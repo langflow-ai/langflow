@@ -367,8 +367,14 @@ async def update_project(
     except HTTPException as exc:
         raise deny_to_404(exc, detail="Project not found") from exc
 
+    # Flow rollup uses the project owner — a non-owner editing a shared
+    # project must touch the owner's flows, not the actor's same-folder
+    # flows (which would be empty for a non-owner anyway).
+    project_owner_id = existing_project.user_id
     result = await session.exec(
-        select(Flow.id, Flow.is_component).where(Flow.folder_id == existing_project.id, Flow.user_id == current_user.id)
+        select(Flow.id, Flow.is_component).where(
+            Flow.folder_id == existing_project.id, Flow.user_id == project_owner_id
+        )
     )
     flows_and_components = result.all()
 
@@ -570,9 +576,14 @@ async def delete_project(
 
     await cleanup_mcp_on_delete(project, project_id, current_user, session)
 
+    # Cascade and deployment guards operate over the project owner's flows —
+    # a non-owner with a delete share must remove the owner's resources, not
+    # only their own (which is the empty set for a non-owner).
+    project_owner_id = project.user_id
+
     async def _delete_project_operation() -> None:
         flows = (
-            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == current_user.id))
+            await session.exec(select(Flow).where(Flow.folder_id == project_id, Flow.user_id == project_owner_id))
         ).all()
         if len(flows) > 0:
             for flow in flows:
@@ -586,7 +597,7 @@ async def delete_project(
     try:
         await retry_project_operation_on_deployment_guard(
             db=session,
-            user_id=current_user.id,
+            user_id=project_owner_id,
             project_id=project_id,
             operation=_delete_project_operation,
         )

@@ -34,7 +34,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareRead, ShareUpdate
 from langflow.services.authorization import ShareAction, ensure_share_permission
 from langflow.services.authorization.utils import audit_decision
-from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
+from langflow.services.database.models.auth import AuthzShare, AuthzTeamMember, SharePermissionLevel, ShareScope
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.file.model import File as UserFile
 from langflow.services.database.models.flow.model import Flow
@@ -76,6 +76,40 @@ async def _resolve_resource_owner(
     if row is None:
         return None
     return getattr(row, owner_attr, None)
+
+
+async def _user_can_see_share(
+    session: DbSession,
+    *,
+    row: AuthzShare,
+    user_id: UUID,
+    resource_owner_id: UUID | None,
+) -> bool:
+    """Return True when ``user_id`` is permitted to see ``row`` in list/get.
+
+    Visibility tiers (any one is sufficient):
+
+    * resource owner — full visibility on shares of their own resource;
+    * share creator — needs to manage their own grants;
+    * user-scoped target — needs to know what's been shared with them;
+    * team-scoped target — caller is a member of ``row.target_id``;
+    * public scope — anyone in the system can see the row exists.
+    """
+    if user_id in {resource_owner_id, row.created_by}:
+        return True
+    scope = row.scope
+    if scope == ShareScope.PUBLIC.value:
+        return True
+    if scope == ShareScope.USER.value and row.target_id == user_id:
+        return True
+    if scope == ShareScope.TEAM.value and row.target_id is not None:
+        membership_stmt = select(AuthzTeamMember).where(
+            AuthzTeamMember.team_id == row.target_id,
+            AuthzTeamMember.user_id == user_id,
+        )
+        member = (await session.exec(membership_stmt)).first()
+        return member is not None
+    return False
 
 
 async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
@@ -236,8 +270,8 @@ async def list_shares(
     if is_superuser:
         return [ShareRead.model_validate(row, from_attributes=True) for row in rows]
 
-    # Non-superuser visibility: caller is either the resource owner (full
-    # row visibility for that resource), the share creator, or the target.
+    # Non-superuser visibility: owner / creator / direct user target / team
+    # member / public. See ``_user_can_see_share`` for the full rule set.
     visible: list[ShareRead] = []
     owner_cache: dict[tuple[str, UUID], UUID | None] = {}
     for row in rows:
@@ -248,7 +282,12 @@ async def list_shares(
                 resource_type=row.resource_type,
                 resource_id=row.resource_id,
             )
-        if current_user.id in {owner_cache[key], row.created_by, row.target_id}:
+        if await _user_can_see_share(
+            session,
+            row=row,
+            user_id=current_user.id,
+            resource_owner_id=owner_cache[key],
+        ):
             visible.append(ShareRead.model_validate(row, from_attributes=True))
     return visible
 
@@ -277,7 +316,12 @@ async def get_share(
             resource_type=row.resource_type,
             resource_id=row.resource_id,
         )
-        if current_user.id not in {owner_id, row.created_by, row.target_id}:
+        if not await _user_can_see_share(
+            session,
+            row=row,
+            user_id=current_user.id,
+            resource_owner_id=owner_id,
+        ):
             # UUID privacy — caller is not allowed to know this share exists.
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 

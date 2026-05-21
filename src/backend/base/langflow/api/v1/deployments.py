@@ -872,14 +872,17 @@ async def create_deployment_run(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.EXECUTE,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.EXECUTE,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
     telemetry.provider = _provider_key
     telemetry.wxo_tenant_id = provider_tenant_id
     adapter_execution_payload = await deployment_mapper.resolve_execution_create(
@@ -891,9 +894,13 @@ async def create_deployment_run(
         handle_adapter_errors(mapper=deployment_mapper),
         deployment_provider_scope(deployment_row.deployment_provider_account_id),
     ):
+        # Adapter calls operate in the deployment owner's provider namespace
+        # (credentials, resource keys, etc.). For shared deployments the actor
+        # may not have a provider account of their own. ``current_user`` is
+        # still used above for authorization/audit.
         execution_result = await deployment_adapter.create_execution(
             payload=adapter_execution_payload,
-            user_id=current_user.id,
+            user_id=deployment_row.user_id,
             db=session,
         )
 
@@ -921,22 +928,27 @@ async def get_deployment_run(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.READ,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
     execution_lookup_id = run_id.strip()
     with (
         handle_adapter_errors(mapper=deployment_mapper),
         deployment_provider_scope(deployment_row.deployment_provider_account_id),
     ):
+        # Provider-namespaced call uses the deployment owner; see
+        # ``create_deployment_run``.
         execution_result = await deployment_adapter.get_execution(
             execution_id=execution_lookup_id,
-            user_id=current_user.id,
+            user_id=deployment_row.user_id,
             db=session,
         )
 
@@ -986,18 +998,22 @@ async def list_deployment_configs(
             user_id=current_user.id,
             db=session,
         )
-        await ensure_deployment_permission(
-            current_user,
-            DeploymentAction.READ,
-            deployment_id=deployment_row.id,
-            deployment_user_id=deployment_row.user_id,
-            workspace_id=deployment_row.workspace_id,
-            project_id=deployment_row.project_id,
-        )
+        try:
+            await ensure_deployment_permission(
+                current_user,
+                DeploymentAction.READ,
+                deployment_id=deployment_row.id,
+                deployment_user_id=deployment_row.user_id,
+                workspace_id=deployment_row.workspace_id,
+                project_id=deployment_row.project_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Deployment not found.") from exc
         if provider_account is None:
+            # Provider account is owner-scoped to the deployment owner.
             provider_account = await get_owned_provider_account_or_404(
                 provider_id=deployment_row.deployment_provider_account_id,
-                user_id=current_user.id,
+                user_id=deployment_row.user_id,
                 db=session,
             )
         elif deployment_row.deployment_provider_account_id != provider_account.id:
@@ -1064,14 +1080,17 @@ async def list_deployment_snapshots(
             user_id=current_user.id,
             db=session,
         )
-        await ensure_deployment_permission(
-            current_user,
-            DeploymentAction.READ,
-            deployment_id=deployment_row.id,
-            deployment_user_id=deployment_row.user_id,
-            workspace_id=deployment_row.workspace_id,
-            project_id=deployment_row.project_id,
-        )
+        try:
+            await ensure_deployment_permission(
+                current_user,
+                DeploymentAction.READ,
+                deployment_id=deployment_row.id,
+                deployment_user_id=deployment_row.user_id,
+                workspace_id=deployment_row.workspace_id,
+                project_id=deployment_row.project_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Deployment not found.") from exc
         if deployment_row.deployment_provider_account_id != provider_account.id:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found for provider.")
 
@@ -1143,14 +1162,17 @@ async def update_snapshot(
             detail=f"Deployment for attachment (deployment_id={attachment.deployment_id}) not found.",
         )
 
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.WRITE,
-        deployment_id=deployment.id,
-        deployment_user_id=deployment.user_id,
-        workspace_id=deployment.workspace_id,
-        project_id=deployment.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.WRITE,
+            deployment_id=deployment.id,
+            deployment_user_id=deployment.user_id,
+            workspace_id=deployment.workspace_id,
+            project_id=deployment.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
 
     flow_version = await get_flow_version_entry(
         session,
@@ -1312,9 +1334,11 @@ async def get_deployment(
     with deployment_provider_scope(deployment_row.deployment_provider_account_id):
         # Deployment-level sync: if the provider no longer has this deployment,
         # delete the stale DB row (FK CASCADE handles attachments) and return 404.
+        # Provider-namespaced call uses the deployment owner; for shared
+        # deployments the actor has no provider account in this scope.
         try:
             deployment = await deployment_adapter.get(
-                user_id=current_user.id,
+                user_id=deployment_row.user_id,
                 deployment_id=deployment_row.resource_key,
                 db=session,
             )
@@ -1448,8 +1472,13 @@ async def update_deployment(
     deployment_row_id = deployment_row.id
     deployment_resource_key = deployment_row.resource_key
     deployment_provider_account_id = deployment_row.deployment_provider_account_id
+    # Owner-namespaced operations use ``deployment_row.user_id`` — the
+    # deployment, its flow versions, and its attachments all live in the
+    # owner's scope. ``current_user`` is still the actor for authorization
+    # and audit, but the data plane operates in the owner's namespace.
+    owner_id = deployment_row.user_id
     adapter_payload = await deployment_mapper.resolve_deployment_update(
-        user_id=current_user.id,
+        user_id=owner_id,
         deployment_db_id=deployment_row_id,
         db=session,
         payload=payload,
@@ -1460,7 +1489,7 @@ async def update_deployment(
     )
     await validate_project_scoped_flow_version_ids(
         flow_version_ids=list(dict.fromkeys([*added_flow_version_ids, *remove_flow_version_ids])),
-        user_id=current_user.id,
+        user_id=owner_id,
         project_id=deployment_row.project_id,
         db=session,
     )
@@ -1468,13 +1497,13 @@ async def update_deployment(
         update_result: DeploymentUpdateResult = await deployment_adapter.update(
             deployment_id=deployment_resource_key,
             payload=adapter_payload,
-            user_id=current_user.id,
+            user_id=owner_id,
             db=session,
         )
     try:
         existing_attachments = await list_deployment_attachments_for_flow_version_ids(
             session,
-            user_id=current_user.id,
+            user_id=owner_id,
             deployment_id=deployment_row_id,
             flow_version_ids=added_flow_version_ids,
         )
@@ -1486,7 +1515,7 @@ async def update_deployment(
             result=update_result,
         )
         await apply_flow_version_patch_attachments(
-            user_id=current_user.id,
+            user_id=owner_id,
             deployment_row_id=deployment_row_id,
             added_snapshot_bindings=added_snapshot_bindings,
             remove_flow_version_ids=remove_flow_version_ids,
@@ -1566,9 +1595,11 @@ async def delete_deployment(
     if include_provider:
         try:
             with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+                # Provider-namespaced call uses the deployment owner; see
+                # ``create_deployment_run``.
                 await deployment_adapter.delete(
                     deployment_id=deployment_row.resource_key,
-                    user_id=current_user.id,
+                    user_id=deployment_row.user_id,
                     db=session,
                 )
         except HTTPException as exc:
@@ -1603,18 +1634,22 @@ async def get_deployment_status(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.READ,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
     with handle_adapter_errors(), deployment_provider_scope(deployment_row.deployment_provider_account_id):
+        # Provider-namespaced — owner id, not actor id.
         health_result = await deployment_adapter.get_status(
             deployment_id=deployment_row.resource_key,
-            user_id=current_user.id,
+            user_id=deployment_row.user_id,
             db=session,
         )
     return DeploymentStatusResponse(
@@ -1662,21 +1697,26 @@ async def list_deployment_flow_versions(
         user_id=current_user.id,
         db=session,
     )
-    await ensure_deployment_permission(
-        current_user,
-        DeploymentAction.READ,
-        deployment_id=deployment_row.id,
-        deployment_user_id=deployment_row.user_id,
-        workspace_id=deployment_row.workspace_id,
-        project_id=deployment_row.project_id,
-    )
+    try:
+        await ensure_deployment_permission(
+            current_user,
+            DeploymentAction.READ,
+            deployment_id=deployment_row.id,
+            deployment_user_id=deployment_row.user_id,
+            workspace_id=deployment_row.workspace_id,
+            project_id=deployment_row.project_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail="Deployment not found.") from exc
     with (
         handle_adapter_errors(mapper=deployment_mapper),
         deployment_provider_scope(deployment_row.deployment_provider_account_id),
     ):
+        # Provider-namespaced flow-version list uses the deployment owner so
+        # shared deployments resolve under the right credentials.
         rows, total, snapshot_result = await list_deployment_flow_versions_synced(
             deployment_adapter=deployment_adapter,
-            user_id=current_user.id,
+            user_id=deployment_row.user_id,
             provider_id=deployment_row.deployment_provider_account_id,
             deployment_id=deployment_row.id,
             db=session,
