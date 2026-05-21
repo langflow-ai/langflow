@@ -38,7 +38,7 @@ class TestFilesystemFlowStore:
         """Write must use rename so readers never see partial JSON."""
         store = FilesystemFlowStore(tmp_path)
         store.write("flow-1", {"name": "test"})
-        assert not (tmp_path / "flow-1.json.tmp").exists()
+        assert list(tmp_path.glob("*.tmp")) == [], "no temp files should remain after write"
         assert (tmp_path / "flow-1.json").exists()
 
     def test_delete_existing_returns_true(self, tmp_path):

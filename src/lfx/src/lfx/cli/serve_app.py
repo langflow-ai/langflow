@@ -166,9 +166,19 @@ class FlowRegistry:
     preventing credential resolution from falling back to ``os.environ``.
     """
 
+    # TTL for the cached result of store.list_ids() (a filesystem glob).
+    # Avoids one glob per /health call while still reflecting changes within ~1 s.
+    # Mutations (add / remove) invalidate the cache immediately.
+    _STORE_IDS_TTL: float = 1.0
+
     def __init__(self, *, no_env_fallback: bool = False, store: FlowStore | None = None) -> None:
         from lfx.cli.flow_store import NullFlowStore
 
+        # Key invariant: a flow may be stored under TWO keys simultaneously —
+        # its JSON UUID *and* a filename stem (e.g. "prompt_one") when the
+        # pre-placed file's stem differs from the UUID in the JSON.  Both keys
+        # map to the *same* (graph, meta) tuple.  All deduplication logic
+        # (list_metas, __len__, remove) uses meta.id as the canonical identity.
         self._flows: dict[str, tuple[Graph, FlowMeta]] = {}
         self._no_env_fallback = no_env_fallback
         self._store = store if store is not None else NullFlowStore()
@@ -180,10 +190,24 @@ class FlowRegistry:
         # Flow IDs whose source of truth is the store. These are re-verified against
         # the store in get() / list_metas() to catch cross-worker deletes.
         self._store_sourced: set[str] = set()
+        # TTL cache for store.list_ids() to avoid one filesystem glob per /health call.
+        self._store_ids_cache: list[str] | None = None
+        self._store_ids_cache_ts: float = 0.0
 
     def _stamp(self, graph: Graph) -> None:
         if self._no_env_fallback:
             graph.context["no_env_fallback"] = True
+
+    def _get_cached_store_ids(self) -> list[str]:
+        """Return store.list_ids(), refreshing at most once per _STORE_IDS_TTL seconds."""
+        now = time.monotonic()
+        if self._store_ids_cache is None or now - self._store_ids_cache_ts > self._STORE_IDS_TTL:
+            self._store_ids_cache = self._store.list_ids()
+            self._store_ids_cache_ts = now
+        return self._store_ids_cache
+
+    def _invalidate_store_ids_cache(self) -> None:
+        self._store_ids_cache = None
 
     def add(self, graph: Graph, meta: FlowMeta, *, overwrite: bool = False, raw_json: dict | None = None) -> None:
         if not overwrite and meta.id in self._flows:
@@ -204,6 +228,7 @@ class FlowRegistry:
         self._stamp(graph)
         self._flows[meta.id] = (graph, meta)
         self._store_meta_cache.pop(meta.id, None)
+        self._invalidate_store_ids_cache()
 
     def _evict(self, meta_id: str) -> None:
         """Remove all in-memory traces of a store-sourced flow (e.g. deleted by another worker)."""
@@ -267,13 +292,14 @@ class FlowRegistry:
         previously uploaded (by another worker or a prior run) without a
         cache-miss penalty on the first request.
         """
+        # Bypass the TTL cache — startup must always see the current store state.
         for flow_id in self._store.list_ids():
             self.get(flow_id)  # no-op if already cached; loads from store otherwise
 
     def list_metas(self) -> list[FlowMeta]:
         seen: set[str] = set()
         result: list[FlowMeta] = []
-        store_ids = set(self._store.list_ids())
+        store_ids = set(self._get_cached_store_ids())
         for _, meta in self._flows.values():
             if meta.id in seen:
                 continue
@@ -338,12 +364,14 @@ class FlowRegistry:
             # Primary key IS the UUID: scan for any stem-keyed file with the same
             # "id" field (e.g. a pre-placed my-flow.json alongside {uuid}.json).
             # Only needed for persistent stores; NullFlowStore has no other files.
+            # Bypass the TTL cache here — we need a live listing after the delete.
             for stem_id in self._store.list_ids():
                 if stem_id == meta_id:
                     continue  # already deleted above
                 stem_raw = self._store.read(stem_id)
                 if stem_raw and stem_raw.get("id") == meta_id:
                     self._store.delete(stem_id)
+        self._invalidate_store_ids_cache()
         return mem_had_it or store_had_it
 
     def __len__(self) -> int:
@@ -371,7 +399,7 @@ class UploadFlowRequest(BaseModel):
             uuid.UUID(str(v))
         except ValueError:
             msg = f"id must be a valid UUID, got {v!r}"
-            raise ValueError(msg)  # noqa: B904
+            raise ValueError(msg) from None
         return str(v)
 
 

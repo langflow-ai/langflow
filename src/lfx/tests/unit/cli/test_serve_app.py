@@ -1075,6 +1075,37 @@ class TestCreateServeAppFactory:
 
         assert len(app.state.registry) == 1, "worker must have loaded the startup flow from the file path"
 
+    def test_create_serve_app_startup_path_load_error_propagates(self, tmp_path):
+        """create_serve_app() must raise (not swallow) if a startup flow file fails to load.
+
+        This exercises the ThreadPoolExecutor path: the coroutine raises inside the
+        thread, and the exception must propagate back to the worker process so the
+        worker fails fast instead of silently starting with an empty registry.
+        """
+        import json
+        import os
+
+        from lfx.cli.serve_app import _SERVE_STARTUP_PATHS_ENV, create_serve_app
+
+        bad_file = tmp_path / "bad_flow.json"
+        bad_file.write_text(json.dumps({"nodes": [], "edges": []}))
+
+        env_override = {
+            "LANGFLOW_API_KEY": "test-key",  # pragma: allowlist secret
+            _SERVE_STARTUP_PATHS_ENV: json.dumps([str(bad_file)]),
+            # No LFX_SERVE_FLOW_DIR — triggers the ThreadPoolExecutor path
+        }
+
+        with (
+            patch.dict(os.environ, env_override),
+            patch(
+                "lfx.cli.commands.load_flow_from_json",
+                side_effect=ValueError("corrupt flow"),
+            ),
+            pytest.raises(Exception, match="corrupt flow"),
+        ):
+            create_serve_app()
+
 
 class TestServeAppEndpoints:
     """Test the FastAPI endpoints."""
