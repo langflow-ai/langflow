@@ -43,9 +43,9 @@ export default function BulkDeleteConfirmDialog({
             </div>
           </DialogTitle>
         </DialogHeader>
-        <p className="pb-3 text-sm text-muted-foreground">
+        <span className="pb-3 text-sm">
           {t("triggers.bulkDeleteBody", { count })}
-        </p>
+        </span>
         <DialogFooter>
           <Button
             type="button"

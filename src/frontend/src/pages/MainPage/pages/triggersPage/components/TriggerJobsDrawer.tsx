@@ -24,33 +24,44 @@ const STATUS_BADGE: Record<
   timed_out: { variant: "errorStatic", label: "timed_out" },
 };
 
-function JobRow({ job }: { job: TriggerJob }) {
+/**
+ * Two-column row inside the job card: a fixed-width muted label on
+ * the left, a non-wrapping monospace value on the right. Used for
+ * every timestamp so the dates stay on one line and the labels
+ * stay visually aligned across rows.
+ */
+function TimestampRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-2">
+      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="truncate whitespace-nowrap font-mono text-xs">
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function JobCard({ job }: { job: TriggerJob }) {
   const badge = STATUS_BADGE[job.status];
   return (
-    <div className="flex flex-col gap-1 px-4 py-3 hover:bg-muted/50">
-      <div className="flex items-center justify-between">
+    <div className="flex flex-col gap-1.5 border-b px-4 py-3 hover:bg-muted/50">
+      <div className="flex items-center justify-between gap-2">
         <Badge variant={badge.variant} size="xq">
           {badge.label}
         </Badge>
-        <span className="text-xs text-muted-foreground">
+        <span className="whitespace-nowrap text-xs text-muted-foreground">
           attempt {job.attempt}/{job.max_attempts}
         </span>
       </div>
-      <div className="text-xs text-muted-foreground">
-        scheduled: {formatDateTime(job.scheduled_at)}
-      </div>
+      <TimestampRow label="scheduled" value={formatDateTime(job.scheduled_at)} />
       {job.started_at && (
-        <div className="text-xs text-muted-foreground">
-          started: {formatDateTime(job.started_at)}
-        </div>
+        <TimestampRow label="started" value={formatDateTime(job.started_at)} />
       )}
       {job.finished_at && (
-        <div className="text-xs text-muted-foreground">
-          finished: {formatDateTime(job.finished_at)}
-        </div>
+        <TimestampRow label="finished" value={formatDateTime(job.finished_at)} />
       )}
       {job.error && (
-        <div className="mt-1 rounded bg-error-background px-2 py-1 text-xs text-error-foreground">
+        <div className="mt-1 rounded bg-error-background px-2 py-1 text-xs text-error-foreground break-words">
           {job.error}
         </div>
       )}
@@ -71,15 +82,29 @@ export default function TriggerJobsDrawer({
   );
 
   return (
-    <div className="flex h-full w-80 flex-col border-l bg-background">
-      <div className="flex items-center justify-between px-4 pt-4">
-        <div className="flex flex-col">
-          <h3 className="text-sm font-semibold">{trigger.flow_name}</h3>
-          <span className="text-xs text-muted-foreground">
+    <div className="flex h-full w-96 flex-col border-l bg-background">
+      {/*
+        Header: flow name on the first line, component id under it.
+        Both ``truncate`` so a long flow name (e.g. "New Flow
+        (Backup)") never forces a line break that pushes the close
+        button down. The close button stays pinned at the same
+        vertical position as the title.
+      */}
+      <div className="flex items-start justify-between gap-2 px-4 pt-4">
+        <div className="flex min-w-0 flex-col">
+          <h3 className="truncate text-sm font-semibold">
+            {trigger.flow_name}
+          </h3>
+          <span className="truncate text-xs text-muted-foreground">
             {trigger.component_id}
           </span>
         </div>
-        <Button variant="ghost" size="iconSm" onClick={onClose}>
+        <Button
+          variant="ghost"
+          size="iconSm"
+          onClick={onClose}
+          className="-mr-1 -mt-1 shrink-0"
+        >
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>
       </div>
@@ -100,7 +125,7 @@ export default function TriggerJobsDrawer({
             {t("triggers.jobsEmpty")}
           </div>
         ) : (
-          jobs.map((job) => <JobRow key={job.id} job={job} />)
+          jobs.map((job) => <JobCard key={job.id} job={job} />)
         )}
       </div>
     </div>

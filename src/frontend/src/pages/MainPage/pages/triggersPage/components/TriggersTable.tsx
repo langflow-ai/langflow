@@ -117,11 +117,21 @@ export default function TriggersTable({
               onCheckedChange={(value) => onSelectAll(allKeys, value === true)}
             />
           </TableHead>
-          <TableHead>{t("triggers.col.flow")}</TableHead>
-          <TableHead>{t("triggers.col.cron")}</TableHead>
-          <TableHead>{t("triggers.col.timezone")}</TableHead>
-          <TableHead>{t("triggers.col.nextFire")}</TableHead>
-          <TableHead>{t("triggers.col.lastRun")}</TableHead>
+          <TableHead className="min-w-[180px]">
+            {t("triggers.col.flow")}
+          </TableHead>
+          <TableHead className="whitespace-nowrap">
+            {t("triggers.col.cron")}
+          </TableHead>
+          <TableHead className="whitespace-nowrap">
+            {t("triggers.col.timezone")}
+          </TableHead>
+          <TableHead className="whitespace-nowrap">
+            {t("triggers.col.nextFire")}
+          </TableHead>
+          <TableHead className="whitespace-nowrap">
+            {t("triggers.col.lastRun")}
+          </TableHead>
           <TableHead className="w-[40px]" />
         </TableRow>
       </TableHeader>
@@ -138,23 +148,23 @@ export default function TriggersTable({
                 />
               </TableCell>
               <TableCell className="font-medium">
-                <div className="flex flex-col">
-                  <span>{trigger.flow_name}</span>
-                  <span className="text-xs text-muted-foreground">
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate">{trigger.flow_name}</span>
+                  <span className="truncate text-xs text-muted-foreground">
                     {trigger.component_id}
                   </span>
                 </div>
               </TableCell>
               <TableCell>
-                <code className="rounded bg-muted px-1.5 py-0.5 text-xs">
+                <code className="whitespace-nowrap rounded bg-muted px-1.5 py-0.5 text-xs">
                   {trigger.cron_expression}
                 </code>
               </TableCell>
-              <TableCell className="text-muted-foreground">
+              <TableCell className="whitespace-nowrap text-muted-foreground">
                 {trigger.timezone}
               </TableCell>
               <TableCell
-                className="text-sm text-muted-foreground"
+                className="whitespace-nowrap text-sm text-muted-foreground"
                 title={formatDateTime(trigger.next_fire_at)}
               >
                 {relativeTimeFrom(trigger.next_fire_at)}

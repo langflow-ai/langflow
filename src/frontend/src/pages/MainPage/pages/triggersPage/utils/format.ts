@@ -2,11 +2,25 @@
 // Kept dependency-free so they remain trivially unit-testable and
 // importable from any component without circular concerns.
 
+/**
+ * Format an ISO datetime as ``DD/MM/YYYY HH:mm:ss`` — space-separated,
+ * no comma. The browser default ``toLocaleString`` inserts a comma
+ * which becomes the de-facto line-break point inside narrow drawers
+ * (text-xs columns), splitting a single date across two lines and
+ * doubling the visual noise.
+ *
+ * Returns ``"—"`` on null / unparseable input so the caller never
+ * has to guard against the missing case.
+ */
 export function formatDateTime(value: string | null): string {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString();
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return (
+    `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()} ` +
+    `${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`
+  );
 }
 
 export function relativeTimeFrom(value: string | null): string {

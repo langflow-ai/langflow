@@ -126,10 +126,22 @@ export default function TriggersPage() {
     <div className="flex h-full w-full" data-testid="triggers-wrapper">
       <div
         className={`flex h-full w-full flex-col overflow-y-auto transition-all duration-200 ${
-          jobsTrigger ? "mr-80" : ""
+          jobsTrigger ? "mr-96" : ""
         }`}
       >
-        <div className="flex h-full w-full flex-col xl:container">
+        {/*
+          When the jobs drawer is open it already eats 384px on the
+          right via mr-96; the inner xl:container would also cap the
+          remaining width to ~1280px and leave a visible empty gap
+          between the page content's right edge and the drawer. Drop
+          the container constraint while the drawer is open so the
+          content fills the freed space.
+        */}
+        <div
+          className={`flex h-full w-full flex-col ${
+            jobsTrigger ? "" : "xl:container"
+          }`}
+        >
           <div className="flex flex-1 flex-col justify-start px-5 pt-10">
             <div
               className="flex items-center justify-between pb-4"
