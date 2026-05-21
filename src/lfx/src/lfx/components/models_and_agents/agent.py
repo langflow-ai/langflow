@@ -535,6 +535,17 @@ class AgentComponent(ToolCallingAgentComponent):
             middleware=middleware or None,
         )
 
+    def _compute_recursion_limit(self) -> int:
+        """Derive the LangGraph recursion_limit from the user-set max_iterations.
+
+        Mirrors the clamp in `_build_middleware` (max(1, max_iterations)) so a
+        saved 0 or negative value cannot under-cap the graph below one full
+        iteration. The +5 buffer covers start/end/router overhead.
+        """
+        raw = getattr(self, "max_iterations", None)
+        run_limit = max(1, int(raw)) if raw is not None else 15
+        return run_limit * 2 + 5
+
     def _build_middleware(self, llm: Any) -> list:
         # `llm` is passed in (rather than re-fetched via `self._get_llm()`)
         # because some providers do credential resolution / client instantiation
@@ -548,7 +559,11 @@ class AgentComponent(ToolCallingAgentComponent):
             # allow an unbounded model/tool loop — clamp it to a real minimum.
             run_limit = max(1, int(max_iterations))
             middleware.append(ModelCallLimitMiddleware(run_limit=run_limit))
-        if getattr(self, "handle_parsing_errors", False):
+        # ToolRetryMiddleware only matters when there ARE tools to retry. Attaching
+        # it on a no-tools agent inflates the compiled graph and adds per-invocation
+        # middleware overhead for nothing, which is a measurable contributor to
+        # trivial-prompt latency (QA UI-003).
+        if getattr(self, "handle_parsing_errors", False) and self.tools:
             middleware.append(ToolRetryMiddleware(max_retries=2))
         # WatsonX models have two known platform quirks; both still reproduce on
         # the current API, so we keep the protections from the legacy
@@ -590,6 +605,14 @@ class AgentComponent(ToolCallingAgentComponent):
         if getattr(self, "_event_manager", None):
             on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
 
+        # Align LangGraph's `recursion_limit` with `max_iterations` so the
+        # middleware cap (ModelCallLimitMiddleware) is what bounds the loop —
+        # not LangGraph's default 25-step guard, which fires at ~12 model+tool
+        # iterations and raises a raw GraphRecursionError (QA UI-009/UI-010).
+        # Each iteration is ~2 graph steps (model node + tools node); add 5
+        # for start/end overhead.
+        recursion_limit = self._compute_recursion_limit()
+
         stream = adapt_graph_events_to_executor_shape(
             agent.astream_events(
                 input_dict,
@@ -598,7 +621,8 @@ class AgentComponent(ToolCallingAgentComponent):
                         AgentAsyncHandler(self.log),
                         token_usage_handler,
                         *self._get_shared_callbacks(),
-                    ]
+                    ],
+                    "recursion_limit": recursion_limit,
                 },
                 version="v2",
             )
