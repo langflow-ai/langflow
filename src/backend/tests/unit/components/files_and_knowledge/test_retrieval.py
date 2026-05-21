@@ -93,6 +93,47 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         assert "kb2" in kb_list
         assert ".hidden" not in kb_list
 
+    async def test_get_knowledge_bases_db_first_hides_stale_disk_dirs(self, tmp_path, active_user):
+        """DB-first listing hides on-disk dirs that have no matching DB row.
+
+        Regression for the dropdown showing entries (e.g. ``api_baseline_*``,
+        ``customer_sales_history_*``) that no longer exist on the Knowledge
+        management page. Before the fix, the lfx helper scanned the disk
+        unconditionally, so any directory left over from a delete that did
+        not write the ``.kb_deleted`` sentinel (legacy delete, direct
+        ``DELETE FROM knowledge_base``, DB reset, etc.) would re-surface in
+        the canvas dropdown but not on the management page (which is
+        DB-first). The two surfaces must agree.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        # Disk has both a "real" KB (with a DB row) and a leftover stale dir.
+        (tmp_path / active_user.username / "real_kb").mkdir(parents=True, exist_ok=True)
+        (tmp_path / active_user.username / "stale_dir").mkdir(parents=True, exist_ok=True)
+        await knowledge_base_service.create_record(user_id=active_user.id, name="real_kb")
+
+        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+
+        assert "real_kb" in kb_list
+        # ``stale_dir`` has no DB row → it's a phantom and must not show up.
+        assert "stale_dir" not in kb_list
+
+    async def test_get_knowledge_bases_skips_memory_base_associated_kbs(self, tmp_path, active_user):
+        """Memory-base-associated KBs are filtered out of the generic KB list.
+
+        Matches the listing endpoint's behavior — those KBs are exposed
+        through the Memory Base APIs, not the generic KB dropdown.
+        """
+        from langflow.api.utils import knowledge_base_service
+
+        await knowledge_base_service.create_record(user_id=active_user.id, name="regular_kb")
+        await knowledge_base_service.create_record(user_id=active_user.id, name="memory_kb", source_types=["memory"])
+
+        kb_list = await get_knowledge_bases(tmp_path, user_id=active_user.id)
+
+        assert "regular_kb" in kb_list
+        assert "memory_kb" not in kb_list
+
     async def test_update_build_config_populates_options(self, component_class, default_kwargs, tmp_path, active_user):
         component = component_class(**default_kwargs)
 
@@ -163,7 +204,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             "metadata": {"embedding_class": "OpenAIEmbeddings"},
         }
         with patch(
-            "lfx.components.files_and_knowledge.retrieval.get_embedding_model_options",
+            "lfx.components.files_and_knowledge.knowledge.get_embedding_model_options",
             return_value=[catalog_entry],
         ):
             resolved = component._resolve_model_selection(
@@ -196,7 +237,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             },
         }
         with patch(
-            "lfx.components.files_and_knowledge.retrieval.get_embedding_model_options",
+            "lfx.components.files_and_knowledge.knowledge.get_embedding_model_options",
             return_value=[catalog_entry],
         ):
             resolved = component._resolve_model_selection({"model_selection": persisted})
@@ -238,7 +279,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
             },
         }
         with patch(
-            "lfx.components.files_and_knowledge.retrieval.get_embedding_model_options",
+            "lfx.components.files_and_knowledge.knowledge.get_embedding_model_options",
             return_value=[catalog_entry],
         ):
             resolved = component._resolve_model_selection({"model_selection": persisted})
@@ -255,7 +296,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         component = component_class(**default_kwargs)
         with (
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_embedding_model_options",
+                "lfx.components.files_and_knowledge.knowledge.get_embedding_model_options",
                 return_value=[],
             ),
             pytest.raises(ValueError, match="no longer available"),
@@ -288,7 +329,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         mock_vertex.graph.user_id = None
         component._vertex = mock_vertex
 
-        with patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope:
+        with patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope:
             mock_session_scope.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
             mock_session_scope.return_value.__aexit__ = AsyncMock(return_value=False)
             with pytest.raises(ValueError, match="User ID is required"):
@@ -297,7 +338,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
     async def test_retrieve_data_missing_user_record_raises(self, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         with (
-            patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
+            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=None,
@@ -335,21 +376,21 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         backend_instance.teardown = AsyncMock()
 
         with (
-            patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
+            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval._get_knowledge_bases_root_path",
+                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
                 return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_embeddings",
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings",
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.create_backend",
+                "lfx.components.files_and_knowledge.knowledge.create_backend",
                 return_value=backend_instance,
             ),
         ):
@@ -389,21 +430,21 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         backend_instance.teardown = AsyncMock()
 
         with (
-            patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
+            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval._get_knowledge_bases_root_path",
+                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
                 return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_embeddings",
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings",
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.create_backend",
+                "lfx.components.files_and_knowledge.knowledge.create_backend",
                 return_value=backend_instance,
             ),
         ):
@@ -434,21 +475,21 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         backend_instance.teardown = AsyncMock()
 
         with (
-            patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
+            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval._get_knowledge_bases_root_path",
+                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
                 return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_embeddings",
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings",
                 return_value=MagicMock(),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.create_backend",
+                "lfx.components.files_and_knowledge.knowledge.create_backend",
                 return_value=backend_instance,
             ),
         ):
@@ -479,21 +520,21 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         backend_instance.teardown = AsyncMock()
 
         with (
-            patch("lfx.components.files_and_knowledge.retrieval.session_scope") as mock_session_scope,
+            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
             patch(
                 "langflow.services.database.models.user.crud.get_user_by_id",
                 return_value=user_record,
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval._get_knowledge_bases_root_path",
+                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
                 return_value=Path(default_kwargs["kb_root_path"]),
             ),
             patch(
-                "lfx.components.files_and_knowledge.retrieval.get_embeddings",
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings",
                 return_value=MagicMock(),
             ) as mock_get_embeddings,
             patch(
-                "lfx.components.files_and_knowledge.retrieval.create_backend",
+                "lfx.components.files_and_knowledge.knowledge.create_backend",
                 return_value=backend_instance,
             ),
         ):

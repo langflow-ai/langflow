@@ -1,0 +1,41 @@
+name: Regression Entry Stub
+
+on:
+  issues:
+    types: [labeled]
+
+jobs:
+  post-stub-comment:
+    if: github.event.label.name == 'regression'
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Get current minor version
+        id: version
+        run: |
+          VERSION=$(grep -m1 '^version' pyproject.toml | sed 's/version = "//;s/".*//')
+          MINOR=$(echo "$VERSION" | cut -d. -f1,2)
+          echo "file=regressions/${MINOR}.x.yaml" >> $GITHUB_OUTPUT
+
+      - name: Post regression stub comment
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            This issue has been labeled as a regression. Please add an entry to `${{ steps.version.outputs.file }}` and open a PR:
+
+            ```yaml
+            - id: GH-${{ github.event.issue.number }}
+              title: "${{ github.event.issue.title }}"
+              status: triage
+              area: TBD  # flow_editor | components | mcp | api | lfx | auth | database | integrations | starter_projects
+              first_bad_version: TBD
+              last_known_good_version: TBD
+              workaround: none
+            ```
+
+            See [regressions/README.md](../blob/main/regressions/README.md) for field descriptions and valid values.

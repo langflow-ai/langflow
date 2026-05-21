@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DialogDescription,
@@ -21,30 +22,33 @@ export default function UpdatePhaseContent({
   onClose,
   onTest,
 }: UpdatePhaseContentProps) {
+  const { t } = useTranslation();
   return (
     <>
       <DialogTitle className="sr-only">
-        {isUpdating ? "Updating deployment" : "Deployment updated"}
+        {isUpdating
+          ? t("deployments.updatingTitle")
+          : t("deployments.updatedTitle")}
       </DialogTitle>
       <DialogDescription className="sr-only">
         {isUpdating
-          ? "Your deployment is being updated."
-          : `"${deploymentName}" has been updated.`}
+          ? t("deployments.updatingDesc")
+          : t("deployments.updatedDesc", { name: deploymentName })}
       </DialogDescription>
       <StepDeployStatus
         phase={isUpdating ? "deploying" : "deployed"}
         deploymentName={deploymentName}
-        loadingTitle="Updating..."
-        loadingDescription="Your deployment is being updated. This usually takes a few seconds."
-        doneTitle="Deployment updated"
-        doneDescription={`"${deploymentName}" has been updated successfully.`}
+        loadingTitle={t("deployments.updating")}
+        loadingDescription={t("deployments.updatingDesc")}
+        doneTitle={t("deployments.updatedTitle")}
+        doneDescription={t("deployments.updatedDesc", { name: deploymentName })}
       />
       {isUpdated && (
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
-            Close
+            {t("deployments.close")}
           </Button>
-          {onTest && <Button onClick={onTest}>Test</Button>}
+          {onTest && <Button onClick={onTest}>{t("deployments.test")}</Button>}
         </DialogFooter>
       )}
     </>

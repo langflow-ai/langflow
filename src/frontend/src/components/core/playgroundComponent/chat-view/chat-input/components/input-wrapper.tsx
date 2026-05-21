@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import type { FilePreviewType } from "@/types/components";
 import FilePreviewDisplay from "../../utils/file-preview-display";
@@ -44,6 +45,7 @@ const InputWrapper = ({
   onStopRecording,
   isAudioSupported,
 }: InputWrapperProps) => {
+  const { t } = useTranslation();
   const classNameFilePreview = `flex w-full items-center gap-2 py-2 overflow-auto`;
 
   const onClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -94,12 +96,12 @@ const InputWrapper = ({
         onKeyDown={onKeyDown}
         role="button"
         tabIndex={0}
-        aria-label="Focus chat input"
+        aria-label={t("playgroundComponent.focusChatInput")}
       >
         {/* Text input area */}
         <div className="w-full">
           <TextAreaWrapper
-            CHAT_INPUT_PLACEHOLDER={"Send a message"}
+            CHAT_INPUT_PLACEHOLDER={t("chat.inputPlaceholderSend")}
             isBuilding={isBuilding}
             checkSendingOk={checkSendingOk}
             send={send}

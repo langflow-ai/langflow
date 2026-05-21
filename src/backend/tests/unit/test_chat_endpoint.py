@@ -903,13 +903,13 @@ async def test_job_owner_cleaned_up_after_cleanup_job():
 
         service.start_job(job_id, _noop())
         await asyncio.sleep(0.05)
-        service.register_job_owner(job_id, user_id)
+        await service.register_job_owner(job_id, user_id)
 
-        assert service.get_job_owner(job_id) == user_id
+        assert await service.get_job_owner(job_id) == user_id
 
         await service.cleanup_job(job_id)
 
-        assert service.get_job_owner(job_id) is None
+        assert await service.get_job_owner(job_id) is None
     finally:
         service._closed = True
         if service._cleanup_task:

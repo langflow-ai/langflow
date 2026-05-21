@@ -11,7 +11,7 @@ export const NoMemorySelected = () => (
   >
     <span aria-hidden="true">
       <IconComponent
-        name="Brain"
+        name="BrainCog"
         className="mb-3 h-12 w-12 text-muted-foreground opacity-50"
       />
     </span>

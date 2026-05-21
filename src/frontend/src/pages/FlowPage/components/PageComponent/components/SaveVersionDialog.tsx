@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ export default function SaveVersionDialog({
   onOpenChange,
   onSave,
 }: SaveVersionDialogProps) {
+  const { t } = useTranslation();
   const [description, setDescription] = useState("");
   const isComposing = useRef(false);
 
@@ -45,16 +47,16 @@ export default function SaveVersionDialog({
                 name="BookMarked"
                 className="h-5 w-5 text-primary"
               />
-              Save Version
+              {t("flowVersion.saveDialogTitle")}
             </div>
           </DialogTitle>
           <DialogDescription>
-            Give this version an optional name to help identify it later.
+            {t("flowVersion.saveDialogDescription")}
           </DialogDescription>
         </DialogHeader>
         <Input
           autoFocus
-          placeholder="Version name (optional)"
+          placeholder={t("flowVersion.versionNamePlaceholder")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           onCompositionStart={() => {
@@ -76,10 +78,10 @@ export default function SaveVersionDialog({
             size="sm"
             onClick={() => handleOpenChange(false)}
           >
-            Cancel
+            {t("deleteModal.cancel")}
           </Button>
           <Button size="sm" onClick={handleSave}>
-            Save
+            {t("nodeToolbar.save")}
           </Button>
         </DialogFooter>
       </DialogContent>

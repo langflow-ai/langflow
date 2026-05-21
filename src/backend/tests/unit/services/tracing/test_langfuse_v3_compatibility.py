@@ -8,6 +8,8 @@ See: https://langfuse.com/docs/observability/sdk/upgrade-path
 """
 
 import os
+import sys
+import types
 import uuid
 from unittest.mock import MagicMock, patch
 
@@ -28,41 +30,76 @@ def langfuse_env_vars():
         yield
 
 
+@pytest.fixture(autouse=True)
+def reset_langfuse_shared_client():
+    """Clear the cached Langfuse client between tests so mocks don't leak."""
+    from langflow.services.tracing.langfuse import _reset_shared_client_for_tests
+
+    _reset_shared_client_for_tests()
+    yield
+    _reset_shared_client_for_tests()
+
+
+def _clear_failed_langfuse_import() -> None:
+    """Remove partially imported Langfuse modules after SDK import failures."""
+    for module_name in list(sys.modules):
+        if module_name == "langfuse" or module_name.startswith("langfuse."):
+            sys.modules.pop(module_name, None)
+
+
+def _import_langfuse_or_skip():
+    try:
+        from langfuse import Langfuse
+    except Exception as exc:
+        _clear_failed_langfuse_import()
+        pytest.skip(f"langfuse SDK is not importable: {exc}")
+    return Langfuse
+
+
+def _import_callback_handler_or_skip():
+    try:
+        from langfuse.langchain import CallbackHandler
+    except Exception as exc:
+        _clear_failed_langfuse_import()
+        pytest.skip(f"langfuse LangChain callback handler is not importable: {exc}")
+    return CallbackHandler
+
+
 class TestLangfuseV3ApiExists:
     """Verify that the langfuse v3 API methods we need actually exist."""
 
     def test_langfuse_client_has_start_span(self):
         """Verify start_span method exists (v3 API)."""
-        from langfuse import Langfuse
+        langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(Langfuse, "start_span"), "Langfuse.start_span() should exist in v3"
+        assert hasattr(langfuse_class, "start_span"), "Langfuse.start_span() should exist in v3"
 
     def test_langfuse_client_has_start_as_current_span(self):
         """Verify start_as_current_span method exists (v3 API)."""
-        from langfuse import Langfuse
+        langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(Langfuse, "start_as_current_span"), "Langfuse.start_as_current_span() should exist in v3"
+        assert hasattr(langfuse_class, "start_as_current_span"), "Langfuse.start_as_current_span() should exist in v3"
 
     def test_langfuse_client_has_create_trace_id(self):
         """Verify create_trace_id method exists (v3 API)."""
-        from langfuse import Langfuse
+        langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(Langfuse, "create_trace_id"), "Langfuse.create_trace_id() should exist in v3"
+        assert hasattr(langfuse_class, "create_trace_id"), "Langfuse.create_trace_id() should exist in v3"
 
     def test_langfuse_client_does_not_have_trace(self):
         """Verify trace() method was removed in v3."""
-        from langfuse import Langfuse
+        langfuse_class = _import_langfuse_or_skip()
 
         # This test documents that trace() no longer exists
         # If this fails, langfuse may have restored backward compatibility
-        assert not hasattr(Langfuse, "trace"), "Langfuse.trace() should NOT exist in v3 (removed)"
+        assert not hasattr(langfuse_class, "trace"), "Langfuse.trace() should NOT exist in v3 (removed)"
 
     def test_callback_handler_import_path(self):
         """Verify the v3 callback handler import path works."""
         # v3 path
-        from langfuse.langchain import CallbackHandler
+        callback_handler = _import_callback_handler_or_skip()
 
-        assert CallbackHandler is not None
+        assert callback_handler is not None
 
 
 class TestLangfuseTracerV3Compatibility:
@@ -91,7 +128,29 @@ class TestLangfuseTracerFunctionality:
     @pytest.fixture
     def mock_langfuse(self):
         """Create a mock langfuse client that simulates v3 API."""
-        with patch("langfuse.Langfuse") as mock_langfuse_class:
+
+        class TraceContext(dict):
+            pass
+
+        mock_langfuse_module = types.ModuleType("langfuse")
+        mock_langfuse_types_module = types.ModuleType("langfuse.types")
+        mock_langfuse_langchain_module = types.ModuleType("langfuse.langchain")
+
+        mock_langfuse_class = MagicMock()
+        mock_langfuse_types_module.TraceContext = TraceContext
+        mock_langfuse_langchain_module.CallbackHandler = MagicMock()
+        mock_langfuse_module.Langfuse = mock_langfuse_class
+        mock_langfuse_module.types = mock_langfuse_types_module
+        mock_langfuse_module.langchain = mock_langfuse_langchain_module
+
+        with patch.dict(
+            sys.modules,
+            {
+                "langfuse": mock_langfuse_module,
+                "langfuse.types": mock_langfuse_types_module,
+                "langfuse.langchain": mock_langfuse_langchain_module,
+            },
+        ):
             mock_client = MagicMock()
             mock_langfuse_class.return_value = mock_client
             mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
@@ -274,3 +333,120 @@ class TestLangfuseTracerFunctionality:
         mock_langfuse["child_span"].start_span.assert_called_once()
         call_args = mock_langfuse["child_span"].start_span.call_args
         assert call_args[1]["name"] == "ChildComponent"
+
+class TestLangfuseClientSingleton:
+    """Verify the Langfuse client is constructed once and reused across flow runs.
+
+    Regression test for https://github.com/langflow-ai/langflow/issues/9066.
+    """
+
+    def test_single_client_for_multiple_flow_runs(self):
+        """A single Langfuse() client must be reused across all flow runs.
+
+        Background threads (task_manager, prompt_cache, OTel exporters) are
+        spawned per client and never joined, so a per-run client leaks threads.
+        """
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        n_runs = 5
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_langfuse_class.return_value = mock_client
+
+            for _ in range(n_runs):
+                LangFuseTracer(
+                    trace_name="test-flow - flow-id",
+                    trace_type="chain",
+                    project_name="test-project",
+                    trace_id=uuid.uuid4(),
+                )
+
+            # After fix: Langfuse() must be instantiated exactly once,
+            # regardless of how many flows run.
+            assert mock_langfuse_class.call_count == 1
+
+    def test_end_calls_client_flush(self):
+        """end() must flush buffered events so they're sent before the trace finishes."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_root_span = MagicMock()
+            mock_client.start_span.return_value = mock_root_span
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test-flow - flow-id",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+            tracer.end(inputs={"a": 1}, outputs={"b": 2})
+
+            mock_client.flush.assert_called_once()
+
+    def test_end_swallows_flush_errors(self):
+        """A failing flush() must not break flow end."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_client.flush.side_effect = RuntimeError("upstream down")
+            mock_root_span = MagicMock()
+            mock_client.start_span.return_value = mock_root_span
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test-flow - flow-id",
+                trace_type="chain",
+                project_name="test-project",
+                trace_id=uuid.uuid4(),
+            )
+            # Should not raise even though flush() blew up.
+            tracer.end(inputs={"a": 1}, outputs={"b": 2})
+
+            mock_client.flush.assert_called_once()
+
+    def test_feedback_helper_reuses_shared_client(self):
+        """`_get_langfuse_client()` (used by feedback scoring) must reuse the singleton."""
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_client = MagicMock()
+            mock_langfuse_class.return_value = mock_client
+
+            client_a = _get_langfuse_client()
+            client_b = _get_langfuse_client()
+
+            assert client_a is client_b
+            assert mock_langfuse_class.call_count == 1
+
+    def test_credential_change_creates_new_client(self):
+        """Rotating credentials should produce a fresh client, not reuse the stale one."""
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.return_value = MagicMock()
+
+            _get_langfuse_client()
+            assert mock_langfuse_class.call_count == 1
+
+            # Rotate credentials and call again.
+            with patch.dict(
+                os.environ,
+                {
+                    "LANGFUSE_SECRET_KEY": "sk-lf-rotated",  # pragma: allowlist secret
+                    "LANGFUSE_PUBLIC_KEY": "pk-lf-rotated",
+                    "LANGFUSE_HOST": "http://localhost:3000",
+                },
+            ):
+                _get_langfuse_client()
+
+            assert mock_langfuse_class.call_count == 2
