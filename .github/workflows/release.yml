@@ -490,7 +490,7 @@ jobs:
           prune-cache: false
       - name: Download SDK artifact
         if: needs.build-sdk.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-sdk
           path: ./sdk-dist
@@ -599,13 +599,13 @@ jobs:
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-lfx
           path: ./lfx-dist
       - name: Download SDK artifact
         if: needs.build-sdk.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-sdk
           path: ./sdk-dist
@@ -742,18 +742,18 @@ jobs:
           python-version: "3.12"
           prune-cache: false
       - name: Download LFX artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-lfx
           path: ./lfx-dist
       - name: Download SDK artifact
         if: needs.build-sdk.result == 'success'
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-sdk
           path: ./sdk-dist
       - name: Download base artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-base
           path: ./base-dist
@@ -940,7 +940,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download base artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-base
           path: src/backend/base/dist
@@ -1011,7 +1011,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-main
           path: dist
@@ -1044,7 +1044,7 @@ jobs:
         with:
           ref: ${{ inputs.release_tag }}
       - name: Download SDK artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-sdk
           path: src/sdk/dist
@@ -1074,7 +1074,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Download LFX artifact
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           name: dist-lfx
           path: src/lfx/dist
@@ -1176,7 +1176,7 @@ jobs:
       needs.publish-main.result == 'success' &&
       needs.validate-tag-format.result == 'success'
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v8
         with:
           name: dist-main
           path: dist
