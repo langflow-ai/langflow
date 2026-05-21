@@ -485,6 +485,12 @@ def register_all_service_factories() -> None:
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    # Same pattern as ``auth_service``: register the OSS pass-through here with
+    # ``override=True`` so Langflow always has a default. Enterprise replaces it
+    # by listing its class in ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use
+    # ``override=True`` via ``_discover_from_config``). Plain entry-point
+    # discovery uses ``override=False`` and would lose to this default — the
+    # supported override path is the ``lfx.toml`` config, matching SSO.
     service_manager.register_service_class(
         ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
     )

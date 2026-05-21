@@ -568,7 +568,25 @@ async def download_file(
     current_user: CurrentActiveUser,
 ):
     """Download all flows from project as a zip file."""
-    await ensure_project_permission(current_user, ProjectAction.READ, project_id=project_id)
+    # Fetch the project row first so the authorization call carries the
+    # owner id (for the owner-override path) and the workspace id (for the
+    # project-domain resolver). Without these, an enterprise plugin would
+    # evaluate the check against ``domain="*"`` and miss workspace-scoped
+    # grants, and an owner could even be denied by a role-only policy.
+    # Phase 3 prerequisite: owner-scoped fetch — see
+    # ``langflow.services.authorization.utils``.
+    project = (
+        await session.exec(select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id))
+    ).first()
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    await ensure_project_permission(
+        current_user,
+        ProjectAction.READ,
+        project_id=project_id,
+        project_user_id=project.user_id,
+        workspace_id=project.workspace_id,
+    )
     return await download_project_flows(session=session, project_id=project_id, current_user=current_user)
 
 

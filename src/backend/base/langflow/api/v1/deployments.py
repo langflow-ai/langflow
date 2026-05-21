@@ -72,7 +72,8 @@ from langflow.api.v1.schemas.deployments import (
     SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
-from langflow.services.authorization import DeploymentAction, ensure_deployment_permission
+from langflow.services.authorization import DeploymentAction, ensure_deployment_permission, filter_visible_resources
+from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
@@ -770,6 +771,22 @@ async def list_deployments(
             project_id=project_id,
             names=names,
         )
+    # Per-deployment authorization filter. Mirrors GET /flows/ and GET /projects/:
+    # the coarse READ check above gates whether the caller can list deployments
+    # at all; this call drops individual rows the enterprise plugin denies. OSS
+    # pass-through returns the input unchanged. ``rows_with_counts`` is
+    # ``list[tuple[Deployment, int, list[...]]]`` so the key/domain extractors
+    # operate on the first element. ``total`` may overcount denied items —
+    # accurate paginated counts need SQL-level prefilter (Phase 3, alongside
+    # ``authz_share``).
+    rows_with_counts = await filter_visible_resources(
+        current_user,
+        resource_type="deployment",
+        candidates=list(rows_with_counts),
+        key=lambda row: row[0].id,
+        domain_extractor=lambda row: _resolve_casbin_domain(row[0].workspace_id, row[0].project_id),
+        act=DeploymentAction.READ,
+    )
     deployments = deployment_mapper.shape_deployment_list_items(
         rows_with_counts=rows_with_counts,
         # include flow_version_ids in list items only when

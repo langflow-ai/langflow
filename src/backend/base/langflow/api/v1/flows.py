@@ -577,7 +577,11 @@ async def upload_file(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Upload flows from a JSON or ZIP file (upsert semantics for flows with stable IDs)."""
-    await ensure_flow_permission(current_user, FlowAction.CREATE, folder_id=folder_id)
+    # Authorization is enforced per-flow below, after parsing — the per-flow
+    # check uses the actual workspace_id/folder_id each uploaded flow targets.
+    # A coarse pre-parse check here would over-reject (it would authorize the
+    # caller against ``domain="*", obj="flow:*"`` regardless of where the
+    # uploaded flows actually land).
     if file is None:
         raise HTTPException(status_code=400, detail="No file provided")
 
