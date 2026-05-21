@@ -1,5 +1,8 @@
+import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   closeAdvancedOptions,
@@ -7,9 +10,6 @@ import {
   enableInspectPanel,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
-
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 test(
   "user should not be able to upload a file larger than the limit",
   { tag: ["@release", "@api", "@database"] },

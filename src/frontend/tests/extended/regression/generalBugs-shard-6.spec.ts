@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",

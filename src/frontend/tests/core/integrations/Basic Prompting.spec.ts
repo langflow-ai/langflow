@@ -46,6 +46,16 @@ withEventDeliveryModes(
     });
 
     await expect(page.getByText("matey").last()).toBeVisible();
+
+    // Open the message logs table view to verify metadata columns
+    // (timestamp/text/sender/...). The header chat-menu is hidden in
+    // fullscreen, so click the sidebar session more-menu instead.
+    await page
+      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
+      .last()
+      .click();
+    await page.getByTestId("message-logs-option").click();
+
     await expect(page.getByText("timestamp", { exact: true }).last()).toBeVisible();
     await expect(page.getByText("text", { exact: true }).last()).toBeVisible();
     await expect(page.getByText("sender", { exact: true }).last()).toBeVisible();
@@ -53,6 +63,9 @@ withEventDeliveryModes(
     await expect(page.getByText("session_id", { exact: true }).last()).toBeVisible();
     await expect(page.getByText("files", { exact: true }).last()).toBeVisible();
     await expect(page.getByRole("gridcell").last()).toBeVisible();
+
+    // Close the logs panel so the rest of the playground UI is reachable again.
+    await page.getByRole("button", { name: "Close" }).click();
     // Use sidebar session more menu (chat-header-more-menu is hidden in fullscreen)
     await page
       .locator('[data-testid^="session-"][data-testid$="-more-menu"]')

@@ -45,8 +45,26 @@ export const awaitBootstrapTest = async (
       attempts++;
       try {
         await page.getByTestId("new-project-btn").click();
+        // Clicking the header "New Flow" button now navigates to a fresh
+        // flow and surfaces the FlowBuilderWelcome overlay before the
+        // templates modal. Race the overlay against the modal so we don't
+        // time out waiting for the modal when the overlay shows first.
+        await Promise.race([
+          page.waitForSelector('[data-testid="flow-builder-welcome-panel"]', {
+            timeout: 30000,
+          }),
+          page.waitForSelector('[data-testid="modal-title"]', {
+            timeout: 30000,
+          }),
+        ]);
+        if (
+          (await page.locator('[data-testid="flow-builder-welcome-panel"]').count()) >
+          0
+        ) {
+          await page.getByTestId("flow-builder-welcome-browse-more").click();
+        }
         await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 5000,
+          timeout: 30000,
         });
         modalCount = await page.getByTestId("modal-title")?.count();
       } catch (error) {

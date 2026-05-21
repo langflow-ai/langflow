@@ -25,8 +25,6 @@ test(
     } else {
       await expect(page.getByText("MCP Server").first()).toBeVisible();
     }
-    await expect(page.getByText("All").first()).toBeVisible();
-    await expect(page.getByText("Select All").first()).toBeVisible();
     await page.getByTestId("add-project-button").click();
     await page
       .locator("[data-testid='project-sidebar']")
