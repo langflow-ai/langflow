@@ -25,9 +25,10 @@ export const waitForNewProjectButton = async (
  * 1.10 screen flow so future intermediate-screen changes only need to be
  * applied here:
  *   1. wait for the "new project" button,
- *   2. click it,
- *   3. dismiss the intermediate "What do you want to build?" welcome panel
- *      by clicking its "Browse more…" card,
+ *   2. click it (header button navigates to a fresh flow with welcome
+ *      overlay; empty-page button opens the templates modal directly),
+ *   3. if the welcome overlay surfaces, click "Browse more templates" to
+ *      open the templates modal,
  *   4. wait for the templates modal title to render.
  *
  * Replaces the legacy `page.getByTestId("new-project-btn").click()` pattern
@@ -40,12 +41,25 @@ export const openTemplatesModal = async (
   await waitForNewProjectButton(page, { timeout: options?.buttonTimeout });
   await page.getByTestId("new-project-btn").click();
 
-  await page.waitForSelector('[data-testid="flow-builder-welcome-panel"]', {
-    timeout: 5000,
-  });
-  await page.getByTestId("flow-builder-welcome-browse-more").click();
+  // After clicking the header "New Flow" button the app navigates to a
+  // freshly-created empty flow and surfaces the FlowBuilderWelcome overlay.
+  // On a slow runner the navigation + canvas mount can take well over 5s,
+  // so race the welcome overlay against the templates modal — whichever
+  // shows up first wins, and we only click "Browse more" when the overlay
+  // actually surfaces.
+  const welcomeSelector = '[data-testid="flow-builder-welcome-panel"]';
+  const modalSelector = '[data-testid="modal-title"]';
 
-  await page.waitForSelector('[data-testid="modal-title"]', {
-    timeout: options?.modalTimeout ?? 5000,
+  await Promise.race([
+    page.waitForSelector(welcomeSelector, { timeout: 30000 }),
+    page.waitForSelector(modalSelector, { timeout: 30000 }),
+  ]);
+
+  if ((await page.locator(welcomeSelector).count()) > 0) {
+    await page.getByTestId("flow-builder-welcome-browse-more").click();
+  }
+
+  await page.waitForSelector(modalSelector, {
+    timeout: options?.modalTimeout ?? 30000,
   });
 };
