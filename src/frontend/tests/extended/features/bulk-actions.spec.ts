@@ -19,7 +19,7 @@ test(
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.getByText("Projects").first().isVisible();
+    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Document Q&A" }).click();
@@ -28,7 +28,7 @@ test(
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.getByText("Projects").first().isVisible();
+    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
@@ -37,7 +37,7 @@ test(
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.getByText("Projects").first().isVisible();
+    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
       timeout: 100000,
     });

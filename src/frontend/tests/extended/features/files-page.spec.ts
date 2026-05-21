@@ -404,9 +404,9 @@ test(
     await jsonCheckbox.click();
     await pyCheckbox.click();
 
-    expect(await txtCheckbox.isChecked()).toBe(true);
-    expect(await jsonCheckbox.isChecked()).toBe(true);
-    expect(await pyCheckbox.isChecked()).toBe(true);
+    await expect(txtCheckbox).toBeChecked();
+    await expect(jsonCheckbox).toBeChecked();
+    await expect(pyCheckbox).toBeChecked();
 
     // Check if the bulk actions toolbar appears
     const deleteButton = await page.getByTestId("bulk-delete-btn");

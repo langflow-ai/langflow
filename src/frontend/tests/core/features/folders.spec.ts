@@ -18,16 +18,15 @@ test(
     });
 
     await page.getByTestId("icon-ChevronLeft").first().click();
-    await page.getByPlaceholder("Search flows").first().isVisible();
-    await page.getByText("Flows").first().isVisible();
+    await expect(page.getByPlaceholder("Search flows").first()).toBeVisible();
+    await expect(page.getByText("Flows").first()).toBeVisible();
     if (await page.getByText("Components").first().isVisible()) {
-      await page.getByText("Components").first().isVisible();
+      await expect(page.getByText("Components").first()).toBeVisible();
     } else {
-      await page.getByText("MCP Server").first().isVisible();
+      await expect(page.getByText("MCP Server").first()).toBeVisible();
     }
-    await page.getByText("All").first().isVisible();
-    await page.getByText("Select All").first().isVisible();
-
+    await expect(page.getByText("All").first()).toBeVisible();
+    await expect(page.getByText("Select All").first()).toBeVisible();
     await page.getByTestId("add-project-button").click();
     await page
       .locator("[data-testid='project-sidebar']")

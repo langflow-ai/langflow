@@ -1,12 +1,11 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "User should be able to interact notifications tab",
   { tag: ["@release"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="disclosure-input & output"]', {
       timeout: 3000,
       state: "visible",

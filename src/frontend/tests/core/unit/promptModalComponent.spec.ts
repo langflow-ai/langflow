@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -9,6 +8,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
@@ -62,11 +62,7 @@ test(
   "PromptTemplateComponent - Variable Extraction",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
     await page.waitForSelector(
@@ -150,12 +146,7 @@ test(
   "PromptTemplateComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
@@ -294,7 +285,7 @@ test(
     ).toBeFalsy();
 
     await page.locator('//*[@id="showprompt"]').click();
-    expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
+    await expect(page.locator('//*[@id="showprompt"]')).not.toBeChecked();
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(
@@ -322,7 +313,7 @@ test(
     ).toBeFalsy();
 
     await page.locator('//*[@id="showprompt"]').click();
-    expect(await page.locator('//*[@id="showprompt"]').isChecked()).toBeFalsy();
+    await expect(page.locator('//*[@id="showprompt"]')).not.toBeChecked();
 
     await page.locator('//*[@id="showprompt1"]').click();
     expect(
@@ -384,12 +375,7 @@ test(
   "PromptTemplateComponent - Double Brackets Variable Extraction",
   { tag: ["@release", "@workspace"], timeout: 60000 },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
@@ -477,12 +463,7 @@ test(
   "PromptTemplateComponent - Double Brackets Multiple Variables",
   { tag: ["@release", "@workspace"], timeout: 60000 },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 
@@ -612,12 +593,7 @@ test(
   "PromptTemplateComponent - Synchronized State",
   { tag: ["@release", "@workspace"], timeout: 60000 },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("prompt");
 

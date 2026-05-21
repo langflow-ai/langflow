@@ -1,24 +1,17 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { zoomOut } from "../../utils/zoom-out";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
 test(
   "user must be able to see output inspection",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

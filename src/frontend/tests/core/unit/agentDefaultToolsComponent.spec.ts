@@ -72,15 +72,15 @@ test(
       "toggle_bool_add_calculator_tool",
     );
     await expect(calculatorToggle).toBeVisible({ timeout: 10000 });
-    expect(await calculatorToggle.isChecked()).toBeTruthy();
+    await expect(calculatorToggle).toBeChecked();
 
     // S3 — user disables the toggle.
     await calculatorToggle.click();
-    expect(await calculatorToggle.isChecked()).toBeFalsy();
+    await expect(calculatorToggle).not.toBeChecked();
 
     // Re-enable to confirm the control is bi-directional.
     await calculatorToggle.click();
-    expect(await calculatorToggle.isChecked()).toBeTruthy();
+    await expect(calculatorToggle).toBeChecked();
   },
 );
 

@@ -1,5 +1,3 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
@@ -10,6 +8,8 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 test(
   "user should not be able to upload a file larger than the limit",
   { tag: ["@release", "@api", "@database"] },
@@ -28,15 +28,8 @@ test(
         },
       });
     });
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

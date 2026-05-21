@@ -1,21 +1,15 @@
-import dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { selectAnthropicModel } from "../../utils/select-anthropic-model";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
   { tag: ["@release", "@components", "@workspace"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    skipIfMissing.anthropicKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();

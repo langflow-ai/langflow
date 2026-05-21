@@ -9,6 +9,12 @@ import {
   RUNNING_RUN_RESPONSE,
 } from "../../utils/deployment-mocks";
 
+
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
+
 async function setupBaseRoutes(page: Page) {
   // Register broad catch-all FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
@@ -44,11 +50,6 @@ test(
   "Test button opens modal with chat interface",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupBaseRoutes(page);
     await navigateToDeploymentsPage(page);
 
@@ -63,11 +64,6 @@ test(
   "Send message calls POST run with correct body",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let capturedRequestBody: Record<string, unknown> | null = null;
     let runCallCount = 0;
 
@@ -119,11 +115,6 @@ test(
   "Response appears in chat after polling completes",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
 
     await setupBaseRoutes(page);
@@ -171,11 +162,6 @@ test(
   "Input is disabled during polling and re-enabled after response",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
 
     await setupBaseRoutes(page);
@@ -227,11 +213,6 @@ test(
   "Multi-turn: second message includes thread_id from first response",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
     const capturedBodies: Array<Record<string, unknown>> = [];
 
@@ -303,11 +284,6 @@ test(
   "Close and reopen modal resets chat history",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
 
     await setupBaseRoutes(page);

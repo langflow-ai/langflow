@@ -1,15 +1,14 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "User should be able to use components as tool",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="disclosure-data sources"]', {
       timeout: 3000,
       state: "visible",

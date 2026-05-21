@@ -1,9 +1,8 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 function getRandomSocialMediaQuery(): string {
   const companies = [
@@ -61,15 +60,8 @@ withEventDeliveryModes(
       !process?.env?.APIFY_API_TOKEN,
       "APIFY_API_TOKEN required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Social Media Agent" }).click();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Social Media Agent");
 
     await initialGPTsetup(page);
 

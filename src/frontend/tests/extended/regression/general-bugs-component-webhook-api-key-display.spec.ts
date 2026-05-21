@@ -9,6 +9,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 test(
   "user must be able to see api key in webhook component when auto login is disabled",
   { tag: ["@release"] },
@@ -103,13 +104,7 @@ test(
         },
       });
     });
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
 
     await page.getByTestId("sidebar-search-input").fill("webhook");

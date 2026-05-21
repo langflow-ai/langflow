@@ -1,14 +1,12 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test.describe("Output Modal Copy Button", () => {
   test(
     "user should be able to copy text output from component output modal",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 3000,
@@ -77,9 +75,7 @@ test.describe("Output Modal Copy Button", () => {
     "copy button should work with JSON output from API Request component",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
       await page.waitForSelector('[data-testid="disclosure-data sources"]', {
         timeout: 3000,

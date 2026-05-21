@@ -1,28 +1,17 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 withEventDeliveryModes(
   "Simple Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Simple Agent");
     await initialGPTsetup(page);
 
     await page.getByTestId("playground-btn-flow-io").click();

@@ -1,10 +1,9 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { selectAnthropicModel } from "../../utils/select-anthropic-model";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
 withEventDeliveryModes(
   "Custom Component Generator",
@@ -14,11 +13,7 @@ withEventDeliveryModes(
       !process?.env?.ANTHROPIC_API_KEY,
       "ANTHROPIC_API_KEY required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
 
     await awaitBootstrapTest(page);

@@ -77,7 +77,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").click();
 
-    await page.getByText("New Flow").isVisible();
+    await expect(page.getByText("New Flow")).toBeVisible();
     await page.getByTestId("new-project-btn").click();
 
     await page.getByTestId("blank-flow").click();

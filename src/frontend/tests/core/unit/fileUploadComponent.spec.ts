@@ -11,6 +11,7 @@ import {
   enableInspectPanel,
 } from "../../utils/open-advanced-options";
 
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
 
@@ -30,13 +31,7 @@ test(
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const fileContent = fs.readFileSync(testFilePath);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await disableInspectPanel(page);
 
@@ -445,13 +440,7 @@ test(
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const _fileContent = fs.readFileSync(testFilePath);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await disableInspectPanel(page);
 

@@ -1,23 +1,15 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
 test(
   "should order the visualization (requires store API key)",
   { tag: ["@release"] },
   async ({ page, context }) => {
     test.skip();
-
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page, { skipModal: true });
 
     await page.waitForTimeout(1000);
@@ -83,13 +75,8 @@ test(
   { tag: ["@release"] },
   async ({ page, context }) => {
     test.skip();
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page, { skipModal: true });
 
     await page.waitForSelector('[data-testid="button-store"]', {
@@ -179,8 +166,7 @@ test(
       .getByTestId("icon-ToyBrick")
       ?.count();
     await newPageStore2.waitForTimeout(500);
-    if (iconGroupAllCount === 0 || toyBrickAllCount === 0) {
-      expect(false).toBe(true);
-    }
+    expect(iconGroupAllCount).not.toBe(0);
+    expect(toyBrickAllCount).not.toBe(0);
   },
 );

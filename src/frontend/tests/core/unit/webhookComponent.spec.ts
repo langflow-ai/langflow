@@ -1,6 +1,5 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -8,6 +7,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 test(
   "user should be able to create an api key within a webhook component",
   { tag: ["@release", "@workspace"] },
@@ -15,13 +15,7 @@ test(
     const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
@@ -94,13 +88,7 @@ test(
     const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 

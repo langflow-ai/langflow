@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -8,8 +8,8 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByText("Vector Store RAG", { exact: true }).last().click();
-    await page.getByText("Retriever", { exact: true }).first().isVisible();
-    await page.getByText("Search Results", { exact: true }).first().isVisible();
+    await expect(page.getByText("Retriever", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Search Results", { exact: true }).first()).toBeVisible();
     await page.getByTestId("canvas_controls_dropdown").click();
 
     const focusElementsOnBoard = async ({ page }) => {
@@ -24,11 +24,10 @@ test(
     await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.getByText("Retriever", { exact: true }).first().isHidden();
-    await page.getByTestId("icon-ChevronDown").last().isVisible();
+    await expect(page.getByTestId("icon-ChevronDown").last()).toBeVisible();
     await page.getByTestId("icon-ChevronDown").last().click();
-    await page.getByText("Retriever", { exact: true }).first().isVisible();
-    await page.getByText("Search Results", { exact: true }).first().isVisible();
-
-    await page.getByTestId("icon-EyeOff").nth(0).isVisible();
+    await expect(page.getByText("Retriever", { exact: true }).first()).toBeVisible();
+    await expect(page.getByText("Search Results", { exact: true }).first()).toBeVisible();
+    await expect(page.getByTestId("icon-EyeOff").nth(0)).toBeVisible();
   },
 );

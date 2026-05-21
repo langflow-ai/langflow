@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to interact with sticky notes",
@@ -35,13 +35,7 @@ Despite its many benefits, AI also raises important ethical and societal questio
 
 The future of AI is both exciting and uncertain. As the technology continues to advance, it will undoubtedly bring about profound changes in society. The challenge will be to harness AI's potential for good while addressing the ethical and societal issues that arise. Whether it's through smarter healthcare, more efficient transportation, or enhanced creativity, AI has the potential to reshape the world in ways we are only beginning to imagine. The journey of AI is far from over, and its impact will be felt for generations to come.
   `;
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("canvas-add-note-button").click();
 
     const targetElement = page.locator('//*[@id="react-flow-id"]');

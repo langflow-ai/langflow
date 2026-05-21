@@ -1,25 +1,19 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 
 withEventDeliveryModes(
   "Twitter Thread Generator",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
     await awaitBootstrapTest(page);
 
@@ -37,9 +31,7 @@ withEventDeliveryModes(
     await page.getByTestId("title-Chat Output").click();
     await page.getByTestId("icon-MoreHorizontal").click();
     await page.getByText("Expand").click();
-
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await buildFlowAndWait(page);
 
     await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page

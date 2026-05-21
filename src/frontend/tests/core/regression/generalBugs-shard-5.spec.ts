@@ -274,8 +274,7 @@ test(
       .first()
       .click();
 
-    await page.getByText("Component Output").isVisible();
-
+    await expect(page.getByText("Component Output")).toBeVisible();
     const text = await page.getByPlaceholder("Empty").textContent();
 
     const permutations = [

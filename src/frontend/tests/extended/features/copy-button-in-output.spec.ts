@@ -1,15 +1,13 @@
 import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to copy JSON from output",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="disclosure-data sources"]', {
       timeout: 3000,
       state: "visible",

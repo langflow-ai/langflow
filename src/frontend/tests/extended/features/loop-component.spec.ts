@@ -1,16 +1,15 @@
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "should process loop with update data correctly",
   { tag: ["@release", "@workspace", "@components"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await addLegacyComponents(page);
 

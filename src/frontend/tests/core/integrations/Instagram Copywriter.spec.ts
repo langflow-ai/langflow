@@ -1,36 +1,25 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test(
   "Instagram Copywriter",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
+    skipIfMissing.openAiKey();
     test.skip(
       !process?.env?.TAVILY_API_KEY,
       "TAVILY_API_KEY required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Instagram Copywriter" }).click();
+    await openStarterProject(page, "Instagram Copywriter");
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

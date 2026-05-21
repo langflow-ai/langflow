@@ -12,6 +12,12 @@ import {
   PROVIDERS_MOCK,
 } from "../../utils/deployment-mocks";
 
+
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
+
 async function setupRoutes(page: Parameters<typeof test>[2]["page"]) {
   // Register broad catch-all FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
@@ -101,11 +107,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -128,11 +129,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -161,11 +157,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -188,11 +179,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -233,11 +219,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -382,11 +363,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     // Capture folder ID from the projects API before bootstrap
     const projectsResponsePromise = page.waitForResponse(
       (resp) =>
@@ -483,11 +459,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     const projectsResponsePromise = page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/projects") && resp.status() === 200,

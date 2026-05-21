@@ -1,27 +1,17 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { expect, test } from "../../fixtures";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 withEventDeliveryModes(
   "Blog Writer",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Blog Writer" }).click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Blog Writer");
 
     await initialGPTsetup(page);
 
@@ -64,8 +54,8 @@ withEventDeliveryModes(
       .last()
       .isVisible();
 
-    await page.getByText("turtles").last().isVisible();
-    await page.getByText("sea").last().isVisible();
-    await page.getByText("survival").last().isVisible();
+    await expect(page.getByText("turtles").last()).toBeVisible();
+    await expect(page.getByText("sea").last()).toBeVisible();
+    await expect(page.getByText("survival").last()).toBeVisible();
   },
 );

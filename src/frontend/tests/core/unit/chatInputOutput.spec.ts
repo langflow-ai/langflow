@@ -1,15 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
-  await awaitBootstrapTest(page);
-
-  await page.waitForSelector('[data-testid="blank-flow"]', {
-    timeout: 30000,
-  });
-
-  await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     state: "visible",
   });

@@ -1,21 +1,14 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
 test(
   "should be able to share a component on the store by clicking on the share button on the canvas (requires store API key)",
   { tag: ["@release", "@api"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByText("Close", { exact: true }).click();

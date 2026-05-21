@@ -1,9 +1,8 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { unselectNodes } from "../../utils/unselect-nodes";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test(
   "Invoice Summarizer",
@@ -15,15 +14,8 @@ test(
         !process?.env?.NEEDLE_COLLECTION_ID,
       "OPENAI_API_KEY, NEEDLE_API_KEY, and NEEDLE_COLLECTION_ID required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Invoice Summarizer" }).click();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Invoice Summarizer");
 
     await initialGPTsetup(page);
 

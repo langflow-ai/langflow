@@ -1,9 +1,9 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "should copy code from playground modal",
@@ -11,21 +11,9 @@ test(
     tag: ["@release"],
   },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
     });
@@ -132,13 +120,7 @@ test(
   "playground button should be enabled or disabled",
   { tag: ["@release", "@api", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     expect(await page.getByTestId("playground-btn-flow").isDisabled());
 

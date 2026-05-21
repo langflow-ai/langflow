@@ -1,4 +1,4 @@
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
@@ -34,7 +34,7 @@ test(
     //confirm the deletion in the modal
     await page.getByText("Delete").last().click();
 
-    await page.getByText("Selected items deleted successfully").isVisible();
+    await expect(page.getByText("Selected items deleted successfully")).toBeVisible();
   },
 );
 
@@ -50,7 +50,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
 
-  await page.getByText("New Flow").isVisible();
+  await expect(page.getByText("New Flow")).toBeVisible();
   await page.getByTestId("new-project-btn").click();
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
@@ -70,7 +70,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
 
   await page.getByTestId("icon-ChevronLeft").first().click();
   await page.getByPlaceholder("Search flows").fill("Memory Chatbot");
-  await page.getByText("Memory Chatbot", { exact: true }).isVisible();
+  await expect(page.getByText("Memory Chatbot", { exact: true })).toBeVisible();
   await page.getByText("Document Q&A", { exact: true }).isHidden();
   await page.getByText("Basic Prompting", { exact: true }).isHidden();
 });
@@ -131,7 +131,7 @@ test(
 
       await page.getByTestId("components-btn").click();
       await page.getByPlaceholder("Search components").fill("Chat Input");
-      await page.getByText("Chat Input", { exact: true }).isVisible();
+      await expect(page.getByText("Chat Input", { exact: true })).toBeVisible();
       await page.getByText("Prompt", { exact: true }).isHidden();
       await page.getByText("OpenAI", { exact: true }).isHidden();
     }

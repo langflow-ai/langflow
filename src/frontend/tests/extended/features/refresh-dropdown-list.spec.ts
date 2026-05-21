@@ -1,8 +1,7 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
 test(
   "refresh dropdown list",
@@ -12,11 +11,7 @@ test(
       !process?.env?.ANTHROPIC_API_KEY,
       "ANTHROPIC_API_KEY required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
     await awaitBootstrapTest(page);
 

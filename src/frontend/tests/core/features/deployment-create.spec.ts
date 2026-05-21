@@ -12,6 +12,12 @@ import {
   SNAPSHOTS_EMPTY_MOCK,
 } from "../../utils/deployment-mocks";
 
+
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
+
 // ---------------------------------------------------------------------------
 // Helper: set up all required API route mocks
 // ---------------------------------------------------------------------------
@@ -225,11 +231,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await awaitBootstrapTest(page, { skipModal: true });
     await setupDeploymentMocks(page, "");
     await page.getByTestId("deployments-btn").click();
@@ -250,11 +251,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
 
     // Next should be disabled before selection
@@ -277,11 +273,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await selectProvider(page);
     await page.getByTestId("deployment-stepper-next").click();
@@ -318,11 +309,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await goToStepType(page);
 
@@ -367,11 +353,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await goToStepReview(page);
 
@@ -399,11 +380,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
 
     // Set up POST deployments mock (after bootstrap, before deploy click)
@@ -454,11 +430,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await goToStepReview(page);
 
@@ -493,11 +464,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
     await goToStepReview(page);
 
@@ -520,11 +486,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK);
     await goToStepReview(page);
 
@@ -547,11 +508,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
     await goToStepReview(page);
 
@@ -590,11 +546,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK, [
       { ...FLOWS_MOCK[0], name: "12925" },
     ]);
