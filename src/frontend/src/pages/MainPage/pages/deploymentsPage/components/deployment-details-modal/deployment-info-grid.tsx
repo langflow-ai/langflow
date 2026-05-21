@@ -50,7 +50,7 @@ export default function DeploymentInfoGrid({
         {deployment?.created_at ? formatDate(deployment.created_at) : "—"}
       </span>
 
-      <span className="text-xs text-muted-foreground">Display Name</span>
+      <span className="text-xs text-muted-foreground">Name</span>
       <span className="min-w-0 break-words text-sm text-foreground">
         {displayName || "—"}
       </span>
@@ -61,7 +61,7 @@ export default function DeploymentInfoGrid({
         {deployment?.updated_at ? formatDate(deployment.updated_at) : "—"}
       </span>
 
-      <span className="text-xs text-muted-foreground">Name</span>
+      <span className="text-xs text-muted-foreground">Technical Name</span>
       <span className="col-span-3 min-w-0 break-words text-sm text-foreground">
         {technicalName || "—"}
       </span>

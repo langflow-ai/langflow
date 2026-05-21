@@ -84,9 +84,9 @@ describe("Row rendering", () => {
     expect(screen.getByText("dep-rk")).toBeInTheDocument();
   });
 
-  it("does not render description in the table row", () => {
+  it("renders description under the deployment name", () => {
     renderTable([makeDeployment({ description: "Handles sales queries" })]);
-    expect(screen.queryByText("Handles sales queries")).not.toBeInTheDocument();
+    expect(screen.getByText("Handles sales queries")).toBeInTheDocument();
   });
 
   it("shows MCP badge for mcp type", () => {
@@ -280,7 +280,7 @@ describe("Column headers", () => {
   it("renders all expected column headers", () => {
     renderTable();
     for (const header of [
-      "Display Name",
+      "Name",
       "Type",
       "Attached",
       "Environment",

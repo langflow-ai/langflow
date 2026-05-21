@@ -41,9 +41,7 @@ export function ReviewSummaryCard({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-24 text-xs text-muted-foreground">
-                Display Name
-              </span>
+              <span className="w-24 text-xs text-muted-foreground">Name</span>
               <span className="text-sm text-foreground">
                 {deploymentName || "—"}
               </span>

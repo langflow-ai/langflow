@@ -166,11 +166,11 @@ describe("StepReview tool name editing", () => {
 // ---------------------------------------------------------------------------
 
 describe("Deployment summary display", () => {
-  it("labels the deployment display name", () => {
+  it("labels the deployment name", () => {
     setup();
 
-    expect(screen.getByText("Display Name")).toBeInTheDocument();
-    expect(screen.queryByText("Name")).not.toBeInTheDocument();
+    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.queryByText("Display Name")).not.toBeInTheDocument();
   });
 
   it("renders a dash when deployment name is empty", () => {

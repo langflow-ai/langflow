@@ -59,11 +59,11 @@ describe("DeploymentInfoGrid", () => {
 
   it("renders display name and technical name without exposing the short ID", () => {
     renderGrid(makeDeployment());
-    expect(screen.getByText("Display Name")).toBeInTheDocument();
-    expect(screen.getByText("My Agent")).toBeInTheDocument();
     expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.getByText("My Agent")).toBeInTheDocument();
+    expect(screen.getByText("Technical Name")).toBeInTheDocument();
     expect(screen.getByText("my_agent")).toBeInTheDocument();
-    expect(screen.queryByText("Technical Name")).not.toBeInTheDocument();
+    expect(screen.queryByText("Display Name")).not.toBeInTheDocument();
     expect(screen.queryByText("ID")).not.toBeInTheDocument();
   });
 

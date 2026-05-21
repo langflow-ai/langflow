@@ -97,7 +97,7 @@ describe("Basic rendering", () => {
 
   it("renders required field indicators", () => {
     render(<StepType />);
-    expect(screen.getByText("Display Name")).toBeInTheDocument();
+    expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("Model")).toBeInTheDocument();
   });
 
@@ -139,7 +139,7 @@ describe("Name input", () => {
     mockDeploymentName = "";
     mockHasDeploymentNameFormatError = true;
     render(<StepType />);
-    expect(screen.getByText("Display name is required.")).toBeInTheDocument();
+    expect(screen.getByText("Name is required.")).toBeInTheDocument();
     expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
       "aria-invalid",
       "true",
@@ -152,14 +152,12 @@ describe("Name input", () => {
 
     render(<StepType />);
 
-    expect(screen.getByText("Display name is required.")).toBeInTheDocument();
+    expect(screen.getByText("Name is required.")).toBeInTheDocument();
   });
 
   it("does not show validation error for empty name", () => {
     render(<StepType />);
-    expect(
-      screen.queryByText("Display name is required."),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText("Name is required.")).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
       "aria-invalid",
       "false",

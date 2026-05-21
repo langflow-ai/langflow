@@ -146,7 +146,7 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Display Name <span className="text-destructive">*</span>
+          Name <span className="text-destructive">*</span>
         </span>
         <Input
           placeholder={t("deployments.placeholderSalesBot")}
@@ -161,7 +161,7 @@ export default function StepType() {
         />
         {hasDeploymentNameFormatError && (
           <span className="mt-1 text-xs text-destructive">
-            Display name is required.
+            Name is required.
           </span>
         )}
       </div>

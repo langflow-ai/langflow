@@ -120,7 +120,7 @@ export function buildDeploymentPayload({
   toolNameByFlow: Map<string, string>;
 }): DeploymentCreateRequest {
   if (!isDeploymentNameValid) {
-    throw new Error("Deployment display name is required");
+    throw new Error("Deployment name is required");
   }
   const allConnectionIds = new Set<string>();
   Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
@@ -206,7 +206,7 @@ export function buildDeploymentUpdatePayload({
     throw new Error("buildDeploymentUpdatePayload called outside edit mode");
   }
   if (!isDeploymentNameValid) {
-    throw new Error("Deployment display name is required");
+    throw new Error("Deployment name is required");
   }
 
   const result: DeploymentUpdateRequest = {
