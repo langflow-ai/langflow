@@ -457,6 +457,7 @@
   "triggers.col.status": "Status",
   "triggers.field.flow": "Flow",
   "triggers.field.flowPlaceholder": "Select a flow",
+  "triggers.field.flowEmpty": "No flows available. Create or import a flow first.",
   "triggers.field.name": "Name",
   "triggers.field.namePlaceholder": "e.g. daily-summary",
   "triggers.field.cron": "Schedule",

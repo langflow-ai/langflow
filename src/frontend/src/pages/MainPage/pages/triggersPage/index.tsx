@@ -4,6 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
+import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useGetTriggers } from "@/controllers/API/queries/triggers";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import TriggerFormModal from "./components/TriggerFormModal";
@@ -25,6 +26,7 @@ export default function TriggersPage() {
     { get_all: true, remove_example_flows: true },
     { enabled: flows === undefined },
   );
+  useGetFoldersQuery();
 
   const { data: triggers, isLoading } = useGetTriggers({});
 

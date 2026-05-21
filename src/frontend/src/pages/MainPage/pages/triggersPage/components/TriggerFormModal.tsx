@@ -23,11 +23,13 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
+import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import {
   usePatchTrigger,
   usePostTrigger,
 } from "@/controllers/API/queries/triggers";
 import useAlertStore from "@/stores/alertStore";
+import { useFolderStore } from "@/stores/foldersStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { Trigger } from "../types";
 import CronScheduleField from "./CronScheduleField";
@@ -112,22 +114,32 @@ export default function TriggerFormModal({
 
   const isEditing = existingTrigger !== null;
 
-  // Make sure the flow selector has data even if the user landed on
-  // /triggers without visiting the home page first. The query also
-  // hydrates the flowsManagerStore that the table uses to render
-  // flow names.
+  // Make sure both flows and folders are hydrated when the modal opens
+  // — same queries the home page uses. ``useGetFoldersQuery`` is the
+  // critical one for filtering: ``GET /projects/`` excludes the system
+  // ``Starter Projects`` folder, so the folders returned here are
+  // exactly the ones the user can navigate to in the sidebar.
   useGetRefreshFlowsQuery(
     { get_all: true, remove_example_flows: true },
     { enabled: open && (flows === undefined || flows.length === 0) },
   );
+  useGetFoldersQuery();
+  const folders = useFolderStore((s) => s.folders);
 
-  const flowOptions = useMemo(
-    () =>
-      (flows ?? [])
-        .filter((f) => !f.is_component)
-        .map((f) => ({ id: f.id, name: f.name })),
-    [flows],
-  );
+  const flowOptions = useMemo(() => {
+    const userFolderIds = new Set((folders ?? []).map((f) => f.id));
+    return (flows ?? [])
+      .filter((f) => !f.is_component)
+      .filter((f) => !f.folder_id || userFolderIds.has(f.folder_id))
+      .map((f) => ({
+        id: f.id,
+        name: f.name,
+        folderName:
+          (folders ?? []).find((folder) => folder.id === f.folder_id)?.name ??
+          "",
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [flows, folders]);
 
   const defaultValues: FormValues = useMemo(
     () => ({
@@ -247,11 +259,22 @@ export default function TriggerFormModal({
                     />
                   </SelectTrigger>
                   <SelectContent>
-                    {flowOptions.map((flow) => (
-                      <SelectItem key={flow.id} value={flow.id}>
-                        {flow.name}
-                      </SelectItem>
-                    ))}
+                    {flowOptions.length === 0 ? (
+                      <div className="px-3 py-2 text-xs text-muted-foreground">
+                        {t("triggers.field.flowEmpty")}
+                      </div>
+                    ) : (
+                      flowOptions.map((flow) => (
+                        <SelectItem key={flow.id} value={flow.id}>
+                          <span>{flow.name}</span>
+                          {flow.folderName && (
+                            <span className="ml-2 text-xs text-muted-foreground">
+                              · {flow.folderName}
+                            </span>
+                          )}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               )}
