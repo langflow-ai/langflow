@@ -13,6 +13,11 @@ jest.mock("@/components/ui/loading", () => ({
   default: () => <div>loading...</div>,
 }));
 
+jest.mock("@/components/common/stringReaderComponent", () => ({
+  __esModule: true,
+  default: ({ string }: { string: string }) => <span>{string}</span>,
+}));
+
 describe("MemoryKnowledgeBaseSection", () => {
   const makeBaseProps = () => {
     const documents: MemoryDocumentItem[] = [
@@ -63,14 +68,17 @@ describe("MemoryKnowledgeBaseSection", () => {
 
     render(<MemoryKnowledgeBaseSection {...props} />);
 
-    expect(screen.getByText("No chunks yet.")).toBeInTheDocument();
+    expect(screen.getByText("No chunks yet")).toBeInTheDocument();
   });
 
   it("opens document panel when row is clicked", () => {
     const props = makeBaseProps();
     render(<MemoryKnowledgeBaseSection {...props} />);
 
-    fireEvent.click(screen.getByText("hello"));
+    // Cells stop propagation so clicking cell text does not open the panel.
+    // Click the row element itself to trigger handleOpenDocumentPanel.
+    const row = screen.getByText("hello").closest("tr")!;
+    fireEvent.click(row);
     expect(props.handleOpenDocumentPanel).toHaveBeenCalled();
   });
 });

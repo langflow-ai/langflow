@@ -1,4 +1,5 @@
 import type { ColDef } from "ag-grid-community";
+import enTranslations from "@/locales/en.json";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import LoadingTextComponent from "@/components/common/loadingTextComponent";
 import { Button } from "@/components/ui/button";
@@ -34,6 +35,8 @@ export interface KnowledgeBaseColumnsCallbacks {
 
 export const createKnowledgeBaseColumns = (
   callbacks?: KnowledgeBaseColumnsCallbacks,
+  t: (key: string) => string = (key) =>
+    enTranslations[key as keyof typeof enTranslations] ?? key,
 ): ColDef[] => {
   const baseCellClass =
     "text-muted-foreground cursor-pointer select-text group-[.no-select-cells]:cursor-default group-[.no-select-cells]:select-none";
@@ -42,7 +45,7 @@ export const createKnowledgeBaseColumns = (
 
   return [
     {
-      headerName: "Name",
+      headerName: t("knowledge.column.name"),
       field: "name",
       flex: 2,
       sortable: true,
@@ -84,7 +87,7 @@ export const createKnowledgeBaseColumns = (
       },
     },
     {
-      headerName: "Size",
+      headerName: t("knowledge.column.size"),
       field: "size",
       flex: 1,
       sortable: false,
@@ -93,7 +96,7 @@ export const createKnowledgeBaseColumns = (
       cellClass: baseCellClass,
     },
     {
-      headerName: "Embedding Model",
+      headerName: t("knowledge.column.embeddingModel"),
       field: "embedding_model",
       flex: 1.5,
       sortable: false,
@@ -126,7 +129,7 @@ export const createKnowledgeBaseColumns = (
       },
     },
     {
-      headerName: "Vector Store",
+      headerName: t("knowledge.column.vectorStore"),
       field: "backend_type",
       flex: 1.3,
       sortable: false,
@@ -142,7 +145,7 @@ export const createKnowledgeBaseColumns = (
       ),
     },
     {
-      headerName: "Chunks",
+      headerName: t("knowledge.column.chunks"),
       field: "chunks",
       flex: 1,
       sortable: false,
@@ -151,7 +154,7 @@ export const createKnowledgeBaseColumns = (
       valueFormatter: (params) => formatNumber(params.value),
     },
     {
-      headerName: "Avg Chunk Size",
+      headerName: t("knowledge.column.avgChunkSize"),
       field: "avg_chunk_size",
       flex: 1,
       sortable: false,
@@ -160,7 +163,7 @@ export const createKnowledgeBaseColumns = (
       valueFormatter: (params) => formatAverageChunkSize(params.value),
     },
     {
-      headerName: "Status",
+      headerName: t("knowledge.column.status"),
       field: "status",
       flex: 1,
       sortable: false,
@@ -175,9 +178,9 @@ export const createKnowledgeBaseColumns = (
           <div className="flex items-center h-full">
             <span className={cn("text-xs font-medium", c.textClass)}>
               {isBusyStatus(status) ? (
-                <LoadingTextComponent text={c.label} />
+                <LoadingTextComponent text={t(c.label)} />
               ) : (
-                c.label
+                t(c.label)
               )}
             </span>
           </div>
@@ -208,7 +211,7 @@ export const createKnowledgeBaseColumns = (
                     size="icon"
                     disabled={isBusy}
                     data-testid="kb-row-update-button"
-                    aria-label="Ingest Files"
+                    aria-label={t("knowledge.action.ingestFiles")}
                     onClick={(e) => {
                       e.stopPropagation();
                       callbacks?.onAddSources?.(params.data);
@@ -220,7 +223,9 @@ export const createKnowledgeBaseColumns = (
                     />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Ingest Files</TooltipContent>
+                <TooltipContent>
+                  {t("knowledge.action.ingestFiles")}
+                </TooltipContent>
               </Tooltip>
             </TooltipProvider>
             <DropdownMenu>
@@ -249,7 +254,7 @@ export const createKnowledgeBaseColumns = (
                     name="FileUp"
                     className="mr-2 h-4 w-4"
                   />
-                  Ingest Files
+                  {t("knowledge.action.ingestFiles")}
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={(e) => {
@@ -261,7 +266,7 @@ export const createKnowledgeBaseColumns = (
                     name="Layers"
                     className="mr-2 h-4 w-4"
                   />
-                  View Chunks
+                  {t("knowledge.action.viewChunks")}
                 </DropdownMenuItem>
                 {isBusy ? (
                   <DropdownMenuItem
@@ -276,7 +281,7 @@ export const createKnowledgeBaseColumns = (
                       name="Square"
                       className="mr-2 h-4 w-4"
                     />
-                    Stop Ingestion
+                    {t("knowledge.action.stopIngestion")}
                   </DropdownMenuItem>
                 ) : (
                   <DropdownMenuItem
@@ -290,7 +295,7 @@ export const createKnowledgeBaseColumns = (
                       name="Trash2"
                       className="mr-2 h-4 w-4"
                     />
-                    Delete
+                    {t("knowledge.action.delete")}
                   </DropdownMenuItem>
                 )}
               </DropdownMenuContent>

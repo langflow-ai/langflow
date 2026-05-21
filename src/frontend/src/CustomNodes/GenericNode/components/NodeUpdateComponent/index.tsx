@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/utils/utils";
 
@@ -20,6 +21,7 @@ export default function NodeUpdateComponent({
   dismissed?: boolean;
   isRequired?: boolean;
 }) {
+  const { t } = useTranslation();
   const showUpdateAction = !blocked;
 
   if (dismissed && isRequired) {
@@ -33,8 +35,8 @@ export default function NodeUpdateComponent({
         <div className="mb-px flex-1 truncate text-mmd font-medium">
           {showNode &&
             (blocked
-              ? "Custom component cannot run while custom components are disabled"
-              : "Upgrade is required to execute flow")}
+              ? t("node.updateBlockedMessage")
+              : t("node.upgradeRequiredMessage"))}
         </div>
         {showUpdateAction && (
           <Button
@@ -47,7 +49,9 @@ export default function NodeUpdateComponent({
             loading={loadingUpdate}
             data-testid={hasBreakingChange ? "review-button" : "update-button"}
           >
-            {hasBreakingChange ? "Review" : "Update"}
+            {hasBreakingChange
+              ? t("deployments.review")
+              : t("nodeToolbar.update")}
           </Button>
         )}
       </div>
@@ -62,12 +66,12 @@ export default function NodeUpdateComponent({
         : "bg-status-green";
 
   const label = blocked
-    ? "Custom component blocked"
+    ? t("node.updateBlockedLabel")
     : isRequired
-      ? "Update required"
+      ? t("node.updateRequiredLabel")
       : hasBreakingChange
-        ? "Update available"
-        : "Update ready";
+        ? t("node.updateAvailableLabel")
+        : t("node.updateReadyLabel");
 
   return (
     <div
@@ -88,10 +92,10 @@ export default function NodeUpdateComponent({
           e.stopPropagation();
           setDismissAll(true);
         }}
-        aria-label="Dismiss warning bar"
+        aria-label={t("node.dismissWarning")}
         data-testid="dismiss-warning-bar"
       >
-        Dismiss
+        {t("node.dismiss")}
       </Button>
       {showUpdateAction && (
         <Button
@@ -104,7 +108,9 @@ export default function NodeUpdateComponent({
           loading={loadingUpdate}
           data-testid={hasBreakingChange ? "review-button" : "update-button"}
         >
-          {hasBreakingChange ? "Review" : "Update"}
+          {hasBreakingChange
+            ? t("deployments.review")
+            : t("nodeToolbar.update")}
         </Button>
       )}
     </div>

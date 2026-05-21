@@ -1,6 +1,6 @@
-"""Unit tests for the LE-1018 atomic-swap reload pipeline.
+"""Unit tests for the atomic-swap reload pipeline.
 
-Covers the AC items from the ticket:
+Covers the AC items:
 
 * rename a component, reload, old name gone, new name present;
 * broken bundle (import error in staging) leaves the live registry

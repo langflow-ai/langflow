@@ -77,12 +77,14 @@ const FilesTab = ({
       const filesIds = await uploadFile({
         files: files,
       });
-      setSuccessData({
-        title:
-          filesIds.length > 1
-            ? t("files.filesUploadedSuccessfully")
-            : t("files.uploadedSuccessfully"),
-      });
+      if (filesIds.length > 0) {
+        setSuccessData({
+          title:
+            filesIds.length > 1
+              ? t("files.filesUploadedSuccessfully")
+              : t("files.uploadedSuccessfully"),
+        });
+      }
     } catch (error: any) {
       setErrorData({
         title: t("files.errorUploading"),
@@ -158,7 +160,7 @@ const FilesTab = ({
             {params.data.progress !== undefined &&
             params.data.progress === -1 ? (
               <span className="text-xs text-primary">
-                Upload failed,{" "}
+                {t("files.uploadFailed")}{" "}
                 <span
                   className="cursor-pointer text-accent-pink-foreground underline"
                   onClick={(e) => {
@@ -168,7 +170,7 @@ const FilesTab = ({
                     }
                   }}
                 >
-                  try again?
+                  {t("files.tryAgain")}
                 </span>
               </span>
             ) : (

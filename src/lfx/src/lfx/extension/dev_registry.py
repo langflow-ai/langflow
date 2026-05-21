@@ -1,4 +1,4 @@
-"""Local dev-extension registry for ``lfx extension dev`` (LE-1016).
+"""Local dev-extension registry for ``lfx extension dev``.
 
 When an author types ``lfx extension dev <path>``, we don't ship the
 Extension via pip; instead we record the absolute path in a small JSON
@@ -25,16 +25,17 @@ Concurrency: the state file is rewritten atomically (tempfile + rename).
 We do not take a long-lived lock; the file is read-mostly and the only
 writer is the ``extension dev`` CLI invoked synchronously by a developer.
 
-Scope notes (kept here so the next milestone reads them):
+Scope notes:
 
-    - LE-1016 only writes / reads / lists the state file and is
-      consumed by Langflow's startup hook.  The runtime "remove" path
-      (``extension dev --unregister``) is a deliberate non-goal for v0;
-      authors clean up by deleting the state file or the directory.
-    - LE-1018 (reload) reuses :func:`load_dev_extensions` to refresh
+    - This module only writes / reads / lists the state file; the actual
+      registration is consumed by Langflow's startup hook.  The runtime
+      "remove" path (``extension dev --unregister``) is a deliberate
+      non-goal for v0; authors clean up by deleting the state file or
+      the directory.
+    - The reload pipeline reuses :func:`load_dev_extensions` to refresh
       the @official slot mid-run; the reload UX itself ships there.
-    - LE-1022 (installed-package discovery) keeps its own primitives
-      and is orthogonal -- both flows produce ``LoadResult`` lists that
+    - Installed-package discovery keeps its own primitives and is
+      orthogonal -- both flows produce ``LoadResult`` lists that
       Langflow startup merges in the same step.
 """
 
@@ -117,8 +118,8 @@ class DevExtensionEntry:
     path: Path
     registered_at: str
     """ISO-8601 UTC timestamp ('YYYY-MM-DDTHH:MM:SSZ') of when this entry
-    was added.  Surfaced for ``extension list`` (LE-1022) so authors can
-    audit what's registered."""
+    was added.  Surfaced for ``extension list`` so authors can audit
+    what's registered."""
 
 
 def _utcnow_iso() -> str:
@@ -314,9 +315,9 @@ def load_dev_extensions(*, state_dir: Path | None = None) -> list[LoadResult]:
 
     Missing entries (the directory was renamed, deleted, or moved) are
     surfaced as :class:`LoadResult` instances containing a single
-    ``local-extension-missing`` warning so the events pipeline (LE-1017)
-    can report them without aborting startup.  The author sees a
-    typed warning rather than a stack trace.
+    ``local-extension-missing`` warning so the events pipeline can
+    report them without aborting startup.  The author sees a typed
+    warning rather than a stack trace.
 
     The dev registry is never silently mutated by this function: stale
     entries stay in the file so the author can fix the underlying path

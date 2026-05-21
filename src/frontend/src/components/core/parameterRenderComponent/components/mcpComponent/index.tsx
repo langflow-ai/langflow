@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { BuildStatus } from "@/constants/enums";
@@ -15,7 +16,7 @@ import { default as ForwardedIconComponent } from "../../../../common/genericIco
 import { Button } from "../../../../ui/button";
 import type { InputProps } from "../../types";
 
-type McpServerValue = {
+export type McpServerValue = {
   name: string;
   config?: Record<string, unknown>;
 };
@@ -36,6 +37,7 @@ export default function McpComponent({
   nodeClass,
   handleNodeClass,
 }: InputProps<McpServerValue>): JSX.Element | null {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const {
     data: mcpServers,
@@ -53,10 +55,10 @@ export default function McpComponent({
         description: server.error
           ? server.error
           : server.toolsCount === null
-            ? "Loading..."
+            ? t("mcp.loadingTools")
             : !server.toolsCount
-              ? "No tools found"
-              : `${server.toolsCount} tool${server.toolsCount === 1 ? "" : "s"}`,
+              ? t("mcp.noToolsFound")
+              : t("mcp.toolCount", { count: server.toolsCount }),
       })),
     [mcpServers],
   );
@@ -151,7 +153,7 @@ export default function McpComponent({
         },
         onError: (error) => {
           setErrorData({
-            title: "Error adding MCP server",
+            title: t("errors.addMcpServer"),
             list: [error.message],
           });
         },
@@ -188,7 +190,7 @@ export default function McpComponent({
     } catch (error) {
       setIsRefreshing(false);
       setErrorData({
-        title: "Error refreshing MCP server",
+        title: t("errors.refreshMcpServer"),
         list: [error instanceof Error ? error.message : String(error)],
       });
     } finally {
@@ -250,10 +252,10 @@ export default function McpComponent({
             >
               <span className="truncate">
                 {!options
-                  ? "Loading servers..."
+                  ? t("mcp.loadingServers")
                   : selectedItem[0]?.name
                     ? selectedItem[0]?.name
-                    : "Select a server..."}
+                    : t("mcp.selectServer")}
               </span>
               <ForwardedIconComponent
                 name={!showSaveButton ? "ChevronsUpDown" : "X"}
@@ -276,14 +278,14 @@ export default function McpComponent({
             </Button>
           )}
           {name && !showSaveButton && (
-            <ShadTooltip content="Refresh MCP server">
+            <ShadTooltip content={t("mcp.refreshServer")}>
               <Button
                 variant="ghost"
                 size="iconMd"
                 className="px-2.5"
                 onClick={handleRefreshButtonClick}
                 data-testid="refresh-mcp-server-button"
-                aria-label="Refresh MCP server"
+                aria-label={t("mcp.refreshServer")}
                 disabled={disabled || isRefreshing || isFetchingMCPServers}
               >
                 <ForwardedIconComponent
@@ -303,7 +305,7 @@ export default function McpComponent({
           onClick={handleAddButtonClick}
           data-testid="add-mcp-server-simple-button"
         >
-          <span>Add MCP Server</span>
+          <span>{t("input.addMcpServer")}</span>
         </Button>
       )}
       {options && (
@@ -319,10 +321,10 @@ export default function McpComponent({
             id={id}
             value={name}
             editNode={editNode}
-            headerSearchPlaceholder="Search MCP Servers..."
+            headerSearchPlaceholder={t("mcp.searchServers")}
             handleOnNewValue={handleOnNewValue}
             disabled={disabled}
-            addButtonText="Add MCP Server"
+            addButtonText={t("mcp.addServer")}
             onAddButtonClick={handleAddButtonClick}
           />
           <AddMcpServerModal
