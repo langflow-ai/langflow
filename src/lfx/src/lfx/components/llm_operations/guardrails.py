@@ -615,4 +615,4 @@ Now analyze the user input above and respond according to the instructions:"""
     def result_data(self) -> Data:
         """Return structured result data for both pass and fail outcomes."""
         _validation_passed, payload = self._process_validation()
-        return Data(data=payload)
+        return Data(data=payload, default_value=None)
