@@ -37,6 +37,18 @@ To allow-list custom components, use the `LANGFLOW_COMPONENTS_PATH` environment 
 
 If both environment variables are set, Langflow builds one combined set of components from the custom index _and_ from `LANGFLOW_COMPONENTS_PATH`. If the same component category name exists in both, `LANGFLOW_COMPONENTS_PATH` replaces that whole category from the custom index.
 
+### Disable the allow-list bypass
+
+The allow-list behavior above assumes the admin controls which env vars are set at startup. In deployments where that assumption doesn't hold — for example, where operators want a hard guarantee that only built-in server templates execute — set:
+
+```bash
+LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=false
+```
+
+When this is `false` **and** `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, components contributed by `LANGFLOW_COMPONENTS_PATH` and `LANGFLOW_COMPONENTS_INDEX_PATH` are ignored and no longer bypass the block.
+
+Default is `true`, which preserves existing behavior. The setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`, since nothing is being bypassed.
+
 For more information, see:
 
 * [Environment variables](/environment-variables#visual-editor-and-playground-behavior)
