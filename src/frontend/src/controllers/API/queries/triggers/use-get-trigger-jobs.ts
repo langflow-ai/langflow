@@ -8,7 +8,8 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface GetTriggerJobsParams {
-  triggerId: string;
+  flowId: string;
+  componentId: string;
   status?: JobStatus;
   limit?: number;
 }
@@ -16,21 +17,21 @@ interface GetTriggerJobsParams {
 export const useGetTriggerJobs: useQueryFunctionType<
   GetTriggerJobsParams,
   TriggerJob[]
-> = ({ triggerId, status, limit = 50 }, options) => {
+> = ({ flowId, componentId, status, limit = 50 }, options) => {
   const { query } = UseRequestProcessor();
 
   const fn = async (): Promise<TriggerJob[]> => {
     const params: Record<string, unknown> = { limit };
     if (status) params.status_filter = status;
     const { data } = await api.get<TriggerJob[]>(
-      `${getURL("TRIGGERS")}/${triggerId}/jobs`,
+      `${getURL("TRIGGERS")}/${flowId}/${encodeURIComponent(componentId)}/jobs`,
       { params },
     );
     return data;
   };
 
   return query(
-    ["useGetTriggerJobs", { triggerId, status, limit }],
+    ["useGetTriggerJobs", { flowId, componentId, status, limit }],
     fn,
     options,
   );

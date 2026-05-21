@@ -1,40 +1,27 @@
 import type {
-  Trigger,
-  TriggerUpdate,
+  BulkDeleteSummary,
 } from "@/pages/MainPage/pages/triggersPage/types";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
-interface PatchTriggerParams {
-  trigger_id: string;
-  patch: TriggerUpdate;
-}
-
-export const usePatchTrigger: useMutationFunctionType<
+export const useDeleteAllTriggers: useMutationFunctionType<
   undefined,
-  PatchTriggerParams,
-  Trigger
+  void,
+  BulkDeleteSummary
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const fn = async ({
-    trigger_id,
-    patch,
-  }: PatchTriggerParams): Promise<Trigger> => {
-    const { data } = await api.patch<Trigger>(
-      `${getURL("TRIGGERS")}/${trigger_id}`,
-      patch,
-    );
+  const fn = async (): Promise<BulkDeleteSummary> => {
+    const { data } = await api.delete<BulkDeleteSummary>(`${getURL("TRIGGERS")}`);
     return data;
   };
 
-  return mutate(["usePatchTrigger"], fn, {
+  return mutate(["useDeleteAllTriggers"], fn, {
     ...options,
     onSuccess: (...args) => {
       queryClient.refetchQueries({ queryKey: ["useGetTriggers"] });
-      queryClient.refetchQueries({ queryKey: ["useGetTrigger"] });
       options?.onSuccess?.(...args);
     },
   });

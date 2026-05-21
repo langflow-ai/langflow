@@ -4,7 +4,8 @@ import { getURL } from "../../helpers/constants";
 import { UseRequestProcessor } from "../../services/request-processor";
 
 interface DeleteTriggerParams {
-  trigger_id: string;
+  flow_id: string;
+  component_id: string;
 }
 
 export const useDeleteTrigger: useMutationFunctionType<
@@ -13,8 +14,10 @@ export const useDeleteTrigger: useMutationFunctionType<
 > = (options?) => {
   const { mutate, queryClient } = UseRequestProcessor();
 
-  const fn = async ({ trigger_id }: DeleteTriggerParams) => {
-    await api.delete(`${getURL("TRIGGERS")}/${trigger_id}`);
+  const fn = async ({ flow_id, component_id }: DeleteTriggerParams) => {
+    await api.delete(
+      `${getURL("TRIGGERS")}/${flow_id}/${encodeURIComponent(component_id)}`,
+    );
   };
 
   return mutate(["useDeleteTrigger"], fn, {

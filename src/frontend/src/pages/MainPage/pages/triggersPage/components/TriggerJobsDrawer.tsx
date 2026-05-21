@@ -4,16 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { useGetTriggerJobs } from "@/controllers/API/queries/triggers";
-import type { JobStatus, Trigger, TriggerJob } from "../types";
+import type { JobStatus, TriggerInstance, TriggerJob } from "../types";
+import { formatDateTime } from "../utils/format";
 
 interface TriggerJobsDrawerProps {
-  trigger: Trigger;
+  trigger: TriggerInstance;
   onClose: () => void;
 }
 
 const STATUS_BADGE: Record<
   JobStatus,
-  { variant: "successStatic" | "errorStatic" | "secondaryStatic" | "default"; label: string }
+  { variant: "default" | "successStatic" | "errorStatic" | "secondaryStatic"; label: string }
 > = {
   queued: { variant: "default", label: "queued" },
   in_progress: { variant: "default", label: "in_progress" },
@@ -22,11 +23,6 @@ const STATUS_BADGE: Record<
   cancelled: { variant: "secondaryStatic", label: "cancelled" },
   timed_out: { variant: "errorStatic", label: "timed_out" },
 };
-
-function formatTime(value: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString();
-}
 
 function JobRow({ job }: { job: TriggerJob }) {
   const badge = STATUS_BADGE[job.status];
@@ -41,16 +37,16 @@ function JobRow({ job }: { job: TriggerJob }) {
         </span>
       </div>
       <div className="text-xs text-muted-foreground">
-        scheduled: {formatTime(job.scheduled_at)}
+        scheduled: {formatDateTime(job.scheduled_at)}
       </div>
       {job.started_at && (
         <div className="text-xs text-muted-foreground">
-          started: {formatTime(job.started_at)}
+          started: {formatDateTime(job.started_at)}
         </div>
       )}
       {job.finished_at && (
         <div className="text-xs text-muted-foreground">
-          finished: {formatTime(job.finished_at)}
+          finished: {formatDateTime(job.finished_at)}
         </div>
       )}
       {job.error && (
@@ -67,18 +63,22 @@ export default function TriggerJobsDrawer({
   onClose,
 }: TriggerJobsDrawerProps) {
   const { t } = useTranslation();
-  // Refetch every 5s while the drawer is open so a freshly-fired job
-  // shows up without manual reload. Aligned with the worker's max
-  // idle backoff so latency between fire and visible is bounded.
+  // Poll every 5s — aligned with the worker's idle backoff cap so a
+  // fresh fire becomes visible within seconds without a manual reload.
   const { data: jobs, isLoading } = useGetTriggerJobs(
-    { triggerId: trigger.id, limit: 20 },
+    { flowId: trigger.flow_id, componentId: trigger.component_id, limit: 20 },
     { refetchInterval: 5000 },
   );
 
   return (
     <div className="flex h-full w-80 flex-col border-l bg-background">
       <div className="flex items-center justify-between px-4 pt-4">
-        <h3 className="text-sm font-semibold">{trigger.name}</h3>
+        <div className="flex flex-col">
+          <h3 className="text-sm font-semibold">{trigger.flow_name}</h3>
+          <span className="text-xs text-muted-foreground">
+            {trigger.component_id}
+          </span>
+        </div>
         <Button variant="ghost" size="iconSm" onClick={onClose}>
           <ForwardedIconComponent name="X" className="h-4 w-4" />
         </Button>

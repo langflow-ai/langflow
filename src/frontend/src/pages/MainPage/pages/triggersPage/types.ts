@@ -1,7 +1,9 @@
-// Domain types mirroring the backend Pydantic schemas in
-// langflow.services.database.models.triggers.model.
-
-export type TriggerType = "cron";
+// Shapes the trigger management page consumes.
+//
+// Mirrors the backend serialisation in api/v1/triggers.py — the
+// schedule itself lives inside flow.data as a CronTrigger node, so
+// the page has no "trigger entity" to persist, only the aggregator
+// projection.
 
 export type JobStatus =
   | "queued"
@@ -11,42 +13,24 @@ export type JobStatus =
   | "cancelled"
   | "timed_out";
 
-export interface Trigger {
-  id: string;
+/** One CronTrigger component instance, joined with queue stats. */
+export interface TriggerInstance {
   flow_id: string;
-  user_id: string;
-  name: string;
-  trigger_type: TriggerType;
-  cron_expression: string | null;
-  timezone: string;
-  payload: Record<string, unknown> | null;
-  max_attempts: number;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface TriggerCreate {
-  flow_id: string;
-  name: string;
+  flow_name: string;
+  component_id: string;
   cron_expression: string;
-  timezone?: string;
-  payload?: Record<string, unknown> | null;
-  max_attempts?: number;
-  is_active?: boolean;
-  trigger_type?: TriggerType;
+  timezone: string;
+  max_attempts: number;
+  next_fire_at: string | null;
+  last_finished_status: JobStatus | null;
+  last_finished_at: string | null;
 }
 
-export type TriggerUpdate = Partial<
-  Pick<
-    Trigger,
-    "name" | "cron_expression" | "timezone" | "payload" | "max_attempts" | "is_active"
-  >
->;
-
+/** One row in the trigger_job history list. */
 export interface TriggerJob {
   id: string;
-  trigger_id: string;
+  flow_id: string;
+  component_id: string;
   status: JobStatus;
   scheduled_at: string;
   started_at: string | null;
@@ -56,4 +40,10 @@ export interface TriggerJob {
   error: string | null;
   run_job_id: string | null;
   created_at: string;
+}
+
+/** Response shape of the bulk-delete endpoint. */
+export interface BulkDeleteSummary {
+  flows_updated: number;
+  components_removed: number;
 }
