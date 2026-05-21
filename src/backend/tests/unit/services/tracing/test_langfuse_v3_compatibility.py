@@ -334,6 +334,7 @@ class TestLangfuseTracerFunctionality:
         call_args = mock_langfuse["child_span"].start_span.call_args
         assert call_args[1]["name"] == "ChildComponent"
 
+
 class TestLangfuseClientSingleton:
     """Verify the Langfuse client is constructed once and reused across flow runs.
 
