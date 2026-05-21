@@ -229,6 +229,9 @@ class Vertex:
         state["_lock"] = None  # Locks are not serializable
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
+        state["custom_component"] = (
+            None  # custom_component may carry unpicklable state (e.g. thread-local, console objects)
+        )
         return state
 
     def __setstate__(self, state):
@@ -236,6 +239,7 @@ class Vertex:
         self._lock = asyncio.Lock()  # Reinitialize the lock
         self.built_object = state.get("built_object") or UnbuiltObject()
         self.built_result = state.get("built_result") or UnbuiltResult()
+        # custom_component is lazily re-initialized via _build() if needed
 
     def set_top_level(self, top_level_vertices: list[str]) -> None:
         self.parent_is_top_level = self.parent_node_id in top_level_vertices
