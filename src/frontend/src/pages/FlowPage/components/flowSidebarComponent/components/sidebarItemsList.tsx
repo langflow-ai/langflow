@@ -7,10 +7,32 @@ import {
   checkWebhookInput,
 } from "@/utils/reactflowUtils";
 import { removeCountFromString } from "@/utils/utils";
+import {
+  CHAT_INPUT_COMPONENT,
+  CRON_TRIGGER_COMPONENT,
+  WEBHOOK_COMPONENT,
+} from "../helpers/constants";
 import { disableItem } from "../helpers/disable-item";
 import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
 import type { UniqueInputsComponents } from "../types";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
+
+/**
+ * Set of component class names that get their own "is-this-already-
+ * in-the-flow?" check via UniqueInputsDraggableComponent. Adding a
+ * new singleton component means adding its name here AND extending
+ * the UniqueInputsComponents interface + disableItem +
+ * getDisabledTooltip. The set keeps all coupling in one place so an
+ * accidental partial wiring (like CronTrigger had at one point —
+ * disable-item branch added but the gate above defaulted to
+ * disabled={false}) fails loudly the next time someone reads this
+ * file.
+ */
+const UNIQUE_INPUT_COMPONENT_NAMES: ReadonlySet<string> = new Set([
+  CHAT_INPUT_COMPONENT,
+  WEBHOOK_COMPONENT,
+  CRON_TRIGGER_COMPONENT,
+]);
 
 const SidebarItemsList = ({
   item,
@@ -46,7 +68,7 @@ const SidebarItemsList = ({
             return null;
           }
 
-          if (SBItemName === "ChatInput" || SBItemName === "Webhook") {
+          if (UNIQUE_INPUT_COMPONENT_NAMES.has(SBItemName)) {
             return (
               <UniqueInputsDraggableComponent
                 key={SBItemName}
