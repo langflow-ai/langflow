@@ -1,4 +1,6 @@
 import asyncio
+import dataclasses
+import json
 import pickle
 import threading
 import time
@@ -175,6 +177,81 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
+# Serialization markers for identifying the format of cached values in Redis.
+# Using \x01 prefix which cannot appear at the start of valid pickled data.
+_SERIAL_JSON = b"\x01json:"
+_SERIAL_DILL = b"\x01dill:"
+
+
+def _json_default(obj):
+    """JSON encoder fallback for types not natively JSON-serializable.
+
+    Handles Pydantic models, dataclasses, and other common Python types.
+    """
+    # Pydantic v2
+    if hasattr(obj, "model_dump"):
+        return obj.model_dump()
+    # Pydantic v1
+    if hasattr(obj, "dict"):
+        return obj.dict()
+    # Dataclasses
+    if dataclasses.is_dataclass(obj) and not isinstance(obj, type):
+        return dataclasses.asdict(obj)
+    # Sets
+    if isinstance(obj, set):
+        return list(obj)
+    # Bytes
+    if isinstance(obj, bytes):
+        return obj.decode("utf-8", errors="replace")
+    type_name = type(obj).__name__
+    msg = (
+        f"Object of type '{type_name}' is not JSON serializable. "
+        "Try converting the value to a dict or a simpler type."
+    )
+    raise TypeError(msg)
+
+
+def _serialize_value(value):
+    """Serialize a value for Redis storage.
+
+    Uses dill first (handles most Python objects), then falls back to JSON
+    for types that dill cannot handle (e.g., some Pydantic models, dataclasses
+    with complex fields, objects with custom __getstate__/__setstate__).
+
+    Returns bytes with a serialization marker prefix.
+    """
+    try:
+        return _SERIAL_DILL + dill.dumps(value, recurse=True)
+    except (pickle.PicklingError, TypeError):
+        pass
+
+    # Fallback: serialize as JSON with custom type handlers
+    try:
+        json_bytes = json.dumps(value, default=_json_default, ensure_ascii=False).encode("utf-8")
+        return _SERIAL_JSON + json_bytes
+    except (TypeError, ValueError) as exc:
+        msg = (
+            f"RedisCache cannot cache value of type '{type(value).__name__}'. "
+            "Serialization failed with both dill and JSON. "
+            f"Original error: {exc}"
+        )
+        raise TypeError(msg) from exc
+
+
+def _deserialize_value(data):
+    """Deserialize a value from Redis storage.
+
+    Detects the serialization format from the marker prefix.
+    Falls back to dill for backward compatibility with unmarked cached data.
+    """
+    if data.startswith(_SERIAL_JSON):
+        return json.loads(data[len(_SERIAL_JSON) :].decode("utf-8"))
+    if data.startswith(_SERIAL_DILL):
+        return dill.loads(data[len(_SERIAL_DILL) :])
+    # Backward compatibility: unmarked data was serialized with dill
+    return dill.loads(data)
+
+
 class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
     """A Redis-based cache implementation.
 
@@ -237,19 +314,17 @@ class RedisCache(ExternalAsyncBaseCacheService, Generic[LockType]):
         if key is None:
             return CACHE_MISS
         value = await self._client.get(str(key))
-        return dill.loads(value) if value else CACHE_MISS
+        if value is None:
+            return CACHE_MISS
+        return _deserialize_value(value)
 
     @override
     async def set(self, key, value, lock=None) -> None:
-        try:
-            if pickled := dill.dumps(value, recurse=True):
-                result = await self._client.setex(str(key), self.expiration_time, pickled)
-                if not result:
-                    msg = "RedisCache could not set the value."
-                    raise ValueError(msg)
-        except pickle.PicklingError as exc:
-            msg = "RedisCache only accepts values that can be pickled. "
-            raise TypeError(msg) from exc
+        serialized = _serialize_value(value)
+        result = await self._client.setex(str(key), self.expiration_time, serialized)
+        if not result:
+            msg = "RedisCache could not set the value."
+            raise ValueError(msg)
 
     @override
     async def upsert(self, key, value, lock=None) -> None:
