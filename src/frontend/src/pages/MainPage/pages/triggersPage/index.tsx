@@ -142,7 +142,7 @@ export default function TriggersPage() {
             jobsTrigger ? "" : "xl:container"
           }`}
         >
-          <div className="flex flex-1 flex-col justify-start px-5 pt-10">
+          <div className="flex min-w-0 flex-1 flex-col justify-start px-5 pt-10">
             <div
               className="flex items-center justify-between pb-4"
               data-testid="mainpage_title"

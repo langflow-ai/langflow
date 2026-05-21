@@ -107,19 +107,25 @@ export default function TriggersTable({
   const someSelected = !allSelected && allKeys.some((k) => selected.has(k));
 
   return (
-    <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead className="w-[36px]">
-            <Checkbox
-              data-testid="triggers-select-all"
-              checked={allSelected ? true : someSelected ? "indeterminate" : false}
-              onCheckedChange={(value) => onSelectAll(allKeys, value === true)}
-            />
-          </TableHead>
-          <TableHead className="min-w-[180px]">
-            {t("triggers.col.flow")}
-          </TableHead>
+    // ``overflow-x-auto`` contains any horizontal overflow inside the
+    // table card itself so a narrow container (e.g. the drawer-open
+    // layout) never propagates a page-level scroll. ``min-w-0`` works
+    // with the parent flex column to allow the table to shrink below
+    // its intrinsic min-content width without overflowing siblings.
+    <div className="min-w-0 overflow-x-auto">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[36px]">
+              <Checkbox
+                data-testid="triggers-select-all"
+                checked={allSelected ? true : someSelected ? "indeterminate" : false}
+                onCheckedChange={(value) => onSelectAll(allKeys, value === true)}
+              />
+            </TableHead>
+            <TableHead>
+              {t("triggers.col.flow")}
+            </TableHead>
           <TableHead className="whitespace-nowrap">
             {t("triggers.col.cron")}
           </TableHead>
@@ -234,7 +240,8 @@ export default function TriggersTable({
             </TableRow>
           );
         })}
-      </TableBody>
-    </Table>
+        </TableBody>
+      </Table>
+    </div>
   );
 }
