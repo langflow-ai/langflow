@@ -7,7 +7,6 @@ from uuid import uuid4
 
 import pytest
 from langflow.api.v1.schemas.deployments import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     DeploymentConfigListResponse,
     DeploymentCreateRequest,
     DeploymentFlowVersionListItem,
@@ -206,9 +205,12 @@ class TestDeploymentUpdateRequest:
         assert payload.description is None
         assert "description" in payload.model_fields_set
 
-    def test_rejects_description_over_max_length(self):
-        with pytest.raises(ValidationError, match="at most"):
-            DeploymentUpdateRequest(description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1))
+    def test_accepts_long_description(self):
+        description = "x" * 501
+
+        payload = DeploymentUpdateRequest(description=description)
+
+        assert payload.description == description
 
 
 class TestDeploymentSpecPayloadCompatibility:
@@ -230,14 +232,17 @@ class TestDeploymentSpecPayloadCompatibility:
         )
         assert request.provider_data == {"display_name": "deployment", "operations": []}
 
-    def test_create_request_rejects_description_over_max_length(self):
-        with pytest.raises(ValidationError, match="at most"):
-            DeploymentCreateRequest(
-                provider_id=uuid4(),
-                description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
-                type="agent",
-                provider_data={"display_name": "deployment", "operations": []},
-            )
+    def test_create_request_accepts_long_description(self):
+        description = "x" * 501
+
+        request = DeploymentCreateRequest(
+            provider_id=uuid4(),
+            description=description,
+            type="agent",
+            provider_data={"display_name": "deployment", "operations": []},
+        )
+
+        assert request.description == description
 
 
 # ---------------------------------------------------------------------------

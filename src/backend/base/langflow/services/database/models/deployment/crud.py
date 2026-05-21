@@ -5,7 +5,6 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 from sqlalchemy import column, values
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import col, delete, func, select, update
@@ -43,32 +42,6 @@ def _strip_or_raise(value: str, field_name: str) -> str:
     return stripped
 
 
-def _validate_description_max_length(description: str | None) -> str | None:
-    """Reject descriptions that exceed the deployment max length."""
-    if description is not None and len(description) > DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
-        msg = f"description must be at most {DEPLOYMENT_DESCRIPTION_MAX_LENGTH} characters"
-        raise ValueError(msg)
-    return description
-
-
-def _description_length(description: str | None) -> int | None:
-    return len(description) if description is not None else None
-
-
-def _metadata_update_log_payload(update_item: DeploymentMetadataUpdate) -> dict[str, object]:
-    deployment = update_item.langflow_db_row
-    return {
-        "deployment_id": str(deployment.id),
-        "provider_account_id": str(deployment.deployment_provider_account_id),
-        "provider_resource_key": deployment.resource_key,
-        "changed_fields": _deployment_metadata_changed_fields(update_item),
-        "previous_display_name_length": len(deployment.display_name),
-        "next_display_name_length": len(update_item.display_name),
-        "previous_description_length": _description_length(deployment.description),
-        "next_description_length": _description_length(update_item.description),
-    }
-
-
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -82,7 +55,6 @@ async def create_deployment(
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
     display_name_s = _strip_or_raise(display_name, "display_name")
-    description_s = _validate_description_max_length(description)
 
     row = Deployment(
         user_id=user_id,
@@ -91,7 +63,7 @@ async def create_deployment(
         resource_key=resource_key_s,
         display_name=display_name_s,
         deployment_type=deployment_type,
-        description=description_s,
+        description=description,
     )
     db.add(row)
     try:
@@ -199,7 +171,7 @@ async def update_deployment(
     if deployment_type is not _UNSET:
         deployment.deployment_type = deployment_type  # type: ignore[assignment]
     if description is not _UNSET:
-        deployment.description = _validate_description_max_length(description)  # type: ignore[assignment]
+        deployment.description = description  # type: ignore[assignment]
     deployment.updated_at = datetime.now(timezone.utc)
     db.add(deployment)
     try:
@@ -225,16 +197,10 @@ async def update_deployment_metadata(
     update_item = DeploymentMetadataUpdate(
         langflow_db_row=deployment,
         display_name=_strip_or_raise(display_name, "display_name"),
-        description=_validate_description_max_length(description),
+        description=description,
     )
     if not _deployment_metadata_has_changed(update_item):
         return deployment
-
-    logger.info(
-        "sync_deployment_metadata_db_write",
-        user_id=str(user_id),
-        **_metadata_update_log_payload(update_item),
-    )
 
     stmt = (
         update(Deployment)
@@ -305,13 +271,6 @@ async def update_deployment_metadata_batch(
     updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
     if not updates:
         return
-
-    logger.info(
-        "sync_deployment_metadata_batch_db_write",
-        user_id=str(user_id),
-        update_count=len(updates),
-        updates=[_metadata_update_log_payload(item) for item in updates],
-    )
 
     metadata_updates = _deployment_metadata_updates_cte(updates)
     stmt = (

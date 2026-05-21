@@ -7,7 +7,6 @@ import pytest
 from fastapi import HTTPException
 from langflow.api.v1.deployments import list_deployments
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
-from langflow.api.v1.mappers.deployments.contracts import truncate_deployment_description
 from langflow.services.database.models.deployment.crud import create_deployment
 from langflow.services.database.models.deployment.crud import get_deployment as get_deployment_db
 from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
@@ -102,7 +101,7 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
         return {
             str(item.id): {
                 "display_name": item.provider_data["display_name"],
-                "description": truncate_deployment_description(item.provider_data["description"]),
+                "description": item.provider_data["description"],
             }
             for item in provider_view.deployments
         }
@@ -110,7 +109,7 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
     def extract_metadata_for_get(self, get_result):
         return {
             "display_name": get_result.provider_data["display_name"],
-            "description": truncate_deployment_description(get_result.provider_data["description"]),
+            "description": get_result.provider_data["description"],
         }
 
     def shape_deployment_get_data(self, provider_data):

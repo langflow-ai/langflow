@@ -5,7 +5,6 @@ from uuid import UUID, uuid4
 
 import pytest
 from lfx.services.adapters.deployment.schema import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
@@ -619,8 +618,8 @@ def test_deployment_create_result_defaults() -> None:
     assert result.description is None
 
 
-def test_deployment_create_result_allows_provider_description_over_max_length() -> None:
-    description = "x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1)
+def test_deployment_create_result_allows_long_provider_description() -> None:
+    description = "x" * 501
 
     result = DeploymentCreateResult(
         id="dep_1",

@@ -12,18 +12,15 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
-import pytest
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.services.database.models.deployment.model import Deployment, DeploymentRead
 from lfx.services.adapters.deployment.schema import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
 )
-from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # Model-level tests
@@ -101,17 +98,23 @@ class TestDeploymentModel:
 
 
 class TestAdapterDescriptionValidation:
-    def test_create_payload_rejects_description_over_max_length(self):
-        with pytest.raises(ValidationError, match="at most"):
-            BaseDeploymentData(
-                name="test",
-                description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
-                type=DeploymentType.AGENT,
-            )
+    def test_create_payload_accepts_long_description(self):
+        description = "x" * 501
 
-    def test_update_payload_rejects_description_over_max_length(self):
-        with pytest.raises(ValidationError, match="at most"):
-            BaseDeploymentDataUpdate(description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1))
+        payload = BaseDeploymentData(
+            name="test",
+            description=description,
+            type=DeploymentType.AGENT,
+        )
+
+        assert payload.description == description
+
+    def test_update_payload_accepts_long_description(self):
+        description = "x" * 501
+
+        payload = BaseDeploymentDataUpdate(description=description)
+
+        assert payload.description == description
 
     def test_update_payload_accepts_explicit_null_description(self):
         payload = BaseDeploymentDataUpdate(description=None)

@@ -50,7 +50,6 @@ from langflow.api.v1.mappers.deployments.contracts import (
     ProviderSnapshotBinding,
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
-    truncate_deployment_description,
 )
 from langflow.api.v1.mappers.deployments.helpers import (
     build_flow_artifacts_from_flow_versions,
@@ -340,14 +339,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             resource_key=str(result.id),
             display_name=adapter_provider_result.display_name,
             deployment_type=result.type,
-            description=truncate_deployment_description(
-                result.description,
-                log_context={
-                    "callsite_function": "resolve_deployment_model_for_create",
-                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-                    "provider_resource_key": str(result.id),
-                },
-            ),
+            description=result.description,
         )
 
     def resolve_deployment_model_from_existing_resource_for_create(
@@ -373,14 +365,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             resource_key=str(existing_provider_resource.id),
             display_name=existing_provider_data.display_name,
             deployment_type=payload.type,
-            description=truncate_deployment_description(
-                existing_provider_data.description,
-                log_context={
-                    "callsite_function": "resolve_deployment_model_from_existing_resource_for_create",
-                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-                    "provider_resource_key": str(existing_provider_resource.id),
-                },
-            ),
+            description=existing_provider_data.description,
         )
 
     def resolve_kwargs_for_metadata_update(self, result: DeploymentUpdateResult) -> dict[str, Any]:
@@ -393,14 +378,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return {
             "display_name": adapter_provider_result.display_name,
-            "description": truncate_deployment_description(
-                adapter_provider_result.description,
-                log_context={
-                    "callsite_function": "resolve_kwargs_for_metadata_update",
-                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-                    "provider_resource_key": str(result.id),
-                },
-            ),
+            "description": adapter_provider_result.description,
         }
 
     def resolve_credentials(
@@ -879,7 +857,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         provider_view: DeploymentListResult,
     ) -> dict[str, dict[str, Any]]:
         metadata_by_resource_key: dict[str, dict[str, Any]] = {}
-        for provider_list_item_index, item in enumerate(provider_view.deployments):
+        for item in provider_view.deployments:
             item_provider_data = self._parse_required_payload_slot(
                 slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
                 slot_name="deployment_item_data",
@@ -889,15 +867,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             resource_key = str(item.id)
             metadata_by_resource_key[resource_key] = {
                 "display_name": item_provider_data.display_name,
-                "description": truncate_deployment_description(
-                    item_provider_data.description,
-                    log_context={
-                        "callsite_function": "extract_metadata_for_list",
-                        "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-                        "provider_resource_key": resource_key,
-                        "provider_list_item_index": provider_list_item_index,
-                    },
-                ),
+                "description": item_provider_data.description,
             }
         return metadata_by_resource_key
 
@@ -936,14 +906,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         )
         return {
             "display_name": parsed.display_name,
-            "description": truncate_deployment_description(
-                parsed.description,
-                log_context={
-                    "callsite_function": "extract_metadata_for_get",
-                    "provider_key": WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-                    "provider_resource_key": str(get_result.id),
-                },
-            ),
+            "description": parsed.description,
         }
 
     async def resolve_rollback_update(

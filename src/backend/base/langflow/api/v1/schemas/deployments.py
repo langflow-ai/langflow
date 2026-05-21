@@ -33,7 +33,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH, DeploymentType
+from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_validator
 
 from langflow.services.database.models.deployment_provider_account.schemas import (
@@ -383,7 +383,6 @@ class DeploymentCreateRequest(BaseModel):
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     description: str = Field(
         default="",
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="Deployment description.",
     )
     type: DeploymentType = Field(description="Deployment type.")
@@ -402,7 +401,6 @@ class DeploymentUpdateRequest(BaseModel):
 
     description: str | None = Field(
         default=None,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="Updated deployment description.",
     )
     provider_data: dict[str, Any] | None = Field(

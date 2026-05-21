@@ -2,31 +2,10 @@
 
 from __future__ import annotations
 
-from typing import Annotated, Any
+from typing import Annotated
 from uuid import UUID
 
-from lfx.log.logger import logger
-from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
 from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
-
-
-def truncate_deployment_description(
-    description: str | None,
-    *,
-    log_context: dict[str, Any] | None = None,
-) -> str | None:
-    if description is None:
-        return None
-    if len(description) <= DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
-        return description
-    truncated = description[:DEPLOYMENT_DESCRIPTION_MAX_LENGTH]
-    logger.info(
-        "truncate_deployment_description",
-        original_length=len(description),
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
-        **(log_context or {}),
-    )
-    return truncated
 
 
 class CreateFlowArtifactProviderData(BaseModel):

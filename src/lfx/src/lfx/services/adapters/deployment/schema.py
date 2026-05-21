@@ -47,7 +47,6 @@ DeploymentProviderName = Annotated[
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
-DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
 class DeploymentType(str, Enum):
@@ -344,7 +343,6 @@ class BaseDeploymentData(BaseModel):
     name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
     description: str = Field(
         default="",
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="The description of the deployment",
     )
     type: DeploymentType = Field(description="The type of the deployment")
@@ -537,7 +535,6 @@ class BaseDeploymentDataUpdate(BaseModel):
     name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
     description: str | None = Field(
         None,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="The description of the deployment",
     )
 
