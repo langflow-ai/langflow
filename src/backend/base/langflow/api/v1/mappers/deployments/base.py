@@ -31,6 +31,7 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
     BaseFlowArtifact,
@@ -56,7 +57,13 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
+from lfx.services.adapters.payload import (
+    AdapterPayload,
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+)
+from pydantic import BaseModel
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
@@ -114,6 +121,23 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
     provider_account_response: PayloadSlot | None = None
 
 
+class OuterRequestValidationError(ValueError):
+    """Raised when provider_data is invalid in the context of its containing request."""
+
+    def __init__(self, *, model_name: str, detail: str) -> None:
+        self.model_name = model_name
+        self.detail = detail
+        super().__init__(f"Invalid content for request payload '{model_name}'.")
+
+
+class OuterRequestValidationNotConfiguredError(RuntimeError):
+    """Raised when outer-request validation is requested for a model without the hook."""
+
+    def __init__(self, *, model_name: str) -> None:
+        self.model_name = model_name
+        super().__init__(f"Payload model '{model_name}' does not support outer request validation.")
+
+
 class BaseDeploymentMapper:
     """Per-provider mapper for deployment API payloads.
 
@@ -139,6 +163,13 @@ class BaseDeploymentMapper:
     """
 
     api_payloads: ClassVar[DeploymentApiPayloads] = DeploymentApiPayloads()
+    PROVIDER_LABEL: ClassVar[str | None] = None
+
+    def get_provider_label(self) -> str:
+        if self.PROVIDER_LABEL is None:
+            msg = f"{self.__class__.__name__} must override PROVIDER_LABEL to be a string."
+            raise NotImplementedError(msg)
+        return self.PROVIDER_LABEL
 
     async def resolve_deployment_spec(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.deployment_spec, raw)
@@ -877,3 +908,104 @@ class BaseDeploymentMapper:
         if raw is None or slot is None:
             return raw
         return slot.apply(raw)
+
+    def parse_adapter_slot(
+        self,
+        *,
+        slot: PayloadSlot[Any] | None,
+        slot_name: str,
+        raw: Any,
+        operation: str = "this operation",
+    ) -> Any:
+        """Parse a non-user-supplied adapter-boundary payload, raising 500 on failure.
+
+        Use for adapter/provider results and mapper-built payloads headed to the adapter.
+        Failures are internal errors — the user cannot fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
+        See ``parse_api_request_slot`` for user-supplied input.
+        """
+        provider_label = self.get_provider_label()
+        if slot is None:
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, provider_label)
+            msg = f"The {provider_label} integration is not configured for {operation}."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            return slot.parse(raw)
+        except AdapterPayloadMissingError as exc:
+            logger.error("Empty adapter payload for slot '%s' (%s)", slot_name, provider_label)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Empty result while {operation} ({provider_label}).",
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            logger.error("Invalid adapter payload for slot '%s' (%s): %s", slot_name, provider_label, detail)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Unexpected result while {operation} ({provider_label}): {detail}",
+            ) from exc
+
+    def parse_api_request_slot(
+        self,
+        *,
+        slot: PayloadSlot[Any] | None,
+        slot_name: str,
+        raw: Any,
+        outer_payload: Any | None = None,
+    ) -> Any:
+        """Parse a user-supplied API payload, raising 422 on failure.
+
+        Use for data sent **by** the user in the API request (inbound).
+        Failures are input errors — the user can fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
+        See ``parse_adapter_slot`` for adapter-boundary payloads.
+        """
+        provider_label = self.get_provider_label()
+        if slot is None:
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, provider_label)
+            msg = f"The {provider_label} integration is not configured for this operation."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            parsed = slot.parse(raw)
+        except AdapterPayloadMissingError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Missing provider_data for {provider_label}.",
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid provider_data for {provider_label}: {detail}",
+            ) from exc
+        if outer_payload is None:
+            return parsed
+        try:
+            self.validate_with_outer_request(parsed, outer_payload)
+        except OuterRequestValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid provider_data for {provider_label}: {exc.detail}",
+            ) from exc
+        except OuterRequestValidationNotConfiguredError as exc:
+            logger.error(
+                "Payload slot '%s' does not support outer request validation for %s: %s",
+                slot_name,
+                provider_label,
+                exc,
+            )
+            msg = f"The {provider_label} integration is not configured for this operation."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from exc
+        return parsed
+
+    @staticmethod
+    def validate_with_outer_request(parsed: BaseModel, outer_payload: BaseModel) -> None:
+        validate_with_outer_fields = getattr(parsed, "validate_with_outer_fields", None)
+        model_name = parsed.__class__.__name__
+        if not callable(validate_with_outer_fields):
+            raise OuterRequestValidationNotConfiguredError(model_name=model_name)
+        try:
+            validate_with_outer_fields(outer_payload)
+        except ValueError as exc:
+            detail = str(exc) or "Invalid content for request payload."
+            raise OuterRequestValidationError(model_name=model_name, detail=detail) from exc

@@ -9,6 +9,11 @@ from uuid import uuid4
 import pytest
 from fastapi import HTTPException
 from langflow.api.v1.mappers.deployments import get_mapper
+from langflow.api.v1.mappers.deployments.base import (
+    BaseDeploymentMapper,
+    OuterRequestValidationError,
+    OuterRequestValidationNotConfiguredError,
+)
 from langflow.api.v1.mappers.deployments.contracts import (
     CreatedSnapshotIds,
     CreateSnapshotBindings,
@@ -35,7 +40,7 @@ from lfx.services.adapters.deployment.schema import (
 )
 from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
 from lfx.services.adapters.schema import AdapterType
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
 try:
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
@@ -1151,6 +1156,169 @@ def test_watsonx_api_payload_accepts_existing_agent_id_only() -> None:
     assert payload.existing_agent_id == "21b2b5a4-ef72-4697-8731-132163669a46"
 
 
+def test_watsonx_api_payload_rejects_existing_agent_id_with_outer_description() -> None:
+    payload = WatsonxApiDeploymentCreatePayload.model_validate(
+        {"existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46"}
+    )
+    outer_payload = DeploymentCreateRequest(
+        provider_id=uuid4(),
+        description="local description",
+        type="agent",
+        provider_data={"existing_agent_id": "21b2b5a4-ef72-4697-8731-132163669a46"},
+    )
+
+    with pytest.raises(ValueError, match="description already set for the agent in wxO"):
+        payload.validate_with_outer_fields(outer_payload)
+
+
+def test_base_mapper_wraps_outer_request_value_error() -> None:
+    class _OuterAwarePayload(BaseModel):
+        def validate_with_outer_fields(self, outer_payload) -> None:
+            _ = outer_payload
+            msg = "outer validation failed"
+            raise ValueError(msg)
+
+    with pytest.raises(OuterRequestValidationError, match="Invalid content for request payload") as exc_info:
+        BaseDeploymentMapper.validate_with_outer_request(
+            _OuterAwarePayload(),
+            DeploymentCreateRequest(provider_id=uuid4(), type="agent"),
+        )
+
+    assert exc_info.value.model_name == "_OuterAwarePayload"
+    assert exc_info.value.detail == "outer validation failed"
+
+
+def test_base_mapper_rejects_outer_request_validation_without_hook() -> None:
+    class _PayloadWithoutOuterHook(BaseModel):
+        value: str = "ok"
+
+    with pytest.raises(OuterRequestValidationNotConfiguredError, match="does not support outer request validation"):
+        BaseDeploymentMapper.validate_with_outer_request(
+            _PayloadWithoutOuterHook(),
+            DeploymentCreateRequest(provider_id=uuid4(), type="agent"),
+        )
+
+
+def test_base_mapper_provider_label_must_be_defined() -> None:
+    with pytest.raises(NotImplementedError, match="must define PROVIDER_LABEL"):
+        BaseDeploymentMapper().get_provider_label()
+
+
+def test_base_mapper_parse_api_request_slot_requires_configured_slot() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_api_request_slot(slot=None, slot_name="test_slot", raw={})
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "The test provider integration is not configured for this operation."
+
+
+def test_base_mapper_parse_api_request_slot_rejects_missing_provider_data() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    class _Payload(BaseModel):
+        value: str
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_api_request_slot(slot=PayloadSlot(_Payload), slot_name="test_slot", raw=None)
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail == "Missing provider_data for test provider."
+
+
+def test_base_mapper_parse_api_request_slot_sanitizes_validation_errors() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    class _Payload(BaseModel):
+        value: str
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_api_request_slot(slot=PayloadSlot(_Payload), slot_name="test_slot", raw={})
+
+    assert exc_info.value.status_code == 422
+    assert exc_info.value.detail == "Invalid provider_data for test provider: Missing required field 'value'."
+
+
+def test_base_mapper_parse_api_request_slot_maps_missing_outer_validation_hook() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    class _Payload(BaseModel):
+        value: str
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_api_request_slot(
+            slot=PayloadSlot(_Payload),
+            slot_name="test_slot",
+            raw={"value": "ok"},
+            outer_payload=DeploymentCreateRequest(provider_id=uuid4(), type="agent"),
+        )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "The test provider integration is not configured for this operation."
+
+
+def test_base_mapper_parse_adapter_slot_requires_configured_slot() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_adapter_slot(
+            slot=None,
+            slot_name="test_slot",
+            raw={},
+            operation="testing adapter output",
+        )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "The test provider integration is not configured for testing adapter output."
+
+
+def test_base_mapper_parse_adapter_slot_rejects_missing_adapter_result() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    class _Payload(BaseModel):
+        value: str
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_adapter_slot(
+            slot=PayloadSlot(_Payload),
+            slot_name="test_slot",
+            raw=None,
+            operation="testing adapter output",
+        )
+
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.detail == "Empty result while testing adapter output (test provider)."
+
+
+def test_base_mapper_parse_adapter_slot_sanitizes_validation_errors() -> None:
+    class _TestMapper(BaseDeploymentMapper):
+        PROVIDER_LABEL = "test provider"
+
+    class _Payload(BaseModel):
+        value: str
+
+    with pytest.raises(HTTPException) as exc_info:
+        _TestMapper().parse_adapter_slot(
+            slot=PayloadSlot(_Payload),
+            slot_name="test_slot",
+            raw={},
+            operation="testing adapter output",
+        )
+
+    assert exc_info.value.status_code == 500
+    assert (
+        exc_info.value.detail
+        == "Unexpected result while testing adapter output (test provider): Missing required field 'value'."
+    )
+
+
 def test_watsonx_api_payload_rejects_null_existing_agent_id() -> None:
     with pytest.raises(ValidationError, match="existing_agent_id cannot be set to null"):
         WatsonxApiDeploymentCreatePayload.model_validate({"existing_agent_id": None})
@@ -1408,10 +1576,12 @@ def test_watsonx_mapper_create_utilities_reject_explicit_null_provider_data() ->
     with pytest.raises(HTTPException) as exc_info:
         mapper.util_create_flow_version_ids(payload)
     assert exc_info.value.status_code == 422
+    assert "description already set for the agent in wxO" in exc_info.value.detail
 
     with pytest.raises(HTTPException) as exc_info:
         mapper.util_existing_deployment_resource_key_for_create(payload)
     assert exc_info.value.status_code == 422
+    assert "description already set for the agent in wxO" in exc_info.value.detail
 
 
 def test_watsonx_mapper_existing_agent_onboarding_allows_db_only_payload() -> None:

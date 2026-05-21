@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from lfx.services.adapters.deployment.schema import DeploymentType
@@ -20,6 +20,9 @@ from pydantic import (
 
 from langflow.api.v1.schemas.deployments import ValidatedUrl
 from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
+
+if TYPE_CHECKING:
+    from langflow.api.v1.schemas.deployments import DeploymentCreateRequest
 
 # Keep API-boundary scalar normalization local to this module instead of
 # importing adapter-layer aliases, so mapper contracts can evolve independently.
@@ -391,6 +394,12 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
         referenced_app_ids.update(_collect_api_referenced_app_ids(self.upsert_tools, attr_name="add_app_ids"))
         _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
+
+    def validate_with_outer_fields(self, outer_payload: DeploymentCreateRequest) -> None:
+        if self.existing_agent_id is None or "description" not in outer_payload.model_fields_set:
+            return
+        msg = "When existing_agent_id is provided, Langflow uses the description already set for the agent in wxO."
+        raise ValueError(msg)
 
 
 class WatsonxApiCreatedTool(BaseModel):
