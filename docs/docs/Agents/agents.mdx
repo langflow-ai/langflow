@@ -145,10 +145,21 @@ For example:
 
 ## Agent component output
 
-The **Agent** component outputs a **Response** (`response`) that is [`Message` data](/data-types#message) containing the agent's raw response to the query.
+The **Agent** component has two outputs:
 
-Typically, this is passed to a **Chat Output** component to return the response in a human-readable format.
-It can also be passed to other components if you need to process the response further before, or in addition to, returning it to the user.
+* **Response** (`response`): The agent's reply as [`Message`](/data-types#message) data, which is typically connected to a **Chat Output** component.
+* **Structured Response** (`structured_response`): The agent's reply formatted as structured [`Data`](/data-types#data) according to the **Output Schema** you define.
+
+    To configure the agent's **Structured Response** output:
+
+    1. In the **Agent** component, click the output label near the component's output port and select **Structured Response**.
+    2. Select the **Agent** component to open the [component inspection panel](/concepts-components#component-inspection-panel), and then click <Icon name="Table" aria-hidden="true"/> **Open table**.
+    3. Click <Icon name="Plus" aria-hidden="true"/> **+** to add a row for each field you want to extract. For each row, enter a **Name**, **Type**, and optionally a **Description** and **As List** toggle.
+    4. Connect the **Structured Response** port to a downstream component that accepts [`Data`](/data-types#data) input, such as a **Parser** or **JSON Operations** component.
+
+    The **Agent** component uses the connected LLM to extract structured data, and the extraction behavior is configured in the **Output Format Instructions** field.
+    Modify the prompt in the **Output Format Instructions** field to change extraction behavior.
+    This does not modify the schema defined in **Output Schema**.
 
 ## See also
 
