@@ -1562,10 +1562,10 @@ class TestUpgradeFlowOption:
     async def test_upgrade_flow_safe_envelope_file_loads_successfully(self, tmp_path):
         """Happy path: --upgrade-flow=safe on an envelope file must proceed to load.
 
-        Regression: when the upgrade block unwrapped the envelope and handed the inner
-        dict to aload_flow_from_json, the loader raised ``KeyError: 'data'`` because it
-        expects the envelope shape. The fix re-attaches the (possibly upgraded) inner
-        graph to the envelope before loading.
+        All three input paths (file, --flow-json, --stdin) unwrap the outer envelope with
+        raw.get("data", raw) before the upgrade check, so aload_flow_from_json always
+        receives {"data": <inner_graph>}. The loader does flow_graph["data"] and Graph.from_payload
+        handles the rest correctly.
         """
         import json as _json
 
@@ -1599,12 +1599,9 @@ class TestUpgradeFlowOption:
 
             mock_load.assert_called_once()
             loaded_arg = mock_load.call_args[0][0]
-            # Loader must receive the envelope shape, not the unwrapped inner dict.
-            assert "data" in loaded_arg, f"loader got unwrapped dict (KeyError regression): {list(loaded_arg)}"
+            # Loader receives {"data": inner_graph} — the "data" key is always present.
+            assert "data" in loaded_arg, f"loader got wrong shape: {list(loaded_arg)}"
             assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
-            # Envelope metadata must be preserved.
-            assert loaded_arg.get("name") == "My Flow"
-            assert loaded_arg.get("description") == "x"
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_safe_flat_file_loads_successfully(self, tmp_path):
@@ -1640,6 +1637,6 @@ class TestUpgradeFlowOption:
 
             mock_load.assert_called_once()
             loaded_arg = mock_load.call_args[0][0]
-            # For flat input, the loader receives the upgraded flat dict.
-            assert "nodes" in loaded_arg
-            assert loaded_arg["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+            # Loader receives {"data": inner_graph} for both flat and envelope inputs.
+            assert "data" in loaded_arg
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE

@@ -198,7 +198,8 @@ async def run_flow(
     if upgrade_flow and flow_dict is None and script_path is not None:
         if script_path.suffix.lower() == ".json":
             try:
-                flow_dict = json.loads(script_path.read_text(encoding="utf-8"))
+                raw = json.loads(script_path.read_text(encoding="utf-8"))
+                flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
             except Exception as e:
                 error_msg = f"--upgrade-flow: could not read flow file '{script_path}': {e}"
                 output_error(error_msg, verbose=verbose)
@@ -221,16 +222,8 @@ async def run_flow(
         from lfx.upgrade.applier import apply_safe_upgrades
         from lfx.upgrade.checker import check_flow_compatibility
 
-        # Exported Langflow flows have an outer envelope:
-        #   {"name": ..., "data": {"nodes": [...], "edges": [...]}}
-        # The checker/applier work on the inner graph. After upgrade we re-attach
-        # the (possibly upgraded) inner graph to the envelope so aload_flow_from_json
-        # still gets the {"data": ...} shape it expects.
-        has_envelope = "data" in flow_dict and "nodes" in flow_dict.get("data", {})
-        inner = flow_dict["data"] if has_envelope else flow_dict
-
         all_types = component_cache.all_types_dict or {}
-        report = check_flow_compatibility(inner, all_types)
+        report = check_flow_compatibility(flow_dict, all_types)
 
         if upgrade_flow == "check":
             if not report.is_clean:
@@ -248,8 +241,7 @@ async def run_flow(
                 output_error(error_msg, verbose=verbose)
                 raise RunError(error_msg, None)
             if report.has_safe_updates:
-                new_inner, count = apply_safe_upgrades(inner, all_types, report, return_count=True)
-                flow_dict = {**flow_dict, "data": new_inner} if has_envelope else new_inner
+                flow_dict, count = apply_safe_upgrades(flow_dict, all_types, report, return_count=True)
                 if verbose:
                     sys.stderr.write(f"Applied {count} safe component upgrade(s).\n")
 
