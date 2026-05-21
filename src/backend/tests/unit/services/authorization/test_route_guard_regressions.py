@@ -23,6 +23,7 @@ import pytest
 
 _API_V1 = Path(__file__).resolve().parents[4] / "base" / "langflow" / "api" / "v1"
 _FLOWS_FILE = _API_V1 / "flows.py"
+_PROJECTS_FILE = _API_V1 / "projects.py"
 _HELPERS_FLOW = Path(__file__).resolve().parents[4] / "base" / "langflow" / "helpers" / "flow.py"
 
 
@@ -51,6 +52,11 @@ def _has_keyword(call: ast.Call, name: str) -> bool:
 @pytest.fixture(scope="module")
 def flows_routes() -> dict[str, ast.AsyncFunctionDef]:
     return _parse_async_funcs(_FLOWS_FILE)
+
+
+@pytest.fixture(scope="module")
+def projects_routes() -> dict[str, ast.AsyncFunctionDef]:
+    return _parse_async_funcs(_PROJECTS_FILE)
 
 
 @pytest.fixture(scope="module")
@@ -119,6 +125,23 @@ def test_download_multiple_file_does_not_unconditionally_prescope(flows_routes):
     )
     assert "deny_to_404" in src, (
         "download_multiple_file must convert ensure_flow_permission 403 to 404 for UUID privacy"
+    )
+
+
+def test_read_project_paginated_branch_filters_via_filter_visible_resources(projects_routes):
+    """The paginated branch of ``read_project`` must apply per-flow authz too.
+
+    A project READ grant must not bypass finer-grained per-flow policy just
+    because the caller asked for pagination. Both the non-paginated and
+    paginated branches must call ``filter_visible_resources`` when the
+    project is reached via a share grant (``treat_as_shared``); otherwise
+    shared-project reads behave differently depending on page/size.
+    """
+    func = projects_routes["read_project"]
+    fvr_calls = _calls(func, "filter_visible_resources")
+    assert len(fvr_calls) >= 2, (
+        "read_project must call filter_visible_resources on both the paginated "
+        "and non-paginated shared-project branches"
     )
 
 

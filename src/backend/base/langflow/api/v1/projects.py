@@ -321,6 +321,25 @@ async def read_project(
                 )
                 paginated_flows = await apaginate(session, stmt, params=params)
 
+            # Apply the same per-flow authz filter the non-paginated branch
+            # uses so shared-project reads behave identically regardless of
+            # page/size. Without this, a project READ grant would expose
+            # every flow in the page even when finer-grained per-flow
+            # policy (deny rules, lower-permission shares) should narrow
+            # the result. OSS pass-through returns the input unchanged.
+            # ``page.total`` may overcount when items are dropped — same
+            # caveat as the paginated branch of ``read_flows``; SQL-level
+            # prefiltering via authz_share lands in Phase 3.
+            if treat_as_shared:
+                paginated_flows.items = await filter_visible_resources(
+                    current_user,
+                    resource_type="flow",
+                    candidates=list(paginated_flows.items),
+                    domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+                    owner_extractor=lambda flow: flow.user_id,
+                    act=FlowAction.READ,
+                )
+
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
         # If no pagination requested, return flows visible to the caller.
