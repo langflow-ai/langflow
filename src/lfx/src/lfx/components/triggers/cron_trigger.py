@@ -1,9 +1,12 @@
 """Cron Trigger component.
 
 A trigger that fires the surrounding flow on a recurring schedule.
-The component lives in the flow canvas like any other node; its
-configuration is the source of truth and is read by the in-process
-trigger worker — there is no parallel registry table.
+The component is a *marker*: it lives in the canvas to declare "this
+flow runs on this schedule" and to hold the schedule configuration.
+It does NOT participate in the data graph — there is no output handle
+and no upstream connections to make. The flow itself owns its
+ChatInput / Input / Agent / whatever, and runs to completion every
+time the worker fires it.
 
 Design notes:
 
@@ -12,25 +15,20 @@ Design notes:
   and as the prefix of the node id in ``flow.data`` (e.g.
   ``"CronTrigger-abc12"``). Renaming would be a breaking change for
   every saved flow.
-* The canvas UX is intentionally NOT raw cron syntax. A
-  ``schedule_mode`` dropdown drives which friendly parameters
-  (interval, time of day, day of week) are visible; the actual
-  ``cron_expression`` field is derived from those inputs via
-  :func:`compose_cron` and is only directly editable when the user
-  picks the ``Custom (cron expression)`` mode.
+* The canvas UX is NOT raw cron syntax. A ``schedule_mode`` dropdown
+  drives which friendly parameters (interval, time of day, day of
+  week) are visible; the actual ``cron_expression`` field is derived
+  from those inputs via :func:`compose_cron` and is only directly
+  editable when the user picks the ``Custom (cron expression)`` mode.
 * The single source of truth on the wire — what gets read by the
   trigger worker and the discovery helper — is still
   ``cron_expression``. The mode + parameter fields are the *user-
   facing* representation; the derived cron is the *system-facing*
   representation. They are kept in sync at every input change by
   :meth:`update_build_config`.
-* The ``fire_time`` input is invisible to manual canvas runs. The
-  worker injects it via the same tweak mechanism the webhook handler
-  uses, so the component can pass the actual fire instant downstream
-  without needing a dedicated runtime channel.
-* Manual canvas runs (Play button) are a no-op: the component emits
-  the current UTC time as the event message — matches the Webhook
-  component's 'inert outside the trigger path' contract.
+* No ``outputs``: the trigger does not feed downstream nodes. It
+  kicks the whole flow off when the worker fires; the flow uses its
+  own inputs.
 * No ``is_active`` field: the presence of the node in the flow IS the
   activation. To pause a trigger, the user removes the node (or the
   containing flow).
@@ -38,7 +36,6 @@ Design notes:
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
 from typing import Any
 
 from lfx.components.triggers.constants import (
@@ -60,18 +57,10 @@ from lfx.components.triggers.cron_builder import (
 )
 from lfx.custom.custom_component.component import Component
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.io import (
-    DropdownInput,
-    IntInput,
-    MessageTextInput,
-    MultilineInput,
-    Output,
-)
-from lfx.schema.message import Message
+from lfx.io import DropdownInput, IntInput, MessageTextInput
 
 # Default time-of-day for the Daily / Weekly modes — 09:00 in the
-# trigger's selected timezone. Picked because it's a sensible
-# business-hours default and matches what most cron tutorials show.
+# trigger's selected timezone. Sensible business-hours default.
 _DEFAULT_TIME_OF_DAY = "09:00"
 _DEFAULT_DAY_OF_WEEK = "Monday"
 _DEFAULT_MINUTES_INTERVAL = 5
@@ -164,33 +153,10 @@ class CronTriggerComponent(Component):
             range_spec=RangeSpec(min=1, max=MAX_ATTEMPTS_LIMIT, step=1),
             advanced=True,
         ),
-        MultilineInput(
-            name="payload",
-            display_name="Payload (JSON)",
-            info=(
-                "Optional JSON object merged into the SimplifiedAPIRequest fields "
-                "(input_value, input_type, output_type, tweaks, session_id) when the trigger fires."
-            ),
-            advanced=True,
-            input_types=[],
-        ),
-        # Worker-populated. Empty on manual canvas runs.
-        MessageTextInput(
-            name="fire_time",
-            display_name="Fire Time",
-            info="Set by the trigger worker at fire time. Empty on manual runs.",
-            advanced=True,
-            input_types=[],
-        ),
     ]
 
-    outputs = [
-        Output(
-            display_name="Trigger Event",
-            name="event",
-            method="build_event",
-        ),
-    ]
+    # No outputs — see module docstring.
+    outputs = []
 
     # ------------------------------------------------------------------ #
     #  Dynamic build config — show/hide fields by mode, derive cron
@@ -198,8 +164,8 @@ class CronTriggerComponent(Component):
 
     # Map mode → list of "user-editable parameter field names" that
     # should be visible in that mode. Centralised so the visibility
-    # rule lives in exactly one place and the matching unit tests
-    # can assert against the same dict.
+    # rule lives in exactly one place and the matching unit tests can
+    # assert against the same dict.
     _MODE_VISIBLE_FIELDS: dict[str, tuple[str, ...]] = {
         MODE_EVERY_N_MINUTES: ("minutes_interval",),
         MODE_EVERY_N_HOURS: ("hours_interval",),
@@ -236,9 +202,6 @@ class CronTriggerComponent(Component):
            custom mode the user types the cron themselves and we
            leave the field alone.
         """
-        # Current mode value: either the one being set in this call,
-        # or the existing one in the build_config (when the user
-        # tweaked an interval / time field, not the mode itself).
         if field_name == "schedule_mode":
             mode = field_value
         else:
@@ -269,20 +232,3 @@ class CronTriggerComponent(Component):
             )
 
         return build_config
-
-    # ------------------------------------------------------------------ #
-    #  Execution
-    # ------------------------------------------------------------------ #
-
-    def build_event(self) -> Message:
-        """Emit the event message that downstream nodes consume.
-
-        Returns the worker-injected ``fire_time`` when present, otherwise
-        the current UTC instant. Either value is a tz-aware ISO 8601
-        string, so downstream components see a consistent shape
-        regardless of how the flow was kicked off.
-        """
-        fire_time = (self.fire_time or "").strip()
-        text = fire_time or datetime.now(timezone.utc).isoformat()
-        self.status = f"Cron trigger fired at {text}"
-        return Message(text=text)

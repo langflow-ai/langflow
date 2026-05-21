@@ -83,7 +83,6 @@ def test_parse_uses_defaults_when_template_is_empty():
     assert config.cron_expression == DEFAULT_CRON_EXPRESSION
     assert config.timezone == DEFAULT_TIMEZONE
     assert config.max_attempts == DEFAULT_MAX_ATTEMPTS
-    assert config.payload is None
 
 
 def test_parse_reads_provided_values():
@@ -93,14 +92,12 @@ def test_parse_reads_provided_values():
             "cron_expression": {"value": "0 9 * * 1"},
             "timezone": {"value": "America/Sao_Paulo"},
             "max_attempts": {"value": 5},
-            "payload": {"value": '{"input_value": "hi"}'},
         },
     )
     config = parse_cron_trigger_config(node)
     assert config.cron_expression == "0 9 * * 1"
     assert config.timezone == "America/Sao_Paulo"
     assert config.max_attempts == 5
-    assert config.payload == {"input_value": "hi"}
 
 
 def test_parse_clamps_max_attempts_into_range():
@@ -117,30 +114,6 @@ def test_parse_falls_back_when_max_attempts_is_non_numeric():
         template={"max_attempts": {"value": "garbage"}},
     )
     assert parse_cron_trigger_config(node).max_attempts == DEFAULT_MAX_ATTEMPTS
-
-
-def test_parse_returns_none_payload_for_invalid_json():
-    node = _make_node(
-        "CronTrigger-bad-json",
-        template={"payload": {"value": "not json"}},
-    )
-    assert parse_cron_trigger_config(node).payload is None
-
-
-def test_parse_returns_none_payload_for_json_non_object():
-    node = _make_node(
-        "CronTrigger-array",
-        template={"payload": {"value": "[1, 2, 3]"}},
-    )
-    assert parse_cron_trigger_config(node).payload is None
-
-
-def test_parse_accepts_payload_already_decoded():
-    node = _make_node(
-        "CronTrigger-dict",
-        template={"payload": {"value": {"already": "decoded"}}},
-    )
-    assert parse_cron_trigger_config(node).payload == {"already": "decoded"}
 
 
 def test_parse_treats_empty_string_as_default():

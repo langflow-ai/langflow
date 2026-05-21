@@ -17,7 +17,6 @@ saves as long as the canvas does not regenerate the node id.
 
 from __future__ import annotations
 
-import json
 from dataclasses import dataclass
 from typing import Any
 
@@ -40,9 +39,9 @@ CRON_TRIGGER_TYPE: str = CronTriggerComponent.name
 class CronTriggerConfig:
     """Parsed configuration for a single CronTrigger node.
 
-    All five attributes have safe defaults: a partially filled node
-    (e.g. the user just dropped the component but has not configured
-    it yet) still produces a config with sensible fallbacks. The
+    All attributes have safe defaults: a partially filled node (e.g.
+    the user just dropped the component but has not configured it
+    yet) still produces a config with sensible fallbacks. The
     ``cron_expression`` default of ``"*/5 * * * *"`` is intentionally
     a valid cron so we never enqueue a job that the worker would
     immediately reject — invalid expressions are caught by the
@@ -53,7 +52,6 @@ class CronTriggerConfig:
     cron_expression: str
     timezone: str
     max_attempts: int
-    payload: dict[str, Any] | None
 
 
 def find_cron_trigger_nodes(flow_data: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -105,21 +103,6 @@ def _coerce_int(value: Any, fallback: int, *, lo: int, hi: int) -> int:
     return n
 
 
-def _coerce_payload(value: Any) -> dict[str, Any] | None:
-    """Accept dict, JSON string, or empty input. Always return dict or None."""
-    if value is None or value == "":
-        return None
-    if isinstance(value, dict):
-        return value
-    if isinstance(value, str):
-        try:
-            parsed = json.loads(value)
-        except json.JSONDecodeError:
-            return None
-        return parsed if isinstance(parsed, dict) else None
-    return None
-
-
 def parse_cron_trigger_config(node: dict[str, Any]) -> CronTriggerConfig:
     """Pull a typed config out of a CronTrigger node dict.
 
@@ -145,7 +128,6 @@ def parse_cron_trigger_config(node: dict[str, Any]) -> CronTriggerConfig:
             lo=1,
             hi=MAX_ATTEMPTS_LIMIT,
         ),
-        payload=_coerce_payload(_read_template_value(template, "payload", None)),
     )
 
 

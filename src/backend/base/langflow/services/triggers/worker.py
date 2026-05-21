@@ -57,7 +57,6 @@ from langflow.services.triggers.discovery import (
     find_cron_trigger_configs,
 )
 from langflow.services.triggers.scheduler import next_fire_time_utc
-from langflow.services.triggers.tweaks import build_simplified_request_kwargs
 
 if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
@@ -241,16 +240,21 @@ async def _run_flow_for_trigger(
     Imports happen inside the function so the worker module does not
     pull the full request-handling stack at import time (which would
     create a circular import with ``api.v1.endpoints``).
+
+    The trigger does not feed input data into the flow — it just
+    kicks the whole graph off. We dispatch with a default-empty
+    ``SimplifiedAPIRequest`` so the flow runs against its own inputs
+    (ChatInput defaults, hardcoded values, etc.). The fire time is
+    surfaced only via the ``context`` dict, which the existing
+    tracing / telemetry hooks already consume.
     """
     from langflow.api.v1.endpoints import simple_run_flow
     from langflow.api.v1.schemas import SimplifiedAPIRequest
 
-    request_kwargs = build_simplified_request_kwargs(ctx.config, fire_time=fire_time)
-    input_request = SimplifiedAPIRequest(**request_kwargs)
     run_id = str(uuid4())
     await simple_run_flow(
         flow=ctx.flow,
-        input_request=input_request,
+        input_request=SimplifiedAPIRequest(),
         stream=False,
         api_key_user=ctx.user,
         event_manager=None,

@@ -43,7 +43,6 @@ def _cron_trigger_node(
                     "cron_expression": {"value": cron_expression},
                     "timezone": {"value": timezone_name},
                     "max_attempts": {"value": max_attempts},
-                    "payload": {"value": ""},
                 },
             },
         },
@@ -116,7 +115,6 @@ def _ctx_from(flow: Flow, user: User, *, component_id: str) -> worker_module._Di
             cron_expression="*/5 * * * *",
             timezone="UTC",
             max_attempts=3,
-            payload=None,
         ),
     )
 

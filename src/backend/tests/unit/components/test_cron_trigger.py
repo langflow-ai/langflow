@@ -1,16 +1,12 @@
 """Unit tests for the CronTrigger component.
 
-Pure instantiation tests — no graph wiring, no DB. Verifies the
-component declares the immutable identifier, the expected friendly
-mode inputs, and that the two execution paths (manual canvas run vs
-worker-injected fire) both produce a tz-aware ISO 8601 string message.
-The ``update_build_config`` visibility + derivation logic is tested
-in this file too because it is canvas-facing behaviour.
+Pure instantiation tests — no graph wiring, no DB. The component is
+a config-only marker (no outputs, no execution side-effects); tests
+verify the immutable identifier, the expected friendly mode inputs,
+and the ``update_build_config`` visibility + cron-derivation logic.
 """
 
 from __future__ import annotations
-
-from datetime import datetime, timezone
 
 from lfx.components.triggers import CronTriggerComponent
 from lfx.components.triggers.constants import (
@@ -26,7 +22,6 @@ from lfx.components.triggers.cron_builder import (
     MODE_EVERY_N_MINUTES,
     MODE_WEEKLY,
 )
-from lfx.schema.message import Message
 
 # --------------------------------------------------------------------------- #
 #  Identity / metadata / inputs surface
@@ -57,9 +52,17 @@ def test_inputs_present_with_expected_names():
         "cron_expression",
         "timezone",
         "max_attempts",
-        "payload",
-        "fire_time",
     }
+
+
+def test_component_has_no_outputs():
+    """A CronTrigger is a marker, not a data source.
+
+    Pinning ``outputs == []`` keeps the contract that the node has no
+    handle on the canvas. Adding an output later would mean reverting
+    a deliberate UX decision.
+    """
+    assert CronTriggerComponent.outputs == []
 
 
 def test_initial_visibility_matches_default_mode():
@@ -99,14 +102,6 @@ def test_timezone_dropdown_lists_common_iana_names():
     assert "UTC" in options
     assert "America/Sao_Paulo" in options
     assert set(options) == set(COMMON_TIMEZONES)
-
-
-def test_output_is_single_message_emitter():
-    component = CronTriggerComponent()
-    assert len(component.outputs) == 1
-    only = component.outputs[0]
-    assert only.name == "event"
-    assert only.method == "build_event"
 
 
 # --------------------------------------------------------------------------- #
@@ -195,41 +190,3 @@ def test_update_build_config_recomputes_cron_when_interval_changes():
     config["minutes_interval"]["value"] = 15
     out = component.update_build_config(config, 15, "minutes_interval")
     assert out["cron_expression"]["value"] == "*/15 * * * *"
-
-
-# --------------------------------------------------------------------------- #
-#  build_event — execution behaviour
-# --------------------------------------------------------------------------- #
-
-
-def test_manual_canvas_run_returns_current_utc():
-    """No fire_time → component emits the call instant."""
-    component = CronTriggerComponent()
-    before = datetime.now(timezone.utc)
-    message = component.build_event()
-    after = datetime.now(timezone.utc)
-    assert isinstance(message, Message)
-    parsed = datetime.fromisoformat(message.text)
-    assert before <= parsed <= after
-    assert parsed.tzinfo is not None
-
-
-def test_worker_injection_path_emits_provided_timestamp():
-    component = CronTriggerComponent()
-    component.fire_time = "2026-05-21T12:34:56+00:00"
-    message = component.build_event()
-    assert message.text == "2026-05-21T12:34:56+00:00"
-
-
-def test_status_string_includes_fire_time():
-    component = CronTriggerComponent()
-    component.fire_time = "2026-05-21T12:34:56+00:00"
-    component.build_event()
-    assert "2026-05-21T12:34:56+00:00" in str(component.status)
-
-
-def test_fire_time_whitespace_is_ignored():
-    component = CronTriggerComponent()
-    component.fire_time = "   2026-05-21T12:34:56+00:00   "
-    message = component.build_event()
-    assert message.text == "2026-05-21T12:34:56+00:00"
