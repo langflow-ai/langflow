@@ -126,7 +126,7 @@ class MemoryBaseComponent(Component):
         Output(
             name="retrieve_data",
             display_name="Results",
-            method="retrieve_data",
+            method="retrieve_memory",
             info=(
                 "Returns matching memory chunks. Scoped to the current session by "
                 "default; turn 'Filter by Session' off to retrieve across sessions."
@@ -254,12 +254,12 @@ class MemoryBaseComponent(Component):
             data_list.append(Data(**kwargs))
         return DataFrame(data=data_list)
 
-    async def retrieve_data(self) -> DataFrame:
+    async def retrieve_memory(self) -> DataFrame:
         """Retrieve chunks from the selected Memory Base.
 
         Scoped to the current ``session_id`` when ``filter_by_session`` is true; when
         false, every chunk in the Memory Base is queryable so the agent can recall
-        context from prior conversations.
+        context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
         if bool(self.filter_by_session) and not session_id:

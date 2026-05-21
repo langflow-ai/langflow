@@ -631,6 +631,79 @@ class TestRunFlowBaseComponentInputOutputHandling:
         assert updated[1]["input_types"] == ["str"]
         assert updated[2]["input_types"] == []  # Should be added as empty list
 
+    def test_resolve_exposed_input_types_restores_message_for_empty_text_field(self):
+        """Empty input_types on a text field should be restored to ["Message"]."""
+        entry = {"type": "str", "input_types": []}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == ["Message"]
+
+    def test_resolve_exposed_input_types_restores_message_when_missing(self):
+        """Missing input_types on a text field should default to ["Message"]."""
+        entry = {"type": "Text"}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == ["Message"]
+
+    def test_resolve_exposed_input_types_preserves_existing_input_types(self):
+        """Existing input_types must be preserved without modification."""
+        entry = {"type": "str", "input_types": ["Message", "Data"]}
+
+        result = RunFlowBaseComponent._resolve_exposed_input_types(entry)
+
+        assert result == ["Message", "Data"]
+        # Returns a copy, not the original list, to avoid accidental shared mutation.
+        assert result is not entry["input_types"]
+
+    def test_resolve_exposed_input_types_skips_non_text_fields(self):
+        """Non-text fields with empty input_types are left untouched."""
+        entry = {"type": "bool", "input_types": []}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == []
+
+    def test_get_new_fields_exposes_message_handle_for_chat_input_value(self):
+        """Run Flow must expose a Message handle for ChatInput-style input_value fields.
+
+        Regression test for LE-1233: ChatInput sets input_types=[] on its input_value,
+        which previously propagated to the Run Flow dynamic field and prevented users
+        from wiring upstream components into the exposed Input Text field.
+        """
+        component = RunFlowBaseComponent()
+
+        chat_input_vertex = MagicMock(spec=Vertex)
+        chat_input_vertex.id = "ChatInput-abcde"
+        chat_input_vertex.display_name = "Chat Input"
+        chat_input_vertex.data = {
+            "node": {
+                "template": {
+                    "input_value": {
+                        "name": "input_value",
+                        "display_name": "Input Text",
+                        "type": "str",
+                        "input_types": [],
+                        "advanced": False,
+                    },
+                    "should_store_message": {
+                        "name": "should_store_message",
+                        "display_name": "Store Messages",
+                        "type": "bool",
+                        "input_types": [],
+                        "advanced": True,
+                    },
+                },
+                "field_order": ["input_value", "should_store_message"],
+            }
+        }
+
+        new_fields = component.get_new_fields([chat_input_vertex])
+
+        input_value_field = next(f for f in new_fields if f["name"].endswith("~input_value"))
+        bool_field = next(f for f in new_fields if f["name"].endswith("~should_store_message"))
+
+        assert input_value_field["input_types"] == ["Message"], (
+            "Text-typed exposed inputs must receive a Message handle so upstream components can be wired in (LE-1233)."
+        )
+        # Bool fields don't expose a Message handle — handle visibility is driven by `type`.
+        assert bool_field["input_types"] == []
+
 
 class TestRunFlowBaseComponentOutputMethods:
     """Test output methods."""
