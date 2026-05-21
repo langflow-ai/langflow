@@ -60,9 +60,14 @@ def _fake_provider_account(
     provider_url: str = "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
     api_key: str = "encrypted-key",
     provider_tenant_id: str | None = "tenant-1",
+    user_id=None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
+        # ``user_id`` is read by ``list_deployment_configs`` to pick the
+        # provider namespace for adapter calls; default to a random UUID
+        # so tests that don't care about the owner still pass.
+        user_id=user_id if user_id is not None else uuid4(),
         provider_key=provider_key,
         provider_url=provider_url,
         api_key=api_key,
@@ -1197,10 +1202,10 @@ class TestUpdateSnapshotRoute:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.get_attachment_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
     async def test_updates_all_attachment_rows_for_snapshot(
         self,
-        mock_get_attachment,
+        mock_list_attachments,
         mock_get_pa,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -1213,19 +1218,23 @@ class TestUpdateSnapshotRoute:
         user = _fake_user()
         flow_id = uuid4()
         target_flow_version_id = uuid4()
+        # ``update_snapshot`` filters the candidate set to attachments owned
+        # by the actor when share-aware fetch is off. Pin the owner to the
+        # actor's id so the OSS pass-through path keeps the row.
+        deployment = _fake_deployment_row(
+            user_id=user.id,
+            deployment_provider_account_id=uuid4(),
+        )
         attachment = SimpleNamespace(
             flow_version_id=uuid4(),
-            deployment_id=uuid4(),
+            deployment_id=deployment.id,
             provider_snapshot_id="tool-1",
-        )
-        deployment = _fake_deployment_row(
-            id=attachment.deployment_id,
-            deployment_provider_account_id=uuid4(),
+            user_id=user.id,
         )
         provider_account = _fake_provider_account()
         provider_account.id = deployment.deployment_provider_account_id
 
-        mock_get_attachment.return_value = attachment
+        mock_list_attachments.return_value = [attachment]
         mock_get_deployment_row.return_value = deployment
         mock_get_flow_version.return_value = SimpleNamespace(id=target_flow_version_id, flow_id=flow_id, data={})
         mock_get_pa.return_value = provider_account
@@ -1249,9 +1258,8 @@ class TestUpdateSnapshotRoute:
 
         assert response.flow_version_id == target_flow_version_id
         assert response.provider_snapshot_id == "tool-1"
-        mock_get_attachment.assert_awaited_once_with(
+        mock_list_attachments.assert_awaited_once_with(
             session,
-            user_id=user.id,
             provider_snapshot_id="tool-1",
         )
         mock_update_rows.assert_awaited_once_with(
@@ -1270,10 +1278,10 @@ class TestUpdateSnapshotRoute:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.get_attachment_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
     async def test_commit_failure_attempts_provider_compensation(
         self,
-        mock_get_attachment,
+        mock_list_attachments,
         mock_get_pa,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -1287,14 +1295,15 @@ class TestUpdateSnapshotRoute:
         flow_id = uuid4()
         previous_flow_version_id = uuid4()
         target_flow_version_id = uuid4()
+        deployment = _fake_deployment_row(
+            user_id=user.id,
+            deployment_provider_account_id=uuid4(),
+        )
         attachment = SimpleNamespace(
             flow_version_id=previous_flow_version_id,
-            deployment_id=uuid4(),
+            deployment_id=deployment.id,
             provider_snapshot_id="tool-1",
-        )
-        deployment = _fake_deployment_row(
-            id=attachment.deployment_id,
-            deployment_provider_account_id=uuid4(),
+            user_id=user.id,
         )
         provider_account = _fake_provider_account()
         provider_account.id = deployment.deployment_provider_account_id
@@ -1302,7 +1311,7 @@ class TestUpdateSnapshotRoute:
         target_version = SimpleNamespace(id=target_flow_version_id, flow_id=flow_id, data={"nodes": []})
         previous_version = SimpleNamespace(id=previous_flow_version_id, flow_id=flow_id, data={"nodes": []})
         mock_get_flow_version.side_effect = [target_version, previous_version]
-        mock_get_attachment.return_value = attachment
+        mock_list_attachments.return_value = [attachment]
         mock_get_deployment_row.return_value = deployment
         mock_get_pa.return_value = provider_account
         adapter = AsyncMock()
@@ -2249,7 +2258,10 @@ class TestGetDeploymentSync:
             await get_deployment(deployment_id=dep_row.id, session=session, current_user=user)
 
         assert exc_info.value.status_code == 404
-        mock_delete_row.assert_awaited_once_with(session, user_id=user.id, deployment_id=dep_row.id)
+        # Stale-row delete now runs in the deployment owner's namespace so
+        # a non-owner with a share grant can still prune the owner's stale
+        # row. ``current_user`` is only the actor for audit.
+        mock_delete_row.assert_awaited_once_with(session, user_id=dep_row.user_id, deployment_id=dep_row.id)
         session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio

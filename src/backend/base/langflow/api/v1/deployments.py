@@ -1253,9 +1253,30 @@ async def update_snapshot(
             detail=f"No attachment found for provider_snapshot_id '{snapshot_id}'.",
         )
 
+    # The downstream provider call is scoped to ONE provider account (the
+    # one we resolve ``deployment_adapter`` against), but
+    # ``update_flow_version_by_provider_snapshot_id`` rewrites every owner
+    # row matching ``(owner_id, snapshot_id)`` regardless of which provider
+    # account the deployment belongs to. If the same provider_snapshot_id
+    # exists across multiple provider accounts in the owner's namespace,
+    # mutating one provider account while rewriting attachments tied to a
+    # different account would corrupt their pointer state. Refuse the
+    # ambiguous case so the caller has to disambiguate (typically by
+    # cleaning up snapshot id collisions).
+    provider_account_ids = {d.deployment_provider_account_id for d in resolved_deployments}
+    if len(provider_account_ids) > 1:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=(
+                f"Provider snapshot '{snapshot_id}' is attached to deployments across "
+                f"{len(provider_account_ids)} provider accounts. The PATCH route cannot "
+                "safely update them in one operation."
+            ),
+        )
+
     # Pick any authorized attachment + deployment for the downstream provider
     # call — they all share the same owner, snapshot, and provider account by
-    # construction. The mutation operates on the full set via
+    # the check above. The mutation operates on the full set via
     # ``update_flow_version_by_provider_snapshot_id``.
     deployment = resolved_deployments[0]
     attachment = next(c for c in all_candidates if c.deployment_id == deployment.id)
