@@ -4,7 +4,6 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from fastapi import HTTPException
 from langflow.api.v1.deployments import list_deployments
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.services.database.models.deployment.crud import create_deployment
@@ -117,8 +116,8 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
 
 
 @pytest.mark.asyncio
-async def test_list_deployments_names_filter_db_mode(async_session, active_user):
-    """Integration test: DB mode returns display_name and rejects provider-name filters."""
+async def test_list_deployments_db_mode_syncs_display_name(async_session, active_user):
+    """Integration test: DB-backed list syncs provider display_name into deployment rows."""
     with patch("langflow.services.utils.FEATURE_FLAGS.wxo_deployments", new=True):
         # Manually register adapters since app initialization might have skipped it
         register_builtin_adapters()
@@ -201,7 +200,6 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
                 return_value=_NoSnapshotBindingMapper(),
             ),
         ):
-            # 1. Fetch without names filter
             response = await list_deployments(
                 provider_id=provider_id,
                 session=async_session,
@@ -209,33 +207,21 @@ async def test_list_deployments_names_filter_db_mode(async_session, active_user)
                 params=params,
                 deployment_type=None,
                 load_from_provider=False,
-                names=None,
             )
             assert response.total == 3
-            names = {d.display_name for d in response.deployments}
-            assert names == {"Agent Alpha", "Agent Beta", "Agent Gamma"}
-
-            # 2. Provider technical-name filters are provider-only after local rows moved to display_name.
-            with pytest.raises(HTTPException) as exc_info:
-                await list_deployments(
-                    provider_id=provider_id,
-                    session=async_session,
-                    current_user=active_user,
-                    params=params,
-                    deployment_type=None,
-                    load_from_provider=False,
-                    names=["Agent Alpha"],
-                )
-            assert exc_info.value.status_code == 422
-            assert (
-                exc_info.value.detail
-                == "names filtering is only supported when loading deployments directly from the provider."
-            )
+            await async_session.commit()
+            for deployment in (deployment_alpha, deployment_beta, deployment_gamma):
+                await async_session.refresh(deployment)
+            assert {
+                deployment_alpha.display_name,
+                deployment_beta.display_name,
+                deployment_gamma.display_name,
+            } == {"Agent Alpha", "Agent Beta", "Agent Gamma"}
 
 
 @pytest.mark.asyncio
-async def test_list_deployments_names_filter_provider_mode(async_session, active_user):
-    """Integration test: GET /deployments?names= filters correctly in provider mode."""
+async def test_list_deployments_provider_mode_lists_entries(async_session, active_user):
+    """Integration test: load_from_provider lists provider-owned deployment entries."""
     with patch("langflow.services.utils.FEATURE_FLAGS.wxo_deployments", new=True):
         register_builtin_adapters()
 
@@ -271,7 +257,6 @@ async def test_list_deployments_names_filter_provider_mode(async_session, active
                 return_value=_NoSnapshotBindingMapper(),
             ),
         ):
-            # 1. Fetch without names filter
             response = await list_deployments(
                 provider_id=provider_id,
                 session=async_session,
@@ -279,29 +264,15 @@ async def test_list_deployments_names_filter_provider_mode(async_session, active
                 params=params,
                 deployment_type=None,
                 load_from_provider=True,
-                names=None,
             )
             assert response.total == 2
-            names = {d["name"] for d in response.provider_data["entries"]}
+            names = {entry["name"] for entry in response.provider_data["entries"]}
             assert names == {"Agent Alpha", "Agent Beta"}
-
-            # 2. Fetch with single name filter
-            response = await list_deployments(
-                provider_id=provider_id,
-                session=async_session,
-                current_user=active_user,
-                params=params,
-                deployment_type=None,
-                load_from_provider=True,
-                names=["Agent Alpha"],
-            )
-            assert response.total == 1
-            assert response.provider_data["entries"][0]["name"] == "Agent Alpha"
 
 
 @pytest.mark.asyncio
-async def test_list_deployments_names_filter_combined(async_session, active_user):
-    """Integration test: DB mode rejects provider-name filters even with project_id."""
+async def test_list_deployments_project_id_filter_db_mode(async_session, active_user):
+    """Integration test: DB-backed list filters by project_id and syncs display_name."""
     with patch("langflow.services.utils.FEATURE_FLAGS.wxo_deployments", new=True):
         register_builtin_adapters()
 
@@ -375,7 +346,6 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
                 return_value=_NoSnapshotBindingMapper(),
             ),
         ):
-            # Project filtering remains local; provider technical-name filtering does not.
             response = await list_deployments(
                 provider_id=provider_id,
                 session=async_session,
@@ -383,28 +353,12 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
                 params=params,
                 deployment_type=None,
                 load_from_provider=False,
-                names=None,
                 project_id=project_a.id,
             )
             assert response.total == 1
-            assert response.deployments[0].display_name == "Agent Alpha"
-
-            with pytest.raises(HTTPException) as exc_info:
-                await list_deployments(
-                    provider_id=provider_id,
-                    session=async_session,
-                    current_user=active_user,
-                    params=params,
-                    deployment_type=None,
-                    load_from_provider=False,
-                    names=["Agent Alpha", "Agent Beta"],
-                    project_id=project_a.id,
-                )
-            assert exc_info.value.status_code == 422
-            assert (
-                exc_info.value.detail
-                == "names filtering is only supported when loading deployments directly from the provider."
-            )
+            await async_session.commit()
+            await async_session.refresh(deployment_alpha)
+            assert deployment_alpha.display_name == "Agent Alpha"
 
 
 @pytest.mark.asyncio
