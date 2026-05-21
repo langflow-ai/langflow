@@ -164,7 +164,22 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
 
             return values
 
-    return run_until_complete(_get_all_variables())
+    db_values = run_until_complete(_get_all_variables())
+
+    # decrypt_api_key swallows Fernet InvalidToken silently and returns "",
+    # so a SECRET_KEY rotation leaves required keys missing from db_values
+    # even when the env var is set. Mirror get_api_key_for_provider's
+    # post-async env fallback so the assistant doesn't reject the request
+    # with "Missing required configuration" while the env var is present.
+    for var_info in provider_vars:
+        var_key = var_info.get("variable_key")
+        if not var_key or db_values.get(var_key):
+            continue
+        env_value = os.environ.get(var_key)
+        if env_value and env_value.strip():
+            db_values[var_key] = env_value
+
+    return db_values
 
 
 def _validate_and_get_enabled_providers(
