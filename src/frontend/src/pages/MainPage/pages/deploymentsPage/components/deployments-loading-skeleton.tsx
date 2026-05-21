@@ -10,7 +10,7 @@ import {
 
 const SKELETON_ROWS = 3;
 const COLUMN_HEADERS = [
-  "Name",
+  "Display Name",
   "Type",
   "Status",
   "Health",

@@ -33,8 +33,6 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentData,
-    BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigListParams,
     ConfigListResult,
@@ -82,7 +80,6 @@ from langflow.api.v1.schemas.deployments import (
 
 from .contracts import (
     CreatedSnapshotIds,
-    CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
     ProviderSnapshotBinding,
@@ -157,39 +154,9 @@ class BaseDeploymentMapper:
         db: AsyncSession,
         payload: DeploymentCreateRequest,
     ) -> AdapterDeploymentCreate:
-        _ = (user_id, project_id)
-        provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
-        return AdapterDeploymentCreate(
-            spec=BaseDeploymentData(
-                name=payload.name,
-                description=payload.description,
-                type=payload.type,
-            ),
-            provider_data=provider_data,
-        )
-
-    async def resolve_deployment_update_for_existing_create(
-        self,
-        *,
-        user_id: UUID,
-        project_id: UUID,
-        db: AsyncSession,
-        payload: DeploymentCreateRequest,
-    ) -> AdapterDeploymentUpdate:
-        """Build adapter update payload for existing-resource create onboarding."""
-        create_payload = await self.resolve_deployment_create(
-            user_id=user_id,
-            project_id=project_id,
-            db=db,
-            payload=payload,
-        )
-        return AdapterDeploymentUpdate(
-            spec=BaseDeploymentDataUpdate(
-                name=payload.name,
-                description=payload.description,
-            ),
-            provider_data=create_payload.provider_data,
-        )
+        _ = (user_id, project_id, db, payload)
+        msg = "This deployment provider is not configured for creating deployments."
+        raise NotImplementedError(msg)
 
     async def resolve_deployment_update(
         self,
@@ -199,20 +166,9 @@ class BaseDeploymentMapper:
         db: AsyncSession,
         payload: DeploymentUpdateRequest,
     ) -> AdapterDeploymentUpdate:
-        _ = (user_id, deployment_db_id)
-        adapter_spec = (
-            BaseDeploymentDataUpdate(
-                name=payload.name,
-                description=payload.description,
-            )
-            if payload.name is not None or payload.description is not None
-            else None
-        )
-        provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)
-        return AdapterDeploymentUpdate(
-            spec=adapter_spec,
-            provider_data=provider_data,
-        )
+        _ = (user_id, deployment_db_id, db, payload)
+        msg = "This deployment provider is not configured for updating deployments."
+        raise NotImplementedError(msg)
 
     async def resolve_execution_input(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.execution_input, raw)
@@ -283,14 +239,12 @@ class BaseDeploymentMapper:
         self,
         *,
         deployment_type: DeploymentType | None,
-        names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
     ) -> DeploymentListParams | None:
-        if deployment_type is None and not names and provider_params is None:
+        if deployment_type is None and provider_params is None:
             return None
         return DeploymentListParams(
             deployment_types=[deployment_type] if deployment_type is not None else None,
-            deployment_names=names or None,
             provider_params=provider_params,
         )
 
@@ -309,12 +263,10 @@ class BaseDeploymentMapper:
         self,
         *,
         deployment_resource_key: str | None,
-        snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
     ) -> SnapshotListParams:
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            snapshot_names=snapshot_names or None,
             provider_params=provider_params,
         )
 
@@ -334,7 +286,6 @@ class BaseDeploymentMapper:
                 provider_key=provider_key,
                 resource_key=row.resource_key,
                 type=row.deployment_type,
-                name=row.name,
                 description=row.description,
                 attached_count=attached_count,
                 created_at=row.created_at,
@@ -385,7 +336,6 @@ class BaseDeploymentMapper:
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -406,7 +356,6 @@ class BaseDeploymentMapper:
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -426,6 +375,48 @@ class BaseDeploymentMapper:
         """
         _ = provider_data
         raise NotImplementedError
+
+    def resolve_deployment_model_for_create(
+        self,
+        *,
+        result: DeploymentCreateResult,
+        user_id: UUID,
+        project_id: UUID,
+        deployment_provider_account_id: UUID,
+    ) -> Deployment:
+        """Assemble the DB model for a deployment create.
+
+        Provider mappers own request-specific deployment metadata extraction.
+        The base mapper has no provider-agnostic source for required DB fields
+        such as the display label.
+        """
+        _ = (result, user_id, project_id, deployment_provider_account_id)
+        msg = "This deployment provider is not configured for creating local deployment records."
+        raise NotImplementedError(msg)
+
+    def resolve_deployment_model_from_existing_resource_for_create(
+        self,
+        *,
+        payload: DeploymentCreateRequest,
+        existing_provider_resource: DeploymentGetResult,
+        user_id: UUID,
+        project_id: UUID,
+        deployment_provider_account_id: UUID,
+    ) -> Deployment:
+        """Assemble the DB model for onboarding an existing provider resource."""
+        _ = (payload, existing_provider_resource, user_id, project_id, deployment_provider_account_id)
+        msg = "This deployment provider is not configured for onboarding existing deployment resources."
+        raise NotImplementedError(msg)
+
+    def resolve_kwargs_for_metadata_update(self, result: DeploymentUpdateResult) -> dict[str, Any]:
+        """Assemble Deployment metadata update kwargs from a provider update result.
+
+        Provider mappers own provider-result metadata extraction. The base
+        mapper has no provider-agnostic source for mutable DB cache fields.
+        """
+        _ = result
+        msg = "This deployment provider is not configured for updating local deployment metadata."
+        raise NotImplementedError(msg)
 
     def format_conflict_detail(
         self,
@@ -526,7 +517,7 @@ class BaseDeploymentMapper:
         _ = existing_account
         if "provider_data" not in payload.model_fields_set:
             return None
-        msg = "Credential verification for provider account updates is not implemented for this provider."
+        msg = "This deployment provider is not configured for verifying provider account updates."
         raise NotImplementedError(msg)
 
     def resolve_provider_account_response(
@@ -549,19 +540,6 @@ class BaseDeploymentMapper:
         """Return non-sensitive provider metadata for provider-account responses."""
         return {"url": provider_account.provider_url}
 
-    def util_create_flow_artifact_provider_data(
-        self,
-        *,
-        project_id: UUID,
-        flow_version_id: UUID,
-    ) -> CreateFlowArtifactProviderData:
-        """Build provider_data for create-time flow artifacts.
-
-        Contract schema: ``CreateFlowArtifactProviderData``.
-        """
-        _ = project_id
-        return CreateFlowArtifactProviderData(source_ref=str(flow_version_id))
-
     def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
         """Resolve flow-version ids referenced by create payload."""
         _ = payload
@@ -575,35 +553,15 @@ class BaseDeploymentMapper:
         _ = payload
         raise NotImplementedError
 
-    def util_should_mutate_provider_for_existing_deployment_create(
-        self,
-        payload: DeploymentCreateRequest,
-    ) -> bool:
-        """Return whether existing-resource create should call provider update."""
-        _ = payload
-        raise NotImplementedError
-
-    def util_create_result_from_existing_update(
-        self,
-        *,
-        existing_resource_key: str,
-        result: DeploymentUpdateResult,
-    ) -> DeploymentCreateResult:
-        """Build create-result contract from existing-resource update result.
-
-        Routes use this when create-time onboarding reuses an existing provider
-        resource and mutates it through ``adapter.update``.
-        """
-        _ = (existing_resource_key, result)
-        raise NotImplementedError
-
     def util_create_result_from_existing_resource(
         self,
         *,
-        existing_resource_key: str,
+        existing_resource: DeploymentGetResult,
     ) -> DeploymentCreateResult:
         """Build create-result contract for DB-only existing-resource onboarding."""
-        return DeploymentCreateResult(id=existing_resource_key)
+        _ = existing_resource
+        msg = "This deployment provider is not configured for onboarding existing deployment resources."
+        raise NotImplementedError(msg)
 
     def util_create_snapshot_bindings(
         self,
@@ -678,10 +636,7 @@ class BaseDeploymentMapper:
         surface a loud failure pointing at the unimplemented method.
         """
         _ = provider_view
-        msg = (
-            "BaseDeploymentMapper does not implement extract_snapshot_bindings; "
-            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
-        )
+        msg = "This deployment provider is not configured for syncing snapshots for multiple deployments."
         raise NotImplementedError(msg)
 
     def extract_list_item_provider_data(
@@ -695,6 +650,24 @@ class BaseDeploymentMapper:
         """
         _ = provider_view
         return {}
+
+    def extract_metadata_for_list(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Resolve resource_key -> CRUD kwargs for local metadata sync."""
+        _ = provider_view
+        msg = "This deployment provider is not configured for syncing metadata for multiple deployments."
+        raise NotImplementedError(msg)
+
+    def extract_metadata_for_get(
+        self,
+        get_result: DeploymentGetResult,
+    ) -> dict[str, Any]:
+        """Resolve CRUD kwargs for local metadata sync from a provider GET result."""
+        _ = get_result
+        msg = "This deployment provider is not configured for syncing metadata for a deployment."
+        raise NotImplementedError(msg)
 
     def extract_snapshot_bindings_for_get(
         self,
@@ -720,10 +693,7 @@ class BaseDeploymentMapper:
         than wiping local state.
         """
         _ = get_result, resource_key
-        msg = (
-            "BaseDeploymentMapper does not implement extract_snapshot_bindings_for_get; "
-            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
-        )
+        msg = "This deployment provider is not configured for syncing snapshots for a deployment."
         raise NotImplementedError(msg)
 
     async def resolve_rollback_update(
@@ -897,9 +867,6 @@ class BaseDeploymentMapper:
             "GET provider_data shaping is unavailable for this provider."
         )
         raise NotImplementedError(msg)
-
-    def shape_deployment_status_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
-        return provider_data
 
     @staticmethod
     def _validate_slot(

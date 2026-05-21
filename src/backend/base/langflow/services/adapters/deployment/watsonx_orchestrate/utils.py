@@ -4,7 +4,8 @@ from __future__ import annotations
 
 import json
 import logging
-from typing import TYPE_CHECKING, Any, NoReturn
+from typing import TYPE_CHECKING, Any, NoReturn, TypeVar
+from uuid import uuid4
 
 from fastapi import HTTPException
 from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
@@ -26,8 +27,6 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
 )
 
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         SnapshotListParams,
@@ -35,21 +34,96 @@ if TYPE_CHECKING:
 
 logger = logging.getLogger(__name__)
 
+LANGFLOW_WXO_RESOURCE_NAME_PREFIX = "langflow_"
+T = TypeVar("T")
+
 
 def normalize_wxo_name(s: str) -> str:
     return WXO_SANITIZE_RE.sub("", s.translate(WXO_TRANSLATE))
 
 
-def validate_wxo_name(name: str) -> str:
+def normalize_wxo_display_name_segment(display_name: str, *, resource: str) -> str:
+    """Normalize the display label segment used in Langflow-managed wxO names."""
+    normalized_display_name = normalize_wxo_name(display_name).strip("_")
+    if normalized_display_name:
+        return normalized_display_name
+    normalized_resource = normalize_wxo_name(resource).strip("_").lower()
+    if not normalized_resource:
+        msg = (
+            "Display name did not include any alphanumeric characters, so fallback naming used the 'resource' "
+            "argument. The 'resource' argument must include at least one alphanumeric character. "
+            f"Received: '{resource}'"
+        )
+        raise InvalidContentError(message=msg)
+    return normalized_resource
+
+
+def build_langflow_wxo_resource_name(display_name: str, *, resource: str) -> str:
+    """Build a Langflow-managed wxO technical name from a display label."""
+    normalized_display_name = normalize_wxo_display_name_segment(display_name, resource=resource)
+    return f"{LANGFLOW_WXO_RESOURCE_NAME_PREFIX}{normalized_display_name}_{uuid4().hex[:8]}"
+
+
+def validate_wxo_name(name: str, *, field_label: str) -> str:
     """Normalize and validate a wxO resource name."""
     normalized_name = normalize_wxo_name(str(name))
     if not normalized_name:
-        msg = "Deployment name must include at least one alphanumeric character."
+        msg = f"{field_label} must include at least one alphanumeric character."
         raise InvalidContentError(message=msg)
     if not normalized_name[0].isalpha():
-        msg = "Deployment name must start with a letter."
+        msg = f"{field_label} must start with a letter."
         raise InvalidContentError(message=msg)
     return normalized_name
+
+
+def ensure_field_not_none(value: T | None, *, field_label: str) -> T:
+    """Validate that an explicitly provided field is not null."""
+    if value is None:
+        msg = f"{field_label} cannot be set to null."
+        raise InvalidContentError(message=msg)
+    return value
+
+
+def ensure_field_not_empty(value: str | None, *, field_label: str) -> str:
+    """Validate that an explicitly provided string field is neither null nor blank."""
+    field_value = ensure_field_not_none(value, field_label=field_label)
+    if not field_value.strip():
+        msg = f"{field_label} cannot be empty."
+        raise InvalidContentError(message=msg)
+    return field_value
+
+
+def validate_technical_name(name: str | None, *, field_label: str) -> str:
+    """Validate a caller-provided wxO technical name without rewriting it."""
+    technical_name = ensure_field_not_none(name, field_label=field_label)
+    if not technical_name:
+        msg = f"{field_label} must include at least one alphanumeric character."
+        raise InvalidContentError(message=msg)
+    if not technical_name[0].isalpha():
+        msg = f"{field_label} must start with a letter."
+        raise InvalidContentError(message=msg)
+    if WXO_SANITIZE_RE.search(technical_name):
+        msg = f"{field_label} must only contain letters, numbers, and underscores."
+        raise InvalidContentError(message=msg)
+    return technical_name
+
+
+def validate_description(description: str | None, *, field_label: str) -> str | None:
+    """Validate an explicit description update."""
+    if description is not None and not description.strip():
+        msg = f"{field_label} cannot be empty."
+        raise InvalidContentError(message=msg)
+    return description
+
+
+def resolve_agent_description(description: str | None, *, agent_display_name: str) -> str:
+    """Resolve the required description content used for agent create payloads.
+
+    wxO does not allow null or empty descriptions.
+    """
+    if description and (desc := description.strip()):
+        return desc
+    return f"Langflow deployment {agent_display_name}"
 
 
 def require_tool_id(tool_response: dict[str, Any]) -> str:
@@ -169,22 +243,15 @@ def build_agent_payload_from_values(
     *,
     agent_name: str,
     agent_display_name: str,
-    deployment_name: str,
-    description: str,
-    tool_ids: Sequence[str],
+    description: str | None,
+    tool_ids: list[str],
     llm: str,
 ) -> dict[str, Any]:
     return {
         "name": agent_name,
         "display_name": agent_display_name,
-        "description": str(description).strip() or f"Langflow deployment {deployment_name}",
-        "tools": list(tool_ids),
+        "description": resolve_agent_description(description, agent_display_name=agent_display_name),
+        "tools": tool_ids,
         "style": "default",
-        "llm": str(llm).strip(),
+        "llm": llm,
     }
-
-
-def extract_agent_tool_ids(agent: dict[str, Any]) -> list[str]:
-    # Shape source:
-    # - SDK/API agent payload uses "tools" as list[str] in this adapter flow.
-    return [str(tool_id) for tool_id in agent.get("tools", []) if tool_id]

@@ -12,13 +12,13 @@ class TestDeploymentValidation:
         info.field_name = field_name
         return info
 
-    def test_rejects_empty_name(self):
-        with pytest.raises(ValueError, match="name must not be empty"):
-            Deployment.validate_non_empty("", self._make_info("name"))
+    def test_rejects_empty_display_name(self):
+        with pytest.raises(ValueError, match="display_name must not be empty"):
+            Deployment.validate_non_empty("", self._make_info("display_name"))
 
-    def test_rejects_whitespace_name(self):
-        with pytest.raises(ValueError, match="name must not be empty"):
-            Deployment.validate_non_empty("   ", self._make_info("name"))
+    def test_rejects_whitespace_display_name(self):
+        with pytest.raises(ValueError, match="display_name must not be empty"):
+            Deployment.validate_non_empty("   ", self._make_info("display_name"))
 
     def test_rejects_empty_resource_key(self):
         with pytest.raises(ValueError, match="resource_key must not be empty"):
@@ -28,8 +28,8 @@ class TestDeploymentValidation:
         with pytest.raises(ValueError, match="resource_key must not be empty"):
             Deployment.validate_non_empty("   ", self._make_info("resource_key"))
 
-    def test_strips_whitespace_from_name(self):
-        result = Deployment.validate_non_empty("  hello  ", self._make_info("name"))
+    def test_strips_whitespace_from_display_name(self):
+        result = Deployment.validate_non_empty("  hello  ", self._make_info("display_name"))
         assert result == "hello"
 
     def test_strips_whitespace_from_resource_key(self):
@@ -47,7 +47,7 @@ class TestDeploymentRead:
             "user_id",
             "project_id",
             "deployment_provider_account_id",
-            "name",
+            "display_name",
             "description",
             "deployment_type",
             "created_at",

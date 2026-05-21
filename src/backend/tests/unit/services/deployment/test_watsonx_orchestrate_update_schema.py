@@ -28,13 +28,19 @@ from lfx.services.adapters.payload import AdapterPayloadValidationError
 
 
 def _raw_tool(name: str, suffix: int) -> dict:
+    technical_name = name.replace("-", "_")
     return {
         "id": str(UUID(int=suffix)),
         "name": name,
         "description": "desc",
         "data": {"nodes": [], "edges": []},
         "tags": [],
-        "provider_data": {"project_id": "project-1", "source_ref": f"fv-{suffix}"},
+        "provider_data": {
+            "project_id": "project-1",
+            "source_ref": f"fv-{suffix}",
+            "tool_name": technical_name,
+            "tool_display_name": name,
+        },
     }
 
 
@@ -72,6 +78,7 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     assert slot.deployment_create is not None
 
     payload = {
+        "display_name": "Create Agent",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [_raw_tool("tool-new-1", 11)],
@@ -82,7 +89,7 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
         "operations": [
             {
                 "op": "bind",
-                "tool": {"name_of_raw": "tool-new-1"},
+                "tool": {"name_of_raw": "tool_new_1"},
                 "app_ids": ["app-new-1"],
             },
             {
@@ -94,7 +101,7 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     }
 
     applied = slot.deployment_create.apply(payload)
-    assert applied["operations"][0]["tool"]["name_of_raw"] == "tool-new-1"
+    assert applied["operations"][0]["tool"]["name_of_raw"] == "tool_new_1"
 
 
 def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
@@ -103,6 +110,7 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
     assert slot.deployment_create is not None
 
     payload = {
+        "display_name": "Create Agent",
         "llm": "granite-3-8b-instruct",
         "tools": {
             "raw_payloads": [
@@ -114,7 +122,7 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
         "operations": [
             {
                 "op": "bind",
-                "tool": {"name_of_raw": "tool-dup"},
+                "tool": {"name_of_raw": "tool_dup"},
                 "app_ids": ["app-existing-1"],
             }
         ],
@@ -123,7 +131,7 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
     applied = slot.deployment_create.apply(payload)
     raw_payloads = applied["tools"]["raw_payloads"]
     assert len(raw_payloads) == 1
-    assert raw_payloads[0]["name"] == "tool-dup"
+    assert raw_payloads[0]["provider_data"]["tool_name"] == "tool_dup"
     # First payload wins after dedupe.
     assert raw_payloads[0]["provider_data"]["source_ref"] == "fv-101"
 
@@ -144,7 +152,7 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
         "operations": [
             {
                 "op": "bind",
-                "tool": {"name_of_raw": "tool-new-1"},
+                "tool": {"name_of_raw": "tool_new_1"},
                 "app_ids": ["app-new-1"],
             },
             {
@@ -156,7 +164,7 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
     }
 
     applied = slot.deployment_update.apply(payload)
-    assert applied["operations"][0]["tool"]["name_of_raw"] == "tool-new-1"
+    assert applied["operations"][0]["tool"]["name_of_raw"] == "tool_new_1"
     assert applied["operations"][1]["tool"]["tool_id_with_ref"]["tool_id"] == "tool-existing-1"
 
 
@@ -213,7 +221,7 @@ def test_update_schema_rejects_tool_reference_with_both_selectors() -> None:
                         "op": "bind",
                         "tool": {
                             "tool_id_with_ref": {"source_ref": "fv-1", "tool_id": "tool-existing-1"},
-                            "name_of_raw": "tool-new-1",
+                            "name_of_raw": "tool_new_1",
                         },
                         "app_ids": ["app-existing-1"],
                     }
@@ -261,7 +269,7 @@ def test_update_schema_accepts_bind_app_id_not_in_raw_pool_as_existing() -> None
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"name_of_raw": "tool-new-1"},
+                    "tool": {"name_of_raw": "tool_new_1"},
                     "app_ids": ["app-not-declared"],
                 }
             ],
@@ -301,7 +309,7 @@ def test_update_schema_rejects_unused_raw_connection_app_ids() -> None:
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"name_of_raw": "tool-new-1"},
+                        "tool": {"name_of_raw": "tool_new_1"},
                         "app_ids": ["app-new-1"],
                     }
                 ],
