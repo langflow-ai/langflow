@@ -91,6 +91,10 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Optional override forwarded to tracing providers as the trace's user_id.
+        # Distinct from self.user_id so request-supplied identifiers can label
+        # external traces (e.g. Langfuse) without leaking into authn/authz paths.
+        self.tracing_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -672,7 +676,7 @@ class Graph:
             await self.tracing_service.start_tracers(
                 run_id=uuid.UUID(self._run_id),
                 run_name=run_name,
-                user_id=self.user_id,
+                user_id=self.tracing_user_id or self.user_id,
                 session_id=self.session_id,
                 flow_id=self.flow_id,
             )
