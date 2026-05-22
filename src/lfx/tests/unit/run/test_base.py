@@ -1640,3 +1640,87 @@ class TestUpgradeFlowOption:
             # Loader receives {"data": inner_graph} for both flat and envelope inputs.
             assert "data" in loaded_arg
             assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_envelope_inline_json_loads_successfully(self):
+        """--flow-json with outer envelope + --upgrade-flow=safe must upgrade and pass {"data": inner} to loader.
+
+        Symmetric to test_upgrade_flow_safe_envelope_file_loads_successfully but for the
+        --flow-json input path. Regression: the envelope unwrap at parse time (line 162)
+        must leave flow_dict as the inner graph so the loader receives {"data": inner}, not
+        {"data": {"name":..., "data": inner}} (double-wrapped).
+        """
+        import json as _json
+
+        envelope = {"name": "My Flow", "description": "x", "data": self._flow_dict(code=self.NODE_CODE)}
+        flow_json = _json.dumps(envelope)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_cache.all_types_dict = self._registry()
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(flow_json=flow_json, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            assert "data" in loaded_arg, f"loader got wrong shape: {list(loaded_arg)}"
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_envelope_stdin_loads_successfully(self):
+        """--stdin with outer envelope + --upgrade-flow=safe must upgrade and pass {"data": inner} to loader.
+
+        Symmetric to the file and --flow-json envelope tests for the stdin input path.
+        """
+        import json as _json
+        from io import StringIO
+
+        envelope = {"name": "My Flow", "description": "x", "data": self._flow_dict(code=self.NODE_CODE)}
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+            patch("sys.stdin", StringIO(_json.dumps(envelope))),
+        ):
+            mock_cache.all_types_dict = self._registry()
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(stdin=True, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            assert "data" in loaded_arg, f"loader got wrong shape: {list(loaded_arg)}"
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
