@@ -901,6 +901,79 @@ async def test_is_mcp_servers_locked_respects_explicit_true_flag():
     assert is_mcp_servers_locked(settings) is True
 
 
+async def test_v2_mcp_servers_locked_blocks_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    server_name = f"lf-lock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
+    client: AsyncClient,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    username = f"super_lock_{uuid4().hex[:8]}"
+    login_password = f"lfx-{uuid4().hex[:12]}"
+    async with session_scope() as session:
+        super_user = User(
+            username=username,
+            password=get_password_hash(login_password),
+            is_active=True,
+            is_superuser=True,
+        )
+        session.add(super_user)
+
+    login_response = await client.post("api/v1/login", data={"username": username, "password": login_password})
+    assert login_response.status_code == status.HTTP_200_OK
+    access_token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    server_name = f"lf-lock-super-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(
+        f"/api/v2/mcp/servers/{server_name}",
+        json=server_config,
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
 async def test_install_mcp_config_defaults_to_sse_transport(
     client: AsyncClient,
     user_test_project,

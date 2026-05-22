@@ -556,17 +556,6 @@ async def update_project_mcp_settings(
             if not project:
                 raise HTTPException(status_code=404, detail="Project not found")
 
-            # P2: Check if MCP server management is locked for non-superusers
-            settings_service = get_settings_service()
-            mcp_locked = is_mcp_servers_locked(settings_service.settings)
-            if mcp_locked and not current_user.is_superuser:
-                raise HTTPException(
-                    status_code=403,
-                    detail=(
-                        "MCP server configuration is locked. Contact an administrator to manage external MCP servers."
-                    ),
-                )
-
             # Track if MCP Composer needs to be started or stopped
             should_handle_mcp_composer = False
             should_start_composer = False
@@ -791,16 +780,6 @@ async def install_mcp_config(
     client_ip = get_client_ip(request)
     if not is_local_ip(client_ip):
         raise HTTPException(status_code=500, detail="MCP configuration can only be installed from a local connection")
-
-    # P2: Check if MCP server management is locked
-    settings_service = get_settings_service()
-    # Some tests patch settings with MagicMock objects that return truthy placeholders
-    # for unknown attrs. Only enforce this gate when the flag is explicitly True.
-    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
-        raise HTTPException(
-            status_code=403,
-            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
-        )
 
     removed_servers: list[str] = []  # Track removed servers for reinstallation
     try:
