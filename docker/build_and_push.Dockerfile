@@ -36,8 +36,6 @@ RUN apt-get update \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
-    && corepack enable \
-    && corepack prepare npm@11 --activate \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
