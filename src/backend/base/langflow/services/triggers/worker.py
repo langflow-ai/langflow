@@ -43,15 +43,14 @@ from typing import TYPE_CHECKING
 from uuid import UUID, uuid4
 
 from lfx.log.logger import logger
-from sqlalchemy import text
-from sqlmodel import select
+from sqlalchemy import update
+from sqlmodel import col, select
 
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.database.models.triggers import TriggerJob
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import session_scope
-from langflow.services.triggers._sqlmodel_compat import suppress_sqlmodel_exec_warning
 from langflow.services.triggers.discovery import (
     CronTriggerConfig,
     find_cron_trigger_configs,
@@ -92,13 +91,13 @@ def _retry_delay(attempt: int) -> timedelta:
 
 
 def _coerce_uuid(value: object) -> UUID:
-    """Normalize a raw SQL row value to a ``UUID``.
+    """Normalize a row value to a ``UUID``.
 
-    SQLAlchemy returns ``UUID`` for ORM queries against ``sa.Uuid()``
-    columns but a hex string (or bytes) for ``text()`` queries since
-    raw SQL bypasses the type adapter. The worker uses ``text()`` for
-    the claim query — coerce here so downstream callers can compare
-    against ORM Uuid columns without surprises.
+    SQLite returns ``str`` (or ``bytes``) for ``sa.Uuid()`` columns
+    fetched via ``RETURNING`` because the dialect skips the type
+    adapter on raw cursor rows; Postgres ORM rows already come back
+    as ``UUID``. Either way we hand downstream callers a real ``UUID``
+    so they can compare against ORM columns without surprises.
     """
     if isinstance(value, UUID):
         return value
@@ -123,27 +122,35 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
     now = _utcnow()
 
     if dialect == "postgresql":
-        select_stmt = text(
-            "SELECT id, flow_id, component_id, attempt, max_attempts "
-            "FROM trigger_job "
-            "WHERE status = 'queued' AND scheduled_at <= :now "
-            "ORDER BY scheduled_at "
-            "LIMIT 1 "
-            "FOR UPDATE SKIP LOCKED"
+        # Two-step claim: select the eligible row holding a row-level
+        # lock with SKIP LOCKED so other workers move past it, then
+        # flip it to in_progress. The lock is released when the
+        # transaction commits.
+        select_stmt = (
+            select(
+                TriggerJob.id,
+                TriggerJob.flow_id,
+                TriggerJob.component_id,
+                TriggerJob.attempt,
+                TriggerJob.max_attempts,
+            )
+            .where(
+                TriggerJob.status == JobStatus.QUEUED,
+                TriggerJob.scheduled_at <= now,
+            )
+            .order_by(col(TriggerJob.scheduled_at))
+            .limit(1)
+            .with_for_update(skip_locked=True)
         )
-        with suppress_sqlmodel_exec_warning():
-            row = (await session.execute(select_stmt, {"now": now})).first()
+        row = (await session.exec(select_stmt)).first()
         if row is None:
             return None
         trigger_job_id, flow_id, component_id, attempt, max_attempts = row
-        with suppress_sqlmodel_exec_warning():
-            await session.execute(
-                text(
-                    "UPDATE trigger_job SET status = 'in_progress', started_at = :now "
-                    "WHERE id = :id"
-                ),
-                {"now": now, "id": trigger_job_id},
-            )
+        await session.exec(
+            update(TriggerJob)
+            .where(TriggerJob.id == trigger_job_id)
+            .values(status=JobStatus.IN_PROGRESS, started_at=now),
+        )
         return _ClaimedJob(
             trigger_job_id=_coerce_uuid(trigger_job_id),
             flow_id=_coerce_uuid(flow_id),
@@ -153,20 +160,38 @@ async def _claim_one(session: AsyncSession) -> _ClaimedJob | None:
         )
 
     # SQLite (and any other dialect): one-shot optimistic update.
-    update_stmt = text(
-        "UPDATE trigger_job "
-        "SET status = 'in_progress', started_at = :now "
-        "WHERE id = ( "
-        "    SELECT id FROM trigger_job "
-        "    WHERE status = 'queued' AND scheduled_at <= :now "
-        "    ORDER BY scheduled_at "
-        "    LIMIT 1 "
-        ") "
-        "AND status = 'queued' "
-        "RETURNING id, flow_id, component_id, attempt, max_attempts"
+    # Inner select picks the next queued row by schedule; outer update
+    # only succeeds if that row is still queued at apply time. The
+    # ``status = 'queued'`` predicate on the outer where defends
+    # against the (impossible-under-SQLite-serial-writes but cheap)
+    # case where a concurrent writer flipped it between subquery and
+    # update.
+    inner = (
+        select(TriggerJob.id)
+        .where(
+            TriggerJob.status == JobStatus.QUEUED,
+            TriggerJob.scheduled_at <= now,
+        )
+        .order_by(col(TriggerJob.scheduled_at))
+        .limit(1)
+        .scalar_subquery()
     )
-    with suppress_sqlmodel_exec_warning():
-        result = await session.execute(update_stmt, {"now": now})
+    update_stmt = (
+        update(TriggerJob)
+        .where(
+            TriggerJob.id == inner,
+            TriggerJob.status == JobStatus.QUEUED,
+        )
+        .values(status=JobStatus.IN_PROGRESS, started_at=now)
+        .returning(
+            TriggerJob.id,
+            TriggerJob.flow_id,
+            TriggerJob.component_id,
+            TriggerJob.attempt,
+            TriggerJob.max_attempts,
+        )
+    )
+    result = await session.exec(update_stmt)
     row = result.first()
     if row is None:
         return None
@@ -205,9 +230,7 @@ async def _load_dispatch_context(
     skips the finalize step (the row will be cleaned up by the next
     save's reconciliation, or by the CASCADE on the flow delete).
     """
-    flow = (
-        await session.exec(select(Flow).where(Flow.id == claimed.flow_id))
-    ).first()
+    flow = (await session.exec(select(Flow).where(Flow.id == claimed.flow_id))).first()
     if flow is None:
         return None
 
@@ -329,9 +352,7 @@ async def _finalize_success(
     run_job_id: UUID,
 ) -> None:
     now = _utcnow()
-    job = (
-        await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))
-    ).first()
+    job = (await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))).first()
     if job is None:
         return
     job.status = JobStatus.COMPLETED
@@ -349,9 +370,7 @@ async def _finalize_failure(
     error: str,
 ) -> None:
     now = _utcnow()
-    job = (
-        await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))
-    ).first()
+    job = (await session.exec(select(TriggerJob).where(TriggerJob.id == claimed.trigger_job_id))).first()
     if job is None:
         return
     job.status = JobStatus.FAILED
