@@ -62,16 +62,24 @@ test(
       checked: false,
     });
     await expect(page.getByTestId("rf__wrapper")).toBeVisible();
+
+    // The publish-switch toggle is confirmed in the UI above, but the
+    // un-publish has to reach the backend before the shareable URL stops
+    // resolving — give it time to propagate.
+    await page.waitForTimeout(ANIMATIONS.publishTogglePropagation);
+
     await page.goto(newUrl);
-    try {
-      await expect(page.getByTestId(TID.mainpageTitle)).toBeVisible({
-        timeout: TIMEOUTS.medium,
-      });
-    } catch (_error) {
-      await page.reload();
-      await expect(page.getByTestId(TID.mainpageTitle)).toBeVisible({
-        timeout: TIMEOUTS.medium,
-      });
-    }
+
+    // An un-published playground URL redirects to the projects page:
+    // PlaygroundPage detects access_type !== "PUBLIC" and navigates to
+    // "/". The redirect is client-side and the subsequent app bootstrap
+    // can be slow on CI, so wait for the URL to leave /playground/
+    // before asserting the projects page rendered.
+    await page.waitForURL((url) => !url.pathname.startsWith("/playground/"), {
+      timeout: TIMEOUTS.long,
+    });
+    await expect(page.getByTestId(TID.mainpageTitle)).toBeVisible({
+      timeout: TIMEOUTS.long,
+    });
   },
 );
