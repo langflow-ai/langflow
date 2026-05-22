@@ -72,7 +72,12 @@ from langflow.api.v1.schemas.deployments import (
     SnapshotUpdateResponse,
 )
 from langflow.services.adapters.deployment.context import deployment_provider_scope
-from langflow.services.authorization import DeploymentAction, ensure_deployment_permission, filter_visible_resources
+from langflow.services.authorization import (
+    DeploymentAction,
+    ensure_deployment_permission,
+    filter_visible_resources,
+    share_visibility_filter,
+)
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.database.models.deployment.crud import (
@@ -87,6 +92,7 @@ from langflow.services.database.models.deployment.crud import (
 from langflow.services.database.models.deployment.crud import (
     update_deployment as update_deployment_db,
 )
+from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
     count_provider_accounts as count_provider_account_rows,
 )
@@ -758,6 +764,16 @@ async def list_deployments(
             )
         return deployment_mapper.shape_deployment_list_result(provider_view)
 
+    # SQL prefilter for share-backed visibility. When AUTHZ is off, this
+    # resolves to ``Deployment.user_id == current_user.id`` so existing
+    # behavior is unchanged. When AUTHZ is on, owner + ``authz_share``
+    # grants are included so paginated ``total`` matches the page.
+    deployment_visibility_clause = share_visibility_filter(
+        current_user,
+        resource_type="deployment",
+        id_column=Deployment.id,  # type: ignore[arg-type]
+        owner_column=Deployment.user_id,  # type: ignore[arg-type]
+    )
     with handle_adapter_errors(mapper=deployment_mapper), deployment_provider_scope(provider_id):
         rows_with_counts, total, provider_data_by_resource_key = await list_deployments_synced(
             deployment_adapter=deployment_adapter,
@@ -771,15 +787,19 @@ async def list_deployments(
             flow_version_ids=effective_flow_version_ids,
             project_id=project_id,
             names=names,
+            deployment_visibility_clause=deployment_visibility_clause,
         )
     # Per-deployment authorization filter. Mirrors GET /flows/ and GET /projects/:
     # the coarse READ check above gates whether the caller can list deployments
     # at all; this call drops individual rows the enterprise plugin denies. OSS
     # pass-through returns the input unchanged. ``rows_with_counts`` is
     # ``list[tuple[Deployment, int, list[...]]]`` so the key/domain extractors
-    # operate on the first element. ``total`` may overcount denied items —
-    # accurate paginated counts need SQL-level prefilter (Phase 3, alongside
-    # ``authz_share``).
+    # operate on the first element.
+    #
+    # ``total`` accuracy: ``deployment_visibility_clause`` above is the SQL
+    # floor (owner + authz_share). Plugin-only grants (no matching share row)
+    # can still trim items here, in which case ``total`` may overcount; in
+    # the common case where shares power visibility, total matches.
     rows_with_counts = await filter_visible_resources(
         current_user,
         resource_type="deployment",

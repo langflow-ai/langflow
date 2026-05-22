@@ -20,6 +20,7 @@ if TYPE_CHECKING:
     from uuid import UUID
 
     from lfx.services.adapters.deployment.schema import DeploymentType
+    from sqlalchemy.sql import ColumnElement
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -189,12 +190,19 @@ async def list_deployments_page(
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     names: list[str] | None = None,
+    deployment_visibility_clause: ColumnElement[bool] | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
     The third tuple element contains ``(flow_version_id, provider_snapshot_id)``
     pairs for attachments that matched the ``flow_version_ids`` filter (empty
     list when no filter is active).
+
+    ``deployment_visibility_clause`` is an optional SQL predicate that
+    replaces the default ``Deployment.user_id == user_id`` outer filter so
+    callers can broaden visibility (e.g. share-backed access) without
+    affecting the per-user attachment-count subquery, which intentionally
+    stays scoped to ``user_id``.
     """
     if offset < 0:
         msg = "offset must be greater than or equal to 0"
@@ -218,6 +226,9 @@ async def list_deployments_page(
         .group_by(FlowVersionDeploymentAttachment.deployment_id)
         .subquery()
     )
+    visibility_clause = (
+        deployment_visibility_clause if deployment_visibility_clause is not None else Deployment.user_id == user_id
+    )
     stmt = (
         select(
             Deployment,
@@ -225,7 +236,7 @@ async def list_deployments_page(
         )
         .outerjoin(attachment_counts_subquery, attachment_counts_subquery.c.deployment_id == Deployment.id)
         .where(
-            Deployment.user_id == user_id,
+            visibility_clause,
             Deployment.deployment_provider_account_id == deployment_provider_account_id,
         )
     )
@@ -370,9 +381,19 @@ async def count_deployments_by_provider(
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     names: list[str] | None = None,
+    deployment_visibility_clause: ColumnElement[bool] | None = None,
 ) -> int:
+    """Count deployments visible to the caller.
+
+    Mirrors the visibility shape of :func:`list_deployments_page` so paginated
+    ``total`` counts match the page contents. ``deployment_visibility_clause``
+    (when provided) replaces the default ``Deployment.user_id == user_id`` filter.
+    """
+    visibility_clause = (
+        deployment_visibility_clause if deployment_visibility_clause is not None else Deployment.user_id == user_id
+    )
     stmt = select(func.count(Deployment.id)).where(
-        Deployment.user_id == user_id,
+        visibility_clause,
         Deployment.deployment_provider_account_id == deployment_provider_account_id,
     )
     if project_id is not None:

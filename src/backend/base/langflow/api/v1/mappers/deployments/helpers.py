@@ -74,6 +74,8 @@ from langflow.services.database.utils import require_non_empty
 if TYPE_CHECKING:
     from collections.abc import Sequence
 
+    from sqlalchemy.sql import ColumnElement
+
     from langflow.api.utils import DbSession
     from langflow.services.database.models.flow_version_deployment_attachment.model import (
         FlowVersionDeploymentAttachment,
@@ -715,6 +717,7 @@ async def list_deployments_synced(
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
     names: list[str] | None = None,
+    deployment_visibility_clause: ColumnElement[bool] | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -740,6 +743,7 @@ async def list_deployments_synced(
             flow_version_ids=flow_version_ids,
             project_id=project_id,
             names=names,
+            deployment_visibility_clause=deployment_visibility_clause,
         )
         if not batch:
             break
@@ -806,6 +810,7 @@ async def list_deployments_synced(
         flow_version_ids=flow_version_ids,
         project_id=project_id,
         names=names,
+        deployment_visibility_clause=deployment_visibility_clause,
     )
     return accepted, total, provider_data_by_resource_key
 

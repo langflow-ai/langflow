@@ -44,6 +44,7 @@ from langflow.services.authorization import (
     ensure_flow_permission,
     filter_visible_resources,
     requires_flow_manage,
+    share_visibility_filter,
 )
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
@@ -145,12 +146,29 @@ async def read_flows(
         if not folder_id:
             folder_id = default_folder_id
 
+        # SQL prefilter: floor visibility before pagination so paginated
+        # ``page.total`` math is correct. When AUTHZ is off, this resolves
+        # to ``Flow.user_id == current_user.id`` (matching pre-authz
+        # behavior). When AUTHZ is on, it ORs in PUBLIC flows and any
+        # ``authz_share`` grants visible to the caller. The post-filter
+        # below (``filter_visible_resources``) remains the ceiling for
+        # plugin-only grants.
+        visibility_clause = share_visibility_filter(
+            current_user,
+            resource_type="flow",
+            id_column=Flow.id,  # type: ignore[arg-type]
+            owner_column=Flow.user_id,  # type: ignore[arg-type]
+            access_type_column=Flow.access_type,  # type: ignore[arg-type]
+            public_value=AccessTypeEnum.PUBLIC,
+        )
         if auth_settings.AUTO_LOGIN:
+            # AUTO_LOGIN also includes legacy orphan rows (user_id IS NULL)
+            # so the dev-mode endpoint keeps returning them.
             stmt = select(Flow).where(
-                (Flow.user_id == None) | (Flow.user_id == current_user.id)  # noqa: E711
+                (Flow.user_id == None) | visibility_clause  # noqa: E711
             )
         else:
-            stmt = select(Flow).where(Flow.user_id == current_user.id)
+            stmt = select(Flow).where(visibility_clause)
 
         if remove_example_flows:
             stmt = stmt.where(Flow.folder_id != starter_folder_id)
@@ -204,9 +222,14 @@ async def read_flows(
         # ``owner_extractor`` lets the helper short-circuit owner-allow without
         # round-tripping through the enforcer — without it, an enterprise
         # plugin lacking an explicit owner-allow policy would hide the caller's
-        # own flows from paginated results. ``page.total`` may overcount denied
-        # items — a fully accurate count requires SQL-level prefiltering via
-        # authz_share (Phase 3 work).
+        # own flows from paginated results.
+        #
+        # ``page.total`` accuracy: ``share_visibility_filter`` above is the SQL
+        # floor (owner + public + authz_share), so the count reflects share-backed
+        # visibility. Any plugin-only grants the enterprise enforcer would add
+        # land on top via this post-filter; the ceiling can still differ from
+        # the count in those cases (rare in practice — most grants land in
+        # ``authz_share`` because that's how the plugin's admin UI persists them).
         page.items = await filter_visible_resources(
             current_user,
             resource_type="flow",

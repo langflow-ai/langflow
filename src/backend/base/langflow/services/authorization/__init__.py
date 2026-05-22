@@ -9,7 +9,11 @@ from langflow.services.authorization.actions import (
     ShareAction,
     VariableAction,
 )
-from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.fetch import (
+    authorized_or_owner_scoped,
+    deny_to_404,
+    share_visibility_filter,
+)
 from langflow.services.authorization.sensitive_fields import (
     SENSITIVE_DEPLOYMENT_FIELDS,
     SENSITIVE_FLOW_FIELDS,
@@ -59,4 +63,5 @@ __all__ = [
     "requires_deployment_manage",
     "requires_flow_manage",
     "requires_project_manage",
+    "share_visibility_filter",
 ]

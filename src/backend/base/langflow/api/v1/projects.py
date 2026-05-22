@@ -38,6 +38,7 @@ from langflow.services.authorization import (
     ensure_project_permission,
     filter_visible_resources,
     requires_project_manage,
+    share_visibility_filter,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
@@ -47,7 +48,7 @@ from langflow.services.database.models.deployment.exceptions import (
 )
 from langflow.services.database.models.deployment.guards import check_project_has_deployments
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_moves_allowed
-from langflow.services.database.models.flow.model import Flow, FlowRead
+from langflow.services.database.models.flow.model import AccessTypeEnum, Flow, FlowRead
 from langflow.services.database.models.folder.constants import DEFAULT_FOLDER_NAME
 from langflow.services.database.models.folder.model import (
     Folder,
@@ -214,10 +215,20 @@ async def read_projects(
     current_user: CurrentActiveUser,
 ):
     try:
+        # SQL prefilter: owner + share-backed visibility. When AUTHZ is off,
+        # collapses to ``Folder.user_id == current_user.id`` so behavior
+        # is unchanged. The orphan ``Folder.user_id IS NULL`` branch (used
+        # for built-in folders like the starter project) is preserved.
+        project_visibility_clause = share_visibility_filter(
+            current_user,
+            resource_type="project",
+            id_column=Folder.id,  # type: ignore[arg-type]
+            owner_column=Folder.user_id,  # type: ignore[arg-type]
+        )
         projects = (
             await session.exec(
                 select(Folder).where(
-                    or_(Folder.user_id == current_user.id, Folder.user_id == None)  # noqa: E711
+                    or_(project_visibility_clause, Folder.user_id == None)  # noqa: E711
                 )
             )
         ).all()
@@ -300,10 +311,27 @@ async def read_project(
         # contents. Otherwise keep the existing owner-scoped flow filter.
         treat_as_shared = share_aware and project.user_id != current_user.id
 
+        # SQL prefilter for the per-flow visibility inside this project. When
+        # the project is reached via a share, scope is broad (project share
+        # implies access to project flows) — for that case we use a
+        # ``share_visibility_filter`` on Flow so authz_share grants on
+        # individual flows also extend visibility. Otherwise the legacy
+        # owner-only scope still applies.
+        flow_visibility_clause = share_visibility_filter(
+            current_user,
+            resource_type="flow",
+            id_column=Flow.id,  # type: ignore[arg-type]
+            owner_column=Flow.user_id,  # type: ignore[arg-type]
+            access_type_column=Flow.access_type,  # type: ignore[arg-type]
+            public_value=AccessTypeEnum.PUBLIC,
+        )
+
         # Check if pagination is explicitly requested by the user (both page and size provided)
         if page is not None and size is not None:
             stmt = select(Flow).where(Flow.folder_id == project_id)
-            if not treat_as_shared:
+            if treat_as_shared:
+                stmt = stmt.where(flow_visibility_clause)
+            else:
                 stmt = stmt.where(Flow.user_id == current_user.id)
 
             if Flow.updated_at is not None:
@@ -344,23 +372,30 @@ async def read_project(
             return FolderWithPaginatedFlows(folder=FolderRead.model_validate(project), flows=paginated_flows)
 
         # If no pagination requested, return flows visible to the caller.
+        # SQL prefilter: when the project is reached via a share grant, fall
+        # through to share-backed flow visibility; otherwise keep the
+        # legacy owner-only scope. Re-querying Flow (instead of filtering
+        # the eager-loaded ``project.flows`` list in Python) makes this
+        # branch consistent with the paginated branch above and lets the
+        # SQL ``authz_share`` join do the work.
+        flow_stmt = select(Flow).where(Flow.folder_id == project_id)
         if treat_as_shared:
-            # A project share grant implies access to the project itself, but
-            # per-flow policy (deny rules, lower scopes) still applies. Without
-            # this call, ``list(project.flows)`` would leak every flow in the
-            # project regardless of finer-grained Casbin rules the plugin may
-            # have. OSS pass-through returns the input list unchanged, so this
-            # has no effect on default OSS installs.
+            flow_stmt = flow_stmt.where(flow_visibility_clause)
+        else:
+            flow_stmt = flow_stmt.where(Flow.user_id == current_user.id)
+        visible_flows_seq = (await session.exec(flow_stmt)).all()
+        visible_flows = list(visible_flows_seq)
+        if treat_as_shared:
+            # Ceiling for plugin-only grants — keeps behavior consistent with
+            # the rest of the authz layer (SQL floor + post-filter ceiling).
             visible_flows = await filter_visible_resources(
                 current_user,
                 resource_type="flow",
-                candidates=list(project.flows),
+                candidates=visible_flows,
                 domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
-        else:
-            visible_flows = [flow for flow in project.flows if flow.user_id == current_user.id]
         project.flows = visible_flows
 
         # Convert to FolderReadWithFlows while session is still active to avoid detached instance errors

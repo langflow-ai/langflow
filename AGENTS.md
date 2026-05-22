@@ -119,7 +119,22 @@ The Casbin request shape is `(subject, domain, object, action)`:
 - subject = `user:{uuid}`
 - domain = `project:{uuid}` → `workspace:{uuid}` → `*` (resolved by `_resolve_flow_domain`; the more specific domain wins so project-scoped grants match directly while workspace-scoped grants still flow down via Casbin `g2` inheritance)
 - object = `flow:{uuid}` / `deployment:{uuid}` / `project:{uuid}` / `flow:*` / etc.
-- action = `read` / `write` / `create` / `delete` / `execute` / `deploy`
+- action = `read` / `write` / `create` / `delete` / `execute` / `deploy` / `manage`
+
+**`MANAGE` action (Phase 4+):** PATCH/PUT handlers that touch sensitive administrative fields gate on `FlowAction.MANAGE` (resp. `DeploymentAction.MANAGE`, `ProjectAction.MANAGE`) instead of `WRITE`. The field sets live in `langflow.services.authorization.sensitive_fields`:
+- `SENSITIVE_FLOW_FIELDS = {locked, access_type, endpoint_name, webhook, mcp_enabled}`
+- `SENSITIVE_PROJECT_FIELDS = {auth_settings, parent_id}` (reparenting / governance)
+- `SENSITIVE_DEPLOYMENT_FIELDS = frozenset()` (no sensitive field today; enum exists for future use)
+Route handlers compute `required_action = FlowAction.MANAGE if requires_flow_manage(payload.model_fields_set) else FlowAction.WRITE` and pass the result to `ensure_flow_permission`. The OSS pass-through still allows everything; the enterprise plugin decides who has `MANAGE`. Lock-bypass is not an OSS env var — the enterprise policy determines who can MANAGE a locked flow.
+
+**External trusted auth (Phase 4+):** the existing `BaseAuthService.get_or_create_user_from_claims()` JIT hook is implemented in `langflow.services.auth.AuthService`. When `LANGFLOW_EXTERNAL_AUTH_ENABLED=true`, the native JWT path runs first; on failure the auth service falls back to `langflow.services.auth.external.resolve_external_identity` which validates the credential (built-in JWT/JWKS or a pluggable `EXTERNAL_AUTH_IDENTITY_RESOLVER`) and JIT-provisions a local user via `SSOUserProfile`. Key settings:
+- `LANGFLOW_EXTERNAL_AUTH_ENABLED=false` — independent of `LANGFLOW_AUTHZ_ENABLED`; either can be used alone.
+- `LANGFLOW_EXTERNAL_AUTH_PROVIDER` — stable provider key written to `SSOUserProfile.sso_provider`.
+- `LANGFLOW_EXTERNAL_AUTH_TOKEN_HEADER` (default `"Authorization"`) and `LANGFLOW_EXTERNAL_AUTH_TOKEN_COOKIE`.
+- `LANGFLOW_EXTERNAL_AUTH_JWKS_URL` for production JWKS-backed validation, or `LANGFLOW_EXTERNAL_AUTH_TRUSTED_JWT_DECODE=true` to skip signature verification when an upstream proxy already validates the token (off by default).
+- Claim mapping: `LANGFLOW_EXTERNAL_AUTH_SUBJECT_CLAIM` / `_USERNAME_CLAIM` / `_EMAIL_CLAIM` / `_NAME_CLAIM`.
+
+**Share-backed list prefilter (Phase 4+):** `langflow.services.authorization.share_visibility_filter(user, *, resource_type, id_column, owner_column, access_type_column=None, public_value=None)` returns a SQLAlchemy boolean predicate that callers AND into their `select(...)`. Floor semantics: when `AUTHZ_ENABLED=false`, it resolves to `owner_column == user.id` (no behavior change); when `AUTHZ_ENABLED=true`, it ORs in `access_type_column == public_value` (when applicable) and `id_column IN (SELECT resource_id FROM authz_share WHERE ...)`. Used by the list endpoints in `flows.py`, `deployments.py`, and `projects.py` so paginated `page.total` math reflects share-backed visibility. The post-filter `filter_visible_resources` remains the ceiling for plugin-only grants that don't live in `authz_share`.
 
 Use `langflow authz dry-run` to simulate a built-in policy against the live audit table without enabling enforcement.
 
