@@ -1,0 +1,65 @@
+---
+title: Connect the Ejentum cognitive harness MCP server to Langflow
+slug: /mcp-component-ejentum
+---
+
+import Icon from "@site/src/components/icon";
+import PartialMcpNodeTip from '@site/docs/_partial-mcp-node-tip.mdx';
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
+This guide demonstrates how to [use Langflow as an MCP client](/mcp-client) by using the **MCP Tools** component to run an [Ejentum cognitive harness MCP server](https://github.com/ejentum/ejentum-mcp) in an agent flow.
+
+The Ejentum MCP server exposes four callable harness tools (`harness_reasoning`, `harness_code`, `harness_anti_deception`, `harness_memory`) that retrieve task-matched scaffolds from a library of 679 natural-language-engineered cognitive operations. The agent calls them on demand; nothing is auto-injected.
+
+1. Install an LTS release of [Node.js](https://docs.npmjs.com/downloading-and-installing-node-js-and-npm).
+
+<PartialMcpNodeTip />
+
+2. Create an [OpenAI](https://platform.openai.com/) API key.
+
+3. Get an Ejentum API key from the [Ejentum dashboard](https://ejentum.com/dashboard). Free and paid tiers are available.
+
+4. To follow along with this guide, create a flow based on the **Simple Agent** template.
+
+    You can also use an existing flow or create a blank flow.
+
+5. Remove the **URL** tool from the flow.
+
+6. Register the Ejentum MCP server from the <McpIcon /> **MCP** sidebar and add **MCP Tools** to the canvas.
+Use the following values:
+
+    1. In the **Name** field, enter a name for the MCP server, for example `ejentum`.
+
+    2. In the **Command** field, add the following code to start the Ejentum MCP server:
+
+        ```bash
+        npx -y ejentum-mcp
+        ```
+
+    3. In the **Environment Variables** field, add `EJENTUM_API_KEY` with the value from your Ejentum dashboard.
+
+        :::info
+        Environment variables declared in your Langflow `.env` file can be referenced in your MCP server commands, but you cannot reference global variables declared in Langflow.
+
+        If you want to use a variable for `EJENTUM_API_KEY`, add it to Langflow's `.env` file, and then restart Langflow.
+        For more information, see [global variables](/configuration-global-variables).
+        :::
+
+        ```bash
+        EJENTUM_API_KEY=ek_...
+        ```
+
+7. In the **Agent** component, add your OpenAI API key.
+
+    The default model is an OpenAI model.
+    If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+8. Open the **Playground**, and ask the agent a question that benefits from structured reasoning. For example:
+
+    ```text
+    Plan a three-step migration from a single-table user store to a multi-tenant schema. Walk through the trade-offs at each step.
+    ```
+
+    The agent decides whether to call one of the four `harness_*` tools and merges the returned scaffold with its own reasoning before answering. Each call returns a task-matched scaffold rather than a fixed template; the same tool with a different query returns a different scaffold.
+
+    For more on what the four harnesses cover, see the [Ejentum documentation](https://ejentum.com/docs).
