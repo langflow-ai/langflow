@@ -515,6 +515,7 @@
   "errors.uploadFile": "Ocorreu um erro ao enviar o arquivo",
   "errors.uploadJsonOnly": "Por favor, envie um arquivo JSON",
   "errors.wrongFileType": "Tipo de arquivo inválido",
+  "fetchError.retry": "Tentar novamente",
   "fileManager.avoidLargeHiddenDirectories": "⚠️ Evite pastas com diretórios ocultos de grande tamanho (.mypy_cache,.git, node_modules, etc.)",
   "fileManager.clickOrDragFilesHere": "Clique ou arraste os arquivos para cá",
   "fileManager.clickToSelectFilesOrDropFolder": "Clique para selecionar arquivos (ou arraste uma pasta)",

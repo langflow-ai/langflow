@@ -515,6 +515,7 @@
   "errors.uploadFile": "Une erreur s'est produite lors du téléchargement du fichier",
   "errors.uploadJsonOnly": "Veuillez télécharger un fichier JSON",
   "errors.wrongFileType": "Type de fichier non valide",
+  "fetchError.retry": "Réessayer",
   "fileManager.avoidLargeHiddenDirectories": "⚠️ Évitez les dossiers contenant des répertoires cachés volumineux (.mypy_cache,.git, node_modules, etc.)",
   "fileManager.clickOrDragFilesHere": "Cliquez ou faites glisser les fichiers ici",
   "fileManager.clickToSelectFilesOrDropFolder": "Cliquez pour sélectionner des fichiers (ou faites glisser un dossier)",

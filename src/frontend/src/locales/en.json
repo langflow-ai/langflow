@@ -1618,5 +1618,6 @@
   "updateComponents.dismiss": "Dismiss",
   "updateComponents.dismissAll": "Dismiss All",
   "updateComponents.reviewAll": "Review All",
-  "updateComponents.updateAll": "Update All"
+  "updateComponents.updateAll": "Update All",
+  "fetchError.retry": "Retry"
 }

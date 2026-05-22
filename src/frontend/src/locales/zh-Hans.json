@@ -515,6 +515,7 @@
   "errors.uploadFile": "上传文件时发生错误",
   "errors.uploadJsonOnly": "请上传一个 JSON 文件",
   "errors.wrongFileType": "无效文件类型",
+  "fetchError.retry": "重试",
   "fileManager.avoidLargeHiddenDirectories": "⚠️ 请避开包含大量隐藏目录（如.mypy_cache、.git、node_modules 等）的文件夹",
   "fileManager.clickOrDragFilesHere": "点击或将文件拖放到此处",
   "fileManager.clickToSelectFilesOrDropFolder": "点击选择文件（或拖放文件夹）",

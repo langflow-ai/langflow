@@ -515,6 +515,7 @@
   "errors.uploadFile": "ファイルのアップロード中にエラーが発生しました",
   "errors.uploadJsonOnly": "JSONファイルをアップロードしてください",
   "errors.wrongFileType": "無効なファイル・タイプ",
+  "fetchError.retry": "再試行",
   "fileManager.avoidLargeHiddenDirectories": "⚠️ 隠しディレクトリ（.mypy_cache、.git、node_modules など）が大量に含まれるフォルダは避けてください",
   "fileManager.clickOrDragFilesHere": "ここをクリックするか、ファイルをドラッグしてください",
   "fileManager.clickToSelectFilesOrDropFolder": "クリックしてファイルを選択してください（またはフォルダをドラッグ＆ドロップしてください）",
