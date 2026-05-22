@@ -803,3 +803,76 @@ async def test_teardown_spills_remaining_buffer(tmp_path: Path) -> None:
     fallback = Path(tempfile.gettempdir()) / "langflow_telemetry_outbox"
     if fallback.exists() and fallback.is_dir() and not any(fallback.iterdir()):
         fallback.rmdir()
+
+
+async def test_retention_sweep_caps_vertex_builds_per_vertex(writer_with_engine) -> None:
+    """Per-vertex cap must prune the oldest builds for a single vertex."""
+    writer, engine = writer_with_engine
+    writer.settings_service.settings.max_vertex_builds_per_vertex = 3
+    writer.settings_service.settings.max_vertex_builds_to_keep = 10_000
+    flow_id = uuid4()
+    # Insert 8 builds for the same vertex — only 3 should survive.
+    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(8)]
+    await writer._flush([], vb_batch)
+    await writer._run_retention_pass()
+
+    async with AsyncSession(engine) as session:
+        count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
+    assert count == 3
+
+
+def test_either_strategy_trips_on_bytes_first(writer_with_engine) -> None:
+    """'either' strategy must enforce the byte cap when it trips before the row cap."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "either"
+    writer.settings_service.settings.telemetry_writer_max_queue = 10_000  # high — must not trigger
+    writer.settings_service.settings.telemetry_writer_max_queue_bytes = 200
+    # Each row encodes to ~123 bytes; two rows (246B) exceed the 200B cap.
+    for i in range(3):
+        writer.enqueue_transaction({"payload": "x" * 100, "i": i})
+    # Byte cap trips first — same drop semantics as the bytes-only strategy.
+    assert writer.dropped_transactions >= 1
+    assert writer._tx_bytes <= 200
+
+
+async def test_writer_retries_on_batch_failure(writer_with_engine) -> None:
+    """Failed flush must increment failed_batches, return rows to buffer, then succeed on retry."""
+    writer, engine = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_batch_size = 100
+    writer.settings_service.settings.telemetry_writer_flush_interval_s = 0.01
+    flow_id = uuid4()
+    for _ in range(5):
+        writer.enqueue_transaction(_make_transaction_row(flow_id))
+
+    fail_count = 0
+
+    real_flush = writer._flush.__func__
+
+    async def _fail_twice(self, tx_batch, vb_batch):
+        nonlocal fail_count
+        if fail_count < 2:
+            fail_count += 1
+            msg = "injected failure"
+            raise RuntimeError(msg)
+        return await real_flush(self, tx_batch, vb_batch)
+
+    import types
+
+    writer._flush = types.MethodType(_fail_twice, writer)
+
+    task = asyncio.create_task(writer._run_writer())
+    # Wait until all rows land in the DB (after retries).
+    for _ in range(50):
+        await asyncio.sleep(0.05)
+        async with AsyncSession(engine) as session:
+            n = await session.scalar(select(func.count()).select_from(TransactionTable))
+        if n == 5:
+            break
+    writer._shutdown_event.set()
+    await asyncio.wait_for(task, timeout=2)
+
+    assert writer.failed_batches == 2
+    assert writer.flushed_rows == 5
+    async with AsyncSession(engine) as session:
+        final = await session.scalar(select(func.count()).select_from(TransactionTable))
+    assert final == 5

@@ -82,7 +82,7 @@ def _host_boot_identity() -> tuple[str, str]:
     except OSError:
         try:
             boot = str(int(time.time() - time.monotonic()))
-        except OSError:
+        except Exception:  # noqa: BLE001
             boot = "unknown"
     return host, boot
 
@@ -304,8 +304,13 @@ class TelemetryWriterService(Service):
         # Stamp host + boot identity so a future process on a different host
         # (or after reboot) will not adopt this PID's spill data if the PID
         # happens to be recycled.
-        with suppress(OSError):
+        try:
             _write_owner_file(own_dir)
+        except OSError as e:
+            logger.error(
+                f"telemetry_writer: failed to write owner file to {own_dir}; "
+                f"disk-spilled rows from this process will not be recoverable on restart: {e}"
+            )
 
         # Drain any rows that were spilled by a previous run of *this* PID and
         # adopt the contents of any orphan (dead-PID) directories.
@@ -352,8 +357,13 @@ class TelemetryWriterService(Service):
                 with suppress(asyncio.CancelledError):
                     await self._writer_task
             except asyncio.CancelledError:
+                # teardown() itself was cancelled (e.g. outer lifespan task killed).
+                # Await the writer's own cancellation so it can put in-flight rows
+                # back in the buffer, then re-raise so the cancellation propagates
+                # up the task tree — swallowing it here breaks asyncio's cancel chain.
                 with suppress(asyncio.CancelledError):
                     await self._writer_task
+                raise
         if self._sweeper_task is not None:
             self._sweeper_task.cancel()
             with suppress(asyncio.CancelledError):
@@ -621,13 +631,16 @@ class TelemetryWriterService(Service):
                 if payloads:
                     logger.info(f"telemetry_writer: adopted {len(payloads)} orphan {kind} from pid={pid}")
             # Best-effort cleanup of the dead-PID directory.
-            with suppress(OSError):
+            try:
                 for child in sorted(entry.rglob("*"), reverse=True):
                     if child.is_file():
                         child.unlink(missing_ok=True)
                     elif child.is_dir():
-                        child.rmdir()
+                        with suppress(OSError):
+                            child.rmdir()
                 entry.rmdir()
+            except OSError as e:
+                logger.debug(f"telemetry_writer: could not remove orphan dir {entry}: {e}")
 
     def _prune_stale_foreign_outboxes(self, outbox_root: Path) -> None:
         """Delete cross-host orphan dirs whose owner file has gone stale.
@@ -664,13 +677,16 @@ class TelemetryWriterService(Service):
                 f"telemetry_writer: pruning stale cross-host outbox {entry} "
                 f"(host={owner.get('host')!r}, age={age:.0f}s)"
             )
-            with suppress(OSError):
+            try:
                 for child in sorted(entry.rglob("*"), reverse=True):
                     if child.is_file():
                         child.unlink(missing_ok=True)
                     elif child.is_dir():
-                        child.rmdir()
+                        with suppress(OSError):
+                            child.rmdir()
                 entry.rmdir()
+            except OSError as e:
+                logger.debug(f"telemetry_writer: could not remove stale foreign outbox {entry}: {e}")
 
     def _heartbeat_owner_file(self) -> None:
         """Refresh the owner file's mtime so foreign hosts can age us out cleanly."""
@@ -723,7 +739,7 @@ class TelemetryWriterService(Service):
                 # Exponential-ish backoff capped at 30s. Avoids hot-looping on a
                 # broken DB while still preserving telemetry across the failure.
                 backoff = min(30.0, 0.5 * (2 ** min(consecutive_failures, 6)))
-                if consecutive_failures == _FAILURE_ESCALATION_THRESHOLD:
+                if consecutive_failures >= _FAILURE_ESCALATION_THRESHOLD:
                     logger.error(
                         f"telemetry_writer: {consecutive_failures} consecutive batch failures, "
                         f"buffer depth tx={len(self._tx_buffer)} vb={len(self._vb_buffer)}"
@@ -772,8 +788,6 @@ class TelemetryWriterService(Service):
     async def _run_retention_pass(self) -> None:
         if self._session_maker is None:
             return
-        from uuid import UUID
-
         settings = self.settings_service.settings
         max_transactions = int(getattr(settings, "max_transactions_to_keep", 3000))
         max_vertex_builds = int(getattr(settings, "max_vertex_builds_to_keep", 3000))
