@@ -175,10 +175,13 @@ def collect_strings() -> dict[str, str]:
     # Shared tool-mode output — injected dynamically on every component when tool_mode is
     # enabled, so it's never part of any component's static output list.  Uses the sentinel
     # norm "_toolmode" so the runtime translator can look it up with a single shared key.
-    from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME as _TOD
-    from lfx.base.tools.constants import TOOL_OUTPUT_NAME as _TON
-
-    flat[_component_field_key("_toolmode", f"outputs.{_TON}.display_name", _TOD)] = _TOD
+    # Constants are inlined (not imported from lfx.base) so this script can run without
+    # the full lfx package installed, matching the pattern used in bake_note_keys.py.
+    _tool_output_name = "component_as_tool"
+    _tool_output_display_name = "Toolset"
+    flat[_component_field_key("_toolmode", f"outputs.{_tool_output_name}.display_name", _tool_output_display_name)] = (
+        _tool_output_display_name
+    )
 
     return dict(sorted(flat.items()))
 
