@@ -34,7 +34,7 @@ export default function prismIncludeLanguages(Prism) {
   if (Prism.languages.bash) {
     Prism.languages.insertBefore("bash", "function", {
       "bash-plain": {
-        pattern: /(^|[\s;|&])(?:install|run|add|remove|update|build|start|stop|init|exec|create|delete|list|show|get|set|push|pull|clone|apply|deploy)(?=$|[\s;|&])/,
+        pattern: /(^|[\s;|&])(?:install|remove|update|build|init|exec|push|pull|clone|apply|deploy)(?=$|[\s;|&])/,
         lookbehind: true,
       },
       "function-modern": {

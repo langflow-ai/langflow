@@ -1,5 +1,9 @@
 .theme-code-block {
   box-shadow: none !important;
+  border: 1px solid #1e2128;
+  border-radius: var(--ifm-global-radius);
+  overflow: hidden;
+  margin-bottom: 1.5rem;
 }
 
 /* Keep inline code vertically aligned with surrounding text */
@@ -97,13 +101,6 @@ html[data-theme="light"] .theme-code-block div[class*="codeBlockTitle"] {
   border-bottom-color: #303038;
 }
 
-/* Code block container */
-.theme-code-block {
-  border: 1px solid #1e2128;
-  border-radius: var(--ifm-global-radius);
-  overflow: hidden;
-  margin-bottom: 1.5rem;
-}
 
 .theme-code-block pre,
 .theme-code-block code {
