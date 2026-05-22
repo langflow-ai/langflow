@@ -213,8 +213,9 @@ export function DeploymentStepperProvider({
   // Cache removed flow data so undo can restore it.
   const initialVersionByFlow = normalizedInitialVersions;
   const preExistingFlowIds = useMemo(
-    () => new Set(initialVersionByFlow.keys()),
-    [initialVersionByFlow],
+    () =>
+      isEditMode ? new Set(initialVersionByFlow.keys()) : new Set<string>(),
+    [isEditMode, initialVersionByFlow],
   );
   const initialToolNameByFlow = normalizedInitialToolNames;
   const initialConnectionsByFlow = normalizedInitialConnections;
