@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 import chromadb.errors
 from langchain_chroma import Chroma
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
@@ -431,7 +432,12 @@ async def _delete_chunks_for_session(
 
     client = KBStorageHelper.get_fresh_chroma_client(kb_path)
     try:
-        chroma = Chroma(client=client, embedding_function=embeddings, collection_name=kb_name)
+        chroma = Chroma(
+            client=client,
+            embedding_function=embeddings,
+            collection_name=kb_name,
+            **chroma_langchain_collection_kwargs(),
+        )
         await chroma.adelete(where={"session_id": {"$eq": session_id}})
         # Refresh on-disk metrics so the UI reflects the post-purge state.
         try:

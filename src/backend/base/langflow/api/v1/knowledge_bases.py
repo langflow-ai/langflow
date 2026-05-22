@@ -21,6 +21,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     get_source_class,
     registered_sources,
 )
+from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.log import logger
 from pydantic import BaseModel, Field
 
@@ -588,7 +589,7 @@ async def create_knowledge_base(
         # This ensures files exist for read operations and avoids 'readonly' errors later
         try:
             client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-            client.create_collection(name=kb_name)
+            client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
         except (OSError, ValueError, chromadb.errors.ChromaError) as e:
             logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
         finally:
