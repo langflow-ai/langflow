@@ -50,8 +50,6 @@ export const timeElapsed = (
         ? `${minutes} minute`
         : `${minutes} minutes`;
   } else {
-    return t
-      ? t("mainPage.timeElapsed.lessThanMinute")
-      : "less than a minute";
+    return t ? t("mainPage.timeElapsed.lessThanMinute") : "less than a minute";
   }
 };
