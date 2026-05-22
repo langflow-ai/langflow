@@ -3,6 +3,10 @@ from typing import Any
 from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx.base.vectorstores.chroma_security import (
+    chroma_client_create_collection_kwargs,
+    chroma_langchain_collection_kwargs,
+)
 from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
 
@@ -37,7 +41,27 @@ def test_remote_chroma_server_uses_http_client() -> None:
         client=mock_client,
         embedding_function=None,
         collection_name="remote_collection",
+        collection_configuration={"embedding_function": None},
     )
+
+
+def test_chroma_collection_security_kwargs_disable_server_side_embedding_functions() -> None:
+    assert chroma_langchain_collection_kwargs() == {
+        "collection_configuration": {"embedding_function": None},
+    }
+    assert chroma_client_create_collection_kwargs() == {
+        "configuration": {"embedding_function": None},
+        "embedding_function": None,
+    }
+
+
+def test_chroma_collection_security_kwargs_are_fresh_dicts() -> None:
+    first = chroma_langchain_collection_kwargs()
+    first["collection_configuration"]["embedding_function"] = "unsafe"
+
+    assert chroma_langchain_collection_kwargs() == {
+        "collection_configuration": {"embedding_function": None},
+    }
 
 
 @pytest.mark.api_key_required
