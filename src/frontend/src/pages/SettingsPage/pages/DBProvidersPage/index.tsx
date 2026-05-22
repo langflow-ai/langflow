@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,6 +47,7 @@ const getErrorDetail = (error: unknown) =>
   "An unexpected error occurred. Please try again.";
 
 export default function DBProvidersPage() {
+  const { t } = useTranslation();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const [selectedProviderId, setSelectedProviderId] = useState<DBProviderId>(
     getActiveDBProvider(globalVariables),
@@ -205,7 +207,7 @@ export default function DBProvidersPage() {
     if (selectedProvider.status !== "available") return false;
     if (!canSave) {
       setErrorData({
-        title: "Missing required configuration",
+        title: t("settings.dbProviders.errorMissingConfig"),
         list: [
           `${selectedProvider.label} requires ${selectedProvider.configFields
             .filter(
@@ -264,14 +266,16 @@ export default function DBProvidersPage() {
         setSuccessData({
           title:
             selectedProvider.id === "chroma"
-              ? "Chroma selected"
-              : `${selectedProvider.label} configuration saved`,
+              ? t("settings.dbProviders.chromaSelected")
+              : t("settings.dbProviders.configSaved", {
+                  provider: selectedProvider.label,
+                }),
         });
       }
       return true;
     } catch (error: unknown) {
       setErrorData({
-        title: "Error saving DB Provider",
+        title: t("settings.dbProviders.errorSaving"),
         list: [getErrorDetail(error)],
       });
       return false;
@@ -282,7 +286,7 @@ export default function DBProvidersPage() {
     if (selectedProvider.status !== "available") return;
     if (!canSave) {
       setErrorData({
-        title: "Missing required configuration",
+        title: t("settings.dbProviders.errorMissingConfig"),
         list: [
           `${selectedProvider.label} requires ${selectedProvider.configFields
             .filter(
@@ -342,18 +346,22 @@ export default function DBProvidersPage() {
         // detail (cluster name, version) into the title so it shows.
         setSuccessData({
           title: response.message
-            ? `Connection successful — ${response.message}`
-            : "Connection successful",
+            ? t("settings.dbProviders.connectionSuccessfulWith", {
+                message: response.message,
+              })
+            : t("settings.dbProviders.connectionSuccessful"),
         });
       } else {
         setErrorData({
-          title: "Connection failed",
-          list: [response.message || "The provider rejected the connection."],
+          title: t("settings.dbProviders.connectionFailed"),
+          list: [
+            response.message || t("settings.dbProviders.connectionRejected"),
+          ],
         });
       }
     } catch (error: unknown) {
       setErrorData({
-        title: "Error testing provider connection",
+        title: t("settings.dbProviders.errorTesting"),
         list: [getErrorDetail(error)],
       });
     }
@@ -365,10 +373,10 @@ export default function DBProvidersPage() {
       await activateProvider(chromaProvider);
       setSelectedProviderId("chroma");
       setHasManuallySelectedProvider(false);
-      setSuccessData({ title: "Chroma selected" });
+      setSuccessData({ title: t("settings.dbProviders.chromaSelected") });
     } catch (error: unknown) {
       setErrorData({
-        title: "Error selecting Chroma",
+        title: t("settings.dbProviders.errorSelectingChroma"),
         list: [getErrorDetail(error)],
       });
     }
@@ -382,14 +390,14 @@ export default function DBProvidersPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            DB Providers
+            {t("settings.dbProviders.title")}
             <ForwardedIconComponent
               name="Database"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Configure vector-store providers for Knowledge Bases.
+            {t("settings.dbProviders.description")}
           </p>
         </div>
       </div>
@@ -512,6 +520,7 @@ function ProviderListItem({
   isConfigured: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   const isComingSoon = provider.status === "coming_soon";
   const isMuted = (!isConfigured || isComingSoon) && !provider.defaultEnabled;
 
@@ -545,12 +554,12 @@ function ProviderListItem({
           </span>
           {isComingSoon && (
             <Badge variant="secondaryStatic" size="sq" className="text-xs">
-              Coming soon
+              {t("settings.dbProviders.comingSoon")}
             </Badge>
           )}
           {isActive && !isComingSoon && (
             <Badge variant="secondary" size="sq" className="text-xs">
-              Active
+              {t("settings.dbProviders.active")}
             </Badge>
           )}
         </div>
@@ -599,6 +608,7 @@ function ProviderConfigurationPanel({
   onTestConnection?: () => void;
   isTesting: boolean;
 }) {
+  const { t } = useTranslation();
   const isComingSoon = provider.status === "coming_soon";
   const isActive = activeProviderId === provider.id;
   // True when the user has interacted with any field this session.
@@ -608,10 +618,12 @@ function ProviderConfigurationPanel({
   // · Hydrated + no edits → "Use <Provider>" (just switch active provider)
   // · Otherwise → "Save and use <Provider>" (persist + activate)
   const saveButtonLabel = isActive
-    ? "Save"
+    ? t("settings.dbProviders.save")
     : isHydrated && !hasUnsavedChanges
-      ? `Use ${provider.label}`
-      : `Save and use ${provider.label}`;
+      ? t("settings.dbProviders.useProvider", { provider: provider.label })
+      : t("settings.dbProviders.saveAndUseProvider", {
+          provider: provider.label,
+        });
 
   return (
     <div className="flex max-w-[680px] flex-col gap-4">
@@ -628,12 +640,12 @@ function ProviderConfigurationPanel({
               </span>
               {isActive && !isComingSoon && (
                 <Badge variant="secondary" size="sq" className="text-xs">
-                  Active
+                  {t("settings.dbProviders.active")}
                 </Badge>
               )}
               {isComingSoon && (
                 <Badge variant="secondaryStatic" size="sq" className="text-xs">
-                  Coming soon
+                  {t("settings.dbProviders.comingSoon")}
                 </Badge>
               )}
             </div>
@@ -646,16 +658,12 @@ function ProviderConfigurationPanel({
 
       {isComingSoon ? (
         <div className="rounded-md border border-dashed border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
-          This provider is stubbed in the Knowledge Base backend registry and
-          will become configurable after the provider implementation is wired
-          through end-to-end.
+          {t("settings.dbProviders.comingSoonDescription")}
         </div>
       ) : provider.id === "chroma" ? (
         <div className="flex flex-col gap-3">
           <div className="rounded-md border border-border bg-muted/30 p-3 text-[13px] text-muted-foreground">
-            Chroma stores vectors on disk next to Langflow and is enabled by
-            default. Selecting it here makes it the default provider for new
-            Knowledge Bases.
+            {t("settings.dbProviders.chromaDescription")}
           </div>
           <div className="flex justify-end">
             <Button
@@ -664,7 +672,9 @@ function ProviderConfigurationPanel({
               loading={isPending}
               disabled={isPending || isActive}
             >
-              {isActive ? "Chroma selected" : "Use Chroma"}
+              {isActive
+                ? t("settings.dbProviders.chromaSelected")
+                : t("settings.dbProviders.useChroma")}
             </Button>
           </div>
         </div>
@@ -731,7 +741,7 @@ function ProviderConfigurationPanel({
                 disabled={!canSave || isPending || isTesting}
                 data-testid="db-provider-test-connection"
               >
-                Test connection
+                {t("settings.dbProviders.testConnection")}
               </Button>
             )}
             <Button
@@ -777,6 +787,7 @@ function TextFieldRow({
   // session. Use ``isSecretConfigured`` (variable existence) rather than
   // ``existingValue`` (returned API value) because credential-type
   // variables are not exposed in the global-variables API response.
+  const { t } = useTranslation();
   const shouldMask =
     field.isSecret &&
     (isSecretConfigured ?? !!existingValue) &&
@@ -800,7 +811,7 @@ function TextFieldRow({
         onBlur={onBlur}
       />
       <span className="text-[11px] text-muted-foreground">
-        Saved as global variable{" "}
+        {t("settings.dbProviders.savedAsGlobalVariable")}{" "}
         <span className="font-mono">{field.variableKey}</span>
       </span>
     </label>
@@ -818,6 +829,7 @@ function BooleanFieldRow({
   disabled: boolean;
   onChange: (checked: boolean) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/20 px-3 py-2">
       <div className="flex min-w-0 flex-col">
@@ -828,7 +840,7 @@ function BooleanFieldRow({
           </span>
         )}
         <span className="pt-1 text-[11px] text-muted-foreground">
-          Saved as global variable{" "}
+          {t("settings.dbProviders.savedAsGlobalVariable")}{" "}
           <span className="font-mono">{field.variableKey}</span>
         </span>
       </div>

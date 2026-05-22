@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useNavigate } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import type { BaseInputProps } from "@/components/core/parameterRenderComponent/types";
@@ -96,6 +97,7 @@ export function DBProviderInput({
   disabled,
   onValueChange,
 }: DBProviderInputProps) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -211,7 +213,7 @@ export function DBProviderInput({
             onClick={handleManageProviders}
           >
             <div className="flex items-center gap-2 pl-1 group-hover:text-primary">
-              Manage DB Providers
+              {t("settings.dbProviders.manage")}
               <ForwardedIconComponent
                 name="Settings"
                 className="w-4 h-4 text-muted-foreground group-hover:text-primary"
