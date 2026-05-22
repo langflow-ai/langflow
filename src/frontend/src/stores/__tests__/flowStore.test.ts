@@ -17,6 +17,7 @@ jest.mock("@/CustomNodes/helpers/check-code-validity", () => ({
 }));
 
 jest.mock("../../i18n", () => ({
+  __esModule: true,
   default: { t: jest.fn((key: string) => key) },
 }));
 

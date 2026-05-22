@@ -9,6 +9,7 @@
   "files": {
     "ignoreUnknown": false
   },
+  "plugins": ["./biome-plugins/no-hardcoded-tailwind-palette.grit"],
   "formatter": {
     "enabled": true,
     "indentStyle": "space",

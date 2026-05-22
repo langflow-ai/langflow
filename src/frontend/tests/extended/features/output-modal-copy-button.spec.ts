@@ -1,14 +1,13 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.describe("Output Modal Copy Button", () => {
   test(
     "user should be able to copy text output from component output modal",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      await page.getByTestId("blank-flow").click();
+      await openBlankFlow(page);
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 3000,
@@ -17,7 +16,9 @@ test.describe("Output Modal Copy Button", () => {
 
       // Add a Text Input component
       await page.getByTestId("sidebar-search-input").click();
-      await page.getByTestId("sidebar-search-input").fill("text input");
+      await page
+        .getByTestId("sidebar-search-input")
+        .fill(TEXTS.searchTextInput);
 
       await page.waitForSelector('[data-testid="input_outputText Input"]', {
         timeout: 3000,
@@ -41,7 +42,9 @@ test.describe("Output Modal Copy Button", () => {
       // Run the component
       await page.getByTestId("button_run_text input").click();
 
-      await page.waitForSelector("text=built successfully", { timeout: 30000 });
+      await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+        timeout: 30000,
+      });
 
       // Open the output modal
       await page.locator('[data-testid^="output-inspection-"]').first().click();
@@ -77,9 +80,7 @@ test.describe("Output Modal Copy Button", () => {
     "copy button should work with JSON output from API Request component",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
-      await awaitBootstrapTest(page);
-
-      await page.getByTestId("blank-flow").click();
+      await openBlankFlow(page);
 
       await page.waitForSelector('[data-testid="disclosure-data sources"]', {
         timeout: 3000,
@@ -109,7 +110,9 @@ test.describe("Output Modal Copy Button", () => {
         state: "visible",
       });
 
-      await page.waitForSelector("text=built successfully", { timeout: 30000 });
+      await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+        timeout: 30000,
+      });
 
       await page
         .getByTestId("output-inspection-api response-apirequest")

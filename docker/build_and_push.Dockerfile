@@ -50,6 +50,14 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
+# is a uv workspace member, so each bundle's pyproject.toml must be present
+# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
+# whole tree once rather than enumerating each bundle, so a new bundle does
+# not require a Dockerfile edit.  The full ./src copy a few lines below
+# produces the same layer either way -- this earlier copy just unblocks the
+# dependency-resolution sync.
+COPY ./src/bundles /app/src/bundles
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
@@ -100,6 +108,15 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
+# Pre-create LANGFLOW_CONFIG_DIR (the default location used by the docker_example
+# compose file) with the non-root user as owner. When the official compose mounts
+# a fresh named volume at /app/langflow, Docker copies this directory's ownership
+# and permissions into the new volume, so the in-container uid=1000 user can
+# write secret_key, profile_pictures, etc. Without this, the volume is created
+# as root:root and Langflow crashes during startup with PermissionError on
+# /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
+RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
+
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']
 LABEL org.opencontainers.image.licenses=MIT
@@ -113,4 +130,3 @@ ENV LANGFLOW_HOST=0.0.0.0
 ENV LANGFLOW_PORT=7860
 
 CMD ["langflow", "run"]
-

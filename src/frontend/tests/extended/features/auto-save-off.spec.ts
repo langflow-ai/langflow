@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to manually save a flow when the auto_save is off",
@@ -21,14 +21,7 @@ test(
         },
       });
     });
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 5000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("NVIDIA");

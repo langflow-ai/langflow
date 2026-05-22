@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { OPENAI_VOICES } from "@/constants/constants";
 import IconComponent from "../../../../../../../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../../../../../../../components/common/shadTooltipComponent";
@@ -22,13 +23,14 @@ const VoiceSelect = ({
   handleSetVoice,
   allVoices,
 }: VoiceSelectProps) => {
+  const { t } = useTranslation();
   allVoices = allVoices?.length === 0 || !allVoices ? OPENAI_VOICES : allVoices;
 
   return (
     <div className="grid w-full items-center gap-2">
       <span className="flex w-full items-center text-sm">
-        Voice
-        <ShadTooltip content="You can select ElevenLabs voices if you have an ElevenLabs API key. Otherwise, you can only select OpenAI voices.">
+        {t("voice.voiceLabel")}
+        <ShadTooltip content={t("voice.voiceSelectTooltip")}>
           <div>
             <IconComponent
               name="Info"
@@ -41,7 +43,7 @@ const VoiceSelect = ({
 
       <Select value={voice} onValueChange={handleSetVoice}>
         <SelectTrigger className="h-9 w-full">
-          <SelectValue placeholder="Select" />
+          <SelectValue placeholder={t("voice.selectVoice")} />
         </SelectTrigger>
         <SelectContent className="max-h-[200px]">
           <SelectGroup>

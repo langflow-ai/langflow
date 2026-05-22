@@ -117,7 +117,7 @@ export function ModelSelector({
         disabled
       >
         <span className="text-muted-foreground">•</span>
-        <span>No models configured</span>
+        <span>{t("assistant.noModels")}</span>
       </Button>
     );
   }

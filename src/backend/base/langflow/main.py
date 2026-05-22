@@ -163,6 +163,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         sync_flows_from_fs_task = None
         mcp_init_task = None
+        models_dev_refresh_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -263,6 +264,12 @@ def get_lifespan(*, fix_migration=False, version=None):
                 temp_dirs, bundles_components_paths = await load_bundles_with_error_handling()
                 get_settings_service().settings.components_path.extend(bundles_components_paths)
                 await logger.adebug(f"Bundles loaded in {asyncio.get_event_loop().time() - current_time:.2f}s")
+
+            # Locally-registered dev extensions (``lfx extension dev``) are
+            # loaded later via :func:`import_extension_components` through the
+            # @official-slot pathway alongside installed extensions, so they
+            # share the BundleRegistry, palette decoration, and reload
+            # endpoint with pip-installed bundles.  Nothing to wire here.
 
             # Gate: Cache component types
             # When types_cached is True, workers inherited the populated cache via COW; we still need a
@@ -413,6 +420,54 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
+            async def refresh_models_dev_periodically() -> None:
+                """Hydrate the models.dev catalog at startup and refresh daily.
+
+                Loads any disk snapshot first so the in-memory catalog reflects
+                last-known-good metadata immediately, then attempts a live
+                fetch. On failure the disk snapshot (or bundled static lists)
+                stays in effect — startup is never blocked by models.dev
+                availability.
+                """
+                from lfx.base.models.models_dev_catalog import (
+                    fetch_models_dev_snapshot,
+                    invalidate_catalog_cache,
+                    load_models_dev_snapshot,
+                    save_models_dev_snapshot,
+                    set_active_snapshot,
+                )
+
+                refresh_interval_seconds = 24 * 60 * 60
+
+                disk_snapshot = load_models_dev_snapshot()
+                if disk_snapshot is not None:
+                    set_active_snapshot(disk_snapshot)
+                    invalidate_catalog_cache()
+                    await logger.adebug("Loaded models.dev snapshot from disk")
+
+                while True:
+                    try:
+                        fresh = await fetch_models_dev_snapshot()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"models.dev refresh failed: {e}")
+                        fresh = None
+
+                    if fresh is not None:
+                        set_active_snapshot(fresh)
+                        invalidate_catalog_cache()
+                        try:
+                            save_models_dev_snapshot(fresh)
+                        except Exception as e:  # noqa: BLE001
+                            await logger.awarning(f"models.dev snapshot save failed: {e}")
+                        else:
+                            await logger.adebug("models.dev snapshot refreshed")
+
+                    await asyncio.sleep(refresh_interval_seconds)
+
+            models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager
             from langflow.api.v1.mcp_projects import start_project_task_group
@@ -487,6 +542,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if models_dev_refresh_task and not models_dev_refresh_task.done():
+                        models_dev_refresh_task.cancel()
+                        tasks_to_cancel.append(models_dev_refresh_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)

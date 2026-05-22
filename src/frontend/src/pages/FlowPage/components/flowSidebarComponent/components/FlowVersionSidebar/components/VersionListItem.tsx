@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import VersionLabel from "@/components/common/versionLabelComponent";
 import {
@@ -28,6 +29,7 @@ export default function VersionListItem({
   onExport,
   onDeleteClick,
 }: VersionListItemProps) {
+  const { t } = useTranslation();
   return (
     <SidebarMenuItem
       className={cn(
@@ -59,7 +61,7 @@ export default function VersionListItem({
               <button
                 onClick={(e) => e.stopPropagation()}
                 className="group/trigger flex h-6 w-6 items-center justify-center rounded"
-                title="More options"
+                title={t("flow.moreOptions")}
               >
                 {isSelected ? (
                   <>

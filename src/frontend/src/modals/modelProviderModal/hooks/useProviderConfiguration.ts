@@ -7,10 +7,8 @@ import {
   VARIABLE_CATEGORY,
 } from "@/constants/providerConstants";
 import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
-import { EnabledModelsResponse } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { useGetProviderVariables } from "@/controllers/API/queries/models/use-get-provider-variables";
-import { useUpdateEnabledModels } from "@/controllers/API/queries/models/use-update-enabled-models";
 import { useValidateProvider } from "@/controllers/API/queries/models/use-validate-provider";
 import {
   useDeleteGlobalVariables,
@@ -18,10 +16,10 @@ import {
   usePatchGlobalVariables,
   usePostGlobalVariables,
 } from "@/controllers/API/queries/variables";
-import { useDebounce } from "@/hooks/use-debounce";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import useAlertStore from "@/stores/alertStore";
 import { Provider } from "../components/types";
+import { useModelToggleQueue } from "./useModelToggleQueue";
 
 // Masked value shown for configured secret fields
 const MASKED_VALUE = "••••••••";
@@ -115,17 +113,21 @@ export const useProviderConfiguration = ({
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const { mutateAsync: validateProvider } = useValidateProvider();
   const { data: providerVariablesMapping = {} } = useGetProviderVariables();
-  const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
-    useUpdateEnabledModels({ retry: 0 });
   const { refreshAllModelInputs } = useRefreshModelInputs();
   const { data: modelProviders = [], isFetching: isFetchingModels } =
     useGetModelProviders(
       { includeDeprecated: true },
       {
-        refetchInterval:
-          syncedSelectedProvider?.provider?.toLowerCase() === "ollama"
-            ? 10000
-            : false,
+        // Issue #13137: the previous 10s ``refetchInterval`` polled
+        // ``/api/v1/models`` continuously while the Ollama card was
+        // selected. Each backend call serially probed every Ollama model
+        // (GET /api/tags + POST /api/show per model), so with many models
+        // the request took longer than the interval and the queue grew
+        // unbounded. The catalog already refreshes on credential save and
+        // disconnect via ``invalidateProviderQueries``, so the timer is
+        // unnecessary — leaving it removed makes the list update on
+        // demand instead of on a fixed schedule.
+        refetchInterval: false,
         staleTime: 1000 * 30, // 30 seconds
       },
     );
@@ -535,17 +537,36 @@ export const useProviderConfiguration = ({
   const handleDisconnect = useCallback(async () => {
     if (!syncedSelectedProvider) return;
 
-    const variableName =
-      PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
-    if (!variableName) return;
+    // Resolve every variable key associated with this provider so
+    // multi-variable providers (e.g. OpenRouter's API key + attribution
+    // headers, IBM WatsonX's apikey + project_id + url) are fully removed.
+    // The dynamic ``providerVariables`` list comes from
+    // ``GET /api/v1/models/provider-variable-mapping`` and is the source of
+    // truth; fall back to the deprecated ``PROVIDER_VARIABLE_MAPPING`` only
+    // when the API call has not resolved yet (or the provider is missing
+    // from the dynamic mapping for some reason).
+    const variableKeys = new Set<string>();
+    for (const v of providerVariables) {
+      if (v.variable_key) variableKeys.add(v.variable_key);
+    }
+    if (variableKeys.size === 0) {
+      const staticKey =
+        PROVIDER_VARIABLE_MAPPING[syncedSelectedProvider.provider];
+      if (staticKey) variableKeys.add(staticKey);
+    }
 
-    const existingVariable = globalVariables.find(
-      (v) => v.name === variableName,
+    const variablesToDelete = globalVariables.filter((v) =>
+      variableKeys.has(v.name),
     );
-    if (!existingVariable) return;
+    if (variablesToDelete.length === 0) return;
 
     try {
-      await deleteGlobalVariable({ id: existingVariable.id });
+      // Delete in parallel — backend already cleans up per-provider enabled
+      // and disabled model lists on the primary credential delete, so order
+      // does not matter.
+      await Promise.all(
+        variablesToDelete.map((v) => deleteGlobalVariable({ id: v.id })),
+      );
 
       hasUserMadeChangesRef.current = true;
       setSuccessData({
@@ -565,6 +586,7 @@ export const useProviderConfiguration = ({
     }
   }, [
     syncedSelectedProvider,
+    providerVariables,
     globalVariables,
     deleteGlobalVariable,
     setSuccessData,
@@ -572,145 +594,18 @@ export const useProviderConfiguration = ({
     invalidateProviderQueries,
   ]);
 
-  const pendingModelToggles = useRef<Record<string, boolean>>({});
-  const fallbackModelData = useRef<EnabledModelsResponse | undefined>(
-    undefined,
-  );
-
-  const flushModelToggles = useDebounce(() => {
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const updates = Object.entries(pendingModelToggles.current).map(
-      ([modelName, enabled]) => ({
-        provider: providerName,
-        model_id: modelName,
-        enabled,
-      }),
-    );
-
-    if (updates.length === 0) return;
-
-    // Capture the fallback data
-    const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
-
-    updateEnabledModels(
-      { updates },
-      {
-        onError: (error: unknown) => {
-          if (previousData) {
-            queryClient.setQueryData(["useGetEnabledModels"], previousData);
-          }
-          const errorMessage = getAxiosErrorMessage(
-            error,
-            t("modelProviders.errorFailedToUpdateModelStatus"),
-          );
-          setErrorData({
-            title: t("modelProviders.errorUpdatingModelStatus"),
-            list: [errorMessage],
-          });
-        },
-        onSettled: () => {
-          queryClient.invalidateQueries({
-            queryKey: ["useGetEnabledModels"],
-          });
-          queryClient.invalidateQueries({
-            queryKey: ["useGetModelProviders"],
-          });
-          refreshAllModelInputs({ silent: true });
-        },
-      },
-    );
-  }, 1000);
-
-  const flushPendingChanges = useCallback(async () => {
-    // Cancel the pending debounce timer — we'll send the toggles directly
-    flushModelToggles.cancel();
-
-    if (!syncedSelectedProvider?.provider) return;
-    const providerName = syncedSelectedProvider.provider;
-
-    const toggles = { ...pendingModelToggles.current };
-    if (Object.keys(toggles).length === 0) return;
-
-    const updates = Object.entries(toggles).map(([modelName, enabled]) => ({
-      provider: providerName,
-      model_id: modelName,
-      enabled,
-    }));
-
-    const previousData = fallbackModelData.current;
-
-    // Clear buffer
-    pendingModelToggles.current = {};
-    fallbackModelData.current = undefined;
-
-    try {
-      await updateEnabledModelsAsync({ updates });
-      // Mutation succeeded — query invalidation is handled by
-      // refreshAllModelInputs which runs after this promise resolves.
-    } catch (error: unknown) {
-      // Revert optimistic update on failure
-      if (previousData) {
-        queryClient.setQueryData(["useGetEnabledModels"], previousData);
-      }
-      const errorMessage = getAxiosErrorMessage(
-        error,
-        t("modelProviders.errorFailedToUpdateModelStatus"),
-      );
-      setErrorData({
-        title: t("modelProviders.errorUpdatingModelStatus"),
-        list: [errorMessage],
-      });
-    }
-  }, [
-    flushModelToggles,
-    syncedSelectedProvider,
-    queryClient,
-    updateEnabledModelsAsync,
-    setErrorData,
-  ]);
+  const { handleModelToggle: queueModelToggle, flushPendingChanges } =
+    useModelToggleQueue({
+      providerName: syncedSelectedProvider?.provider,
+    });
 
   const handleModelToggle = useCallback(
     (modelName: string, enabled: boolean) => {
       if (!syncedSelectedProvider?.provider) return;
-
-      const providerName = syncedSelectedProvider.provider;
-
       hasUserMadeChangesRef.current = true;
-
-      if (Object.keys(pendingModelToggles.current).length === 0) {
-        fallbackModelData.current =
-          queryClient.getQueryData<EnabledModelsResponse>([
-            "useGetEnabledModels",
-          ]);
-      }
-
-      queryClient.setQueryData<EnabledModelsResponse>(
-        ["useGetEnabledModels"],
-        (old) => {
-          if (!old) return old;
-          return {
-            ...old,
-            enabled_models: {
-              ...old.enabled_models,
-              [providerName]: {
-                ...old.enabled_models[providerName],
-                [modelName]: enabled,
-              },
-            },
-          };
-        },
-      );
-
-      pendingModelToggles.current[modelName] = enabled;
-      flushModelToggles();
+      queueModelToggle(modelName, enabled);
     },
-    [syncedSelectedProvider, queryClient, flushModelToggles],
+    [syncedSelectedProvider, queueModelToggle],
   );
 
   return {

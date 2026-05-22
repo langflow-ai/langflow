@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -22,12 +23,6 @@ interface NavItem {
 }
 
 export const NAV_ITEMS: NavItem[] = [
-  {
-    id: "search",
-    icon: "search",
-    label: "sidebar.nav.search",
-    tooltip: "sidebar.nav.search",
-  },
   {
     id: "components",
     icon: "component",
@@ -53,23 +48,23 @@ export const NAV_ITEMS: NavItem[] = [
     tooltip: "sidebar.nav.versionHistory",
   },
   {
-    id: "traces",
-    icon: "Activity",
-    label: "sidebar.nav.traces",
-    tooltip: "sidebar.nav.traces",
-  },
-  {
     id: "memories",
     icon: "BrainCog",
     label: "Memories",
     tooltip: "Memories",
+  },
+  {
+    id: "traces",
+    icon: "Activity",
+    label: "sidebar.nav.traces",
+    tooltip: "sidebar.nav.traces",
   },
 ];
 
 const SidebarSegmentedNav = () => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
-  const { focusSearch, setSearch } = useSearchContext();
+  const { setSearch } = useSearchContext();
   const setPlaygroundOpen = usePlaygroundStore((state) => state.setIsOpen);
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
@@ -80,6 +75,9 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
+            {item.id === "memories" && (
+              <Separator className="mx-auto my-1 w-5" />
+            )}
             <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={t(item.tooltip)} side="right">
                 <SidebarMenuButton
@@ -101,9 +99,6 @@ const SidebarSegmentedNav = () => {
                       setActiveSection(item.id);
                       if (!open) {
                         toggleSidebar();
-                      }
-                      if (item.id === "search") {
-                        setTimeout(() => focusSearch(), 100);
                       }
                     }
                   }}

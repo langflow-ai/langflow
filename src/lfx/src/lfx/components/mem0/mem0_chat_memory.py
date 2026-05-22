@@ -135,10 +135,10 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
         try:
             if search_query:
                 logger.info("Performing search with query.")
-                related_memories = mem0_memory.search(query=search_query, user_id=user_id)
+                related_memories = mem0_memory.search(query=search_query, filters={"user_id": user_id})
             else:
                 logger.info("Retrieving all memories for user_id: %s", user_id)
-                related_memories = mem0_memory.get_all(user_id=user_id)
+                related_memories = mem0_memory.get_all(filters={"user_id": user_id})
         except Exception:
             logger.exception("Failed to retrieve related memories from Mem0.")
             raise

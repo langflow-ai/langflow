@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Loading from "@/components/ui/loading";
 import { useGetTraceQuery } from "@/controllers/API/queries/traces";
 import { SpanDetail } from "./SpanDetail";
@@ -10,6 +11,7 @@ import { Span, TraceDetailViewProps } from "./types";
  * Matches the "Trace Detail" layout (header + span list + span details).
  */
 export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
+  const { t } = useTranslation();
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
 
   const { data: trace, isLoading } = useGetTraceQuery(
@@ -70,7 +72,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
         className="flex h-full items-center justify-center text-sm text-muted-foreground"
         data-testid="trace-detail-view-empty"
       >
-        No trace available for this run.
+        {t("trace.noTraceAvailable")}
       </div>
     );
   }
@@ -83,7 +85,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
       >
         <div className="flex flex-col items-center gap-2 text-muted-foreground">
           <Loading size={32} className="text-primary" />
-          <span className="text-sm">Loading trace...</span>
+          <span className="text-sm">{t("trace.loadingTrace")}</span>
         </div>
       </div>
     );
@@ -95,7 +97,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
         className="flex h-full items-center justify-center text-sm text-muted-foreground"
         data-testid="trace-detail-view-error"
       >
-        Failed to load trace details.
+        {t("trace.failedToLoad")}
       </div>
     );
   }
@@ -110,7 +112,9 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
       <div className="border-b border-border px-4 py-3 pr-12">
         <div className="flex flex-nowrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-2 overflow-hidden whitespace-nowrap">
-            <span className="shrink-0 text-sm font-medium">Trace Details</span>
+            <span className="shrink-0 text-sm font-medium">
+              {t("trace.traceDetails")}
+            </span>
             <span className="shrink-0 text-sm text-muted-foreground">—</span>
             <span className="shrink-0 text-sm font-medium">{trace.id}</span>
           </div>
