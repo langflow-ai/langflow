@@ -215,7 +215,11 @@ class TestLangfuseTracerFunctionality:
             trace_type="chain",
             project_name="test-project",
             trace_id=uuid.uuid4(),
+            user_id="user-1",
+            session_id="session-1",
         )
+
+        propagate_calls_before = len(mock_langfuse["propagate_calls"])
 
         tracer.add_trace(
             trace_id="component-1",
@@ -229,6 +233,15 @@ class TestLangfuseTracerFunctionality:
         mock_langfuse["root_span"].start_observation.assert_called_once()
         call_kwargs = mock_langfuse["root_span"].start_observation.call_args[1]
         assert call_kwargs["name"] == "TestComponent"
+
+        # add_trace must enter propagate_attributes around start_observation,
+        # otherwise child observations created in a worker task won't inherit
+        # user.id / session.id / langfuse.trace.name.
+        assert len(mock_langfuse["propagate_calls"]) > propagate_calls_before
+        last_attrs = mock_langfuse["propagate_calls"][-1]
+        assert last_attrs["user_id"] == "user-1"
+        assert last_attrs["session_id"] == "session-1"
+        assert last_attrs["trace_name"] == "flow-123"
 
     def test_end_trace_updates_and_ends_span(self, mock_langfuse):
         """Test that end_trace updates span with output and ends it."""
@@ -320,3 +333,167 @@ class TestLangfuseTracerFunctionality:
             trace_context = call_kwargs["trace_context"]
             assert "parent_span_id" in trace_context
             assert trace_context["parent_span_id"] == "child-span-id"
+
+
+class TestLangfuseTracerWorkerTaskPropagation:
+    """Verify trace-level attrs reach child observations created in a different
+    asyncio task than the tracer was constructed in.
+
+    langflow's TracingService spawns a worker task in `start_tracers` BEFORE
+    `_initialize_langfuse_tracer` runs, and dispatches `add_trace` calls via
+    a queue. Because `asyncio.create_task` snapshots contextvars at task
+    creation, a `propagate_attributes` token attached in the request task is
+    not visible from the worker. The mocked-module tests above can't catch
+    this — they assert the *call* was made but the SDK's real OTel context
+    plumbing is bypassed.
+
+    This test exercises a real `LangfuseSpanProcessor` against an in-memory
+    span exporter and asserts user.id / session.id / langfuse.trace.name
+    actually land on the exported child span.
+    """
+
+    @pytest.fixture
+    def memory_exporter(self):
+        from opentelemetry.sdk.trace import ReadableSpan
+        from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
+
+        class _InMemoryExporter(SpanExporter):
+            def __init__(self) -> None:
+                self._spans: list[ReadableSpan] = []
+
+            def export(self, spans):
+                self._spans.extend(spans)
+                return SpanExportResult.SUCCESS
+
+            def shutdown(self):
+                pass
+
+            def get_finished_spans(self):
+                return list(self._spans)
+
+        return _InMemoryExporter()
+
+    @pytest.fixture
+    def real_langfuse_with_memory_exporter(self, monkeypatch, memory_exporter):
+        """Wire the real LangfuseSpanProcessor to an in-memory exporter; mock auth.
+
+        Resets OTel globals AND LangfuseResourceManager both before and after the
+        test, because earlier tests in this file may have constructed a real
+        LangFuseTracer (e.g. test_tracer_initialization_does_not_crash) whose
+        cached LangfuseResourceManager entry would otherwise short-circuit our
+        patched processor init.
+        """
+        _import_langfuse_or_skip()
+
+        from opentelemetry import trace as trace_api
+        from opentelemetry.sdk.resources import Resource
+        from opentelemetry.sdk.trace import TracerProvider
+        from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
+        from opentelemetry.util._once import Once
+
+        from langfuse._client import span_processor as sp_mod
+        from langfuse._client.resource_manager import LangfuseResourceManager
+        from langfuse._client.span_filter import is_default_export_span
+
+        def _reset_otel_globals() -> None:
+            trace_api._TRACER_PROVIDER = None
+            trace_api._PROXY_TRACER_PROVIDER = trace_api.ProxyTracerProvider()
+            trace_api._TRACER_PROVIDER_SET_ONCE = Once()
+
+        LangfuseResourceManager.reset()
+        _reset_otel_globals()
+
+        def _mock_processor_init(self_, **kwargs):
+            self_.public_key = kwargs.get("public_key", "test-key")
+            self_.blocked_instrumentation_scopes = kwargs.get("blocked_instrumentation_scopes") or []
+            self_._should_export_span = kwargs.get("should_export_span") or is_default_export_span
+            BatchSpanProcessor.__init__(
+                self_,
+                span_exporter=memory_exporter,
+                max_export_batch_size=512,
+                schedule_delay_millis=1,
+            )
+
+        monkeypatch.setattr(sp_mod.LangfuseSpanProcessor, "__init__", _mock_processor_init)
+
+        provider = TracerProvider(resource=Resource.create({"service.name": "langfuse-test"}))
+        provider.add_span_processor(SimpleSpanProcessor(memory_exporter))
+        trace_api.set_tracer_provider(provider)
+
+        yield
+
+        LangfuseResourceManager.reset()
+        _reset_otel_globals()
+
+    async def test_child_observation_in_worker_task_has_propagated_attrs(
+        self, real_langfuse_with_memory_exporter, memory_exporter, monkeypatch
+    ):
+        """Mirror the TracingService topology: worker task spawned before the
+        tracer, add_trace dispatched through a queue. The child span must end
+        up with user.id / session.id / langfuse.trace.name set.
+        """
+        import asyncio
+
+        from langfuse._client.attributes import LangfuseOtelSpanAttributes
+        from langfuse._client.client import Langfuse
+
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        monkeypatch.setattr(Langfuse, "auth_check", lambda self: True)
+
+        queue: asyncio.Queue = asyncio.Queue()
+        done = asyncio.Event()
+
+        async def worker():
+            while not done.is_set() or not queue.empty():
+                try:
+                    func = await asyncio.wait_for(queue.get(), timeout=0.5)
+                except asyncio.TimeoutError:
+                    continue
+                try:
+                    func()
+                finally:
+                    queue.task_done()
+
+        # Worker spawned BEFORE tracer construction — mirrors start_tracers's
+        # ordering where _start (worker creation) precedes _initialize_langfuse_tracer.
+        worker_task = asyncio.create_task(worker())
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-WORKER",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="user-WORKER",
+            session_id="session-WORKER",
+        )
+        assert tracer.ready
+
+        def dispatch_add_trace():
+            tracer.add_trace(
+                trace_id="component-1",
+                trace_name="ChildComponent (component-1)",
+                trace_type="llm",
+                inputs={"prompt": "test"},
+                metadata={"key": "value"},
+            )
+
+        await queue.put(dispatch_add_trace)
+        await queue.join()
+
+        tracer.end_trace("component-1", "ChildComponent", outputs={"output": "result"})
+        tracer.end(inputs={"flow_input": "x"}, outputs={"flow_output": "y"})
+
+        done.set()
+        await worker_task
+
+        spans_by_name = {s.name: s for s in memory_exporter.get_finished_spans()}
+        child = spans_by_name.get("ChildComponent")
+        assert child is not None, f"child span not exported; got {list(spans_by_name)}"
+
+        attrs = dict(child.attributes or {})
+        assert attrs.get(LangfuseOtelSpanAttributes.TRACE_USER_ID) == "user-WORKER", (
+            f"child observation missing user.id (worker-task propagation broken). attrs={attrs}"
+        )
+        assert attrs.get(LangfuseOtelSpanAttributes.TRACE_SESSION_ID) == "session-WORKER"
+        assert attrs.get(LangfuseOtelSpanAttributes.TRACE_NAME) == "flow-WORKER"

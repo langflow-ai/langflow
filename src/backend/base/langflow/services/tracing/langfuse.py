@@ -12,7 +12,6 @@ from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from contextlib import AbstractContextManager
     from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -28,8 +27,9 @@ class LangFuseTracer(BaseTracer):
 
     The v4 SDK is OpenTelemetry-based: `start_observation` replaces v3's
     `start_span`; trace-level attributes (user_id, session_id, name) propagate
-    via `propagate_attributes`, manually entered here and exited in `end()`;
-    trace-level input/output go through `set_trace_io`.
+    via `propagate_attributes`, applied per `start_observation` call so the
+    OTel context is attached in the same asyncio task that creates the
+    observation; trace-level input/output go through `set_trace_io`.
 
     See: https://langfuse.com/docs/observability/sdk/upgrade-path/python-v3-to-v4
     """
@@ -54,7 +54,12 @@ class LangFuseTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
-        self._attributes_ctx: AbstractContextManager[None] | None = None
+
+        self._propagated_attrs: dict[str, Any] = {"trace_name": self.flow_id}
+        if user_id:
+            self._propagated_attrs["user_id"] = user_id
+        if session_id:
+            self._propagated_attrs["session_id"] = session_id
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -70,13 +75,20 @@ class LangFuseTracer(BaseTracer):
         - `start_observation` replaces `start_span`.
         - Trace-level attributes (user_id, session_id, name) are not span
           parameters; they propagate via `propagate_attributes`, an OTel
-          context manager. We enter it here and exit in `end()`.
+          context manager backed by `contextvars`. `asyncio.create_task`
+          snapshots contextvars at task-creation time, so a token attached
+          in one task is not visible to tasks created earlier. langflow's
+          TracingService dispatches `add_trace` via a worker task that was
+          spawned before the tracer is constructed, so we enter
+          `propagate_attributes` per `start_observation` call rather than
+          holding it open for the tracer's lifetime.
         """
         try:
             from langfuse import Langfuse, propagate_attributes
             from langfuse.types import TraceContext
 
             self._client = Langfuse(**config)
+            self._propagate_attributes = propagate_attributes
 
             # Health check using public API
             try:
@@ -92,23 +104,12 @@ class LangFuseTracer(BaseTracer):
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 
-            # v4: enter propagate_attributes manually so trace-level attributes
-            # (name/user_id/session_id) attach to every observation underneath.
-            # Must be exited in end() or the OTel context leaks.
-            attrs: dict[str, Any] = {"trace_name": self.flow_id}
-            if self.user_id:
-                attrs["user_id"] = self.user_id
-            if self.session_id:
-                attrs["session_id"] = self.session_id
-            self._attributes_ctx = propagate_attributes(**attrs)
-            self._attributes_ctx.__enter__()
-
-            # Create root observation for the flow under the propagated attrs.
-            self._root_span = self._client.start_observation(
-                name=self.flow_id,
-                trace_context=self._trace_context,
-                metadata={"flow_id": self.flow_id, "project_name": self.project_name},
-            )
+            with self._propagate_attributes(**self._propagated_attrs):
+                self._root_span = self._client.start_observation(
+                    name=self.flow_id,
+                    trace_context=self._trace_context,
+                    metadata={"flow_id": self.flow_id, "project_name": self.project_name},
+                )
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -116,7 +117,6 @@ class LangFuseTracer(BaseTracer):
 
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error setting up LangFuse tracer: {e}")
-            self._detach_attributes()
             return False
 
         return True
@@ -140,12 +140,17 @@ class LangFuseTracer(BaseTracer):
 
         name = trace_name.removesuffix(f" ({trace_id})")
 
-        # Create child observation under the root span (v4: start_observation).
-        span = self._root_span.start_observation(
-            name=name,
-            input=serialize(inputs),
-            metadata=serialize(metadata_),
-        )
+        # Wrap start_observation in propagate_attributes so the child span
+        # gets user.id/session.id/langfuse.trace.name. This call typically
+        # runs in a different asyncio task than _setup_langfuse (langflow's
+        # TracingService dispatches add_trace via a worker task), and
+        # contextvars don't cross task boundaries forward-in-time.
+        with self._propagate_attributes(**self._propagated_attrs):
+            span = self._root_span.start_observation(
+                name=name,
+                input=serialize(inputs),
+                metadata=serialize(metadata_),
+            )
 
         self.spans[trace_id] = span
 
@@ -188,42 +193,22 @@ class LangFuseTracer(BaseTracer):
         outputs_ser = serialize(outputs)
         metadata_ser = serialize(metadata) if metadata else None
 
-        try:
-            # Update the root span with final input/output
-            self._root_span.update(
-                input=inputs_ser,
-                output=outputs_ser,
-                metadata=metadata_ser,
-            )
+        # Update the root span with final input/output
+        self._root_span.update(
+            input=inputs_ser,
+            output=outputs_ser,
+            metadata=metadata_ser,
+        )
 
-            # v4: trace-level input/output via set_trace_io (replaces update_trace's
-            # input/output args). user_id/session_id/name were set during setup via
-            # propagate_attributes and don't need to be re-applied here.
-            self._root_span.set_trace_io(
-                input=inputs_ser,
-                output=outputs_ser,
-            )
+        # v4: trace-level input/output via set_trace_io. user_id/session_id/name
+        # are propagated per start_observation call, not on a long-lived context,
+        # so nothing to detach here.
+        self._root_span.set_trace_io(
+            input=inputs_ser,
+            output=outputs_ser,
+        )
 
-            # End the root span
-            self._root_span.end()
-        finally:
-            self._detach_attributes()
-
-    def _detach_attributes(self) -> None:
-        """Exit the propagate_attributes context manager entered in setup.
-
-        Safe to call multiple times; runs at most once per tracer instance.
-        Failures are swallowed because the OTel context will reset on next
-        flow run regardless.
-        """
-        if self._attributes_ctx is None:
-            return
-        try:
-            self._attributes_ctx.__exit__(None, None, None)
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error exiting propagate_attributes: {e}")
-        finally:
-            self._attributes_ctx = None
+        self._root_span.end()
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
