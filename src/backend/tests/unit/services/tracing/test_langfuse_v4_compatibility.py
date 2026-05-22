@@ -385,15 +385,14 @@ class TestLangfuseTracerWorkerTaskPropagation:
         """
         _import_langfuse_or_skip()
 
+        from langfuse._client import span_processor as sp_mod
+        from langfuse._client.resource_manager import LangfuseResourceManager
+        from langfuse._client.span_filter import is_default_export_span
         from opentelemetry import trace as trace_api
         from opentelemetry.sdk.resources import Resource
         from opentelemetry.sdk.trace import TracerProvider
         from opentelemetry.sdk.trace.export import BatchSpanProcessor, SimpleSpanProcessor
         from opentelemetry.util._once import Once
-
-        from langfuse._client import span_processor as sp_mod
-        from langfuse._client.resource_manager import LangfuseResourceManager
-        from langfuse._client.span_filter import is_default_export_span
 
         def _reset_otel_globals() -> None:
             trace_api._TRACER_PROVIDER = None
@@ -434,10 +433,9 @@ class TestLangfuseTracerWorkerTaskPropagation:
         """
         import asyncio
 
+        from langflow.services.tracing.langfuse import LangFuseTracer
         from langfuse._client.attributes import LangfuseOtelSpanAttributes
         from langfuse._client.client import Langfuse
-
-        from langflow.services.tracing.langfuse import LangFuseTracer
 
         monkeypatch.setattr(Langfuse, "auth_check", lambda self: True)
 
