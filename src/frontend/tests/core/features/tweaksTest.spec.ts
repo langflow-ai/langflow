@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "curl_api_generation",
   { tag: ["@release", "@workspace", "@api"] },
@@ -10,7 +11,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     // Wait for the new-flow Loading state to clear before checking the
     // publish button — the canvas mounts only after the flow finishes
     // loading, which can outlast a 20s action timeout on Windows CI.
@@ -33,7 +36,7 @@ test(
     expect(clipboardContent.length).toBeGreaterThan(0);
     await page.getByTestId("tweaks-button").click();
     await page
-      .getByRole("heading", { name: "Language Model" })
+      .getByRole("heading", { name: TEXTS.componentLanguageModel })
       .locator("div")
       .first()
       .click();
@@ -44,7 +47,7 @@ test(
 
     await page.getByTestId("showstream").first().click();
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     await page.getByTestId("api_tab_curl").click();
     await page.getByTestId("icon-Copy").click();
@@ -56,7 +59,7 @@ test(
     expect(oldValue).not.toBe(newValue);
     expect(clipboardContent2.length).toBeGreaterThan(clipboardContent.length);
     await awaitBootstrapTest(page, { skipModal: true });
-    await page.getByText("Basic Prompting").first().click();
+    await page.getByText(TEXTS.templateBasicPrompting).first().click();
     await page.getByTestId("publish-button").click();
     await page.getByTestId("api-access-item").click();
     expect(
@@ -119,7 +122,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
   await page.getByText("collection_name_test_123123123!@#$&*(&%$@").isVisible();
   await page.getByText("persist_directory_123123123!@#$&*(&%$@").isVisible();
 
-  await page.getByText("Close").last().click();
+  await page.getByText(TEXTS.close).last().click();
 
   await page.getByText("Python", { exact: true }).click();
 

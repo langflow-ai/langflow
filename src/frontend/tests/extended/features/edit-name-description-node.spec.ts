@@ -1,10 +1,10 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   disableInspectPanel,
   enableInspectPanel,
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to edit name and description of a node",
@@ -22,13 +22,7 @@ test(
 
     const randomName_4 = Math.random().toString(36).substring(2, 15);
     const randomDescription_4 = Math.random().toString(36).substring(2, 15);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -139,13 +133,7 @@ test(
 
     const randomName_4 = Math.random().toString(36).substring(2, 15);
     const randomDescription_4 = Math.random().toString(36).substring(2, 15);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
