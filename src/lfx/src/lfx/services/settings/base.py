@@ -9,7 +9,7 @@ from typing import Any, Literal
 import aiofiles
 import orjson
 import yaml
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -504,7 +504,13 @@ class Settings(BaseSettings):
     embedded_mode: bool = False
     """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
     standalone installations (logout button, new project/flow buttons, starter projects, etc.)."""
-    hide_getting_started_progress: bool = False
+    hide_getting_started_progress: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LANGFLOW_HIDE_GETTING_STARTED_PROGRESS",
+            "HIDE_GETTING_STARTED_PROGRESS",
+        ),
+    )
     """If set to True, hides the getting-started onboarding progress UI."""
     hide_logout_button: bool = False
     """If set to True, hides the Logout button in the account menu."""
