@@ -21,6 +21,7 @@
 - **Source code access** lets you customize any component using Python.
 - **Interactive playground** to immediately test and refine your flows with step-by-step control.
 - **Multi-agent orchestration** with conversation management and retrieval.
+- **Modular Extension Bundles** — 80+ vendor integrations ship as independent `lfx-*` packages that can be installed, updated, and developed in isolation.
 - **Deploy as an API** or export as JSON for Python apps.
 - **Deploy as an MCP server** and turn your flows into tools for MCP clients.
 - **Observability** with LangSmith, LangFuse and other integrations.
@@ -76,6 +77,26 @@ docker run -p 7860:7860 langflowai/langflow:latest
 ```
 Langflow is available at http://localhost:7860/.
 For configuration options, see the [Docker deployment guide](https://docs.langflow.org/deployment-docker).
+
+## 🧩 Extension Bundles
+
+Langflow's vendor-specific integrations (LLM providers, vector stores, search tools, SaaS connectors, and agent frameworks) are shipped as **Extension Bundles** — standalone `lfx-*` Python packages under [`src/bundles/`](src/bundles/). Each bundle is an independent distribution with its own dependencies, tests, and release lifecycle.
+
+A default `pip install langflow` still includes every bundle, so nothing changes for end users. For bundle authors and contributors:
+
+- **[`BUNDLE_API.md`](./BUNDLE_API.md)** — the stable API surface that bundles consume.
+- **[`src/bundles/PORTING.md`](src/bundles/PORTING.md)** — step-by-step recipe for extracting a component into a bundle.
+- **[`src/bundles/EXTRACTION_PLAN.md`](src/bundles/EXTRACTION_PLAN.md)** — the full mass-extraction plan and bundle inventory.
+
+Develop a bundle in isolation with hot reload:
+```shell
+uv run lfx extension dev src/bundles/<bundle>
+```
+
+Validate a bundle:
+```shell
+uv run lfx extension validate src/bundles/<bundle>/src/lfx_<bundle>
+```
 
 ## 🛡️ Security
 
