@@ -38,11 +38,33 @@ from datetime import datetime, timezone
 from uuid import UUID, uuid4
 
 import sqlalchemy as sa
+from pydantic import field_serializer
 from sqlalchemy import Column, DateTime, ForeignKey, Text
 from sqlalchemy import Enum as SQLEnum
 from sqlmodel import Field, SQLModel
 
 from langflow.services.database.models.jobs.model import JobStatus
+
+
+def _as_utc_iso(value: datetime | None) -> str | None:
+    """Serialize ``value`` as a UTC ISO-8601 string, or ``None``.
+
+    SQLite drops the tzinfo of ``DateTime(timezone=True)`` columns on
+    read, so a value that was written tz-aware can come back naive.
+    Pydantic's default ``datetime`` serializer would then emit a
+    string without an offset, which the browser interprets in the
+    local timezone — for a São Paulo user that shifts every timestamp
+    by +3h (the visible "next fire in 3h" bug).
+
+    We normalize on the boundary: naive values are read as UTC
+    (matching how they were written), tz-aware values are converted
+    to UTC, and we emit ISO with an explicit ``+00:00`` so the
+    browser can do its own local-time rendering correctly.
+    """
+    if value is None:
+        return None
+    aware = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    return aware.isoformat()
 
 
 def _utcnow() -> datetime:
@@ -158,3 +180,13 @@ class TriggerJobRead(SQLModel):
     error: str | None
     run_job_id: UUID | None
     created_at: datetime
+
+    @field_serializer(
+        "scheduled_at",
+        "started_at",
+        "finished_at",
+        "created_at",
+        when_used="json",
+    )
+    def _serialize_datetimes(self, value: datetime | None) -> str | None:
+        return _as_utc_iso(value)

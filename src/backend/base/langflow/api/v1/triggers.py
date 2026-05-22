@@ -40,7 +40,7 @@ canvas round-trip when they only need to schedule an existing flow.
 from __future__ import annotations
 
 from dataclasses import asdict
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -125,7 +125,20 @@ def _serialize_instance(instance: TriggerInstance) -> dict:
 
 
 def _iso(value: datetime | None) -> str | None:
-    return value.isoformat() if value else None
+    """ISO-8601 string in UTC, or ``None``.
+
+    SQLite drops the tzinfo of ``DateTime(timezone=True)`` columns on
+    read, so a value originally stored tz-aware comes back naive.
+    Emitting that naive value via ``isoformat()`` produces a string
+    without an offset, which the browser then interprets in the local
+    timezone — shifting every datetime by the user's UTC offset (the
+    visible "next fire in 3h" bug for a São Paulo user). We normalize
+    naive → UTC and always emit with an explicit offset.
+    """
+    if value is None:
+        return None
+    aware = value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
+    return aware.isoformat()
 
 
 # --------------------------------------------------------------------------- #
