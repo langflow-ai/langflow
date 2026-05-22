@@ -336,15 +336,14 @@ class TestLangfuseTracerFunctionality:
 
 
 class TestLangfuseTracerWorkerTaskPropagation:
-    """Verify trace-level attrs reach child observations created in a different
-    asyncio task than the tracer was constructed in.
+    """Verify trace-level attrs reach child observations across asyncio task boundaries.
 
     langflow's TracingService spawns a worker task in `start_tracers` BEFORE
     `_initialize_langfuse_tracer` runs, and dispatches `add_trace` calls via
     a queue. Because `asyncio.create_task` snapshots contextvars at task
     creation, a `propagate_attributes` token attached in the request task is
     not visible from the worker. The mocked-module tests above can't catch
-    this — they assert the *call* was made but the SDK's real OTel context
+    this; they assert the call was made but the SDK's real OTel context
     plumbing is bypassed.
 
     This test exercises a real `LangfuseSpanProcessor` against an in-memory
@@ -354,12 +353,11 @@ class TestLangfuseTracerWorkerTaskPropagation:
 
     @pytest.fixture
     def memory_exporter(self):
-        from opentelemetry.sdk.trace import ReadableSpan
         from opentelemetry.sdk.trace.export import SpanExporter, SpanExportResult
 
         class _InMemoryExporter(SpanExporter):
             def __init__(self) -> None:
-                self._spans: list[ReadableSpan] = []
+                self._spans = []
 
             def export(self, spans):
                 self._spans.extend(spans)
@@ -424,10 +422,11 @@ class TestLangfuseTracerWorkerTaskPropagation:
         LangfuseResourceManager.reset()
         _reset_otel_globals()
 
-    async def test_child_observation_in_worker_task_has_propagated_attrs(
-        self, real_langfuse_with_memory_exporter, memory_exporter, monkeypatch
-    ):
-        """Mirror the TracingService topology: worker task spawned before the
+    @pytest.mark.usefixtures("real_langfuse_with_memory_exporter")
+    async def test_child_observation_in_worker_task_has_propagated_attrs(self, memory_exporter, monkeypatch):
+        """Worker task spawned before tracer; assert child span has propagated attrs.
+
+        Mirrors the TracingService topology: worker task spawned before the
         tracer, add_trace dispatched through a queue. The child span must end
         up with user.id / session.id / langfuse.trace.name set.
         """
@@ -437,7 +436,7 @@ class TestLangfuseTracerWorkerTaskPropagation:
         from langfuse._client.attributes import LangfuseOtelSpanAttributes
         from langfuse._client.client import Langfuse
 
-        monkeypatch.setattr(Langfuse, "auth_check", lambda self: True)
+        monkeypatch.setattr(Langfuse, "auth_check", lambda _self: True)
 
         queue: asyncio.Queue = asyncio.Queue()
         done = asyncio.Event()
