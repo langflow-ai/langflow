@@ -45,19 +45,15 @@ describe("useCanvasDragSelectFix", () => {
     expect(getUserSelect()).toBe("");
   });
 
-  it("sets user-select:none on any mousedown (no shift key)", () => {
+  it("sets user-select:none on mousedown regardless of shift key state", () => {
     renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
     act(() => fireMouseDown(el, false));
-
     expect(getUserSelect()).toBe("none");
-  });
 
-  it("sets user-select:none on shift+mousedown", () => {
-    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
+    act(() => fireMouseUp());
 
     act(() => fireMouseDown(el, true));
-
     expect(getUserSelect()).toBe("none");
   });
 
@@ -105,5 +101,35 @@ describe("useCanvasDragSelectFix", () => {
       act(() => fireMouseUp());
       expect(getUserSelect()).toBe("");
     }
+  });
+
+  it("triggers on mousedown from a child element that bubbles up to the canvas ref", () => {
+    const child = document.createElement("span");
+    el.appendChild(child);
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
+
+    act(() => fireMouseDown(child));
+
+    expect(getUserSelect()).toBe("none");
+
+    el.removeChild(child);
+  });
+
+  it("does not add duplicate restore listeners when mousedown fires twice before mouseup", () => {
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
+
+    act(() => {
+      fireMouseDown(el);
+      fireMouseDown(el);
+    });
+
+    // First mouseup should restore selection
+    act(() => fireMouseUp());
+    expect(getUserSelect()).toBe("");
+
+    // A subsequent mouseup should not affect a value set after the first restore
+    document.documentElement.style.setProperty("user-select", "text");
+    act(() => fireMouseUp());
+    expect(getUserSelect()).toBe("text");
   });
 });
