@@ -133,6 +133,76 @@ class AuthSettings(BaseSettings):
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
 
+    # External trusted-identity settings.
+    # Used when an upstream identity layer (proxy, gateway, IdP) issues or
+    # validates a credential and Langflow needs to accept it and map it to
+    # a local user via SSOUserProfile (JIT provisioning).
+    EXTERNAL_AUTH_ENABLED: bool = Field(
+        default=False,
+        description="Enable trusted external request authentication and JIT local user mapping.",
+    )
+    EXTERNAL_AUTH_PROVIDER: str = Field(
+        default="external",
+        description="Stable provider key written to SSOUserProfile.sso_provider for external identities.",
+    )
+    EXTERNAL_AUTH_TOKEN_HEADER: str = Field(
+        default="Authorization",
+        description=(
+            "Header containing the external credential. The native Langflow JWT path is tried first; "
+            "if it fails, the external path is attempted as a fallback. Bearer-prefixed values are supported."
+        ),
+    )
+    EXTERNAL_AUTH_TOKEN_COOKIE: str | None = Field(
+        default=None,
+        description="Optional cookie name containing the external credential.",
+    )
+    EXTERNAL_AUTH_IDENTITY_RESOLVER: str | None = Field(
+        default=None,
+        description=(
+            "Optional 'module:attribute' import path for a custom resolver that converts the external "
+            "credential into an identity. Defaults to built-in JWT validation when unset."
+        ),
+    )
+    EXTERNAL_AUTH_TRUSTED_JWT_DECODE: bool = Field(
+        default=False,
+        description=(
+            "When True, decode the external JWT without verifying its signature. ONLY safe behind a trusted "
+            "upstream proxy that already validates the token. Off by default."
+        ),
+    )
+    EXTERNAL_AUTH_JWKS_URL: str | None = Field(
+        default=None,
+        description="JWKS URL used to verify external JWT signatures when trusted decode is disabled.",
+    )
+    EXTERNAL_AUTH_ISSUER: str | None = Field(
+        default=None,
+        description="Expected JWT issuer (iss). Leave empty to skip issuer validation.",
+    )
+    EXTERNAL_AUTH_AUDIENCE: str | None = Field(
+        default=None,
+        description="Expected JWT audience (aud). Comma-separated audiences are supported.",
+    )
+    EXTERNAL_AUTH_ALGORITHMS: str = Field(
+        default="RS256",
+        description="Comma-separated JWT algorithms accepted for external JWT validation.",
+    )
+    EXTERNAL_AUTH_SUBJECT_CLAIM: str = Field(
+        default="sub",
+        description="JWT claim used as the stable external user id.",
+    )
+    EXTERNAL_AUTH_USERNAME_CLAIM: str = Field(
+        default="preferred_username",
+        description="JWT claim preferred for the local Langflow username on JIT provisioning.",
+    )
+    EXTERNAL_AUTH_EMAIL_CLAIM: str = Field(
+        default="email",
+        description="JWT claim containing the user's email.",
+    )
+    EXTERNAL_AUTH_NAME_CLAIM: str = Field(
+        default="name",
+        description="JWT claim containing the user's display name.",
+    )
+
     # Authorization (RBAC) feature flags — enforcement via authorization_service plugin
     AUTHZ_ENABLED: bool = Field(
         default=False,
