@@ -288,7 +288,9 @@ test(
       .first()
       .click();
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     // Create a new session first
     await page.getByTestId("new-chat").click();
@@ -989,7 +991,9 @@ test(
     await textInputs.first().fill(`${folderId}/${file1}.txt`);
     await textInputs.last().fill(`${folderId}/${file2}.txt`);
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,

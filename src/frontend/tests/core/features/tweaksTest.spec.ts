@@ -11,7 +11,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     // Wait for the new-flow Loading state to clear before checking the
     // publish button — the canvas mounts only after the flow finishes
     // loading, which can outlast a 20s action timeout on Windows CI.

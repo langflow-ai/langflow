@@ -19,7 +19,9 @@ test(
 
     // Navigate to templates and create a flow first
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -99,7 +101,9 @@ test(
 
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -225,7 +229,9 @@ test(
 
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,
@@ -427,7 +433,9 @@ test(
 
     // Navigate to templates
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 30000,

@@ -18,7 +18,9 @@ test(
     });
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
+    await page
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
 
     await page.waitForSelector('[data-testid="openaiOpenAI"]', {
       timeout: 1000,

@@ -16,7 +16,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await adjustScreenView(page);
 
@@ -93,7 +95,9 @@ AI:
 
     await page.locator('//*[@id="react-flow-id"]').hover();
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

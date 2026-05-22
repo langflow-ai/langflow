@@ -25,7 +25,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
@@ -37,7 +39,9 @@ test(
     await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
     await openAdvancedOptions(page);
     await closeAdvancedOptions(page);
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,

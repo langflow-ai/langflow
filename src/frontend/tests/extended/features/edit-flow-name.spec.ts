@@ -14,7 +14,9 @@ test(
 
     await awaitBootstrapTest(page);
 
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await renameFlow(page, { flowName: randomName });
 

@@ -12,8 +12,12 @@ test(
     // The post-Knowledge-merge Vector Store RAG template uses a single
     // Knowledge node instead of separate Retriever / Search Results nodes,
     // so assert against display_names that ARE in the current template.
-    await expect(page.getByText("Knowledge", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(TEXTS.componentLanguageModel, { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByText("Knowledge", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText(TEXTS.componentLanguageModel, { exact: true }).first(),
+    ).toBeVisible();
     await page.getByTestId("canvas_controls_dropdown").click();
 
     const focusElementsOnBoard = async ({ page }) => {
@@ -30,7 +34,11 @@ test(
     await page.getByText("Knowledge", { exact: true }).first().isHidden();
     await expect(page.getByTestId("icon-ChevronDown").last()).toBeVisible();
     await page.getByTestId("icon-ChevronDown").last().click();
-    await expect(page.getByText("Knowledge", { exact: true }).first()).toBeVisible();
-    await expect(page.getByText(TEXTS.componentLanguageModel, { exact: true }).first()).toBeVisible();
+    await expect(
+      page.getByText("Knowledge", { exact: true }).first(),
+    ).toBeVisible();
+    await expect(
+      page.getByText(TEXTS.componentLanguageModel, { exact: true }).first(),
+    ).toBeVisible();
   },
 );

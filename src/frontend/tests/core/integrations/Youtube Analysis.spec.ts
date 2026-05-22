@@ -32,7 +32,9 @@ withEventDeliveryModes(
 
     await page.getByTestId("button_run_chat output").last().click();
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
 
     await page.getByTestId("playground-btn-flow-io").click();
 

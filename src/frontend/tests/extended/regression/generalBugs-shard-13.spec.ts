@@ -44,7 +44,9 @@ test(
     await page.getByTestId("new-project-btn").click();
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.waitForSelector("text=share", { timeout: 10000 });
     await page.waitForSelector("text=playground", { timeout: 10000 });
     await page.waitForSelector("text=api", { timeout: 10000 });

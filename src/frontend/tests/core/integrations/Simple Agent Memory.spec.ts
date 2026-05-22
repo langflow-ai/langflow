@@ -16,7 +16,10 @@ withEventDeliveryModes(
 
     // Open Simple Agent template
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
     await initialGPTsetup(page);
 
     // Open Playground

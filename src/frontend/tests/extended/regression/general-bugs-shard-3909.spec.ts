@@ -38,7 +38,9 @@ test(
     await page.getByTestId("new_project_btn_empty_page").click();
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.waitForSelector("text=playground", { timeout: 30000 });
     await page.waitForSelector("text=share", { timeout: 30000 });
 

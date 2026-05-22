@@ -89,7 +89,9 @@ test(
     const secondSourceElement = await page
       .getByTestId(`card-${secondRandomName}`)
       .first();
-    const secondTargetElement = await page.getByText(TEXTS.labelNewProject).last();
+    const secondTargetElement = await page
+      .getByText(TEXTS.labelNewProject)
+      .last();
 
     const secondSourceBox = await secondSourceElement.boundingBox();
     const secondTargetBox = await secondTargetElement.boundingBox();

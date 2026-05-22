@@ -14,11 +14,15 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.getByTestId("user-profile-settings").click();
 

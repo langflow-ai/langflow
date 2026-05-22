@@ -42,10 +42,16 @@ test(
 
     await page.goto("/");
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -68,7 +74,10 @@ test(
     //CRUD an user
     await page.getByText("New User", { exact: true }).click();
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).last().fill(randomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(randomName);
     await page.locator('input[name="password"]').fill(randomPassword);
     await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
@@ -98,7 +107,10 @@ test(
 
     await page.getByText("New User", { exact: true }).click();
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).last().fill(randomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(randomName);
     await page.locator('input[name="password"]').fill(randomPassword);
     await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
@@ -116,12 +128,18 @@ test(
       (response) =>
         response.url().includes("/api/v1/users") && response.status() === 200,
     );
-    await page.getByPlaceholder(TEXTS.placeholderUsername).last().fill(randomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(randomName);
     await searchResponse;
 
     await page.getByTestId("icon-Pencil").last().click();
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).last().fill(secondRandomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(secondRandomName);
 
     await page.getByText(TEXTS.save, { exact: true }).click();
 
@@ -147,7 +165,9 @@ test(
     await awaitBootstrapTest(page, { skipGoto: true });
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
@@ -185,9 +205,13 @@ test(
 
     await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(secondRandomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(secondRandomName);
     await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
 
     await page.waitForSelector("text=Sign in", {
@@ -217,7 +241,9 @@ test(
     await awaitBootstrapTest(page, { skipGoto: true });
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
@@ -252,10 +278,16 @@ test(
 
     await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");

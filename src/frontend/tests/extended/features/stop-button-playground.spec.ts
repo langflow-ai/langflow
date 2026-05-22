@@ -47,9 +47,12 @@ test(
       { timeout: TIMEOUTS.short },
     );
 
-    await page.waitForSelector(`[data-testid="${TID.canvasControlsDropdown}"]`, {
-      timeout: TIMEOUTS.short,
-    });
+    await page.waitForSelector(
+      `[data-testid="${TID.canvasControlsDropdown}"]`,
+      {
+        timeout: TIMEOUTS.short,
+      },
+    );
 
     await page.getByTestId(TID.sidebarCustomComponentButton).click();
     await adjustScreenView(page);
@@ -90,7 +93,9 @@ test(
 
     await page.getByTestId(TID.buttonRunChatOutput).click();
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector(`[data-testid="${TID.buttonStop}"]`, {
       timeout: TIMEOUTS.standard,

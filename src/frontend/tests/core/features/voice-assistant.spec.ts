@@ -30,7 +30,9 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.getByTestId("playground-btn-flow-io").click();
 
     await expect(page.getByTestId("voice-button")).toBeVisible();
@@ -96,7 +98,9 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.getByTestId("playground-btn-flow-io").click();
 
     await expect(page.getByTestId("voice-button")).not.toBeVisible();
@@ -124,7 +128,9 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.getByTestId("playground-btn-flow-io").click();
 
     await expect(page.getByTestId("voice-button")).toBeVisible();

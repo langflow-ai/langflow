@@ -61,7 +61,9 @@ test.skip(
     expect(Number(downloadValueAfter)).not.toBe(Number(downloadValue));
     await page.getByTestId("install-Basic RAG").click();
     await page.waitForTimeout(1000);
-    await expect(page.getByText("Component Installed Successfully")).toBeVisible();
+    await expect(
+      page.getByText("Component Installed Successfully"),
+    ).toBeVisible();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });

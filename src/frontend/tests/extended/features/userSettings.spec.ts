@@ -92,9 +92,7 @@ test(
       page.getByText("Global Variables", { exact: true }).nth(1),
     ).toBeVisible({ timeout: 10000 });
     await page.getByText("Add New").click();
-    await page
-      .getByPlaceholder(TEXTS.placeholderVariableName)
-      .fill(randomName);
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).fill(randomName);
     await expect(page.getByText("Generic", { exact: true }).last()).toBeVisible(
       { timeout: 10000 },
     );
@@ -370,7 +368,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

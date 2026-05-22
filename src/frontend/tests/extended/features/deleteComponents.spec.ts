@@ -33,7 +33,9 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
     if (await page.getByText(TEXTS.labelComponents).first().isVisible()) {
       await page.getByText(TEXTS.labelComponents).first().click();
-      await expect(page.getByText(TEXTS.templateBasicRag).first()).toBeVisible();
+      await expect(
+        page.getByText(TEXTS.templateBasicRag).first(),
+      ).toBeVisible();
       await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
         timeout: 100000,
       });

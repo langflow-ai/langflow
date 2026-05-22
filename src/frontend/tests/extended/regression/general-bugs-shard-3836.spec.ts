@@ -19,7 +19,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await initialGPTsetup(page);
 
     await page.waitForSelector("text=Chat Input", { timeout: 30000 });
@@ -44,7 +46,9 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,

@@ -4,7 +4,7 @@ import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 import { TEXTS } from "../../utils/constants/texts";
 test("chat_io_teste", { tag: ["@release", "@workspace"] }, async ({ page }) => {
-    await openBlankFlow(page);
+  await openBlankFlow(page);
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     state: "visible",
   });

@@ -58,8 +58,9 @@ export const awaitBootstrapTest = async (
           }),
         ]);
         if (
-          (await page.locator('[data-testid="flow-builder-welcome-panel"]').count()) >
-          0
+          (await page
+            .locator('[data-testid="flow-builder-welcome-panel"]')
+            .count()) > 0
         ) {
           await page.getByTestId("flow-builder-welcome-browse-more").click();
         }

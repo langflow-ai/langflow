@@ -250,7 +250,9 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
 
     await unselectNodes(page);
 

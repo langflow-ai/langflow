@@ -104,7 +104,9 @@ test(
 
     await page.getByTestId("button_run_text output").click();
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.waitForTimeout(3000);
 
@@ -130,7 +132,9 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.waitForTimeout(3000);
 
@@ -158,7 +162,9 @@ test(
 
     await page.waitForTimeout(2000);
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.waitForTimeout(3000);
 
@@ -182,7 +188,9 @@ test(
     await page.getByTestId("popover-anchor-input-input_text").fill("2");
     await page.getByTestId("button_run_textoutputfalse").click();
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     numberOfSuccessfullComponentsRun = 0;
     numberOfInactiveComponentsRun = 0;

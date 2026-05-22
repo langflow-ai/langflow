@@ -173,7 +173,9 @@ test(
 
     //---------------------------------- OPENAI
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
+    await page
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
     await page.waitForSelector('[data-testid="openai_openai_draggable"]', {
       timeout: 2000,
     });
@@ -371,7 +373,9 @@ test(
 
     await adjustScreenView(page);
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

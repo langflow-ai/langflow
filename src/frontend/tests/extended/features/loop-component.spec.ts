@@ -194,7 +194,9 @@ test(
     // Build and run, expect the wrong loop message
     await page.getByTestId("button_run_read file").click();
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     // Delete the second parse data used to test
 
@@ -228,7 +230,9 @@ test(
     await expect(chatOutputInspectionButton).toBeEnabled({ timeout: 60000 });
     await chatOutputInspectionButton.click();
 
-    const output = await page.getByPlaceholder(TEXTS.placeholderEmpty).textContent();
+    const output = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
     expect(output).toContain("modified_value");
 
     // Count occurrences of modified_value in output

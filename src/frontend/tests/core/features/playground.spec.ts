@@ -55,7 +55,9 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page.waitForSelector(`[data-testid="${TID.inputChatPlayground}"]`, {
       timeout: TIMEOUTS.componentMount,
     });

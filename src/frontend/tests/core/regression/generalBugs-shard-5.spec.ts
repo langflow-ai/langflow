@@ -263,7 +263,9 @@ test(
 
     await page.getByTestId("button_run_text output").last().click();
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     expect(
       await page
@@ -276,7 +278,9 @@ test(
       .click();
 
     await expect(page.getByText(TEXTS.componentOutput)).toBeVisible();
-    const text = await page.getByPlaceholder(TEXTS.placeholderEmpty).textContent();
+    const text = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
 
     const permutations = [
       `${randomName}-${secondRandomName}-${thirdRandomName}`,

@@ -46,7 +46,9 @@ test(
 
     await page.getByTestId("output-inspection-output text-textinput").click();
 
-    const firstOutputText = await page.getByPlaceholder(TEXTS.placeholderEmpty).textContent();
+    const firstOutputText = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
 
     expect(firstOutputText).toBe("hello world");
 
@@ -77,7 +79,9 @@ test(
 
     await page.getByTestId("output-inspection-output text-textinput").click();
 
-    const secondOutputText = await page.getByPlaceholder(TEXTS.placeholderEmpty).textContent();
+    const secondOutputText = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
 
     expect(secondOutputText).toBe("goodbye world");
   },

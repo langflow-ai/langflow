@@ -34,7 +34,9 @@ withEventDeliveryModes(
     await page.getByText("Expand").click();
     await buildFlowAndWait(page);
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()

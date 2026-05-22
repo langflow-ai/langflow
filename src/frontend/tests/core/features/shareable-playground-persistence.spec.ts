@@ -27,8 +27,12 @@ async function setupAutoLoginOff(page: Page): Promise<void> {
     timeout: TIMEOUTS.standard,
   });
 
-  await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-  await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+  await page
+    .getByPlaceholder(TEXTS.placeholderUsername)
+    .fill(TEXTS.authDefaultCredential);
+  await page
+    .getByPlaceholder(TEXTS.placeholderPassword)
+    .fill(TEXTS.authDefaultCredential);
 
   await page.evaluate(() => {
     sessionStorage.removeItem("testMockAutoLogin");
@@ -141,9 +145,7 @@ test(
     await page.getByTestId(TID.newChat).click();
     await sendPlaygroundMessage(page, "delete this", { surface: "shareable" });
 
-    const sessionsBefore = await page
-      .getByTestId(TID.sessionSelector)
-      .count();
+    const sessionsBefore = await page.getByTestId(TID.sessionSelector).count();
 
     // Delete last session
     await sessionMoreMenu(page, "last").click();

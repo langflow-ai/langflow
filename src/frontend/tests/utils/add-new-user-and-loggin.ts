@@ -32,10 +32,16 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.goto("/");
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    timeout: 30000,
+  });
 
-  await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-  await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+  await page
+    .getByPlaceholder(TEXTS.placeholderUsername)
+    .fill(TEXTS.authDefaultCredential);
+  await page
+    .getByPlaceholder(TEXTS.placeholderPassword)
+    .fill(TEXTS.authDefaultCredential);
 
   await page.evaluate(() => {
     sessionStorage.removeItem("testMockAutoLogin");
@@ -67,7 +73,10 @@ export const addNewUserAndLogin = async (page: Page) => {
   //CRUD an user
   await page.getByText("New User", { exact: true }).click();
 
-  await page.getByPlaceholder(TEXTS.placeholderUsername).last().fill(randomName);
+  await page
+    .getByPlaceholder(TEXTS.placeholderUsername)
+    .last()
+    .fill(randomName);
   await page.locator('input[name="password"]').fill(randomPassword);
   await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
@@ -97,7 +106,9 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.getByText(TEXTS.logout, { exact: true }).click();
 
-  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+  await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+    timeout: 30000,
+  });
 
   await page.getByPlaceholder(TEXTS.placeholderUsername).fill(randomName);
   await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);

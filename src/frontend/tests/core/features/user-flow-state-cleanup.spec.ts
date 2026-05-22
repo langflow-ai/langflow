@@ -44,9 +44,15 @@ test(
 
     // Log in as admin and create test user
     await page.goto("/");
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
-    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
@@ -67,7 +73,10 @@ test(
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Admin Page", { exact: true }).click();
     await page.getByText("New User", { exact: true }).click();
-    await page.getByPlaceholder(TEXTS.placeholderUsername).last().fill(userAName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(userAName);
     await page.locator('input[name="password"]').fill(userAPassword);
     await page.locator('input[name="confirmpassword"]').fill(userAPassword);
     await page.waitForSelector("#is_active", { timeout: 1500 });
@@ -90,7 +99,9 @@ test(
     // ---- USER A SESSION ----
 
     // Log in as User A
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
     await page.getByPlaceholder(TEXTS.placeholderUsername).fill(userAName);
     await page.getByPlaceholder(TEXTS.placeholderPassword).fill(userAPassword);
     await page.evaluate(() => {
@@ -165,9 +176,15 @@ test(
     // ---- ADMIN SESSION AGAIN ----
 
     // Log in as admin again
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
-    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });

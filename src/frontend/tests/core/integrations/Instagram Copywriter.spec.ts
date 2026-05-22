@@ -51,7 +51,9 @@ test(
       timeout: 30000 * 2,
     });
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByText("Create a Langflow post", { exact: true })
       .last()

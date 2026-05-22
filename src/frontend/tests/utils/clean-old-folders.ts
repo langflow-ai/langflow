@@ -7,7 +7,10 @@ export const cleanOldFolders = async (page: Page) => {
 
   while (numberOfFolders > 0) {
     const getFirstFolderName = convertTestName(
-      (await page.getByText(TEXTS.labelNewProject).first().textContent()) as string,
+      (await page
+        .getByText(TEXTS.labelNewProject)
+        .first()
+        .textContent()) as string,
     );
 
     await page.getByText(TEXTS.labelNewProject).first().hover();

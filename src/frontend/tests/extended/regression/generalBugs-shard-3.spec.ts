@@ -37,7 +37,9 @@ test(
       });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
+    await page
+      .getByTestId("sidebar-search-input")
+      .fill(TEXTS.providerOpenAiSearch);
 
     await page
       .getByTestId("openaiOpenAI")
@@ -80,7 +82,9 @@ test(
       .click();
     await adjustScreenView(page);
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page.waitForSelector('[data-testid="input-chat-playground"]', {
       timeout: 100000,
     });

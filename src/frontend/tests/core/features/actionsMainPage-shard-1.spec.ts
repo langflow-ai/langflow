@@ -10,7 +10,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
@@ -35,7 +37,9 @@ test(
     //confirm the deletion in the modal
     await page.getByText(TEXTS.delete).last().click();
 
-    await expect(page.getByText("Selected items deleted successfully")).toBeVisible();
+    await expect(
+      page.getByText("Selected items deleted successfully"),
+    ).toBeVisible();
   },
 );
 
@@ -43,7 +47,9 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   await awaitBootstrapTest(page);
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
 
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
@@ -73,7 +79,9 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   await page.getByPlaceholder("Search flows").fill("Memory Chatbot");
   await expect(page.getByText("Memory Chatbot", { exact: true })).toBeVisible();
   await page.getByText("Document Q&A", { exact: true }).isHidden();
-  await page.getByText(TEXTS.templateBasicPrompting, { exact: true }).isHidden();
+  await page
+    .getByText(TEXTS.templateBasicPrompting, { exact: true })
+    .isHidden();
 });
 
 test(
@@ -84,7 +92,9 @@ test(
 
     if (await page.getByTestId("components-btn").isVisible()) {
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
 
       await adjustScreenView(page, { numberOfZoomOut: 2 });
 
@@ -124,7 +134,9 @@ test(
 
       await page.getByTestId("icon-ChevronLeft").first().click();
 
-      const exitButton = await page.getByText(TEXTS.exit, { exact: true }).count();
+      const exitButton = await page
+        .getByText(TEXTS.exit, { exact: true })
+        .count();
 
       if (exitButton > 0) {
         await page.getByText(TEXTS.exit, { exact: true }).click();
@@ -132,7 +144,9 @@ test(
 
       await page.getByTestId("components-btn").click();
       await page.getByPlaceholder("Search components").fill("Chat Input");
-      await expect(page.getByText(TEXTS.componentChatInput, { exact: true })).toBeVisible();
+      await expect(
+        page.getByText(TEXTS.componentChatInput, { exact: true }),
+      ).toBeVisible();
       await page.getByText("Prompt", { exact: true }).isHidden();
       await page.getByText("OpenAI", { exact: true }).isHidden();
     }

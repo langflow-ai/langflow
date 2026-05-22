@@ -11,7 +11,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await adjustScreenView(page);
 
     await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
@@ -27,7 +29,9 @@ test(
       timeout: 100000,
     });
 
-    const exitButton = await page.getByText(TEXTS.exit, { exact: true }).count();
+    const exitButton = await page
+      .getByText(TEXTS.exit, { exact: true })
+      .count();
 
     if (exitButton > 0) {
       await page.getByText(TEXTS.exit, { exact: true }).click();
@@ -91,7 +95,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await adjustScreenView(page);
 
     await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
@@ -107,7 +113,9 @@ test(
       timeout: 100000,
     });
 
-    const exitButton = await page.getByText(TEXTS.exit, { exact: true }).count();
+    const exitButton = await page
+      .getByText(TEXTS.exit, { exact: true })
+      .count();
 
     if (exitButton > 0) {
       await page.getByText(TEXTS.exit, { exact: true }).click();

@@ -30,7 +30,9 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
     await page.getByTestId("notification_button").click();
 
     // Add explicit waits before checking visibility

@@ -11,7 +11,9 @@ test(
     // Start with a basic template that has multiple components
     if (await page.getByTestId("components-btn").isVisible()) {
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
     }
 
     await page.getByTestId("template-get-started-card-basic-prompting").click();

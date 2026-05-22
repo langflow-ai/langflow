@@ -48,7 +48,10 @@ test(
     //rename a folder
 
     const getFirstFolderName = convertTestName(
-      (await page.getByText(TEXTS.labelNewProject).first().textContent()) as string,
+      (await page
+        .getByText(TEXTS.labelNewProject)
+        .first()
+        .textContent()) as string,
     );
 
     await page
@@ -110,7 +113,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,

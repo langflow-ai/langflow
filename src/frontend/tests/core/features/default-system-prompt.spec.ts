@@ -159,7 +159,10 @@ test(
 
     // Load Simple Agent — gives us a ready-to-run Agent wired to ChatInput/Output.
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
     await initialGPTsetup(page);
 
     // Simple Agent's template may carry its own system_prompt — force the fresh
@@ -221,7 +224,10 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
     await initialGPTsetup(page);
 
     const customPrompt =
@@ -281,7 +287,10 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateSimpleAgent }).first().click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateSimpleAgent })
+      .first()
+      .click();
     await initialGPTsetup(page);
 
     // Force the model to echo the date from its context — any obedience-style

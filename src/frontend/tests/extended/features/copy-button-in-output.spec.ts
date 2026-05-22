@@ -37,7 +37,9 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.getByTestId("output-inspection-api response-apirequest").click();
 

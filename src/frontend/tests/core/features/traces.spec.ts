@@ -32,7 +32,9 @@ test(
         response.status() === 201,
       { timeout: 120000 },
     );
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await flowCreatePromise;
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -100,7 +102,9 @@ test.skip(
         response.status() === 201,
       { timeout: 120000 },
     );
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await flowCreatePromise;
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

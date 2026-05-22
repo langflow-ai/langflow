@@ -4,7 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 async function addChromaNode(page: Page) {
-    await openBlankFlow(page);
+  await openBlankFlow(page);
   await page.getByTestId("sidebar-search-input").click();
   await page.getByTestId("sidebar-search-input").fill("Chroma");
 

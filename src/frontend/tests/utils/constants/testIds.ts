@@ -62,6 +62,7 @@ export const TID = {
  */
 export const SELECTORS = {
   reactFlowCanvasXPath: '//*[@id="react-flow-id"]',
-  sessionMoreMenuPattern: '[data-testid^="session-"][data-testid$="-more-menu"]',
+  sessionMoreMenuPattern:
+    '[data-testid^="session-"][data-testid$="-more-menu"]',
   providerItemPattern: '[data-testid^="provider-item-"]',
 } as const;

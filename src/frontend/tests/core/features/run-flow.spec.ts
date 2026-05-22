@@ -128,7 +128,9 @@ test(
 
     await page.locator('[data-testid^="output-inspection-"]').first().click();
 
-    const value = await page.getByPlaceholder(TEXTS.placeholderEmpty).inputValue();
+    const value = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .inputValue();
 
     expect(value).toBe("THIS IS A TEST FOR RUN FLOW COMPONENT");
   },

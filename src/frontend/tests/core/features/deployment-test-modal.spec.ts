@@ -199,7 +199,9 @@ test(
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Textarea should be disabled while waiting for response
-    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeDisabled();
+    await expect(
+      page.getByPlaceholder(TEXTS.placeholderMessage),
+    ).toBeDisabled();
 
     // After response arrives, textarea should be re-enabled
     await expect(page.getByText(TEXTS.labelHelloFromAi)).toBeVisible({
@@ -261,7 +263,9 @@ test(
     });
 
     // Second message
-    await page.getByPlaceholder(TEXTS.placeholderMessage).fill("Second message");
+    await page
+      .getByPlaceholder(TEXTS.placeholderMessage)
+      .fill("Second message");
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Wait for second response
@@ -330,7 +334,9 @@ test(
     await page.keyboard.press("Escape");
 
     // Verify the modal is closed
-    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).not.toBeVisible();
+    await expect(
+      page.getByPlaceholder(TEXTS.placeholderMessage),
+    ).not.toBeVisible();
 
     // Reopen the modal
     runCallCount = 0;

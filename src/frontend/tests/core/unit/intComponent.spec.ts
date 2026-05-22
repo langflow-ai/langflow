@@ -11,9 +11,11 @@ import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 import { TEXTS } from "../../utils/constants/texts";
 test("IntComponent", { tag: ["@release", "@workspace"] }, async ({ page }) => {
-    await openBlankFlow(page);
+  await openBlankFlow(page);
   await page.getByTestId("sidebar-search-input").click();
-  await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAiSearch);
+  await page
+    .getByTestId("sidebar-search-input")
+    .fill(TEXTS.providerOpenAiSearch);
 
   await page.waitForSelector('[data-testid="openaiOpenAI"]', {
     timeout: 3000,

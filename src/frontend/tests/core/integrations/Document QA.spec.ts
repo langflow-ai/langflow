@@ -24,7 +24,9 @@ withEventDeliveryModes(
     });
     await buildFlowAndWait(page);
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
@@ -47,8 +49,6 @@ withEventDeliveryModes(
     });
 
     await expect(page.getByText("this is a test file").last()).toBeVisible();
-    expect(
-      await page.getByTestId("div-chat-message").last().count(),
-    ).toBe(1);
+    expect(await page.getByTestId("div-chat-message").last().count()).toBe(1);
   },
 );

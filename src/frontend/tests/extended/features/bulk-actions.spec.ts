@@ -11,7 +11,9 @@ test(
 
     // Add some flows to test with
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await adjustScreenView(page);
 
     // Go back to main page
@@ -32,7 +34,9 @@ test(
     await expect(page.getByText("Projects").first()).toBeVisible();
     await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });

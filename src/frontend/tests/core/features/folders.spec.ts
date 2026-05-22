@@ -12,7 +12,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
@@ -136,7 +138,9 @@ test("change flow folder", async ({ page }) => {
   // unique so our assertions can't collide with any template that
   // Starter ships with by default.
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
 
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,

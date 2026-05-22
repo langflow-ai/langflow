@@ -74,7 +74,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -108,7 +110,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -157,7 +161,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -207,7 +213,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -267,7 +275,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -323,7 +333,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -384,7 +396,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
@@ -421,7 +435,9 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground

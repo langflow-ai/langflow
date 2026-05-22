@@ -31,10 +31,16 @@ test(
 
     await page.goto("/");
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(TEXTS.authDefaultCredential);
-    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -58,7 +64,9 @@ test(
 
     await page.reload();
 
-    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
     const isLoggedIn = await page
       .getByTestId("mainpage_title")

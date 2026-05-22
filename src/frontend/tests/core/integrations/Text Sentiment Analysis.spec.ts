@@ -33,9 +33,13 @@ withEventDeliveryModes(
     await page.getByText("Expand").click();
     await unselectNodes(page);
     await page.getByTestId("button_run_chat output").last().click();
-    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByText("Add a Chat Input component to your flow to send messages.", {
         exact: true,

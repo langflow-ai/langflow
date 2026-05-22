@@ -18,7 +18,9 @@ withEventDeliveryModes(
     await initialGPTsetup(page);
     await buildFlowAndWait(page);
 
-    await page.getByRole("button", { name: TEXTS.playground, exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
     await page
       .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
@@ -57,11 +59,19 @@ withEventDeliveryModes(
       .click();
     await page.getByTestId("message-logs-option").click();
 
-    await expect(page.getByText("timestamp", { exact: true }).last()).toBeVisible();
+    await expect(
+      page.getByText("timestamp", { exact: true }).last(),
+    ).toBeVisible();
     await expect(page.getByText("text", { exact: true }).last()).toBeVisible();
-    await expect(page.getByText("sender", { exact: true }).last()).toBeVisible();
-    await expect(page.getByText("sender_name", { exact: true }).last()).toBeVisible();
-    await expect(page.getByText("session_id", { exact: true }).last()).toBeVisible();
+    await expect(
+      page.getByText("sender", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(
+      page.getByText("sender_name", { exact: true }).last(),
+    ).toBeVisible();
+    await expect(
+      page.getByText("session_id", { exact: true }).last(),
+    ).toBeVisible();
     await expect(page.getByText("files", { exact: true }).last()).toBeVisible();
     await expect(page.getByRole("gridcell").last()).toBeVisible();
 
@@ -77,6 +87,8 @@ withEventDeliveryModes(
       timeout: 100000,
     });
 
-    await expect(page.getByTestId("input-chat-playground").last()).toBeVisible();
+    await expect(
+      page.getByTestId("input-chat-playground").last(),
+    ).toBeVisible();
   },
 );

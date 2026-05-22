@@ -11,7 +11,9 @@ test.describe("Flow Lock Feature", () => {
 
       // Navigate to templates and select a flow to work with
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 5000,
@@ -121,7 +123,9 @@ test.describe("Flow Lock Feature", () => {
 
       // Navigate to templates and select a flow
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: TEXTS.templateBasicPrompting }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 5000,
