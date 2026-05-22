@@ -39,6 +39,7 @@ def upgrade_command(
     flow_path: Path,
     *,
     write: bool,
+    registry: dict[str, Any] | None = None,
 ) -> None:
     if not flow_path.exists():
         typer.echo(f"Error: flow file does not exist: {flow_path}", err=True)
@@ -56,7 +57,7 @@ def upgrade_command(
     has_envelope = "data" in flow_data and "nodes" in flow_data.get("data", {})
     inner_data = flow_data["data"] if has_envelope else flow_data
 
-    all_types = load_registry_from_index()
+    all_types = registry if registry is not None else load_registry_from_index()
     report = check_flow_compatibility(inner_data, all_types)
 
     _print_report(report)
