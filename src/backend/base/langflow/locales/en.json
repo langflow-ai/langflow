@@ -3912,6 +3912,7 @@
   "components.guardrailvalidator.inputs.model.display_name.698eabeb": "Language Model",
   "components.guardrailvalidator.inputs.model.info.c3f8e1ba": "Select your model provider",
   "components.guardrailvalidator.inputs.model.placeholder.56590d8e": "Setup Provider",
+  "components.guardrailvalidator.outputs.data_result.display_name.2152533a": "Result Data",
   "components.guardrailvalidator.outputs.failed_result.display_name.09230b3d": "Fail",
   "components.guardrailvalidator.outputs.pass_result.display_name.ebdf8cc0": "Pass",
   "components.hcd.description.3c5fb222": "Implementation of Vector Store using Hyper-Converged Database (HCD) with search capabilities",

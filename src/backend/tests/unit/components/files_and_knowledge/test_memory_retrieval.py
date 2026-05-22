@@ -323,7 +323,7 @@ class TestMemoryBaseRetrievalInvariants:
     async def test_missing_session_id_raises_when_filter_enabled(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id=None, filter_by_session=True)
         with pytest.raises(ValueError, match="session_id is required"):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
     async def test_missing_session_id_allowed_when_filter_disabled(self):
         """Cross-session retrieval should not require a session_id on the graph."""
@@ -348,7 +348,7 @@ class TestMemoryBaseRetrievalInvariants:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
-            result = await component.retrieve_data()
+            result = await component.retrieve_memory()
 
         assert len(result) == 0
         kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
@@ -357,18 +357,18 @@ class TestMemoryBaseRetrievalInvariants:
     async def test_missing_flow_id_raises(self):
         component = _make_component(flow_id=None, session_id="s1")
         with pytest.raises(ValueError, match="flow_id"):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
     async def test_no_memory_base_selected_raises(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1", selected=None)
         with pytest.raises(ValueError, match="No Memory Base"):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
     async def test_mb_not_attached_to_flow_raises(self):
         component = _make_component(flow_id=uuid.uuid4(), session_id="s1")
         db = _exec_returning(None)
         with _patched_session_scope(db), pytest.raises(ValueError, match="not attached to this flow"):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
     async def test_owner_not_found_raises(self):
         flow_id = uuid.uuid4()
@@ -384,7 +384,7 @@ class TestMemoryBaseRetrievalInvariants:
             ),
             pytest.raises(ValueError, match="owner account"),
         ):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
     async def test_missing_metadata_raises(self):
         flow_id = uuid.uuid4()
@@ -413,7 +413,7 @@ class TestMemoryBaseRetrievalInvariants:
             ),
             pytest.raises(ValueError, match="no embedding metadata"),
         ):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
     async def test_kb_path_traversal_raises(self):
         flow_id = uuid.uuid4()
@@ -438,7 +438,7 @@ class TestMemoryBaseRetrievalInvariants:
             ),
             pytest.raises(ValueError, match="not accessible"),
         ):
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
 
 class TestMemoryBaseRetrievalBehavior:
@@ -491,7 +491,7 @@ class TestMemoryBaseRetrievalBehavior:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x", "api_key": "k"},
             )
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
         kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
         assert kwargs["k"] == 5
@@ -515,7 +515,7 @@ class TestMemoryBaseRetrievalBehavior:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
-            await component.retrieve_data()
+            await component.retrieve_memory()
 
         kwargs = fake_chroma.similarity_search_with_score.call_args.kwargs
         assert kwargs["filter"] is None
@@ -541,7 +541,7 @@ class TestMemoryBaseRetrievalBehavior:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
-            result = await component.retrieve_data()
+            result = await component.retrieve_memory()
 
         assert len(result) == 0
         fake_chroma.similarity_search_with_score.assert_not_called()
@@ -570,7 +570,7 @@ class TestMemoryBaseRetrievalBehavior:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
-            df = await component.retrieve_data()
+            df = await component.retrieve_memory()
 
         assert len(df) == 1
         row = df.to_dict(orient="records")[0]
@@ -598,7 +598,7 @@ class TestMemoryBaseRetrievalBehavior:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
-            df = await component.retrieve_data()
+            df = await component.retrieve_memory()
 
         row = df.to_dict(orient="records")[0]
         assert row["sender"] == "ai"
@@ -639,7 +639,7 @@ class TestMemoryBaseRetrievalBehavior:
                 owner=owner,
                 metadata={"embedding_provider": "OpenAI", "embedding_model": "x"},
             )
-            df = await component.retrieve_data()
+            df = await component.retrieve_memory()
 
         row = df.to_dict(orient="records")[0]
         assert row["ingest_seq"] == 7
