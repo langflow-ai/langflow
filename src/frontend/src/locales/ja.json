@@ -951,7 +951,6 @@
   "memory.noChunksYet": "まだチャンクはありません",
   "memory.noId": "(IDなし)",
   "memory.preprocessing": "前処理：",
-  "memory.preprocessingPromptPlaceholder": "重要な事実と背景を捉えた簡潔な要約を作成してください。",
   "memory.processedMessages": "処理済みのメッセージ",
   "memory.providerLabel": "プロバイダー:",
   "memory.reloadSessions": "セッションとメッセージを再読み込みする",
