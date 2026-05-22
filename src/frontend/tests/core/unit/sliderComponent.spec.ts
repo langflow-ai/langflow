@@ -9,6 +9,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 // TODO: This component doesn't have slider needs updating
 test(
   "user should be able to use slider input",
@@ -110,44 +111,6 @@ test(
     await enableInspectPanel(page);
   },
 );
-
-async function extractAndCleanCode(page: Page): Promise<string> {
-  // The hidden `#codeValue` mirror is rendered with `<Input value={code} />`,
-  // i.e. a single-line `<input>` rather than a textarea. Browsers strip
-  // newlines from `.value` of single-line inputs by HTML spec, so reading
-  // `(el as HTMLInputElement).value` returns the entire source concatenated
-  // onto one line. The backend then rejects it as
-  // `invalid decimal literal (<unknown>, line 1)`.
-  //
-  // Read the rendered HTML attribute instead — React serializes the prop as
-  // `value="..."` with newlines encoded (`&#10;`, `&#13;`, or literal LF
-  // inside attribute text), and the regex below recovers them faithfully.
-  // This is the same strategy queryInputComponent.spec.ts uses.
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the #codeValue HTML");
-  }
-
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/")
-    .replace(/&#10;/g, "\n")
-    .replace(/&#13;/g, "\r")
-    .replace(/&#xA;/gi, "\n")
-    .replace(/&#xD;/gi, "\r");
-
-  // Normalize line endings so downstream string operations are OS-agnostic
-  // (Windows git checkouts of .py files can end up with CRLF).
-  return codeContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
 
 // Set the Ace editor's content using the exact same pattern that
 // queryInputComponent.spec.ts uses successfully on Windows CI:

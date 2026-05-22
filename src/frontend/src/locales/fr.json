@@ -951,7 +951,6 @@
   "memory.noChunksYet": "Pas encore de morceaux",
   "memory.noId": "(sans identifiant)",
   "memory.preprocessing": "Prétraitement :",
-  "memory.preprocessingPromptPlaceholder": "Rédigez un résumé concis qui résume les faits essentiels et le contexte.",
   "memory.processedMessages": "Messages traités",
   "memory.providerLabel": "Fournisseur :",
   "memory.reloadSessions": "Actualiser les sessions et les messages",
