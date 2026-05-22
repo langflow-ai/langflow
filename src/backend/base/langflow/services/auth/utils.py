@@ -17,7 +17,8 @@ from langflow.services.auth.exceptions import (
     InvalidCredentialsError,
     MissingCredentialsError,
 )
-from langflow.services.deps import get_auth_service
+from langflow.services.auth.external import extract_external_token
+from langflow.services.deps import get_auth_service, get_settings_service
 
 if TYPE_CHECKING:
     from collections.abc import Coroutine
@@ -35,6 +36,8 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
     This allows the application to work with HttpOnly cookies while supporting
     explicit Authorization headers for backward compatibility and testing scenarios.
     If an explicit Authorization header is provided, it takes precedence over cookies.
+    When external trusted auth is enabled, the configured external header/cookie
+    is consulted last so the native JWT path is always tried first.
     """
 
     async def __call__(self, request: Request) -> str | None:
@@ -49,9 +52,22 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
         if token:
             return token
 
+        # Final fallback: external trusted credential (validated downstream).
+        if external := _get_external_token(request.headers, request.cookies):
+            return external
+
         # If auto_error is True, this would raise an exception
         # Since we set auto_error=False, return None
         return None
+
+
+def _get_external_token(headers, cookies) -> str | None:
+    """Return the configured external credential, swallowing transient failures."""
+    try:
+        auth_settings = get_settings_service().auth_settings
+    except Exception:  # noqa: BLE001
+        return None
+    return extract_external_token(headers, cookies, auth_settings)
 
 
 oauth2_login = OAuth2PasswordBearerCookie(tokenUrl="api/v1/login", auto_error=False)
@@ -193,7 +209,11 @@ async def get_current_user_for_websocket(
     db: AsyncSession,
 ) -> User | UserRead:
     """Extracts credentials from WebSocket and delegates to auth service."""
-    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
+    token = (
+        websocket.cookies.get("access_token_lf")
+        or websocket.query_params.get("token")
+        or _get_external_token(websocket.headers, websocket.cookies)
+    )
     api_key = (
         websocket.query_params.get("x-api-key")
         or websocket.query_params.get("api_key")
@@ -215,7 +235,7 @@ async def get_current_user_for_sse(
 
     Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
-    token = request.cookies.get("access_token_lf")
+    token = request.cookies.get("access_token_lf") or _get_external_token(request.headers, request.cookies)
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
@@ -284,6 +304,9 @@ async def get_current_user_optional(
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):
         token = token or auth_header[len("Bearer ") :]
+
+    if not token:
+        token = _get_external_token(request.headers, request.cookies)
 
     if not token and not api_key:
         return None

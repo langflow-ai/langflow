@@ -26,6 +26,11 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.exceptions import (
     InvalidTokenError as AuthInvalidTokenError,
 )
+from langflow.services.auth.external import (
+    ExternalIdentity,
+    identity_from_claims,
+    resolve_external_identity,
+)
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -198,10 +203,16 @@ class AuthService(BaseAuthService):
             msg = "Token has expired"
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.debug("JWT validation failed: Invalid token format or signature")
             msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.error(f"Unexpected error decoding token: {e}")
             msg = "Token validation failed"
             raise AuthInvalidTokenError(msg) from e
@@ -220,6 +231,22 @@ class AuthService(BaseAuthService):
 
         return user
 
+    async def _authenticate_with_external_token(self, token: str, db: AsyncSession) -> User | None:
+        """Fallback path: try the configured external identity resolver.
+
+        Returns the JIT-provisioned local user when the token resolves to a
+        valid external identity, ``None`` otherwise. Callers raise the native
+        JWT error if this returns ``None``.
+        """
+        if not self.settings.auth_settings.EXTERNAL_AUTH_ENABLED:
+            return None
+        try:
+            identity = await resolve_external_identity(token, self.settings.auth_settings)
+        except AuthInvalidTokenError as exc:
+            logger.debug(f"External credential rejected: {exc}")
+            return None
+        return await self._materialize_external_user(identity, db)
+
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
         result = await check_key(db, api_key)
@@ -234,6 +261,128 @@ class AuthService(BaseAuthService):
             return user_read
 
         return None
+
+    # ------------------------------------------------------------------
+    # JIT user provisioning via BaseAuthService hook
+    # ------------------------------------------------------------------
+
+    def extract_user_info_from_claims(self, claims: dict) -> dict:
+        """Normalize provider claims using the configured EXTERNAL_AUTH_* mapping.
+
+        Returns a dict with ``provider``, ``subject``, ``username``, ``email``,
+        and ``name`` keys; raises :class:`AuthInvalidTokenError` when the
+        subject claim is missing.
+        """
+        identity = identity_from_claims(claims, self.settings.auth_settings)
+        return {
+            "provider": identity.provider,
+            "subject": identity.subject,
+            "username": identity.username,
+            "email": identity.email,
+            "name": identity.name,
+        }
+
+    async def get_or_create_user_from_claims(self, claims: dict, db: AsyncSession) -> User:
+        """Return the local Langflow user mapped to these external claims.
+
+        Looks up SSOUserProfile by (provider, sso_user_id). On hit, refreshes
+        the email + last-login timestamps and returns the existing user. On
+        miss, JIT-provisions a fresh user, writes a profile row, and seeds
+        the default folder + variables.
+        """
+        identity = identity_from_claims(claims, self.settings.auth_settings)
+        return await self._materialize_external_user(identity, db)
+
+    async def _materialize_external_user(self, identity: ExternalIdentity, db: AsyncSession) -> User:
+        """Find-or-create the local user backing an external identity."""
+        import secrets
+        from datetime import datetime, timezone
+
+        from sqlalchemy.exc import IntegrityError
+        from sqlmodel import select
+
+        from langflow.services.database.models.auth import SSOUserProfile
+
+        profile_stmt = select(SSOUserProfile).where(
+            SSOUserProfile.sso_provider == identity.provider,
+            SSOUserProfile.sso_user_id == identity.subject,
+        )
+        profile = (await db.exec(profile_stmt)).first()
+
+        if profile is not None:
+            user = await get_user_by_id(db, profile.user_id)
+            if user is None:
+                msg = "Mapped external user was not found"
+                raise AuthInvalidTokenError(msg)
+            if not user.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg)
+            now = datetime.now(timezone.utc)
+            profile.email = identity.email
+            profile.sso_last_login_at = now
+            profile.updated_at = now
+            await update_user_last_login_at(user.id, db)
+            return user
+
+        username = await self._unique_external_username(db, identity)
+        random_password = secrets.token_urlsafe(48)
+        now = datetime.now(timezone.utc)
+        user = User(
+            username=username,
+            password=self.get_password_hash(random_password),
+            is_active=True,
+            is_superuser=False,
+            last_login_at=now,
+        )
+        new_profile = SSOUserProfile(
+            user_id=user.id,
+            sso_provider=identity.provider,
+            sso_user_id=identity.subject,
+            email=identity.email,
+            sso_last_login_at=now,
+        )
+        db.add(user)
+        db.add(new_profile)
+        try:
+            await db.flush()
+            await db.refresh(user)
+            await self._initialize_jit_user_defaults(user, db)
+        except IntegrityError:
+            await db.rollback()
+            profile = (await db.exec(profile_stmt)).first()
+            if profile is None:
+                raise
+            user = await get_user_by_id(db, profile.user_id)
+            if user is None:
+                msg = "Mapped external user was not found"
+                raise AuthInvalidTokenError(msg) from None
+            if not user.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg) from None
+
+        return user
+
+    @staticmethod
+    async def _unique_external_username(db: AsyncSession, identity: ExternalIdentity) -> str:
+        import hashlib
+
+        desired = identity.username
+        if await get_user_by_username(db, desired) is None:
+            return desired
+        digest = hashlib.sha256(f"{identity.provider}:{identity.subject}".encode()).hexdigest()[:12]
+        fallback = f"{identity.provider[:200] or 'external'}-{digest}"
+        if await get_user_by_username(db, fallback) is None:
+            return fallback
+        long_digest = hashlib.sha256(f"{identity.provider}:{identity.subject}:{desired}".encode()).hexdigest()[:16]
+        return f"{identity.provider[:200] or 'external'}-{long_digest}"
+
+    @staticmethod
+    async def _initialize_jit_user_defaults(user: User, db: AsyncSession) -> None:
+        from langflow.initial_setup.setup import get_or_create_default_folder
+        from langflow.services.deps import get_variable_service
+
+        await get_or_create_default_folder(db, user.id)
+        await get_variable_service().initialize_user_variables(user.id, db)
 
     async def api_key_security(
         self, query_param: str | None, header_param: str | None, db: AsyncSession | None = None
