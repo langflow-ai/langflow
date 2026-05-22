@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { waitForNewProjectButton } from "../../utils/new-project-flow";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
+
 test.beforeAll(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10000));
 });

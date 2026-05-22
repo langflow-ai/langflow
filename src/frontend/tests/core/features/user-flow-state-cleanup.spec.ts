@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   openTemplatesModal,
   waitForNewProjectButton,
-} from "../../utils/new-project-flow";
+} from "../../utils/flow/new-project-flow";
 import { renameFlow } from "../../utils/rename-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "flow state should be properly cleaned up between user sessions",
   { tag: ["@release", "@api", "@database"] },

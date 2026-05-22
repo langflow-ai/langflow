@@ -1,6 +1,6 @@
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { openTemplatesModal } from "../../utils/new-project-flow";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test.describe(
   "Auto_login tests",

@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { openTemplatesModal } from "../../utils/new-project-flow";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test(
   "user should be able to use fourth quarter of starter projects without any outdated components on the flow",

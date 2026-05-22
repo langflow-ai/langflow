@@ -1,10 +1,12 @@
 import type { Page } from "@playwright/test";
+import { TID } from "../constants/testIds";
+import { TIMEOUTS } from "../constants/timeouts";
 
 // Single source of truth for the "new project" button selector. Some tests
 // historically referenced it via id ([id="new-project-btn"]), others via
 // data-testid; centralizing here keeps both call sites in sync if the
 // attribute ever changes.
-const NEW_PROJECT_BUTTON_SELECTOR = '[id="new-project-btn"]';
+const NEW_PROJECT_BUTTON_SELECTOR = `[id="${TID.newProjectBtn}"]`;
 
 /**
  * Waits for the "new project" button on the projects/home page to be ready.
@@ -16,7 +18,7 @@ export const waitForNewProjectButton = async (
   options?: { timeout?: number },
 ) => {
   await page.waitForSelector(NEW_PROJECT_BUTTON_SELECTOR, {
-    timeout: options?.timeout ?? 30000,
+    timeout: options?.timeout ?? TIMEOUTS.standard,
   });
 };
 
@@ -39,7 +41,7 @@ export const openTemplatesModal = async (
   options?: { buttonTimeout?: number; modalTimeout?: number },
 ) => {
   await waitForNewProjectButton(page, { timeout: options?.buttonTimeout });
-  await page.getByTestId("new-project-btn").click();
+  await page.getByTestId(TID.newProjectBtn).click();
 
   // After clicking the header "New Flow" button the app navigates to a
   // freshly-created empty flow and surfaces the FlowBuilderWelcome overlay.
@@ -48,11 +50,11 @@ export const openTemplatesModal = async (
   // shows up first wins, and we only click "Browse more" when the overlay
   // actually surfaces.
   const welcomeSelector = '[data-testid="flow-builder-welcome-panel"]';
-  const modalSelector = '[data-testid="modal-title"]';
+  const modalSelector = `[data-testid="${TID.modalTitle}"]`;
 
   await Promise.race([
-    page.waitForSelector(welcomeSelector, { timeout: 30000 }),
-    page.waitForSelector(modalSelector, { timeout: 30000 }),
+    page.waitForSelector(welcomeSelector, { timeout: TIMEOUTS.standard }),
+    page.waitForSelector(modalSelector, { timeout: TIMEOUTS.standard }),
   ]);
 
   if ((await page.locator(welcomeSelector).count()) > 0) {
@@ -60,6 +62,6 @@ export const openTemplatesModal = async (
   }
 
   await page.waitForSelector(modalSelector, {
-    timeout: options?.modalTimeout ?? 30000,
+    timeout: options?.modalTimeout ?? TIMEOUTS.standard,
   });
 };

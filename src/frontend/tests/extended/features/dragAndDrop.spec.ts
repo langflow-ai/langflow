@@ -1,10 +1,10 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { waitForNewProjectButton } from "../../utils/new-project-flow";
+import { TEXTS } from "../../utils/constants/texts";
+import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to drag and drop an old collection without crashing the application",
   { tag: ["@release", "@mainpage"] },

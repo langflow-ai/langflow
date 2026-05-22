@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
-import { openTemplatesModal } from "../../utils/new-project-flow";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test(
   "select and delete a flow",

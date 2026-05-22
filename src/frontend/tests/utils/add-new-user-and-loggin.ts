@@ -1,8 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect } from "../fixtures";
-import { waitForNewProjectButton } from "./new-project-flow";
-
 import { TEXTS } from "../utils/constants/texts";
+import { waitForNewProjectButton } from "./flow/new-project-flow";
 export const addNewUserAndLogin = async (page: Page) => {
   await page.route("**/api/v1/auto_login", (route) => {
     route.fulfill({

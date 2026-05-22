@@ -3,7 +3,7 @@ import { addFlowToTestOnEmptyLangflow } from "./add-flow-to-test-on-empty-langfl
 import {
   openTemplatesModal,
   waitForNewProjectButton,
-} from "./new-project-flow";
+} from "./flow/new-project-flow";
 
 export const awaitBootstrapTest = async (
   page: Page,
