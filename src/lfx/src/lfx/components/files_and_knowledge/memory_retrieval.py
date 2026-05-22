@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 
 import chromadb
 import chromadb.api.client
+import numpy as np
 from langchain_chroma import Chroma
 from langflow.api.utils.kb_helpers import KBIngestionHelper
 from langflow.services.database.models.memory_base.model import MemoryBase
@@ -51,6 +52,20 @@ def _coerce_uuid(value: Any) -> uuid.UUID | None:
 def _distance_to_similarity(distance: float) -> float:
     """Chroma returns a distance; flip the sign so larger == more similar."""
     return -1 * distance
+
+
+def _to_python_scalar(value: Any) -> Any:
+    """Convert numpy scalars (int64, float64, bool_, …) to Python primitives.
+
+    Chroma persists integer/float metadata as numpy scalars, which break JSON
+    serialization when this component is consumed as an Agent tool — LangChain's
+    tool-output path calls ``vars()`` / iterates the value, both of which fail
+    on numpy C-extension scalars. Coerce at the boundary so downstream stays
+    primitive-only.
+    """
+    if isinstance(value, np.generic):
+        return value.item()
+    return value
 
 
 class MemoryBaseComponent(Component):
@@ -111,7 +126,7 @@ class MemoryBaseComponent(Component):
         Output(
             name="retrieve_data",
             display_name="Results",
-            method="retrieve_data",
+            method="retrieve_memory",
             info=(
                 "Returns matching memory chunks. Scoped to the current session by "
                 "default; turn 'Filter by Session' off to retrieve across sessions."
@@ -222,23 +237,29 @@ class MemoryBaseComponent(Component):
         )
 
     def _format_results(self, results: list[tuple]) -> DataFrame:
-        """Convert Chroma (doc, score) tuples into the component's DataFrame output."""
+        """Convert Chroma (doc, score) tuples into the component's DataFrame output.
+
+        Metadata values are coerced from numpy scalars to Python primitives so the
+        resulting DataFrame is JSON-serializable when the component is invoked as
+        an Agent tool.
+        """
         data_list: list[Data] = []
         for doc, score in results:
             kwargs: dict = {"content": doc.page_content}
             if self.search_query:
-                kwargs["_score"] = _distance_to_similarity(score)
+                kwargs["_score"] = _to_python_scalar(_distance_to_similarity(score))
             if self.include_metadata:
-                kwargs.update(doc.metadata or {})
+                for key, value in (doc.metadata or {}).items():
+                    kwargs[key] = _to_python_scalar(value)
             data_list.append(Data(**kwargs))
         return DataFrame(data=data_list)
 
-    async def retrieve_data(self) -> DataFrame:
+    async def retrieve_memory(self) -> DataFrame:
         """Retrieve chunks from the selected Memory Base.
 
         Scoped to the current ``session_id`` when ``filter_by_session`` is true; when
         false, every chunk in the Memory Base is queryable so the agent can recall
-        context from prior conversations.
+        context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
         if bool(self.filter_by_session) and not session_id:

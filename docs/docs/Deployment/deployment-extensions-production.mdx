@@ -8,7 +8,7 @@ slug: /deployment-extensions-production
 This guide describes the production install pattern for Langflow Extensions in Modes A, B, and C of the Bundle Separation iteration. The mechanism is intentionally simple: **Python distributions installed into the environment are the primary install path**, and an optional **seed directory** is supported for Docker images that prefer an explicit on-disk layout.
 
 :::info First-delivery scope
-This page documents the first-delivery slice of the Bundle Separation epic (LE-905). It covers discovery and registration of installed Extensions; the corresponding loader, dev server, and reload features ship in the same first-delivery cycle. Mutation verbs (`enable`, `disable`, `install`, `uninstall`) ship in B3/B4 follow-up epics; **runtime mutation of installed Extensions is intentionally not supported**.
+This page documents the first-delivery slice of the Bundle Separation work. It covers discovery and registration of installed Extensions; the corresponding loader, dev server, and reload features ship in the same first-delivery cycle. Mutation verbs (`enable`, `disable`, `install`, `uninstall`) ship in follow-up work; **runtime mutation of installed Extensions is intentionally not supported**.
 :::
 
 ## How discovery works
@@ -22,7 +22,7 @@ Each Extension registered via these paths is **read-only at runtime**:
 
 * `autoUpdate` is forced to `false`.
 * Mutation through the registry service raises a typed error with code `installed-extension-immutable` or `seed-directory-immutable`.
-* No HTTP route exists for installing or uninstalling Extensions; the LE-1017 router-trust CI guard blocks any attempt to add one.
+* No HTTP route exists for installing or uninstalling Extensions; the router-trust CI guard blocks any attempt to add one.
 
 To change which Extensions are installed in Mode B/C, **rebuild the image** (or modify the seed directory layout) and restart the server.
 

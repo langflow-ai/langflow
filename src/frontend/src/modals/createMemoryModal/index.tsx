@@ -1,4 +1,6 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -23,6 +25,7 @@ export default function CreateMemoryModal({
   flowName,
   onSuccess,
 }: CreateMemoryModalProps): JSX.Element {
+  const { t } = useTranslation();
   const {
     name,
     setName,
@@ -69,7 +72,7 @@ export default function CreateMemoryModal({
             id="memory-name"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="Memory name"
+            placeholder={t("memory.memoryName")}
           />
         </div>
 
@@ -88,7 +91,8 @@ export default function CreateMemoryModal({
                   setSelectedEmbeddingModel(value);
                 }}
                 options={embeddingModelOptions}
-                placeholder="Select embedding model"
+                placeholder={t("memory.selectEmbeddingModel")}
+                modelType="embeddings"
               />
             </div>
             {selectedEmbeddingModel[0]?.provider && (
@@ -100,10 +104,25 @@ export default function CreateMemoryModal({
         </div>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="memory-batch-size">Batch Size</Label>
-          <span className="text-xs text-muted-foreground">
-            Messages per ingestion batch (min 1)
-          </span>
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="memory-batch-size">{t("memory.batchSize")}</Label>
+            <ShadTooltip
+              content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
+              side="right"
+            >
+              <button
+                type="button"
+                tabIndex={0}
+                aria-label="Batch size help"
+                className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              >
+                <ForwardedIconComponent
+                  name="Info"
+                  className="h-3.5 w-3.5 text-muted-foreground"
+                />
+              </button>
+            </ShadTooltip>
+          </div>
           <Input
             id="memory-batch-size"
             value={batchSizeInput}
@@ -153,7 +172,8 @@ export default function CreateMemoryModal({
                     setSelectedPreprocessingModel(value);
                   }}
                   options={llmModelOptions}
-                  placeholder="Select preprocessing model"
+                  placeholder={t("memory.selectPreprocessingModel")}
+                  modelType="llm"
                 />
               </div>
               {selectedPreprocessingModel[0]?.provider && (
@@ -163,14 +183,32 @@ export default function CreateMemoryModal({
               )}
             </div>
             <div className="flex flex-col gap-2">
-              <Label htmlFor="preprocessing-prompt">
-                Preprocessing Instructions (optional)
-              </Label>
+              <div className="flex items-center gap-1.5">
+                <Label htmlFor="preprocessing-prompt">
+                  Preprocessing Instructions{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <ShadTooltip
+                  content={t("memory.preprocessingInstructionsHint")}
+                  side="right"
+                >
+                  <button
+                    type="button"
+                    tabIndex={0}
+                    aria-label="Preprocessing instructions help"
+                    className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                  >
+                    <ForwardedIconComponent
+                      name="Info"
+                      className="h-3.5 w-3.5 text-muted-foreground"
+                    />
+                  </button>
+                </ShadTooltip>
+              </div>
               <Textarea
                 id="preprocessing-prompt"
                 value={preprocessingPrompt}
                 onChange={(e) => setPreprocessingPrompt(e.target.value)}
-                placeholder="Produce a concise summary that captures key facts and context."
                 className="min-h-[80px] resize-y"
               />
             </div>
@@ -185,7 +223,8 @@ export default function CreateMemoryModal({
           disabled:
             !name.trim() ||
             selectedEmbeddingModel.length === 0 ||
-            (preprocessingEnabled && selectedPreprocessingModel.length === 0),
+            (preprocessingEnabled && selectedPreprocessingModel.length === 0) ||
+            (preprocessingEnabled && !preprocessingPrompt.trim()),
         }}
       />
     </BaseModal>

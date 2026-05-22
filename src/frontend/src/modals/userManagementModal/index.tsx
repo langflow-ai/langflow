@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { Eye, EyeOff } from "lucide-react";
 import { useContext, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "../../components/ui/button";
@@ -26,6 +27,7 @@ export default function UserManagementModal({
   onConfirm,
   asChild,
 }: UserManagementType) {
+  const { t } = useTranslation();
   const [pwdVisible, setPwdVisible] = useState(false);
   const [confirmPwdVisible, setConfirmPwdVisible] = useState(false);
   const [open, setOpen] = useState(false);
@@ -103,7 +105,7 @@ export default function UserManagementModal({
                 }}
               >
                 <Form.Label className="data-[invalid]:label-invalid">
-                  Username{" "}
+                  {t("admin.usernameLabel")}{" "}
                   <span className="font-medium text-destructive">*</span>
                 </Form.Label>
               </div>
@@ -116,11 +118,11 @@ export default function UserManagementModal({
                   value={username}
                   className="primary-input"
                   required
-                  placeholder="Username"
+                  placeholder={t("admin.usernamePlaceholder")}
                 />
               </Form.Control>
               <Form.Message match="valueMissing" className="field-invalid">
-                Please enter your username
+                {t("admin.usernameRequired")}
               </Form.Message>
             </Form.Field>
 
@@ -138,7 +140,7 @@ export default function UserManagementModal({
                     }}
                   >
                     <Form.Label className="data-[invalid]:label-invalid flex">
-                      Password{" "}
+                      {t("admin.passwordLabel")}{" "}
                       <span className="ml-1 mr-1 font-medium text-destructive">
                         *
                       </span>
@@ -172,12 +174,12 @@ export default function UserManagementModal({
                   </Form.Control>
 
                   <Form.Message className="field-invalid" match="valueMissing">
-                    Please enter a password
+                    {t("admin.passwordRequired")}
                   </Form.Message>
 
                   {password != confirmPassword && (
                     <Form.Message className="field-invalid">
-                      Passwords do not match
+                      {t("admin.passwordsDoNotMatch")}
                     </Form.Message>
                   )}
                 </Form.Field>
@@ -196,7 +198,7 @@ export default function UserManagementModal({
                     }}
                   >
                     <Form.Label className="data-[invalid]:label-invalid flex">
-                      Confirm password{" "}
+                      {t("admin.confirmPasswordLabel")}{" "}
                       <span className="ml-1 mr-1 font-medium text-destructive">
                         *
                       </span>
@@ -232,7 +234,7 @@ export default function UserManagementModal({
                     />
                   </Form.Control>
                   <Form.Message className="field-invalid" match="valueMissing">
-                    Please confirm your password
+                    {t("admin.confirmPasswordRequired")}
                   </Form.Message>
                 </Form.Field>
               </div>
@@ -241,10 +243,10 @@ export default function UserManagementModal({
               <Form.Field name="is_active">
                 <div>
                   <Form.Label className="data-[invalid]:label-invalid mr-3">
-                    Active
+                    {t("admin.columnActive")}
                   </Form.Label>
                   {data?.id === userData?.id ? (
-                    <ShadTooltip content="You cannot deactivate your own account">
+                    <ShadTooltip content={t("admin.cannotDeactivateSelf")}>
                       <span className="inline-block cursor-not-allowed">
                         <Checkbox
                           value={isActive}
@@ -275,7 +277,7 @@ export default function UserManagementModal({
                 <Form.Field name="is_superuser">
                   <div>
                     <Form.Label className="data-[invalid]:label-invalid mr-3">
-                      Superuser
+                      {t("admin.columnSuperuser")}
                     </Form.Label>
                     <Form.Control asChild>
                       <Checkbox

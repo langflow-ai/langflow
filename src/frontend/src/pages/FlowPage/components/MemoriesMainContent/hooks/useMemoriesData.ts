@@ -8,10 +8,10 @@ import { useGetMemories } from "@/controllers/API/queries/memories/use-get-memor
 import { useGetMemory } from "@/controllers/API/queries/memories/use-get-memory";
 import { useUpdateMemory } from "@/controllers/API/queries/memories/use-update-memory";
 import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
 import { UseMemoriesDataProps } from "../types";
 import { useAutoCaptureDebouncedToggle } from "./useAutoCaptureDebouncedToggle";
 import { useMemoryDocuments } from "./useMemoryDocuments";
-import { extractApiErrorMessages } from "@/utils/apiError";
 import { useMemorySessionResolver } from "./useMemorySessionResolver";
 
 const EMPTY_MEMORIES: MemoryInfo[] = [];
@@ -109,13 +109,7 @@ export function useMemoriesData({
       }),
   });
 
-  const updateMemoryMutation = useUpdateMemory({
-    onError: (error: unknown) =>
-      setErrorData({
-        title: "Failed to update memory",
-        list: extractApiErrorMessages(error),
-      }),
-  });
+  const updateMemoryMutation = useUpdateMemory();
 
   const { autoCaptureDraft, handleToggleActive } =
     useAutoCaptureDebouncedToggle({
@@ -166,10 +160,12 @@ export function useMemoriesData({
     return nextMemory;
   }, [memory, autoCaptureDraft, effectiveSessionId, memorySessions]);
 
-  const onRefresh = useCallback(() => {
-    refetchMemories();
-    refetchMemorySessions();
-    refetchMessages();
+  const onRefresh = useCallback(async () => {
+    await Promise.all([
+      refetchMemories(),
+      refetchMemorySessions(),
+      refetchMessages(),
+    ]);
   }, [refetchMemories, refetchMemorySessions, refetchMessages]);
 
   const handleOpenDocumentPanel = (doc: MemoryDocumentItem) => {

@@ -774,9 +774,9 @@ def _decorate_template_with_extension(
 def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
     """Surface typed errors/warnings from a batch of LoadResults to the logger.
 
-    The events pipeline (LE-1017) will replace this with structured emission;
-    until then we want operators to see what the loader rejected without
-    silently dropping the typed payload.
+    The future events pipeline will replace this with structured
+    emission; until then we want operators to see what the loader
+    rejected without silently dropping the typed payload.
     """
     for result in results:
         for err in result.errors:
@@ -1029,9 +1029,9 @@ async def import_extension_components(
                     exc,
                 )
                 continue
-            # Register under the namespaced ID per AC: ``ext:<bundle>:<Class>@<slot>``.
-            # This is the canonical address saved flows reference after the
-            # LE-1020 migration table rewrites legacy class-name lookups.
+            # Register under the namespaced ID: ``ext:<bundle>:<Class>@<slot>``.
+            # This is the canonical address saved flows reference after
+            # the migration table rewrites legacy class-name lookups.
             bundle_dict[loaded.namespaced_id] = _decorate_template_with_extension(
                 template,
                 extension_id=loaded.extension_id,

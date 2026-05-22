@@ -192,6 +192,66 @@ class TestLangfuseTracerFunctionality:
         # Should set trace metadata via update_trace
         mock_langfuse["root_span"].update_trace.assert_called()
 
+    def test_trace_user_id_uses_auth_user_when_no_tracing_override(self, mock_langfuse):
+        """``trace.userId`` should be the authenticated Langflow user (pre-#9505 behavior)."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="auth-user",
+            session_id="session-1",
+        )
+
+        update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert update_kwargs["user_id"] == "auth-user"
+        # No override → no metadata payload was supplied for the override.
+        assert "metadata" not in update_kwargs
+
+    def test_trace_user_id_stays_auth_user_and_override_goes_to_metadata(self, mock_langfuse):
+        """``tracing_user_id`` must not redefine ``trace.userId``; it is stamped in metadata.
+
+        Regression for GitHub issue #9505 / PR #13266 review: external Langfuse
+        consumers depend on ``trace.userId`` continuing to mean the authenticated
+        Langflow user. The caller-supplied override surfaces as
+        ``metadata.langflow.tracing_user_id`` instead.
+        """
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="auth-user",
+            session_id="session-1",
+            tracing_user_id="end-user-456",
+        )
+
+        update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert update_kwargs["user_id"] == "auth-user"
+        assert update_kwargs["metadata"] == {"langflow.tracing_user_id": "end-user-456"}
+
+    def test_tracing_user_id_equal_to_auth_user_is_not_stamped(self, mock_langfuse):
+        """When the override matches the auth user there is nothing extra to record."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="same-user",
+            session_id="session-1",
+            tracing_user_id="same-user",
+        )
+
+        update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert update_kwargs["user_id"] == "same-user"
+        assert "metadata" not in update_kwargs
+
     def test_add_trace_creates_child_span(self, mock_langfuse):
         """Test that add_trace creates a child span using v3 API."""
         from langflow.services.tracing.langfuse import LangFuseTracer

@@ -24,6 +24,7 @@ class MockTracer(BaseTracer):
         flow_id: str | None = None,
         user_id: str | None = None,
         session_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         self.trace_name = trace_name
         self.trace_type = trace_type
@@ -32,6 +33,7 @@ class MockTracer(BaseTracer):
         self.flow_id = flow_id
         self.user_id = user_id
         self.session_id = session_id
+        self.tracing_user_id = tracing_user_id
         self._ready = True
         self.end_called = False
         self.get_langchain_callback_called = False
@@ -203,6 +205,47 @@ async def test_start_end_tracers(tracing_service):
     # Verify worker_task is cancelled
     assert trace_context.worker_task is None
     assert not trace_context.running
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_forwards_tracing_user_id_to_langfuse(tracing_service):
+    """``tracing_user_id`` reaches Langfuse as a distinct field; ``user_id`` stays the auth user.
+
+    Regression for GitHub issue #9505: the LangFuseTracer keeps ``user_id`` as
+    the authenticated Langflow user (backwards compat) and exposes the override
+    on ``tracing_user_id``. The tracer stamps the override into trace metadata
+    rather than redefining ``trace.userId``.
+    """
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(
+        run_id,
+        "run",
+        "auth-uuid",
+        "session-abc",
+        "project",
+        tracing_user_id="end-user-123",
+    )
+
+    trace_context = trace_context_var.get()
+    langfuse = trace_context.tracers["langfuse"]
+    assert langfuse.user_id == "auth-uuid"
+    assert langfuse.tracing_user_id == "end-user-123"
+    # The shared trace context mirrors the same separation.
+    assert trace_context.user_id == "auth-uuid"
+    assert trace_context.tracing_user_id == "end-user-123"
+
+
+@pytest.mark.asyncio
+@pytest.mark.usefixtures("mock_tracers")
+async def test_start_tracers_without_override_keeps_auth_user_and_no_tracing_user_id(tracing_service):
+    """Without an override, ``user_id`` is the auth user and ``tracing_user_id`` is None."""
+    run_id = uuid.uuid4()
+    await tracing_service.start_tracers(run_id, "run", "auth-uuid", "session-abc", "project")
+
+    langfuse = trace_context_var.get().tracers["langfuse"]
+    assert langfuse.user_id == "auth-uuid"
+    assert langfuse.tracing_user_id is None
 
 
 @pytest.mark.asyncio

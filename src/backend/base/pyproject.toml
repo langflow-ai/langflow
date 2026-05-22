@@ -108,7 +108,7 @@ dependencies = [
 
 [tool.uv]
 override-dependencies = [
-    "litellm>=1.83.0"
+    "litellm>=1.85.1,<2.0.0"
 ]
 
 [dependency-groups]
@@ -199,6 +199,15 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
+qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
+weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
+chroma = [
+    "chromadb>=1.0.0,<2.0.0",
+    "langchain-chroma~=0.2.6"
+]
+upstash = ["upstash-vector==0.6.0"]
+pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
+milvus = ["langchain-milvus~=0.3.2"]
 mongodb-vectors = ["langchain-mongodb==0.7.0"]
 # Individual LLM providers
 
@@ -255,10 +264,10 @@ aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
 numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 litellm = [
-    "litellm>=1.83.0",
+    "litellm>=1.85.1,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
-    # [proxy] extra pins boto3>=1.40.76, which conflicts with our aioboto3
+    # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
     # transitive cap, so we pull in just the missing modules instead.
     "apscheduler>=3.10.4,<4.0.0",
     "cryptography",
@@ -269,6 +278,8 @@ json-repair = ["json_repair==0.30.3"]
 ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
+mem0 = ["mem0ai>=2.0.2,<3.0.0"]
+needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
 mcp = ["mcp>=1.17.0,<2.0.0"]
@@ -278,13 +289,14 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # ALTK (Agent Lifecycle Toolkit)
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
-# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2 (see LE-172)
+# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
+altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
 toolguard = ["toolguard>=0.2.16,<1.0.0"]
 
 # Additional LangChain integrations
-# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
+# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
 langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
@@ -345,8 +357,8 @@ complete = [
     "langflow-base[beautifulsoup]",
     "langflow-base[google-api]",
     "langflow-base[fake-useragent]",
-    # duckduckgo was an extra of langflow-base; the LE-1023 pilot moved it
-    # to the standalone lfx-duckduckgo bundle (now a regular dep of langflow).
+    # duckduckgo was an extra of langflow-base; it has been moved to
+    # the standalone lfx-duckduckgo bundle (now a regular dep of langflow).
     "langflow-base[yfinance]",
     "langflow-base[pyarrow]",
     "langflow-base[fastavro]",
