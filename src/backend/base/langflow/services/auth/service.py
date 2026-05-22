@@ -269,6 +269,11 @@ class AuthService(BaseAuthService):
                             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                             detail="Superuser not found in database",
                         )
+                    if not result.is_active:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="User account is inactive",
+                        )
                     logger.warning(AUTO_LOGIN_WARNING)
                     return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(

@@ -750,3 +750,36 @@ async def test_ws_api_key_security_auto_login_skip_rejects_inactive_superuser(
         await auth_service.ws_api_key_security(api_key=None)
 
     assert exc.value.code == status.WS_1008_POLICY_VIOLATION
+
+
+# =============================================================================
+# _api_key_security_impl Tests
+# =============================================================================
+
+
+@pytest.mark.anyio
+async def test_api_key_security_impl_auto_login_skip_rejects_inactive_superuser(
+    auth_service: AuthService,
+    auth_settings: AuthSettings,
+):
+    """_api_key_security_impl must enforce is_active in the AUTO_LOGIN + skip_auth bypass path."""
+    auth_settings.AUTO_LOGIN = True
+    auth_settings.skip_auth_auto_login = True
+    auth_settings.SUPERUSER = "admin"
+    inactive_superuser = _dummy_user(uuid4(), active=False)
+
+    with (
+        patch(
+            "langflow.services.auth.service.get_user_by_username",
+            new=AsyncMock(return_value=inactive_superuser),
+        ),
+        pytest.raises(HTTPException) as exc,
+    ):
+        await auth_service._api_key_security_impl(
+            query_param=None,
+            header_param=None,
+            db=AsyncMock(),
+            settings_service=auth_service.settings,
+        )
+
+    assert exc.value.status_code == status.HTTP_403_FORBIDDEN
