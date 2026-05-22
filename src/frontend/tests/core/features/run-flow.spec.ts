@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TID } from "../../utils/constants/testIds";
 import { TEXTS } from "../../utils/constants/texts";
 import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 import { zoomOut } from "../../utils/zoom-out";
@@ -79,7 +80,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").click();
 
-    await expect(page.getByText("New Flow")).toBeVisible();
+    await expect(page.getByTestId(TID.newProjectBtn)).toBeVisible();
     await openTemplatesModal(page);
 
     await page.getByTestId("blank-flow").click();
