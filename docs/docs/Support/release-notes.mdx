@@ -53,6 +53,26 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Python 3.14 support
+
+    Langflow now supports Python 3.10 through 3.14 on macOS, Linux, and Windows.
+    The Langflow Docker images now use Python 3.14.
+
+    <details>
+    <summary>Optional integrations not yet available on Python 3.14</summary>
+
+    The following optional integrations are excluded from installs on Python 3.14:
+
+    - [IBM watsonx](/bundles-ibm)
+    - [IBM watsonx Orchestrate](/deployment-wxo)
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - OpenDsStar
+
+    </details>
+
 - File System component
 
     The **File System** component gives agents sandboxed read/write access to files on disk.
