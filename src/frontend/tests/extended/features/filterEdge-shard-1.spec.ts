@@ -22,7 +22,6 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
 
-
     await page.getByTestId("blank-flow").click();
 
     await page.waitForSelector('[data-testid="sidebar-options-trigger"]', {
