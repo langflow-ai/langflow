@@ -10,7 +10,7 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
-from langflow.services.database.utils import validate_non_empty_string
+from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_preserve_value
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -123,7 +123,12 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     @field_validator("display_name", "resource_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
-        return validate_non_empty_string(v, info)
+        validators = {
+            "display_name": validate_non_empty_string_preserve_value,
+            "resource_key": validate_non_empty_string,
+        }
+        validator = validators.get(getattr(info, "field_name", None), validate_non_empty_string)
+        return validator(v, info)
 
 
 class DeploymentRead(SQLModel):

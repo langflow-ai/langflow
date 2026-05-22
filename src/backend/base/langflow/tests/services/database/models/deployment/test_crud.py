@@ -426,7 +426,7 @@ async def test_delete_by_id_prunes_attachments_when_fk_disabled():
 
 
 @pytest.mark.asyncio
-async def test_create_deployment_strips_whitespace(
+async def test_create_deployment_preserves_display_name_whitespace_and_strips_resource_key(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
     assert folder.id is not None
@@ -444,11 +444,11 @@ async def test_create_deployment_strips_whitespace(
     fetched = await get_deployment(db, user_id=user.id, deployment_id=row.id)
     assert fetched is not None
     assert fetched.resource_key == "rk-1"
-    assert fetched.display_name == "my-deploy"
+    assert fetched.display_name == "  my-deploy  "
 
 
 @pytest.mark.asyncio
-async def test_update_deployment_strips_whitespace(
+async def test_update_deployment_preserves_display_name_whitespace(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
     assert folder.id is not None
@@ -468,7 +468,7 @@ async def test_update_deployment_strips_whitespace(
 
     fetched = await get_deployment(db, user_id=user.id, deployment_id=updated.id)
     assert fetched is not None
-    assert fetched.display_name == "new-name"
+    assert fetched.display_name == "  new-name  "
 
 
 @pytest.mark.asyncio

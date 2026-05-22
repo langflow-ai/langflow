@@ -28,9 +28,9 @@ class TestDeploymentValidation:
         with pytest.raises(ValueError, match="resource_key must not be empty"):
             Deployment.validate_non_empty("   ", self._make_info("resource_key"))
 
-    def test_strips_whitespace_from_display_name(self):
+    def test_preserves_whitespace_from_display_name(self):
         result = Deployment.validate_non_empty("  hello  ", self._make_info("display_name"))
-        assert result == "hello"
+        assert result == "  hello  "
 
     def test_strips_whitespace_from_resource_key(self):
         result = Deployment.validate_non_empty("  rk-1  ", self._make_info("resource_key"))

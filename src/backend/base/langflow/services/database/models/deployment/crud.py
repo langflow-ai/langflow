@@ -32,6 +32,17 @@ class DeploymentMetadataUpdate:
     display_name: str
     description: str | None
 
+    def __post_init__(self) -> None:
+        _raise_if_blank(self.display_name, "display_name")
+
+
+def _raise_if_blank(value: str, field_name: str) -> str:
+    """Return *value* unchanged, or raise if it is blank."""
+    if not value.strip():
+        msg = f"{field_name} must not be empty"
+        raise ValueError(msg)
+    return value
+
 
 def _strip_or_raise(value: str, field_name: str) -> str:
     """Return *value* stripped of whitespace, or raise if blank."""
@@ -54,7 +65,7 @@ async def create_deployment(
     description: str | None = None,
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
-    display_name_s = _strip_or_raise(display_name, "display_name")
+    display_name_s = _raise_if_blank(display_name, "display_name")
 
     row = Deployment(
         user_id=user_id,
@@ -165,7 +176,7 @@ async def update_deployment(
     )
 
     if display_name is not None:
-        deployment.display_name = _strip_or_raise(display_name, "display_name")
+        deployment.display_name = _raise_if_blank(display_name, "display_name")
     if project_id is not None:
         deployment.project_id = project_id
     if deployment_type is not _UNSET:
@@ -196,7 +207,7 @@ async def update_deployment_metadata(
     """Update provider-owned metadata without changing local audit fields."""
     update_item = DeploymentMetadataUpdate(
         langflow_db_row=deployment,
-        display_name=_strip_or_raise(display_name, "display_name"),
+        display_name=_raise_if_blank(display_name, "display_name"),
         description=description,
     )
     if not _deployment_metadata_has_changed(update_item):
