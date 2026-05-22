@@ -37,6 +37,7 @@ from langflow.services.authorization import (
     ProjectAction,
     ensure_project_permission,
     filter_visible_resources,
+    requires_project_manage,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
@@ -393,10 +394,14 @@ async def update_project(
     if not existing_project:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    # Reparenting (parent_id) and governance toggles (auth_settings) require
+    # ProjectAction.MANAGE — a strictly higher privilege than WRITE.
+    project_action = ProjectAction.MANAGE if requires_project_manage(project.model_fields_set) else ProjectAction.WRITE
+
     try:
         await ensure_project_permission(
             current_user,
-            ProjectAction.WRITE,
+            project_action,
             project_id=project_id,
             project_user_id=existing_project.user_id,
             workspace_id=existing_project.workspace_id,

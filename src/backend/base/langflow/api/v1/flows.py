@@ -39,7 +39,12 @@ from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_dep
 from langflow.api.v1.schemas import FlowListCreate
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
-from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
+from langflow.services.authorization import (
+    FlowAction,
+    ensure_flow_permission,
+    filter_visible_resources,
+    requires_flow_manage,
+)
 from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.authorization.utils import _resolve_casbin_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
@@ -324,10 +329,16 @@ async def update_flow(
         if not db_flow:
             raise HTTPException(status_code=404, detail="Flow not found")
 
+        # Sensitive administrative fields (locked, access_type, endpoint_name,
+        # webhook, mcp_enabled) require FlowAction.MANAGE instead of WRITE.
+        # The OSS pass-through still allows everything; the enterprise plugin
+        # decides who has MANAGE.
+        required_action = FlowAction.MANAGE if requires_flow_manage(flow.model_fields_set) else FlowAction.WRITE
+
         try:
             await ensure_flow_permission(
                 current_user,
-                FlowAction.WRITE,
+                required_action,
                 flow_id=flow_id,
                 flow_user_id=db_flow.user_id,
                 workspace_id=db_flow.workspace_id,
@@ -347,7 +358,7 @@ async def update_flow(
             try:
                 await ensure_flow_permission(
                     current_user,
-                    FlowAction.WRITE,
+                    required_action,
                     flow_id=flow_id,
                     flow_user_id=db_flow.user_id,
                     workspace_id=target_workspace_id,
@@ -375,7 +386,7 @@ async def update_flow(
             try:
                 await ensure_flow_permission(
                     current_user,
-                    FlowAction.WRITE,
+                    required_action,
                     flow_id=flow_id,
                     flow_user_id=db_flow_for_attempt.user_id,
                     workspace_id=db_flow_for_attempt.workspace_id,
@@ -394,7 +405,7 @@ async def update_flow(
                 try:
                     await ensure_flow_permission(
                         current_user,
-                        FlowAction.WRITE,
+                        required_action,
                         flow_id=flow_id,
                         flow_user_id=db_flow_for_attempt.user_id,
                         workspace_id=attempt_target_workspace_id,
@@ -464,10 +475,17 @@ async def upsert_flow(
             if not can_widen and existing_flow.user_id != current_user.id:
                 raise HTTPException(status_code=404, detail="Flow not found")
 
+            # Upgrade WRITE → MANAGE when the incoming payload touches any
+            # administrative field (locked, access_type, endpoint_name,
+            # webhook, mcp_enabled). model_fields_set reflects only the
+            # fields the client actually sent so default values do not
+            # accidentally escalate the required action.
+            required_action = FlowAction.MANAGE if requires_flow_manage(flow.model_fields_set) else FlowAction.WRITE
+
             try:
                 await ensure_flow_permission(
                     current_user,
-                    FlowAction.WRITE,
+                    required_action,
                     flow_id=flow_id,
                     flow_user_id=existing_flow.user_id,
                     workspace_id=existing_flow.workspace_id,
@@ -487,7 +505,7 @@ async def upsert_flow(
                 try:
                     await ensure_flow_permission(
                         current_user,
-                        FlowAction.WRITE,
+                        required_action,
                         flow_id=flow_id,
                         flow_user_id=existing_flow.user_id,
                         workspace_id=target_workspace_id,

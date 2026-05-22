@@ -10,6 +10,14 @@ from langflow.services.authorization.actions import (
     VariableAction,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.sensitive_fields import (
+    SENSITIVE_DEPLOYMENT_FIELDS,
+    SENSITIVE_FLOW_FIELDS,
+    SENSITIVE_PROJECT_FIELDS,
+    requires_deployment_manage,
+    requires_flow_manage,
+    requires_project_manage,
+)
 from langflow.services.authorization.service import LangflowAuthorizationService
 from langflow.services.authorization.utils import (
     audit_decision,
@@ -25,6 +33,9 @@ from langflow.services.authorization.utils import (
 )
 
 __all__ = [
+    "SENSITIVE_DEPLOYMENT_FIELDS",
+    "SENSITIVE_FLOW_FIELDS",
+    "SENSITIVE_PROJECT_FIELDS",
     "DeploymentAction",
     "FileAction",
     "FlowAction",
@@ -45,4 +56,7 @@ __all__ = [
     "ensure_share_permission",
     "ensure_variable_permission",
     "filter_visible_resources",
+    "requires_deployment_manage",
+    "requires_flow_manage",
+    "requires_project_manage",
 ]

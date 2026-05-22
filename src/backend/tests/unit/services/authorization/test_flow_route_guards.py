@@ -47,7 +47,12 @@ def _ensure_flow_permission_calls(func: ast.AsyncFunctionDef) -> list[ast.Call]:
 
 
 def _action_arg(call: ast.Call) -> str | None:
-    """Extract the action argument (positional[1]) as the dotted name like 'FlowAction.READ'."""
+    """Extract the action argument (positional[1]) as the dotted name like 'FlowAction.READ'.
+
+    Also recognizes :class:`ast.Name` references (e.g. ``required_action``)
+    used by the dynamic MANAGE/WRITE gating pattern and returns them in the
+    ``var:NAME`` form so resolution can find the underlying enum branches.
+    """
     if len(call.args) < 2:
         return None
     arg = call.args[1]
@@ -55,7 +60,49 @@ def _action_arg(call: ast.Call) -> str | None:
         return f"{arg.value.id}.{arg.attr}"
     if isinstance(arg, ast.Constant) and isinstance(arg.value, str):
         return arg.value
+    if isinstance(arg, ast.Name):
+        return f"var:{arg.id}"
     return None
+
+
+def _resolve_var_action_branches(func: ast.AsyncFunctionDef, var_name: str) -> set[str]:
+    """Find ``var_name = X if cond else Y`` assignments and return both enum branches.
+
+    Used to expand the dynamic ``required_action`` / ``project_action`` pattern
+    introduced for MANAGE-gated PATCH/PUT handlers so the regression tests can
+    still assert that the underlying WRITE/MANAGE enum values are reachable.
+    """
+    actions: set[str] = set()
+    for node in ast.walk(func):
+        if not isinstance(node, ast.Assign):
+            continue
+        if not any(isinstance(target, ast.Name) and target.id == var_name for target in node.targets):
+            continue
+        value = node.value
+        candidates: list[ast.expr] = [value.body, value.orelse] if isinstance(value, ast.IfExp) else [value]
+        for candidate in candidates:
+            if isinstance(candidate, ast.Attribute) and isinstance(candidate.value, ast.Name):
+                actions.add(f"{candidate.value.id}.{candidate.attr}")
+    return actions
+
+
+def _resolved_actions(func: ast.AsyncFunctionDef, calls: list[ast.Call]) -> set[str]:
+    """Return the set of enum action names reachable from *calls* inside *func*.
+
+    Resolves ``var:NAME`` placeholders via :func:`_resolve_var_action_branches`
+    so dynamic gating patterns (e.g. ``required_action = MANAGE if ... else WRITE``)
+    appear in the result set as both enum branches.
+    """
+    resolved: set[str] = set()
+    for call in calls:
+        action = _action_arg(call)
+        if action is None:
+            continue
+        if action.startswith("var:"):
+            resolved.update(_resolve_var_action_branches(func, action[len("var:") :]))
+        else:
+            resolved.add(action)
+    return resolved
 
 
 @pytest.fixture(scope="module")
@@ -75,33 +122,49 @@ def routes() -> dict[str, ast.AsyncFunctionDef]:
     ],
 )
 def test_single_guard_route_uses_enum_action(routes, func_name, expected_action):
-    """Single-call guard routes call ensure_flow_permission once with the right FlowAction."""
+    """Single-call guard routes call ensure_flow_permission once with the right FlowAction.
+
+    Resolves dynamic ``required_action = MANAGE if ... else WRITE`` patterns
+    introduced for MANAGE-gated PATCH/PUT handlers so the WRITE branch still
+    shows up in the resolved set.
+    """
     func = routes[func_name]
     calls = _ensure_flow_permission_calls(func)
     assert calls, f"{func_name} has no ensure_flow_permission call"
-    actions = {_action_arg(c) for c in calls}
+    actions = _resolved_actions(func, calls)
     assert expected_action in actions, f"{func_name} actions={actions}, expected {expected_action}"
 
 
+def test_update_flow_gates_sensitive_fields_on_manage(routes):
+    """PATCH /flows/{flow_id} must reach FlowAction.MANAGE for the sensitive-field branch."""
+    func = routes["update_flow"]
+    actions = _resolved_actions(func, _ensure_flow_permission_calls(func))
+    assert "FlowAction.MANAGE" in actions, (
+        f"update_flow must gate sensitive fields on MANAGE; resolved actions={actions}"
+    )
+
+
 def test_upsert_flow_guards_both_create_and_write(routes):
-    """upsert_flow has two guard branches — WRITE for existing flows, CREATE for new ones."""
+    """upsert_flow has two guard branches — WRITE/MANAGE for existing flows, CREATE for new ones."""
     func = routes["upsert_flow"]
-    actions = {_action_arg(c) for c in _ensure_flow_permission_calls(func)}
+    actions = _resolved_actions(func, _ensure_flow_permission_calls(func))
     assert "FlowAction.WRITE" in actions
     assert "FlowAction.CREATE" in actions
+    # Upsert reuses the same MANAGE-gating pattern as PATCH for the update branch.
+    assert "FlowAction.MANAGE" in actions, f"upsert_flow must reach MANAGE for sensitive fields; got {actions}"
 
 
 def test_delete_multiple_flows_guards_each_flow(routes):
     """Bulk delete iterates and calls ensure_flow_permission per loaded flow."""
     func = routes["delete_multiple_flows"]
-    actions = {_action_arg(c) for c in _ensure_flow_permission_calls(func)}
+    actions = _resolved_actions(func, _ensure_flow_permission_calls(func))
     assert actions == {"FlowAction.DELETE"}
 
 
 def test_download_multiple_file_guards_each_flow(routes):
     """Bulk download iterates and calls ensure_flow_permission per loaded flow."""
     func = routes["download_multiple_file"]
-    actions = {_action_arg(c) for c in _ensure_flow_permission_calls(func)}
+    actions = _resolved_actions(func, _ensure_flow_permission_calls(func))
     assert actions == {"FlowAction.READ"}
 
 
@@ -176,9 +239,16 @@ def _has_destination_check(
     target_workspace_kw: str,
     target_folder_kw: str,
 ) -> bool:
-    """Return True if *func* has a WRITE ensure_flow_permission call with the destination kwargs."""
+    """Return True if *func* has a WRITE/MANAGE ensure_flow_permission call with the destination kwargs.
+
+    Accepts either the literal ``FlowAction.WRITE`` / ``FlowAction.MANAGE`` or a
+    variable reference (``required_action``) used by the dynamic gating pattern.
+    """
     for call in _ensure_flow_permission_calls(func):
-        if _action_arg(call) != "FlowAction.WRITE":
+        action = _action_arg(call)
+        if action not in {"FlowAction.WRITE", "FlowAction.MANAGE"} and not (
+            action is not None and action.startswith("var:")
+        ):
             continue
         ws = _kwarg_source(call, "workspace_id")
         fld = _kwarg_source(call, "folder_id")
@@ -213,13 +283,20 @@ def test_upsert_flow_update_branch_authorizes_destination_on_move(routes):
 
 
 def test_no_bare_string_actions_remain(routes):
-    """No flow-route guard should use a bare string action — the enum is now canonical."""
+    """No flow-route guard should use a bare string action — the enum is now canonical.
+
+    Variable references (``var:NAME``) for the dynamic MANAGE/WRITE gating
+    pattern are accepted because each branch resolves to a ``FlowAction.*``
+    enum value (verified by :func:`test_update_flow_gates_sensitive_fields_on_manage`
+    and the per-route assertions above).
+    """
     offenders: list[str] = []
     for name, func in routes.items():
         for call in _ensure_flow_permission_calls(func):
             arg = _action_arg(call)
-            if arg is not None and not arg.startswith("FlowAction."):
-                offenders.append(f"{name}:{arg}")
+            if arg is None or arg.startswith(("FlowAction.", "var:")):
+                continue
+            offenders.append(f"{name}:{arg}")
     assert offenders == [], f"bare-string actions found: {offenders}"
 
 
@@ -315,9 +392,10 @@ def test_execute_surfaces_guard_with_flow_execute(module_path, func_name):
     """build/run/webhook handlers must call ensure_flow_permission(FlowAction.EXECUTE)."""
     funcs = _parse_async_funcs(module_path)
     assert func_name in funcs, f"{func_name} missing from {module_path.name}"
-    calls = _ensure_flow_permission_calls(funcs[func_name])
+    func = funcs[func_name]
+    calls = _ensure_flow_permission_calls(func)
     assert calls, f"{func_name} has no ensure_flow_permission call"
-    actions = {_action_arg(c) for c in calls}
+    actions = _resolved_actions(func, calls)
     assert "FlowAction.EXECUTE" in actions, f"{func_name} actions={actions}, expected FlowAction.EXECUTE"
 
 
@@ -371,10 +449,15 @@ def _ensure_project_permission_calls(func: ast.AsyncFunctionDef) -> list[ast.Cal
     ],
 )
 def test_project_routes_guarded(func_name, expected_action):
-    """Each project CRUD handler calls ensure_project_permission with the right ProjectAction."""
+    """Each project CRUD handler calls ensure_project_permission with the right ProjectAction.
+
+    Dynamic ``project_action = MANAGE if ... else WRITE`` is resolved so the
+    WRITE branch still satisfies the existing assertions.
+    """
     funcs = _parse_async_funcs(_PROJECTS_FILE)
     assert func_name in funcs, f"{func_name} missing from projects.py"
-    calls = _ensure_project_permission_calls(funcs[func_name])
+    func = funcs[func_name]
+    calls = _ensure_project_permission_calls(func)
     assert calls, f"{func_name} has no ensure_project_permission call"
-    actions = {_action_arg(c) for c in calls}
+    actions = _resolved_actions(func, calls)
     assert expected_action in actions, f"{func_name} actions={actions}, expected {expected_action}"

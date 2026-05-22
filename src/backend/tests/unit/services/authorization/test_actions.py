@@ -7,6 +7,7 @@ from langflow.services.authorization.actions import (
     FileAction,
     FlowAction,
     KnowledgeBaseAction,
+    ProjectAction,
     ShareAction,
     VariableAction,
 )
@@ -20,18 +21,20 @@ def test_flow_action_values_match_casbin_strings():
     assert FlowAction.DELETE.value == "delete"
     assert FlowAction.EXECUTE.value == "execute"
     assert FlowAction.DEPLOY.value == "deploy"
+    assert FlowAction.MANAGE.value == "manage"
 
 
 def test_flow_action_subclasses_str():
     """Subclassing str lets the enum be passed wherever a string is accepted."""
     assert isinstance(FlowAction.READ, str)
     assert FlowAction.WRITE == "write"
+    assert FlowAction.MANAGE == "manage"
 
 
 def test_flow_action_is_iterable_and_complete():
-    """The enum exposes exactly the six canonical actions."""
+    """The enum exposes the seven canonical actions including MANAGE."""
     values = {member.value for member in FlowAction}
-    assert values == {"read", "write", "create", "delete", "execute", "deploy"}
+    assert values == {"read", "write", "create", "delete", "execute", "deploy", "manage"}
 
 
 def test_deployment_action_values_match_casbin_strings():
@@ -41,6 +44,7 @@ def test_deployment_action_values_match_casbin_strings():
     assert DeploymentAction.CREATE.value == "create"
     assert DeploymentAction.DELETE.value == "delete"
     assert DeploymentAction.EXECUTE.value == "execute"
+    assert DeploymentAction.MANAGE.value == "manage"
 
 
 def test_deployment_action_subclasses_str():
@@ -50,9 +54,16 @@ def test_deployment_action_subclasses_str():
 
 
 def test_deployment_action_is_iterable_and_complete():
-    """The enum exposes exactly the five canonical deployment actions (no DEPLOY)."""
+    """The enum exposes the six canonical deployment actions (no DEPLOY)."""
     values = {member.value for member in DeploymentAction}
-    assert values == {"read", "write", "create", "delete", "execute"}
+    assert values == {"read", "write", "create", "delete", "execute", "manage"}
+
+
+def test_project_action_includes_manage():
+    """Projects expose MANAGE for reparenting / auth_settings changes."""
+    values = {member.value for member in ProjectAction}
+    assert values == {"read", "write", "create", "delete", "manage"}
+    assert ProjectAction.MANAGE == "manage"
 
 
 def test_knowledge_base_action_values():
