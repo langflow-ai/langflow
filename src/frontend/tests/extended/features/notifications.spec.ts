@@ -1,12 +1,12 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "User should be able to interact notifications tab",
   { tag: ["@release"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="disclosure-input & output"]', {
       timeout: 3000,
       state: "visible",
@@ -30,7 +30,9 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
     await page.getByTestId("notification_button").click();
 
     // Add explicit waits before checking visibility

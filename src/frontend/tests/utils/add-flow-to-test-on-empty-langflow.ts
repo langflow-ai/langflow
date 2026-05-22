@@ -1,5 +1,7 @@
 import type { Page } from "@playwright/test";
 
+import { TEXTS } from "../utils/constants/texts";
+
 /**
  * Bootstraps a fresh Langflow install by creating a "Basic Prompting" flow
  * from the templates modal so subsequent assertions have a valid project
@@ -26,6 +28,8 @@ export const addFlowToTestOnEmptyLangflow = async (page: Page) => {
   }
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
   await page.getByTestId("icon-ChevronLeft").click();
 };
