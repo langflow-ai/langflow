@@ -2,9 +2,48 @@
 // Note: type annotations allow type checking and IDEs autocompletion
 
 const path = require("path");
-const lightCodeTheme = require("prism-react-renderer/themes/github");
-const darkCodeTheme = require("prism-react-renderer/themes/dracula");
-const { remarkCodeHike } = require("@code-hike/mdx");
+
+
+// Prism light neon theme
+const lightNeonPrismTheme = {
+  plain: {
+    color: "#64748b",
+    backgroundColor: "#f9f9fd",
+  },
+  styles: [
+    { types: ["comment"], style: { color: "#94a3b8", fontStyle: "italic" } },
+    { types: ["string", "attr-value"], style: { color: "#059669" } },
+    { types: ["number"], style: { color: "#ea580c" } },
+    { types: ["boolean", "constant"], style: { color: "#d97706" } },
+    { types: ["keyword-import", "imports", "module"], style: { color: "#7c3aed" } },
+    { types: ["keyword", "tag"], style: { color: "#0891b2" } },
+    { types: ["builtin", "class-name", "function", "attr-name", "property"], style: { color: "#db2777" } },
+    { types: ["decorator"], style: { color: "#be185d" } },
+    { types: ["operator", "punctuation"], style: { color: "#64748b" } },
+    { types: ["variable"], style: { color: "#64748b" } },
+  ],
+};
+
+// Prism dark neon theme (Grafite Neon)
+const grafiteNeonTheme = {
+  plain: {
+    color: "#c8ccd4",
+    backgroundColor: "#18181a",
+  },
+  styles: [
+    { types: ["comment"], style: { color: "#4a5060", fontStyle: "italic" } },
+    { types: ["string", "attr-value", "template-string"], style: { color: "#51d0a5" } },
+    { types: ["number"], style: { color: "#ff9b7d" } },
+    { types: ["boolean", "constant"], style: { color: "#f7c93e" } },
+    { types: ["keyword-import", "imports", "module"], style: { color: "#c792ea" } },
+    { types: ["keyword", "tag"], style: { color: "#31d1e9" } },
+    { types: ["builtin", "class-name", "function", "attr-name", "property"], style: { color: "#ed86bf" } },
+    { types: ["decorator"], style: { color: "#e45287" } },
+    { types: ["operator", "punctuation"], style: { color: "#c8ccd4" } },
+    { types: ["variable"], style: { color: "#c8ccd4" } },
+  ],
+};
+
 const rehypeWbrUnderscore = require("./src/plugins/rehypeWbrUnderscore");
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -127,16 +166,6 @@ const config = {
               path: "1.8.0",
             },
           },
-          beforeDefaultRemarkPlugins: [
-            [
-              remarkCodeHike,
-              {
-                theme: "github-dark",
-                showCopyButton: true,
-                lineNumbers: true,
-              },
-            ],
-          ],
           rehypePlugins: [rehypeWbrUnderscore],
         },
         sitemap: {
@@ -152,10 +181,7 @@ const config = {
         },
         blog: false,
         theme: {
-          customCss: [
-            require.resolve("@code-hike/mdx/styles.css"),
-            require.resolve("./css/custom.css"),
-          ],
+          customCss: [require.resolve("./css/custom.css")],
         },
       }),
     ],
@@ -507,8 +533,9 @@ const config = {
         respectPrefersColorScheme: true,
       },
       prism: {
-        theme: lightCodeTheme,
-        darkTheme: darkCodeTheme,
+        theme: lightNeonPrismTheme,
+        darkTheme: grafiteNeonTheme,
+        additionalLanguages: ["bash", "docker", "nginx", "powershell", "batch"],
       },
       zoom: {
         selector: ".markdown :not(a) > img:not(.no-zoom)",

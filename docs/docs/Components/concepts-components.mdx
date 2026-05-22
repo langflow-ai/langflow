@@ -4,7 +4,7 @@ slug: /concepts-components
 ---
 
 import Icon from "@site/src/components/icon";
-import CodeSnippet from "@site/src/components/CodeSnippet";
+import CodeBlock from "@theme/CodeBlock";
 import RecursiveCharacterSource from "!!raw-loader!@langflow/src/lfx/src/lfx/components/langchain_utilities/recursive_character.py";
 
 Components are the building blocks of your flows.
@@ -168,26 +168,12 @@ Each component's code includes definitions for inputs and outputs, which are rep
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
 These values determine the component settings, such as display names and tooltips in the visual editor.
 
-<CodeSnippet
-  source={RecursiveCharacterSource}
-  startLine={17}
-  endLine={41}
-  language="python"
-  title="RecursiveCharacterTextSplitter inputs (from recursive_character.py)"
-  showLineNumbers
-/>
+<CodeBlock language="python" title="RecursiveCharacterTextSplitter inputs (from recursive_character.py)" showLineNumbers>{RecursiveCharacterSource}</CodeBlock>
 
 Additionally, components have methods or functions that handle their functionality.
 For example, the `RecursiveCharacterTextSplitter` has two methods:
 
-<CodeSnippet
-  source={RecursiveCharacterSource}
-  startLine={45}
-  endLine={60}
-  language="python"
-  title="RecursiveCharacterTextSplitter methods (from recursive_character.py)"
-  showLineNumbers
-/>
+<CodeBlock language="python" title="RecursiveCharacterTextSplitter methods (from recursive_character.py)" showLineNumbers>{RecursiveCharacterSource}</CodeBlock>
 
 The `get_data_input` method retrieves the text to be split from the component's input, which makes the data available to the class.
 The `build_text_splitter` method creates a `RecursiveCharacterTextSplitter` object by calling its parent class's `build` method. Then, the text is split with the created splitter and passed to the next component.

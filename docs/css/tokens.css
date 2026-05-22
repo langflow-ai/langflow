@@ -7,8 +7,8 @@
   --ifm-navbar-item-padding-vertical: 0;
   --ifm-font-family-base: "Geist", Inter, -apple-system, BlinkMacSystemFont,
     Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
-  --ifm-font-family-monospace: "Geist Mono", "SFMono-Regular", "Roboto Mono",
-    Consolas, "Liberation Mono", Menlo, Courier, monospace;
+  --ifm-font-family-monospace: "JetBrains Mono", "Geist Mono", "SFMono-Regular",
+    Consolas, "Liberation Mono", Menlo, monospace;
   --ifm-heading-font-weight: 700;
   --ifm-line-height-base: 1.7;
 }
