@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
@@ -206,11 +206,19 @@ export default function NodeStatus({
     if (pollingTimeout.current) clearTimeout(pollingTimeout.current);
   };
 
+  // A trigger node has no inputs and (intentionally) no outputs, so
+  // running it with the usual upstream-subgraph semantics would
+  // execute an empty graph. The user clicking play on a trigger is
+  // really asking "fire this flow as if the schedule just hit", so
+  // we drop ``stopNodeId`` and let the whole flow build — matching
+  // what the scheduler worker does on a real fire.
+  const isTriggerNode = data.type === "CronTrigger";
+
   function handlePlayWShortcut() {
     if (buildStatus === BuildStatus.BUILDING || isBuilding || !selected) return;
     setValidationStatus(null);
     buildFlow({
-      stopNodeId: nodeId,
+      ...(isTriggerNode ? {} : { stopNodeId: nodeId }),
       eventDelivery: eventDeliveryConfig,
     });
   }
@@ -304,10 +312,13 @@ export default function NodeStatus({
     }
     if (buildStatus === BuildStatus.BUILDING || isBuilding) return;
     buildFlow({
-      stopNodeId: nodeId,
+      ...(isTriggerNode ? {} : { stopNodeId: nodeId }),
       eventDelivery: eventDeliveryConfig,
     });
-    track("Flow Build - Clicked", { stopNodeId: nodeId });
+    track("Flow Build - Clicked", {
+      stopNodeId: isTriggerNode ? undefined : nodeId,
+      triggerFire: isTriggerNode,
+    });
   };
 
   const iconName =
