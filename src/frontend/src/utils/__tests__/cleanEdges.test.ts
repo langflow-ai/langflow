@@ -518,8 +518,8 @@ describe("cleanEdges", () => {
       expect(result3.brokenEdges.length).toBe(1);
     });
 
-    it("should preserve edge when EmbeddingModel has empty input_types and edge expects Embeddings (LE-278)", () => {
-      // This tests the fix for embedding model input type (LE-278)
+    it("should preserve edge when EmbeddingModel has empty input_types and edge expects Embeddings", () => {
+      // This tests the fix for embedding model input type
       const sourceNode: AllNodeType = {
         id: "EmbeddingModelComponent-123",
         type: "genericNode",

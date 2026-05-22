@@ -1,4 +1,5 @@
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
+import i18n from "@/i18n";
 
 export const CustomStoreSidebar = (
   hasApiKey: boolean = false,
@@ -8,7 +9,7 @@ export const CustomStoreSidebar = (
 
   if (hasApiKey) {
     items.push({
-      title: "Langflow API Keys",
+      title: i18n.t("settings.nav.apiKeys"),
       href: "/settings/api-keys",
       icon: (
         <ForwardedIconComponent
@@ -21,7 +22,7 @@ export const CustomStoreSidebar = (
 
   if (hasStore) {
     items.push({
-      title: "Langflow Store",
+      title: i18n.t("settings.nav.store"),
       href: "/settings/store",
       icon: (
         <ForwardedIconComponent

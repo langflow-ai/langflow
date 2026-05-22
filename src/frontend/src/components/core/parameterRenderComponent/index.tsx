@@ -18,7 +18,7 @@ import FloatComponent from "./components/floatComponent";
 import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
-import McpComponent from "./components/mcpComponent";
+import McpComponent, { type McpServerValue } from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import MustachePromptAreaComponent from "./components/mustachePromptComponent";
 import PromptAreaComponent from "./components/promptComponent";
@@ -327,7 +327,7 @@ export function ParameterRenderComponent({
             id={`mcp_${id}`}
             editNode={editNode}
             disabled={disabled}
-            value={templateValue}
+            value={templateValue as McpServerValue}
           />
         );
       case "model":

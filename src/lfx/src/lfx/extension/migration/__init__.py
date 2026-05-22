@@ -17,8 +17,8 @@ Public surface:
     - :func:`load_migration_table` -- read and validate the canonical JSON.
     - :func:`migrate_flow_payload` -- rewrite a flow payload in place.
     - :class:`MigrationTable` / :class:`MigrationEntry` -- Pydantic models.
-    - :class:`MigrationReport` -- per-node rewrite outcomes; will feed the
-      ``flow-migrated`` event once :data:`LE-1017` lands.
+    - :class:`MigrationReport` -- per-node rewrite outcomes; will feed
+      the ``flow-migrated`` event once the events pipeline lands.
 """
 
 from lfx.extension.migration.loader import (
