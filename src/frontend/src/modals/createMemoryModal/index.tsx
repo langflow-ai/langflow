@@ -104,9 +104,7 @@ export default function CreateMemoryModal({
 
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="memory-batch-size">
-                {t("memory.batchSize")}
-              </Label>
+              <Label htmlFor="memory-batch-size">{t("memory.batchSize")}</Label>
               <ShadTooltip
                 content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
                 side="right"
