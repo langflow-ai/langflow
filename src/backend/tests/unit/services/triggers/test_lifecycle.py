@@ -174,3 +174,122 @@ async def test_skips_enqueue_for_unknown_timezone(async_session):
 
     queued = await _queued_jobs(async_session, flow.id)
     assert queued == []
+
+
+@pytest.mark.asyncio
+async def test_reschedules_queued_job_when_cron_expression_changes(async_session):
+    """User edits the cron in the canvas → the QUEUED row is replaced.
+
+    Without this branch the stale ``scheduled_at`` survives until the
+    next fire and the triggers page shows a "next fire in 3h" that does
+    not match the cron the user just set.
+    """
+    flow = await _seed_flow(
+        async_session,
+        nodes=[_cron_node("CronTrigger-a", cron_expression="*/5 * * * *")],
+    )
+    await reconcile_trigger_jobs_for_flow(async_session, flow)
+    await async_session.commit()
+
+    initial = (await _queued_jobs(async_session, flow.id))[0]
+    initial_scheduled_at = initial.scheduled_at
+    initial_id = initial.id
+
+    flow.data = {
+        "nodes": [_cron_node("CronTrigger-a", cron_expression="*/1 * * * *")],
+        "edges": [],
+    }
+    async_session.add(flow)
+    await async_session.commit()
+
+    await reconcile_trigger_jobs_for_flow(async_session, flow)
+    await async_session.commit()
+
+    queued = await _queued_jobs(async_session, flow.id)
+    assert len(queued) == 1
+    fresh = queued[0]
+    assert fresh.id != initial_id  # row was rotated, not mutated
+    assert fresh.scheduled_at != initial_scheduled_at  # rescheduled on new cron
+
+    cancelled = list(
+        (
+            await async_session.exec(
+                select(TriggerJob).where(
+                    TriggerJob.flow_id == flow.id,
+                    TriggerJob.status == JobStatus.CANCELLED,
+                ),
+            )
+        ).all()
+    )
+    assert [j.id for j in cancelled] == [initial_id]
+
+
+@pytest.mark.asyncio
+async def test_reschedules_queued_job_when_timezone_changes(async_session):
+    flow = await _seed_flow(
+        async_session,
+        nodes=[
+            _cron_node(
+                "CronTrigger-a",
+                cron_expression="0 9 * * *",
+                timezone_name="UTC",
+            ),
+        ],
+    )
+    await reconcile_trigger_jobs_for_flow(async_session, flow)
+    await async_session.commit()
+
+    initial = (await _queued_jobs(async_session, flow.id))[0]
+    initial_scheduled_at = initial.scheduled_at
+
+    flow.data = {
+        "nodes": [
+            _cron_node(
+                "CronTrigger-a",
+                cron_expression="0 9 * * *",
+                timezone_name="America/Sao_Paulo",
+            ),
+        ],
+        "edges": [],
+    }
+    async_session.add(flow)
+    await async_session.commit()
+
+    await reconcile_trigger_jobs_for_flow(async_session, flow)
+    await async_session.commit()
+
+    queued = await _queued_jobs(async_session, flow.id)
+    assert len(queued) == 1
+    assert queued[0].scheduled_at != initial_scheduled_at
+
+
+@pytest.mark.asyncio
+async def test_does_not_reschedule_when_only_max_attempts_changes(async_session):
+    """``max_attempts`` is read live by the worker on each dispatch.
+
+    Editing it alone must not rotate the queued row — otherwise we
+    would push the next fire later than the user intends.
+    """
+    flow = await _seed_flow(
+        async_session,
+        nodes=[_cron_node("CronTrigger-a", max_attempts=3)],
+    )
+    await reconcile_trigger_jobs_for_flow(async_session, flow)
+    await async_session.commit()
+
+    initial = (await _queued_jobs(async_session, flow.id))[0]
+    initial_id = initial.id
+
+    flow.data = {
+        "nodes": [_cron_node("CronTrigger-a", max_attempts=5)],
+        "edges": [],
+    }
+    async_session.add(flow)
+    await async_session.commit()
+
+    await reconcile_trigger_jobs_for_flow(async_session, flow)
+    await async_session.commit()
+
+    queued = await _queued_jobs(async_session, flow.id)
+    assert len(queued) == 1
+    assert queued[0].id == initial_id  # untouched
