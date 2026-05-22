@@ -29,6 +29,8 @@ RUN apt-get update \
     # deps for building python deps
     build-essential \
     git \
+    # npm
+    npm \
     # gcc
     gcc \
     curl \
