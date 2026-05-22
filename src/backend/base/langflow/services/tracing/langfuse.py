@@ -171,12 +171,19 @@ class LangFuseTracer(BaseTracer):
         trace_id: UUID,
         user_id: str | None = None,
         session_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         self.project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
+        # ``user_id`` remains the authenticated Langflow user and drives
+        # ``trace.userId`` unchanged from pre-#9505 behavior. ``tracing_user_id``
+        # is an optional caller-supplied label; when set, it is stamped into
+        # trace metadata as ``langflow.tracing_user_id`` so consumers can still
+        # access the override without redefining ``trace.userId``.
         self.user_id = user_id
+        self.tracing_user_id = tracing_user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
@@ -223,12 +230,19 @@ class LangFuseTracer(BaseTracer):
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
             )
 
-            # Set trace-level metadata (user_id, session_id)
-            self._root_span.update_trace(
-                name=self.flow_id,
-                user_id=self.user_id,
-                session_id=self.session_id,
-            )
+            # ``trace.userId`` stays the authenticated Langflow user so existing
+            # Langfuse consumers keep getting the same identity. When a caller
+            # provides an override via ``tracing_user_id``, stamp it under
+            # ``langflow.tracing_user_id`` so it is still recoverable from trace
+            # metadata without changing the meaning of ``trace.userId``.
+            trace_kwargs: dict[str, Any] = {
+                "name": self.flow_id,
+                "user_id": self.user_id,
+                "session_id": self.session_id,
+            }
+            if self.tracing_user_id and self.tracing_user_id != self.user_id:
+                trace_kwargs["metadata"] = {"langflow.tracing_user_id": self.tracing_user_id}
+            self._root_span.update_trace(**trace_kwargs)
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
