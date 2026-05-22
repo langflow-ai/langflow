@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { createRef } from "react";
-import { useShiftDragSelectFix } from "../useShiftDragSelectFix";
+import { useCanvasDragSelectFix } from "../useCanvasDragSelectFix";
 
 // Note: jsdom does not implement vendor-prefixed CSS properties such as
 // -webkit-user-select, so only the unprefixed user-select property is
@@ -12,7 +12,7 @@ function makeRef(el: HTMLElement | null) {
   return ref;
 }
 
-function fireMouseDown(target: HTMLElement, shiftKey: boolean) {
+function fireMouseDown(target: HTMLElement, shiftKey = false) {
   target.dispatchEvent(
     new MouseEvent("mousedown", { bubbles: true, shiftKey }),
   );
@@ -26,7 +26,7 @@ function getUserSelect() {
   return document.documentElement.style.getPropertyValue("user-select");
 }
 
-describe("useShiftDragSelectFix", () => {
+describe("useCanvasDragSelectFix", () => {
   let el: HTMLDivElement;
 
   beforeEach(() => {
@@ -41,40 +41,40 @@ describe("useShiftDragSelectFix", () => {
   });
 
   it("does nothing when ref.current is null", () => {
-    renderHook(() => useShiftDragSelectFix(makeRef(null)));
+    renderHook(() => useCanvasDragSelectFix(makeRef(null)));
     expect(getUserSelect()).toBe("");
   });
 
-  it("does not suppress selection on mousedown without shiftKey", () => {
-    renderHook(() => useShiftDragSelectFix(makeRef(el)));
+  it("sets user-select:none on any mousedown (no shift key)", () => {
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
     act(() => fireMouseDown(el, false));
 
-    expect(getUserSelect()).toBe("");
+    expect(getUserSelect()).toBe("none");
   });
 
   it("sets user-select:none on shift+mousedown", () => {
-    renderHook(() => useShiftDragSelectFix(makeRef(el)));
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
     act(() => fireMouseDown(el, true));
 
     expect(getUserSelect()).toBe("none");
   });
 
-  it("restores user-select on mouseup after shift+drag", () => {
-    renderHook(() => useShiftDragSelectFix(makeRef(el)));
+  it("restores user-select on mouseup after drag", () => {
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
-    act(() => fireMouseDown(el, true));
+    act(() => fireMouseDown(el));
     act(() => fireMouseUp());
 
     expect(getUserSelect()).toBe("");
   });
 
   it("only restores once — a second mouseup does not clear a subsequently set value", () => {
-    renderHook(() => useShiftDragSelectFix(makeRef(el)));
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
     act(() => {
-      fireMouseDown(el, true);
+      fireMouseDown(el);
       fireMouseUp();
       document.documentElement.style.setProperty("user-select", "text");
       fireMouseUp();
@@ -86,20 +86,20 @@ describe("useShiftDragSelectFix", () => {
   });
 
   it("removes the mousedown listener on unmount", () => {
-    const { unmount } = renderHook(() => useShiftDragSelectFix(makeRef(el)));
+    const { unmount } = renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
     unmount();
 
-    act(() => fireMouseDown(el, true));
+    act(() => fireMouseDown(el));
 
     expect(getUserSelect()).toBe("");
   });
 
-  it("handles multiple shift+drag cycles correctly", () => {
-    renderHook(() => useShiftDragSelectFix(makeRef(el)));
+  it("handles multiple drag cycles correctly", () => {
+    renderHook(() => useCanvasDragSelectFix(makeRef(el)));
 
     for (let i = 0; i < 3; i++) {
-      act(() => fireMouseDown(el, true));
+      act(() => fireMouseDown(el));
       expect(getUserSelect()).toBe("none");
 
       act(() => fireMouseUp());
