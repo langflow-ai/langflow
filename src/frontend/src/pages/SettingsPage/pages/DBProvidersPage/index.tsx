@@ -650,7 +650,9 @@ function ProviderConfigurationPanel({
               )}
             </div>
             <span className="pt-1 text-[13px] text-muted-foreground">
-              {provider.description}
+              {t(`settings.dbProviders.providers.${provider.id}.description`, {
+                defaultValue: provider.description,
+              })}
             </span>
           </div>
         </div>
@@ -798,7 +800,9 @@ function TextFieldRow({
   return (
     <label className="flex flex-col gap-1">
       <span className="text-[12px] font-medium text-muted-foreground">
-        {field.label}
+        {t(`settings.dbProviders.fields.${field.variableKey}.label`, {
+          defaultValue: field.label,
+        })}
         {field.required && <span className="ml-1 text-destructive">*</span>}
       </span>
       <Input
@@ -833,10 +837,16 @@ function BooleanFieldRow({
   return (
     <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/20 px-3 py-2">
       <div className="flex min-w-0 flex-col">
-        <span className="text-[12px] font-medium">{field.label}</span>
+        <span className="text-[12px] font-medium">
+          {t(`settings.dbProviders.fields.${field.variableKey}.label`, {
+            defaultValue: field.label,
+          })}
+        </span>
         {field.helperText && (
           <span className="pt-0.5 text-[11px] text-muted-foreground">
-            {field.helperText}
+            {t(`settings.dbProviders.fields.${field.variableKey}.helperText`, {
+              defaultValue: field.helperText,
+            })}
           </span>
         )}
         <span className="pt-1 text-[11px] text-muted-foreground">
