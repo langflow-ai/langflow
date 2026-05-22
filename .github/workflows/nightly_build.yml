@@ -291,7 +291,7 @@ jobs:
       ref: ${{ needs.resolve-release-branch.outputs.branch }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure' && needs.stress-tests.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
       [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests]
@@ -313,7 +313,7 @@ jobs:
   slack-notification:
     name: Send Slack Notification
     needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.stress-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
