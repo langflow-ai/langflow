@@ -1210,6 +1210,7 @@ async def get_version():
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
     if not settings_service.settings.allow_custom_components:
@@ -1244,6 +1245,11 @@ async def custom_component(
             field_value=tool_mode,
         )
     type_ = get_instance_name(component_instance)
+    locale = getattr(request.state, "locale", "en")
+    if locale != "en":
+        from langflow.utils.i18n import translate_component_node
+
+        built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
@@ -1251,6 +1257,7 @@ async def custom_component(
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -1335,6 +1342,12 @@ async def custom_component_update(
                 field_name=code_request.field,
                 field_value=code_request.field_value,
             )
+
+        locale = getattr(request.state, "locale", "en")
+        if locale != "en":
+            from langflow.utils.i18n import translate_component_node
+
+            component_node = translate_component_node(get_instance_name(cc_instance), component_node, locale)
 
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
