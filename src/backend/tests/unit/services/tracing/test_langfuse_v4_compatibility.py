@@ -73,17 +73,13 @@ class TestLangfuseV4ApiExists:
         """v4 replaces v3 `start_span` with `start_observation` on the client."""
         langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(langfuse_class, "start_observation"), (
-            "Langfuse.start_observation() should exist in v4"
-        )
+        assert hasattr(langfuse_class, "start_observation"), "Langfuse.start_observation() should exist in v4"
 
     def test_langfuse_client_has_create_trace_id(self):
         """`create_trace_id` is still on the class in v4."""
         langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(langfuse_class, "create_trace_id"), (
-            "Langfuse.create_trace_id() should exist in v4"
-        )
+        assert hasattr(langfuse_class, "create_trace_id"), "Langfuse.create_trace_id() should exist in v4"
 
     def test_langfuse_module_has_propagate_attributes(self):
         """v4 introduces `propagate_attributes` for trace-level attrs."""
@@ -95,9 +91,7 @@ class TestLangfuseV4ApiExists:
         """`start_span` was removed from the client in v4 (replaced by start_observation)."""
         langfuse_class = _import_langfuse_or_skip()
 
-        assert not hasattr(langfuse_class, "start_span"), (
-            "Langfuse.start_span() should NOT exist in v4 (removed)"
-        )
+        assert not hasattr(langfuse_class, "start_span"), "Langfuse.start_span() should NOT exist in v4 (removed)"
 
     def test_callback_handler_import_path(self):
         """The langchain integration import path still resolves in v4."""
