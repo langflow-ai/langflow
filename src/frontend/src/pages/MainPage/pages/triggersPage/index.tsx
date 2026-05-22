@@ -34,7 +34,12 @@ export default function TriggersPage() {
   const setErrorData = useAlertStore((s) => s.setErrorData);
   const setSuccessData = useAlertStore((s) => s.setSuccessData);
 
-  const { data: triggers, isLoading } = useGetTriggers();
+  // Poll every 5s so the table reflects fresh fires (last_run status,
+  // next_fire_at) without a manual reload. Aligned with the drawer's
+  // own refetch cadence so both surfaces converge at the same beat.
+  const { data: triggers, isLoading } = useGetTriggers({
+    refetchInterval: 5000,
+  });
   const allTriggers = useMemo(() => triggers ?? [], [triggers]);
 
   const [selectedKeys, setSelectedKeys] = useState<Set<string>>(new Set());
