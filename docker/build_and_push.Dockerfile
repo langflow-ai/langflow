@@ -29,13 +29,13 @@ RUN apt-get update \
     # deps for building python deps
     build-essential \
     git \
-    # npm
-    npm \
     # gcc
     gcc \
     curl \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
+    && corepack enable \
+    && corepack prepare npm@11 --activate \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
