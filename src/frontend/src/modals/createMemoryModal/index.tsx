@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
@@ -6,7 +7,6 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
 import BaseModal from "../baseModal";
 import { useCreateMemoryModal } from "./useCreateMemoryModal";
 
@@ -56,31 +56,31 @@ export default function CreateMemoryModal({
     <BaseModal
       open={open}
       setOpen={handleClose}
-      size="small-h-full"
+      size="x-small"
       onSubmit={handleSubmit}
     >
-      <BaseModal.Header description={`Create a memory for \"${flowName}\"`}>
-        <ForwardedIconComponent name="BrainCog" className="mr-2 h-4 w-4" />
+      <BaseModal.Header description={`Create a memory for "${flowName}"`}>
+        <ForwardedIconComponent
+          name="BrainCog"
+          className="h-6 w-6 pr-1 text-primary"
+          aria-hidden="true"
+        />
         Create Memory
       </BaseModal.Header>
-      <BaseModal.Content className="flex flex-col gap-6 px-6 py-4">
-        <div className="flex flex-col gap-2">
-          <Label htmlFor="memory-name">
-            Name <span className="text-destructive">*</span>
-          </Label>
-          <Input
-            id="memory-name"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("memory.memoryName")}
-          />
-        </div>
+      <BaseModal.Content>
+        <div className="flex h-full w-full flex-col gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="memory-name">{t("memory.nameLabel")}</Label>
+            <Input
+              id="memory-name"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("memory.memoryName")}
+            />
+          </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="flex flex-col gap-2 md:col-span-2">
-            <Label className="text-sm font-medium">
-              Embedding Model <span className="text-destructive">*</span>
-            </Label>
+          <div className="space-y-2">
+            <Label>{t("memory.embeddingModelLabel")}</Label>
             <div className={cn("rounded-md", "[&_button]:h-10")}>
               <ModelInputComponent
                 id="memory-embedding-model"
@@ -96,106 +96,107 @@ export default function CreateMemoryModal({
               />
             </div>
             {selectedEmbeddingModel[0]?.provider && (
-              <span className="text-xs text-muted-foreground">
+              <div className="text-xs text-muted-foreground">
                 Provider: {selectedEmbeddingModel[0].provider}
-              </span>
+              </div>
             )}
           </div>
-        </div>
 
-        <div className="flex flex-col gap-2">
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="memory-batch-size">{t("memory.batchSize")}</Label>
-            <ShadTooltip
-              content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
-              side="right"
-            >
-              <button
-                type="button"
-                tabIndex={0}
-                aria-label="Batch size help"
-                className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-              >
-                <ForwardedIconComponent
-                  name="Info"
-                  className="h-3.5 w-3.5 text-muted-foreground"
-                />
-              </button>
-            </ShadTooltip>
-          </div>
-          <Input
-            id="memory-batch-size"
-            value={batchSizeInput}
-            onChange={(e) => {
-              const raw = e.target.value.replace(/[^0-9]/g, "");
-              setBatchSizeInput(raw);
-            }}
-            onBlur={() => {
-              const val = parseInt(batchSizeInput, 10);
-              if (!batchSizeInput || Number.isNaN(val) || val < 1) {
-                setBatchSizeInput("1");
-              }
-            }}
-            placeholder="1"
-          />
-        </div>
-
-        <div className="flex items-center justify-between rounded-lg border border-border p-3">
-          <div className="flex flex-col gap-0.5">
-            <Label className="text-sm" htmlFor="llm-preprocessing-switch">
-              LLM Preprocessing
-            </Label>
-            <span className="text-xs text-muted-foreground">
-              Summarize messages with an LLM before ingestion
-            </span>
-          </div>
-          <Switch
-            id="llm-preprocessing-switch"
-            checked={preprocessingEnabled}
-            onCheckedChange={setPreprocessingEnabled}
-          />
-        </div>
-
-        {preprocessingEnabled && (
-          <>
-            <div className="flex flex-col gap-2">
-              <Label className="text-sm font-medium">
-                Preprocessing Model <span className="text-destructive">*</span>
+          <div className="space-y-2">
+            <div className="flex items-center gap-1.5">
+              <Label htmlFor="memory-batch-size">
+                {t("memory.batchSize")}
               </Label>
-              <div className={cn("rounded-md", "[&_button]:h-10")}>
-                <ModelInputComponent
-                  id="memory-preprocessing-model"
-                  value={selectedPreprocessingModel}
-                  editNode={false}
-                  disabled={false}
-                  handleOnNewValue={({ value }) => {
-                    setSelectedPreprocessingModel(value);
-                  }}
-                  options={llmModelOptions}
-                  placeholder={t("memory.selectPreprocessingModel")}
-                  modelType="llm"
+              <ShadTooltip
+                content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
+                side="right"
+              >
+                <button
+                  type="button"
+                  tabIndex={0}
+                  aria-label="Batch size help"
+                  className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                >
+                  <ForwardedIconComponent
+                    name="Info"
+                    className="h-3.5 w-3.5 text-muted-foreground"
+                  />
+                </button>
+              </ShadTooltip>
+            </div>
+            <Input
+              id="memory-batch-size"
+              value={batchSizeInput}
+              onChange={(e) => {
+                const raw = e.target.value.replace(/[^0-9]/g, "");
+                setBatchSizeInput(raw);
+              }}
+              onBlur={() => {
+                const val = parseInt(batchSizeInput, 10);
+                if (!batchSizeInput || Number.isNaN(val) || val < 1) {
+                  setBatchSizeInput("1");
+                }
+              }}
+              placeholder="1"
+            />
+          </div>
+
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <div className="space-y-0.5">
+              <Label className="text-sm" htmlFor="llm-preprocessing-switch">
+                LLM Preprocessing
+              </Label>
+              <div className="text-xs text-muted-foreground">
+                Summarize messages with an LLM before ingestion
+              </div>
+            </div>
+            <Switch
+              id="llm-preprocessing-switch"
+              checked={preprocessingEnabled}
+              onCheckedChange={setPreprocessingEnabled}
+            />
+          </div>
+
+          {preprocessingEnabled && (
+            <>
+              <div className="space-y-2">
+                <Label>{t("memory.preprocessingModelLabel")}</Label>
+                <div className={cn("rounded-md", "[&_button]:h-10")}>
+                  <ModelInputComponent
+                    id="memory-preprocessing-model"
+                    value={selectedPreprocessingModel}
+                    editNode={false}
+                    disabled={false}
+                    handleOnNewValue={({ value }) => {
+                      setSelectedPreprocessingModel(value);
+                    }}
+                    options={llmModelOptions}
+                    placeholder={t("memory.selectPreprocessingModel")}
+                    modelType="llm"
+                  />
+                </div>
+                {selectedPreprocessingModel[0]?.provider && (
+                  <div className="text-xs text-muted-foreground">
+                    Provider: {selectedPreprocessingModel[0].provider}
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="preprocessing-prompt">
+                  {t("memory.preprocessingInstructionsLabel")}
+                </Label>
+                <Textarea
+                  id="preprocessing-prompt"
+                  value={preprocessingPrompt}
+                  onChange={(e) => setPreprocessingPrompt(e.target.value)}
+                  placeholder={t("memory.preprocessingPromptPlaceholder")}
+                  className="min-h-[80px] resize-y"
                 />
               </div>
-              {selectedPreprocessingModel[0]?.provider && (
-                <span className="text-xs text-muted-foreground">
-                  Provider: {selectedPreprocessingModel[0].provider}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="preprocessing-prompt">
-                Preprocessing Instructions (optional)
-              </Label>
-              <Textarea
-                id="preprocessing-prompt"
-                value={preprocessingPrompt}
-                onChange={(e) => setPreprocessingPrompt(e.target.value)}
-                placeholder={t("memory.preprocessingPromptPlaceholder")}
-                className="min-h-[80px] resize-y"
-              />
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
