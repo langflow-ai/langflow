@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
@@ -8,11 +9,14 @@ interface DeploymentsEmptyStateProps {
 export default function DeploymentsEmptyState({
   onAction,
 }: DeploymentsEmptyStateProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-24">
-      <h3 className="text-lg font-semibold">No Deployments</h3>
+      <h3 className="text-lg font-semibold">
+        {t("deployments.noDeployments")}
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Create your first deployment to run your flows in production.
+        {t("deployments.emptyStateDescription")}
       </p>
       <Button
         variant="outline"
@@ -21,7 +25,7 @@ export default function DeploymentsEmptyState({
         onClick={onAction}
       >
         <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-        Create Deployment
+        {t("deployments.createDeployment")}
       </Button>
     </div>
   );

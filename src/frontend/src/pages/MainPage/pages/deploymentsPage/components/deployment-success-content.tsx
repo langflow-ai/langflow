@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
@@ -16,6 +17,7 @@ export default function DeploymentSuccessContent({
   showTestButton,
   onTest,
 }: DeploymentSuccessContentProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-8 py-10 text-center">
       <div className="flex h-16 w-16 items-center justify-center rounded-full border-2 border-accent-emerald">
@@ -27,15 +29,15 @@ export default function DeploymentSuccessContent({
 
       <div className="space-y-2">
         <h3 className="font-sans text-2xl font-semibold tracking-normal text-foreground">
-          Deployment successful
+          {t("deployments.deploymentSuccessful")}
         </h3>
         <p className="font-sans text-base font-normal text-muted-foreground">
-          Deployed to {providerName} as draft
+          {t("deployments.deployedToDraft", { providerName })}
         </p>
       </div>
 
       <div className="flex items-center gap-1 font-sans text-sm font-normal text-muted-foreground">
-        <span>Publish from Draft to Live in</span>
+        <span>{t("deployments.publishDraftToLive")}</span>
         <a
           href={providerUrl}
           target="_blank"
@@ -55,7 +57,7 @@ export default function DeploymentSuccessContent({
           onClick={onTest}
         >
           <ForwardedIconComponent name="Play" className="h-5 w-5" />
-          Test Deployment
+          {t("deployments.testDeployment")}
         </Button>
       )}
     </div>

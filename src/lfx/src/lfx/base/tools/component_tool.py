@@ -333,9 +333,11 @@ class ComponentToolkit:
         elif (tool_name or tool_description) and (flow_mode_inputs or len(tools) > 1):
             for tool in tools:
                 tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
-                tool.description = (
-                    str(tool_description) + " Output details: " + str(tool.description)
-                ) or tool.description
+                # Only prepend an explicit tool_description. Without one, keep the
+                # output-derived description so it stays equal to display_description
+                # and the Actions-panel merge logic can detect real user edits.
+                if tool_description:
+                    tool.description = f"{tool_description} Output details: {tool.description}"
                 tool.tags = [tool.name]
         return tools
 

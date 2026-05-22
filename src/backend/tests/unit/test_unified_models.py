@@ -1,6 +1,7 @@
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from lfx.base.models import models_dev_catalog
 from lfx.base.models.unified_models import (
     _get_all_provider_mapped_fields,
     apply_provider_variable_config_to_build_config,
@@ -11,6 +12,28 @@ from lfx.base.models.unified_models import (
     update_model_options_in_build_config,
 )
 from lfx.base.models.unified_models.build_config import _resolve_dropdown_provider_values
+from lfx.base.models.unified_models.provider_queries import get_models_detailed
+
+
+@pytest.fixture(autouse=True)
+def _clear_models_dev_snapshot():
+    """Isolate every test in this file from any active models.dev snapshot.
+
+    The backend ``client`` fixture's lifespan installs a snapshot via
+    ``set_active_snapshot`` and never resets it on teardown, so tests that
+    expect the static bundled catalog (e.g. ``test_filter_by_model_name``,
+    which relies on ``gpt-4`` not being auto-deprecated by the age-based
+    rule in ``_translate_model_entry``) would otherwise fail when run in
+    the same xdist worker as a fixture-using test.
+    """
+    prior = models_dev_catalog.get_active_snapshot()
+    try:
+        models_dev_catalog.set_active_snapshot(None)
+        get_models_detailed.cache_clear()
+        yield
+    finally:
+        models_dev_catalog.set_active_snapshot(prior)
+        get_models_detailed.cache_clear()
 
 
 def _flatten_models(result):

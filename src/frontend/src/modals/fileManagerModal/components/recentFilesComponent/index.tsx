@@ -36,6 +36,7 @@ export default function RecentFilesComponent({
   types: string[];
   isList: boolean;
 }) {
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
 
@@ -68,7 +69,6 @@ export default function RecentFilesComponent({
       }),
     [filesWithDisabled],
   );
-  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [lastClickedIndex, setLastClickedIndex] = useState<number | null>(null);
   const [isShiftPressed, setIsShiftPressed] = useState(false);
@@ -225,7 +225,7 @@ export default function RecentFilesComponent({
         },
         onError: (error: Error) => {
           setErrorData({
-            title: "Error deleting files",
+            title: t("files.errorDeleting"),
             list: [
               error?.message || "An error occurred while deleting the files",
             ],
@@ -241,7 +241,7 @@ export default function RecentFilesComponent({
         <div className="flex-1">
           <Input
             icon="Search"
-            placeholder="Search files..."
+            placeholder={t("fileManager.searchFiles")}
             inputClassName="h-8"
             data-testid="search-files-input"
             value={searchQuery}

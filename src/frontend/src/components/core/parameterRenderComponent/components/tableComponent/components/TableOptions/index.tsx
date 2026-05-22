@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -24,6 +25,7 @@ export default function TableOptions({
   tableOptions?: TableOptionsTypeAPI;
   paginationInfo?: string;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [tabIndex, setTabIndex] = useState(-1);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function TableOptions({
       <div className="flex items-center gap-3">
         {addRow && !tableOptions?.block_add && (
           <div>
-            <ShadTooltip content={"Add a new row"}>
+            <ShadTooltip content={t("table.addRow")}>
               <Button
                 data-testid="add-row-button"
                 unstyled
@@ -57,9 +59,9 @@ export default function TableOptions({
             <ShadTooltip
               content={
                 !hasSelection ? (
-                  <span>Select items to duplicate</span>
+                  <span>{t("table.selectToDuplicate")}</span>
                 ) : (
-                  <span>Duplicate selected items</span>
+                  <span>{t("table.duplicateSelected")}</span>
                 )
               }
             >
@@ -88,9 +90,9 @@ export default function TableOptions({
             <ShadTooltip
               content={
                 !hasSelection ? (
-                  <span>Select items to delete</span>
+                  <span>{t("table.selectToDelete")}</span>
                 ) : (
-                  <span>Delete selected items</span>
+                  <span>{t("table.deleteSelected")}</span>
                 )
               }
             >
@@ -115,7 +117,7 @@ export default function TableOptions({
           </div>
         )}{" "}
         <div>
-          <ShadTooltip content="Reset Columns">
+          <ShadTooltip content={t("table.resetColumns")}>
             <Button
               data-testid="reset-columns-button"
               unstyled
@@ -140,7 +142,7 @@ export default function TableOptions({
         </div>
         {paginationInfo && (
           <div className="ml-2 text-xs text-muted-foreground">
-            <ShadTooltip content="Pagination Info">
+            <ShadTooltip content={t("table.paginationInfo")}>
               <span>{paginationInfo}</span>
             </ShadTooltip>
           </div>

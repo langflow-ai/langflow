@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 
@@ -14,6 +15,7 @@ interface ReviewDetachingSectionProps {
 export function ReviewDetachingSection({
   removedFlows,
 }: ReviewDetachingSectionProps) {
+  const { t } = useTranslation();
   if (removedFlows.length === 0) {
     return null;
   }
@@ -21,7 +23,9 @@ export function ReviewDetachingSection({
   return (
     <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-4">
       <div className="flex flex-col gap-3">
-        <span className="text-sm font-medium text-destructive">Detaching</span>
+        <span className="text-sm font-medium text-destructive">
+          {t("deployments.detaching")}
+        </span>
         <div className="flex flex-col gap-2">
           {removedFlows.map((flow) => (
             <div
@@ -45,14 +49,13 @@ export function ReviewDetachingSection({
                 size="tag"
                 variant="secondaryStatic"
               >
-                removing
+                {t("deployments.removing")}
               </Badge>
             </div>
           ))}
         </div>
         <p className="text-xs text-muted-foreground">
-          These tools will be detached from the agent. They will remain
-          available on your provider tenant.
+          {t("deployments.toolsWillBeDetached")}
         </p>
       </div>
     </div>
