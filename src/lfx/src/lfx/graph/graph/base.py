@@ -91,6 +91,11 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Optional caller-supplied label forwarded to tracing providers. Kept
+        # distinct from ``self.user_id`` so request-supplied identifiers can be
+        # surfaced in external traces (e.g. Langfuse trace metadata) without
+        # leaking into authn/authz paths.
+        self.tracing_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -675,6 +680,7 @@ class Graph:
                 user_id=self.user_id,
                 session_id=self.session_id,
                 flow_id=self.flow_id,
+                tracing_user_id=self.tracing_user_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:

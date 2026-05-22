@@ -2,6 +2,9 @@
 
 from __future__ import annotations
 
+import sys
+from types import SimpleNamespace
+
 import pytest
 from lfx.extension.migration.rewrite import migrate_flow_payload
 from lfx.extension.migration.schema import (
@@ -19,6 +22,19 @@ def _node(node_id: str, type_value: str) -> dict:
         "data": {
             "id": node_id,
             "type": type_value,
+            "node": {"template": {}},
+        },
+    }
+
+
+def _note_node(node_id: str) -> dict:
+    """Build a note node that still carries a data.type value."""
+    return {
+        "id": node_id,
+        "type": "noteNode",
+        "data": {
+            "id": node_id,
+            "type": "note",
             "node": {"template": {}},
         },
     }
@@ -116,6 +132,101 @@ def test_already_canonical_left_alone(table: MigrationTable) -> None:
 
 
 @pytest.mark.unit
+@pytest.mark.parametrize(
+    "type_value",
+    [
+        "Prompt",
+        "ChatOutput",
+        "ParserComponent",
+        "URLComponent",
+        "LanguageModelComponent",
+    ],
+)
+def test_known_current_components_left_alone_without_errors(table: MigrationTable, type_value: str) -> None:
+    payload = _payload(_node(f"{type_value}-1", type_value))
+    known_current_types = {
+        "Prompt",
+        "ChatOutput",
+        "ParserComponent",
+        "URLComponent",
+        "LanguageModelComponent",
+    }
+
+    report = migrate_flow_payload(payload, table=table, known_current_types=known_current_types)
+
+    assert report.rewritten_count == 0
+    assert report.errors == []
+    [record] = report.records
+    assert record.outcome == "known_current_component"
+    assert record.error is None
+    assert payload["data"]["nodes"][0]["data"]["type"] == type_value
+
+
+@pytest.mark.unit
+def test_note_node_with_data_type_is_skipped(table: MigrationTable) -> None:
+    payload = _payload(_note_node("note-1"))
+
+    report = migrate_flow_payload(payload, table=table, known_current_types=set())
+
+    assert report.records == []
+    assert report.errors == []
+    assert payload["data"]["nodes"][0]["data"]["type"] == "note"
+
+
+@pytest.mark.unit
+def test_migration_table_entry_wins_over_known_current_type(table: MigrationTable) -> None:
+    payload = _payload(_node("OpenAIEmbeddings-1", "OpenAIEmbeddings"))
+
+    report = migrate_flow_payload(payload, table=table, known_current_types={"OpenAIEmbeddings"})
+
+    assert report.rewritten_count == 1
+    assert report.errors == []
+    [record] = report.records
+    assert record.outcome == "rewritten"
+    assert payload["data"]["nodes"][0]["data"]["type"] == "ext:openai:OpenAIEmbeddings@official"
+
+
+@pytest.mark.unit
+def test_bundled_index_alias_suppresses_current_component_noise() -> None:
+    payload = _payload(_node("Prompt-1", "Prompt"))
+    table = MigrationTable(schema_version=1, entries=[])
+
+    report = migrate_flow_payload(payload, table=table)
+
+    assert report.rewritten_count == 0
+    assert report.errors == []
+    [record] = report.records
+    assert record.outcome == "known_current_component"
+    assert payload["data"]["nodes"][0]["data"]["type"] == "Prompt"
+
+
+@pytest.mark.unit
+def test_loaded_component_cache_suppresses_current_component_noise(monkeypatch: pytest.MonkeyPatch) -> None:
+    payload = _payload(_node("CustomCurrent-1", "CustomCurrent"))
+    table = MigrationTable(schema_version=1, entries=[])
+    fake_components_module = SimpleNamespace(
+        component_cache=SimpleNamespace(
+            all_types_dict={
+                "custom": {
+                    "CustomCurrent": {
+                        "display_name": "Custom Current",
+                    }
+                }
+            }
+        )
+    )
+    monkeypatch.setitem(sys.modules, "lfx.interface.components", fake_components_module)
+
+    report = migrate_flow_payload(payload, table=table)
+
+    assert report.rewritten_count == 0
+    assert report.errors == []
+    [record] = report.records
+    assert record.outcome == "known_current_component"
+    assert payload["data"]["nodes"][0]["data"]["type"] == "CustomCurrent"
+
+
+@pytest.mark.unit
 def test_unmapped_reference_emits_typed_error_with_suggestion(table: MigrationTable) -> None:
     # A near-miss on an existing entry: should produce a close-match hint.
     payload = _payload(_node("x", "OpenAIEmbedding"))  # missing trailing 's'
@@ -201,7 +312,7 @@ def test_ambiguous_bare_name_surfaces_component_name_ambiguous() -> None:
     )
 
     payload = _payload(_node("n1", "MergeDataComponent"))
-    report = migrate_flow_payload(payload, table=table)
+    report = migrate_flow_payload(payload, table=table, known_current_types={"MergeDataComponent"})
 
     [record] = report.records
     assert record.outcome == "ambiguous"
