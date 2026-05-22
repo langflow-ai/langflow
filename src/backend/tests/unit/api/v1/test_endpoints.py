@@ -303,7 +303,7 @@ async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient,
     monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
     monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", False)
     monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
-    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", True)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", False)
 
     response = await client.get("api/v1/config", headers=logged_in_headers)
     result = response.json()
@@ -314,7 +314,50 @@ async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient,
     assert result["hide_new_project_button"] is True
     assert result["hide_new_flow_button"] is True
     assert result["hide_starter_projects"] is True
+    # This flag is currently a direct passthrough (not part of embedded_mode cascade).
+    assert result["hide_getting_started_progress"] is False
+
+
+async def test_get_config_embedded_mode_false_keeps_individual_hide_flags(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """When embedded mode is disabled, individual hide flags should retain explicit values."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "embedded_mode", False)
+    monkeypatch.setattr(settings_service.settings, "hide_logout_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", True)
+    monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["embedded_mode"] is False
+    assert result["hide_logout_button"] is False
+    assert result["hide_new_project_button"] is False
+    assert result["hide_new_flow_button"] is True
+    assert result["hide_starter_projects"] is False
     assert result["hide_getting_started_progress"] is True
+
+
+async def test_get_config_returns_mcp_and_admin_only_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Config response should expose lock/admin feature flags from settings."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "mcp_servers_locked", True)
+    monkeypatch.setattr(settings_service.settings, "custom_component_admin_only", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_servers_locked"] is True
+    assert result["custom_component_admin_only"] is True
 
 
 async def test_get_config_returns_mcp_base_url(client: AsyncClient, logged_in_headers: dict):
