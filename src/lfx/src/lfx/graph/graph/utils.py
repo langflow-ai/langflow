@@ -255,7 +255,7 @@ def _update_source_handle_from_group_output(new_edge, group_node_data, g_nodes):
     new_source_handle["name"] = output_name
     if data_type := node.get("data", {}).get("type"):
         new_source_handle["dataType"] = data_type
-    if output_types := _get_output_types(node, output_name):
+    if output_types := source_handle.get("output_types") or _get_output_types(node, output_name):
         new_source_handle["output_types"] = output_types
     new_edge["data"]["sourceHandle"] = new_source_handle
     return True
