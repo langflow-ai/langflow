@@ -1,4 +1,4 @@
-"""Unit tests for lfx.base.composio.safe_provider.
+"""Unit tests for lfx_composio.base.safe_provider.
 
 Covers:
 - _sanitize_schema: adds missing 'type' keys recursively
@@ -57,7 +57,7 @@ class TestSanitizeSchema:
     """_sanitize_schema adds a 'type' key wherever one is missing."""
 
     def _get_fn(self):
-        from lfx.base.composio.safe_provider import _sanitize_schema
+        from lfx_composio.base.safe_provider import _sanitize_schema
 
         return _sanitize_schema
 
@@ -232,10 +232,10 @@ class TestPatchIdentifierSubstitutionOnce:
         """Apply the patch against a fake module, return the wrapped function."""
         with (
             patch.dict(sys.modules, {"composio_langchain.provider": fake_mod}),
-            patch("lfx.base.composio.safe_provider._COMPOSIO_AVAILABLE", new=True),
-            patch("lfx.base.composio.safe_provider._composio_lc_provider", fake_mod),
+            patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=True),
+            patch("lfx_composio.base.safe_provider._composio_lc_provider", fake_mod),
         ):
-            from lfx.base.composio import safe_provider
+            from lfx_composio.base import safe_provider
 
             # Reset sentinel so the patch runs fresh
             if hasattr(fake_mod, "_lfx_identifier_patched"):
@@ -260,10 +260,10 @@ class TestPatchIdentifierSubstitutionOnce:
         # Mark as already patched and call again
         fake_mod._lfx_identifier_patched = True
         with (
-            patch("lfx.base.composio.safe_provider._COMPOSIO_AVAILABLE", new=True),
-            patch("lfx.base.composio.safe_provider._composio_lc_provider", fake_mod),
+            patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=True),
+            patch("lfx_composio.base.safe_provider._composio_lc_provider", fake_mod),
         ):
-            from lfx.base.composio import safe_provider
+            from lfx_composio.base import safe_provider
 
             safe_provider._patch_identifier_substitution_once()
         # Function should not be re-wrapped
@@ -280,8 +280,8 @@ class TestPatchIdentifierSubstitutionOnce:
     def test_skips_when_composio_unavailable(self):
         fake_mod = _make_fake_lc_provider()
         original = fake_mod._substitute_reserved_python_keywords
-        with patch("lfx.base.composio.safe_provider._COMPOSIO_AVAILABLE", new=False):
-            from lfx.base.composio import safe_provider
+        with patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=False):
+            from lfx_composio.base import safe_provider
 
             safe_provider._patch_identifier_substitution_once()
         assert fake_mod._substitute_reserved_python_keywords is original
@@ -301,8 +301,8 @@ class TestPythonReservedExpansion:
     def test_from_is_in_expanded_reserved_set(self):
         fake_mod = _make_fake_lc_provider()
         with (
-            patch("lfx.base.composio.safe_provider._COMPOSIO_AVAILABLE", new=True),
-            patch("lfx.base.composio.safe_provider._composio_lc_provider", fake_mod),
+            patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=True),
+            patch("lfx_composio.base.safe_provider._composio_lc_provider", fake_mod),
         ):
             fake_mod._python_reserved = set(keyword.kwlist)
         assert "from" in fake_mod._python_reserved
