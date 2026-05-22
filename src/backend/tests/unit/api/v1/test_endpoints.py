@@ -171,6 +171,60 @@ class TestMetadataComponent(Component):
     assert "restricted to administrators" in response.json().get("detail", "")
 
 
+async def test_custom_component_create_admin_only_blocks_non_superuser(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    dummy_settings = type(
+        "DummySettings",
+        (),
+        {"custom_component_admin_only": True, "allow_custom_components": True},
+    )()
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_settings_service",
+        lambda: type("DummyService", (), {"settings": dummy_settings})(),
+    )
+
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "restricted to administrators" in response.json().get("detail", "")
+
+
+async def test_custom_component_create_admin_only_allows_superuser(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict,
+    monkeypatch,
+):
+    dummy_settings = type(
+        "DummySettings",
+        (),
+        {"custom_component_admin_only": True, "allow_custom_components": True},
+    )()
+    monkeypatch.setattr(
+        "langflow.api.v1.endpoints.get_settings_service",
+        lambda: type("DummyService", (), {"settings": dummy_settings})(),
+    )
+
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post(
+        "api/v1/custom_component",
+        json=request.model_dump(),
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    assert "data" in response.json()
+
+
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
     """Test that the /custom_component endpoint returns metadata with module and code_hash."""
     component_code = """

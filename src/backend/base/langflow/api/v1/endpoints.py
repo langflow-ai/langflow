@@ -80,6 +80,14 @@ from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
+
+def _requires_component_hash_lookups(settings: object, user: CurrentActiveUser) -> bool:
+    requires_admin_only_hashes = (
+        getattr(settings, "custom_component_admin_only", False) is True and not user.is_superuser
+    )
+    return requires_admin_only_hashes or not settings.allow_custom_components
+
+
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
@@ -1334,13 +1342,15 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     settings_service = get_settings_service()
-    get_component_hash_lookups_for_validation()
-    all_known = component_cache.all_known_hashes
-    if all_known is None:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Component templates are still initializing. Please try again in a few seconds.",
-        )
+    all_known = None
+    if _requires_component_hash_lookups(settings_service.settings, user):
+        get_component_hash_lookups_for_validation()
+        all_known = component_cache.all_known_hashes
+        if all_known is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Component templates are still initializing. Please try again in a few seconds.",
+            )
 
     # In admin-only mode, non-admin users may refresh/update only known server
     # templates. Truly custom code edits remain restricted to administrators.
