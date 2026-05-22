@@ -616,7 +616,6 @@ class WatsonxDeploymentItemProviderData(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    name: NonEmptyString
     display_name: NonEmptyString
     description: str
     tool_ids: list[NonEmptyString]

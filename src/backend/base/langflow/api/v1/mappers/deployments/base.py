@@ -889,9 +889,14 @@ class BaseDeploymentMapper:
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
 
-    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+    def shape_deployment_get_data(
+        self,
+        provider_data: AdapterPayload | None,
+        *,
+        name: str | None = None,
+    ) -> dict[str, Any] | None:
         """Shape provider_data for single-deployment GET responses."""
-        _ = provider_data
+        _ = provider_data, name
         msg = (
             "BaseDeploymentMapper does not implement shape_deployment_get_data; "
             "must be implemented by subclasses (e.g. watsonx_orchestrate). "

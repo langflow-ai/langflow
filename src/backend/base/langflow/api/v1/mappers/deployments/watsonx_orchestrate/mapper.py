@@ -836,7 +836,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
             resource_key = str(item.id)
             provider_data_by_resource_key[resource_key] = WatsonxApiDeploymentListItemProviderData(
-                name=item_provider_data.name,
+                name=item.name,
                 display_name=item_provider_data.display_name,
                 llm=item_provider_data.llm,
                 environments=item_provider_data.environments,
@@ -1508,6 +1508,8 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         if item_provider_data is not None and not isinstance(item_provider_data, dict):
             msg = "Invalid deployment list item provider_data payload: expected object or null."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        provider_data = dict(item_provider_data or {})
+        provider_data.pop("name", None)
         try:
             return WatsonxApiProviderDeploymentListItem.model_validate(
                 {
@@ -1517,7 +1519,7 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                     "description": getattr(item, "description", None),
                     "created_at": item.created_at,
                     "updated_at": item.updated_at,
-                    **(item_provider_data or {}),
+                    **provider_data,
                 }
             ).model_dump(
                 mode="json",
@@ -1530,16 +1532,24 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
                 detail=f"Invalid deployment list item provider_data payload: {detail}",
             ) from exc
 
-    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+    def shape_deployment_get_data(
+        self,
+        provider_data: AdapterPayload | None,
+        *,
+        name: str | None = None,
+    ) -> dict[str, Any] | None:
         parsed = self.parse_adapter_slot(
             slot=WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_item_data,
             slot_name="deployment_item_data",
             raw=provider_data,
             operation="reading deployment metadata",
         )
+        if name is None:
+            msg = "Missing deployment name while shaping wxO deployment metadata."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
         return WatsonxApiDeploymentGetProviderData(
             llm=parsed.llm,
-            name=parsed.name,
+            name=name,
             display_name=parsed.display_name,
             environments=parsed.environments,
         ).model_dump(mode="json")

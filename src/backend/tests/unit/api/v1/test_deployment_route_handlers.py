@@ -2427,7 +2427,7 @@ class TestGetDeploymentSync:
         from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 
         class _MapperForGet(BaseDeploymentMapper):
-            def shape_deployment_get_data(self, provider_data):
+            def shape_deployment_get_data(self, provider_data, *, name=None):  # noqa: ARG002
                 if provider_data is None:
                     return None
                 sanitized_provider_data = dict(provider_data)
@@ -2498,7 +2498,7 @@ class TestGetDeploymentSync:
         from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 
         class _MapperForGet(BaseDeploymentMapper):
-            def shape_deployment_get_data(self, provider_data):
+            def shape_deployment_get_data(self, provider_data, *, name=None):  # noqa: ARG002
                 return dict(provider_data) if provider_data is not None else None
 
             def extract_metadata_for_get(self, get_result):

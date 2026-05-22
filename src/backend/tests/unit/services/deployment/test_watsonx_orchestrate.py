@@ -2641,7 +2641,6 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
     assert sorted(item.id for item in result.deployments) == ["dep-3"]
     assert fake_agent.last_list_params == {"ids": ["dep-2"], "names": ["deployment-3", "deployment-4"]}
     assert result.deployments[0].provider_data == {
-        "name": "deployment-3",
         "display_name": "Deployment Three",
         "description": "Provider description",
         "tool_ids": [],
@@ -4430,6 +4429,7 @@ async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
                 }
             ]
@@ -4548,6 +4548,7 @@ async def test_list_snapshots_single_deployment_scope_extracts_connections(monke
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
                 }
             ]
@@ -5330,7 +5331,6 @@ async def test_get_deployment_includes_tool_ids_and_environment_in_provider_data
     result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
     assert result.provider_data == {
-        "name": "my_agent",
         "display_name": "My Agent",
         "description": "desc",
         "tool_ids": ["tool-1", "tool-2"],
@@ -5359,7 +5359,7 @@ async def test_get_deployment_requires_provider_display_metadata(monkeypatch, mi
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    with pytest.raises(DeploymentError, match="getting a deployment"):
+    with pytest.raises(KeyError, match=missing_field):
         await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
 
@@ -5387,7 +5387,6 @@ async def test_get_deployment_defaults_tool_ids_to_empty_list(monkeypatch):
     result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
     assert result.provider_data == {
-        "name": "my_agent",
         "display_name": "My Agent",
         "description": "desc",
         "tool_ids": [],

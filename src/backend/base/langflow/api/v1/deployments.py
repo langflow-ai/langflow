@@ -1411,7 +1411,7 @@ async def get_deployment(
 
     payload = deployment.model_dump(exclude_unset=True)
     raw_provider_data = payload.get("provider_data")
-    provider_data = deployment_mapper.shape_deployment_get_data(raw_provider_data)
+    provider_data = deployment_mapper.shape_deployment_get_data(raw_provider_data, name=payload.get("name"))
     return DeploymentGetResponse(
         id=deployment_row.id,
         provider_id=deployment_row.deployment_provider_account_id,

@@ -111,7 +111,7 @@ class _NoSnapshotBindingMapper(BaseDeploymentMapper):
             "description": get_result.provider_data["description"],
         }
 
-    def shape_deployment_get_data(self, provider_data):
+    def shape_deployment_get_data(self, provider_data, *, name=None):  # noqa: ARG002
         return provider_data if isinstance(provider_data, dict) else None
 
 

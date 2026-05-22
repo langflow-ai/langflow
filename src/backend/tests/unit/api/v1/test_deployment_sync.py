@@ -61,13 +61,11 @@ def _wxo_deployment_provider_data(
     *,
     tool_ids: list[str],
     environments: list[str] | None = None,
-    name: str = "agent_api_name",
     display_name: str = "Agent Display",
     description: str = "Agent description",
     llm: str = "meta-llm",
 ) -> dict[str, Any]:
     return {
-        "name": name,
         "display_name": display_name,
         "description": description,
         "tool_ids": tool_ids,
@@ -1015,7 +1013,7 @@ def test_watsonx_mapper_extract_snapshot_bindings_requires_contract_fields():
     with pytest.raises(HTTPException) as exc_info:
         mapper.extract_snapshot_bindings(provider_view)
     assert exc_info.value.status_code == 500
-    assert "Missing required field 'name'" in str(exc_info.value.detail)
+    assert "Missing required field 'display_name'" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_extract_snapshot_bindings_requires_provider_data_object():
@@ -1118,12 +1116,12 @@ def test_watsonx_mapper_shape_deployment_get_data_hides_internal_sync_fields():
     shaped = mapper.shape_deployment_get_data(
         {
             "llm": "my-llm",
-            "name": "agent-name",
             "display_name": "Agent Name",
             "description": "Provider description",
             "tool_ids": ["tool-1", "tool-2"],
             "environments": ["draft"],
-        }
+        },
+        name="agent-name",
     )
 
     assert shaped == {
@@ -2139,9 +2137,8 @@ class TestListDeploymentsSyncedBindingPhase:
                 [
                     SimpleNamespace(
                         id="rk-1",
-                        name="Agent 1",
+                        name="agent_api_name",
                         provider_data={
-                            "name": "agent_api_name",
                             "display_name": "Agent One",
                             "description": "Provider description",
                             "tool_ids": ["snap-1"],

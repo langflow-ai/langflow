@@ -214,7 +214,6 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
         created_at=now,
         updated_at=now,
         provider_data={
-            "name": "Agent 1",
             "display_name": "Agent 1",
             "description": "desc",
             "tool_ids": ["tool-1", "tool-2"],
@@ -250,7 +249,6 @@ def test_watsonx_mapper_provider_list_entry_rejects_blank_tool_id() -> None:
         created_at=now,
         updated_at=now,
         provider_data={
-            "name": "Agent 1",
             "display_name": "Agent 1",
             "description": "desc",
             "tool_ids": ["tool-1", "  "],
@@ -279,7 +277,6 @@ def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -
                 created_at=now,
                 updated_at=now,
                 provider_data={
-                    "name": "Agent 1",
                     "display_name": "Agent 1",
                     "description": "desc",
                     "tool_ids": ["tool-1"],
@@ -342,9 +339,8 @@ def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
         deployments=[
             SimpleNamespace(
                 id="agent-1",
-                name="Agent 1",
+                name="agent_api_name",
                 provider_data={
-                    "name": "agent_api_name",
                     "display_name": "  Agent One  ",
                     "description": "  Provider description  ",
                     "tool_ids": ["tool-1"],
@@ -383,12 +379,12 @@ def test_watsonx_mapper_shapes_get_provider_agent_metadata() -> None:
     provider_data = mapper.shape_deployment_get_data(
         {
             "llm": TEST_WXO_LLM,
-            "name": "agent_api_name",
             "display_name": "  Agent Display Name  ",
             "description": "  Provider description  ",
             "tool_ids": ["tool-1"],
             "environments": ["draft"],
-        }
+        },
+        name="agent_api_name",
     )
 
     assert provider_data == {
@@ -406,12 +402,12 @@ def test_watsonx_mapper_shapes_get_provider_agent_metadata_requires_llm() -> Non
         mapper.shape_deployment_get_data(
             {
                 "llm": None,
-                "name": "agent_api_name",
                 "display_name": "Agent Display Name",
                 "description": "Provider description",
                 "tool_ids": ["tool-1"],
                 "environments": ["draft"],
-            }
+            },
+            name="agent_api_name",
         )
 
     assert exc_info.value.status_code == 500
@@ -426,14 +422,13 @@ def test_watsonx_mapper_shapes_get_provider_agent_metadata_requires_llm() -> Non
             "Invalid payload.",
         ),
         (
-            SimpleNamespace(id="agent-1", provider_data={"name": "agent-1", "tool_ids": ["tool-1"]}),
+            SimpleNamespace(id="agent-1", provider_data={"tool_ids": ["tool-1"]}),
             "Missing required field 'display_name'.",
         ),
         (
             SimpleNamespace(
                 id="agent-1",
                 provider_data={
-                    "name": "agent-1",
                     "display_name": None,
                     "description": "Provider description",
                     "tool_ids": ["tool-1"],
@@ -1409,7 +1404,6 @@ def test_watsonx_mapper_create_result_from_existing_resource_includes_empty_payl
             name="agent_technical_name",
             type="agent",
             provider_data={
-                "name": "agent_technical_name",
                 "display_name": "Provider Label",
                 "description": "Provider description",
                 "tool_ids": [],
@@ -1441,7 +1435,6 @@ def test_watsonx_mapper_existing_resource_result_preserves_description_before_db
             name="agent_technical_name",
             type="agent",
             provider_data={
-                "name": "agent_technical_name",
                 "display_name": "Provider Label",
                 "description": long_description,
                 "tool_ids": [],
@@ -1653,7 +1646,6 @@ def test_watsonx_mapper_existing_agent_create_model_uses_provider_metadata() -> 
         name="agent_technical_name",
         type="agent",
         provider_data={
-            "name": "agent_technical_name",
             "display_name": "Provider Label",
             "description": "Provider description",
             "tool_ids": [],
@@ -1688,7 +1680,6 @@ def test_watsonx_mapper_existing_agent_create_model_passes_description_for_db_wr
         name="agent_technical_name",
         type="agent",
         provider_data={
-            "name": "agent_technical_name",
             "display_name": "Provider Label",
             "description": long_description,
             "tool_ids": [],
@@ -1717,7 +1708,6 @@ def test_watsonx_mapper_metadata_sync_kwargs_include_display_name() -> None:
                 name="agent_technical_name",
                 type="agent",
                 provider_data={
-                    "name": "agent_technical_name",
                     "display_name": "Provider Label",
                     "description": "Provider description",
                     "tool_ids": [],
@@ -1747,7 +1737,6 @@ def test_watsonx_mapper_metadata_sync_passes_list_description() -> None:
                 name="agent_technical_name",
                 type="agent",
                 provider_data={
-                    "name": "agent_technical_name",
                     "display_name": "Provider Label",
                     "description": "short",
                     "tool_ids": [],
@@ -1762,7 +1751,6 @@ def test_watsonx_mapper_metadata_sync_passes_list_description() -> None:
                 name="agent_technical_name_2",
                 type="agent",
                 provider_data={
-                    "name": "agent_technical_name_2",
                     "display_name": "Provider Label 2",
                     "description": "x" * 501,
                     "tool_ids": [],
@@ -1787,7 +1775,6 @@ def test_watsonx_mapper_get_metadata_sync_kwargs_include_display_name() -> None:
         name="agent_technical_name",
         type="agent",
         provider_data={
-            "name": "agent_technical_name",
             "display_name": "Provider Label",
             "description": "Provider description",
             "tool_ids": [],

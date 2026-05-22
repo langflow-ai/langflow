@@ -193,8 +193,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             raise InvalidContentError(message=detail) from None
 
     def _snapshot_item_provider_data_from_tool(self, tool: dict[str, Any]) -> dict[str, object]:
-        technical_name = str(tool.get("name") or tool["id"]).strip()
-        display_name = str(tool.get("display_name") or technical_name).strip()
+        technical_name = tool["name"]
+        display_name = tool["display_name"]
         return self._validate_snapshot_item_provider_data(
             {
                 "name": technical_name,
@@ -214,7 +214,6 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         """
         return self.payload_schemas.deployment_item_data.parse(
             {
-                "name": agent["name"],
                 "display_name": agent["display_name"],
                 "description": agent["description"],
                 "tool_ids": agent["tools"],
@@ -463,18 +462,15 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             msg = f"Deployment '{deployment_id}' not found."
             raise DeploymentNotFoundError(msg)
         try:
+            provider_data = self._validate_deployment_item_provider_data(agent)
             return get_deployment_detail_metadata(
                 data=agent,
                 deployment_type=DeploymentType.AGENT,
-                provider_data=self._validate_deployment_item_provider_data(agent),
+                provider_data=provider_data,
             )
-        except Exception as exc:  # noqa: BLE001
-            raise_as_deployment_error(
-                exc,
-                error_prefix=ErrorPrefix.GET,
-                log_msg="Unexpected error validating wxO deployment",
-                pass_through=(AuthenticationError, AuthorizationError, DeploymentNotFoundError),
-            )
+        except (AdapterPayloadMissingError, AdapterPayloadValidationError) as exc:
+            detail = exc.format_first_error() if isinstance(exc, AdapterPayloadValidationError) else str(exc)
+            raise InvalidContentError(message=detail) from None
 
     async def update(
         self,
@@ -771,11 +767,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             snapshots = [
                 SnapshotItem(
                     id=tool["id"],
-                    name=tool.get("name") or tool["id"],
+                    name=tool["name"],
                     provider_data=self._snapshot_item_provider_data_from_tool(tool),
                 )
-                for tool in (raw_tools or [])
-                if isinstance(tool, dict) and tool.get("id")
+                for tool in raw_tools
             ]
             return SnapshotListResult(
                 snapshots=snapshots,
@@ -812,11 +807,10 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         snapshots = [
             SnapshotItem(
                 id=tool["id"],
-                name=tool.get("name") or tool["id"],
+                name=tool["name"],
                 provider_data=self._snapshot_item_provider_data_from_tool(tool),
             )
-            for tool in (tools or [])
-            if isinstance(tool, dict) and tool.get("id")
+            for tool in tools
         ]
         resolved_ids = {s.id for s in snapshots}
         stale_ids = [tid for tid in requested_tool_ids if tid not in resolved_ids]
