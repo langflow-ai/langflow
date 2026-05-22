@@ -16,10 +16,8 @@ import sys
 import types
 from unittest.mock import patch
 
-# ---------------------------------------------------------------------------
-# Helpers - build a minimal fake composio_langchain.provider module so the
-# tests run even when composio is not installed in the test virtualenv.
-# ---------------------------------------------------------------------------
+from lfx_composio.base import safe_provider
+from lfx_composio.base.safe_provider import _sanitize_schema
 
 
 def _make_fake_lc_provider():
@@ -48,17 +46,10 @@ def _make_fake_lc_provider():
     return mod
 
 
-# ---------------------------------------------------------------------------
-# _sanitize_schema
-# ---------------------------------------------------------------------------
-
-
 class TestSanitizeSchema:
     """_sanitize_schema adds a 'type' key wherever one is missing."""
 
     def _get_fn(self):
-        from lfx_composio.base.safe_provider import _sanitize_schema
-
         return _sanitize_schema
 
     def test_adds_object_type_when_properties_present(self):
@@ -99,15 +90,9 @@ class TestSanitizeSchema:
         assert schema["anyOf"][1]["type"] == "object"
 
     def test_noop_on_non_dict(self):
-        # Should not raise
         self._get_fn()(None)
         self._get_fn()("string")
         self._get_fn()(42)
-
-
-# ---------------------------------------------------------------------------
-# safe_substitute (the inner closure created by _patch_identifier_substitution_once)
-# ---------------------------------------------------------------------------
 
 
 class TestSafeSubstituteLogic:
@@ -142,8 +127,6 @@ class TestSafeSubstituteLogic:
 
         return safe_substitute
 
-    # --- basic renaming ---
-
     def test_renames_hyphenated_property(self):
         sub = self._make_safe_substitute()
         schema = {"properties": {"extension-id": {"type": "string"}}}
@@ -160,7 +143,7 @@ class TestSafeSubstituteLogic:
         schema = {"properties": {"from": {"type": "string"}, "to": {"type": "string"}}}
         schema, _ = sub(schema)
         assert "from" not in schema["properties"]
-        assert "to" in schema["properties"]  # valid identifier, unchanged
+        assert "to" in schema["properties"]
 
     def test_renames_dotted_property(self):
         sub = self._make_safe_substitute()
@@ -181,12 +164,11 @@ class TestSafeSubstituteLogic:
 
     def test_handles_collision_by_appending_underscore(self):
         sub = self._make_safe_substitute()
-        # 'a-b' would become 'a_b', but 'a_b' already exists
         schema = {"properties": {"a-b": {"type": "string"}, "a_b": {"type": "integer"}}}
         schema, keywords = sub(schema)
         assert "a-b" not in schema["properties"]
-        assert "a_b" in schema["properties"]  # original survives
-        assert "a_b_" in schema["properties"]  # renamed version
+        assert "a_b" in schema["properties"]
+        assert "a_b_" in schema["properties"]
         assert keywords["a_b_"] == "a-b"
 
     def test_preserves_valid_identifiers_unchanged(self):
@@ -220,11 +202,6 @@ class TestSafeSubstituteLogic:
         assert len(keywords) == 3
 
 
-# ---------------------------------------------------------------------------
-# _patch_identifier_substitution_once
-# ---------------------------------------------------------------------------
-
-
 class TestPatchIdentifierSubstitutionOnce:
     """_patch_identifier_substitution_once wraps the composio_langchain function."""
 
@@ -232,12 +209,9 @@ class TestPatchIdentifierSubstitutionOnce:
         """Apply the patch against a fake module, return the wrapped function."""
         with (
             patch.dict(sys.modules, {"composio_langchain.provider": fake_mod}),
-            patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=True),
-            patch("lfx_composio.base.safe_provider._composio_lc_provider", fake_mod),
+            patch.object(safe_provider, "_COMPOSIO_AVAILABLE", new=True),
+            patch.object(safe_provider, "_composio_lc_provider", fake_mod),
         ):
-            from lfx_composio.base import safe_provider
-
-            # Reset sentinel so the patch runs fresh
             if hasattr(fake_mod, "_lfx_identifier_patched"):
                 del fake_mod._lfx_identifier_patched
             safe_provider._patch_identifier_substitution_once()
@@ -257,16 +231,12 @@ class TestPatchIdentifierSubstitutionOnce:
     def test_idempotent(self):
         fake_mod = _make_fake_lc_provider()
         patched_once = self._run_patch(fake_mod)
-        # Mark as already patched and call again
         fake_mod._lfx_identifier_patched = True
         with (
-            patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=True),
-            patch("lfx_composio.base.safe_provider._composio_lc_provider", fake_mod),
+            patch.object(safe_provider, "_COMPOSIO_AVAILABLE", new=True),
+            patch.object(safe_provider, "_composio_lc_provider", fake_mod),
         ):
-            from lfx_composio.base import safe_provider
-
             safe_provider._patch_identifier_substitution_once()
-        # Function should not be re-wrapped
         assert fake_mod._substitute_reserved_python_keywords is patched_once
 
     def test_patched_fn_renames_hyphenated_field(self):
@@ -280,29 +250,19 @@ class TestPatchIdentifierSubstitutionOnce:
     def test_skips_when_composio_unavailable(self):
         fake_mod = _make_fake_lc_provider()
         original = fake_mod._substitute_reserved_python_keywords
-        with patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=False):
-            from lfx_composio.base import safe_provider
-
+        with patch.object(safe_provider, "_COMPOSIO_AVAILABLE", new=False):
             safe_provider._patch_identifier_substitution_once()
         assert fake_mod._substitute_reserved_python_keywords is original
 
 
-# ---------------------------------------------------------------------------
-# _python_reserved expansion
-# ---------------------------------------------------------------------------
-
-
 class TestPythonReservedExpansion:
-    """Verify _python_reserved is expanded to the full Python keyword list.
-
-    The expansion happens at import time when composio is available.
-    """
+    """Verify _python_reserved is expanded to the full Python keyword list."""
 
     def test_from_is_in_expanded_reserved_set(self):
         fake_mod = _make_fake_lc_provider()
         with (
-            patch("lfx_composio.base.safe_provider._COMPOSIO_AVAILABLE", new=True),
-            patch("lfx_composio.base.safe_provider._composio_lc_provider", fake_mod),
+            patch.object(safe_provider, "_COMPOSIO_AVAILABLE", new=True),
+            patch.object(safe_provider, "_composio_lc_provider", fake_mod),
         ):
             fake_mod._python_reserved = set(keyword.kwlist)
         assert "from" in fake_mod._python_reserved
@@ -313,7 +273,6 @@ class TestPythonReservedExpansion:
         assert set(keyword.kwlist).issubset(fake_mod._python_reserved)
 
     def test_original_reserved_words_still_covered(self):
-        """'for' and 'async' were in the original set — must still be handled."""
         fake_mod = _make_fake_lc_provider()
         fake_mod._python_reserved = set(keyword.kwlist)
         assert "for" in fake_mod._python_reserved
