@@ -39,7 +39,17 @@ export const AUTH_MAINTENANCE_PATHS = [
 
 export function isAuthMaintenanceURL(url: string | undefined): boolean {
   if (!url) return false;
-  return AUTH_MAINTENANCE_PATHS.some((path) => url.includes(path));
+  return AUTH_MAINTENANCE_PATHS.some((path) => {
+    const idx = url.indexOf(path);
+    if (idx === -1) return false;
+    const charAfter = url[idx + path.length];
+    return (
+      charAfter === undefined ||
+      charAfter === "/" ||
+      charAfter === "?" ||
+      charAfter === "#"
+    );
+  });
 }
 
 function ApiInterceptor() {
@@ -108,16 +118,6 @@ function ApiInterceptor() {
             await clearBuildVerticesState(error);
             return Promise.reject(error);
           }
-          // One-shot guard: if we've already retried this exact request
-          // once after a refresh, don't retry again. Without this, a
-          // request that 401s post-refresh would loop back through here.
-          const requestConfig = error?.config as
-            | (AxiosRequestConfig & { _retry?: boolean })
-            | undefined;
-          if (requestConfig?._retry) {
-            await clearBuildVerticesState(error);
-            return Promise.reject(error);
-          }
           const stillRefresh = checkErrorCount();
           if (!stillRefresh) {
             return Promise.reject(error);
@@ -132,16 +132,7 @@ function ApiInterceptor() {
             await clearBuildVerticesState(error);
             return Promise.reject(error);
           }
-          // Refresh succeeded — replay the original request and resolve
-          // the interceptor with its response so the caller transparently
-          // gets the retried result. Without this, callers used to
-          // resolve with ``undefined`` after a successful refresh because
-          // the interceptor fell through without returning the retried
-          // response.
           await clearBuildVerticesState(error);
-          if (requestConfig) {
-            requestConfig._retry = true;
-          }
           return await remakeRequest(error);
         }
 
@@ -239,8 +230,8 @@ function ApiInterceptor() {
     };
   }, [accessToken, setErrorData, customHeaders, autoLogin]);
 
-  function checkErrorCount() {
-    if (isLoginPage) return;
+  function checkErrorCount(): boolean {
+    if (isLoginPage) return false;
 
     setAuthenticationErrorCount(authenticationErrorCount + 1);
 
@@ -254,7 +245,7 @@ function ApiInterceptor() {
   }
 
   async function tryToRenewAccessToken(error: AxiosError) {
-    if (isLoginPage) return;
+    if (isLoginPage) throw error;
     if (error.config?.headers) {
       for (const [key, value] of Object.entries(customHeaders)) {
         error.config.headers[key] = value;
@@ -265,7 +256,11 @@ function ApiInterceptor() {
       setAuthenticationErrorCount(0);
     } catch (refreshError) {
       console.error(refreshError);
-      mutationLogout();
+      const isNetworkError =
+        (refreshError as AxiosError)?.response === undefined;
+      if (!isNetworkError) {
+        mutationLogout();
+      }
       throw refreshError;
     }
   }
