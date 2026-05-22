@@ -1604,5 +1604,19 @@
   "updateComponent.updateButtonPlural": "Update Components",
   "shareModal.yourComponent": "your component",
   "shareModal.workflow": "workflow",
-  "modelProviders.loadingProviders": "Loading providers"
+  "modelProviders.loadingProviders": "Loading providers",
+  "updateComponents.customComponentsDisabled": "Custom components are disabled",
+  "updateComponents.upgradeRequired": "Upgrade is required to execute flow",
+  "updateComponents.blockedAndMustUpdate_one": "{{blocked}} custom component{{blockedPlural}} cannot run and {{count}} component must be updated before this flow can run",
+  "updateComponents.blockedAndMustUpdate_other": "{{blocked}} custom component{{blockedPlural}} cannot run and {{count}} components must be updated before this flow can run",
+  "updateComponents.cannotRunDisabled_one": "{{count}} custom component cannot run while custom components are disabled",
+  "updateComponents.cannotRunDisabled_other": "{{count}} custom components cannot run while custom components are disabled",
+  "updateComponents.mustBeUpdated_one": "{{count}} component must be updated before this flow can run",
+  "updateComponents.mustBeUpdated_other": "{{count}} components must be updated before this flow can run",
+  "updateComponents.updatesAvailable_one": "Update is available for {{count}} component",
+  "updateComponents.updatesAvailable_other": "Updates are available for {{count}} components",
+  "updateComponents.dismiss": "Dismiss",
+  "updateComponents.dismissAll": "Dismiss All",
+  "updateComponents.reviewAll": "Review All",
+  "updateComponents.updateAll": "Update All"
 }

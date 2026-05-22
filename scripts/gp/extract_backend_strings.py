@@ -172,6 +172,13 @@ def collect_strings() -> dict[str, str]:
         )
     print(f"Found {note_count} note node(s) across starter projects.")
 
+    # Shared tool-mode output — injected dynamically on every component when tool_mode is
+    # enabled, so it's never part of any component's static output list.  Uses the sentinel
+    # norm "_toolmode" so the runtime translator can look it up with a single shared key.
+    from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME as _TOD, TOOL_OUTPUT_NAME as _TON
+
+    flat[_component_field_key("_toolmode", f"outputs.{_TON}.display_name", _TOD)] = _TOD
+
     return dict(sorted(flat.items()))
 
 

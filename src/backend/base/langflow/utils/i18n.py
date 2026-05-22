@@ -229,12 +229,15 @@ def translate_component_node(comp_name: str, node: dict[str, Any], locale: str) 
                 translated["outputs"].append(out)
                 continue
             out_name = out.get("name", "")
+            # The tool-mode output is injected dynamically (not a static class output), so
+            # it's stored under the sentinel norm "_toolmode" shared across all components.
+            out_norm = "_toolmode" if out_name == "component_as_tool" else norm
             out_updates = {}
             for sub in ("display_name", "info"):
                 val = out.get(sub, "")
                 if val:
                     out_updates[sub] = translate(
-                        component_field_key(norm, f"outputs.{out_name}.{sub}", val), locale, val
+                        component_field_key(out_norm, f"outputs.{out_name}.{sub}", val), locale, val
                     )
             translated["outputs"].append({**out, **out_updates} if out_updates else out)
 

@@ -1,4 +1,5 @@
 {
+  "components._toolmode.outputs.component_as_tool.display_name.108f1240": "Toolset",
   "components.addcontenttopage.description.05abfe1f": "Convert markdown text to Notion blocks and append them to a Notion page.",
   "components.addcontenttopage.display_name.aacaf495": "Add Content to Page ",
   "components.addcontenttopage.inputs.block_id.display_name.8fa0a68b": "Page/Block ID",

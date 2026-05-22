@@ -2,6 +2,7 @@ import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
   type UpdateNodesType,
@@ -35,6 +36,7 @@ const CONTAINER_VARIANTS = {
 };
 
 export default function UpdateAllComponents() {
+  const { t } = useTranslation();
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -265,15 +267,25 @@ export default function UpdateAllComponents() {
   const showDismissedWarning = !allowCustomComponents && allDismissed;
   const summaryMessage = showDismissedWarning
     ? blockedComponents.length > 0
-      ? "Custom components are disabled"
-      : "Upgrade is required to execute flow"
+      ? t("updateComponents.customComponentsDisabled")
+      : t("updateComponents.upgradeRequired")
     : !allowCustomComponents
       ? blockedComponents.length > 0 && updatableComponents.length > 0
-        ? `${blockedComponents.length} custom component${blockedComponents.length > 1 ? "s cannot" : " cannot"} run and ${updatableComponents.length} component${updatableComponents.length > 1 ? "s must" : " must"} be updated before this flow can run`
+        ? t("updateComponents.blockedAndMustUpdate", {
+            count: updatableComponents.length,
+            blocked: blockedComponents.length,
+            blockedPlural: blockedComponents.length > 1 ? "s" : "",
+          })
         : blockedComponents.length > 0
-          ? `${blockedComponents.length} custom component${blockedComponents.length > 1 ? "s cannot" : " cannot"} run while custom components are disabled`
-          : `${updatableComponents.length} component${updatableComponents.length > 1 ? "s must" : " must"} be updated before this flow can run`
-      : `Update${updatableComponents.length > 1 ? "s are" : " is"} available for ${updatableComponents.length} component${updatableComponents.length > 1 ? "s" : ""}`;
+          ? t("updateComponents.cannotRunDisabled", {
+              count: blockedComponents.length,
+            })
+          : t("updateComponents.mustBeUpdated", {
+              count: updatableComponents.length,
+            })
+      : t("updateComponents.updatesAvailable", {
+          count: updatableComponents.length,
+        });
 
   return (
     <AnimatePresence mode="wait">
@@ -306,7 +318,7 @@ export default function UpdateAllComponents() {
                   className="shrink-0 text-sm"
                   onClick={handleDismissAllComponents}
                 >
-                  Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
+                  {componentsToUpdateFiltered.length > 1 ? t("updateComponents.dismissAll") : t("updateComponents.dismiss")}
                 </Button>
               )}
               {updatableComponents.length > 0 && (
@@ -317,7 +329,7 @@ export default function UpdateAllComponents() {
                   loading={loadingUpdate}
                   data-testid="update-all-button"
                 >
-                  {breakingChanges.length > 0 ? "Review All" : "Update All"}
+                  {breakingChanges.length > 0 ? t("updateComponents.reviewAll") : t("updateComponents.updateAll")}
                 </Button>
               )}
             </div>
