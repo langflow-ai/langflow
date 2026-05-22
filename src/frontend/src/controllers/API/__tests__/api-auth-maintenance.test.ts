@@ -26,13 +26,17 @@ describe("isAuthMaintenanceURL", () => {
   });
 
   it("does not cross-match login vs auto_login (separate paths)", () => {
-    // ``/login`` and ``/auto_login`` both appear in the list; verify the
-    // matcher recognises them via the leading slash anchor so an
-    // ``/auto_login`` URL is not mis-classified as ``login``.
-    const autoLogin = "/api/v1/auto_login";
-    expect(autoLogin.includes("/login")).toBe(false);
-    expect(autoLogin.includes("/auto_login")).toBe(true);
-    expect(isAuthMaintenanceURL(autoLogin)).toBe(true);
+    // Both /login and /auto_login are in the list. Verify the matcher
+    // classifies each correctly and does not confuse one for the other.
+    expect(isAuthMaintenanceURL("/api/v1/auto_login")).toBe(true);
+    expect(isAuthMaintenanceURL("/api/v1/login")).toBe(true);
+  });
+
+  it("does not match URLs that share a path segment prefix with a maintenance path", () => {
+    // Substring matching would false-positive on these — path-segment matching must not.
+    expect(isAuthMaintenanceURL("/api/v1/refresh_tokens")).toBe(false);
+    expect(isAuthMaintenanceURL("/api/v1/login_history")).toBe(false);
+    expect(isAuthMaintenanceURL("/api/v1/logout_sessions")).toBe(false);
   });
 
   it("returns false for empty or undefined urls", () => {

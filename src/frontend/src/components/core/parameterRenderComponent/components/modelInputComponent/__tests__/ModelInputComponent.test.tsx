@@ -552,7 +552,7 @@ describe("ModelInputComponent", () => {
       expect(screen.queryByTestId("gpt-4-option")).not.toBeInTheDocument();
     });
 
-    it("should call refresh with silent flag exactly once per click", async () => {
+    it("should call refresh with silent=false exactly once per click", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
 
@@ -567,7 +567,7 @@ describe("ModelInputComponent", () => {
       await user.click(refreshButton);
 
       expect(mockRefreshAllModelInputs).toHaveBeenCalledTimes(1);
-      expect(mockRefreshAllModelInputs).toHaveBeenCalledWith({ silent: true });
+      expect(mockRefreshAllModelInputs).toHaveBeenCalledWith({ silent: false });
 
       mockRefreshResolve();
     });
@@ -1154,7 +1154,7 @@ describe("ModelInputComponent", () => {
       });
     });
 
-    it("falls back to the loading spinner while an error refetch is in flight", () => {
+    it("hides the error UI while an error refetch is in flight", () => {
       const mockedProviders = useGetModelProviders as jest.MockedFunction<
         typeof useGetModelProviders
       >;
@@ -1184,6 +1184,36 @@ describe("ModelInputComponent", () => {
       expect(
         screen.queryByTestId("model-input-load-failed"),
       ).not.toBeInTheDocument();
+    });
+
+    it("renders the retry button when only the enabled-models query fails", () => {
+      const mockedProviders = useGetModelProviders as jest.MockedFunction<
+        typeof useGetModelProviders
+      >;
+      const mockedEnabled = useGetEnabledModels as jest.MockedFunction<
+        typeof useGetEnabledModels
+      >;
+
+      // Symmetric case: providers succeed, enabled-models alone errors with no data.
+      mockedProviders.mockReturnValue({
+        data: mockProvidersData,
+        isLoading: false,
+        isFetching: false,
+        error: null,
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetModelProviders>);
+      mockedEnabled.mockReturnValue({
+        data: undefined,
+        isLoading: false,
+        isFetching: false,
+        error: new Error("Request failed with status code 401"),
+        refetch: jest.fn(),
+      } as unknown as ReturnType<typeof useGetEnabledModels>);
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      expect(screen.getByTestId("model-input-load-failed")).toBeInTheDocument();
+      expect(screen.queryByText("Loading models")).not.toBeInTheDocument();
     });
   });
 

@@ -264,6 +264,11 @@ class AuthService(BaseAuthService):
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    if result is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Superuser not found in database",
+                        )
                     logger.warning(AUTO_LOGIN_WARNING)
                     return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
@@ -313,6 +318,16 @@ class AuthService(BaseAuthService):
                 if not api_key:
                     if settings.auth_settings.skip_auth_auto_login:
                         result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+                        if result is None:
+                            raise WebSocketException(
+                                code=status.WS_1011_INTERNAL_ERROR,
+                                reason="Superuser not found",
+                            )
+                        if not result.is_active:
+                            raise WebSocketException(
+                                code=status.WS_1008_POLICY_VIOLATION,
+                                reason="User account is inactive",
+                            )
                         logger.warning(AUTO_LOGIN_WARNING)
                     else:
                         raise WebSocketException(
