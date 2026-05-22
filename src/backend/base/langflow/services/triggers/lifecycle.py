@@ -8,10 +8,19 @@ components present in ``flow.data``:
   scheduled at the next cron tick.
 * Nodes that disappear from the flow → mark their queued trigger_jobs
   as ``cancelled`` (history preserved; worker stops considering them).
-* Existing nodes are left alone — the worker reads the live config
-  from ``flow.data`` on each dispatch, so cron / timezone edits in the
-  canvas are picked up at the next fire automatically and we do not
-  need to mutate the already-queued row.
+* Existing nodes whose cron expression or timezone changed → cancel
+  the stale queued row and enqueue a fresh one at the new next fire.
+  Drift is detected by recomputing ``next_fire_time_utc(after=
+  job.created_at)`` from the current canvas config and comparing it
+  to the stored ``scheduled_at``. The function is deterministic, so
+  any mismatch means the user edited the trigger inputs between the
+  enqueue and this save. Without this step the in-flight job keeps
+  firing on the old schedule until it completes, which contradicts
+  the value the UI now displays for the trigger.
+* Existing nodes whose schedule did not change are left alone — the
+  worker reads the live config from ``flow.data`` on each dispatch
+  anyway (so ``max_attempts`` edits land at the next fire without us
+  touching the row).
 
 Invalid configurations (bad cron expression, unknown IANA timezone)
 are skipped silently and the operation is logged. We do not raise
@@ -49,16 +58,70 @@ if TYPE_CHECKING:
     from langflow.services.database.models.flow.model import Flow
 
 
-async def _existing_queued_component_ids(
+async def _existing_queued_jobs_by_component(
     session: AsyncSession,
     flow_id,
-) -> set[str]:
-    statement = select(TriggerJob.component_id).where(
+) -> dict[str, TriggerJob]:
+    """Return the QUEUED trigger_job per component for ``flow_id``.
+
+    There can only be one queued job per ``(flow_id, component_id)``
+    at a time (the worker enqueues the next fire on finalize), so a
+    plain dict is the right shape for the reconcile diff. If an older
+    bug left multiple queued rows behind, the last one wins for
+    drift-detection purposes — the duplicates would get cancelled
+    anyway by ``cancel_queued_jobs_for_components`` once the user
+    edits the trigger.
+    """
+    statement = select(TriggerJob).where(
         TriggerJob.flow_id == flow_id,
         TriggerJob.status == JobStatus.QUEUED,
     )
     result = await session.exec(statement)
-    return set(result.all())
+    return {job.component_id: job for job in result.all()}
+
+
+def _as_utc(dt: datetime) -> datetime:
+    """Coerce a possibly-naive datetime to a tz-aware UTC datetime.
+
+    SQLite drops the ``tzinfo`` of ``DateTime(timezone=True)`` columns
+    on read, so values that were written tz-aware can come back naive.
+    The downstream ``croniter`` math (and equality with the freshly
+    computed next fire) only works correctly if both sides agree on
+    tz-awareness, so we normalise everything to UTC at the boundary.
+    """
+    if dt.tzinfo is None:
+        return dt.replace(tzinfo=timezone.utc)
+    return dt.astimezone(timezone.utc)
+
+
+def _schedule_drifted(
+    job: TriggerJob,
+    config: CronTriggerConfig,
+) -> bool:
+    """``True`` if ``job.scheduled_at`` no longer matches ``config``.
+
+    Recomputes the next fire that *would* have been scheduled at
+    enqueue time (``after=job.created_at``) from the current cron
+    expression and timezone, and compares it against the stored
+    value. Because ``next_fire_time_utc`` is deterministic for a
+    given ``(cron, tz, anchor)``, equality means the config has not
+    been touched since the row was written; inequality means the
+    user edited the canvas and we should reschedule.
+
+    Invalid configs (bad cron / unknown tz) return ``False`` here —
+    drift detection is not the right place to surface that, the
+    ``new_ids`` path already logs and skips invalid configs and the
+    stale queued row stays put until the user fixes the inputs.
+    """
+    try:
+        expected = next_fire_time_utc(
+            cron_expression=config.cron_expression,
+            timezone_name=config.timezone,
+            after=_as_utc(job.created_at),
+        )
+    except InvalidTriggerConfigError:
+        return False
+    return expected != _as_utc(job.scheduled_at)
 
 
 async def _enqueue_initial_job(
@@ -113,7 +176,8 @@ async def reconcile_trigger_jobs_for_flow(
     desired = find_cron_trigger_configs(flow_data)
     desired_by_id = {c.component_id: c for c in desired if c.component_id}
 
-    existing_ids = await _existing_queued_component_ids(session, flow.id)
+    existing_by_id = await _existing_queued_jobs_by_component(session, flow.id)
+    existing_ids = set(existing_by_id.keys())
 
     # Components that disappeared from the canvas → cancel their queued jobs.
     removed_ids = existing_ids - set(desired_by_id.keys())
@@ -131,8 +195,32 @@ async def reconcile_trigger_jobs_for_flow(
                 sorted(removed_ids),
             )
 
+    # Existing components whose cron / timezone changed → cancel the
+    # stale queued row and treat the component as new below so it gets
+    # re-enqueued on the new schedule.
+    drifted_ids: list[str] = [
+        component_id
+        for component_id in sorted(existing_ids & set(desired_by_id.keys()))
+        if _schedule_drifted(existing_by_id[component_id], desired_by_id[component_id])
+    ]
+    if drifted_ids:
+        cancelled = await cancel_queued_jobs_for_components(
+            session,
+            flow.id,
+            drifted_ids,
+        )
+        if cancelled:
+            await logger.adebug(
+                "trigger lifecycle: cancelled %d drifted queued job(s) on flow %s for components %s",
+                cancelled,
+                flow.id,
+                drifted_ids,
+            )
+
     # Components that appeared (no existing queued job) → enqueue first fire.
-    new_ids = set(desired_by_id.keys()) - existing_ids
+    # Drifted components fall into this branch too: their stale rows were
+    # just cancelled, so they no longer count as "existing" from here on.
+    new_ids = (set(desired_by_id.keys()) - existing_ids) | set(drifted_ids)
     for component_id in sorted(new_ids):
         config = desired_by_id[component_id]
         try:
