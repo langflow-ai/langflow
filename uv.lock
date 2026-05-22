@@ -5989,14 +5989,14 @@ wheels = [
 
 [[package]]
 name = "jinxed"
-version = "2.0.0"
+version = "2.0.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "ansicon", marker = "sys_platform == 'win32'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/eb/8821ce6e7386e96355f2c6be83944925b4a0870572896fd33a4e61b8aa5a/jinxed-2.0.0.tar.gz", hash = "sha256:64b960b8f8d9966e1b2e7cb57ea2b1aa0a8d7e68045b96dc7ef58201e43a1209", size = 127118, upload-time = "2026-05-08T21:25:25.917Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/3e/b0/76ee7c88752e69d6582a099672309e49801a56a607f7a89573ccbfb5a3d6/jinxed-2.0.1.tar.gz", hash = "sha256:5220778f130e7b9502055dbefaef9cb92ea5c892e72ff2c8e514c8be4d9af9ca", size = 127988, upload-time = "2026-05-22T18:12:03.816Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b3/00/b61668fd3b1e43b445979ec9a9e0af4781bf06884937d1e906f6a1be6dff/jinxed-2.0.0-py2.py3-none-any.whl", hash = "sha256:b3df1be5262a37145ef42875a8bbf918f1a563fbd035359650dd9fc0bb2b9294", size = 95364, upload-time = "2026-05-08T21:25:24.536Z" },
+    { url = "https://files.pythonhosted.org/packages/36/1a/d760e6033c3cd760ec1b2c6a56b5b330d3c37ebfb3bc63bdb322edfb7057/jinxed-2.0.1-py2.py3-none-any.whl", hash = "sha256:436ace63cc670cc08127bb388d23ac19418f2c3965efd60d578f1462065a18a5", size = 95364, upload-time = "2026-05-22T18:12:02.176Z" },
 ]
 
 [[package]]
@@ -7003,7 +7003,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.9.3"
+version = "1.9.4"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -7153,7 +7153,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.9.3"
+version = "0.9.4"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -8194,7 +8194,7 @@ dev = [
 
 [[package]]
 name = "langflow-sdk"
-version = "0.1.3"
+version = "0.1.4"
 source = { editable = "src/sdk" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
@@ -8400,7 +8400,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.4.3"
+version = "0.4.4"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
