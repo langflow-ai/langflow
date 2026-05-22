@@ -2,6 +2,15 @@
   box-shadow: none !important;
 }
 
+/* Keep inline code vertically aligned with surrounding text */
+:not(pre) > code {
+  vertical-align: baseline;
+}
+
+html[data-theme="light"] :not(pre) > code {
+  border: none;
+}
+
 /* =====================================================================
    Langflow custom code theme — CSS variables (dark/light switching).
    ===================================================================== */

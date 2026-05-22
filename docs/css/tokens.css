@@ -4,6 +4,7 @@
   --ifm-navbar-padding-vertical: 0;
   --ifm-global-radius: 10px;
   --ifm-code-border-radius: 4px;
+  --ifm-code-padding-horizontal: 0.4em;
   --ifm-navbar-item-padding-vertical: 0;
   --ifm-font-family-base: "Geist", Inter, -apple-system, BlinkMacSystemFont,
     Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI emoji";
@@ -18,10 +19,12 @@ html[data-theme="light"] {
   --ifm-color-primary: hsla(333, 71%, 51%, 1); /* Slightly darker pink for light theme */
   --ifm-background-color: var(--ifm-color-white);
   --ifm-background-surface-color: var(--ifm-color-white);
+  --ifm-code-background: #eeeef5;
 }
 
 /* Dark theme - Slate dark background (Langfuse style) */
 html[data-theme="dark"] {
+  --ifm-code-background: #1e1e24;
   --ifm-color-primary: hsla(329, 45%, 58%, 1); /* Muted, desaturated pink */
   --ifm-background-color: #111; /* Warm slate, not pure black */
   --ifm-background-surface-color: #111;
