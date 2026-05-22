@@ -3,6 +3,7 @@ import { expect } from "../fixtures";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
 
+import { TEXTS } from "../utils/constants/texts";
 export const selectAnthropicModel = async (page: Page) => {
   const nodes = page.locator(".react-flow__node", {
     has: page.getByTestId("title-language model"),
@@ -52,7 +53,7 @@ export const selectAnthropicModel = async (page: Page) => {
           timeout: 30000,
         });
         await page.getByTestId("llm-toggle-claude-sonnet-4-5-20250929").click();
-        await page.getByText("Close").last().click();
+        await page.getByText(TEXTS.close).last().click();
       } else {
         await page.waitForTimeout(500);
 
@@ -64,7 +65,7 @@ export const selectAnthropicModel = async (page: Page) => {
             .getByTestId("llm-toggle-claude-sonnet-4-5-20250929")
             .click();
         }
-        await page.getByText("Close").last().click();
+        await page.getByText(TEXTS.close).last().click();
         await page.getByTestId("model_model").nth(i).click();
       }
     }

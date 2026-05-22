@@ -4,6 +4,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 async function verifyTextareaValue(
   page: Page,
   value: string,
@@ -57,7 +58,7 @@ test(
     await renameFlow(page, { flowName: randomFlowName });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
 
     await page
       .getByTestId("input_outputText Output")
