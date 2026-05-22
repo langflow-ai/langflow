@@ -267,12 +267,16 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
-            if vertex_id in self.cycle_vertices:
-                self.run_manager.add_to_cycle_vertices(vertex_id)
+
+        self._cycle_vertices = None
+        self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self._cycle_vertices = None
+        self._is_cyclic = None
+        self.run_manager.cycle_vertices.clear()
         self.initialize()
 
     def add_component(self, component: Component, component_id: str | None = None) -> str:
