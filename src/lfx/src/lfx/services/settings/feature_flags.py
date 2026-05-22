@@ -7,6 +7,7 @@ class FeatureFlags(BaseSettings):
     Enable Watsonx Orchestrate deployments.
     """
     mvp_components: bool = False
+    hide_new_flow_button: bool = False
 
     class Config:
         env_prefix = "LANGFLOW_FEATURE_"

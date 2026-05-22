@@ -123,7 +123,7 @@ export default function TemplatesModal({
           <SidebarProvider width="15rem" defaultOpen={false}>
             <Nav
               categories={categories}
-              currentTab={currentTab}
+              currentTab={effectiveTab}
               setCurrentTab={setCurrentTab}
             />
             <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
