@@ -6744,7 +6744,7 @@ requires-dist = [
     { name = "markupsafe", marker = "extra == 'markup'", specifier = "==3.0.2" },
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
     { name = "mcp", marker = "extra == 'mcp'", specifier = ">=1.17.0,<2.0.0" },
-    { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=0.1.34" },
+    { name = "mem0ai", marker = "extra == 'mem0'", specifier = ">=2.0.2,<3.0.0" },
     { name = "metal-sdk", marker = "extra == 'metal'", specifier = "==2.5.1" },
     { name = "metaphor-python", marker = "extra == 'metaphor'", specifier = "==0.1.23" },
     { name = "mlx", marker = "python_full_version >= '3.12' and platform_machine == 'arm64' and sys_platform == 'darwin' and extra == 'mlx'", specifier = ">=0.29.0" },
@@ -6788,7 +6788,7 @@ requires-dist = [
     { name = "python-docx", marker = "extra == 'docx'", specifier = ">=1.1.0" },
     { name = "python-multipart", specifier = ">=0.0.12,<1.0.0" },
     { name = "pytube", marker = "extra == 'pytube'", specifier = "==15.0.0" },
-    { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = "==1.9.2" },
+    { name = "qdrant-client", marker = "extra == 'qdrant'", specifier = ">=1.12.0,<2.0.0" },
     { name = "qianfan", marker = "extra == 'qianfan'", specifier = "==0.3.5" },
     { name = "ragstack-ai-knowledge-store", marker = "extra == 'ragstack'", specifier = "==0.2.1" },
     { name = "redis", marker = "extra == 'redis'", specifier = ">=7.4.0,<8.0.0" },
@@ -7720,7 +7720,7 @@ wheels = [
 
 [[package]]
 name = "mem0ai"
-version = "1.0.11"
+version = "2.0.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "openai" },
@@ -7731,9 +7731,9 @@ dependencies = [
     { name = "qdrant-client" },
     { name = "sqlalchemy" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/91/1e/2f8a8cc4b8e7f6126f3367d27dc65eac5cd4ceb854888faa3a8f62a2c0a0/mem0ai-1.0.11.tar.gz", hash = "sha256:ddb803bedc22bd514606d262407782e88df929f6991b59f6972fb8a25cc06001", size = 201758, upload-time = "2026-04-06T11:31:43.695Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ce/8f/86975bdf11a0aece78b6f4d5551b8b92c38b9bdf5f5764fc879e6cb1227b/mem0ai-2.0.2.tar.gz", hash = "sha256:482d11a55c8aa00dce29a66eeecbba2fd5f5c7501c054ce8ba606baee3755f99", size = 214627, upload-time = "2026-05-07T20:03:47.812Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b8/b5/f822c94e1b901f8a700af134c2473646de9a7db26364566f6a72d527d235/mem0ai-1.0.11-py3-none-any.whl", hash = "sha256:bcf4d678dc0a4d4e8eccaebe05562eae022fcdc825a0e3095d02f28cf61a5b6d", size = 297138, upload-time = "2026-04-06T11:31:41.716Z" },
+    { url = "https://files.pythonhosted.org/packages/01/f8/59902456c1950e63b6b226634463bc8b24d81697e7114f0740059fd0a270/mem0ai-2.0.2-py3-none-any.whl", hash = "sha256:6fda32549c213fb63b393f4b1920f54961ea75c51d95b6492096108609accf3b", size = 302276, upload-time = "2026-05-07T20:03:45.706Z" },
 ]
 
 [[package]]
@@ -11841,21 +11841,21 @@ wheels = [
 
 [[package]]
 name = "qdrant-client"
-version = "1.9.2"
+version = "1.18.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "grpcio" },
-    { name = "grpcio-tools" },
     { name = "httpx", extra = ["http2"] },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "portalocker" },
+    { name = "protobuf" },
     { name = "pydantic" },
     { name = "urllib3" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/84/39/5fd63d835acbad5d76c3f3e7cb366c84c9cc09b2a2d2b3a4cac3a9b6adee/qdrant_client-1.9.2.tar.gz", hash = "sha256:35ba55a8484a4b817f985749d11fe6b5d2acf617fec07dd8bc01f3e9b4e9fa79", size = 201058, upload-time = "2024-06-20T11:19:54.006Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/65/45/5b1bdd15a3c7730eefb9c113600829e20d689b82b5a23f9e07d107094004/qdrant_client-1.18.0.tar.gz", hash = "sha256:52e8ece1a7d40519801bf0b70713bfa0f6b7ae28c7275bbe0b0286fbed7f6db4", size = 352580, upload-time = "2026-05-11T14:12:38.702Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/8f/32/d639a030094b9e427e27abc7ad36b26a912d403e2a1bbd5b172a766de3a6/qdrant_client-1.9.2-py3-none-any.whl", hash = "sha256:0f49a4a6a47f62bc2c9afc69f9e1fb7790e4861ffe083d2de78dda30eb477d0e", size = 230108, upload-time = "2024-06-20T11:19:51.713Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/10/c437bd2ac41ef30d3019063e6ce537dc111e9214473b337ee88f7fa6359a/qdrant_client-1.18.0-py3-none-any.whl", hash = "sha256:093aa8cf8a420ee3ad2a68b007e1378d7992b2600e0b53c193fc172674f659cd", size = 398126, upload-time = "2026-05-11T14:12:36.998Z" },
 ]
 
 [[package]]
