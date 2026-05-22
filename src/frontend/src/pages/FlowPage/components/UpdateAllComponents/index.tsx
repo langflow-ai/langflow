@@ -318,7 +318,9 @@ export default function UpdateAllComponents() {
                   className="shrink-0 text-sm"
                   onClick={handleDismissAllComponents}
                 >
-                  {componentsToUpdateFiltered.length > 1 ? t("updateComponents.dismissAll") : t("updateComponents.dismiss")}
+                  {componentsToUpdateFiltered.length > 1
+                    ? t("updateComponents.dismissAll")
+                    : t("updateComponents.dismiss")}
                 </Button>
               )}
               {updatableComponents.length > 0 && (
@@ -329,7 +331,9 @@ export default function UpdateAllComponents() {
                   loading={loadingUpdate}
                   data-testid="update-all-button"
                 >
-                  {breakingChanges.length > 0 ? t("updateComponents.reviewAll") : t("updateComponents.updateAll")}
+                  {breakingChanges.length > 0
+                    ? t("updateComponents.reviewAll")
+                    : t("updateComponents.updateAll")}
                 </Button>
               )}
             </div>
