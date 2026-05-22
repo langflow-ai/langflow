@@ -1,16 +1,18 @@
-"""Tests to verify langfuse v3 API compatibility.
+"""Tests to verify langfuse v4 API compatibility.
 
 These tests verify that the LangFuseTracer implementation is compatible
-with the langfuse v3 SDK. The v3 SDK removed several methods that the
-v2 API used, so we need to ensure our implementation uses the correct API.
+with the langfuse v4 SDK. v4 is OpenTelemetry-based: `start_observation`
+replaces v3's `start_span`; trace-level attributes propagate via
+`propagate_attributes`; trace-level input/output go through `set_trace_io`.
 
-See: https://langfuse.com/docs/observability/sdk/upgrade-path
+See: https://langfuse.com/docs/observability/sdk/upgrade-path/python-v3-to-v4
 """
 
 import os
 import sys
 import types
 import uuid
+from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -46,6 +48,15 @@ def _import_langfuse_or_skip():
     return Langfuse
 
 
+def _import_propagate_attributes_or_skip():
+    try:
+        from langfuse import propagate_attributes
+    except Exception as exc:
+        _clear_failed_langfuse_import()
+        pytest.skip(f"langfuse propagate_attributes is not importable: {exc}")
+    return propagate_attributes
+
+
 def _import_callback_handler_or_skip():
     try:
         from langfuse.langchain import CallbackHandler
@@ -55,45 +66,48 @@ def _import_callback_handler_or_skip():
     return CallbackHandler
 
 
-class TestLangfuseV3ApiExists:
-    """Verify that the langfuse v3 API methods we need actually exist."""
+class TestLangfuseV4ApiExists:
+    """Verify that the langfuse v4 API surface we depend on actually exists."""
 
-    def test_langfuse_client_has_start_span(self):
-        """Verify start_span method exists (v3 API)."""
+    def test_langfuse_client_has_start_observation(self):
+        """v4 replaces v3 `start_span` with `start_observation` on the client."""
         langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(langfuse_class, "start_span"), "Langfuse.start_span() should exist in v3"
-
-    def test_langfuse_client_has_start_as_current_span(self):
-        """Verify start_as_current_span method exists (v3 API)."""
-        langfuse_class = _import_langfuse_or_skip()
-
-        assert hasattr(langfuse_class, "start_as_current_span"), "Langfuse.start_as_current_span() should exist in v3"
+        assert hasattr(langfuse_class, "start_observation"), (
+            "Langfuse.start_observation() should exist in v4"
+        )
 
     def test_langfuse_client_has_create_trace_id(self):
-        """Verify create_trace_id method exists (v3 API)."""
+        """`create_trace_id` is still on the class in v4."""
         langfuse_class = _import_langfuse_or_skip()
 
-        assert hasattr(langfuse_class, "create_trace_id"), "Langfuse.create_trace_id() should exist in v3"
+        assert hasattr(langfuse_class, "create_trace_id"), (
+            "Langfuse.create_trace_id() should exist in v4"
+        )
 
-    def test_langfuse_client_does_not_have_trace(self):
-        """Verify trace() method was removed in v3."""
+    def test_langfuse_module_has_propagate_attributes(self):
+        """v4 introduces `propagate_attributes` for trace-level attrs."""
+        propagate_attributes = _import_propagate_attributes_or_skip()
+
+        assert callable(propagate_attributes)
+
+    def test_langfuse_client_does_not_have_v3_start_span(self):
+        """`start_span` was removed from the client in v4 (replaced by start_observation)."""
         langfuse_class = _import_langfuse_or_skip()
 
-        # This test documents that trace() no longer exists
-        # If this fails, langfuse may have restored backward compatibility
-        assert not hasattr(langfuse_class, "trace"), "Langfuse.trace() should NOT exist in v3 (removed)"
+        assert not hasattr(langfuse_class, "start_span"), (
+            "Langfuse.start_span() should NOT exist in v4 (removed)"
+        )
 
     def test_callback_handler_import_path(self):
-        """Verify the v3 callback handler import path works."""
-        # v3 path
+        """The langchain integration import path still resolves in v4."""
         callback_handler = _import_callback_handler_or_skip()
 
         assert callback_handler is not None
 
 
-class TestLangfuseTracerV3Compatibility:
-    """Test that LangFuseTracer works with langfuse v3 API."""
+class TestLangfuseTracerV4Compatibility:
+    """Test that LangFuseTracer works with langfuse v4 API."""
 
     def test_tracer_initialization_does_not_crash(self):
         """Tracer should initialize without crashing (may not be ready without server)."""
@@ -117,7 +131,7 @@ class TestLangfuseTracerFunctionality:
 
     @pytest.fixture
     def mock_langfuse(self):
-        """Create a mock langfuse client that simulates v3 API."""
+        """Create a mock langfuse client that simulates the v4 API."""
 
         class TraceContext(dict):
             pass
@@ -133,6 +147,16 @@ class TestLangfuseTracerFunctionality:
         mock_langfuse_module.types = mock_langfuse_types_module
         mock_langfuse_module.langchain = mock_langfuse_langchain_module
 
+        # v4: propagate_attributes is a context manager exposed at top level.
+        propagate_calls: list[dict] = []
+
+        @contextmanager
+        def _propagate_attributes(**attrs):
+            propagate_calls.append(attrs)
+            yield None
+
+        mock_langfuse_module.propagate_attributes = MagicMock(side_effect=_propagate_attributes)
+
         with patch.dict(
             sys.modules,
             {
@@ -145,26 +169,28 @@ class TestLangfuseTracerFunctionality:
             mock_langfuse_class.return_value = mock_client
             mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
 
-            # Mock health check (auth_check in v3)
+            # Mock health check
             mock_client.auth_check.return_value = True
 
-            # V3 API mocks
+            # v4 API mocks
             mock_root_span = MagicMock()
             mock_root_span.id = "root-span-id"
-            mock_client.start_span.return_value = mock_root_span
+            mock_client.start_observation.return_value = mock_root_span
 
             mock_child_span = MagicMock()
             mock_child_span.id = "child-span-id"
-            mock_root_span.start_span.return_value = mock_child_span
+            mock_root_span.start_observation.return_value = mock_child_span
 
             yield {
                 "client": mock_client,
                 "root_span": mock_root_span,
                 "child_span": mock_child_span,
+                "propagate_calls": propagate_calls,
+                "propagate_attributes": mock_langfuse_module.propagate_attributes,
             }
 
-    def test_tracer_uses_v3_api_for_initialization(self, mock_langfuse):
-        """Verify tracer uses start_span instead of removed trace() method."""
+    def test_tracer_uses_v4_api_for_initialization(self, mock_langfuse):
+        """Verify tracer uses start_observation + propagate_attributes."""
         from langflow.services.tracing.langfuse import LangFuseTracer
 
         tracer = LangFuseTracer(
@@ -177,13 +203,17 @@ class TestLangfuseTracerFunctionality:
         )
 
         assert tracer.ready
-        # Should use v3 start_span, not v2 trace()
-        mock_langfuse["client"].start_span.assert_called_once()
-        # Should set trace metadata via update_trace
-        mock_langfuse["root_span"].update_trace.assert_called()
+        # v4: client.start_observation creates the root, not start_span
+        mock_langfuse["client"].start_observation.assert_called_once()
+        # v4: trace-level attrs are propagated, not set via update_trace
+        assert mock_langfuse["propagate_attributes"].called
+        ctx_attrs = mock_langfuse["propagate_calls"][0]
+        assert ctx_attrs["trace_name"] == "flow-123"
+        assert ctx_attrs["user_id"] == "user-1"
+        assert ctx_attrs["session_id"] == "session-1"
 
-    def test_add_trace_creates_child_span(self, mock_langfuse):
-        """Test that add_trace creates a child span using v3 API."""
+    def test_add_trace_creates_child_observation(self, mock_langfuse):
+        """Test that add_trace creates a child observation under the root."""
         from langflow.services.tracing.langfuse import LangFuseTracer
 
         tracer = LangFuseTracer(
@@ -201,9 +231,9 @@ class TestLangfuseTracerFunctionality:
             metadata={"key": "value"},
         )
 
-        # Should create child span under root span
-        mock_langfuse["root_span"].start_span.assert_called_once()
-        call_kwargs = mock_langfuse["root_span"].start_span.call_args[1]
+        # v4: child created via root.start_observation, not start_span
+        mock_langfuse["root_span"].start_observation.assert_called_once()
+        call_kwargs = mock_langfuse["root_span"].start_observation.call_args[1]
         assert call_kwargs["name"] == "TestComponent"
 
     def test_end_trace_updates_and_ends_span(self, mock_langfuse):
@@ -225,8 +255,8 @@ class TestLangfuseTracerFunctionality:
         mock_langfuse["child_span"].update.assert_called()
         mock_langfuse["child_span"].end.assert_called()
 
-    def test_end_updates_root_span_and_trace(self, mock_langfuse):
-        """Test that end() updates both root span and trace, then ends."""
+    def test_end_updates_root_span_and_set_trace_io(self, mock_langfuse):
+        """Test that end() updates the root span, calls set_trace_io, then ends."""
         from langflow.services.tracing.langfuse import LangFuseTracer
 
         tracer = LangFuseTracer(
@@ -244,8 +274,8 @@ class TestLangfuseTracerFunctionality:
 
         # Should update root span
         mock_langfuse["root_span"].update.assert_called()
-        # Should update trace metadata
-        assert mock_langfuse["root_span"].update_trace.call_count >= 2  # init + end
+        # v4: trace-level input/output via set_trace_io (not update_trace)
+        mock_langfuse["root_span"].set_trace_io.assert_called_once()
         # Should end root span
         mock_langfuse["root_span"].end.assert_called()
 
@@ -262,7 +292,7 @@ class TestLangfuseTracerFunctionality:
 
         # Add a span first (uses mock_langfuse fixture)
         tracer.add_trace("comp-1", "Test", "llm", {})
-        assert mock_langfuse["root_span"].start_span.called
+        assert mock_langfuse["root_span"].start_observation.called
 
         with patch("langfuse.langchain.CallbackHandler") as mock_handler:
             mock_handler.return_value = MagicMock()

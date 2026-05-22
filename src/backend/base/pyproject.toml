@@ -234,7 +234,7 @@ sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
-langfuse = ["langfuse~=3.8; python_version < '3.14'"]
+langfuse = ["langfuse>=4,<5"]
 langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]

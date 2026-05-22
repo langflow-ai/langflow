@@ -12,6 +12,7 @@ from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from contextlib import AbstractContextManager
     from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
@@ -23,10 +24,14 @@ if TYPE_CHECKING:
 
 
 class LangFuseTracer(BaseTracer):
-    """LangFuse tracer implementation using langfuse v3 API.
+    """LangFuse tracer implementation using langfuse v4 API.
 
-    The v3 API uses OpenTelemetry-based spans instead of the v2 trace/span pattern.
-    See: https://langfuse.com/docs/observability/sdk/upgrade-path
+    The v4 SDK is OpenTelemetry-based: `start_observation` replaces v3's
+    `start_span`; trace-level attributes (user_id, session_id, name) propagate
+    via `propagate_attributes`, manually entered here and exited in `end()`;
+    trace-level input/output go through `set_trace_io`.
+
+    See: https://langfuse.com/docs/observability/sdk/upgrade-path/python-v3-to-v4
     """
 
     flow_id: str
@@ -49,6 +54,7 @@ class LangFuseTracer(BaseTracer):
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
+        self._attributes_ctx: AbstractContextManager[None] | None = None
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -60,11 +66,14 @@ class LangFuseTracer(BaseTracer):
     def _setup_langfuse(self, config: dict) -> bool:
         """Initialize langfuse client and create root span for the flow.
 
-        Uses langfuse v3 API which requires creating spans with trace_context
-        instead of using the removed trace() method.
+        v4 differs from v3 in two load-bearing ways:
+        - `start_observation` replaces `start_span`.
+        - Trace-level attributes (user_id, session_id, name) are not span
+          parameters; they propagate via `propagate_attributes`, an OTel
+          context manager. We enter it here and exit in `end()`.
         """
         try:
-            from langfuse import Langfuse
+            from langfuse import Langfuse, propagate_attributes
             from langfuse.types import TraceContext
 
             self._client = Langfuse(**config)
@@ -78,23 +87,27 @@ class LangFuseTracer(BaseTracer):
                 logger.debug(f"Cannot connect to Langfuse: {e}")
                 return False
 
-            # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
+            # Create a deterministic trace ID from the UUID (32-char hex)
             langfuse_trace_id = Langfuse.create_trace_id(seed=str(self.trace_id))
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 
-            # Create root span for the flow - this also creates the trace implicitly
-            self._root_span = self._client.start_span(
+            # v4: enter propagate_attributes manually so trace-level attributes
+            # (name/user_id/session_id) attach to every observation underneath.
+            # Must be exited in end() or the OTel context leaks.
+            attrs: dict[str, Any] = {"trace_name": self.flow_id}
+            if self.user_id:
+                attrs["user_id"] = self.user_id
+            if self.session_id:
+                attrs["session_id"] = self.session_id
+            self._attributes_ctx = propagate_attributes(**attrs)
+            self._attributes_ctx.__enter__()
+
+            # Create root observation for the flow under the propagated attrs.
+            self._root_span = self._client.start_observation(
                 name=self.flow_id,
                 trace_context=self._trace_context,
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
-            )
-
-            # Set trace-level metadata (user_id, session_id)
-            self._root_span.update_trace(
-                name=self.flow_id,
-                user_id=self.user_id,
-                session_id=self.session_id,
             )
 
         except ImportError:
@@ -103,6 +116,7 @@ class LangFuseTracer(BaseTracer):
 
         except Exception as e:  # noqa: BLE001
             logger.debug(f"Error setting up LangFuse tracer: {e}")
+            self._detach_attributes()
             return False
 
         return True
@@ -126,8 +140,8 @@ class LangFuseTracer(BaseTracer):
 
         name = trace_name.removesuffix(f" ({trace_id})")
 
-        # Create child span under the root span
-        span = self._root_span.start_span(
+        # Create child observation under the root span (v4: start_observation).
+        span = self._root_span.start_observation(
             name=name,
             input=serialize(inputs),
             metadata=serialize(metadata_),
@@ -174,22 +188,42 @@ class LangFuseTracer(BaseTracer):
         outputs_ser = serialize(outputs)
         metadata_ser = serialize(metadata) if metadata else None
 
-        # Update the root span with final input/output
-        self._root_span.update(
-            input=inputs_ser,
-            output=outputs_ser,
-            metadata=metadata_ser,
-        )
+        try:
+            # Update the root span with final input/output
+            self._root_span.update(
+                input=inputs_ser,
+                output=outputs_ser,
+                metadata=metadata_ser,
+            )
 
-        # Update trace-level data
-        self._root_span.update_trace(
-            input=inputs_ser,
-            output=outputs_ser,
-            metadata=metadata_ser,
-        )
+            # v4: trace-level input/output via set_trace_io (replaces update_trace's
+            # input/output args). user_id/session_id/name were set during setup via
+            # propagate_attributes and don't need to be re-applied here.
+            self._root_span.set_trace_io(
+                input=inputs_ser,
+                output=outputs_ser,
+            )
 
-        # End the root span
-        self._root_span.end()
+            # End the root span
+            self._root_span.end()
+        finally:
+            self._detach_attributes()
+
+    def _detach_attributes(self) -> None:
+        """Exit the propagate_attributes context manager entered in setup.
+
+        Safe to call multiple times; runs at most once per tracer instance.
+        Failures are swallowed because the OTel context will reset on next
+        flow run regardless.
+        """
+        if self._attributes_ctx is None:
+            return
+        try:
+            self._attributes_ctx.__exit__(None, None, None)
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error exiting propagate_attributes: {e}")
+        finally:
+            self._attributes_ctx = None
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:
