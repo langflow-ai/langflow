@@ -301,7 +301,10 @@ jobs:
     if: ${{ github.repository == 'langflow-ai/langflow' && always() && needs.release-nightly-build.result == 'success' }}
     uses: ./.github/workflows/db-migration-validation.yml
     with:
-      nightly_tag: ${{ needs.create-nightly-tag.outputs.release_tag }}
+      # Pass Docker image reference for docker-compose and version without 'v' prefix for pip
+      # release_tag format: v1.10.0.dev20260522
+      # We need: langflowai/langflow-nightly:1.10.0.dev20260522 for Docker
+      nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
     secrets: inherit
 
 
@@ -371,7 +374,7 @@ jobs:
           }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
       - name: Send success notification to Slack
-        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
+        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' && needs.db-migration-validation.result != 'failure' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
