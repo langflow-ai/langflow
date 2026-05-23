@@ -1,6 +1,6 @@
 [project]
-name = "langflow"
-version = "1.10.0"
+name = "langflow-nightly"
+version = "v1.10.0.dev44"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-base-nightly[complete]==1.10.0.dev42",
     # langflow-extensions:bundle-deps-start
     # Bundle pilot: lfx-duckduckgo ships the DuckDuckGoSearchComponent
     # as a standalone Extension distribution.  Listed as a regular dep so
@@ -80,10 +80,10 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv.sources]
-langflow-base = { workspace = true }
-langflow = { workspace = true }
-lfx = { workspace = true }
-langflow-sdk = { workspace = true }
+langflow-base-nightly = { workspace = true }
+langflow-nightly = { workspace = true }
+lfx-nightly = { workspace = true }
+langflow-sdk-nightly = { workspace = true }
 # langflow-extensions:bundle-sources-start
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
