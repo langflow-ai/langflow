@@ -5,27 +5,44 @@ import React from "react";
 // Stores & hooks — mocked at module boundary so ChatInput renders in isolation.
 // ---------------------------------------------------------------------------
 
+// Generic Zustand selector type local to the test mocks. Avoids `any`
+// while remaining permissive enough for ad-hoc state shapes.
+type Selector<TState, TResult> = (state: TState) => TResult;
+
 let activeSessionId: string | null = null;
+type SessionManagerState = {
+  activeSessionId: string | null;
+  setActiveSessionId: jest.Mock;
+};
 jest.mock("@/stores/sessionManagerStore", () => ({
-  useSessionManagerStore: (selector: any) =>
-    selector({ activeSessionId, setActiveSessionId: jest.fn() }),
+  useSessionManagerStore: <TResult,>(
+    selector: Selector<SessionManagerState, TResult>,
+  ) => selector({ activeSessionId, setActiveSessionId: jest.fn() }),
 }));
 
+type FlowsManagerState = { currentFlowId: string };
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: (selector: any) => selector({ currentFlowId: "flow-1" }),
+  default: <TResult,>(selector: Selector<FlowsManagerState, TResult>) =>
+    selector({ currentFlowId: "flow-1" }),
 }));
 
+type FlowStoreState = { stopBuilding: jest.Mock; isBuilding: boolean };
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: <TResult,>(selector: Selector<FlowStoreState, TResult>) =>
     selector({ stopBuilding: jest.fn(), isBuilding: false }),
 }));
 
 let chatValueStoreValue = "";
+type UtilityState = {
+  chatValueStore: string;
+  setChatValueStore: jest.Mock;
+  setAwaitingBotResponse: jest.Mock;
+};
 jest.mock("@/stores/utilityStore", () => ({
   useUtilityStore: Object.assign(
-    (selector: any) =>
+    <TResult,>(selector: Selector<UtilityState, TResult>) =>
       selector({
         chatValueStore: chatValueStoreValue,
         setChatValueStore: jest.fn((v: string) => {
@@ -34,7 +51,7 @@ jest.mock("@/stores/utilityStore", () => ({
         setAwaitingBotResponse: jest.fn(),
       }),
     {
-      getState: () => ({
+      getState: (): UtilityState => ({
         chatValueStore: chatValueStoreValue,
         setChatValueStore: jest.fn(),
         setAwaitingBotResponse: jest.fn(),
@@ -43,9 +60,11 @@ jest.mock("@/stores/utilityStore", () => ({
   ),
 }));
 
+type AlertState = { setErrorData: jest.Mock };
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: any) => selector({ setErrorData: jest.fn() }),
+  default: <TResult,>(selector: Selector<AlertState, TResult>) =>
+    selector({ setErrorData: jest.fn() }),
 }));
 
 jest.mock("@/shared/hooks/use-chat-file-upload", () => ({
@@ -91,7 +110,9 @@ jest.mock("framer-motion", () => ({
   AnimatePresence: ({ children }: { children: React.ReactNode }) => (
     <>{children}</>
   ),
-  motion: { div: (props: any) => <div {...props} /> },
+  motion: {
+    div: (props: React.HTMLAttributes<HTMLDivElement>) => <div {...props} />,
+  },
 }));
 
 import ChatInput from "../chat-input";
