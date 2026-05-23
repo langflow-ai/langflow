@@ -197,6 +197,18 @@ class TestXquikComponent(ComponentTestBaseWithoutClient):
         assert component.status == "Xquik request failed: request timed out"
 
     @patch("lfx.components.data_source.xquik.requests.get")
+    def test_run_table_preserves_request_error_status(self, mock_get, component_class, default_kwargs):
+        component = component_class(**default_kwargs)
+        mock_get.side_effect = requests.Timeout("request timed out")
+
+        result = component.run_table()
+
+        assert isinstance(result, DataFrame)
+        assert len(result) == 1
+        assert result.iloc[0]["error"] == "Xquik request failed: request timed out"
+        assert component.status == "Xquik request failed: request timed out"
+
+    @patch("lfx.components.data_source.xquik.requests.get")
     def test_non_json_response_returns_text_payload(self, mock_get, component_class, default_kwargs):
         component = component_class(**default_kwargs)
         response = Mock()

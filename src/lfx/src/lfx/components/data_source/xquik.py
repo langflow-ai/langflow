@@ -172,7 +172,8 @@ class XquikComponent(Component):
         """Return Xquik records as a Langflow DataFrame."""
         payload = self._run_operation()
         records = self._records_from_payload(payload)
-        self.status = f"Returned {len(records)} record(s)."
+        if "error" not in payload:
+            self.status = f"Returned {len(records)} record(s)."
         return DataFrame(pd.DataFrame(records))
 
     def run_json(self) -> Data:
