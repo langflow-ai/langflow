@@ -14,6 +14,8 @@ from lfx.schema.message import Message
 
 
 class XquikComponent(Component):
+    """Read X/Twitter data from Xquik API endpoints."""
+
     display_name = "Xquik"
     description = "Read X/Twitter data with Xquik."
     documentation: str = "https://docs.langflow.org/xquik"
@@ -139,6 +141,7 @@ class XquikComponent(Component):
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:
+        """Show only the inputs required by the selected operation."""
         if field_name != "operation":
             return build_config
 
@@ -166,20 +169,24 @@ class XquikComponent(Component):
         return build_config
 
     def run_table(self) -> DataFrame:
+        """Return Xquik records as a Langflow DataFrame."""
         payload = self._run_operation()
         records = self._records_from_payload(payload)
         self.status = f"Returned {len(records)} record(s)."
         return DataFrame(pd.DataFrame(records))
 
     def run_json(self) -> Data:
+        """Return the raw Xquik JSON payload."""
         payload = self._run_operation()
         return Data(data=payload)
 
     def run_text(self) -> Message:
+        """Return Xquik records as newline-delimited JSON text."""
         payload = self._run_operation()
         return Message(text=self._payload_to_text(payload), data=payload)
 
     def _run_operation(self) -> dict[str, Any]:
+        """Call the selected Xquik endpoint and normalize the response shape."""
         operation = str(getattr(self, "operation", self.SEARCH_TWEETS))
         url = self._build_url(operation)
         params = self._build_params(operation)
@@ -209,6 +216,7 @@ class XquikComponent(Component):
         return {"result": payload, "operation": operation, "url": url}
 
     def _build_url(self, operation: str) -> str:
+        """Build the request URL for an Xquik operation."""
         path = self._OPERATION_PATHS.get(operation)
         if path is None:
             msg = f"Unsupported Xquik operation: {operation}"
@@ -221,6 +229,7 @@ class XquikComponent(Component):
         return f"{self.base_url.rstrip('/')}{path}"
 
     def _build_params(self, operation: str) -> dict[str, Any]:
+        """Build query parameters for an Xquik operation."""
         params: dict[str, Any] = {}
 
         if operation in {self.SEARCH_TWEETS, self.SEARCH_USERS}:
@@ -240,6 +249,7 @@ class XquikComponent(Component):
         return params
 
     def _api_key_value(self) -> str:
+        """Return the configured API key as a plain string."""
         value = self.api_key
         if isinstance(value, SecretStr):
             value = value.get_secret_value()
@@ -250,6 +260,7 @@ class XquikComponent(Component):
         return value
 
     def _required_value(self, field_name: str) -> str:
+        """Return a required input value or raise a user-facing error."""
         value = str(getattr(self, field_name, "") or "").strip()
         if not value:
             msg = f"{field_name.replace('_', ' ').title()} is required for this operation."
@@ -257,6 +268,7 @@ class XquikComponent(Component):
         return value
 
     def _bounded_int(self, field_name: str, *, default: int, minimum: int, maximum: int | None) -> int:
+        """Clamp an integer input to the supported Xquik range."""
         raw_value = getattr(self, field_name, default) or default
         value = int(raw_value)
         if value < minimum:
@@ -266,6 +278,7 @@ class XquikComponent(Component):
         return value
 
     def _records_from_payload(self, payload: dict[str, Any]) -> list[dict[str, Any]]:
+        """Extract tabular records from common Xquik response containers."""
         for key in ("tweets", "users", "trends", "data", "items", "results"):
             value = payload.get(key)
             if isinstance(value, list):
@@ -280,16 +293,19 @@ class XquikComponent(Component):
         return [self._record_from_value(payload)]
 
     def _record_from_value(self, value: Any) -> dict[str, Any]:
+        """Convert a response item into a table row."""
         if isinstance(value, dict):
             return value
         return {"value": value}
 
     def _payload_to_text(self, payload: dict[str, Any]) -> str:
+        """Render response records as deterministic JSON lines."""
         records = self._records_from_payload(payload)
         if not records:
             return "No Xquik records returned."
         return "\n".join(json.dumps(record, ensure_ascii=False, sort_keys=True) for record in records)
 
     def _set_visible(self, build_config: dict, field_name: str, *, visible: bool) -> None:
+        """Update an input visibility flag when it exists."""
         if field_name in build_config:
             build_config[field_name]["show"] = visible
