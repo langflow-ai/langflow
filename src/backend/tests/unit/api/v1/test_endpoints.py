@@ -104,15 +104,12 @@ async def test_custom_component_update_admin_only_allows_known_template_refresh(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
     """Non-admin users can refresh known server templates in admin-only mode."""
-    dummy_settings = type(
-        "DummySettings",
-        (),
-        {"custom_component_admin_only": True, "allow_custom_components": True},
-    )()
-    monkeypatch.setattr(
-        "langflow.api.v1.endpoints.get_settings_service",
-        lambda: type("DummyService", (), {"settings": dummy_settings})(),
-    )
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
 
     component = AgentComponent()
     component_node, _cc_instance = build_custom_component_template(component)
@@ -137,15 +134,12 @@ async def test_custom_component_update_admin_only_blocks_unknown_custom_code(
     client: AsyncClient, logged_in_headers: dict, monkeypatch
 ):
     """Non-admin users cannot edit truly custom code in admin-only mode."""
-    dummy_settings = type(
-        "DummySettings",
-        (),
-        {"custom_component_admin_only": True, "allow_custom_components": True},
-    )()
-    monkeypatch.setattr(
-        "langflow.api.v1.endpoints.get_settings_service",
-        lambda: type("DummyService", (), {"settings": dummy_settings})(),
-    )
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
 
     component_code = """
 from lfx.custom import Component
@@ -176,20 +170,48 @@ async def test_custom_component_create_admin_only_blocks_non_superuser(
     logged_in_headers: dict,
     monkeypatch,
 ):
-    dummy_settings = type(
-        "DummySettings",
-        (),
-        {"custom_component_admin_only": True, "allow_custom_components": True},
-    )()
-    monkeypatch.setattr(
-        "langflow.api.v1.endpoints.get_settings_service",
-        lambda: type("DummyService", (), {"settings": dummy_settings})(),
-    )
+    """Non-admin users can create/refresh known server templates in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
 
     agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
     code = await Path(agent_component_file).read_text(encoding="utf-8")
 
     request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+async def test_custom_component_create_admin_only_blocks_unknown_custom_code(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Non-admin users cannot create truly custom code in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class TestMetadataComponent(Component):
+    display_name = "Test Metadata Component"
+    description = "Test component for metadata"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = CustomComponentRequest(code=component_code)
     response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_403_FORBIDDEN
@@ -201,15 +223,12 @@ async def test_custom_component_create_admin_only_allows_superuser(
     logged_in_headers_super_user: dict,
     monkeypatch,
 ):
-    dummy_settings = type(
-        "DummySettings",
-        (),
-        {"custom_component_admin_only": True, "allow_custom_components": True},
-    )()
-    monkeypatch.setattr(
-        "langflow.api.v1.endpoints.get_settings_service",
-        lambda: type("DummyService", (), {"settings": dummy_settings})(),
-    )
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
 
     agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
     code = await Path(agent_component_file).read_text(encoding="utf-8")

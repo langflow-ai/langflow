@@ -1274,15 +1274,9 @@ async def custom_component(
     request: Request,
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
-
-    # P2: Check if custom component editing is restricted to admins only
-    if getattr(settings_service.settings, "custom_component_admin_only", False) is True and not user.is_superuser:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="Custom component creation is restricted to administrators",
-        )
-
-    if not settings_service.settings.allow_custom_components:
+    settings = settings_service.settings
+    all_known = None
+    if _requires_component_hash_lookups(settings, user):
         # Lazily compute hash lookups if they haven't been built yet
         # (e.g. during startup before the cache is fully populated).
         get_component_hash_lookups_for_validation()
@@ -1292,13 +1286,26 @@ async def custom_component(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Component templates are still initializing. Please try again in a few seconds.",
             )
+
+    # In admin-only mode, non-admin users may create/refresh only known server
+    # templates. Truly custom code creation remains restricted to administrators.
+    if (
+        getattr(settings, "custom_component_admin_only", False) is True
+        and not user.is_superuser
+        and not code_hash_matches_any_template(raw_code.code, all_known)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is restricted to administrators",
+        )
+
+    if not settings.allow_custom_components and not code_hash_matches_any_template(raw_code.code, all_known):
         # Allow updating to a known server template (core component update),
         # but block truly custom code.
-        if not code_hash_matches_any_template(raw_code.code, all_known):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is disabled",
+        )
 
     component = Component(_code=raw_code.code)
 
