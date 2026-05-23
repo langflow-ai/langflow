@@ -1420,7 +1420,7 @@ class MCPStdioClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=get_settings_service().settings.mcp_tool_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
@@ -1692,7 +1692,7 @@ class MCPStreamableHttpClient:
 
                 result = await asyncio.wait_for(
                     session.call_tool(tool_name, arguments=arguments),
-                    timeout=30.0,  # 30 second timeout
+                    timeout=get_settings_service().settings.mcp_tool_timeout,
                 )
             except Exception as e:
                 current_error_type = type(e).__name__
