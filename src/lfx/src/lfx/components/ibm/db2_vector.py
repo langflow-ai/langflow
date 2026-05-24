@@ -9,7 +9,7 @@ from lfx.components.ibm.db2_security import (
     validate_port,
 )
 from lfx.helpers.data import docs_to_data
-from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
+from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.io import Output, QueryInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -124,6 +124,13 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
             info="Number of results to return from search",
+        ),
+        FloatInput(
+            name="score_threshold",
+            display_name="Score Threshold",
+            value=0.5,
+            advanced=True,
+            info="Minimum relevance score (0-1) for similarity_score_threshold mode",
         ),
         DropdownInput(
             name="distance_strategy",
@@ -339,7 +346,8 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 query=query_text,
                 k=self.number_of_results,
             )
-            docs = [doc for doc, _score in docs_and_scores]
+            # Apply threshold filtering
+            docs = [doc for doc, score in docs_and_scores if score >= self.score_threshold]
         else:  # MMR
             docs = vector_store.max_marginal_relevance_search(
                 query=query_text,
