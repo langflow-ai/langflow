@@ -1,3 +1,4 @@
+from .a2a_task import A2ATask
 from .api_key import ApiKey
 from .auth import SSOConfig, SSOUserProfile
 from .deployment import Deployment
@@ -18,6 +19,7 @@ from .user import User
 from .variable import Variable
 
 __all__ = [
+    "A2ATask",
     "ApiKey",
     "Deployment",
     "DeploymentProviderAccount",
