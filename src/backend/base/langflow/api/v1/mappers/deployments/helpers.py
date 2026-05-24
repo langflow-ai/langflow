@@ -437,8 +437,8 @@ async def resolve_adapter_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol, str]:
-    """Returns ``(deployment_row, adapter, provider_key)``."""
+) -> tuple[Deployment, DeploymentServiceProtocol, str, str | None]:
+    """Returns ``(deployment_row, adapter, provider_key, provider_tenant_id)``."""
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment_row.deployment_provider_account_id,
@@ -446,7 +446,7 @@ async def resolve_adapter_from_deployment(
         db=db,
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
-    return deployment_row, deployment_adapter, provider_account.provider_key
+    return deployment_row, deployment_adapter, provider_account.provider_key, provider_account.provider_tenant_id
 
 
 async def resolve_adapter_mapper_from_deployment(
@@ -454,8 +454,8 @@ async def resolve_adapter_mapper_from_deployment(
     deployment_id: UUID,
     user_id: UUID,
     db: DbSession,
-) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper, str]:
-    """Returns ``(deployment_row, adapter, mapper, provider_key)``."""
+) -> tuple[Deployment, DeploymentServiceProtocol, BaseDeploymentMapper, str, str | None]:
+    """Returns ``(deployment_row, adapter, mapper, provider_key, provider_tenant_id)``."""
     from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
 
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
@@ -466,7 +466,13 @@ async def resolve_adapter_mapper_from_deployment(
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
     deployment_mapper = get_deployment_mapper(provider_account.provider_key)
-    return deployment_row, deployment_adapter, deployment_mapper, provider_account.provider_key
+    return (
+        deployment_row,
+        deployment_adapter,
+        deployment_mapper,
+        provider_account.provider_key,
+        provider_account.provider_tenant_id,
+    )
 
 
 async def resolve_project_id_for_deployment_create(

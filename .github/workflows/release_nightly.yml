@@ -294,8 +294,8 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $1}')
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $2}')
+          name=$(uv tree | grep -E '^langflow(-nightly)?[[:space:]]' | awk '{print $1}')
+          version=$(uv tree | grep -E '^langflow(-nightly)?[[:space:]]' | awk '{print $2}')
           if [ "$name" != "langflow-nightly" ]; then
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
@@ -331,13 +331,50 @@ jobs:
             echo "Server terminated successfully"
           fi
 
+      - name: Prepare Langflow Main artifact
+        run: |
+          shopt -s nullglob
+          MAIN_WHEELS=(dist/langflow_nightly-*.whl)
+          if [ ${#MAIN_WHEELS[@]} -ne 1 ]; then
+            echo "Expected exactly one langflow-nightly wheel in dist/, found ${#MAIN_WHEELS[@]}"
+            ls -la dist/
+            exit 1
+          fi
+          rm -rf main-dist
+          mkdir -p main-dist
+          cp "${MAIN_WHEELS[0]}" main-dist/
+
+      - name: Build bundle wheels for cross-platform test
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            exit 1
+          fi
+          rm -rf bundles-dist
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          ls -la bundles-dist/
+
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:
           name: dist-nightly-main
-          path: dist
+          path: main-dist
+
+      - name: Upload bundles artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-nightly-bundles
+          path: bundles-dist
 
   test-cross-platform:
     name: Test Cross-Platform Installation
@@ -348,6 +385,7 @@ jobs:
       main-artifact-name: "dist-nightly-main"
       lfx-artifact-name: "dist-nightly-lfx"
       sdk-artifact-name: "dist-nightly-sdk"
+      bundles-artifact-name: "dist-nightly-bundles"
 
   publish-nightly-lfx:
     name: Publish LFX Nightly to PyPI
@@ -437,6 +475,7 @@ jobs:
   publish-nightly-main:
     name: Publish Langflow Main Nightly to PyPI
     needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

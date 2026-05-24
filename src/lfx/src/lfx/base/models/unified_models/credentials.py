@@ -67,36 +67,38 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         # Literal API key (e.g. sk-...)
         return var_name
 
-    # If no user_id or user_id is the string "None", we can't look up global variables
-    if user_id is None or (isinstance(user_id, str) and user_id == "None"):
-        return None
-
     # Get primary variable (first required secret) from provider metadata
     provider_variable_map = get_model_provider_variable_mapping()
     variable_name = provider_variable_map.get(provider)
     if not variable_name:
         return None
 
-    # Try to get from global variables, fall back to environment
-    async def _get_variable():
-        async with session_scope() as session:
-            variable_service = get_variable_service()
-            if variable_service is None:
-                return None
-            try:
-                return await variable_service.get_variable(
-                    user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
-                    name=variable_name,
-                    field="",
-                    session=session,
-                )
-            except ValueError:
-                return None
+    # Try the database-backed variable service first when a user_id is available.
+    # Fall through to os.environ regardless so lfx run (no user_id) can still pick
+    # up canonical credentials from the shell.
+    has_user = user_id is not None and not (isinstance(user_id, str) and user_id == "None")
+    api_key = None
+    if has_user:
 
-    try:
-        api_key = run_until_complete(_get_variable())
-    except (ValueError, Exception):  # noqa: BLE001
-        api_key = None
+        async def _get_variable():
+            async with session_scope() as session:
+                variable_service = get_variable_service()
+                if variable_service is None:
+                    return None
+                try:
+                    return await variable_service.get_variable(
+                        user_id=UUID(user_id) if isinstance(user_id, str) else user_id,
+                        name=variable_name,
+                        field="",
+                        session=session,
+                    )
+                except ValueError:
+                    return None
+
+        try:
+            api_key = run_until_complete(_get_variable())
+        except (ValueError, Exception):  # noqa: BLE001
+            api_key = None
 
     if api_key:
         return api_key

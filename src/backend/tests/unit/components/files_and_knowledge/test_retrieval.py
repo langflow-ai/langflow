@@ -1,3 +1,4 @@
+import importlib.util
 import json
 import uuid
 from pathlib import Path
@@ -8,6 +9,12 @@ from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
 
 from tests.base import ComponentTestBaseWithClient
+
+# langchain-ibm is gated to python_version<'3.14' in pyproject.toml because
+# upstream pins exclude 3.14. Tests that patch langchain_ibm.* directly must
+# be skipped when the package is unavailable.
+_HAS_LANGCHAIN_IBM = importlib.util.find_spec("langchain_ibm") is not None
+_NO_LANGCHAIN_IBM_REASON = "langchain-ibm not available (gated to python_version<'3.14')"
 
 
 class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
@@ -331,6 +338,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         )
         assert result == mock_embeddings
 
+    @pytest.mark.skipif(not _HAS_LANGCHAIN_IBM, reason=_NO_LANGCHAIN_IBM_REASON)
     @patch("langchain_ibm.WatsonxEmbeddings")
     def test_build_embeddings_watsonx(self, mock_watsonx_embeddings, component_class, default_kwargs):
         """Test building IBM WatsonX embeddings."""
@@ -363,6 +371,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         )
         assert result == mock_embeddings
 
+    @pytest.mark.skipif(not _HAS_LANGCHAIN_IBM, reason=_NO_LANGCHAIN_IBM_REASON)
     def test_build_embeddings_watsonx_no_key(self, component_class, default_kwargs):
         """Test building IBM WatsonX embeddings without API key raises error."""
         component = component_class(**default_kwargs)
@@ -748,6 +757,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         mock_ollama_embeddings.assert_called_once_with(model="nomic-embed-text")
         assert result == mock_embeddings
 
+    @pytest.mark.skipif(not _HAS_LANGCHAIN_IBM, reason=_NO_LANGCHAIN_IBM_REASON)
     @patch("langchain_ibm.WatsonxEmbeddings")
     def test_build_embeddings_watsonx_api_key_from_provider_vars(
         self, mock_watsonx_embeddings, component_class, default_kwargs
@@ -781,6 +791,7 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         )
         assert result == mock_embeddings
 
+    @pytest.mark.skipif(not _HAS_LANGCHAIN_IBM, reason=_NO_LANGCHAIN_IBM_REASON)
     @patch("langchain_ibm.WatsonxEmbeddings")
     def test_build_embeddings_watsonx_partial_vars(self, mock_watsonx_embeddings, component_class, default_kwargs):
         """Test WatsonX with only apikey, no project_id or url."""

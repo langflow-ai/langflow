@@ -398,12 +398,12 @@ class Settings(BaseSettings):
     use hardware-level isolation to restrict access."""
 
     # SSRF Protection
-    ssrf_protection_enabled: bool = False
+    ssrf_protection_enabled: bool = True
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
-    When False (default), no URL validation is performed, allowing requests to any destination
+    When False, no URL validation is performed, allowing requests to any destination
     including internal services, private networks, and cloud metadata endpoints.
-    Default is False for backward compatibility. In v2.0, this will be changed to True.
+    Default is True to protect against SSRF attacks including DNS rebinding.
 
     Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
     ssrf_allowed_hosts: list[str] = []
@@ -444,7 +444,15 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
-        """Convert comma-separated string to list if needed."""
+        """Convert comma-separated string to list if needed.
+
+        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
+        before this validator runs (the union list[str] | str resolves
+        differently). Collapse that back to the bare-string wildcard so
+        downstream consumers see the same shape on every Python version.
+        """
+        if isinstance(value, list) and value == ["*"]:
+            return "*"
         if isinstance(value, str) and value != "*":
             if "," in value:
                 # Convert comma-separated string to list

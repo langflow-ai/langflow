@@ -6,9 +6,18 @@ by Akash Joshi / Anderson Filho: ``get_model_name`` returns ``"Custom"`` for
 is set on a different attribute than the one ``next()`` happens to find first.
 """
 
-from langchain_ibm import ChatWatsonx
+import pytest
+
+try:
+    from langchain_ibm import ChatWatsonx
+except (ImportError, TypeError):
+    # langchain-ibm is gated to python_version<'3.14' because ibm-watsonx-ai
+    # has not yet adapted to Python 3.14's StrEnum initialization changes.
+    pytest.skip("langchain-ibm not available on Python 3.14+", allow_module_level=True)
+
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
-from lfx.base.models.model_utils import get_model_name
+from lfx.base.models.model_metadata import create_model_metadata
+from lfx.base.models.model_utils import fetch_live_watsonx_models, get_model_name
 
 
 class _AttrBag:
@@ -98,3 +107,84 @@ class TestGetModelName:
             project_id="fake",
         )
         assert get_model_name(llm) == "meta-llama/llama-3-3-70b-instruct"
+
+
+class TestFetchLiveWatsonxModelsRespectsStaticToolCalling:
+    """Live-fetched WatsonX models must honor static tool_calling metadata.
+
+    Regression: ``fetch_live_watsonx_models`` blanket-sets ``tool_calling=True``
+    for every LLM returned from the WatsonX foundation_model_specs endpoint,
+    even when the static catalog declares the model as ``tool_calling=False``
+    (e.g. code-instruct or guardian variants). The Agent dropdown filters on
+    ``tool_calling=True`` and consequently surfaces models that will fail at
+    runtime when bound with tools.
+    """
+
+    NON_TOOL_MODEL = "ibm/granite-3b-code-instruct"
+
+    @staticmethod
+    def _fake_static_llm_metadata():
+        """Static catalog entry declaring the model as non-tool-calling."""
+        return [
+            create_model_metadata(
+                provider="IBM WatsonX",
+                name=TestFetchLiveWatsonxModelsRespectsStaticToolCalling.NON_TOOL_MODEL,
+                icon="IBM",
+                model_type="llm",
+                tool_calling=False,
+            ),
+        ]
+
+    def test_live_fetch_preserves_static_tool_calling_false(self, monkeypatch):
+        """A model whose static metadata says tool_calling=False must come back as False."""
+        # Force the live API to return the model name we declared as non-tool-calling.
+        monkeypatch.setattr(
+            "lfx.base.models.model_utils.get_provider_variable_value",
+            lambda *_args, **_kwargs: "https://us-south.ml.cloud.ibm.com",
+        )
+        monkeypatch.setattr(
+            "lfx.base.models.model_utils.get_watsonx_llm_models",
+            lambda *_args, **_kwargs: [self.NON_TOOL_MODEL],
+        )
+        # Static catalog: the model is known and explicitly marked non-tool-calling.
+        monkeypatch.setattr(
+            "lfx.base.models.model_utils.WATSONX_LLM_METADATA",
+            self._fake_static_llm_metadata(),
+        )
+
+        models = fetch_live_watsonx_models(user_id="test-user", model_type="llm")
+
+        assert models, "Expected the live fetch to return the mocked model"
+        match = next((m for m in models if m["name"] == self.NON_TOOL_MODEL), None)
+        assert match is not None, f"{self.NON_TOOL_MODEL} missing from live results"
+        assert match["tool_calling"] is False, (
+            f"{self.NON_TOOL_MODEL} is declared tool_calling=False in static metadata "
+            "but fetch_live_watsonx_models returned tool_calling=True. The live-fetch "
+            "path is overriding static capability flags and will surface non-tool-capable "
+            "models in the Agent dropdown."
+        )
+
+    def test_live_fetch_defaults_unknown_models_to_tool_calling_true(self, monkeypatch):
+        """Models not in the static catalog default to tool_calling=True (current behavior)."""
+        unknown_model = "ibm/some-future-model-xyz"
+        monkeypatch.setattr(
+            "lfx.base.models.model_utils.get_provider_variable_value",
+            lambda *_args, **_kwargs: "https://us-south.ml.cloud.ibm.com",
+        )
+        monkeypatch.setattr(
+            "lfx.base.models.model_utils.get_watsonx_llm_models",
+            lambda *_args, **_kwargs: [unknown_model],
+        )
+        monkeypatch.setattr(
+            "lfx.base.models.model_utils.WATSONX_LLM_METADATA",
+            self._fake_static_llm_metadata(),  # does not contain unknown_model
+        )
+
+        models = fetch_live_watsonx_models(user_id="test-user", model_type="llm")
+
+        match = next((m for m in models if m["name"] == unknown_model), None)
+        assert match is not None
+        assert match["tool_calling"] is True, (
+            "Unknown models (not present in static catalog) should default to "
+            "tool_calling=True to preserve current behavior for unenumerated models."
+        )

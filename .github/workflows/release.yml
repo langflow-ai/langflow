@@ -28,6 +28,11 @@ on:
         required: false
         type: boolean
         default: false
+      release_bundles:
+        description: "Release every src/bundles/* package (required when releasing main, since main pins exact bundle versions)"
+        required: false
+        type: boolean
+        default: false
       build_docker_base:
         description: "Build Docker Image for Langflow Base"
         required: true
@@ -71,6 +76,7 @@ jobs:
           echo "release_package_main: ${{ inputs.release_package_main }}"
           echo "release_lfx: ${{ inputs.release_lfx }}"
           echo "release_sdk: ${{ inputs.release_sdk }}"
+          echo "release_bundles: ${{ inputs.release_bundles }}"
           echo "build_docker_base: ${{ inputs.build_docker_base }}"
           echo "build_docker_main: ${{ inputs.build_docker_main }}"
           echo "pre_release: ${{ inputs.pre_release }}"
@@ -163,6 +169,12 @@ jobs:
             exit 1
           fi
 
+          if [ "${{ inputs.release_package_main }}" = "true" ] && [ "${{ inputs.release_bundles }}" = "false" ]; then
+            echo "Error: Cannot release Langflow Main without releasing bundles."
+            echo "Langflow Main pins exact bundle versions (lfx-arxiv, lfx-duckduckgo, ...). Please enable 'release_bundles' or disable 'release_package_main'."
+            exit 1
+          fi
+
           echo "✅ Release dependencies validated successfully."
 
   determine-base-version:
@@ -245,7 +257,7 @@ jobs:
       - name: Determine version
         id: version
         run: |
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $2}' | sed 's/^v//')
+          version=$(uv tree | grep -E '^langflow(-nightly)?[[:space:]]' | awk '{print $2}' | sed 's/^v//')
           echo "Main version from pyproject.toml: $version"
 
           if [ ${{inputs.pre_release}} == "true" ]; then
@@ -383,7 +395,7 @@ jobs:
     uses: ./.github/workflows/ci.yml
     with:
       ref: ${{ inputs.release_tag }}
-      python-versions: "['3.10', '3.11', '3.12', '3.13']"
+      python-versions: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       frontend-tests-folder: "tests"
       release: true
       run-all-tests: true
@@ -445,7 +457,10 @@ jobs:
           uv venv test-env --seed
           uv pip install --python ./test-env/bin/python dist/*.whl
           EXPECTED_VERSION="${{ needs.determine-sdk-version.outputs.version }}"
-          ./test-env/bin/python -c "from importlib.metadata import version; import langflow_sdk; installed_version = version('langflow-sdk'); print(f'langflow-sdk {installed_version} imported successfully'); assert installed_version == '$EXPECTED_VERSION', f'Installed version {installed_version} does not match expected version $EXPECTED_VERSION'"
+          # importlib.metadata returns the PEP 440 canonical form, so normalize
+          # the expected version the same way the wheel filename check does.
+          NORMALIZED_VERSION=$(echo "$EXPECTED_VERSION" | sed 's/\.rc/rc/g; s/\.a/a/g; s/\.b/b/g; s/\.dev/dev/g')
+          ./test-env/bin/python -c "from importlib.metadata import version; import langflow_sdk; installed_version = version('langflow-sdk'); print(f'langflow-sdk {installed_version} imported successfully'); assert installed_version == '$NORMALIZED_VERSION', f'Installed version {installed_version} does not match expected version $NORMALIZED_VERSION'"
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:
@@ -841,9 +856,63 @@ jobs:
           name: dist-main
           path: dist
 
+  build-bundles:
+    name: Build Langflow Bundles
+    needs: [build-lfx, determine-lfx-version]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.release_bundles &&
+      needs.build-lfx.result == 'success'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      bundles-found: ${{ steps.build.outputs.bundles-found }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.13"
+          prune-cache: false
+      - name: Install the project
+        run: uv sync
+      - name: Build bundle wheels
+        id: build
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            echo "bundles-found=0" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          echo "bundles-found=1" >> $GITHUB_OUTPUT
+          ls -la bundles-dist/
+      - name: Upload bundles artifact
+        if: steps.build.outputs.bundles-found == '1'
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-bundles
+          path: bundles-dist
+
   test-cross-platform:
     name: Test Cross-Platform Installation
-    needs: [build-base, build-main, build-lfx, build-sdk]
+    needs: [build-base, build-main, build-lfx, build-sdk, build-bundles]
     if: |
       always() &&
       !cancelled() &&
@@ -854,6 +923,7 @@ jobs:
       main-artifact-name: "dist-main"
       lfx-artifact-name: "dist-lfx"
       sdk-artifact-name: ${{ needs.build-sdk.result == 'success' && 'dist-sdk' || '' }}
+      bundles-artifact-name: ${{ needs.build-bundles.result == 'success' && needs.build-bundles.outputs.bundles-found == '1' && 'dist-bundles' || '' }}
       pre_release: ${{ inputs.pre_release }}
 
   publish-base:
@@ -886,10 +956,58 @@ jobs:
         run: |
           cd src/backend/base && uv publish dist/*.whl
 
+  publish-bundles:
+    name: Publish Bundles to PyPI
+    needs: [build-bundles, test-cross-platform, ci, publish-lfx]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.release_bundles &&
+      needs.build-bundles.result == 'success' &&
+      needs.build-bundles.outputs.bundles-found == '1' &&
+      needs.test-cross-platform.result == 'success' &&
+      needs.ci.result == 'success' &&
+      (needs.publish-lfx.result == 'success' || needs.publish-lfx.result == 'skipped')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bundles artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-bundles
+          path: bundles-dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish bundles to PyPI
+        if: ${{ !inputs.dry_run }}
+        env:
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          shopt -s nullglob
+          wheels=(bundles-dist/*.whl)
+          if [ ${#wheels[@]} -eq 0 ]; then
+            echo "No bundle wheels to publish."
+            exit 0
+          fi
+          for wheel in "${wheels[@]}"; do
+            echo "Publishing $wheel"
+            uv publish "$wheel"
+          done
+
   publish-main:
     name: Publish Langflow Main to PyPI
-    if: ${{ inputs.release_package_main }}
-    needs: [build-main, test-cross-platform, publish-base, ci]
+    if: |
+      always() &&
+      !cancelled() &&
+      inputs.release_package_main &&
+      needs.build-main.result == 'success' &&
+      needs.test-cross-platform.result == 'success' &&
+      needs.publish-base.result == 'success' &&
+      needs.ci.result == 'success' &&
+      (needs.publish-bundles.result == 'success' || needs.publish-bundles.result == 'skipped')
+    needs: [build-main, test-cross-platform, publish-base, publish-bundles, ci]
     runs-on: ubuntu-latest
     steps:
       - name: Download main artifact
