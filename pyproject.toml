@@ -302,6 +302,9 @@ external = ["RUF027"]
 "src/backend/base/langflow/api/v2/*" = [
     "TCH",  # FastAPI needs to evaluate types at runtime
 ]
+"src/backend/base/langflow/api/a2a/*" = [
+    "TCH",  # FastAPI needs to evaluate types at runtime (DbSession, CurrentActiveUser deps)
+]
 "src/backend/base/langflow/__main__.py" = [
     "B008",  # Typer CLI requires function calls in defaults
 ]

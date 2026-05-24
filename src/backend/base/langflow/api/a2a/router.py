@@ -14,7 +14,7 @@ import asyncio
 import json
 import os
 import uuid
-from typing import Any
+from typing import Annotated, Any
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, Query, status
@@ -25,14 +25,19 @@ from sqlmodel import select
 
 from langflow.api.a2a.agent_card import generate_agent_card
 from langflow.api.a2a.config import validate_a2a_slug
+from langflow.api.a2a.db_task_manager import DatabaseTaskManager
 from langflow.api.a2a.flow_adapter import translate_inbound, translate_outbound
 from langflow.api.a2a.streaming import A2AStreamBridge
-from langflow.api.a2a.task_manager import TaskManager
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.services.database.models.flow.model import Flow
 
-# Module-level task manager instance (in-memory for v1)
-_task_manager = TaskManager()
+# Module-level task manager. DB-backed so task state survives restarts and
+# is shared across workers.
+_task_manager = DatabaseTaskManager()
+
+# Strong references to in-flight streaming background tasks so they are not
+# garbage-collected while the SSE response is still being produced.
+_background_tasks: set[asyncio.Task] = set()
 
 # ---------------------------------------------------------------------------
 # Pydantic models for request/response
@@ -110,8 +115,7 @@ async def get_agent_card(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
     base_url = f"/a2a/{agent_slug}"
-    card = generate_agent_card(flow, base_url=base_url)
-    return card
+    return generate_agent_card(flow, base_url=base_url)
 
 
 @a2a_router.get("/a2a/{agent_slug}/v1/card")
@@ -149,7 +153,7 @@ async def message_send(
     agent_slug: str,
     body: dict[str, Any],
     session: DbSession,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
 ):
     """Send an A2A message to a Langflow agent (synchronous).
 
@@ -175,7 +179,7 @@ async def message_send(
     # Check for INPUT_REQUIRED follow-up: if the client sends a message
     # with a taskId that's in INPUT_REQUIRED state, start a new execution
     # with the follow-up text (same session for conversation continuity).
-    if requested_task_id and _task_manager.is_input_required(requested_task_id):
+    if requested_task_id and await _task_manager.is_input_required(requested_task_id):
         await _task_manager.resolve_input(requested_task_id)
         # Fall through to create a new task and execute — the same
         # contextId means the same session_id, so the Agent sees
@@ -210,14 +214,14 @@ async def message_send(
             "context_id": context_id,
             "task_manager": _task_manager,
         }
-        result = await _execute_flow(flow, flow_inputs, session, a2a_context=a2a_context)
+        result = await _execute_flow(flow, flow_inputs, session, user=current_user, a2a_context=a2a_context)
 
         # Translate outputs → A2A artifacts
         artifacts = await translate_outbound(result.outputs or [])
 
         # Check if the flow signaled input-required (via request_input tool
         # or a RequestInput component). The task_manager tracks this.
-        if _task_manager.is_input_required(task_id):
+        if await _task_manager.is_input_required(task_id):
             task = await _task_manager.get_task(task_id)
             task["contextId"] = context_id
             task["artifacts"] = artifacts
@@ -226,9 +230,11 @@ async def message_send(
         # Update to COMPLETED
         task = await _task_manager.update_state(task_id, "completed", artifacts=artifacts)
         task["contextId"] = context_id
-        return task
+        return task  # noqa: TRY300
 
-    except Exception as e:
+    # Any flow execution error is converted into a FAILED task so the A2A
+    # client always receives a well-formed Task rather than an HTTP 500.
+    except Exception as e:  # noqa: BLE001
         logger.exception(f"A2A flow execution failed for task {task_id}: {e}")
         task = await _task_manager.update_state(task_id, "failed", error=str(e))
         task["contextId"] = context_id
@@ -240,7 +246,10 @@ async def _execute_flow(
     flow_inputs: dict,
     session,  # noqa: ARG001
     *,
+    user: Any,
     a2a_context: dict | None = None,
+    stream: bool = False,
+    event_manager: Any = None,
 ) -> Any:
     """Execute a Langflow flow with the given inputs.
 
@@ -250,10 +259,18 @@ async def _execute_flow(
         flow: The Flow model to execute.
         flow_inputs: Translated inputs from the A2A message.
         session: DB session (unused, kept for interface compatibility).
+        user: The authenticated A2A caller. Forwarded as ``api_key_user``
+              so flow execution runs with proper ownership (global
+              variables, job records, permissions). Without it,
+              ``simple_run_flow`` rejects the run with 401.
         a2a_context: Optional A2A execution context passed through to
                      the graph. Components can read this via self.ctx
                      to detect A2A execution and inject tools like
                      request_input.
+        stream: When True, run in streaming mode and emit events to
+                ``event_manager`` (used by message:stream).
+        event_manager: EventManager that receives token/vertex/end
+                       events when ``stream`` is True.
     """
     from langflow.api.v1.endpoints import simple_run_flow
     from langflow.api.v1.schemas import SimplifiedAPIRequest
@@ -275,7 +292,9 @@ async def _execute_flow(
     return await simple_run_flow(
         flow=flow,
         input_request=input_request,
-        stream=False,
+        stream=stream,
+        api_key_user=user,
+        event_manager=event_manager,
         context=context,
     )
 
@@ -290,7 +309,7 @@ async def message_stream(
     agent_slug: str,
     body: dict[str, Any],
     session: DbSession,
-    current_user: CurrentActiveUser,  # noqa: ARG001
+    current_user: CurrentActiveUser,
 ):
     """Send an A2A message and receive a streaming SSE response.
 
@@ -352,7 +371,46 @@ async def message_stream(
                 "task_manager": _task_manager,
                 "stream_bridge": bridge,
             }
-            result = await _execute_flow(flow, flow_inputs, session, a2a_context=a2a_context)
+
+            # Stream real execution events into the bridge as they happen:
+            # LLM tokens (artifact-update, append) and per-vertex progress
+            # (working status). The terminal state and the authoritative final
+            # artifact are emitted explicitly below.
+            from langflow.events.event_manager import create_stream_tokens_event_manager
+
+            langflow_queue: asyncio.Queue = asyncio.Queue()
+            event_manager = create_stream_tokens_event_manager(queue=langflow_queue)
+
+            async def _forward_progress_events() -> None:
+                while True:
+                    item = await langflow_queue.get()
+                    if item is None or item[1] is None:
+                        break
+                    raw = item[1]
+                    raw_str = raw.decode("utf-8") if isinstance(raw, bytes) else raw
+                    try:
+                        parsed = json.loads(raw_str.strip())
+                    except (json.JSONDecodeError, AttributeError):
+                        continue
+                    # Only forward progress events; terminal state is emitted explicitly.
+                    if parsed.get("event") in ("token", "end_vertex"):
+                        await bridge.process_langflow_event(raw_str)
+
+            forward_task = asyncio.create_task(_forward_progress_events())
+            try:
+                result = await _execute_flow(
+                    flow,
+                    flow_inputs,
+                    session,
+                    user=current_user,
+                    a2a_context=a2a_context,
+                    stream=True,
+                    event_manager=event_manager,
+                )
+            finally:
+                # Stop the forwarder and let it drain any remaining events.
+                await langflow_queue.put(None)
+                await forward_task
 
             # Check if the task entered INPUT_REQUIRED during execution
             # (this would be set by the request_input tool handler)
@@ -397,7 +455,7 @@ async def message_stream(
             }
             await bridge.output_queue.put(completed_event)
 
-        except Exception as e:
+        except Exception as e:  # noqa: BLE001 - surface any failure as a FAILED SSE event
             logger.exception(f"A2A streaming flow execution failed: {e}")
             await _task_manager.update_state(task_id, "failed", error=str(e))
             failed_event = {
@@ -426,8 +484,11 @@ async def message_stream(
                 break
             yield f"data: {json.dumps(event)}\n\n"
 
-    # Start flow execution in background
-    asyncio.create_task(_run_and_stream())
+    # Start flow execution in background. Keep a strong reference so the
+    # task isn't garbage-collected mid-stream (RUF006).
+    stream_task = asyncio.create_task(_run_and_stream())
+    _background_tasks.add(stream_task)
+    stream_task.add_done_callback(_background_tasks.discard)
 
     return StreamingResponse(
         _event_generator(),
@@ -440,44 +501,74 @@ async def message_stream(
 # ---------------------------------------------------------------------------
 
 
+def _task_belongs_to_flow(task: dict | None, flow: Flow) -> bool:
+    """Whether a task was created by the given flow (agent).
+
+    Tasks are scoped to their owning agent so one agent's task endpoints
+    cannot read or mutate another agent's tasks.
+    """
+    if task is None:
+        return False
+    return (task.get("metadata") or {}).get("flowId") == str(flow.id)
+
+
 @a2a_router.get("/a2a/{agent_slug}/v1/tasks/{task_id}")
 async def get_task(
-    agent_slug: str,  # noqa: ARG001
+    agent_slug: str,
     task_id: str,
-    session: DbSession,  # noqa: ARG001
+    session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001
 ):
     """Get the current state of an A2A task.
 
     Used for polling when the client doesn't have an SSE connection.
+    Scoped to the agent identified by ``agent_slug``.
     """
+    if not _a2a_is_enabled():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="A2A is not enabled")
+    flow = await _get_flow_by_slug(session, agent_slug)
+    if not flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+
     task = await _task_manager.get_task(task_id)
-    if task is None:
+    if not _task_belongs_to_flow(task, flow):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
     return task
 
 
 @a2a_router.get("/a2a/{agent_slug}/v1/tasks")
 async def list_tasks(
-    agent_slug: str,  # noqa: ARG001
-    session: DbSession,  # noqa: ARG001
+    agent_slug: str,
+    session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001
-    contextId: str | None = Query(None),  # noqa: N803
+    contextId: Annotated[str | None, Query()] = None,  # noqa: N803
 ):
-    """List A2A tasks, optionally filtered by contextId."""
-    return await _task_manager.list_tasks(context_id=contextId)
+    """List A2A tasks for this agent, optionally filtered by contextId."""
+    if not _a2a_is_enabled():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="A2A is not enabled")
+    flow = await _get_flow_by_slug(session, agent_slug)
+    if not flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+
+    return await _task_manager.list_tasks(context_id=contextId, flow_id=str(flow.id))
 
 
 @a2a_router.post("/a2a/{agent_slug}/v1/tasks/{task_id}:cancel")
 async def cancel_task(
-    agent_slug: str,  # noqa: ARG001
+    agent_slug: str,
     task_id: str,
-    session: DbSession,  # noqa: ARG001
+    session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001
 ):
-    """Cancel an A2A task (best-effort)."""
+    """Cancel an A2A task (best-effort). Scoped to the agent."""
+    if not _a2a_is_enabled():
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="A2A is not enabled")
+    flow = await _get_flow_by_slug(session, agent_slug)
+    if not flow:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
+
     task = await _task_manager.get_task(task_id)
-    if task is None:
+    if not _task_belongs_to_flow(task, flow):
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Task not found")
 
     try:

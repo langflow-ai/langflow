@@ -5,15 +5,9 @@ import pytest
 
 @pytest.fixture(autouse=True)
 def _reset_a2a_task_manager():
-    """Reset the module-level task manager between tests.
-
-    The task manager is a module-level singleton for v1 (in-memory).
-    Tests must start with a clean state to avoid cross-test contamination.
+    """A2A task state is DB-backed and the test database is recreated per
+    test (see the ``client`` fixture), so cross-test isolation is automatic.
+    Kept as an autouse no-op for clarity and as a hook if isolation is ever
+    needed explicitly.
     """
-    from langflow.api.a2a.router import _task_manager
-
-    _task_manager._tasks.clear()
-    _task_manager._pending_inputs.clear()
     yield
-    _task_manager._tasks.clear()
-    _task_manager._pending_inputs.clear()

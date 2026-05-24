@@ -16,7 +16,6 @@ the interface.
 
 from __future__ import annotations
 
-import asyncio
 import uuid
 from datetime import datetime, timezone
 
@@ -128,11 +127,18 @@ class TaskManager:
         """
         return self._tasks.get(task_id)
 
-    async def list_tasks(self, context_id: str | None = None) -> list[dict]:
-        """List tasks, optionally filtered by contextId.
+    async def list_tasks(
+        self,
+        context_id: str | None = None,
+        flow_id: str | None = None,
+    ) -> list[dict]:
+        """List tasks, optionally filtered by contextId and/or flow.
 
         Args:
             context_id: If provided, only return tasks in this conversation.
+            flow_id: If provided, only return tasks belonging to this flow.
+                     This scopes results to a single agent so one agent's
+                     endpoint cannot enumerate another agent's tasks.
 
         Returns:
             List of task dicts.
@@ -140,6 +146,8 @@ class TaskManager:
         tasks = list(self._tasks.values())
         if context_id is not None:
             tasks = [t for t in tasks if t.get("contextId") == context_id]
+        if flow_id is not None:
+            tasks = [t for t in tasks if (t.get("metadata") or {}).get("flowId") == flow_id]
         return tasks
 
     async def handle_retry(self, task_id: str) -> dict | None:
