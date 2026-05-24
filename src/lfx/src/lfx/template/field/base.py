@@ -1,10 +1,8 @@
 from collections.abc import Callable
 from enum import Enum
-from typing import (  # type: ignore[attr-defined]
+from typing import (
     Any,
-    GenericAlias,  # type: ignore[attr-defined]
-    _GenericAlias,  # type: ignore[attr-defined]
-    _UnionGenericAlias,  # type: ignore[attr-defined]
+    get_origin,
 )
 
 from pydantic import (
@@ -164,12 +162,12 @@ class Input(BaseModel):
         # If the user passes CustomComponent as a type insteado of "CustomComponent" we need to convert it to a string
         # this should be done for all types
         # How to check if v is a type?
-        if isinstance(v, type | _GenericAlias | GenericAlias | _UnionGenericAlias):
+        if isinstance(v, type) or get_origin(v) is not None:
             v = post_process_type(v)[0]
             v = format_type(v)
         elif not isinstance(v, str):
             msg = f"type must be a string or a type, not {type(v)}"
-            raise ValueError(msg)  # noqa: TRY004
+            raise ValueError(msg)
         return v
 
 
@@ -216,6 +214,13 @@ class Output(BaseModel):
 
     options: OutputOptions | None = Field(default=None)
     """Options for the output."""
+
+    info: str | None = Field(default=None, exclude=True)
+    """Description/info text for this output, used as tool description when available.
+
+    Excluded from serialization to avoid polluting stored templates.
+    Only used at runtime by build_description() for tool descriptions.
+    """
 
     tool_mode: bool = Field(default=True)
     """Specifies if the output should be used as a tool"""

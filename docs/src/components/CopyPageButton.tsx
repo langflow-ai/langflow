@@ -1,5 +1,6 @@
 import React, { useCallback, useState } from "react";
 import { Copy as CopyIcon, Check as CheckIcon } from "lucide-react";
+import styles from "./CopyPageButton.module.css";
 
 function nodeToInlineMarkdown(node: Node): string {
   if (node.nodeType === Node.TEXT_NODE) {
@@ -147,39 +148,16 @@ export function CopyPageButton(): JSX.Element | null {
   }, []);
 
   return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "flex-start",
-        margin: "0.5rem 0 1.25rem 0",
-      }}
-    >
-      <button
-        type="button"
-        onClick={handleClick}
-        style={{
-          display: "inline-flex",
-          alignItems: "center",
-          gap: "0.3rem",
-          cursor: "pointer",
-          borderRadius: "999px",
-          padding: "0.22rem 0.7rem",
-          border: "1px solid var(--ifm-color-secondary-dark)",
-          backgroundColor: "var(--ifm-background-surface-color)",
-          color: "var(--ifm-font-color-base)",
-          fontSize: "0.7rem",
-        }}
-      >
-        <span aria-hidden="true" style={{ display: "inline-flex", alignItems: "center" }}>
+    <div className={styles.root}>
+      <button type="button" onClick={handleClick} className={styles.button}>
+        <span aria-hidden="true" className={styles.icon}>
           {copied ? (
-            <CheckIcon size={11} strokeWidth={2} style={{ marginRight: "0.22rem" }} />
+            <CheckIcon size={12} strokeWidth={2} />
           ) : (
-            <CopyIcon size={11} strokeWidth={2} style={{ marginRight: "0.22rem" }} />
+            <CopyIcon size={12} strokeWidth={2} />
           )}
         </span>
-        <span style={{ fontSize: "0.75rem", fontWeight: 500 }}>
-          {copied ? "Copied!" : "Copy page"}
-        </span>
+        <span className={styles.label}>{copied ? "Copied!" : "Copy page"}</span>
       </button>
     </div>
   );

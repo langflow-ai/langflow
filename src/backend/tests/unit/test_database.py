@@ -523,6 +523,45 @@ async def test_upload_file(client: AsyncClient, json_flow: str, logged_in_header
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_file_flows_not_a_list_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": <non-list> } must return 422, not 500."""
+    file_contents = orjson.dumps({"flows": "oops"})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows" in response.json()["detail"].lower()
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_file_flows_item_not_a_dict_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": [1] } must return 422, not 500."""
+    file_contents = orjson.dumps({"flows": [1]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows" in response.json()["detail"].lower()
+
+
+@pytest.mark.usefixtures("session")
+async def test_upload_file_flows_mixed_items_returns_422(client: AsyncClient, logged_in_headers):
+    """Regression: { "flows": [{}, 42] } must return 422 at the bad item."""
+    file_contents = orjson.dumps({"flows": [{}, 42]})
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("bad.json", file_contents, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 422
+    assert "flows[1]" in response.json()["detail"]
+
+
+@pytest.mark.usefixtures("session")
 async def test_download_file(
     client: AsyncClient,
     json_flow,
@@ -545,7 +584,7 @@ async def test_download_file(
         saved_flows = []
         for flow in flow_list.flows:
             flow.user_id = active_user.id
-            db_flow = Flow.model_validate(flow, from_attributes=True)
+            db_flow = Flow.model_validate(flow.model_dump(exclude={"id"}))
             _session.add(db_flow)
             saved_flows.append(db_flow)
         await _session.commit()
@@ -562,7 +601,102 @@ async def test_download_file(
     # Check response data
     # Since the endpoint now returns a zip file, we need to check the content type and the filename in the headers
     assert response.headers["Content-Type"] == "application/x-zip-compressed"
-    assert "attachment; filename=" in response.headers["Content-Disposition"]
+    content_disposition = response.headers["Content-Disposition"]
+    assert "attachment" in content_disposition
+    assert 'filename="' in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
+
+
+@pytest.mark.usefixtures("session")
+async def test_download_flows_content_disposition_dual_param(client: AsyncClient, logged_in_headers):
+    """Downloading multiple flows must produce a dual-param RFC 5987 Content-Disposition header.
+
+    The ZIP filename is always timestamp-based (pure ASCII). This test verifies
+    that both the legacy 'filename=' param and the RFC 5987 'filename*=' param
+    are present and well-formed, as required for compatibility with both old
+    and new HTTP clients.
+    """
+    from urllib.parse import unquote
+
+    # Create two flows (names don't affect the ZIP filename, which is timestamp-based)
+    chinese_names = ["龙流程", "测试下载"]
+    flow_ids = []
+    for name in chinese_names:
+        create_resp = await client.post(
+            "api/v1/flows/",
+            json={"name": name, "description": "", "data": {}},
+            headers=logged_in_headers,
+        )
+        assert create_resp.status_code == 201
+        flow_ids.append(create_resp.json()["id"])
+
+    download_response = await client.post(
+        "api/v1/flows/download/",
+        data=json.dumps(flow_ids),
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert download_response.status_code == 200
+    assert download_response.headers["Content-Type"] == "application/x-zip-compressed"
+
+    content_disposition = download_response.headers["Content-Disposition"]
+    # Must include both params: ASCII fallback and RFC 5987
+    assert "attachment" in content_disposition
+    assert 'filename="' in content_disposition
+    assert "filename*=UTF-8''" in content_disposition
+    # The RFC 5987 value must decode to a .zip filename
+    rfc5987_value = content_disposition.split("filename*=UTF-8''")[-1].split(";")[0].strip()
+    decoded = unquote(rfc5987_value)
+    assert decoded.endswith(".zip")
+
+
+@pytest.mark.usefixtures("session")
+async def test_download_single_flow_returns_normalized_json(client: AsyncClient, logged_in_headers):
+    """Downloading a single flow returns normalized JSON rather than a ZIP archive."""
+    code_value = "print('hello')\nprint('world')"
+    flow_payload = FlowCreate(
+        name=str(uuid4()),
+        description="single flow export",
+        data={
+            "nodes": [
+                {
+                    "id": "node-1",
+                    "data": {
+                        "node": {
+                            "template": {
+                                "code": {"type": "code", "value": code_value},
+                                "api_key": {"name": "api_key", "password": True, "value": "super-secret"},
+                            }
+                        }
+                    },
+                }
+            ],
+            "edges": [],
+        },
+    )
+
+    create_response = await client.post("api/v1/flows/", json=flow_payload.model_dump(), headers=logged_in_headers)
+    assert create_response.status_code == 201
+    flow_id = create_response.json()["id"]
+
+    download_response = await client.post(
+        "api/v1/flows/download/",
+        data=json.dumps([flow_id]),
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert download_response.status_code == 200
+    assert download_response.headers["Content-Type"].startswith("application/json")
+
+    downloaded = download_response.json()
+    assert downloaded["name"] == flow_payload.name
+    assert "updated_at" not in downloaded
+    assert "user_id" not in downloaded
+    assert "folder_id" not in downloaded
+    assert "access_type" not in downloaded
+    assert downloaded["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == [
+        "print('hello')",
+        "print('world')",
+    ]
+    assert downloaded["data"]["nodes"][0]["data"]["node"]["template"]["api_key"]["value"] is None
 
 
 @pytest.mark.usefixtures("session")
@@ -671,6 +805,7 @@ async def test_download_then_upload_roundtrip(client: AsyncClient, json_flow: st
         saved_flows = []
         for f in flow_list.flows:
             f.user_id = active_user.id
+            f.id = uuid4()
             db_flow = Flow.model_validate(f, from_attributes=True)
             _session.add(db_flow)
             saved_flows.append(db_flow)
@@ -844,11 +979,97 @@ async def test_upload_zip_to_projects_filename_none(client: AsyncClient, json_fl
 
 
 @pytest.mark.usefixtures("session")
+async def test_upload_json_file_to_projects_rejoins_code_lines(client: AsyncClient, logged_in_headers):
+    """Project JSON upload accepts exported code-as-lines format and stores code as a string."""
+    project_name = f"JSON Project {uuid4()}"
+    code_lines = ["print('alpha')", "print('beta')"]
+    payload = {
+        "folder_name": project_name,
+        "folder_description": "json upload",
+        "flows": [
+            {
+                "name": f"Flow {uuid4()}",
+                "description": "imported from project json",
+                "data": {
+                    "nodes": [
+                        {
+                            "id": "node-1",
+                            "data": {
+                                "node": {
+                                    "template": {
+                                        "code": {"type": "code", "value": code_lines},
+                                    }
+                                }
+                            },
+                        }
+                    ],
+                    "edges": [],
+                },
+            }
+        ],
+    }
+
+    response = await client.post(
+        "api/v1/projects/upload/",
+        files={"file": ("project.json", json.dumps(payload).encode("utf-8"), "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 201, response.text
+    response_data = response.json()
+    assert len(response_data) == 1
+    assert response_data[0]["folder_id"] is not None
+    assert (
+        response_data[0]["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+        == "print('alpha')\nprint('beta')"
+    )
+
+    project_response = await client.get(f"api/v1/projects/{response_data[0]['folder_id']}", headers=logged_in_headers)
+    assert project_response.status_code == 200
+    assert project_response.json()["name"].startswith(project_name)
+
+
+@pytest.mark.usefixtures("session")
+async def test_download_project_zip_sanitizes_flow_names(client: AsyncClient, json_flow: str, logged_in_headers):
+    """Project ZIP downloads must sanitize flow names to prevent Zip Slip paths."""
+    project_response = await client.post(
+        "api/v1/projects/",
+        json={"name": f"Download Project {uuid4()}", "description": "", "flows_list": [], "components_list": []},
+        headers=logged_in_headers,
+    )
+    assert project_response.status_code == 201
+    project_id = project_response.json()["id"]
+
+    flow = orjson.loads(json_flow)
+    create_response = await client.post(
+        "api/v1/flows/",
+        json={
+            "name": "../escaped-flow",
+            "description": "path traversal test",
+            "folder_id": project_id,
+            "data": flow["data"],
+            "is_component": False,
+        },
+        headers=logged_in_headers,
+    )
+    assert create_response.status_code == 201
+
+    download_response = await client.get(f"api/v1/projects/download/{project_id}", headers=logged_in_headers)
+    assert download_response.status_code == 200
+
+    with zipfile.ZipFile(io.BytesIO(download_response.content), "r") as zip_file:
+        file_names = zip_file.namelist()
+        assert "__escaped-flow.json" in file_names
+        assert all("/" not in name and ".." not in name for name in file_names)
+
+
+@pytest.mark.usefixtures("session")
 async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_headers):
     """Uploading a corrupt/invalid ZIP file returns 400 with a descriptive error."""
-    # Build a payload that passes zipfile.is_zipfile() but fails ZipFile() construction.
-    # We keep only the end-of-central-directory record (last 22 bytes of a real ZIP)
-    # prepended with garbage, so the EOCD signature is found but the central directory is invalid.
+    # Payload with an EOCD signature prepended by garbage. Python 3.10-3.13 treat
+    # this as a ZIP and fail in ZipFile() construction ("not a valid ZIP archive");
+    # Python 3.14's stricter zipfile.is_zipfile() rejects it and the route falls
+    # through to the JSON branch ("Invalid JSON file"). Both paths return 400 with
+    # a descriptive detail, which is the user-facing contract under test.
     buf = io.BytesIO()
     with zipfile.ZipFile(buf, "w") as zf:
         zf.writestr("dummy.json", '{"name":"x"}')
@@ -862,7 +1083,8 @@ async def test_upload_bad_zip_file_returns_400(client: AsyncClient, logged_in_he
         headers=logged_in_headers,
     )
     assert response.status_code == 400
-    assert "not a valid ZIP" in response.json()["detail"]
+    detail = response.json()["detail"]
+    assert "not a valid ZIP" in detail or "Invalid JSON file" in detail
 
 
 @pytest.mark.usefixtures("session")

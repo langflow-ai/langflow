@@ -17,6 +17,7 @@ qdrant_storage
 .vscode/settings.json
 .chroma
 .ruff_cache
+opendsstar_cache
 
 # PyCharm
 .idea/
@@ -293,3 +294,9 @@ AGENTS.md
 a2a-implementation-plan.md
 a2a-design.md
 a2a_status.md
+CLAUDE.local.md
+langflow.log.*
+tmp_toolguard/
+
+#whitesource
+whitesource/

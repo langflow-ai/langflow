@@ -2,7 +2,7 @@
 
 from typing import Any
 
-from pydantic import AliasChoices, BaseModel, Field, create_model
+from pydantic import AliasChoices, BaseModel, ConfigDict, Field, create_model
 
 from lfx.log.logger import logger
 
@@ -50,16 +50,33 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     defs: dict[str, dict[str, Any]] = schema.get("$defs", {})
     model_cache: dict[str, type[BaseModel]] = {}
+    # Tracks $def names currently being built to detect self-referential schemas
+    building: set[str] = set()
+    # Monotonic counter for anonymous nested-object models. Using len(model_cache)
+    # is unsafe during recursive descent because the cache is populated only after
+    # a build completes, causing concurrent in-progress models to collide on the
+    # same name and falsely trigger the self-reference guard.
+    anon_counter: list[int] = [0]
+
+    def _next_anon_name() -> str:
+        n = anon_counter[0]
+        anon_counter[0] += 1
+        return f"AnonModel{n}"
 
     def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
         """Follow a $ref chain until you land on a real subschema."""
         if s is None:
             return {}
+        visited: set[str] = set()
         while "$ref" in s:
             ref_name = s["$ref"].split("/")[-1]
+            if ref_name in visited:
+                logger.warning("Parsing input schema: Circular $ref detected for '%s', treating as string", ref_name)
+                return {"type": "string"}
+            visited.add(ref_name)
             s = defs.get(ref_name)
             if s is None:
-                logger.warning(f"Parsing input schema: Definition '{ref_name}' not found")
+                logger.warning("Parsing input schema: Definition '%s' not found", ref_name)
                 return {"type": "string"}
         return s
 
@@ -67,6 +84,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         """Map a JSON Schema subschema to a Python type (possibly nested)."""
         if s is None:
             return None
+        # Preserve the original subschema so we can detect when an object was
+        # reached via a named $ref and route it through _build_model's $ref branch
+        # for stable naming and cache reuse.
+        original = s
         s = resolve_ref(s)
 
         if "anyOf" in s:
@@ -117,11 +138,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             return list[schema_type]
 
         if t == "object":
-            # Generic object (no properties) ⇒ dict for free-form key-value pairs
+            # Generic object (no properties) ⇒ dict[str, Any] for free-form key-value pairs
+            # This preserves nested dictionaries (fixes issue #9881)
             if not s.get("properties"):
-                return dict
-            # Inline object with defined properties ⇒ nested model
-            return _build_model(f"AnonModel{len(model_cache)}", s)
+                return dict[str, Any]
+            # If the object was reached via a named $ref, pass the original $ref-bearing
+            # subschema so _build_model uses its $ref branch (stable name, cache reuse).
+            if isinstance(original, dict) and "$ref" in original:
+                return _build_model(_next_anon_name(), original)
+            # Inline object with defined properties ⇒ anonymous nested model
+            return _build_model(_next_anon_name(), s)
 
         # primitive fallback
         return {
@@ -135,46 +161,62 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""
-        # If this came via a named $ref, use that name
+        # If this came via a named $ref, use that name. The recursive _build_model
+        # call below handles `building` tracking and cache population itself, so we
+        # must NOT pre-add `refname` to `building` here — doing so would cause the
+        # recursive call to falsely see itself as self-referential and fall back to
+        # dict on the very first visit of a non-recursive def.
         if "$ref" in subschema:
             refname = subschema["$ref"].split("/")[-1]
             if refname in model_cache:
                 return model_cache[refname]
+            # Already in progress (true self-reference encountered via $ref)
+            if refname in building:
+                logger.warning("Parsing input schema: Self-referential $ref '%s' detected, treating as dict", refname)
+                return dict  # type: ignore[return-value]
             target = defs.get(refname)
             if not target:
                 msg = f"Definition '{refname}' not found"
                 raise ValueError(msg)
-            cls = _build_model(refname, target)
-            model_cache[refname] = cls
-            return cls
+            return _build_model(refname, target)
 
         # Named anonymous or inline: avoid clashes by name
         if name in model_cache:
             return model_cache[name]
+        # Self-referential: this model name is already being built — fall back to dict
+        if name in building:
+            logger.warning("Parsing input schema: Self-referential model '%s' detected, treating as dict", name)
+            return dict  # type: ignore[return-value]
 
-        props = subschema.get("properties", {})
-        reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
-        fields: dict[str, Any] = {}
+        building.add(name)
+        try:
+            props = subschema.get("properties", {})
+            reqs = {r for r in (subschema.get("required") or []) if isinstance(r, str)}
+            fields: dict[str, Any] = {}
 
-        for prop_name, prop_schema in props.items():
-            py_type = parse_type(prop_schema)
-            is_required = prop_name in reqs
-            if not is_required:
-                py_type = py_type | None
-                default = prop_schema.get("default", None)
-            else:
-                default = ...  # required by Pydantic
+            for prop_name, prop_schema in props.items():
+                py_type = parse_type(prop_schema)
+                is_required = prop_name in reqs
+                if not is_required:
+                    py_type = py_type | None
+                    default = prop_schema.get("default", None)
+                else:
+                    default = ...  # required by Pydantic
 
-            # Add alias for camelCase if field name is snake_case
-            field_kwargs = {"description": prop_schema.get("description")}
-            if "_" in prop_name:
-                camel_case_name = _snake_to_camel(prop_name)
-                if camel_case_name != prop_name:  # Only add alias if it's different
-                    field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
+                # Add alias for camelCase if field name is snake_case
+                field_kwargs = {"description": prop_schema.get("description")}
+                if "_" in prop_name:
+                    camel_case_name = _snake_to_camel(prop_name)
+                    if camel_case_name != prop_name:  # Only add alias if it's different
+                        field_kwargs["validation_alias"] = AliasChoices(prop_name, camel_case_name)
 
-            fields[prop_name] = (py_type, Field(default, **field_kwargs))
+                fields[prop_name] = (py_type, Field(default, **field_kwargs))
 
-        model_cls = create_model(name, **fields)
+            # Preserve extras unless schema sets additionalProperties:false (#9881, #10975).
+            extra_mode = "ignore" if subschema.get("additionalProperties") is False else "allow"
+            model_cls = create_model(name, __config__=ConfigDict(extra=extra_mode), **fields)
+        finally:
+            building.discard(name)
         model_cache[name] = model_cls
         return model_cls
 
@@ -200,4 +242,6 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
         top_fields[fname] = (py_type, Field(default, **field_kwargs))
 
-    return create_model("InputSchema", **top_fields)
+    # Same JSON Schema rule applies at the root: preserve extras unless explicitly forbidden.
+    top_extra_mode = "ignore" if schema.get("additionalProperties") is False else "allow"
+    return create_model("InputSchema", __config__=ConfigDict(extra=top_extra_mode), **top_fields)

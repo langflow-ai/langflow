@@ -87,36 +87,85 @@ class TestLocalStorageService:
 
 
 class TestTelemetryService:
-    """Tests for minimal TelemetryService."""
+    """Tests for TelemetryService."""
 
     @pytest.fixture
     def telemetry(self):
-        """Create a telemetry service."""
-        return TelemetryService()
+        """Create a telemetry service with do_not_track so it doesn't hit the network."""
+        return TelemetryService(do_not_track=True)
 
     def test_service_ready(self, telemetry):
         """Test that service is ready."""
         assert telemetry.ready is True
         assert telemetry.name == "telemetry_service"
 
+    def test_do_not_track_from_env(self):
+        """Test DO_NOT_TRACK env var is respected."""
+        os.environ["DO_NOT_TRACK"] = "1"
+        try:
+            svc = TelemetryService()
+            assert svc.do_not_track is True
+        finally:
+            del os.environ["DO_NOT_TRACK"]
+
+    def test_start_skipped_when_do_not_track(self, telemetry):
+        """Start is a no-op when do_not_track is set."""
+        telemetry.start()
+        assert telemetry._running is False
+        assert telemetry._worker_task is None
+        assert telemetry._client is None
+
+    @pytest.mark.asyncio
+    async def test_start_and_stop_lifecycle(self):
+        """Test that start creates worker/client and stop cleans them up."""
+        svc = TelemetryService(base_url="http://localhost:0")
+        svc.start()
+        assert svc._running is True
+        assert svc._worker_task is not None
+        assert svc._client is not None
+
+        await svc.stop()
+        assert svc._running is False
+        assert svc._client is None
+
+    @pytest.mark.asyncio
+    async def test_enqueue_skipped_when_do_not_track(self, telemetry):
+        """Enqueue is a no-op when do_not_track is set."""
+        from lfx.services.telemetry.schema import MCPToolPayload
+
+        await telemetry.log_mcp_tool(MCPToolPayload(tool="test", success=True, ms=5))
+        assert telemetry._queue.empty()
+
+    @pytest.mark.asyncio
+    async def test_flush_when_do_not_track(self, telemetry):
+        """Flush should not raise when do_not_track is set."""
+        await telemetry.flush()
+
     @pytest.mark.asyncio
     async def test_log_exception(self, telemetry):
-        """Test logging an exception (noop)."""
-        # Should not raise
+        """Test logging an exception."""
         exc = ValueError("test error")
         await telemetry.log_exception(exc, "test_context")
 
     @pytest.mark.asyncio
     async def test_log_package_version(self, telemetry):
-        """Test logging package version (noop)."""
-        # Should not raise
+        """Test logging package version."""
         await telemetry.log_package_version()
 
     @pytest.mark.asyncio
     async def test_teardown(self, telemetry):
         """Test service teardown."""
         await telemetry.teardown()
-        # Should not raise
+
+    @pytest.mark.asyncio
+    async def test_teardown_after_start(self):
+        """Test that teardown properly stops a started service."""
+        svc = TelemetryService(base_url="http://localhost:0")
+        svc.start()
+        assert svc._running is True
+        await svc.teardown()
+        assert svc._running is False
+        assert svc._client is None
 
 
 class TestTracingService:
@@ -157,31 +206,31 @@ class TestVariableService:
         assert variables.ready is True
         assert variables.name == "variable_service"
 
-    def test_set_and_get_variable(self, variables):
+    async def test_set_and_get_variable(self, variables):
         """Test setting and getting a variable."""
         variables.set_variable("test_key", "test_value")
-        value = variables.get_variable("test_key")
+        value = await variables.get_variable("test_key")
         assert value == "test_value"
 
-    def test_get_from_environment(self, variables):
+    async def test_get_from_environment(self, variables):
         """Test getting variable from environment."""
         os.environ["TEST_ENV_VAR"] = "env_value"
         try:
-            value = variables.get_variable("TEST_ENV_VAR")
+            value = await variables.get_variable("TEST_ENV_VAR")
             assert value == "env_value"
         finally:
             del os.environ["TEST_ENV_VAR"]
 
-    def test_get_nonexistent_variable(self, variables):
+    async def test_get_nonexistent_variable(self, variables):
         """Test getting a variable that doesn't exist."""
-        value = variables.get_variable("nonexistent_key")
+        value = await variables.get_variable("nonexistent_key")
         assert value is None
 
-    def test_delete_variable(self, variables):
+    async def test_delete_variable(self, variables):
         """Test deleting a variable."""
         variables.set_variable("test_key", "test_value")
         variables.delete_variable("test_key")
-        value = variables.get_variable("test_key")
+        value = await variables.get_variable("test_key")
         assert value is None
 
     def test_list_variables(self, variables):
@@ -193,24 +242,55 @@ class TestVariableService:
         assert "key1" in vars_list
         assert "key2" in vars_list
 
-    def test_in_memory_overrides_env(self, variables):
+    async def test_in_memory_overrides_env(self, variables):
         """Test that in-memory variables override environment."""
         os.environ["TEST_VAR"] = "env_value"
         try:
             variables.set_variable("TEST_VAR", "memory_value")
-            value = variables.get_variable("TEST_VAR")
+            value = await variables.get_variable("TEST_VAR")
             assert value == "memory_value"
         finally:
             del os.environ["TEST_VAR"]
 
-    @pytest.mark.asyncio
+    async def test_get_variable_is_coroutine(self, variables):
+        """get_variable must be async to match the langflow call site.
+
+        Callers use ``await variable_service.get_variable(...)`` (see
+        ``Component.get_variable`` in custom_component.py); awaiting a non-coroutine
+        TypeErrors. lfx's implementation does no I/O — the async wrapper exists
+        purely to match the interface langflow's DatabaseVariableService uses.
+        """
+        import inspect
+
+        assert inspect.iscoroutinefunction(variables.get_variable)
+        coro = variables.get_variable("anything")
+        assert inspect.iscoroutine(coro)
+        await coro  # avoid 'coroutine never awaited' warning
+
+    async def test_get_variable_absorbs_extra_kwargs(self, variables):
+        """Extra kwargs from the langflow call site must not crash the lfx implementation.
+
+        Langflow calls ``await variable_service.get_variable(user_id=..., name=...,
+        field=..., session=...)``. lfx's implementation must accept and ignore the
+        extras so flows behave identically as long as the variable can be resolved
+        by name.
+        """
+        os.environ["LFX_KWARG_TEST"] = "value-from-env"
+        try:
+            value = await variables.get_variable(
+                user_id="random-uuid", name="LFX_KWARG_TEST", field="value", session=None
+            )
+            assert value == "value-from-env"
+        finally:
+            del os.environ["LFX_KWARG_TEST"]
+
     async def test_teardown(self, variables):
         """Test service teardown clears variables."""
         variables.set_variable("test_key", "test_value")
         await variables.teardown()
         # Variables should be cleared (verify via public API)
         assert variables.list_variables() == []
-        assert variables.get_variable("test_key") is None
+        assert await variables.get_variable("test_key") is None
 
 
 class TestMinimalServicesIntegration:

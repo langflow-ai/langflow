@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-
+import { useTranslation } from "react-i18next";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
 import { getBaseUrl } from "@/customization/utils/urls";
 import { createFileUpload } from "@/helpers/create-file-upload";
@@ -7,12 +7,12 @@ import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
 import useAlertStore from "@/stores/alertStore";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Button } from "../../../../../components/ui/button";
-import { ALLOWED_IMAGE_INPUT_EXTENSIONS } from "../../../../../constants/constants";
+import { CHAT_UPLOAD_IMAGE_EXTENSIONS } from "../../../../../constants/file-upload-constants";
 import useFlowsManagerStore from "../../../../../stores/flowsManagerStore";
 import type { IOFileInputProps } from "../../../../../types/components";
 
 export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
-  //component to handle file upload from chatIO
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
   const [isDragging, setIsDragging] = useState(false);
@@ -107,7 +107,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
           },
           onError: (error) => {
             setErrorData({
-              title: "Error uploading file",
+              title: t("files.errorUploading"),
               list: [error.response?.data?.detail],
             });
             console.error("Error occurred while uploading file");
@@ -120,7 +120,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
   const handleButtonClick = (): void => {
     createFileUpload({
       multiple: false,
-      accept: ALLOWED_IMAGE_INPUT_EXTENSIONS.join(","),
+      accept: CHAT_UPLOAD_IMAGE_EXTENSIONS.join(","),
     }).then((files) => upload(files[0]));
     // Create a file input element
   };

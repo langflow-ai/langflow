@@ -3,6 +3,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 async function toggleNodeState(page: Page, action: "minimize" | "expand") {
   const expectedCount = action === "minimize" ? 1 : 0;
   await page.getByTestId("more-options-modal").click();
@@ -20,7 +21,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
 
     await page
       .getByTestId("input_outputText Output")

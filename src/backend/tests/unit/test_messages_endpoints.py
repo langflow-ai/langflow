@@ -1,15 +1,18 @@
-from datetime import datetime, timezone
 from urllib.parse import quote
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
-from langflow.memory import aadd_messagetables
 
 # Assuming you have these imports available
+from langflow.api.v1 import monitor as monitor_api
+from langflow.memory import aadd_messagetables
+from langflow.schema.validators import str_to_timestamp, timestamp_to_str
+from langflow.services.auth.utils import get_auth_service
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message import MessageCreate, MessageRead, MessageUpdate
 from langflow.services.database.models.message.model import MessageTable
+from langflow.services.database.models.user.model import User, UserRead
 from langflow.services.deps import session_scope
 
 
@@ -26,6 +29,73 @@ async def created_message(active_user):
         messagetable.flow_id = flow.id
         messagetables = await aadd_messagetables([messagetable], session)
         return MessageRead.model_validate(messagetables[0], from_attributes=True)
+
+
+@pytest.fixture
+async def other_active_user(client):  # noqa: ARG001
+    username = f"other-user-{uuid4().hex[:8]}"
+    async with session_scope() as session:
+        user = User(
+            username=username,
+            password=get_auth_service().get_password_hash("testpassword"),
+            is_active=True,
+            is_superuser=False,
+        )
+        session.add(user)
+        await session.flush()
+        await session.refresh(user)
+        user = UserRead.model_validate(user, from_attributes=True)
+
+    yield user
+
+    async with session_scope() as session:
+        db_user = await session.get(User, user.id)
+        if db_user:
+            await session.delete(db_user)
+
+
+@pytest.fixture
+async def other_logged_in_headers(client: AsyncClient, other_active_user):
+    login_data = {"username": other_active_user.username, "password": "testpassword"}
+    response = await client.post("api/v1/login", data=login_data)
+    assert response.status_code == 200
+    tokens = response.json()
+    return {"Authorization": f"Bearer {tokens['access_token']}"}
+
+
+@pytest.fixture
+async def cross_user_messages(active_user, other_active_user):
+    async with session_scope() as session:
+        active_flow = Flow(
+            name=f"active-flow-{uuid4().hex[:8]}", user_id=active_user.id, data={"nodes": [], "edges": []}
+        )
+        other_flow = Flow(
+            name=f"other-flow-{uuid4().hex[:8]}",
+            user_id=other_active_user.id,
+            data={"nodes": [], "edges": []},
+        )
+        session.add(active_flow)
+        session.add(other_flow)
+        await session.flush()
+
+        owned_message = MessageTable.model_validate(
+            MessageCreate(text="Owned message", sender="User", sender_name="User", session_id="owned-session"),
+            from_attributes=True,
+        )
+        owned_message.flow_id = active_flow.id
+
+        foreign_message = MessageTable.model_validate(
+            MessageCreate(text="Foreign message", sender="User", sender_name="User", session_id="foreign-session"),
+            from_attributes=True,
+        )
+        foreign_message.flow_id = other_flow.id
+
+        created_messages = await aadd_messagetables([owned_message, foreign_message], session)
+        return {
+            "owned_message": created_messages[0],
+            "foreign_message": created_messages[1],
+            "foreign_session_id": "foreign-session",
+        }
 
 
 @pytest.fixture
@@ -99,6 +169,23 @@ async def test_delete_messages(client: AsyncClient, created_messages, logged_in_
 
 
 @pytest.mark.api_key_required
+async def test_get_messages_does_not_return_other_users_messages(
+    client: AsyncClient, logged_in_headers, other_logged_in_headers, cross_user_messages
+):
+    response = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
+    assert response.status_code == 200, response.text
+    returned_ids = {message["id"] for message in response.json()}
+    assert str(cross_user_messages["owned_message"].id) in returned_ids
+    assert str(cross_user_messages["foreign_message"].id) not in returned_ids
+
+    other_response = await client.get("api/v1/monitor/messages", headers=other_logged_in_headers)
+    assert other_response.status_code == 200, other_response.text
+    other_returned_ids = {message["id"] for message in other_response.json()}
+    assert str(cross_user_messages["foreign_message"].id) in other_returned_ids
+    assert str(cross_user_messages["owned_message"].id) not in other_returned_ids
+
+
+@pytest.mark.api_key_required
 async def test_update_message(client: AsyncClient, logged_in_headers, created_message):
     message_id = created_message.id
     message_update = MessageUpdate(text="Updated content")
@@ -108,6 +195,144 @@ async def test_update_message(client: AsyncClient, logged_in_headers, created_me
     assert response.status_code == 200, response.text
     updated_message = MessageRead(**response.json())
     assert updated_message.text == "Updated content"
+
+
+async def test_update_message_syncs_langfuse_feedback(
+    client: AsyncClient, logged_in_headers, created_message, monkeypatch
+):
+    async with session_scope() as session:
+        db_message = await session.get(MessageTable, created_message.id)
+        assert db_message is not None
+        db_message.run_id = UUID("467ca2ce-4a57-40ce-a911-94ac679d8a79")
+        db_message.session_metadata = {"langfuse_trace_id": "81955a84cb1a1a096639ba1612a48ac0"}
+        session.add(db_message)
+        await session.flush()
+
+    captured = {}
+
+    def fake_sync(**kwargs):
+        captured.update(
+            {
+                "message_id": str(kwargs["message_id"]),
+                "trace_id": kwargs["trace_id"],
+                "positive_feedback": kwargs["positive_feedback"],
+            }
+        )
+
+    monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: True)
+
+    message_update = MessageUpdate(properties={"positive_feedback": True})
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=message_update.model_dump(exclude_none=True),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert captured == {
+        "message_id": str(created_message.id),
+        "trace_id": "81955a84cb1a1a096639ba1612a48ac0",
+        "positive_feedback": True,
+    }
+
+
+async def test_update_message_does_not_sync_langfuse_feedback_without_langfuse_trace_id(
+    client: AsyncClient, logged_in_headers, created_message, monkeypatch
+):
+    async with session_scope() as session:
+        db_message = await session.get(MessageTable, created_message.id)
+        assert db_message is not None
+        db_message.run_id = UUID("467ca2ce-4a57-40ce-a911-94ac679d8a79")
+        db_message.session_metadata = {}
+        session.add(db_message)
+        await session.flush()
+
+    sync_called = False
+
+    def fake_sync(**kwargs):  # noqa: ARG001
+        nonlocal sync_called
+        sync_called = True
+
+    monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: True)
+
+    message_update = MessageUpdate(properties={"positive_feedback": True})
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=message_update.model_dump(exclude_none=True),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert sync_called is False
+
+
+async def test_update_message_does_not_sync_when_langfuse_feedback_disabled(
+    client: AsyncClient, logged_in_headers, created_message, monkeypatch
+):
+    async with session_scope() as session:
+        db_message = await session.get(MessageTable, created_message.id)
+        assert db_message is not None
+        db_message.session_metadata = {"langfuse_trace_id": "81955a84cb1a1a096639ba1612a48ac0"}
+        session.add(db_message)
+        await session.flush()
+
+    sync_called = False
+
+    def fake_sync(**kwargs):  # noqa: ARG001
+        nonlocal sync_called
+        sync_called = True
+
+    monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: False)
+
+    message_update = MessageUpdate(properties={"positive_feedback": True})
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=message_update.model_dump(exclude_none=True),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert sync_called is False
+
+
+async def test_update_message_deletes_langfuse_feedback_when_cleared(
+    client: AsyncClient, logged_in_headers, created_message, monkeypatch
+):
+    async with session_scope() as session:
+        db_message = await session.get(MessageTable, created_message.id)
+        assert db_message is not None
+        db_message.session_metadata = {"langfuse_trace_id": "81955a84cb1a1a096639ba1612a48ac0"}
+        db_message.properties = {"positive_feedback": True}
+        session.add(db_message)
+        await session.flush()
+
+    delete_calls = []
+    sync_called = False
+
+    def fake_delete(**kwargs):
+        delete_calls.append(str(kwargs["message_id"]))
+
+    def fake_sync(**kwargs):  # noqa: ARG001
+        nonlocal sync_called
+        sync_called = True
+
+    monkeypatch.setattr(monitor_api, "delete_feedback_score", fake_delete)
+    monkeypatch.setattr(monitor_api, "sync_feedback_score", fake_sync)
+    monkeypatch.setattr(monitor_api, "_langfuse_feedback_sync_enabled", lambda: True)
+
+    message_update = MessageUpdate(properties={"positive_feedback": None})
+    response = await client.put(
+        f"api/v1/monitor/messages/{created_message.id}",
+        json=message_update.model_dump(),
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, response.text
+    assert delete_calls == [str(created_message.id)]
+    assert sync_called is False
 
 
 @pytest.mark.api_key_required
@@ -122,6 +347,48 @@ async def test_update_message_not_found(client: AsyncClient, logged_in_headers):
 
 
 @pytest.mark.api_key_required
+async def test_delete_messages_cannot_delete_other_users_messages(
+    client: AsyncClient, logged_in_headers, cross_user_messages, other_logged_in_headers
+):
+    foreign_message_id = str(cross_user_messages["foreign_message"].id)
+
+    response = await client.request(
+        "DELETE",
+        "api/v1/monitor/messages",
+        json=[foreign_message_id],
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 204, response.text
+
+    own_view = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
+    assert own_view.status_code == 200, own_view.text
+    assert str(cross_user_messages["owned_message"].id) in {message["id"] for message in own_view.json()}
+
+    other_view = await client.get("api/v1/monitor/messages", headers=other_logged_in_headers)
+    assert other_view.status_code == 200, other_view.text
+    assert foreign_message_id in {message["id"] for message in other_view.json()}
+
+
+@pytest.mark.api_key_required
+async def test_update_message_cannot_update_other_users_message(
+    client: AsyncClient, logged_in_headers, cross_user_messages, other_logged_in_headers
+):
+    foreign_message_id = cross_user_messages["foreign_message"].id
+    response = await client.put(
+        f"api/v1/monitor/messages/{foreign_message_id}",
+        json=MessageUpdate(text="Hijacked").model_dump(),
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["detail"] == "Message not found"
+
+    other_view = await client.get("api/v1/monitor/messages", headers=other_logged_in_headers)
+    assert other_view.status_code == 200, other_view.text
+    foreign_message = next(message for message in other_view.json() if message["id"] == str(foreign_message_id))
+    assert foreign_message["text"] == "Foreign message"
+
+
+@pytest.mark.api_key_required
 async def test_delete_messages_session(client: AsyncClient, created_messages, logged_in_headers):
     session_id = "session_id2"
     response = await client.delete(f"api/v1/monitor/messages/session/{session_id}", headers=logged_in_headers)
@@ -132,6 +399,30 @@ async def test_delete_messages_session(client: AsyncClient, created_messages, lo
     response = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
     assert response.status_code == 200
     assert len(response.json()) == 0
+
+
+@pytest.mark.api_key_required
+async def test_delete_messages_session_cannot_delete_other_users_messages(
+    client: AsyncClient, logged_in_headers, cross_user_messages, other_logged_in_headers
+):
+    response = await client.delete(
+        f"api/v1/monitor/messages/session/{cross_user_messages['foreign_session_id']}",
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 204, response.text
+
+    own_view = await client.get("api/v1/monitor/messages", headers=logged_in_headers)
+    assert own_view.status_code == 200, own_view.text
+    assert str(cross_user_messages["owned_message"].id) in {message["id"] for message in own_view.json()}
+
+    other_view = await client.get(
+        "api/v1/monitor/messages",
+        headers=other_logged_in_headers,
+        params={"session_id": cross_user_messages["foreign_session_id"]},
+    )
+    assert other_view.status_code == 200, other_view.text
+    assert len(other_view.json()) == 1
+    assert other_view.json()[0]["id"] == str(cross_user_messages["foreign_message"].id)
 
 
 # Successfully update session ID for all messages with the old session ID
@@ -161,8 +452,8 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
     for message in messages:
         assert message["session_id"] == new_session_id
         response_timestamp = message["timestamp"]
-        timestamp = datetime.strptime(response_timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
-        timestamp_str = timestamp.strftime("%Y-%m-%d %H:%M:%S %Z")
+        timestamp = str_to_timestamp(response_timestamp)
+        timestamp_str = timestamp_to_str(timestamp)
         assert timestamp_str == response_timestamp
 
     # Check if the messages ordered by timestamp are in the correct order
@@ -170,6 +461,26 @@ async def test_successfully_update_session_id(client, logged_in_headers, created
     assert messages[0]["sender"] == "User"
     assert messages[1]["sender"] == "User"
     assert messages[2]["sender"] == "AI"
+
+
+@pytest.mark.api_key_required
+async def test_update_session_id_cannot_modify_other_users_messages(
+    client: AsyncClient, logged_in_headers, cross_user_messages, other_logged_in_headers
+):
+    response = await client.patch(
+        f"api/v1/monitor/messages/session/{cross_user_messages['foreign_session_id']}",
+        params={"new_session_id": "hijacked-session"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == 404, response.text
+    assert response.json()["detail"] == "No messages found with the given session ID"
+
+    other_view = await client.get("api/v1/monitor/messages", headers=other_logged_in_headers)
+    assert other_view.status_code == 200, other_view.text
+    foreign_message = next(
+        message for message in other_view.json() if message["id"] == str(cross_user_messages["foreign_message"].id)
+    )
+    assert foreign_message["session_id"] == cross_user_messages["foreign_session_id"]
 
 
 # No messages found with the given session ID

@@ -297,6 +297,35 @@ class TestComponent(CustomComponent):
         assert dep.version == "1.21.0"
         assert not dep.is_local
 
+    def test_get_distribution_version_deterministic(self):
+        """Test that _get_distribution_version picks the alphabetically first distribution.
+
+        When multiple distributions provide the same import name, the result must
+        be deterministic regardless of the order returned by packages_distributions().
+        """
+        from lfx.custom.dependency_analyzer import _get_distribution_version
+
+        # Simulate two different orderings of dist names for the same import
+        fake_map_asc = {"myimport": ["alpha-pkg", "zeta-pkg"]}
+        fake_map_desc = {"myimport": ["zeta-pkg", "alpha-pkg"]}
+
+        mock_dist = Mock()
+        mock_dist.version = "1.0.0"
+
+        for fake_map in (fake_map_asc, fake_map_desc):
+            _get_distribution_version.cache_clear()
+            with (
+                patch("lfx.custom.dependency_analyzer._get_packages_distributions", return_value=fake_map),
+                patch("lfx.custom.dependency_analyzer.md.distribution", return_value=mock_dist) as mock_md,
+            ):
+                result = _get_distribution_version("myimport")
+                assert result == "1.0.0"
+                # Should always pick "alpha-pkg" regardless of input order
+                mock_md.assert_called_once_with("alpha-pkg")
+
+        # Clean up the lru_cache so other tests aren't affected
+        _get_distribution_version.cache_clear()
+
     def test_no_optional_dependency_classification(self):
         """Test that the simplified analyzer doesn't classify any dependencies as optional."""
         from lfx.custom.dependency_analyzer import analyze_dependencies

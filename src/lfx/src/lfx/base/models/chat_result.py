@@ -1,4 +1,6 @@
 import warnings
+from collections.abc import Callable
+from typing import Any
 
 from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
 
@@ -44,6 +46,7 @@ def get_chat_result(
     config: dict | None = None,
     *,
     stream: bool = False,
+    token_usage_callback: Callable[[Any], None] | None = None,
 ):
     if not input_value and not system_message:
         msg = "The message you want to send to the model is empty."
@@ -69,6 +72,8 @@ def get_chat_result(
         if stream:
             return runnable.stream(inputs)
         message = runnable.invoke(inputs)
+        if token_usage_callback is not None and hasattr(message, "content"):
+            token_usage_callback(message)
         return message.content if hasattr(message, "content") else message
     except Exception as e:
         if config and config.get("_get_exception_message") and (message := config["_get_exception_message"](e)):

@@ -205,6 +205,7 @@ async def test_get_config_unauthenticated_returns_expected_fields(client: AsyncC
     # Verify expected public fields are present
     assert "max_file_size_upload" in result, "Response must contain 'max_file_size_upload'"
     assert "event_delivery" in result, "Response must contain 'event_delivery'"
+    assert "feature_flags" in result, "Response must contain 'feature_flags'"
     assert "voice_mode_available" in result, "Response must contain 'voice_mode_available'"
     assert "frontend_timeout" in result, "Response must contain 'frontend_timeout'"
 
@@ -227,7 +228,6 @@ async def test_get_config_unauthenticated_does_not_expose_sensitive_fields(clien
         "auto_saving",
         "auto_saving_interval",
         "health_check_max_retries",
-        "feature_flags",
         "webhook_polling_interval",
         "serialization_max_items_length",
         "webhook_auth_enable",
@@ -250,6 +250,8 @@ async def test_get_config_unauthenticated_returns_correct_field_types(client: As
     assert isinstance(result["max_file_size_upload"], int), "max_file_size_upload must be an integer"
     assert isinstance(result["frontend_timeout"], int), "frontend_timeout must be an integer"
     assert isinstance(result["voice_mode_available"], bool), "voice_mode_available must be a boolean"
+    assert isinstance(result["feature_flags"], dict), "feature_flags must be an object"
+    assert result["feature_flags"].get("wxo_deployments") is False, "wxo_deployments flag should default to false"
     assert result["event_delivery"] in ["polling", "streaming", "direct"], (
         "event_delivery must be one of: polling, streaming, direct"
     )
@@ -289,3 +291,100 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "auto_saving_interval" in result, "Authenticated response must contain 'auto_saving_interval'"
     assert "health_check_max_retries" in result, "Authenticated response must contain 'health_check_max_retries'"
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
+
+
+async def test_get_config_returns_mcp_base_url(client: AsyncClient, logged_in_headers: dict):
+    """Test that /config includes mcp_base_url for both authenticated and unauthenticated responses."""
+    # Authenticated
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert "mcp_base_url" in result, "Authenticated response must contain 'mcp_base_url'"
+    assert isinstance(result["mcp_base_url"], str), "mcp_base_url must be a string"
+
+    # Unauthenticated
+    response = await client.get("api/v1/config")
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert "mcp_base_url" in result, "Public response must contain 'mcp_base_url'"
+    assert isinstance(result["mcp_base_url"], str), "mcp_base_url must be a string"
+
+
+async def test_get_config_mcp_base_url_defaults_to_empty(client: AsyncClient, logged_in_headers: dict):
+    """Test that mcp_base_url defaults to empty string when LANGFLOW_MCP_BASE_URL is not set."""
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_base_url"] == ""
+
+
+async def test_get_config_mcp_base_url_from_settings(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Test that mcp_base_url reflects the value from settings."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "mcp_base_url", "https://langflow.example.com")
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_base_url"] == "https://langflow.example.com"
+
+
+async def test_deprecated_upload_rejects_unauthenticated(client: AsyncClient, flow):
+    """Regression: the deprecated /api/v1/upload/{flow_id} must require auth.
+
+    Previously this endpoint accepted uploads without any credentials, letting
+    anonymous callers write arbitrary files into a flow's cache folder.
+    """
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+    )
+    assert response.status_code != status.HTTP_201_CREATED, (
+        "Deprecated upload endpoint must reject unauthenticated requests"
+    )
+    assert response.status_code in {
+        status.HTTP_401_UNAUTHORIZED,
+        status.HTTP_403_FORBIDDEN,
+    }, f"Expected 401/403, got {response.status_code}: {response.text}"
+
+
+async def test_deprecated_upload_authenticated_succeeds(client: AsyncClient, logged_in_headers: dict, flow):
+    """The deprecated endpoint still works for the flow's owner."""
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("test.txt", b"test content")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED, (
+        f"Expected 201 for authenticated owner, got {response.status_code}: {response.text}"
+    )
+    body = response.json()
+    assert body["flowId"] == str(flow.id)
+
+
+async def test_deprecated_upload_enforces_max_file_size(
+    client: AsyncClient, logged_in_headers: dict, flow, monkeypatch
+):
+    """Regression: the deprecated upload route must honor ``max_file_size_upload``.
+
+    Without this guard, an authenticated user could still fill disk through
+    this route by uploading arbitrarily large files, bypassing the limit the
+    non-deprecated twin at /api/v1/files/upload/{flow_id} already enforces.
+    """
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "max_file_size_upload", 1)  # 1 MB
+    oversized = b"x" * (2 * 1024 * 1024)  # 2 MB, exceeds the limit
+
+    response = await client.post(
+        f"api/v1/upload/{flow.id}",
+        files={"file": ("big.bin", oversized)},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_413_CONTENT_TOO_LARGE, (
+        f"Expected 413 for oversized upload, got {response.status_code}: {response.text}"
+    )

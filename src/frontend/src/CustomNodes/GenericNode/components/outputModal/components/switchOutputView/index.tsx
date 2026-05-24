@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import JsonOutputViewComponent from "@/components/core/jsonOutputComponent/json-output-view";
 import { MAX_TEXT_LENGTH } from "@/constants/constants";
 import type { LogsLogType, OutputLogType } from "@/types/api";
@@ -26,6 +27,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   outputName,
   type,
 }) => {
+  const { t } = useTranslation();
   const flowPool = useFlowStore((state) => state.flowPool);
   const nodes = useFlowStore((state) => state.nodes);
 
@@ -45,12 +47,12 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     (outputConfig.method === "to_toolkit" ||
       (outputConfig.types && outputConfig.types.includes("Tool")));
 
-  const results: OutputLogType | LogsLogType =
+  const results: OutputLogType | LogsLogType[] =
     (type === "Outputs"
       ? flowPoolNode?.data?.outputs?.[outputName]
       : flowPoolNode?.data?.logs?.[outputName]) ?? {};
-  const resultType = results?.type;
-  let resultMessage = results?.message ?? {};
+  const resultType = Array.isArray(results) ? undefined : results?.type;
+  let resultMessage = Array.isArray(results) ? {} : (results?.message ?? {});
   const RECORD_TYPES = ["array", "message"];
   const JSON_TYPES = ["data", "object"];
   if (resultMessage?.raw) {
@@ -89,7 +91,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
   // Custom component for Tool output display
   const ToolOutputDisplay = ({ tools }) => {
     if (!Array.isArray(tools) || tools.length === 0) {
-      return <div>No tools available</div>;
+      return <div>{t("output.noToolsAvailable")}</div>;
     }
 
     return (
@@ -144,7 +146,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
       <Case
         condition={(!resultType || resultType === "unknown") && !isToolOutput}
       >
-        <div>NO OUTPUT</div>
+        <div>{t("output.noOutput")}</div>
       </Case>
       <Case
         condition={
@@ -161,7 +163,9 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         <TextOutputView left={false} value={resultMessageMemoized} />
       </Case>
 
-      <Case condition={RECORD_TYPES.includes(resultType) && !isToolOutput}>
+      <Case
+        condition={RECORD_TYPES.includes(resultType ?? "") && !isToolOutput}
+      >
         <DataOutputComponent
           rows={
             Array.isArray(resultMessageMemoized)
@@ -180,7 +184,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
           columnMode="union"
         />
       </Case>
-      <Case condition={JSON_TYPES.includes(resultType) && !isToolOutput}>
+      <Case condition={JSON_TYPES.includes(resultType ?? "") && !isToolOutput}>
         <JsonOutputViewComponent
           nodeId={nodeId}
           outputName={outputName}
@@ -195,7 +199,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{"Streaming is not supported"}</AlertTitle>
+            <AlertTitle>{t("output.streamingNotSupported")}</AlertTitle>
             <AlertDescription>
               {
                 "Use the playground to interact with components that stream data"

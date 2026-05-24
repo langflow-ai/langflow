@@ -5,6 +5,7 @@ const path = require("path");
 const lightCodeTheme = require("prism-react-renderer/themes/github");
 const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 const { remarkCodeHike } = require("@code-hike/mdx");
+const rehypeWbrUnderscore = require("./src/plugins/rehypeWbrUnderscore");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -36,7 +37,7 @@ const config = {
       tagName: "link",
       attributes: {
         rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Sora:wght@550;600&display=swap",
+        href: "https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500&family=Sora:wght@550;600&display=swap",
       },
     },
     ...(isProduction
@@ -111,15 +112,19 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.8.0",
+          lastVersion: "1.9.0",
           versions: {
             current: {
-              label: "1.9.x (Next)",
+              label: "1.10.x (Next)",
               path: "next",
+            },
+            "1.9.0": {
+              label: "1.9.x",
+              path: "",
             },
             "1.8.0": {
               label: "1.8.x",
-              path: "",
+              path: "1.8.0",
             },
           },
           beforeDefaultRemarkPlugins: [
@@ -132,6 +137,7 @@ const config = {
               },
             ],
           ],
+          rehypePlugins: [rehypeWbrUnderscore],
         },
         sitemap: {
           // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
@@ -406,7 +412,11 @@ const config = {
               "/integrations-nvidia-g-assist",
               "/integrations-nvidia-system-assist",
             ]
-          }
+          },
+          {
+            to: "/legacy-core-components",
+            from: "/directory",
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -428,11 +438,12 @@ const config = {
       };
     },
   ],
+  clientModules: [require.resolve("./src/clientModules/tocProgress.js")],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({
       navbar: {
-        hideOnScroll: true,
+        hideOnScroll: false,
         logo: {
           alt: "Langflow",
           src: "img/lf-docs-light.svg",
@@ -450,6 +461,7 @@ const config = {
             className: "header-github-link",
             target: "_blank",
             rel: null,
+            "aria-label": "GitHub",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -463,6 +475,7 @@ const config = {
             className: "header-twitter-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Twitter",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -476,6 +489,7 @@ const config = {
             className: "header-discord-link",
             target: "_blank",
             rel: null,
+            "aria-label": "Discord",
             'data-event': 'UI Interaction',
             'data-action': 'clicked',
             'data-channel': 'docs',
@@ -506,7 +520,7 @@ const config = {
       docs: {
         sidebar: {
           hideable: false,
-          autoCollapseCategories: true,
+          autoCollapseCategories: false,
         },
       },
       footer: {

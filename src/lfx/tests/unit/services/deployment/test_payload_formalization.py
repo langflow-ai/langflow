@@ -10,7 +10,6 @@ from uuid import UUID
 import pytest
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentData,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
@@ -19,17 +18,34 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentOperationResult,
     DeploymentStatusResult,
     DeploymentType,
+    DeploymentUpdateResult,
+    ExecutionCreateResult,
     ExecutionResultBase,
+    ExecutionStatusResult,
     ItemResult,
     SnapshotListParams,
     SnapshotListResult,
 )
-from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot, PayloadSlotPolicy
-from pydantic import BaseModel
+from lfx.services.adapters.payload import (
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+    PayloadSlotPolicy,
+)
+from pydantic import BaseModel, ConfigDict
 
 
 class _SpecModel(BaseModel):
     region: str
+
+
+class _SpecModelCompat(BaseModel):
+    region: str
+
+
+class _SpecModelWithExtra(BaseModel):
+    region: str
+    zone: str
 
 
 class _StatusModel(BaseModel):
@@ -60,6 +76,12 @@ class _ApiLikeConfigModel(BaseModel):
     retries: int
 
 
+class _StrictApiLikeConfigModel(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    retries: int
+
+
 class _Color(str, Enum):
     BLUE = "blue"
 
@@ -84,6 +106,29 @@ def test_payload_slot_parse_and_dump_round_trip() -> None:
     assert slot.dump(parsed) == {"region": "us-east-1"}
 
 
+def test_payload_slot_parse_accepts_same_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    parsed = slot.parse(_SpecModel(region="us-east-1"))
+
+    assert isinstance(parsed, _SpecModel)
+    assert parsed.region == "us-east-1"
+
+
+def test_payload_slot_parse_rejects_compatible_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        slot.parse(_SpecModelCompat(region="us-east-1"))
+
+
+def test_payload_slot_parse_rejects_non_matching_model_instance() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload"):
+        slot.parse(_SpecModelWithExtra(region="us-east-1", zone="1a"))
+
+
 def test_payload_slot_raises_typed_validation_error() -> None:
     slot = PayloadSlot(_SpecModel)
 
@@ -91,6 +136,33 @@ def test_payload_slot_raises_typed_validation_error() -> None:
         slot.parse({"missing": "region"})
     assert exc.value.model_name == "_SpecModel"
     assert exc.value.error is not None
+    assert exc.value.format_first_error() == "Missing required field 'region'."
+
+
+def test_payload_validation_error_formats_non_missing_with_field_path() -> None:
+    slot = PayloadSlot(_ApiLikeConfigModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload") as exc:
+        slot.parse({"retries": "not-an-int"})
+
+    assert exc.value.format_first_error() == "Invalid value for field 'retries'."
+
+
+def test_payload_validation_error_formats_extra_field_as_invalid_field() -> None:
+    slot = PayloadSlot(_StrictApiLikeConfigModel)
+
+    with pytest.raises(AdapterPayloadValidationError, match="Invalid payload") as exc:
+        slot.parse({"retries": 3, "resource_name_prefix": "lf_"})
+
+    assert exc.value.format_first_error() == "Invalid field 'resource_name_prefix'. Please remove it."
+
+
+def test_payload_slot_raises_typed_missing_error_for_none() -> None:
+    slot = PayloadSlot(_SpecModel)
+
+    with pytest.raises(AdapterPayloadMissingError, match="Missing payload") as exc:
+        slot.parse(None)
+    assert exc.value.model_name == "_SpecModel"
 
 
 def test_payload_slot_dump_json_serializes_uuid_datetime_enum_and_nested_model() -> None:
@@ -153,19 +225,12 @@ def test_deployment_payload_schemas_defaults_to_no_active_slots() -> None:
 
 
 def test_generic_parametrization_applies_to_provider_fields() -> None:
-    typed_spec = BaseDeploymentData[_SpecModel](
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
-        provider_spec={"region": "us-east-1"},
-    )
     typed_status = DeploymentStatusResult[_StatusModel](
         id="dep_1",
         provider_data={"healthy": True},
     )
     typed_params = DeploymentListParams[_FilterModel](provider_params={"env": "prod"})
 
-    assert isinstance(typed_spec.provider_spec, _SpecModel)
     assert isinstance(typed_status.provider_data, _StatusModel)
     assert isinstance(typed_params.provider_params, _FilterModel)
 
@@ -179,7 +244,21 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
         id="dep_1",
         provider_result={"external_url": "https://dep.example"},
     )
+    typed_update = DeploymentUpdateResult[_ResultModel](
+        id="dep_1",
+        provider_result={"external_url": "https://dep.example"},
+    )
     typed_execution = ExecutionResultBase[_ExecutionResultModel](
+        execution_id="exec_1",
+        deployment_id="dep_1",
+        provider_result={"status": "running"},
+    )
+    typed_execution_create = ExecutionCreateResult[_ExecutionResultModel](
+        execution_id="exec_1",
+        deployment_id="dep_1",
+        provider_result={"status": "running"},
+    )
+    typed_execution_status = ExecutionStatusResult[_ExecutionResultModel](
         execution_id="exec_1",
         deployment_id="dep_1",
         provider_result={"status": "running"},
@@ -198,7 +277,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
         configs=[],
         provider_result={"external_url": "https://dep.example"},
     )
-    typed_snapshot_list = SnapshotListResult[_ResultModel](
+    typed_snapshot_list = SnapshotListResult[_ResultModel, _StatusModel](
         snapshots=[],
         provider_result={"external_url": "https://dep.example"},
     )
@@ -207,7 +286,10 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
 
     assert isinstance(typed_create.provider_result, _ResultModel)
     assert isinstance(typed_operation.provider_result, _ResultModel)
+    assert isinstance(typed_update.provider_result, _ResultModel)
     assert isinstance(typed_execution.provider_result, _ExecutionResultModel)
+    assert isinstance(typed_execution_create.provider_result, _ExecutionResultModel)
+    assert isinstance(typed_execution_status.provider_result, _ExecutionResultModel)
     assert isinstance(typed_item.provider_data, _StatusModel)
     assert isinstance(typed_deployment_list.provider_result, _ResultModel)
     assert isinstance(typed_config_list.provider_result, _ResultModel)
@@ -216,16 +298,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     assert isinstance(typed_snapshot_params.provider_params, _SnapshotFilterModel)
 
 
-def test_unparametrized_models_keep_dict_passthrough_behavior() -> None:
-    payload = {"region": "us-east-1"}
-    data = BaseDeploymentData(
-        name="dep",
-        description="",
-        type=DeploymentType.AGENT,
-        provider_spec=payload,
-    )
-    assert data.provider_spec == payload
-
+def test_payload_slot_dump_json_serializes_rich_payload() -> None:
     now = datetime(2026, 1, 2, 3, 4, 5, tzinfo=timezone.utc)
     rich_slot = PayloadSlot(_RichPayload)
     dumped = rich_slot.dump(

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
 import { cn } from "@/utils/utils";
@@ -12,10 +13,10 @@ export type FilePreviewDisplayProps = {
   /**
    * File can be:
    * - Browser File object (for input context)
-   * - Server file path object { path: string; type: string; name: string }
+   * - Server file path object { path: string; type?: string; name?: string;}
    * - Server file path string
    */
-  file: File | { path: string; type: string; name: string } | string;
+  file: File | { path: string; type?: string; name?: string } | string;
   /**
    * Loading state (for input context when file is being processed)
    */
@@ -56,14 +57,15 @@ export default function FilePreviewDisplay({
   variant = "compact",
   className,
 }: FilePreviewDisplayProps) {
+  const { t } = useTranslation();
   const [imageError, setImageError] = useState(false);
   const previewUrl = getFilePreviewUrl(file);
   const fileInfo = extractFileInfo(file);
 
-  // Reset error state when file changes
+  // Reset error state when preview URL changes
   useEffect(() => {
     setImageError(false);
-  }, [file]);
+  }, [previewUrl]);
 
   // Cleanup blob URLs for File objects
   useEffect(() => {
@@ -111,7 +113,7 @@ export default function FilePreviewDisplay({
             onClick={onDelete}
             className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
             type="button"
-            aria-label="Delete file"
+            aria-label={t("playgroundComponent.deleteFile")}
           >
             <ForwardedIconComponent name="X" className="h-3 w-3" />
           </button>
@@ -156,7 +158,7 @@ export default function FilePreviewDisplay({
           onClick={onDelete}
           className="absolute -right-2 -top-2 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-destructive-foreground hover:bg-destructive/90"
           type="button"
-          aria-label="Delete file"
+          aria-label={t("playgroundComponent.deleteFile")}
         >
           <ForwardedIconComponent name="X" className="h-3 w-3" />
         </button>

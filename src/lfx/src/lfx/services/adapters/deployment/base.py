@@ -19,6 +19,7 @@ if TYPE_CHECKING:
         DeploymentDeleteResult,
         DeploymentDuplicateResult,
         DeploymentGetResult,
+        DeploymentListLlmsResult,
         DeploymentListParams,
         DeploymentListResult,
         DeploymentListTypesResult,
@@ -33,6 +34,8 @@ if TYPE_CHECKING:
         RedeployResult,
         SnapshotListParams,
         SnapshotListResult,
+        VerifyCredentials,
+        VerifyCredentialsResult,
     )
     from lfx.services.interfaces import DeploymentServiceProtocol
 
@@ -68,6 +71,15 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> DeploymentListTypesResult:
         """List deployment types supported by the provider."""
+
+    @abstractmethod
+    async def list_llms(
+        self,
+        *,
+        user_id: IdLike,
+        db: AsyncSession,
+    ) -> DeploymentListLlmsResult:
+        """List provider-available LLM model names for deployment configuration."""
 
     @abstractmethod
     async def list(
@@ -186,6 +198,15 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> SnapshotListResult:
         """List snapshots visible to this adapter."""
+
+    @abstractmethod
+    async def verify_credentials(
+        self,
+        *,
+        user_id: IdLike,
+        payload: VerifyCredentials,
+    ) -> VerifyCredentialsResult:
+        """Verify provider credentials before account creation."""
 
 
 if TYPE_CHECKING:

@@ -10,6 +10,7 @@ from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
 from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx.serialization.serialization import serialize
@@ -36,7 +37,10 @@ def _get_input_type(input_: InputTypes):
     return input_.field_type
 
 
-def build_description(component: Component) -> str:
+def build_description(component: Component, output=None) -> str:
+    """Build tool description, preferring output-level info over component description."""
+    if output and getattr(output, "info", None):
+        return output.info
     return component.description or ""
 
 
@@ -83,28 +87,56 @@ def _patch_send_message_decorator(component, func):
     return async_wrapper if asyncio.iscoroutinefunction(func) else sync_wrapper
 
 
-def _build_output_function(component: Component, output_method: Callable, event_manager: EventManager | None = None):
+def _build_output_function(
+    component: Component,
+    output_method: Callable,
+    event_manager: EventManager | None = None,
+    output_name: str = TOOL_OUTPUT_NAME,
+):
     method_name = output_method.__name__
+    # Capture tool_mode input names so positional args can be mapped to kwargs
+    _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     def output_function(*args, **kwargs):
+        # Map positional args to keyword args using tool_mode input names
+        if args:
+            for i, val in enumerate(args):
+                if i < len(_tool_input_names) and _tool_input_names[i] not in kwargs:
+                    kwargs[_tool_input_names[i]] = val
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name)
+        local_method = getattr(comp, method_name, output_method)
+        build_started = False
+        result = None
         try:
             if event_manager:
                 event_manager.on_build_start(data={"id": comp.get_id()})
-            comp.set(*args, **kwargs)
+                build_started = True
+            comp.set_event_manager(event_manager)
+            comp.set_current_output(output_name)
+            comp.set(**kwargs)
             result = local_method()
-            if event_manager:
-                event_manager.on_build_end(data={"id": comp.get_id()})
         except Exception as e:
-            raise ToolException(e) from e
+            logger.error(
+                "Component %s failed during tool mode execution: %s",
+                comp.get_id(),
+                e,
+                exc_info=True,
+            )
+            raise ToolException(str(e)) from e
+        finally:
+            comp.set_current_output("")
+            comp.set_event_manager(None)
+            if build_started and event_manager:
+                event_manager.on_build_end(data={"id": comp.get_id()})
 
         if isinstance(result, Message):
             return result.get_text()
         if isinstance(result, Data):
             return result.data
+        if isinstance(result, pd.DataFrame):
+            return result
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
@@ -112,28 +144,54 @@ def _build_output_function(component: Component, output_method: Callable, event_
 
 
 def _build_output_async_function(
-    component: Component, output_method: Callable, event_manager: EventManager | None = None
+    component: Component,
+    output_method: Callable,
+    event_manager: EventManager | None = None,
+    output_name: str = TOOL_OUTPUT_NAME,
 ):
     method_name = output_method.__name__
+    # Capture tool_mode input names so positional args can be mapped to kwargs
+    _tool_input_names = [inp.name for inp in component.inputs if getattr(inp, "tool_mode", False)]
 
     async def output_function(*args, **kwargs):
+        # Map positional args to keyword args using tool_mode input names
+        if args:
+            for i, val in enumerate(args):
+                if i < len(_tool_input_names) and _tool_input_names[i] not in kwargs:
+                    kwargs[_tool_input_names[i]] = val
         # Create an isolated copy to prevent race conditions when this
         # tool is invoked concurrently by an agent (GitHub issue #8791)
         comp = deepcopy(component)
-        local_method = getattr(comp, method_name)
+        local_method = getattr(comp, method_name, output_method)
+        build_started = False
+        result = None
         try:
             if event_manager:
-                await asyncio.to_thread(event_manager.on_build_start, data={"id": comp.get_id()})
-            comp.set(*args, **kwargs)
+                event_manager.on_build_start(data={"id": comp.get_id()})
+                build_started = True
+            comp.set_event_manager(event_manager)
+            comp.set_current_output(output_name)
+            comp.set(**kwargs)
             result = await local_method()
-            if event_manager:
-                await asyncio.to_thread(event_manager.on_build_end, data={"id": comp.get_id()})
         except Exception as e:
-            raise ToolException(e) from e
+            logger.error(
+                "Component %s failed during tool mode execution: %s",
+                comp.get_id(),
+                e,
+                exc_info=True,
+            )
+            raise ToolException(str(e)) from e
+        finally:
+            comp.set_current_output("")
+            comp.set_event_manager(None)
+            if build_started and event_manager:
+                event_manager.on_build_end(data={"id": comp.get_id()})
         if isinstance(result, Message):
             return result.get_text()
         if isinstance(result, Data):
             return result.data
+        if isinstance(result, pd.DataFrame):
+            return result
         # removing the model_dump() call here because it is not serializable
         return serialize(result)
 
@@ -237,15 +295,17 @@ class ComponentToolkit:
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
-                        description=build_description(self.component),
-                        coroutine=_build_output_async_function(self.component, output_method, event_manager),
+                        description=build_description(self.component, output),
+                        coroutine=_build_output_async_function(
+                            self.component, output_method, event_manager, TOOL_OUTPUT_NAME
+                        ),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
                         metadata={
                             "display_name": formatted_name,
-                            "display_description": build_description(self.component),
+                            "display_description": build_description(self.component, output),
                         },
                     )
                 )
@@ -253,15 +313,15 @@ class ComponentToolkit:
                 tools.append(
                     StructuredTool(
                         name=formatted_name,
-                        description=build_description(self.component),
-                        func=_build_output_function(self.component, output_method, event_manager),
+                        description=build_description(self.component, output),
+                        func=_build_output_function(self.component, output_method, event_manager, TOOL_OUTPUT_NAME),
                         args_schema=args_schema,
                         handle_tool_error=True,
                         callbacks=callbacks,
                         tags=[formatted_name],
                         metadata={
                             "display_name": formatted_name,
-                            "display_description": build_description(self.component),
+                            "display_description": build_description(self.component, output),
                         },
                     )
                 )
@@ -273,9 +333,11 @@ class ComponentToolkit:
         elif (tool_name or tool_description) and (flow_mode_inputs or len(tools) > 1):
             for tool in tools:
                 tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
-                tool.description = (
-                    str(tool_description) + " Output details: " + str(tool.description)
-                ) or tool.description
+                # Only prepend an explicit tool_description. Without one, keep the
+                # output-derived description so it stays equal to display_description
+                # and the Actions-panel merge logic can detect real user edits.
+                if tool_description:
+                    tool.description = f"{tool_description} Output details: {tool.description}"
                 tool.tags = [tool.name]
         return tools
 

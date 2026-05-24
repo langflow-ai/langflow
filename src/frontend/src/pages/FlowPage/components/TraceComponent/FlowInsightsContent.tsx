@@ -1,5 +1,6 @@
 import type { CellClickedEvent } from "ag-grid-community";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useSearchParams } from "react-router-dom";
 import IconComponent from "@/components/common/genericIconComponent";
 import PaginatorComponent from "@/components/common/paginatorComponent";
@@ -12,7 +13,13 @@ import {
 } from "@/components/ui/accordion";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -22,11 +29,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
-  DEFAULT_TABLE_ALERT_MSG,
-  DEFAULT_TABLE_ALERT_TITLE,
-} from "@/constants/constants";
-import { useGetTracesQuery } from "@/controllers/API/queries/traces";
+  useDeleteTracesMutation,
+  useGetTracesQuery,
+} from "@/controllers/API/queries/traces";
 import { TraceListItem } from "@/controllers/API/queries/traces/types";
+import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { cn } from "@/utils/utils";
 import { createFlowTracesColumns } from "./config/flowTraceColumns";
@@ -46,6 +53,7 @@ export function FlowInsightsContent({
   refreshOnMount?: boolean;
   showFlowActivityHeader?: boolean;
 }): JSX.Element {
+  const { t } = useTranslation();
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(20);
@@ -60,8 +68,32 @@ export function FlowInsightsContent({
   const [startDate, setStartDate] = useState<string>("");
   const [endDateValue, setEndDateValue] = useState<string>("");
   const [groupBySession, setGroupBySession] = useState<boolean>(false);
+  const [clearConfirmOpen, setClearConfirmOpen] = useState(false);
   const flowIdFromUrl = searchParams.get("id");
   const resolvedFlowId = flowId ?? currentFlowId ?? flowIdFromUrl;
+
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const { mutate: deleteTraces } = useDeleteTracesMutation({
+    onSuccess: () => {
+      setSuccessData({ title: t("trace.clearedSuccess") });
+      refetch();
+    },
+    onError: (error) => {
+      setErrorData({
+        title: t("trace.clearError"),
+        list: [error.message],
+      });
+    },
+  });
+
+  const handleClearAll = useCallback(() => {
+    const trustedFlowId = flowId ?? currentFlowId;
+    if (trustedFlowId) {
+      deleteTraces({ flow_id: trustedFlowId });
+    }
+  }, [flowId, currentFlowId, deleteTraces]);
 
   const resolvedFlowName = useFlowsManagerStore((state) => {
     if (!resolvedFlowId) return state.currentFlow?.name;
@@ -99,15 +131,13 @@ export function FlowInsightsContent({
         size: pageSize,
       },
     },
-    { enabled: !!resolvedFlowId },
+    {
+      enabled: !!resolvedFlowId,
+      refetchOnMount: refreshOnMount ? "always" : true,
+    },
   );
 
   const rows = tracesData?.traces ?? [];
-
-  useEffect(() => {
-    if (!refreshOnMount) return;
-    refetch();
-  }, [refreshOnMount, refetch]);
 
   useEffect(() => {
     if (!initialTraceId) return;
@@ -153,8 +183,10 @@ export function FlowInsightsContent({
   }, []);
 
   const totalRuns = tracesData?.total ?? rows.length;
-  const totalPages =
-    tracesData?.pages ?? Math.max(1, Math.ceil(totalRuns / pageSize));
+  const totalPages = Math.max(
+    1,
+    tracesData?.pages ?? Math.ceil(totalRuns / pageSize),
+  );
 
   useEffect(() => {
     if (pageIndex > totalPages) {
@@ -181,8 +213,8 @@ export function FlowInsightsContent({
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{DEFAULT_TABLE_ALERT_TITLE}</AlertTitle>
-            <AlertDescription>{DEFAULT_TABLE_ALERT_MSG}</AlertDescription>
+            <AlertTitle>{t("table.noDataTitle")}</AlertTitle>
+            <AlertDescription>{t("table.noDataMessage")}</AlertDescription>
           </Alert>
         </div>
       );
@@ -197,9 +229,13 @@ export function FlowInsightsContent({
           <AccordionItem key={sessionId} value={sessionId}>
             <AccordionTrigger className="px-4 text-sm">
               <div className="flex items-center gap-2 text-muted-foreground">
-                <span className="font-medium text-foreground">Session</span>
+                <span className="font-medium text-foreground">
+                  {t("trace.session")}
+                </span>
                 <span className="font-mono text-xs">{sessionId}</span>
-                <span className="text-xs">{sessionRows.length} runs</span>
+                <span className="text-xs">
+                  {t("trace.runsCount", { count: sessionRows.length })}
+                </span>
               </div>
             </AccordionTrigger>
             <AccordionContent className="px-4 pb-4">
@@ -230,14 +266,18 @@ export function FlowInsightsContent({
             className="border-b border-border px-4 py-3"
             data-testid="flow-activity-header"
           >
-            <h2 className="text-base font-semibold">Flow Activity</h2>
+            <h2 className="text-base font-semibold">
+              {t("trace.flowActivity")}
+            </h2>
           </div>
         )}
         <div className="flex flex-nowrap items-center justify-between gap-2 border-b px-4 py-2">
           <div className="flex min-w-0 items-center gap-3 whitespace-nowrap">
             <div className="flex items-center gap-3 text-sm">
-              <span className="font-medium">Runs</span>
-              <span className="text-muted-foreground">Total {totalRuns}</span>
+              <span className="font-medium">{t("trace.runs")}</span>
+              <span className="text-muted-foreground">
+                {t("trace.total", { count: totalRuns })}
+              </span>
             </div>
             <Button
               variant="ghost"
@@ -250,7 +290,7 @@ export function FlowInsightsContent({
               aria-pressed={groupBySession}
             >
               <IconComponent name="Layers" className="h-4 w-4" />
-              Group by Session
+              {t("trace.groupBySession")}
             </Button>
           </div>
 
@@ -263,19 +303,19 @@ export function FlowInsightsContent({
               <Input
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
-                placeholder="Search runs..."
+                placeholder={t("trace.searchRuns")}
                 className="h-8 pl-8 text-sm"
               />
             </div>
 
             <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="h-8 w-[130px]">
-                <SelectValue placeholder="All Status" />
+              <SelectTrigger className="h-8 w-[130px] [&>span]:truncate">
+                <SelectValue placeholder={t("trace.allStatus")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="ok">Success</SelectItem>
-                <SelectItem value="error">Error</SelectItem>
+                <SelectItem value="all">{t("trace.allStatus")}</SelectItem>
+                <SelectItem value="ok">{t("trace.success")}</SelectItem>
+                <SelectItem value="error">{t("trace.error")}</SelectItem>
               </SelectContent>
             </Select>
 
@@ -286,11 +326,58 @@ export function FlowInsightsContent({
               onEndDateChange={setEndDateValue}
             />
 
+            {totalRuns > 0 && (
+              <Button
+                variant="ghost"
+                className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                aria-label={t("trace.clearAll")}
+                onClick={(e) => {
+                  (e.currentTarget as HTMLButtonElement).blur();
+                  setClearConfirmOpen(true);
+                }}
+              >
+                <IconComponent name="Trash2" className="h-4 w-4" />
+              </Button>
+            )}
+            <Dialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+              <DialogContent className="max-w-sm">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <IconComponent
+                      name="Trash2"
+                      className="h-5 w-5 text-destructive"
+                    />
+                    {t("trace.clearAllRecords")}
+                  </DialogTitle>
+                </DialogHeader>
+                <p className="text-sm text-muted-foreground">
+                  {t("trace.clearAllConfirm")}
+                </p>
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setClearConfirmOpen(false)}
+                  >
+                    {t("trace.cancel")}
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      handleClearAll();
+                      setClearConfirmOpen(false);
+                    }}
+                  >
+                    {t("trace.clearAll")}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
             <Button
               variant="ghost"
               size="icon"
               onClick={() => refetch()}
-              aria-label="Reload"
+              aria-label={t("trace.reload")}
             >
               <IconComponent name="RefreshCcw" className="h-4 w-4" />
             </Button>
@@ -300,14 +387,14 @@ export function FlowInsightsContent({
               onClick={() =>
                 downloadJson(`runs-${resolvedFlowId ?? "unknown"}.json`, rows)
               }
-              aria-label="Download"
+              aria-label={t("trace.download")}
             >
               <IconComponent name="Download" className="h-4 w-4" />
             </Button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-hidden">
+        <div className="ag-flush-mode flex-1 overflow-hidden">
           {groupBySession ? (
             renderGroupedSessionContent({
               groupedRows,
@@ -331,7 +418,7 @@ export function FlowInsightsContent({
             />
           )}
         </div>
-        <div className="flex justify-end px-3 py-4">
+        <div className="flex justify-end border-t px-3 py-4">
           <PaginatorComponent
             pageIndex={pageIndex}
             pageSize={pageSize}

@@ -1,24 +1,19 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "sticky notes should have consistent 280x140px dimensions",
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Take reference element for size comparison
     const targetElement = page.locator('//*[@id="react-flow-id"]');
 
     // Start adding note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("canvas-add-note-button").click();
 
     // Get shadow-box dimensions while dragging
     const shadowBox = page.locator("#shadow-box");
@@ -69,15 +64,10 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("canvas-add-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();
@@ -131,15 +121,10 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("canvas-add-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();
@@ -192,15 +177,10 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("canvas-add-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();
@@ -263,15 +243,10 @@ test(
   { tag: ["@release", "@workspace"] },
 
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Add sticky note
-    await page.getByTestId("sidebar-nav-add_note").click();
+    await page.getByTestId("canvas-add-note-button").click();
     const targetElement = page.locator('//*[@id="react-flow-id"]');
     await targetElement.click();
     await page.mouse.up();

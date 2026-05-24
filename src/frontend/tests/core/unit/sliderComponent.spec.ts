@@ -9,6 +9,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 // TODO: This component doesn't have slider needs updating
 test(
   "user should be able to use slider input",
@@ -41,13 +42,23 @@ test(
 
     const cleanCode = await extractAndCleanCode(page);
 
-    // Replace the multiline string in the code
+    // Sanity-check: the original Ollama source has many lines. If we read it
+    // back as a single concatenated line, the textarea-value path is the
+    // problem and Ace surgery downstream cannot save us.
+    const cleanCodeNewlines = (cleanCode.match(/\n/g) || []).length;
+    if (cleanCodeNewlines < 50) {
+      throw new Error(
+        `extractAndCleanCode returned code with only ${cleanCodeNewlines} newlines (length ${cleanCode.length}); expected the multi-line Ollama source. The hidden #codeValue textarea may be returning a stripped value on this platform.`,
+      );
+    }
+
+    // Replace the multiline string in the code.
+    // Use a regex so the match is resilient to line-ending differences
+    // (LF on macOS/Linux vs CRLF on Windows after git checkout).
+    const originalSliderBlockRegex =
+      /name="temperature",\s+display_name="Temperature",\s+value=0\.1,\s+range_spec=RangeSpec\(min=0, max=1, step=0\.01\),\s+advanced=True,/;
     const newCode = cleanCode.replace(
-      `name="temperature",
-            display_name="Temperature",
-            value=0.1,
-            range_spec=RangeSpec(min=0, max=1, step=0.01),
-            advanced=True,`,
+      originalSliderBlockRegex,
       `name="temperature",
             display_name="Temperature",
             value=0.2,
@@ -63,9 +74,7 @@ test(
     );
     // make sure codes are different
     expect(cleanCode).not.toEqual(newCode);
-    await page.locator("textarea").last().press(`ControlOrMeta+a`);
-    await page.keyboard.press("Backspace");
-    await page.locator("textarea").last().fill(newCode);
+    await setAceEditorValue(page, newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
     await adjustScreenView(page);
 
@@ -103,25 +112,34 @@ test(
   },
 );
 
-async function extractAndCleanCode(page: Page): Promise<string> {
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the HTML");
+// Set the Ace editor's content using the exact same pattern that
+// queryInputComponent.spec.ts uses successfully on Windows CI:
+// `textarea.last().fill(newCode)` against Ace's hidden text-input textarea.
+// Textareas (unlike single-line `<input>`s) preserve `\n` in `.value`, so
+// fill() reliably round-trips the multi-line source. Ace's text-input
+// listener picks up the resulting `input` event, applies it to the buffer,
+// and fires the `change` event that react-ace listens to — which is what
+// updates the React `code` state that gets POSTed on save.
+async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
+  const expectedNewlines = (newCode.match(/\n/g) || []).length;
+  if (expectedNewlines < 10) {
+    throw new Error(
+      `setAceEditorValue: newCode has only ${expectedNewlines} newlines (length ${newCode.length}); upstream extractAndCleanCode likely lost newlines.`,
+    );
   }
 
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/");
+  await page.locator("textarea").last().press("ControlOrMeta+a");
+  await page.keyboard.press("Backspace");
+  await page.locator("textarea").last().fill(newCode);
 
-  return codeContent;
+  // Wait for the change to propagate into the controlled React state. The
+  // `#codeValue` mirror is rendered by `<Input>` (single-line), so browsers
+  // strip newlines from its `.value` — matching the substring is enough to
+  // confirm the new code landed.
+  await expect(page.locator("#codeValue")).toHaveValue(
+    /range_spec=RangeSpec\(min=3, max=30, step=1\)/,
+    { timeout: 10000 },
+  );
 }
 
 async function mutualValidation(page: Page) {

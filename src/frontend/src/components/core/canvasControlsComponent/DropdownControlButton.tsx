@@ -52,16 +52,11 @@ const DropdownControlButton: React.FC<DropdownControlButtonProps> = ({
       <span className="text-muted-foreground text-sm mr-2 group-hover:text-primary">
         {label}
       </span>
-      <div
-        className={cn(
-          "flex flex-row items-center text-sm",
-          shortcut && "w-[25px]",
-        )}
-      >
+      <div className="flex flex-row items-center text-sm">
         {shortcut && (
-          <div className="flex items-center justify-between w-full text-muted-foreground group-hover:text-primary">
+          <div className="flex items-center gap-0.5 text-muted-foreground group-hover:text-primary">
             <span>{getModifierKey()}</span>
-            <span className="">{shortcut}</span>
+            <span>{shortcut}</span>
           </div>
         )}
         {externalLink && (

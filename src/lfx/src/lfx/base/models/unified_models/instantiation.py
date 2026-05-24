@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_utils import _to_str
 
+from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .provider_queries import model_provider_metadata
 
 if TYPE_CHECKING:
@@ -74,8 +75,22 @@ def get_llm(
         )
         raise ValueError(msg)
 
-    # Get model class from metadata
+    # Get model class from metadata, falling back to the provider-level
+    # mapping when the stored model value was sourced from
+    # ``get_unified_models_detailed`` (which, unlike
+    # ``get_language_model_options``, does not inject ``model_class`` into
+    # each model's metadata).  This happens for example immediately after a
+    # user configures a provider and the frontend augments its dropdown from
+    # ``/api/v1/models`` before the backend has repopulated
+    # ``template[model]["options"]``; the resulting stored selection only
+    # carries the raw ``create_model_metadata`` fields, so we have to derive
+    # ``model_class`` from the provider mapping that
+    # ``get_language_model_options`` would have used.
     model_class_name = metadata.get("model_class")
+    if not model_class_name and provider:
+        from lfx.base.models.model_metadata import get_provider_param_mapping
+
+        model_class_name = get_provider_param_mapping(provider).get("model_class")
     if not model_class_name:
         msg = f"No model class defined for {model_name}"
         raise ValueError(msg)
@@ -169,6 +184,30 @@ def get_llm(
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
+    elif provider == "OpenRouter":
+        # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
+        # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
+        # any configured attribution headers (HTTP-Referer, X-Title) so usage
+        # shows up correctly in the OpenRouter dashboard.
+        provider_meta = model_provider_metadata.get(provider, {})
+        base_url_value = provider_meta.get("base_url")
+        if base_url_value:
+            kwargs["base_url"] = base_url_value
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        default_headers: dict[str, str] = {}
+        for var in provider_meta.get("variables", []):
+            if not var.get("is_header"):
+                continue
+            header_name = var.get("header_name")
+            # KeyError on a misconfigured metadata entry beats silently
+            # skipping a header the operator expects to be sent.
+            variable_key = var["variable_key"]
+            value = provider_vars.get(variable_key) or os.environ.get(variable_key)
+            if header_name and value:
+                default_headers[header_name] = value
+        if default_headers:
+            kwargs["default_headers"] = default_headers
 
     try:
         return model_class(**kwargs)
@@ -248,15 +287,22 @@ def get_embeddings(
         msg = "Embedding model name is required"
         raise ValueError(msg)
 
-    # Get embedding class from metadata
-    embedding_class_name = metadata.get("embedding_class")
+    # Get embedding class from metadata. Selections persisted via the
+    # generic ``/models`` catalog (e.g. saved into ``KnowledgeBase.model_selection``
+    # by the KB upload flow) lack the enriched embedding metadata, so we
+    # fall back to deriving it from the provider name. Both lookups
+    # share the same source of truth in ``class_registry``.
+    embedding_class_name = metadata.get("embedding_class") or EMBEDDING_PROVIDER_CLASS_MAPPING.get(provider)
     if not embedding_class_name:
-        msg = f"No embedding class defined in metadata for {model_name}"
+        msg = (
+            f"No embedding class defined in metadata for {model_name} (provider: {provider}). "
+            "Add the provider to EMBEDDING_PROVIDER_CLASS_MAPPING or re-select the model."
+        )
         raise ValueError(msg)
     embedding_class = unified_models_module.get_embedding_class(embedding_class_name)
 
     # --- build kwargs from param_mapping -------------------------------------
-    param_mapping: dict[str, str] = metadata.get("param_mapping", {})
+    param_mapping: dict[str, str] = metadata.get("param_mapping") or EMBEDDING_PARAM_MAPPINGS.get(provider, {})
     if not param_mapping:
         msg = (
             f"Parameter mapping not found in metadata for model '{model_name}' (provider: {provider}). "

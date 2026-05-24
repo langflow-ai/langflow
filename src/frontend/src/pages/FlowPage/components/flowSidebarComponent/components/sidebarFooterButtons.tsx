@@ -1,23 +1,38 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
+import { useUtilityStore } from "@/stores/utilityStore";
 
 const SidebarMenuButtons = ({
   customComponent,
   addComponent,
   isLoading = false,
 }) => {
+  const { t } = useTranslation();
   const { activeSection } = useSidebar();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
   const navigate = useCustomNavigate();
+  const allowCustomComponents = useUtilityStore(
+    (state) => state.allowCustomComponents,
+  );
 
   const handleAddMcpServerClick = () => {
     setAddMcpOpen(true);
   };
+
+  // Hide custom component button when custom components are blocked
+  if (
+    !allowCustomComponents &&
+    !(ENABLE_NEW_SIDEBAR && activeSection === "mcp")
+  ) {
+    return null;
+  }
 
   return ENABLE_NEW_SIDEBAR && activeSection === "mcp" ? (
     <>
@@ -33,9 +48,11 @@ const SidebarMenuButtons = ({
             name="Plus"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="group-data-[state=open]/collapsible:font-semibold">
-            Add MCP Server
-          </span>
+          <ShadTooltip content={t("sidebar.mcp.add")} styleClasses="z-50">
+            <span className="group-data-[state=open]/collapsible:font-semibold">
+              {t("sidebar.mcp.add")}
+            </span>
+          </ShadTooltip>
         </Button>
       </SidebarMenuButton>
       <SidebarMenuButton asChild>
@@ -52,9 +69,11 @@ const SidebarMenuButtons = ({
             name="ArrowUpRight"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="group-data-[state=open]/collapsible:font-semibold">
-            Manage Servers
-          </span>
+          <ShadTooltip content={t("sidebar.mcp.manage")} styleClasses="z-50">
+            <span className="group-data-[state=open]/collapsible:font-semibold">
+              {t("sidebar.mcp.manage")}
+            </span>
+          </ShadTooltip>
         </Button>
       </SidebarMenuButton>
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
@@ -76,9 +95,14 @@ const SidebarMenuButtons = ({
           name="Plus"
           className="h-4 w-4 text-muted-foreground"
         />
-        <span className="group-data-[state=open]/collapsible:font-semibold">
-          New Custom Component
-        </span>
+        <ShadTooltip
+          content={t("sidebar.newCustomComponent")}
+          styleClasses="z-50"
+        >
+          <span className="group-data-[state=open]/collapsible:font-semibold">
+            {t("sidebar.newCustomComponent")}
+          </span>
+        </ShadTooltip>
       </Button>
     </SidebarMenuButton>
   );

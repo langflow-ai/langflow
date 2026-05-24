@@ -2,6 +2,7 @@
 
 from .payload import (
     AdapterPayload,
+    AdapterPayloadMissingError,
     AdapterPayloadValidationError,
     PayloadSlot,
     PayloadSlotPolicy,
@@ -10,6 +11,7 @@ from .payload import (
 
 __all__ = [
     "AdapterPayload",
+    "AdapterPayloadMissingError",
     "AdapterPayloadValidationError",
     "PayloadSlot",
     "PayloadSlotPolicy",

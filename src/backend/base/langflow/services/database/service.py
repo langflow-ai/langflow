@@ -585,10 +585,11 @@ class DatabaseService(Service):
         await logger.adebug("Tearing down database")
         try:
             settings_service = get_settings_service()
-            # remove the default superuser if auto_login is enabled
-            # using the SUPERUSER to get the user
+            # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
             async with session_scope() as session:
                 await teardown_superuser(settings_service, session)
-        except Exception:  # noqa: BLE001
+        except Exception:
             await logger.aexception("Error tearing down database")
-        await self.engine.dispose()
+            raise
+        finally:
+            await self.engine.dispose()

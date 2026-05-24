@@ -1,0 +1,195 @@
+import { useState } from "react";
+import IconComponent from "@/components/common/genericIconComponent";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import { useTranslation } from "react-i18next";
+import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { cn } from "@/utils/utils";
+import type { MemoryDetailsHeaderProps } from "../types";
+
+export function MemoryDetailsHeader({
+  memory,
+  sessions,
+  selectedSession,
+  setSelectedSession,
+  deleteMutation,
+  handleToggleActive,
+  onRefresh,
+  fetchNextSessionsPage,
+  hasNextSessionsPage,
+  isFetchingNextSessionsPage,
+}: MemoryDetailsHeaderProps) {
+  const { t } = useTranslation();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
+    setIsRefreshing(true);
+    try {
+      await onRefresh();
+      setSuccessData({ title: `Memory "${memory.name}" refreshed` });
+    } catch (error) {
+      setErrorData({
+        title: "Failed to refresh memory",
+        list: extractApiErrorMessages(error),
+      });
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  const effectiveSession = (selectedSession ?? sessions?.[0] ?? "") as
+    | string
+    | null;
+
+  const handleSessionsScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const el = e.currentTarget;
+    if (
+      el.scrollHeight - el.scrollTop <= el.clientHeight * 2 &&
+      hasNextSessionsPage &&
+      !isFetchingNextSessionsPage
+    ) {
+      fetchNextSessionsPage();
+    }
+  };
+
+  return (
+    <div className="flex items-center justify-between border-b border-border bg-background px-6 py-3">
+      <div className="flex items-center gap-3">
+        <IconComponent
+          name="BrainCog"
+          className="h-5 w-5 text-muted-foreground"
+        />
+        <div>
+          <h2 className="text-sm font-semibold">{memory.name}</h2>
+          {memory.description && (
+            <p className="text-xs text-muted-foreground">
+              {memory.description}
+            </p>
+          )}
+        </div>
+      </div>
+
+      <div className="flex items-center gap-2">
+        {sessions && sessions.length > 0 && (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                aria-label={t("memory.sessionFilter")}
+                disabled={sessions.length <= 1 && !hasNextSessionsPage}
+                className="w-[240px] justify-between px-3"
+              >
+                <span className="truncate">
+                  {effectiveSession && effectiveSession.length > 20
+                    ? `${effectiveSession.slice(0, 20)}...`
+                    : (effectiveSession ?? "")}
+                </span>
+                <IconComponent
+                  name="ChevronDown"
+                  className="ml-2 h-4 w-4 shrink-0 text-muted-foreground"
+                />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-[240px] p-0">
+              <div
+                className="max-h-[240px] overflow-y-auto py-1"
+                onScroll={handleSessionsScroll}
+              >
+                {sessions.map((sid) => {
+                  const isSelected = sid === effectiveSession;
+                  return (
+                    <DropdownMenuItem
+                      key={sid}
+                      className="flex items-center justify-between"
+                      onSelect={() => {
+                        setSelectedSession(sid);
+                      }}
+                    >
+                      <span className="truncate">{sid}</span>
+                      <IconComponent
+                        name="Check"
+                        className={
+                          isSelected
+                            ? "h-4 w-4 text-primary"
+                            : "h-4 w-4 opacity-0"
+                        }
+                      />
+                    </DropdownMenuItem>
+                  );
+                })}
+                {isFetchingNextSessionsPage && (
+                  <div className="py-1 text-center">
+                    <span className="text-xs text-muted-foreground">
+                      Loading…
+                    </span>
+                  </div>
+                )}
+              </div>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+
+        <Button
+          variant={memory.is_active ? "primary" : "outline"}
+          size="sm"
+          onClick={() => handleToggleActive((prevIsActive) => !prevIsActive)}
+          aria-pressed={memory.is_active}
+          aria-label={t("memory.toggleAutoCapture")}
+          className="gap-2"
+        >
+          <span
+            className={cn(
+              "h-2 w-2 shrink-0 rounded-full",
+              memory.is_active
+                ? "bg-accent-emerald-foreground"
+                : "bg-muted-foreground",
+            )}
+          />
+          Auto-capture
+        </Button>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          aria-label={t("memory.reloadSessions")}
+        >
+          <IconComponent
+            name="RefreshCw"
+            className={cn("h-4 w-4", isRefreshing && "animate-spin")}
+          />
+        </Button>
+
+        <DeleteConfirmationModal
+          description={`memory "${memory.name}"`}
+          onConfirm={(e) => {
+            e.stopPropagation();
+            deleteMutation.mutate({ memoryId: memory.id });
+          }}
+          asChild
+        >
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={deleteMutation.isPending}
+          >
+            <IconComponent name="Trash2" className="h-4 w-4" />
+            Delete
+          </Button>
+        </DeleteConfirmationModal>
+      </div>
+    </div>
+  );
+}

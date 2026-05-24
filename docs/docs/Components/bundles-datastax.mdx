@@ -50,7 +50,7 @@ For information about accepted values and functionality, see the [Astra DB Serve
 | keyspace | Keyspace | Input parameter. The keyspace in your database that contains the collection specified in `collection_name`. Default: `default_keyspace`. |
 | collection_name | Collection | Input parameter. The name of the collection that you want to use with this flow. Or, select **New Collection** to create a new collection with limited configuration options. To ensure your collection is configured with the correct embedding provider and search capabilities, it is recommended to create the collection in the Astra Portal or with the Data API *before* configuring this component. For more information, see [Manage collections in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/manage-collections.html). |
 | embedding_model | Embedding Model | Input parameter. Attach an [embedding model component](/components-embedding-models) to generate embeddings. Only available if the specified collection doesn't have a [vectorize integration](https://docs.datastax.com/en/astra-db-serverless/databases/embedding-generation.html). If a vectorize integration exists, the component automatically uses the collection's integrated model. |
-| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. Accepts `Data` or `DataFrame` input. |
+| ingest_data | Ingest Data | Input parameter. The documents to load into the specified collection. Accepts `JSON` or `Table` input. |
 | search_query | Search Query | Input parameter. The query string for vector search. |
 | cache_vector_store | Cache Vector Store | Input parameter. Whether to cache the vector store in Langflow memory for faster reads. Default: Enabled (`true`). |
 | search_method | Search Method | Input parameter. The search methods to use, either `Hybrid Search` or `Vector Search`. Your collection must be configured to support the chosen option, and the default depends on what your collection supports. All vector-enabled collections in Astra DB Serverless (vector) databases support vector search, but hybrid search requires that you set specific collection settings when creating the collection. These options are only available when creating a collection programmatically. For more information, see [Ways to find data in Astra DB Serverless](https://docs.datastax.com/en/astra-db-serverless/databases/about-search.html) and [Create a collection that supports hybrid search](https://docs.datastax.com/en/astra-db-serverless/api-reference/collection-methods/create-collection.html#example-hybrid). |
@@ -135,13 +135,13 @@ This input only appears after connecting a collection that support hybrid search
     * The input sent to the **Structured Output** component is processed by the **Structured Output**, **Language Model**, and **Parser** components to extract space-separated `keywords` used for the lexical search portion of the hybrid search.
 
     The complete hybrid search query is executed against your database using the Data API's `find_and_rerank` command.
-    The API's response is output as a `DataFrame` that is transformed into a text string `Message` by another **Parser** component.
+    The API's response is output as a `Table` that is transformed into a text string `Message` by another **Parser** component.
     Finally, the **Chat Output** component prints the `Message` response to the **Playground**.
 
 9. Optional: Exit the **Playground**, and then click <Icon name="TextSearch" aria-hidden="true"/> **Inspect Output** on each individual component to understand how lexical keywords were constructed and view the raw response from the Data API.
 This is helpful for debugging flows where a certain component isn't receiving input as expected from another component.
 
-    * **Structured Output component**: The output is the `Data` object produced by applying the output schema to the LLM's response to the input message and format instructions.
+    * **Structured Output component**: The output is the `JSON` object produced by applying the output schema to the LLM's response to the input message and format instructions.
     The following example is based on the aforementioned instructions for keyword extraction:
 
         ```
@@ -149,9 +149,9 @@ This is helpful for debugging flows where a certain component isn't receiving in
         2. Question: What characteristics can be identified in my data?
         ```
 
-    * **Parser component**: The output is the string of keywords extracted from the structured output `Data`, and then used as lexical terms for the hybrid search.
+    * **Parser component**: The output is the string of keywords extracted from the structured output `JSON`, and then used as lexical terms for the hybrid search.
 
-    * **Astra DB component**: The output is the `DataFrame` containing the results of the hybrid search as returned by the Data API.
+    * **Astra DB component**: The output is the `Table` containing the results of the hybrid search as returned by the Data API.
 
 </details>
 
@@ -174,7 +174,7 @@ Instead, use the **Astra DB Graph** component that includes both the vector stor
 
 The **Astra DB CQL** component allows agents to query data from CQL tables in Astra DB.
 
-The output is a list of [`Data`](/data-types#data) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter.
+The output is a list of [`JSON`](/data-types#json) objects containing the query results from the Astra DB CQL table. Each Data object contains the document fields specified by the projection fields. Limited by the `number_of_results` parameter.
 
 ### Astra DB CQL parameters
 
@@ -193,6 +193,105 @@ The output is a list of [`Data`](/data-types#data) objects containing the query 
 | Clustering Keys | Dict | Input parameter. Optional parameters the model can fill to refine the query. Required parameters should be marked with an exclamation mark, for example, `!customer_id`. |
 | Static Filters | Dict | Input parameter. Attribute-value pairs used to filter query results. |
 | Limit | String | Input parameter. The number of records to return. |
+
+## Astra DB Data API
+
+The **Astra DB Data API** component runs document-level Data API operations — `find`, `find_one`, `insert_one`, `insert_many`, `update_one`, `update_many`, `delete_one`, `delete_many`, `count_documents`, and `estimated_document_count` — against a collection using the [`astrapy`](https://github.com/datastax/astrapy) Python SDK directly.
+
+Unlike the [**Astra DB** component](#astra-db), which wraps `AstraDBVectorStore` from `langchain-astradb` and is oriented around vector ingest/search, the **Astra DB Data API** component is a thin, direct pass-through to `astrapy`. No `langchain-astradb` code path is used at runtime, which makes it a good fit for:
+
+* Exact-match and compound metadata queries on collections that may or may not be vector-enabled.
+* CRUD-style writes and updates (`$set`, `$inc`, `$push`, `$unset`, and other Data API operators).
+* Document counts (bounded with `count_documents`, statistical with `estimated_document_count`).
+* Wiring an agent tool that can *both* read and write to Astra DB.
+
+The component also provides an **astrapy-only** "Create new collection" dialog (equivalent to the one on the **Astra DB** component) so you can spin up a collection — with or without a vectorize integration — without installing `langchain-astradb`.
+
+:::note
+The operation tab dynamically shows and hides only the inputs relevant to the selected operation, so the configuration surface stays minimal. For example, selecting **Insert One** hides all filter/projection/sort inputs and shows a single **Document** input.
+:::
+
+### Astra DB Data API parameters
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| token | Astra DB Application Token | Input parameter. An Astra application token with permission to access your database. |
+| environment | Environment | Input parameter. The Astra DB environment, typically `prod`. |
+| database_name | Database | Input parameter. The database the component will connect to. Supports in-app database creation. |
+| api_endpoint | Astra DB API Endpoint | Input parameter. Auto-populated from the selected database. |
+| keyspace | Keyspace | Input parameter. Defaults to `default_keyspace`. |
+| collection_name | Collection | Input parameter. The target collection. Supports in-app collection creation via `astrapy` directly (no `langchain-astradb` dependency). |
+| operation | Operation | Input parameter. One of `Find`, `Find One`, `Insert One`, `Insert Many`, `Update One`, `Update Many`, `Delete One`, `Delete Many`, `Count Documents`, `Estimated Count`. |
+| filter_query | Filter | Input parameter. MongoDB-style filter document, e.g. `{"status": "active", "age": {"$gte": 18}}`. Used by find, update, delete, and count operations. |
+| projection | Projection | Input parameter. Fields to include (`1`) or exclude (`0`), e.g. `{"name": 1, "email": 1}`. |
+| sort | Sort | Input parameter. Sort specification. Use `$vector` or `$vectorize` for vector search, e.g. `{"$vectorize": "search query"}`. |
+| limit | Limit | Input parameter. Maximum number of documents returned by `find`. Default: `100`. |
+| skip | Skip | Input parameter. Number of documents to skip. |
+| include_similarity | Include Similarity | Input parameter. Include the `$similarity` score on returned documents (vector searches only). |
+| document | Document | Input parameter. Single JSON document for `Insert One`. |
+| documents | Documents | Input parameter. List of JSON documents for `Insert Many`. |
+| ordered | Ordered Insert | Input parameter. If `true`, `Insert Many` stops at the first error. Default: `false`. |
+| update | Update | Input parameter. Update-operator document for `Update One` / `Update Many`, e.g. `{"$set": {"status": "archived"}}`. |
+| upsert | Upsert | Input parameter. If `true`, inserts a new document when no match is found. Default: `false`. |
+| upper_bound | Count Upper Bound | Input parameter. Maximum count `count_documents` will scan to. Default: `1000`. |
+
+### Astra DB Data API outputs
+
+| Output | Type | Description |
+|--------|------|-------------|
+| **Data** | `list[Data]` | List of JSON documents returned by the selected operation. Writes return a single-element list summarising the result (e.g. `inserted_ids`, `modified_count`, `deleted_count`). |
+| **Table** | `Table` | The same result expressed as a tabular [`Table`](/data-types#table) for easy preview and downstream tabular processing. |
+| **Raw Result** | `Data` | The raw `astrapy` result envelope as a single JSON object — useful for debugging or accessing fields like `matched_count` vs `modified_count`. |
+
+Because key inputs (`operation`, `filter_query`, `limit`, `document`, `documents`, `update`) expose **Tool Mode**, the component can also be connected to an **Agent** component as a tool. When used as a tool, the agent controls the selected operation and the payload while you retain control of the database, keyspace, and collection via the component's configuration.
+
+### Astra DB Data API examples
+
+<details>
+<summary>Example: Insert documents</summary>
+
+1. In a flow, add the **Astra DB Data API** component.
+2. Provide a token and select a database, keyspace, and collection.
+3. Set **Operation** to **Insert Many**.
+4. In **Documents**, provide a JSON list of documents, for example:
+
+    ```json
+    [
+      {"name": "Ada Lovelace", "role": "engineer"},
+      {"name": "Grace Hopper", "role": "engineer"}
+    ]
+    ```
+
+5. Run the component. The **Data** output contains a single summary object with `inserted_ids` and `inserted_count`.
+
+</details>
+
+<details>
+<summary>Example: Filter-based search</summary>
+
+1. Set **Operation** to **Find**.
+2. In **Filter**, provide a MongoDB-style filter, for example:
+
+    ```json
+    {"role": "engineer", "active": true}
+    ```
+
+3. Optionally set **Projection** (e.g. `{"name": 1, "role": 1}`), **Sort**, and **Limit**.
+4. Run the component. The **Data** output contains matching documents as a list of JSON objects; the **Table** output renders the same result as a [`Table`](/data-types#table).
+
+</details>
+
+<details>
+<summary>Example: Use as an agent tool</summary>
+
+1. In a flow with an **Agent** component, add the **Astra DB Data API** component.
+2. Select the database, keyspace, and collection.
+3. Toggle **Tool Mode** on the **Astra DB Data API** component, and connect its tool output to the agent's **Tools** input.
+4. Leave **Operation**, **Filter**, **Limit**, **Document**, **Documents**, and **Update** unset — the agent will populate them per tool call based on the user's request.
+
+</details>
 
 ## Graph RAG
 
@@ -215,7 +314,7 @@ You can inspect a vector store component's parameters to learn more about the in
 | strategy | Traversal Strategies | Input parameter. The strategy to use for graph traversal. Strategy options are dynamically loaded from available strategies. |
 | search_query | Search Query | Input parameter. The query to search for in the vector store. |
 | graphrag_strategy_kwargs | Strategy Parameters | Input parameter. Optional dictionary of additional parameters for the [retrieval strategy](https://datastax.github.io/graph-rag/reference/graph_retriever/strategies/). |
-| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`Data`](/data-types#data) objects or as a tabular [`DataFrame`](/data-types#dataframe). You can set the desired output type near the component's output port. |
+| search_results | **Search Results** or **DataFrame** | Output parameter. The results of the graph-based document retrieval as a list of [`JSON`](/data-types#json) objects or as a tabular [`Table`](/data-types#table). You can set the desired output type near the component's output port. |
 
 ## Hyper-Converged Database (HCD)
 
@@ -319,7 +418,7 @@ Replace the **Astra DB Tool** component with the [**Astra DB** component](#astra
 The **Astra DB Tool** component enables searching data in Astra DB collections, including hybrid search, vector search, and regular filter-based search.
 Specialized searches require that the collection is pre-configured with the required parameters.
 
-Outputs a list of [`Data`](/data-types#data) objects containing the query results from Astra DB. Each `Data` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
+Outputs a list of [`JSON`](/data-types#json) objects containing the query results from Astra DB. Each `JSON` object contains the document fields specified by the projection attributes. Limited by the `number_of_results` parameter and the upper limit of the Astra DB Data API, depending on the type of search.
 
 You can use the component to execute queries directly as isolated steps in a flow, or you can connect it as a [tool for an agent](/agents-tools) to allow the agent to query data from Astra DB collections as needed to respond to user queries.
 
@@ -388,22 +487,6 @@ For information about accepted values and functionality, see the [Astra DB Serve
 | search_type | Search Type | Input parameter. Search type to use, either `Similarity`, `Similarity with score threshold`, or `MMR (Max Marginal Relevance)`, `Graph Traversal`, or `MMR (Max Marginal Relevance) Graph Traversal` (default). Only relevant to reads. |
 | search_score_threshold | Search Score Threshold | Input parameter. Minimum similarity score threshold for search results if the `search_type` is `Similarity with score threshold`. Default: 0. |
 | search_filter | Search Metadata Filter | Input parameter. Optional dictionary of metadata filters to apply in addition to vector search. |
-
-</details>
-
-<details>
-<summary>Assistants API components</summary>
-
-The following DataStax components were used to create and manage Assistants API functions in a flow:
-
-* **Astra Assistant Agent**
-* **Create Assistant**
-* **Create Assistant Thread**
-* **Get Assistant Name**
-* **List Assistants**
-* **Run Assistant**
-
-These components are legacy and should be replaced with Langflow's native agent components.
 
 </details>
 

@@ -1,5 +1,6 @@
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
+import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
 import ModelInputComponent from "@/components/core/parameterRenderComponent/components/modelInputComponent";
 import SliderComponent from "@/components/core/parameterRenderComponent/components/sliderComponent";
 import TableNodeComponent from "@/components/core/parameterRenderComponent/components/TableNodeComponent";
@@ -17,7 +18,7 @@ import FloatComponent from "./components/floatComponent";
 import InputListComponent from "./components/inputListComponent";
 import IntComponent from "./components/intComponent";
 import KeypairListComponent from "./components/keypairListComponent";
-import McpComponent from "./components/mcpComponent";
+import McpComponent, { type McpServerValue } from "./components/mcpComponent";
 import MultiselectComponent from "./components/multiselectComponent";
 import MustachePromptAreaComponent from "./components/mustachePromptComponent";
 import PromptAreaComponent from "./components/promptComponent";
@@ -50,11 +51,11 @@ export function ParameterRenderComponent({
   name: string;
   nodeId: string;
   templateData: Partial<InputFieldType>;
-  templateValue: any;
+  templateValue: unknown;
   editNode: boolean;
   showParameter: boolean;
   inspectionPanel: boolean;
-  handleNodeClass: (value: any, code?: string, type?: string) => void;
+  handleNodeClass: (value: unknown, code?: string, type?: string) => void;
   nodeClass: APIClassType;
   disabled: boolean;
   placeholder?: string;
@@ -282,7 +283,8 @@ export function ParameterRenderComponent({
       case "connect": {
         const link =
           templateData?.options?.find(
-            (option: any) => option?.name === templateValue,
+            (option: { name?: unknown; link?: unknown }) =>
+              option?.name === templateValue,
           )?.link || "";
 
         return (
@@ -325,7 +327,7 @@ export function ParameterRenderComponent({
             id={`mcp_${id}`}
             editNode={editNode}
             disabled={disabled}
-            value={templateValue}
+            value={templateValue as McpServerValue}
           />
         );
       case "model":
@@ -335,6 +337,13 @@ export function ParameterRenderComponent({
             options={templateData?.options || []}
             placeholder={templateData?.placeholder}
             externalOptions={templateData?.external_options}
+          />
+        );
+      case "knowledge_backend":
+        return (
+          <DBProviderInputComponent
+            {...baseInputProps}
+            id={`dbprovider_${id}`}
           />
         );
       default:

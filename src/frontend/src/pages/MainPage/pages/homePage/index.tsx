@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useTranslation } from "react-i18next";
+import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { IS_MAC } from "@/constants/constants";
@@ -14,29 +15,35 @@ import {
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useFolderStore } from "@/stores/foldersStore";
-import { FlowType } from "@/types/flow";
 import HeaderComponent from "../../components/header";
 import ListComponent from "../../components/list";
 import ListSkeleton from "../../components/listSkeleton";
 import ModalsComponent from "../../components/modalsComponent";
 import useFileDrop from "../../hooks/use-on-file-drop";
+import type { FlowTabType } from "../../types";
+import DeploymentsPage from "../deploymentsPage/deployments-page";
 import EmptyFolder from "../emptyFolder";
+import { isFolderEmpty } from "./utils/isFolderEmpty";
 
-const HomePage = ({ type }: { type: "flows" | "components" | "mcp" | "a2a" }) => {
+const HomePage = ({ type }: { type: FlowTabType }) => {
+  const { t } = useTranslation();
   const [view, setView] = useState<"grid" | "list">(() => {
     const savedView = localStorage.getItem("view");
     return savedView === "grid" || savedView === "list" ? savedView : "list";
   });
   const [newProjectModal, setNewProjectModal] = useState(false);
   const { folderId } = useParams();
+  const location = useLocation();
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
-  const [isEmptyFolder, setIsEmptyFolder] = useState(true);
+  const [isEmptyFolder, setIsEmptyFolder] = useState<boolean | null>(null);
   const navigate = useCustomNavigate();
 
-  const [flowType, setFlowType] = useState<"flows" | "components" | "mcp" | "a2a">(
-    type,
+  const [flowType, setFlowType] = useState<FlowTabType>(
+    (location.state as Record<string, unknown>)?.flowType === "deployments"
+      ? "deployments"
+      : type,
   );
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const folders = useFolderStore((state) => state.folders);
@@ -96,14 +103,23 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" | "a2a" }) =>
   }, []);
 
   useEffect(() => {
-    const isEmpty =
-      flows?.find(
-        (flow) =>
-          flow.folder_id === (folderId ?? myCollectionId) &&
-          (ENABLE_MCP ? flow.is_component === false : true),
-      ) === undefined;
-    setIsEmptyFolder(isEmpty);
-  }, [flows, folderId, myCollectionId]);
+    // Wait until both the global flows store has populated and the folder
+    // query has settled (success or error) before deciding whether the
+    // folder is empty. This avoids a one-frame flash of <EmptyFolder> on
+    // initial mount and right after login, when the store is briefly
+    // stale. Gating on isLoading instead of folderData lets us still
+    // resolve when the query errors out (e.g. when there is no valid
+    // folder id to query, after deleting all folders).
+    if (flows === undefined || isLoading) return;
+    setIsEmptyFolder(
+      isFolderEmpty({
+        flows,
+        folderId: folderId ?? myCollectionId ?? "",
+        folderTotal: folderData?.flows?.total,
+        enableMcp: ENABLE_MCP,
+      }),
+    );
+  }, [flows, folderId, myCollectionId, folderData, isLoading]);
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -248,8 +264,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" | "a2a" }) =>
 
   return (
     <CardsWrapComponent
-      onFileDrop={flowType === "mcp" || flowType === "a2a" ? undefined : handleFileDrop}
-      dragMessage={`Drop your ${isEmptyFolder ? "flows or components" : flowType} here`}
+      onFileDrop={
+        flowType === "mcp" || flowType === "a2a" ? undefined : handleFileDrop
+      }
+      dragMessage={
+        isEmptyFolder
+          ? t("home.dragFlowsOrComponents")
+          : t("home.dragFlowType", { flowType })
+      }
     >
       <div
         className="flex h-full w-full flex-col overflow-y-auto"
@@ -267,14 +289,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" | "a2a" }) =>
                 setView={setView}
                 setNewProjectModal={setNewProjectModal}
                 setSearch={onSearch}
-                isEmptyFolder={isEmptyFolder}
+                isEmptyFolder={isEmptyFolder === true}
                 selectedFlows={selectedFlows}
               />
-              {isEmptyFolder ? (
+              {isEmptyFolder === true ? (
                 <EmptyFolder setOpenModal={setNewProjectModal} />
               ) : (
                 <div className="flex h-full flex-col">
-                  {isLoading ? (
+                  {isLoading || isEmptyFolder === null ? (
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
                         <ListSkeleton />
@@ -290,6 +312,8 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" | "a2a" }) =>
                     <A2AServerTab folderName={folderName} />
                   ) : flowType === "mcp" ? (
                     <CustomMcpServerTab folderName={folderName} />
+                  ) : flowType === "deployments" ? (
+                    <DeploymentsPage />
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (
@@ -324,7 +348,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" | "a2a" }) =>
                     )
                   ) : (
                     <div className="pt-24 text-center text-sm text-secondary-foreground">
-                      {flowType} not supported
+                      {t("home.flowTypeNotSupported", { flowType })}
                     </div>
                   )}
                 </div>

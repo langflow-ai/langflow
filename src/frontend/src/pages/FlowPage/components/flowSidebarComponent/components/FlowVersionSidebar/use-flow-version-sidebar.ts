@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
@@ -26,6 +27,7 @@ import {
 import { CURRENT_DRAFT_ID } from "./constants";
 
 export function useFlowVersionSidebar(flowId: string) {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setPreview = useVersionPreviewStore((s) => s.setPreview);
@@ -140,7 +142,7 @@ export function useFlowVersionSidebar(flowId: string) {
   useEffect(() => {
     if (processedPreview?.error) {
       setErrorData({
-        title: "This version's data could not be rendered for preview",
+        title: t("flowVersion.dataCannotBeRendered"),
         ...(processedPreview.errorMessage
           ? { list: [processedPreview.errorMessage] }
           : {}),
@@ -160,6 +162,7 @@ export function useFlowVersionSidebar(flowId: string) {
         processedPreview.edges,
         tag,
         selectedId,
+        selectedEntryFull?.description ?? null,
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
@@ -173,6 +176,7 @@ export function useFlowVersionSidebar(flowId: string) {
     processedPreview,
     selectedId,
     selectedEntryFull?.version_tag,
+    selectedEntryFull?.description,
     setPreview,
   ]);
 
@@ -265,7 +269,7 @@ export function useFlowVersionSidebar(flowId: string) {
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";
         if (!data) {
-          setErrorData({ title: "No data available to export" });
+          setErrorData({ title: t("errors.noDataToExport") });
           return;
         }
         const flowName = `${currentFlow?.name || "flow"}_${tag}`;
@@ -281,7 +285,7 @@ export function useFlowVersionSidebar(flowId: string) {
         const detail = err?.response?.data?.detail;
         const message = detail ?? err?.message ?? "Unknown error";
         setErrorData({
-          title: "Failed to export version",
+          title: t("errors.failedToExportVersion"),
           list: [message],
         });
       }
@@ -302,7 +306,7 @@ export function useFlowVersionSidebar(flowId: string) {
         { flowId, versionId: entry.id },
         {
           onSuccess: () => {
-            setSuccessData({ title: "Version deleted" });
+            setSuccessData({ title: t("success.versionDeleted") });
             // Select the next entry (triggers fetch + preview via existing
             // effects) instead of setting empty arrays into the store which
             // would cause a blank canvas flash.
@@ -316,7 +320,7 @@ export function useFlowVersionSidebar(flowId: string) {
           onError: (err: any) => {
             const detail = err?.response?.data?.detail;
             setErrorData({
-              title: "Failed to delete version",
+              title: t("errors.failedToDeleteVersion"),
               ...(detail ? { list: [detail] } : {}),
             });
           },

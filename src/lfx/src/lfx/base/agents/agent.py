@@ -11,10 +11,11 @@ from langchain_core.runnables import Runnable
 
 from lfx.base.agents.callback import AgentAsyncHandler
 from lfx.base.agents.events import ExceptionWithMessageError, process_agent_events
+from lfx.base.agents.token_callback import TokenUsageCallbackHandler
 from lfx.base.agents.utils import get_chat_output_sender_name
 from lfx.custom.custom_component.component import Component, _get_component_toolkit
 from lfx.field_typing import Tool
-from lfx.inputs.inputs import InputTypes, MultilineInput
+from lfx.inputs.inputs import InputTypes
 from lfx.io import BoolInput, HandleInput, IntInput, MessageInput
 from lfx.log.logger import logger
 from lfx.memory import delete_message
@@ -29,6 +30,8 @@ if TYPE_CHECKING:
     from lfx.schema.log import OnTokenFunctionType, SendMessageFunctionType
 
 
+# Kept for backward compatibility: flows serialized with the pre-deprecation
+# component code still call get_tool_description(), which falls back to this.
 DEFAULT_TOOLS_DESCRIPTION = "A helpful assistant with access to the following tools:"
 DEFAULT_AGENT_NAME = "Agent ({tools_names})"
 
@@ -56,17 +59,6 @@ class LCAgentComponent(Component):
             value=15,
             advanced=True,
             info="The maximum number of attempts the agent can make to complete its task before it stops.",
-        ),
-        MultilineInput(
-            name="agent_description",
-            display_name="Agent Description [Deprecated]",
-            info=(
-                "The description of the agent. This is only used when in Tool Mode. "
-                f"Defaults to '{DEFAULT_TOOLS_DESCRIPTION}' and tools are added dynamically. "
-                "This feature is deprecated and will be removed in future versions."
-            ),
-            advanced=True,
-            value=DEFAULT_TOOLS_DESCRIPTION,
         ),
     ]
 
@@ -325,12 +317,20 @@ class LCAgentComponent(Component):
         if self._event_manager:
             on_token_callback = cast("OnTokenFunctionType", self._event_manager.on_token)
 
+        token_usage_handler = TokenUsageCallbackHandler()
+
         try:
             result = await process_agent_events(
                 runnable.astream_events(
                     input_dict,
                     # here we use the shared callbacks because the AgentExecutor uses the tools
-                    config={"callbacks": [AgentAsyncHandler(self.log), *self._get_shared_callbacks()]},
+                    config={
+                        "callbacks": [
+                            AgentAsyncHandler(self.log),
+                            token_usage_handler,
+                            *self._get_shared_callbacks(),
+                        ]
+                    },
                     version="v2",
                 ),
                 agent_message,
@@ -350,6 +350,17 @@ class LCAgentComponent(Component):
             # Log or handle any other exceptions
             logger.error(f"Error: {e}")
             raise
+
+        # Extract accumulated token usage from callback handler
+        usage_data = token_usage_handler.get_usage()
+        if usage_data:
+            self._token_usage = usage_data
+            result.properties.usage = usage_data
+            # Only update DB and send event if the message was stored (has an ID)
+            if result.get_id():
+                stored_result = await self._update_stored_message(result)
+                await self._send_message_event(stored_result)
+                result = stored_result
 
         self.status = result
         return result
@@ -402,7 +413,16 @@ class LCToolsAgentComponent(LCAgentComponent):
         return self.display_name or "Agent"
 
     def get_tool_description(self) -> str:
-        return self.agent_description or DEFAULT_TOOLS_DESCRIPTION
+        """Backward-compat shim for the deprecated ``agent_description`` input.
+
+        The current agent-as-tool path derives the tool description from the
+        component's ``display_description`` (see ``_get_tools``) and no longer
+        calls this method. It is kept only so older flows serialized with the
+        pre-deprecation component code -- which still call
+        ``self.get_tool_description()`` and define their own ``agent_description``
+        input -- stay loadable.
+        """
+        return getattr(self, "agent_description", None) or DEFAULT_TOOLS_DESCRIPTION
 
     def _build_tools_names(self):
         tools_names = ""
@@ -432,14 +452,9 @@ class LCToolsAgentComponent(LCAgentComponent):
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = _get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
 
         tools = component_toolkit(component=self).get_tools(
             tool_name=self.get_tool_name(),
-            tool_description=description,
             # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )

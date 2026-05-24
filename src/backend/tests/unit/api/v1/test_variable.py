@@ -1,3 +1,4 @@
+from types import SimpleNamespace
 from unittest import mock
 from uuid import uuid4
 
@@ -416,6 +417,75 @@ async def test_create_variable__ollama_base_url_validation_failure(client: Async
 
 
 @pytest.mark.usefixtures("active_user")
+async def test_create_variable__openrouter_api_key_validation_failure(client: AsyncClient, logged_in_headers):
+    """Test failed OpenRouter API key validation surfaces as HTTP 400.
+
+    Regression for the bug where saving any string as ``OPENROUTER_API_KEY``
+    succeeded with 201 because the validation probe hit OpenRouter's public
+    ``/api/v1/models`` endpoint (which returns 200 for any bearer, including
+    invalid ones). The fix routes validation through ``/api/v1/auth/key``,
+    which returns 401 on invalid keys and turns into a user-facing 400 here.
+    """
+    # Clean up any existing OPENROUTER_API_KEY variables
+    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
+    for var in all_vars.json():
+        if var.get("name") == "OPENROUTER_API_KEY":
+            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
+
+    openrouter_variable = {
+        "name": "OPENROUTER_API_KEY",
+        "value": "sk-or-v1-INVALID_FAKE_KEY",
+        "type": CREDENTIAL_TYPE,
+        "default_fields": [],
+    }
+
+    # Mock the OpenRouter validation endpoint returning 401 for an invalid key
+    with mock.patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 401
+        mock_get.return_value.raise_for_status.side_effect = AssertionError(
+            "raise_for_status should not run when the 401 branch triggers"
+        )
+        response = await client.post("api/v1/variables/", json=openrouter_variable, headers=logged_in_headers)
+        result = response.json()
+
+        # The 401 must be translated into a 400 so the frontend can show a
+        # friendly error rather than a silent success.
+        assert response.status_code == status.HTTP_400_BAD_REQUEST
+        assert "Invalid OpenRouter API key" in result["detail"]
+        # And the call must target the auth-required endpoint, not the
+        # public /api/v1/models endpoint that always returns 200.
+        called_url = mock_get.call_args.args[0]
+        assert called_url == "https://openrouter.ai/api/v1/auth/key"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_create_variable__openrouter_api_key_validation_success(client: AsyncClient, logged_in_headers):
+    """A 200 from the OpenRouter validation endpoint creates the variable."""
+    # Clean up any existing OPENROUTER_API_KEY variables
+    all_vars = await client.get("api/v1/variables/", headers=logged_in_headers)
+    for var in all_vars.json():
+        if var.get("name") == "OPENROUTER_API_KEY":
+            await client.delete(f"api/v1/variables/{var['id']}", headers=logged_in_headers)
+
+    openrouter_variable = {
+        "name": "OPENROUTER_API_KEY",
+        "value": "sk-or-v1-valid-fake-key",
+        "type": CREDENTIAL_TYPE,
+        "default_fields": [],
+    }
+
+    with mock.patch("requests.get") as mock_get:
+        mock_get.return_value.status_code = 200
+        mock_get.return_value.raise_for_status.return_value = None
+        response = await client.post("api/v1/variables/", json=openrouter_variable, headers=logged_in_headers)
+
+        assert response.status_code == status.HTTP_201_CREATED
+        assert response.json()["name"] == "OPENROUTER_API_KEY"
+        called_url = mock_get.call_args.args[0]
+        assert called_url == "https://openrouter.ai/api/v1/auth/key"
+
+
+@pytest.mark.usefixtures("active_user")
 async def test_create_variable__model_provider_network_error_allows_creation(client: AsyncClient, logged_in_headers):
     """Test that network errors don't prevent variable creation."""
     # Clean up any existing OPENAI_API_KEY variables
@@ -564,3 +634,65 @@ async def test_delete_non_provider_credential_does_not_cleanup_models(client: As
     # Delete the variable - should not trigger any cleanup
     delete_response = await client.delete(f"api/v1/variables/{created_var['id']}", headers=logged_in_headers)
     assert delete_response.status_code == status.HTTP_204_NO_CONTENT
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_detect_env_vars_endpoint__returns_detected_names(client: AsyncClient, logged_in_headers):
+    flow_version_id = uuid4()
+    flow_version = SimpleNamespace(
+        data={
+            "nodes": [
+                {
+                    "data": {
+                        "node": {
+                            "template": {
+                                "api_key": {"load_from_db": True, "value": "  MY_OPENAI_KEY  "},
+                            }
+                        }
+                    }
+                }
+            ]
+        }
+    )
+    variable_service = SimpleNamespace(list_variables=mock.AsyncMock(return_value=["MY_OPENAI_KEY"]))
+
+    with (
+        mock.patch(
+            "langflow.api.v1.variable.get_flow_version_entries_by_ids",
+            new_callable=mock.AsyncMock,
+            return_value={flow_version_id: flow_version},
+        ),
+        mock.patch("langflow.api.v1.variable.get_variable_service", return_value=variable_service),
+    ):
+        response = await client.post(
+            "api/v1/variables/detections",
+            json={"flow_version_ids": [str(flow_version_id)]},
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"variables": ["MY_OPENAI_KEY"]}
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_detect_env_vars_endpoint__rejects_missing_nodes(client: AsyncClient, logged_in_headers):
+    flow_version_id = uuid4()
+    flow_version = SimpleNamespace(data={})
+    variable_service = SimpleNamespace(list_variables=mock.AsyncMock(return_value=["ANY_KEY"]))
+
+    with (
+        mock.patch(
+            "langflow.api.v1.variable.get_flow_version_entries_by_ids",
+            new_callable=mock.AsyncMock,
+            return_value={flow_version_id: flow_version},
+        ),
+        mock.patch("langflow.api.v1.variable.get_variable_service", return_value=variable_service),
+    ):
+        response = await client.post(
+            "api/v1/variables/detections",
+            json={"flow_version_ids": [str(flow_version_id)]},
+            headers=logged_in_headers,
+        )
+
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert "must be a JSON object with a 'nodes' list" in response.json()["detail"]

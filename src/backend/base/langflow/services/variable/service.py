@@ -18,6 +18,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from lfx.services.settings.service import SettingsService
+    from pydantic import SecretStr
     from sqlmodel.ext.asyncio.session import AsyncSession
 
 
@@ -198,7 +199,7 @@ class DatabaseVariableService(VariableService, Service):
         name: str,
         field: str,
         session: AsyncSession,
-    ) -> str:
+    ) -> str | SecretStr:
         # we get the credential from the database
         # credential = session.query(Variable).filter(Variable.user_id == user_id, Variable.name == name).first()
         variable = await self.get_variable_object(user_id, name, session)
@@ -210,9 +211,15 @@ class DatabaseVariableService(VariableService, Service):
             )
             raise TypeError(msg)
 
-        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text
+        # Only decrypt CREDENTIAL type variables; GENERIC variables are stored as plain text.
+        # CREDENTIAL values are wrapped in pydantic.SecretStr so that any consumer that echoes
+        # the value through a stringification path (Message.text, status, traces, logs) gets
+        # "**********" instead of the raw secret. Consumers that genuinely need the raw value
+        # call .get_secret_value() at the boundary (e.g. provider client construction).
         if variable.type == CREDENTIAL_TYPE:
-            return auth_utils.decrypt_api_key(variable.value)
+            from pydantic import SecretStr
+
+            return SecretStr(auth_utils.decrypt_api_key(variable.value))
         # GENERIC type - return as-is
         return variable.value
 

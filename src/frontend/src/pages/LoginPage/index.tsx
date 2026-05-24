@@ -1,15 +1,16 @@
 import * as Form from "@radix-ui/react-form";
 import { useQueryClient } from "@tanstack/react-query";
 import { useContext, useState } from "react";
+import { useTranslation } from "react-i18next";
 import LangflowLogo from "@/assets/LangflowLogo.svg?react";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { useLoginUser } from "@/controllers/API/queries/auth";
 import { CustomLink } from "@/customization/components/custom-link";
 import { useSanitizeRedirectUrl } from "@/hooks/use-sanitize-redirect-url";
 import InputComponent from "../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
-import { SIGNIN_ERROR_ALERT } from "../../constants/alerts_constants";
-import { CONTROL_LOGIN_STATE, IS_AUTO_LOGIN } from "../../constants/constants";
+import { CONTROL_LOGIN_STATE } from "../../constants/constants";
 import { AuthContext } from "../../contexts/authContext";
 import useAlertStore from "../../stores/alertStore";
 import type { LoginType } from "../../types/api";
@@ -26,6 +27,7 @@ export default function LoginPage(): JSX.Element {
 
   useSanitizeRedirectUrl();
 
+  const { t } = useTranslation();
   const { login, clearAuthSession } = useContext(AuthContext);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -52,7 +54,7 @@ export default function LoginPage(): JSX.Element {
       },
       onError: (error) => {
         setErrorData({
-          title: SIGNIN_ERROR_ALERT,
+          title: t("errors.signin"),
           list: [error["response"]["data"]["detail"]],
         });
       },
@@ -73,18 +75,19 @@ export default function LoginPage(): JSX.Element {
       className="h-screen w-full"
     >
       <div className="flex h-full w-full flex-col items-center justify-center bg-muted">
-        <div className="flex w-72 flex-col items-center justify-center gap-2">
+        <div className="flex w-full max-w-xs flex-col items-center justify-center gap-2">
           <LangflowLogo
-            title="Langflow logo"
+            title={t("common.langflowLogo")}
             className="mb-4 h-10 w-10 scale-[1.5]"
           />
-          <span className="mb-6 text-2xl font-semibold text-primary">
-            Sign in to Langflow
+          <span className="mb-6 text-2xl font-semibold text-primary text-center">
+            {t("auth.loginTitle")}
           </span>
           <div className="mb-3 w-full">
             <Form.Field name="username">
-              <Form.Label className="data-[invalid]:label-invalid">
-                Username <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <span className="truncate">{t("auth.usernameLabel")}</span>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <Form.Control asChild>
@@ -96,19 +99,20 @@ export default function LoginPage(): JSX.Element {
                   value={username}
                   className="w-full"
                   required
-                  placeholder="Username"
+                  placeholder={t("auth.usernamePlaceholder")}
                 />
               </Form.Control>
 
               <Form.Message match="valueMissing" className="field-invalid">
-                Please enter your username
+                {t("auth.usernameRequired")}
               </Form.Message>
             </Form.Field>
           </div>
           <div className="mb-3 w-full">
             <Form.Field name="password">
-              <Form.Label className="data-[invalid]:label-invalid">
-                Password <span className="font-medium text-destructive">*</span>
+              <Form.Label className="data-[invalid]:label-invalid flex items-center gap-1 overflow-hidden">
+                <span className="truncate">{t("auth.passwordLabel")}</span>
+                <span className="shrink-0 font-medium text-destructive">*</span>
               </Form.Label>
 
               <InputComponent
@@ -119,27 +123,38 @@ export default function LoginPage(): JSX.Element {
                 isForm
                 password={true}
                 required
-                placeholder="Password"
+                placeholder={t("auth.passwordPlaceholder")}
                 className="w-full"
               />
 
               <Form.Message className="field-invalid" match="valueMissing">
-                Please enter your password
+                {t("auth.passwordRequired")}
               </Form.Message>
             </Form.Field>
           </div>
           <div className="w-full">
             <Form.Submit asChild>
               <Button className="mr-3 mt-6 w-full" type="submit">
-                Sign in
+                {t("auth.signInButton")}
               </Button>
             </Form.Submit>
           </div>
           <div className="w-full">
             <CustomLink to="/signup">
-              <Button className="w-full" variant="outline" type="button">
-                Don't have an account?&nbsp;<b>Sign Up</b>
-              </Button>
+              <ShadTooltip
+                content={`${t("auth.noAccount")} ${t("auth.signUpLink")}`}
+                styleClasses="z-50"
+              >
+                <Button
+                  className="w-full overflow-hidden"
+                  variant="outline"
+                  type="button"
+                >
+                  <span className="truncate">
+                    {t("auth.noAccount")}&nbsp;<b>{t("auth.signUpLink")}</b>
+                  </span>
+                </Button>
+              </ShadTooltip>
             </CustomLink>
           </div>
         </div>

@@ -341,57 +341,12 @@ def _engine_url(db_url: str) -> str:
     return db_url
 
 
-# Postgres-only expression indexes from migrations; not mirrored in SQLModel.metadata.
-_MESSAGE_SESSION_METADATA_EXPRESSION_INDEX_NAMES = frozenset(
-    {
-        "ix_message_session_metadata_tenant",
-        "ix_message_session_metadata_user",
-    }
-)
-
-
-def _filter_expression_index_metadata_noise(diffs: list) -> list:
-    """Drop autogenerate index diffs for known migration-only expression indexes."""
-    out: list = []
-    for d in diffs:
-        if isinstance(d, tuple) and len(d) >= 2 and d[0] in {"add_index", "remove_index"}:
-            idx = d[1]
-            name = getattr(idx, "name", None)
-            if name in _MESSAGE_SESSION_METADATA_EXPRESSION_INDEX_NAMES:
-                continue
-        out.append(d)
-    return out
-
-
 def _filter_diffs(diffs: list, db_url: str) -> list:
-    """Apply backend-appropriate diff filtering."""
+    """Apply only SQLite-specific diff filtering."""
     filtered_diffs = list(diffs)
     if "sqlite" in db_url:
         filtered_diffs = _filter_sqlite_noise(filtered_diffs)
-    else:
-        filtered_diffs = _filter_expression_index_metadata_noise(filtered_diffs)
     return filtered_diffs
-
-
-class TestFilterExpressionIndexMetadataNoise:
-    """Tests for filtering migration-only expression index autogenerate noise."""
-
-    def test_known_session_metadata_indexes_suppressed(self):
-        class _FakeIdx:
-            name = "ix_message_session_metadata_tenant"
-
-        class _FakeIdx2:
-            name = "ix_message_session_metadata_user"
-
-        diffs = [("remove_index", _FakeIdx()), ("remove_index", _FakeIdx2())]
-        assert _filter_expression_index_metadata_noise(diffs) == []
-
-    def test_other_index_diffs_preserved(self):
-        class _FakeIdx:
-            name = "ix_message_session_id"
-
-        diffs = [("remove_index", _FakeIdx())]
-        assert _filter_expression_index_metadata_noise(diffs) == diffs
 
 
 def test_no_phantom_migrations(db_url):
@@ -422,6 +377,76 @@ def test_no_phantom_migrations(db_url):
             f"after migrating to head. This likely means a dependency upgrade changed "
             f"how column metadata is generated.\n\nDiffs:\n{diff_descriptions}"
         )
+
+
+def test_message_ingestion_message_fk_repaired(db_url):
+    """Repair the Postgres-only state left by concurrent startup migrations."""
+    if not db_url.startswith("postgresql"):
+        pytest.skip("PostgreSQL-only migration repair")
+
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "mb00a1b2c3d4")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.begin() as connection:
+            constraint_name = connection.execute(
+                text(
+                    """
+                    SELECT conname
+                    FROM pg_constraint
+                    WHERE contype = 'f'
+                      AND conrelid = 'message_ingestion_record'::regclass
+                      AND confrelid = 'message'::regclass
+                      AND conkey = ARRAY[
+                          (
+                              SELECT attnum
+                              FROM pg_attribute
+                              WHERE attrelid = 'message_ingestion_record'::regclass
+                                AND attname = 'message_id'
+                          )
+                      ]::smallint[]
+                    """
+                )
+            ).scalar_one()
+            connection.execute(text(f'ALTER TABLE message_ingestion_record DROP CONSTRAINT "{constraint_name}"'))
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_cfg, "head")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            restored_fk = connection.execute(
+                text(
+                    """
+                    SELECT conname, confdeltype
+                    FROM pg_constraint
+                    WHERE contype = 'f'
+                      AND conrelid = 'message_ingestion_record'::regclass
+                      AND confrelid = 'message'::regclass
+                      AND conkey = ARRAY[
+                          (
+                              SELECT attnum
+                              FROM pg_attribute
+                              WHERE attrelid = 'message_ingestion_record'::regclass
+                                AND attname = 'message_id'
+                          )
+                      ]::smallint[]
+                    """
+                )
+            ).one_or_none()
+            assert restored_fk is not None
+            assert restored_fk.confdeltype == "c"
+
+            migration_context = MigrationContext.configure(connection)
+            diffs = compare_metadata(migration_context, SQLModel.metadata)
+    finally:
+        engine.dispose()
+
+    significant_diffs = _filter_diffs(diffs, db_url)
+    assert significant_diffs == []
 
 
 def test_upgrade_from_main_branch(db_url):

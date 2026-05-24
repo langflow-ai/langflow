@@ -5,10 +5,12 @@ import pytest
 from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.graph.graph.base import Graph
 from lfx.graph.vertex.base import Vertex
+from lfx.interface.components import component_cache
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.services.cache.utils import CacheMiss
 from lfx.template.field.base import Output
+from lfx.utils.flow_validation import CustomComponentValidationError
 
 
 @pytest.fixture
@@ -223,6 +225,47 @@ class TestRunFlowBaseComponentFlowRetrieval:
             assert result == fresh_graph
             # Should have called cache "get", "delete", and "set"
             assert mock_cache_call.call_count == 3
+
+    @pytest.mark.asyncio
+    async def test_get_graph_blocks_custom_components_when_disabled(self, monkeypatch):
+        component = RunFlowBaseComponent()
+        component._user_id = str(uuid4())
+        component.cache_flow = False
+        blocked_flow = Data(
+            data={
+                "data": {
+                    "nodes": [
+                        {
+                            "id": "node-1",
+                            "data": {
+                                "id": "node-1",
+                                "type": "TotallyCustom",
+                                "node": {
+                                    "display_name": "Blocked Node",
+                                    "template": {
+                                        "code": {"value": "print('blocked')"},
+                                    },
+                                },
+                            },
+                        }
+                    ],
+                    "edges": [],
+                },
+                "description": "Blocked flow",
+            }
+        )
+
+        monkeypatch.setattr(
+            "lfx.services.deps.get_settings_service",
+            lambda: MagicMock(settings=MagicMock(allow_custom_components=False)),
+        )
+        monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
+        monkeypatch.setattr(component_cache, "all_types_dict", None)
+
+        with patch.object(component, "get_flow", new_callable=AsyncMock) as mock_get_flow:
+            mock_get_flow.return_value = blocked_flow
+            with pytest.raises(CustomComponentValidationError, match="custom components are not allowed"):
+                await component.get_graph(flow_name_selected="blocked-flow", flow_id_selected=str(uuid4()))
 
 
 class TestRunFlowBaseComponentFlowCaching:
@@ -587,6 +630,79 @@ class TestRunFlowBaseComponentInputOutputHandling:
         assert updated[0]["input_types"] == []
         assert updated[1]["input_types"] == ["str"]
         assert updated[2]["input_types"] == []  # Should be added as empty list
+
+    def test_resolve_exposed_input_types_restores_message_for_empty_text_field(self):
+        """Empty input_types on a text field should be restored to ["Message"]."""
+        entry = {"type": "str", "input_types": []}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == ["Message"]
+
+    def test_resolve_exposed_input_types_restores_message_when_missing(self):
+        """Missing input_types on a text field should default to ["Message"]."""
+        entry = {"type": "Text"}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == ["Message"]
+
+    def test_resolve_exposed_input_types_preserves_existing_input_types(self):
+        """Existing input_types must be preserved without modification."""
+        entry = {"type": "str", "input_types": ["Message", "Data"]}
+
+        result = RunFlowBaseComponent._resolve_exposed_input_types(entry)
+
+        assert result == ["Message", "Data"]
+        # Returns a copy, not the original list, to avoid accidental shared mutation.
+        assert result is not entry["input_types"]
+
+    def test_resolve_exposed_input_types_skips_non_text_fields(self):
+        """Non-text fields with empty input_types are left untouched."""
+        entry = {"type": "bool", "input_types": []}
+
+        assert RunFlowBaseComponent._resolve_exposed_input_types(entry) == []
+
+    def test_get_new_fields_exposes_message_handle_for_chat_input_value(self):
+        """Run Flow must expose a Message handle for ChatInput-style input_value fields.
+
+        Regression test for LE-1233: ChatInput sets input_types=[] on its input_value,
+        which previously propagated to the Run Flow dynamic field and prevented users
+        from wiring upstream components into the exposed Input Text field.
+        """
+        component = RunFlowBaseComponent()
+
+        chat_input_vertex = MagicMock(spec=Vertex)
+        chat_input_vertex.id = "ChatInput-abcde"
+        chat_input_vertex.display_name = "Chat Input"
+        chat_input_vertex.data = {
+            "node": {
+                "template": {
+                    "input_value": {
+                        "name": "input_value",
+                        "display_name": "Input Text",
+                        "type": "str",
+                        "input_types": [],
+                        "advanced": False,
+                    },
+                    "should_store_message": {
+                        "name": "should_store_message",
+                        "display_name": "Store Messages",
+                        "type": "bool",
+                        "input_types": [],
+                        "advanced": True,
+                    },
+                },
+                "field_order": ["input_value", "should_store_message"],
+            }
+        }
+
+        new_fields = component.get_new_fields([chat_input_vertex])
+
+        input_value_field = next(f for f in new_fields if f["name"].endswith("~input_value"))
+        bool_field = next(f for f in new_fields if f["name"].endswith("~should_store_message"))
+
+        assert input_value_field["input_types"] == ["Message"], (
+            "Text-typed exposed inputs must receive a Message handle so upstream components can be wired in (LE-1233)."
+        )
+        # Bool fields don't expose a Message handle — handle visibility is driven by `type`.
+        assert bool_field["input_types"] == []
 
 
 class TestRunFlowBaseComponentOutputMethods:

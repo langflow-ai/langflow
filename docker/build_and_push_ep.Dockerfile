@@ -9,7 +9,7 @@
 # 1. use python:3.12.3-slim as the base image until https://github.com/pydantic/pydantic-core/issues/1292 gets resolved
 # 2. do not add --platform=$BUILDPLATFORM because the pydantic binaries must be resolved for the final architecture
 # Use a Python image with uv pre-installed
-FROM ghcr.io/astral-sh/uv:python3.12-bookworm-slim AS builder
+FROM ghcr.io/astral-sh/uv:python3.14-trixie-slim AS builder
 
 # Install the project into `/app`
 WORKDIR /app
@@ -45,6 +45,14 @@ COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
+COPY ./src/sdk/README.md /app/src/sdk/README.md
+COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
+# is a uv workspace member, so each bundle's pyproject.toml must be present
+# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
+# whole tree once rather than enumerating each bundle, so a new bundle does
+# not require a Dockerfile edit.
+COPY ./src/bundles /app/src/bundles
 
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
@@ -70,7 +78,7 @@ RUN --mount=type=cache,target=/root/.cache/uv \
 # RUNTIME
 # Setup user, utilities and copy the virtual environment only
 ################################
-FROM python:3.12.12-slim-trixie AS runtime
+FROM python:3.14-slim-trixie AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
@@ -84,16 +92,24 @@ RUN ARCH=$(dpkg --print-architecture) \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
     && NODE_VERSION=$(curl -fsSL https://nodejs.org/dist/latest-v22.x/ \
-                    | grep -oP "node-v\K[0-9]+\.[0-9]+\.[0-9]+(?=-linux-${NODE_ARCH}\.tar\.xz)" \
+                    | sed -nE "s/.*node-v([0-9]+\.[0-9]+\.[0-9]+)-linux-${NODE_ARCH}\.tar\.xz.*/\1/p" \
                     | head -1) \
+    && if [ -z "$NODE_VERSION" ]; then echo "ERROR: Could not determine Node.js version" && exit 1; fi \
     && curl -fsSL "https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-linux-${NODE_ARCH}.tar.xz" \
     | tar -xJ -C /usr/local --strip-components=1
 RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
-RUN /app/.venv/bin/pip install --upgrade playwright \
-    && /app/.venv/bin/playwright install
+
+# Pre-create LANGFLOW_CONFIG_DIR (the default location used by the docker_example
+# compose file) with the non-root user as owner. When the official compose mounts
+# a fresh named volume at /app/langflow, Docker copies this directory's ownership
+# and permissions into the new volume, so the in-container uid=1000 user can
+# write secret_key, profile_pictures, etc. Without this, the volume is created
+# as root:root and Langflow crashes during startup with PermissionError on
+# /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
+RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

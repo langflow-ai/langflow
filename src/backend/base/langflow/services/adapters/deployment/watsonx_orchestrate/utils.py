@@ -13,12 +13,13 @@ from lfx.services.adapters.deployment.exceptions import (
     DeploymentServiceError,
     InvalidContentError,
     OperationNotSupportedError,
-    raise_for_status_and_detail,
+)
+from lfx.services.adapters.deployment.exceptions import (
+    raise_as_deployment_error as raise_deployment_error_from_status,
 )
 from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    DEFAULT_WXO_AGENT_LLM,
     WXO_SANITIZE_RE,
     WXO_TRANSLATE,
     ErrorPrefix,
@@ -28,7 +29,6 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
     from lfx.services.adapters.deployment.schema import (
-        BaseDeploymentData,
         ConfigListParams,
         SnapshotListParams,
     )
@@ -52,24 +52,6 @@ def validate_wxo_name(name: str) -> str:
     return normalized_name
 
 
-def resolve_resource_name_prefix(
-    *,
-    caller_prefix: str,
-) -> str:
-    """Validate and return the caller-supplied resource name prefix for WxO resource creation."""
-    if not isinstance(caller_prefix, str) or not caller_prefix.strip():
-        msg = "resource_name_prefix must be a non-empty string."
-        raise InvalidContentError(message=msg)
-    validated = normalize_wxo_name(caller_prefix)
-    if not validated:
-        msg = "resource_name_prefix must contain at least one alphanumeric character."
-        raise InvalidContentError(message=msg)
-    if not validated[0].isalpha():
-        msg = "resource_name_prefix must start with a letter."
-        raise InvalidContentError(message=msg)
-    return validated
-
-
 def require_tool_id(tool_response: dict[str, Any]) -> str:
     tool_id = tool_response.get("id")
     if not tool_id:
@@ -89,17 +71,14 @@ def normalize_and_dedupe_ids(values: list[Any] | None, *, field_name: str) -> li
     return dedupe_list([_normalize_and_validate_id(str(value), field_name=field_name) for value in values])
 
 
-def _require_single_deployment_id(
+def require_single_deployment_id(
     params: ConfigListParams | SnapshotListParams | None,
     *,
     resource_label: str,
 ) -> str:
     deployment_ids = params.deployment_ids if params else None
     if not deployment_ids:
-        msg = (
-            f"watsonx Orchestrate {resource_label} listing requires exactly one "
-            "deployment_id. Global listing is not supported by this adapter."
-        )
+        msg = f"watsonx Orchestrate {resource_label} listing requires exactly one deployment_id."
         raise OperationNotSupportedError(message=msg)
     if len(deployment_ids) != 1:
         msg = (
@@ -149,9 +128,9 @@ def _resolve_exc_detail(exc: ClientAPIException | HTTPException) -> str:
     return str(extract_error_detail(str(exc.detail)))
 
 
-def _resolve_exc_status_code(exc: ClientAPIException | HTTPException) -> int | None:
+def _resolve_exc_status_code(exc: ClientAPIException | HTTPException) -> int:
     if isinstance(exc, ClientAPIException):
-        return int(getattr(exc.response, "status_code", 0) or 0) or None
+        return int(exc.response.status_code)
     return int(exc.status_code)
 
 
@@ -160,6 +139,8 @@ def raise_as_deployment_error(
     *,
     error_prefix: ErrorPrefix,
     log_msg: str,
+    resource: str | None = None,
+    resource_name: str | None = None,
     pass_through: tuple[type[DeploymentServiceError], ...] = (),
 ) -> NoReturn:
     if isinstance(exc, pass_through):
@@ -171,33 +152,35 @@ def raise_as_deployment_error(
     if isinstance(exc, (ClientAPIException, HTTPException)):
         status_code = _resolve_exc_status_code(exc)
         detail = _resolve_exc_detail(exc)
-        raise_for_status_and_detail(
+        raise_deployment_error_from_status(
             status_code=status_code,
             detail=detail,
             message_prefix=error_prefix.value,
+            resource=resource,
+            resource_name=resource_name,
+            cause=exc,
         )
     logger.exception(log_msg)
     msg = f"{error_prefix.value} Please check server logs for details."
     raise DeploymentError(message=msg, error_code="deployment_error") from exc
 
 
-def build_agent_payload(
+def build_agent_payload_from_values(
     *,
-    data: BaseDeploymentData,
+    agent_name: str,
+    agent_display_name: str,
+    deployment_name: str,
+    description: str,
     tool_ids: Sequence[str],
+    llm: str,
 ) -> dict[str, Any]:
-    if data.provider_spec is None:
-        msg = "Deployment data must include provider_spec with a non-empty name and display_name."
-        raise InvalidContentError(message=msg)
     return {
-        "name": data.provider_spec["name"],
-        "display_name": data.provider_spec["display_name"],
-        "description": str(data.description or "").strip() or f"Langflow deployment {data.name}",
+        "name": agent_name,
+        "display_name": agent_display_name,
+        "description": str(description).strip() or f"Langflow deployment {deployment_name}",
         "tools": list(tool_ids),
         "style": "default",
-        # TODO: make configurable; the llm field is required by the wxO api
-        # but retrieving available llms requires an extra api request.
-        "llm": DEFAULT_WXO_AGENT_LLM,
+        "llm": str(llm).strip(),
     }
 
 

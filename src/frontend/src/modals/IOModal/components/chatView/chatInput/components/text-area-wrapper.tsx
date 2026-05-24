@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { Textarea } from "../../../../../../components/ui/textarea";
 import { classNames } from "../../../../../../utils/utils";
@@ -10,11 +11,11 @@ const TextAreaWrapper = ({
   noInput,
   chatValue,
   CHAT_INPUT_PLACEHOLDER,
-  CHAT_INPUT_PLACEHOLDER_SEND,
   inputRef,
   files,
   isDragging,
 }) => {
+  const { t } = useTranslation();
   const getPlaceholderText = (
     isDragging: boolean,
     noInput: boolean,
@@ -24,7 +25,7 @@ const TextAreaWrapper = ({
     } else if (noInput) {
       return CHAT_INPUT_PLACEHOLDER;
     } else {
-      return "Send a message...";
+      return t("chat.inputPlaceholderSend");
     }
   };
 

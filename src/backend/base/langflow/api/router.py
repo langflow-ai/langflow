@@ -1,12 +1,14 @@
 # Router for base api
 from fastapi import APIRouter
+from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 from langflow.api.v1 import (
     api_key_router,
     chat_router,
-    deployment_router,
     endpoints_router,
+    extensions_router,
     files_router,
+    flow_events_router,
     flow_version_router,
     flows_router,
     folders_router,
@@ -14,6 +16,7 @@ from langflow.api.v1 import (
     login_router,
     mcp_projects_router,
     mcp_router,
+    memories_router,
     model_options_router,
     models_router,
     monitor_router,
@@ -40,11 +43,21 @@ router_v2 = APIRouter(
     prefix="/v2",
 )
 
+
+def include_deployment_router(target_router: APIRouter) -> None:
+    """Mount deployment routes only when the deployments feature is enabled."""
+    if FEATURE_FLAGS.wxo_deployments:
+        from langflow.api.v1.deployments import router as deployment_router
+
+        target_router.include_router(deployment_router)
+
+
 router_v1.include_router(chat_router)
 router_v1.include_router(endpoints_router)
 router_v1.include_router(validate_router)
 router_v1.include_router(store_router)
 router_v1.include_router(flows_router)
+router_v1.include_router(flow_events_router)
 router_v1.include_router(flow_version_router)
 router_v1.include_router(users_router)
 router_v1.include_router(api_key_router)
@@ -57,13 +70,29 @@ router_v1.include_router(folders_router)
 router_v1.include_router(projects_router)
 router_v1.include_router(starter_projects_router)
 router_v1.include_router(knowledge_bases_router)
+router_v1.include_router(memories_router)
 router_v1.include_router(mcp_router)
 router_v1.include_router(voice_mode_router)
 router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
-router_v1.include_router(deployment_router)
+
+
+# Extension reload is Mode A (local-dev / pip-installed) only.  The route is
+# always mounted; a per-request guard in ``langflow.api.v1.extensions`` reads
+# the live ``settings.enable_extension_reload`` and returns 404 when the flag
+# is off, which means the route is indistinguishable from "not mounted" on
+# production deployments that leave it unset.
+#
+# Mounting unconditionally avoids the import-time / env-file ordering
+# coupling: ``langflow.__main__`` imports ``setup_app`` (and hence this
+# router module) before ``load_dotenv(env_file)`` runs, so any module-level
+# read of ``LANGFLOW_ENABLE_EXTENSION_RELOAD`` would miss the value supplied
+# via ``--env-file``.  The runtime guard sees the post-env-file value
+# because it executes per-request, after settings have been built.
+router_v1.include_router(extensions_router)
+include_deployment_router(router_v1)
 
 
 # Agentic flow execution - lazy import to avoid circular dependency

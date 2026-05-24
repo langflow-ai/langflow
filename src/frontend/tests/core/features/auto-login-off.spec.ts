@@ -5,6 +5,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { renameFlow } from "../../utils/rename-flow";
 import { zoomOut } from "../../utils/zoom-out";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
   { tag: ["@release", "@api", "@database", "@mainpage"] },
@@ -41,16 +42,22 @@ test(
 
     await page.goto("/");
 
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder("Username").fill("langflow");
-    await page.getByPlaceholder("Password").fill("langflow");
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.getByRole("button", { name: TEXTS.signIn }).click();
 
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,
@@ -67,7 +74,10 @@ test(
     //CRUD an user
     await page.getByText("New User", { exact: true }).click();
 
-    await page.getByPlaceholder("Username").last().fill(randomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(randomName);
     await page.locator('input[name="password"]').fill(randomPassword);
     await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
@@ -77,7 +87,7 @@ test(
 
     await page.locator("#is_active").click();
 
-    await page.getByText("Save", { exact: true }).click();
+    await page.getByText(TEXTS.save, { exact: true }).click();
 
     await page.waitForSelector("text=new user added", { timeout: 30000 });
 
@@ -86,7 +96,7 @@ test(
     });
 
     await page.getByTestId("icon-Trash2").last().click();
-    await page.getByText("Delete", { exact: true }).last().click();
+    await page.getByText(TEXTS.delete, { exact: true }).last().click();
 
     await page.waitForSelector("text=user deleted", { timeout: 30000 });
 
@@ -97,7 +107,10 @@ test(
 
     await page.getByText("New User", { exact: true }).click();
 
-    await page.getByPlaceholder("Username").last().fill(randomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(randomName);
     await page.locator('input[name="password"]').fill(randomPassword);
     await page.locator('input[name="confirmpassword"]').fill(randomPassword);
 
@@ -107,17 +120,28 @@ test(
 
     await page.locator("#is_active").click();
 
-    await page.getByText("Save", { exact: true }).click();
+    await page.getByText(TEXTS.save, { exact: true }).click();
 
     await page.waitForSelector("text=new user added", { timeout: 30000 });
 
-    await page.getByPlaceholder("Username").last().fill(randomName);
+    const searchResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/users") && response.status() === 200,
+    );
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(randomName);
+    await searchResponse;
 
     await page.getByTestId("icon-Pencil").last().click();
 
-    await page.getByPlaceholder("Username").last().fill(secondRandomName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(secondRandomName);
 
-    await page.getByText("Save", { exact: true }).click();
+    await page.getByText(TEXTS.save, { exact: true }).click();
 
     await page.waitForSelector("text=user edited", { timeout: 30000 });
 
@@ -141,7 +165,9 @@ test(
     await awaitBootstrapTest(page, { skipGoto: true });
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await adjustScreenView(page, { numberOfZoomOut: 1 });
 
@@ -177,18 +203,22 @@ test(
       sessionStorage.setItem("testMockAutoLogin", "true");
     });
 
-    await page.getByText("Logout", { exact: true }).click();
+    await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder("Username").fill(secondRandomName);
-    await page.getByPlaceholder("Password").fill(randomPassword);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(secondRandomName);
+    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(randomPassword);
 
     await page.waitForSelector("text=Sign in", {
       timeout: 1500,
     });
 
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.getByRole("button", { name: TEXTS.signIn }).click();
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
@@ -211,7 +241,9 @@ test(
     await awaitBootstrapTest(page, { skipGoto: true });
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
@@ -244,18 +276,24 @@ test(
       sessionStorage.setItem("testMockAutoLogin", "true");
     });
 
-    await page.getByText("Logout", { exact: true }).click();
+    await page.getByText(TEXTS.logout, { exact: true }).click();
 
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
 
-    await page.getByPlaceholder("Username").fill("langflow");
-    await page.getByPlaceholder("Password").fill("langflow");
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
 
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.getByRole("button", { name: "Sign In" }).click();
+    await page.getByRole("button", { name: TEXTS.signIn }).click();
 
     await page.waitForSelector('[data-testid="mainpage_title"]', {
       timeout: 30000,

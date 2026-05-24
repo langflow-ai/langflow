@@ -1,7 +1,15 @@
+import ast
 from textwrap import dedent
 
 import pytest
-from lfx.custom.validate import _get_module_fallbacks, _resolve_attribute, create_class
+from lfx.custom.validate import (
+    _get_module_fallbacks,
+    _resolve_attribute,
+    create_class,
+    create_function,
+    execute_function,
+    prepare_global_scope,
+)
 
 
 def test_importing_langflow_module_in_lfx():
@@ -29,6 +37,124 @@ class TestLoggingComponent(Component):
     """)
     result = create_class(code, "TestLoggingComponent")
     assert result.__name__ == "TestLoggingComponent"
+
+
+def test_create_class_future_annotations_with_type_checking():
+    """Regression test for issue #12776.
+
+     `from __future__ import annotations` must act as a compiler directive so that TYPE_CHECKING-only
+    imports don't raise NameError at classdefinition time.
+    """
+    code = dedent("""
+from __future__ import annotations
+from typing import TYPE_CHECKING
+from langflow.custom import Component
+
+if TYPE_CHECKING:
+    from typing import List
+
+class TypeCheckingComponent(Component):
+    display_name = "Test"
+
+    def build(self, value: List[str]) -> str:
+        return str(value)
+    """)
+    result = create_class(code, "TypeCheckingComponent")
+    assert result.__name__ == "TypeCheckingComponent"
+    # With PEP 563 active, annotations should be stored as strings rather than evaluated
+    hints = result.build.__annotations__
+    assert hints.get("value") == "List[str]"
+    assert hints.get("return") == "str"
+
+
+def test_execute_function_supports_aliased_dotted_imports():
+    code = dedent("""
+import urllib.request as request
+
+def to_url(path):
+    return request.pathname2url(path)
+""")
+    assert execute_function(code, "to_url", "folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_execute_function_supports_non_aliased_dotted_imports():
+    """Regression test: `import urllib.request` then using `urllib.request.X` in execute_function."""
+    code = dedent("""
+import urllib.request
+
+def to_url(path):
+    return urllib.request.pathname2url(path)
+""")
+    assert execute_function(code, "to_url", "folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_execute_function_supports_deep_dotted_imports():
+    """Ensure 3+ level dotted imports work (e.g., import xml.etree.ElementTree)."""
+    code = dedent("""
+import xml.etree.ElementTree
+
+def make_root(tag):
+    return xml.etree.ElementTree.Element(tag).tag
+""")
+    assert execute_function(code, "make_root", "root") == "root"
+
+
+def test_create_function_supports_dotted_imports():
+    code = dedent("""
+import urllib.request
+
+def to_url(path):
+    return urllib.request.pathname2url(path)
+""")
+    func = create_function(code, "to_url")
+    assert func("folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_prepare_global_scope_keeps_top_level_package_for_dotted_imports():
+    module = ast.parse(
+        dedent("""
+import urllib.request
+
+def to_url(path):
+    return urllib.request.pathname2url(path)
+""")
+    )
+    scope = prepare_global_scope(module)
+
+    assert "urllib" in scope
+    assert scope["urllib"].request.pathname2url("folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_prepare_global_scope_supports_aliased_from_imports():
+    """Regression test: `from X import Y as Z` must bind Z in scope, not Y."""
+    module = ast.parse(
+        dedent("""
+from urllib.request import pathname2url as to_url_path
+
+def to_url(path):
+    return to_url_path(path)
+""")
+    )
+    scope = prepare_global_scope(module)
+
+    assert "to_url_path" in scope
+    assert "pathname2url" not in scope
+    assert scope["to_url_path"]("folder name/file.txt") == "folder%20name/file.txt"
+
+
+def test_create_class_supports_aliased_from_imports():
+    """End-to-end: a component using `from X import Y as Z` should load and Z is usable."""
+    code = dedent("""
+from urllib.request import pathname2url as to_url_path
+from lfx.custom import Component
+
+class AliasedImportComponent(Component):
+    def to_url(self, path):
+        return to_url_path(path)
+""")
+    cls = create_class(code, "AliasedImportComponent")
+    assert cls.__name__ == "AliasedImportComponent"
+    assert cls().to_url("folder name/file.txt") == "folder%20name/file.txt"
 
 
 # ---------------------------------------------------------------------------

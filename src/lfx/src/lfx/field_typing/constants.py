@@ -23,8 +23,12 @@ try:
     from langchain_core.tools import BaseTool, Tool
     from langchain_core.vectorstores import VectorStore, VectorStoreRetriever
     from langchain_text_splitters import TextSplitter
-except ImportError:
-    # Create stub types if langchain is not available
+except (ImportError, OSError):
+    # Create stub types if langchain is not available, or if a transitive native
+    # dependency (e.g. PyTorch's c10.dll on a Windows machine without the Microsoft
+    # Visual C++ Redistributable) raises OSError: [WinError 126] while loading.
+    # Without the OSError catch, this propagated up through transformers → torch
+    # and crashed `langflow --version` on fresh Windows installs.
     class AgentExecutor:
         pass
 

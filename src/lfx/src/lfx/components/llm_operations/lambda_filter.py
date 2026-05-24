@@ -14,6 +14,7 @@ from lfx.io import DataInput, IntInput, ModelInput, MultilineInput, Output, Secr
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.schema.token_usage import extract_usage_from_message
 from lfx.utils.constants import MESSAGE_SENDER_AI
 
 TEXT_TRANSFORM_PROMPT = (
@@ -251,6 +252,7 @@ class LambdaFilterComponent(Component):
 
         llm = get_llm(model=self.model, user_id=self.user_id, api_key=self.api_key)
         response = await llm.ainvoke(prompt)
+        self._token_usage = extract_usage_from_message(response)
         response_text = response.content if hasattr(response, "content") else str(response)
 
         fn = self._parse_lambda_from_response(response_text)

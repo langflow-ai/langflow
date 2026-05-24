@@ -1,5 +1,6 @@
 import type React from "react";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { usePostValidatePrompt } from "@/controllers/API/queries/nodes/use-post-validate-prompt";
 import IconComponent from "../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../components/common/sanitizedHTMLWrapper";
@@ -7,17 +8,7 @@ import ShadTooltip from "../../components/common/shadTooltipComponent";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
 import { Textarea } from "../../components/ui/textarea";
-import {
-  BUG_ALERT,
-  PROMPT_ERROR_ALERT,
-  PROMPT_SUCCESS_ALERT,
-  TEMP_NOTICE_ALERT,
-} from "../../constants/alerts_constants";
-import {
-  EDIT_TEXT_PLACEHOLDER,
-  MAX_WORDS_HIGHLIGHT,
-  MUSTACHE_PROMPT_DIALOG_SUBTITLE,
-} from "../../constants/constants";
+import { MAX_WORDS_HIGHLIGHT } from "../../constants/constants";
 import useAlertStore from "../../stores/alertStore";
 import { PromptModalType } from "../../types/components";
 import { handleKeyDown } from "../../utils/reactflowUtils";
@@ -47,6 +38,7 @@ export default function MustachePromptModal({
   id = "",
   readonly = false,
 }: PromptModalType): JSX.Element {
+  const { t } = useTranslation();
   const [modalOpen, setModalOpen] = useState(false);
   const [inputValue, setInputValue] = useState(value);
   const [isEdit, setIsEdit] = useState(true);
@@ -139,24 +131,24 @@ export default function MustachePromptModal({
             }
             if (!inputVariables || inputVariables.length === 0) {
               setNoticeData({
-                title: TEMP_NOTICE_ALERT,
+                title: t("alerts.noTemplateVariables"),
               });
             } else {
               setSuccessData({
-                title: PROMPT_SUCCESS_ALERT,
+                title: t("success.promptReady"),
               });
             }
           } else {
             setIsEdit(true);
             setErrorData({
-              title: BUG_ALERT,
+              title: t("errors.generic"),
             });
           }
         },
         onError: (error) => {
           setIsEdit(true);
           return setErrorData({
-            title: PROMPT_ERROR_ALERT,
+            title: t("errors.prompt"),
             list: [error.response.data.detail ?? ""],
           });
         },
@@ -206,7 +198,7 @@ export default function MustachePromptModal({
       <BaseModal.Trigger disable={disabled} asChild>
         {children}
       </BaseModal.Trigger>
-      <BaseModal.Header description={MUSTACHE_PROMPT_DIALOG_SUBTITLE}>
+      <BaseModal.Header description={t("dialog.mustachePrompt")}>
         <div className="flex w-full items-start gap-3">
           <div className="flex">
             <IconComponent
@@ -215,7 +207,7 @@ export default function MustachePromptModal({
               aria-hidden="true"
             />
             <span className="pl-2" data-testid="modal-title">
-              Edit Prompt
+              {t("modal.prompt.title")}
             </span>
           </div>
         </div>
@@ -238,7 +230,7 @@ export default function MustachePromptModal({
                 setInputValue(event.target.value);
                 checkVariables(event.target.value);
               }}
-              placeholder={EDIT_TEXT_PLACEHOLDER}
+              placeholder={t("input.editTextPlaceholder")}
               onKeyDown={(e) => {
                 handleKeyDown(e, inputValue, "");
               }}
@@ -268,7 +260,7 @@ export default function MustachePromptModal({
                     className="flex h-4 w-4 text-primary"
                   />
                   <span className="text-md font-semibold text-primary">
-                    Prompt Variables:
+                    {t("modal.prompt.promptVariables")}
                   </span>
 
                   {Array.from(wordsHighlight).map((word, index) => (
@@ -296,8 +288,7 @@ export default function MustachePromptModal({
                 </div>
               </div>
               <span className="mt-2 text-xs text-muted-foreground">
-                Prompt variables can be created with any chosen name inside
-                double curly brackets, e.g. {"{{variable_name}}"}
+                {t("modal.prompt.variablesHint")}
               </span>
             </div>
           </div>
@@ -310,7 +301,7 @@ export default function MustachePromptModal({
             }}
             type="submit"
           >
-            Check & Save
+            {t("modal.prompt.checkAndSave")}
           </Button>
         </div>
       </BaseModal.Footer>

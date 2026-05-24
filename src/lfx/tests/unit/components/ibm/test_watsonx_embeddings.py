@@ -4,6 +4,16 @@ import sys
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
+try:
+    import ibm_watsonx_ai  # noqa: F401
+    import langchain_ibm  # noqa: F401
+except ImportError:
+    # langchain-ibm and ibm-watsonx-ai are gated to python_version<'3.14' in
+    # pyproject.toml because upstream pins exclude 3.14. Skip these tests on
+    # 3.14 until upstream adapts.
+    pytest.skip("langchain-ibm / ibm-watsonx-ai not available", allow_module_level=True)
+
 from lfx.schema.dotdict import dotdict
 
 # Mock the required modules before importing the component
@@ -293,10 +303,15 @@ class TestWatsonxEmbeddingsComponent:
         assert call_kwargs["space_id"] == "test-space-id"
         assert call_kwargs["model_id"] == "sentence-transformers/all-minilm-l12-v2"
 
-    @patch("lfx.components.ibm.watsonx_embeddings.SecretStr", MockSecretStr)
     @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_secret_str_api_key(self, mock_watsonx_embeddings, wx_embeddings_component):
-        """Test that SecretStr API key is properly converted to string."""
+        """Test that SecretStr API key is properly converted to string.
+
+        ``WatsonxEmbeddingsComponent.build_embeddings`` duck-types
+        ``get_secret_value`` so it unwraps any SecretStr-shaped object (pydantic
+        v1, pydantic v2, or this in-test ``MockSecretStr``) without needing the
+        symbol patched on the module.
+        """
         wx_embeddings_component.api_key = MockSecretStr("secret-api-key")
         wx_embeddings_component.url = "https://us-south.ml.cloud.ibm.com"
         wx_embeddings_component.project_id = "test-project-id"
