@@ -454,3 +454,59 @@ class TestA2AMessageStreamHTTP:
             "/a2a/stream-auth/v1/message:stream", json=_message_body("hi"), headers=_BAD_AUTH
         )
         assert resp.status_code in (401, 403)
+
+
+# ---------------------------------------------------------------------------
+# Edge cases
+# ---------------------------------------------------------------------------
+
+
+class TestA2AEdgeCasesHTTP:
+    """Negative/robustness behaviors over HTTP."""
+
+    async def test_cancel_nonexistent_task_returns_404(self, client: AsyncClient, logged_in_headers):
+        await _expose_flow_as_a2a(client, logged_in_headers, slug="cancel-404", name="Cancel 404 Agent")
+        resp = await client.post("/a2a/cancel-404/v1/tasks/does-not-exist:cancel", headers=logged_in_headers)
+        assert resp.status_code == 404
+
+    async def test_idempotent_retry_does_not_duplicate_task(self, client: AsyncClient, logged_in_headers):
+        """Re-sending a completed taskId returns the same task and creates no duplicate."""
+        slug = "retry-dupe"
+        await _expose_flow_as_a2a(client, logged_in_headers, slug=slug, name="Retry Dupe Agent")
+
+        first = await client.post(
+            f"/a2a/{slug}/v1/message:send", json=_message_body("once", context_id="ctx-r"), headers=logged_in_headers
+        )
+        assert first.status_code == 200
+        assert first.json()["status"]["state"] == "completed"
+        task_id = first.json()["id"]
+
+        # Re-send the SAME taskId — idempotent retry returns the cached task.
+        second = await client.post(
+            f"/a2a/{slug}/v1/message:send",
+            json=_message_body("once", context_id="ctx-r", task_id=task_id),
+            headers=logged_in_headers,
+        )
+        assert second.status_code == 200
+        assert second.json()["id"] == task_id
+
+        # No duplicate task was created for this conversation.
+        listing = await client.get(f"/a2a/{slug}/v1/tasks?contextId=ctx-r", headers=logged_in_headers)
+        assert listing.status_code == 200
+        ids = [t["id"] for t in listing.json()]
+        assert ids == [task_id]
+
+    async def test_malformed_message_body_is_handled_gracefully(self, client: AsyncClient, logged_in_headers):
+        """Missing/empty message bodies must not 500 the server."""
+        slug = "malformed"
+        await _expose_flow_as_a2a(client, logged_in_headers, slug=slug, name="Malformed Agent")
+
+        no_message = await client.post(f"/a2a/{slug}/v1/message:send", json={}, headers=logged_in_headers)
+        assert no_message.status_code != 500
+
+        empty_parts = await client.post(
+            f"/a2a/{slug}/v1/message:send",
+            json={"message": {"role": "user", "parts": []}},
+            headers=logged_in_headers,
+        )
+        assert empty_parts.status_code != 500
