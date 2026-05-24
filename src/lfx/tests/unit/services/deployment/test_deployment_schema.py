@@ -20,6 +20,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdate,
     DeploymentUpdateResult,
+    DeploymentUpdateRollback,
     EnvVarSource,
     EnvVarValueSpec,
     ExecutionCreate,
@@ -458,6 +459,16 @@ def test_deployment_update_result_uses_base_operation_shape() -> None:
     result = DeploymentUpdateResult(id="dep_1")
     assert result.id == "dep_1"
     assert result.provider_result is None
+
+
+def test_deployment_update_rollback_works_with_provider_data() -> None:
+    rollback = DeploymentUpdateRollback(provider_data={"created_tool_ids": ["tool-1"]})
+    assert rollback.provider_data == {"created_tool_ids": ["tool-1"]}
+
+
+def test_deployment_update_rollback_rejects_missing_provider_data() -> None:
+    with pytest.raises(ValidationError, match="provider_data"):
+        DeploymentUpdateRollback()
 
 
 def test_operation_results_share_provider_result_contract() -> None:

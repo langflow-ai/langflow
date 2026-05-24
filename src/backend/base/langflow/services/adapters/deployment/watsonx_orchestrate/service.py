@@ -46,6 +46,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdate,
     DeploymentUpdateResult,
+    DeploymentUpdateRollback,
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -281,6 +282,19 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             tool_ids=tool_ids,
             app_ids=result_data.app_ids,
         )
+
+    async def rollback_update_result(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        payload: DeploymentUpdateRollback,
+        db: AsyncSession,
+    ) -> None:
+        """Best-effort rollback of provider-side update mutations from a pre-update journal."""
+        _ = (user_id, deployment_id, payload, db)
+        msg = f"{ErrorPrefix.UPDATE.value} Update rollback executor is not implemented."
+        raise DeploymentError(message=msg, error_code="deployment_error")
 
     async def list_types(
         self,

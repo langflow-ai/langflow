@@ -22,6 +22,7 @@ from lfx.services.adapters.deployment.payloads import (
     T_DeploymentStatusData,
     T_DeploymentUpdate,
     T_DeploymentUpdateResult,
+    T_DeploymentUpdateRollback,
     T_ExecutionCreateResult,
     T_ExecutionInput,
     T_ExecutionResult,
@@ -585,6 +586,14 @@ class DeploymentUpdate(BaseModel):
 
 class DeploymentUpdateResult(DeploymentOperationResult[T_DeploymentUpdateResult]):
     """Model representing a result for a deployment update operation."""
+
+
+class DeploymentUpdateRollback(BaseModel, Generic[T_DeploymentUpdateRollback]):
+    """Compensating rollback payload for failed deployment update DB commits."""
+
+    provider_data: T_DeploymentUpdateRollback = Field(
+        description="Provider-specific rollback journal captured before the forward update.",
+    )
 
 
 class RedeployResult(DeploymentOperationResult):

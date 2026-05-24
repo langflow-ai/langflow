@@ -21,6 +21,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentCreateResultData,
     WatsonxDeploymentUpdatePayload,
     WatsonxDeploymentUpdateResultData,
+    WatsonxDeploymentUpdateRollback,
     WatsonxFlowArtifactProviderData,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.service import WatsonxOrchestrateDeploymentService
@@ -60,10 +61,40 @@ def test_payload_schema_slot_registered_for_deployment_update() -> None:
     assert slot.deployment_update.adapter_model is WatsonxDeploymentUpdatePayload
     assert slot.deployment_update_result is not None
     assert slot.deployment_update_result.adapter_model is WatsonxDeploymentUpdateResultData
+    assert slot.update_rollback is not None
+    assert slot.update_rollback.adapter_model is WatsonxDeploymentUpdateRollback
     assert slot.execution_create_result is not None
     assert slot.execution_create_result.adapter_model is WatsonxAgentExecutionResultData
     assert slot.execution_status_result is not None
     assert slot.execution_status_result.adapter_model is WatsonxAgentExecutionResultData
+
+
+def test_update_rollback_journal_round_trips_through_slot() -> None:
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.update_rollback is not None
+
+    journal = {
+        "rollback_agent_payload": {"tools": ["tool-1"], "name": "agent-a"},
+        "original_tools": {"tool-2": {"name": "tool-2"}},
+        "created_tool_ids": ["tool-new"],
+        "created_app_ids": ["app-new"],
+    }
+    parsed = slot.update_rollback.parse(journal)
+    assert isinstance(parsed, WatsonxDeploymentUpdateRollback)
+    assert slot.update_rollback.dump(parsed) == journal
+
+
+def test_update_result_data_accepts_optional_rollback_journal() -> None:
+    result = WatsonxDeploymentUpdateResultData(
+        created_app_ids=["app-1"],
+        rollback_data=WatsonxDeploymentUpdateRollback(
+            rollback_agent_payload={"tools": ["tool-1"]},
+            created_tool_ids=["tool-new"],
+        ),
+    )
+    assert result.rollback_data is not None
+    assert result.rollback_data.created_tool_ids == ["tool-new"]
 
 
 def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:

@@ -24,6 +24,9 @@ T_DeploymentConfigModel = TypeVar("T_DeploymentConfigModel", bound=BaseModel, de
 T_DeploymentUpdate = TypeVar("T_DeploymentUpdate", default=AdapterPayload)
 T_DeploymentUpdateModel = TypeVar("T_DeploymentUpdateModel", bound=BaseModel, default=BaseModel)
 
+T_DeploymentUpdateRollback = TypeVar("T_DeploymentUpdateRollback", default=AdapterPayload)
+T_DeploymentUpdateRollbackModel = TypeVar("T_DeploymentUpdateRollbackModel", bound=BaseModel, default=BaseModel)
+
 T_DeploymentCreate = TypeVar("T_DeploymentCreate", default=AdapterPayload)
 T_DeploymentCreateModel = TypeVar("T_DeploymentCreateModel", bound=BaseModel, default=BaseModel)
 
@@ -119,6 +122,7 @@ class DeploymentPayloadFields(ProviderPayloadSchemas):
     deployment_create: PayloadSlot[T_DeploymentCreateModel] | None = None
     deployment_config: PayloadSlot[T_DeploymentConfigModel] | None = None
     deployment_update: PayloadSlot[T_DeploymentUpdateModel] | None = None
+    update_rollback: PayloadSlot[T_DeploymentUpdateRollbackModel] | None = None
     execution_input: PayloadSlot[T_ExecutionInputModel] | None = None
     deployment_list_params: PayloadSlot[T_DeploymentListParamsModel] | None = None
     config_list_params: PayloadSlot[T_ConfigListParamsModel] | None = None

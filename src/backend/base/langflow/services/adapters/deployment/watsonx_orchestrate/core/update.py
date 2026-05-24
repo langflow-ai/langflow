@@ -39,6 +39,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     verify_langflow_owned,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxAgentRollbackUpdatePayload,
     WatsonxAttachToolOperation,
     WatsonxBindOperation,
     WatsonxDeploymentUpdatePayload,
@@ -381,8 +382,12 @@ async def _apply_tool_renames(
     logger.debug("_apply_tool_renames: renamed %d tools: %s", len(tool_updates), tool_renames)
 
 
-def _build_agent_rollback_payload(*, agent: dict[str, Any], final_update_payload: dict[str, Any]) -> dict[str, Any]:
-    rollback_payload: dict[str, Any] = {}
+def _build_agent_rollback_payload(
+    *,
+    agent: dict[str, Any],
+    final_update_payload: dict[str, Any],
+) -> WatsonxAgentRollbackUpdatePayload:
+    rollback_payload: WatsonxAgentRollbackUpdatePayload = {}
     if "tools" in final_update_payload:
         rollback_payload["tools"] = extract_agent_tool_ids(agent)
     for update_field in ("name", "display_name", "description", "llm"):
@@ -395,7 +400,7 @@ async def _rollback_agent_update(
     *,
     clients: WxOClient,
     agent_id: str,
-    rollback_agent_payload: dict[str, Any],
+    rollback_agent_payload: WatsonxAgentRollbackUpdatePayload,
 ) -> None:
     if not rollback_agent_payload:
         return
@@ -457,7 +462,7 @@ async def apply_provider_update_plan_with_rollback(
     added_snapshot_ids: list[str] = []
     created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     final_update_payload = dict(update_payload)
-    rollback_agent_payload: dict[str, Any] = {}
+    rollback_agent_payload: WatsonxAgentRollbackUpdatePayload = {}
     created_app_ids_journal: list[str] = []
 
     # Pre-seed resolved_connections with bindings already attached to the
