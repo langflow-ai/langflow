@@ -1,0 +1,129 @@
+---
+title: Semantic Scholar components
+slug: /bundles-semanticscholar
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+This page describes the components that are available in the **Semantic Scholar** bundle, allowing you to retrieve and analyze academic papers, authors, citation graphs, and AI-driven recommendations.
+
+## Semantic Scholar Search
+
+Search academic papers using advanced filters such as Open Access availability, minimum citations, and year ranges.
+
+### Semantic Scholar Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Search Query | MessageTextInput | Input parameter. Topic to search (e.g., 'large language models'). |
+| Max Results | IntInput | Input parameter. Total number of papers to fetch after applying filters. |
+| Sort Results By | DropdownInput | Input parameter. Sorting method (Relevance, Highest Citations, Newest First). |
+| Only Open Access (PDFs) | BoolInput | Input parameter. If True, only returns papers that are free to read. |
+| Minimum Citations | IntInput | Input parameter. Filter out papers with fewer citations than this number. |
+| Year Range | MessageTextInput | Input parameter. Filter by year, e.g., '2020-2024' or '2023-'. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended to avoid rate limits. |
+| Data | Data | Output parameter. A list of retrieved academic papers. |
+| Table | DataFrame | Output parameter. The search results formatted as a DataFrame. |
+
+## Citation Graph Fetcher
+
+Retrieve papers that cited a specific academic paper (Forward Snowballing).
+
+### Citation Graph Fetcher parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Paper ID or DOI | MessageTextInput | Input parameter. Semantic Scholar ID, DOI, or arXiv ID (e.g., 'arXiv:1706.03762') (Manual Entry). |
+| Input Data (Connection) | DataInput | Input parameter. Connect the output of 'Semantic Scholar Search' or similar components here. |
+| Max Citations to Fetch | IntInput | Input parameter. Limits the number of citing papers returned. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| Citing Papers | Data | Output parameter. A list of papers that cited the source paper. |
+| Table | DataFrame | Output parameter. The citation graph formatted as a DataFrame. |
+
+## Reference Graph Fetcher
+
+Retrieve the bibliography (references) of a specific academic paper (Backward Snowballing).
+
+### Reference Graph Fetcher parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Paper ID or DOI | MessageTextInput | Input parameter. Semantic Scholar ID, DOI, or arXiv ID (Manual Entry). |
+| Input Data (Connection) | DataInput | Input parameter. Connect the output of another Semantic Scholar component here. |
+| Max References to Fetch | IntInput | Input parameter. Limits the number of referenced papers returned. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| References | Data | Output parameter. A list of papers referenced by the source paper. |
+| Table | DataFrame | Output parameter. The reference graph formatted as a DataFrame. |
+
+## Semantic Scholar Author Search
+
+Search for academic authors by name to retrieve their ID, h-index, and impact metrics.
+
+### Semantic Scholar Author Search parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Author Name | MessageTextInput | Input parameter. The name of the author to search (e.g., 'Andrew Ng'). |
+| Max Results | IntInput | Input parameter. Limits the number of author profiles returned. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| Author Profiles | Data | Output parameter. A list of matching author profiles and their metrics. |
+| Table | DataFrame | Output parameter. The author profiles formatted as a DataFrame. |
+
+## Author Portfolio Fetcher
+
+Retrieve the list of papers written by a specific academic author.
+
+### Author Portfolio Fetcher parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Author ID | MessageTextInput | Input parameter. The unique Semantic Scholar Author ID (Manual Entry). |
+| Input Data (Connection) | DataInput | Input parameter. Connect the output of the 'Search Authors' component here. |
+| Max Papers to Fetch | IntInput | Input parameter. Limits the number of papers returned. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| Author Papers | Data | Output parameter. A list of papers belonging to the author. |
+| Table | DataFrame | Output parameter. The author's portfolio formatted as a DataFrame. |
+
+## Paper Details Fetcher
+
+Retrieve deep metadata for a single paper, including the AI-generated TLDR and direct PDF links.
+
+### Paper Details Fetcher parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Paper ID or DOI | MessageTextInput | Input parameter. Semantic Scholar ID, DOI, CorpusID, or arXiv ID (Manual Entry). |
+| Input Data (Connection) | DataInput | Input parameter. Connect the output of another Semantic Scholar component here. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| Paper Details | Data | Output parameter. Detailed metadata for the requested paper. |
+| Table | DataFrame | Output parameter. The paper details formatted as a DataFrame. |
+
+## Batch Paper Fetcher
+
+Retrieve metadata for multiple academic papers simultaneously using a list of paper IDs.
+
+### Batch Paper Fetcher parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Paper IDs | MessageTextInput | Input parameter. Comma-separated list of Semantic Scholar IDs, DOIs, or arXiv IDs (Manual Entry). |
+| Input Data (Connection) | DataInput | Input parameter. Connect the output of another Semantic Scholar component here. |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| Batch Details | Data | Output parameter. Detailed metadata for the requested papers. |
+| Table | DataFrame | Output parameter. The batch paper details formatted as a DataFrame. |
+
+## AI Paper Recommendations
+
+Get AI-driven paper recommendations based on the context and content of a specific academic paper.
+
+### AI Paper Recommendations parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Source Paper ID | MessageTextInput | Input parameter. The Semantic Scholar ID, DOI, or arXiv ID to base recommendations on (Manual Entry). |
+| Input Data (Connection) | DataInput | Input parameter. Connect the output of another Semantic Scholar component here. |
+| Max Recommendations | IntInput | Input parameter. Number of recommended papers to retrieve (Max 500). |
+| Semantic Scholar API Key | SecretStrInput | Input parameter. Optional, but highly recommended. |
+| Recommendations | Data | Output parameter. A list of AI-recommended papers. |
+| Table | DataFrame | Output parameter. The recommendations formatted as a DataFrame. |
