@@ -71,7 +71,7 @@ test("user must be able to update outdated components by update all button", asy
     ).toBe(true);
   }
 
-  expect(await page.getByTestId("backup-flow-checkbox").isChecked()).toBe(true);
+  await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
   await page.getByTestId("backup-flow-checkbox").click();
 
   await page.getByRole("button", { name: "Update Components" }).click();
@@ -140,7 +140,7 @@ test("user must be able to update outdated components by each outdated component
     timeout: 30000,
   });
 
-  expect(await page.getByTestId("backup-flow-checkbox").isChecked()).toBe(true);
+  await expect(page.getByTestId("backup-flow-checkbox")).toBeChecked();
 
   await page.getByRole("button", { name: "Update Component" }).click();
 

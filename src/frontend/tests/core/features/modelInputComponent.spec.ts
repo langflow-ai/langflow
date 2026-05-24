@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.describe("ModelInputComponent", () => {
   test(
     "should display model selector in a node with model input",
@@ -16,7 +17,7 @@ test.describe("ModelInputComponent", () => {
 
       // Search for OpenAI component which has model input
       await page.getByTestId("sidebar-search-input").click();
-      await page.getByTestId("sidebar-search-input").fill("OpenAI");
+      await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAi);
 
       // Wait for search results
       await page.waitForTimeout(500);
@@ -54,7 +55,7 @@ test.describe("ModelInputComponent", () => {
       });
 
       // Add an OpenAI model node
-      await page.getByTestId("sidebar-search-input").fill("OpenAI");
+      await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAi);
       await page.waitForTimeout(500);
 
       const openaiComponent = page.getByTestId("modelsOpenAI").first();
@@ -93,7 +94,7 @@ test.describe("ModelInputComponent", () => {
       });
 
       // Add a model component
-      await page.getByTestId("sidebar-search-input").fill("OpenAI");
+      await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAi);
       await page.waitForTimeout(500);
 
       const openaiComponent = page.getByTestId("modelsOpenAI").first();
@@ -133,7 +134,7 @@ test.describe("ModelInputComponent", () => {
       });
 
       // Add a model component
-      await page.getByTestId("sidebar-search-input").fill("OpenAI");
+      await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAi);
       await page.waitForTimeout(500);
 
       const openaiComponent = page.getByTestId("modelsOpenAI").first();
@@ -175,7 +176,7 @@ test.describe("ModelInputComponent", () => {
       });
 
       // Add a model component
-      await page.getByTestId("sidebar-search-input").fill("OpenAI");
+      await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAi);
       await page.waitForTimeout(500);
 
       const openaiComponent = page.getByTestId("modelsOpenAI").first();
@@ -212,7 +213,7 @@ test.describe("ModelInputComponent", () => {
       });
 
       // Add a model component
-      await page.getByTestId("sidebar-search-input").fill("OpenAI");
+      await page.getByTestId("sidebar-search-input").fill(TEXTS.providerOpenAi);
       await page.waitForTimeout(500);
 
       const openaiComponent = page.getByTestId("modelsOpenAI").first();

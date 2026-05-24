@@ -1,33 +1,24 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Pokedex Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Pokédex Agent" }).click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Pokédex Agent");
 
     await initialGPTsetup(page);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
-    await page.getByTestId("input-chat-playground").isVisible();
+    await expect(page.getByTestId("input-chat-playground")).toBeVisible();
     await page.getByTestId("input-chat-playground").click();
     await page
       .getByTestId("input-chat-playground")
@@ -35,7 +26,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").last().click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 40000 });
 
     if (await stopButton.isVisible()) {

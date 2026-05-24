@@ -688,6 +688,54 @@ describe("Create mode — flow version selection", () => {
     );
     expect(result.current.removedFlowIds.has(attachmentKey)).toBe(false);
   });
+
+  it("preExistingFlowIds is always empty in create mode", () => {
+    const { result } = renderCreateHook();
+    expect(result.current.preExistingFlowIds.size).toBe(0);
+
+    act(() => {
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+    });
+
+    expect(result.current.selectedVersionByFlow.size).toBe(1);
+    expect(result.current.preExistingFlowIds.size).toBe(0);
+  });
+
+  it("handleRemoveAttachedFlow always hard-deletes in create mode (never soft-removes)", () => {
+    const { result } = renderCreateHook();
+    const attachmentKey = flowVersionKey("flow-1", "ver-1");
+
+    act(() => {
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+      result.current.setToolNameByFlow(new Map([[attachmentKey, "Flow v1"]]));
+      result.current.setAttachedConnectionByFlow(
+        new Map([[attachmentKey, ["conn-1"]]]),
+      );
+    });
+
+    expect(result.current.selectedVersionByFlow.has(attachmentKey)).toBe(true);
+
+    act(() => {
+      result.current.handleRemoveAttachedFlow(attachmentKey);
+    });
+
+    expect(result.current.selectedVersionByFlow.has(attachmentKey)).toBe(false);
+    expect(result.current.toolNameByFlow.has(attachmentKey)).toBe(false);
+    expect(result.current.attachedConnectionByFlow.has(attachmentKey)).toBe(
+      false,
+    );
+    expect(result.current.removedFlowIds.has(attachmentKey)).toBe(false);
+  });
 });
 
 // ---------------------------------------------------------------------------
