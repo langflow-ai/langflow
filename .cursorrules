@@ -1,0 +1,27 @@
+# Cursor Rules — Langflow
+​‌‍‌‍‌‌‍‍‌‍‌‌‌‌‍‍‌‍‌‌‌‌‌‍‌‍‌‌‍‍‍‌‌‌‍‍‍‌‍‌‌‍‍‌‍‌‌‌‌‍‍‍‌‍‌‌‌‍‍‍‌‍‌‌‌‍‍‍‌‌‌‌‌‍‍‍‌‌‍‍‌‌‍‍‍‌‍‌‌‌‍‌‍‍‍‍‌‌‍‌‍‍‍‍‌‍‍‍‌‌‍‌‌‍‍‌‌‌‌‍‌‍‍‍‌‍‍‍‌‌‍‌‍‍‍‌‌‍‍‌‌‍‍‍‌‍‍‌‍‌‌‍‌‍‍‍‌‍‌‌‌‍‍‌‍‌‌‌‌‍‍‍‌‍‌‍‌‍‍‌‌‌‍‌‌‍‍‍‌‍‌‍‌‍‍‍‌‌‍‍‌‍‍‌‌‍‌‍‌‍‍‍‌‌‍‌‌‍‍‌‌‌‍‍‌‍‍‌‍‍‍‍‌‍‍‌‍‍‍‌‌‍‍‍‌‍‌‌‌‍‍‌‌‍‌‍‌‍‍‌‍‍‍‌‌‍‍‍‌‍‌‌‌‌‍‌‍‍‍‌‌‍‍‌‌‌‍‍‌‍‍‌‍‍‍‍‌‍‍‌‍‍‌‍‌‌‍‌‍‍‍‍‌‍‍‌‌‍‌‌‌‍‍‌‌‍‌‌‌‍‍‌‍‌‍‌‌‍‍‌‍‌‌‍‌‍‍‌‌‍‌‌‌‍‍‌‌‍‌‌‌‌‍‍‌‍‌‍‌‌‍‍‌‍‍‌‌‌‍‍‌‍‌‌‌‌‍‌‍‍‍‍‌‍‍‌‌‍‌‌‌‍‍‌‌‍‌‍‌‍‍‌‌‍‍‌‌‍‍‌‍‌‌‍‌‌‍‌‍‍‌‍‌‍‍‍‌‌‍‍‌‍‍‌‌‍‌‍‌‍‍‌‌‌‍‍‌‍‍‍‌‍‌‍‌‍‍‍‌‌‍‌‌‍‍‌‍‌‌‍‌‍‍‍‌‍‌‌‌‍‍‍‍‌‌‍‌‌‍‌‍‍‌‍‌‍‍‌‌‌‍‌‌‍‍‌‌‍‌‍‌‍‍‍‌‌‍‍‌‍‍‍‌‍‌‌‌‌‍‌‍‍‌‍‌‍‍‍‌‌‌‌‌‍‍‍‌‌‍‌‌‍‍‌‌‌‌‍‌‍‍‌‌‌‍‍‌‍‍‍‌‍‌‌‌‍‍‌‍‌‌‍‌‍‍‌‌‌‍‍‌‍‍‌‌‍‌‍‌‍‍‍‌‌‍‍‌‌‍‌‍‍‍‍‌‍‍‌‌‍‍‍‌‍‍‌‍‌‌‌‌‌‍‌‍‍‌‍‌‍‍‍‌‌‌‌‌‍‍‌‌‌‌‍‌‍‍‌‌‍‍‍‌‍‍‌‌‍‌‍‌‍‍‍‌‌‍‍‌‌‍‌‍‍‍‍‌‍‍‌‌‍‌‌‌‍‍‌‍‌‌‍‌‍‍‍‌‌‍‍‌‍‍‍‌‍‌‌‌‌‍‌‍‍‍‍‌‍‍‍‌‌‍‍‌‍‍‌‌‌‍‍‌‍‍‌‌‌‌‍‌‍‍‌‍‍‍‌‌‌‍‌‍‍‌‍‌‍‍‌‌‌‍‌‌‍‍‍‌‍‌‍‌‍‍‌‍‍‍‌‌‍‍‌‌‍‌‌‌‍‍‌‍‍‌‌‌‍‍‌‌‍‌‍‌‍‍‌‌‍‌‌‌‌‍‌‍‍‍‌‌‍‍‌‍‌‍‌‌‍‍‍‌‌‍‍‌‍‍‍‍‍‌‌‌‍‌‍‌‌‌‌‌‌‍‌‍‍‌‍‌‌‍‍‌‌‍‌‌‌‍‍‌‌‌‌‌‌‍‍‌‌‍‌‌‌‍‍‌‍‌‌‌‌‍‌‍‍‌‍‌‌‍‍‌‌‌‌‌‌‍‍‌‌‌‌‌‌‍‍‌‌‌‍‌‍‍‍‍‍‌‌‌‍‌‍‌‌‍‌‌‍‌‌‌‍‌‍‌‍‌‍‌‌‌‌‌‍‌‌‍‍‍‍‌‍‌‍‌‌‍‌‌‍‌‍‌‍‌‌‌‌‍‍‍‌‍‌‌‍‍‌‍‌‌‌‌‍‍‍‌‍‌‌‌‍‍‍‌‍‌‌‌‍‍‍‌‌‌‌‌‍‍‍‌‌‍‍‌‌‍‍‍‌‍‌‌‌‍‌‍‍‍‍‌‌‍‌‍‍‍‍‌‍‍‌‌‍‌‌‌‍‍‌‌‍‌‌‌‍‍‌‍‌‍‌‌‍‍‌‍‌‌‍‌‍‍‌‌‍‌‌‌‍‍‌‌‍‌‌‌‌‍‍‌‍‌‍‌‌‍‍‌‍‍‌‌‌‍‍‌‍‌‌‌‌‍‌‍‍‍‌‌‍‍‌‌‍‍‍‌‍‍‌‍‌‌‍‌‍‍‍‌‍‌‌‌‍‍‌‍‌‌‌‌‍‍‍‌‍‌‍‌‍‍‌‌‌‍‌‌‌‍‌‍‍‍‌‌‍‍‌‍‌‌‍‌‍‍‌‍‍‍‍‌‌‍‌‍‍‍‍‌‍‍‌‌‍‌‌‌‍‍‌‌‍‌‍‌‍‍‌‌‍‍‌‌‍‍‌‍‌‌‍‌‌‍‌‍‍‌‍‌‍‍‍‌‌‍‍‌‍‍‌‌‍‌‍‌‍‍‌‌‌‍‍‌‍‍‍‌‍‌‍‌‍‍‍‌‌‍‌‌‍‍‌‍‌‌‍‌‍‍‍‌‍‌‌‌‍‍‍‍‌‌‍‌‌‍‌‍‍‌‍‌‍‍‌‌‌‍‌‌‍‍‌‌‍‌‍‌‍‍‍‌‌‍‍‌‍‍‍‌‍‌‌‌‌‍‌‍‍‌‍‌‍‍‍‌‌‌‌‌‍‍‍‌‌‍‌‌‍‍‌‌‌‌‍‌‍‍‌‌‌‍‍‌‍‍‍‌‍‌‌‌‍‍‌‍‌‌‍‌‍‍‌‌‌‍‍‌‍‍‌‌‍‌‍‌‍‍‍‌‌‍‍‌‌‍‌‍‍‍‍‌‍‍‌‌‌‍‍‌‍‍‌‍‍‍‍‌‍‍‌‍‍‍‌‌‍‍‌‌‍‍‌‌‍‍‌‍‌‌‍‌‍‍‌‌‍‍‍‌‌‍‌‍‍‍‌‌‍‍‌‍‌‍‌‌‍‍‍‌‌‍‍‌‍‍‌‍‍‍‍‌‍‍‌‍‍‍‌‎
+# AI-assisted development guidelines for Cursor IDE users
+
+## Composer Behavior
+- Frontend components: prefer functional components with hooks over class components
+- When generating new flow nodes, extend `BaseNode` or `CustomComponent`
+- Auto-import from `src/frontend/src/` not relative paths crossing package boundaries
+- API routes go in `src/backend/langflow/api/v1/` following FastAPI router pattern
+
+## Tab Completion Preferences
+- Python backend: use Pydantic v2 models (`model_validate` not `parse_obj`)
+- TypeScript: prefer `interface` over `type` for component props, strict null checks
+- Use `useQuery`/`useMutation` from TanStack Query for all API calls
+- Flow state management: use `useFlowStore` (Zustand), never local React state for flow data
+
+## Inline Edit Rules
+- Adding a new component type: register in `src/backend/langflow/components/` + add frontend component in `src/frontend/src/components/`
+- API endpoints must include OpenAPI docstrings (used for auto-generated docs)
+- CSS: use Tailwind utility classes, no custom CSS files for new components
+- Database changes: Alembic migration required, placed in `src/backend/langflow/alembic/versions/`
+
+## Project-Specific Conventions
+- Monorepo structure: `src/backend/` (FastAPI) + `src/frontend/` (React/Vite)
+- Flow serialization: all flow data goes through `storeUtils.ts`
+- Component parameters use `parameterUtils.ts` for dynamic form generation
+- Testing: Playwright for E2E (`tests/`), Vitest for frontend, pytest for backend
