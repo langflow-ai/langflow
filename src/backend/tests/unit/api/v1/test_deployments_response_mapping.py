@@ -107,6 +107,7 @@ def test_shape_deployment_update_result_maps_db_identity_and_provider_result() -
     result = DeploymentUpdateResult(
         id="provider-dep-id",
         provider_result={"status": "updated", "version": 2},
+        rollback_data={},
     )
 
     response = mapper.shape_deployment_update_result(result, row, provider_key="my-provider")

@@ -247,6 +247,7 @@ def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     typed_update = DeploymentUpdateResult[_ResultModel](
         id="dep_1",
         provider_result={"external_url": "https://dep.example"},
+        rollback_data={},
     )
     typed_execution = ExecutionResultBase[_ExecutionResultModel](
         execution_id="exec_1",

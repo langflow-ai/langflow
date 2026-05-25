@@ -61,6 +61,11 @@ Live rollback/error-path scenarios:
   for update calls (expects HTTP404).
 - `update_remove_unknown_tool_id_noop_success`: validates remove-by-tool-id is
   accepted as a no-op when the tool id is unknown (expects Success).
+- `update_failure_then_retry_success`: forces a validation failure on update and
+  confirms a retry succeeds against the same deployment (expects Success).
+- `create_snapshot_binding_mismatch_rollback_cleanup`: triggers create-time
+  attachment/snapshot binding mismatch (HTTP500/HTTP409) and validates the
+  provider does not retain leaked deployment resources after rollback.
 
 Live concurrency/race scenarios:
 - `cc_parallel_duplicate_create_<n>`: runs two create calls in parallel with
@@ -129,6 +134,7 @@ OUTCOME_FAILURE = "Failure"
 
 DEFAULT_TIMEOUT_SECS = 90
 DEFAULT_CONCURRENCY_REPEAT = 2
+MIN_ROLLBACK_CONFLICT_FLOW_IDS = 2
 DEFAULT_WXO_LLM = "groq/openai/gpt-oss-120b"
 LARGE_PAYLOAD_TIER_ORDER = ("S", "M", "L")
 # Large success scenarios create connections three times per tier:
@@ -882,7 +888,133 @@ class DeploymentsApiParallelE2E:
                 "track_owned": False,
             },
         ]
-        return await self._run_http_scenarios(scenarios)
+        results = await self._run_http_scenarios(scenarios)
+
+        retry_seed = await self._create_owned_deployment(
+            name=self._mk_name("retry_seed"),
+            provider_data=self._provider_data_create(
+                add_flows=[{"flow_version_id": self.flow_version_ids[0], "app_ids": []}],
+            ),
+        )
+        retry_bad_response = await self._call_update(
+            {
+                "deployment_id": retry_seed.deployment_id,
+                "body": {
+                    "provider_data": self._provider_data_update(
+                        upsert_flows=[
+                            {
+                                "flow_version_id": self.flow_version_ids[0],
+                                "add_app_ids": ["cfg-retry-overlap"],
+                                "remove_app_ids": ["cfg-retry-overlap"],
+                            }
+                        ],
+                    )
+                },
+            }
+        )
+        retry_bad_outcome = self._to_outcome(retry_bad_response.status_code)
+        retry_description = f"retry-success-{uuid4().hex[:8]}"
+        retry_good_response = await self._call_update(
+            {
+                "deployment_id": retry_seed.deployment_id,
+                "body": {"description": retry_description},
+            }
+        )
+        retry_good_outcome = self._to_outcome(retry_good_response.status_code)
+        retry_get_response = await self._call_get_deployment(retry_seed.deployment_id)
+        retry_get_outcome = self._to_outcome(retry_get_response.status_code)
+        retry_payload = retry_get_response.payload if isinstance(retry_get_response.payload, dict) else {}
+        retry_description_ok = str(retry_payload.get("description", "")).strip() == retry_description
+        retry_ok = (
+            retry_bad_outcome == OUTCOME_HTTP_422
+            and retry_good_outcome == OUTCOME_SUCCESS
+            and retry_get_outcome == OUTCOME_SUCCESS
+            and retry_description_ok
+        )
+        results.append(
+            ScenarioResult(
+                name="update_failure_then_retry_success",
+                expected_outcomes={OUTCOME_SUCCESS},
+                actual_outcome=retry_good_outcome,
+                ok=retry_ok,
+                detail=(
+                    f"bad={retry_bad_response.status_code}:{retry_bad_response.detail} "
+                    f"good={retry_good_response.status_code}:{retry_good_response.detail} "
+                    f"get={retry_get_response.status_code}:{retry_get_response.detail} "
+                    f"description_ok={retry_description_ok}"
+                ),
+            )
+        )
+
+        if len(self.flow_version_ids) < MIN_ROLLBACK_CONFLICT_FLOW_IDS:
+            results.append(
+                ScenarioResult(
+                    name="create_snapshot_binding_mismatch_rollback_cleanup",
+                    expected_outcomes={OUTCOME_HTTP_500, OUTCOME_HTTP_409},
+                    actual_outcome=OUTCOME_FAILURE,
+                    ok=False,
+                    detail="requires at least two flow_version_ids",
+                )
+            )
+            return results
+
+        rollback_name = self._mk_name("create_rb_cleanup")
+        shared_tool_name = self._mk_name("shared_tool")
+        pre_provider_list = await self._call_list_deployments(
+            names=[rollback_name],
+            load_from_provider=True,
+        )
+        pre_provider_count = self._count_named_deployments(
+            pre_provider_list,
+            rollback_name,
+            provider_mode=True,
+        )
+        rollback_create_payload = self._create_request_payload(
+            name=rollback_name,
+            provider_data=self._provider_data_create(
+                add_flows=[
+                    {
+                        "flow_version_id": self.flow_version_ids[0],
+                        "app_ids": [],
+                        "tool_name": shared_tool_name,
+                    },
+                    {
+                        "flow_version_id": self.flow_version_ids[1],
+                        "app_ids": [],
+                        "tool_name": shared_tool_name,
+                    },
+                ],
+            ),
+        )
+        rollback_create_response = await self._call_create(rollback_create_payload)
+        rollback_create_outcome = self._to_outcome(rollback_create_response.status_code)
+        post_provider_list = await self._call_list_deployments(
+            names=[rollback_name],
+            load_from_provider=True,
+        )
+        post_provider_count = self._count_named_deployments(
+            post_provider_list,
+            rollback_name,
+            provider_mode=True,
+        )
+        rollback_cleanup_ok = (
+            rollback_create_outcome in {OUTCOME_HTTP_500, OUTCOME_HTTP_409}
+            and pre_provider_count == post_provider_count
+        )
+        results.append(
+            ScenarioResult(
+                name="create_snapshot_binding_mismatch_rollback_cleanup",
+                expected_outcomes={OUTCOME_HTTP_500, OUTCOME_HTTP_409},
+                actual_outcome=rollback_create_outcome,
+                ok=rollback_cleanup_ok,
+                detail=(
+                    f"create={rollback_create_response.status_code}:{rollback_create_response.detail} "
+                    f"provider_named_count_before={pre_provider_count} "
+                    f"provider_named_count_after={post_provider_count}"
+                ),
+            )
+        )
+        return results
 
     async def _run_parallel_race_scenarios(self) -> list[ScenarioResult]:
         results: list[ScenarioResult] = []
@@ -1014,6 +1146,32 @@ class DeploymentsApiParallelE2E:
 
     async def _call_update(self, payload: dict[str, Any]) -> HttpResponseEnvelope:
         response = await self._client.patch(f"/api/v1/deployments/{payload['deployment_id']}", json=payload["body"])
+        return self._normalize_response(response)
+
+    async def _call_get_deployment(self, deployment_id: str) -> HttpResponseEnvelope:
+        response = await self._client.get(f"/api/v1/deployments/{deployment_id}")
+        return self._normalize_response(response)
+
+    async def _call_list_deployments(
+        self,
+        *,
+        names: list[str] | None = None,
+        load_from_provider: bool = False,
+    ) -> HttpResponseEnvelope:
+        if self.provider_id is None:
+            msg = "provider_id must be resolved before listing deployments"
+            raise RuntimeError(msg)
+        params: list[tuple[str, str]] = [
+            ("provider_id", self.provider_id),
+            ("page", "1"),
+            ("size", "200"),
+            ("load_from_provider", "true" if load_from_provider else "false"),
+        ]
+        for value in names or []:
+            normalized = str(value).strip()
+            if normalized:
+                params.append(("names", normalized))
+        response = await self._client.get("/api/v1/deployments", params=params)
         return self._normalize_response(response)
 
     async def _call_update_chain_add_remove(self, payload: dict[str, Any]) -> HttpResponseEnvelope:
@@ -1530,6 +1688,33 @@ class DeploymentsApiParallelE2E:
         if isinstance(payload, list):
             return str(payload)[:500]
         return ""
+
+    def _count_named_deployments(
+        self,
+        envelope: HttpResponseEnvelope,
+        expected_name: str,
+        *,
+        provider_mode: bool,
+    ) -> int:
+        if not isinstance(envelope.payload, dict):
+            return 0
+        target_name = str(expected_name).strip()
+        if not target_name:
+            return 0
+
+        if provider_mode:
+            provider_data = envelope.payload.get("provider_data")
+            entries = provider_data.get("entries", []) if isinstance(provider_data, dict) else []
+            return sum(
+                1 for entry in entries if isinstance(entry, dict) and str(entry.get("name", "")).strip() == target_name
+            )
+
+        deployments = envelope.payload.get("deployments", [])
+        return sum(
+            1
+            for deployment in deployments
+            if isinstance(deployment, dict) and str(deployment.get("name", "")).strip() == target_name
+        )
 
     def _track_owned_from_create_response(self, envelope: HttpResponseEnvelope) -> OwnedDeployment | None:
         if not isinstance(envelope.payload, dict):

@@ -4,13 +4,19 @@ from unittest.mock import AsyncMock, patch
 from uuid import uuid4
 
 import pytest
-from langflow.api.v1.deployments import list_deployments
+from langflow.api.v1.deployments import DeploymentTelemetryCtx, list_deployments
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
+from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from langflow.services.database.models.deployment.crud import create_deployment
 from langflow.services.database.models.deployment_provider_account.crud import create_provider_account
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.utils import register_builtin_adapters
-from lfx.services.adapters.deployment.schema import DeploymentType
+from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentDataUpdate,
+    DeploymentType,
+    DeploymentUpdate,
+    DeploymentUpdateResult,
+)
 
 
 class _FakeDeploymentAdapter:
@@ -319,3 +325,103 @@ async def test_list_deployments_names_filter_combined(async_session, active_user
             )
             assert response.total == 1
             assert response.deployments[0].name == "Agent Alpha"
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_commit_failure_triggers_provider_rollback(
+    async_session,
+    active_user,
+):
+    """Integration: PATCH update triggers compensating rollback when DB commit fails."""
+    deployment_id = uuid4()
+    deployment_resource_key = f"rk-update-{uuid4()}"
+    deployment_provider_account_id = uuid4()
+    deployment_row = SimpleNamespace(
+        id=deployment_id,
+        resource_key=deployment_resource_key,
+        deployment_provider_account_id=deployment_provider_account_id,
+        project_id=uuid4(),
+        name="Agent Update Target",
+        description="before",
+        deployment_type=DeploymentType.AGENT,
+    )
+
+    adapter = AsyncMock()
+    mapper = SimpleNamespace(
+        resolve_deployment_update=AsyncMock(
+            return_value=DeploymentUpdate(spec=BaseDeploymentDataUpdate(description="after"))
+        ),
+        util_flow_version_patch=lambda _payload: SimpleNamespace(add_flow_version_ids=[], remove_flow_version_ids=[]),
+        shape_deployment_update_result=lambda *_args, **_kwargs: {
+            "id": str(deployment_id),
+            "provider_id": str(uuid4()),
+            "provider_key": "watsonx-orchestrate",
+            "name": "Agent Update Target",
+            "description": "after",
+            "type": "agent",
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "updated_at": datetime.now(timezone.utc).isoformat(),
+            "provider_data": {},
+            "resource_key": deployment_resource_key,
+            "attached_count": 0,
+        },
+    )
+    update_result = DeploymentUpdateResult(
+        id=deployment_resource_key,
+        rollback_data={"created_tool_ids": ["tool-1"]},
+    )
+    adapter.update.return_value = update_result
+
+    async_session.commit = AsyncMock(side_effect=RuntimeError("DB commit failed"))
+
+    with (
+        patch(
+            "langflow.api.v1.deployments.resolve_adapter_mapper_from_deployment",
+            new_callable=AsyncMock,
+            return_value=(
+                deployment_row,
+                adapter,
+                mapper,
+                "watsonx-orchestrate",
+                "tenant-1",
+            ),
+        ),
+        patch(
+            "langflow.api.v1.deployments.list_deployment_attachments_for_flow_version_ids",
+            new_callable=AsyncMock,
+            return_value=[],
+        ),
+        patch(
+            "langflow.api.v1.deployments.resolve_added_snapshot_bindings_for_update",
+            return_value=[],
+        ),
+        patch(
+            "langflow.api.v1.deployments.apply_flow_version_patch_attachments",
+            new_callable=AsyncMock,
+        ),
+        patch(
+            "langflow.api.v1.deployments.update_deployment_db",
+            new_callable=AsyncMock,
+            return_value=deployment_row,
+        ),
+        patch(
+            "langflow.api.v1.deployments.rollback_provider_update",
+            new_callable=AsyncMock,
+        ) as mock_rollback_provider_update,
+    ):
+        from langflow.api.v1.deployments import update_deployment
+
+        with pytest.raises(RuntimeError, match="DB commit failed"):
+            await update_deployment(
+                deployment_id=deployment_id,
+                session=async_session,
+                payload=DeploymentUpdateRequest(description="after"),
+                current_user=active_user,
+                telemetry=DeploymentTelemetryCtx(),
+            )
+
+    adapter.update.assert_awaited_once()
+    mock_rollback_provider_update.assert_awaited_once()
+    rollback_call = mock_rollback_provider_update.call_args.kwargs
+    assert rollback_call["deployment_resource_key"] == deployment_resource_key
+    assert rollback_call["update_result"] is update_result

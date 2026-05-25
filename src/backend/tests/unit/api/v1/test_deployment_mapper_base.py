@@ -667,7 +667,11 @@ def test_base_mapper_shapes_deployment_update_result() -> None:
     deployment_id = uuid4()
     provider_account_id = uuid4()
     timestamp = datetime.now(tz=timezone.utc)
-    result = DeploymentUpdateResult(id="provider-id", provider_result={"ok": True})
+    result = DeploymentUpdateResult(
+        id="provider-id",
+        provider_result={"ok": True},
+        rollback_data={},
+    )
     deployment_row = SimpleNamespace(
         id=deployment_id,
         name="Deployment Name",
@@ -751,7 +755,10 @@ def test_base_mapper_exposes_reconciliation_resolvers() -> None:
     assert isinstance(bindings, CreateSnapshotBindings)
     assert bindings.snapshot_bindings == []
 
-    update_result = DeploymentUpdateResult(id="provider-id")
+    update_result = DeploymentUpdateResult(
+        id="provider-id",
+        rollback_data={},
+    )
     created_ids = mapper.util_created_snapshot_ids(
         result=update_result,
     )
@@ -904,7 +911,10 @@ def test_base_mapper_util_should_mutate_provider_for_existing_deployment_create_
 
 def test_base_mapper_util_create_result_from_existing_update_raises_not_implemented() -> None:
     mapper = BaseDeploymentMapper()
-    result = DeploymentUpdateResult(id="provider-deploy-id")
+    result = DeploymentUpdateResult(
+        id="provider-deploy-id",
+        rollback_data={},
+    )
     with pytest.raises(NotImplementedError):
         mapper.util_create_result_from_existing_update(
             existing_resource_key="provider-deploy-id",

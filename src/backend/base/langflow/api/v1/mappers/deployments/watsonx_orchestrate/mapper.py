@@ -900,54 +900,6 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
             ProviderSnapshotBinding(resource_key=resource_key, snapshot_id=str(snapshot_id)) for snapshot_id in tool_ids
         ]
 
-    async def resolve_rollback_update(
-        self,
-        *,
-        user_id: UUID,
-        deployment_db_id: UUID,
-        deployment_resource_key: str,
-        db: AsyncSession,
-    ) -> AdapterDeploymentUpdate | None:
-        """Build a compensating update from current DB attachment state.
-
-        Queries flow_version_deployment_attachment for provider_snapshot_ids
-        (WXO tool IDs) and constructs an update that declaratively sets the
-        agent's tool list to match the (still-committed) DB state.  Also
-        restores deployment name/description via spec.
-
-        If the provider snapshots were concurrently deleted, the adapter call
-        may fail; read-path snapshot sync handles that residual divergence.
-        """
-        from langflow.services.database.models.deployment.crud import get_deployment
-        from langflow.services.database.models.flow_version_deployment_attachment.crud import (
-            list_deployment_attachments,
-        )
-
-        _ = deployment_resource_key
-        deployment = await get_deployment(db, user_id=user_id, deployment_id=deployment_db_id)
-        if deployment is None:
-            return None
-
-        attachments = await list_deployment_attachments(db, user_id=user_id, deployment_id=deployment_db_id)
-        existing_tool_ids = [
-            str(att.provider_snapshot_id).strip()
-            for att in attachments
-            if att.provider_snapshot_id and str(att.provider_snapshot_id).strip()
-        ]
-
-        update_slot = WXO_ADAPTER_PAYLOAD_SCHEMAS.deployment_update
-        if update_slot is None:
-            return None
-        provider_payload = update_slot.apply({"put_tools": existing_tool_ids})
-
-        return AdapterDeploymentUpdate(
-            spec=BaseDeploymentDataUpdate(
-                name=deployment.name,
-                description=deployment.description or "",
-            ),
-            provider_data=provider_payload,
-        )
-
     def shape_deployment_create_result(
         self,
         result: DeploymentCreateResult,

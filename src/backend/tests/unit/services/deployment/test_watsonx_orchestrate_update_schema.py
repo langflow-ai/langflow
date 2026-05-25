@@ -85,16 +85,10 @@ def test_update_rollback_journal_round_trips_through_slot() -> None:
     assert slot.update_rollback.dump(parsed) == journal
 
 
-def test_update_result_data_accepts_optional_rollback_journal() -> None:
-    result = WatsonxDeploymentUpdateResultData(
-        created_app_ids=["app-1"],
-        rollback_data=WatsonxDeploymentUpdateRollback(
-            rollback_agent_payload={"tools": ["tool-1"]},
-            created_tool_ids=["tool-new"],
-        ),
-    )
-    assert result.rollback_data is not None
-    assert result.rollback_data.created_tool_ids == ["tool-new"]
+def test_update_result_data_no_longer_carries_rollback_journal() -> None:
+    result = WatsonxDeploymentUpdateResultData(created_app_ids=["app-1"])
+    assert result.created_app_ids == ["app-1"]
+    assert "rollback_data" not in WatsonxDeploymentUpdateResultData.model_fields
 
 
 def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:

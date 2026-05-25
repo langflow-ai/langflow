@@ -563,10 +563,6 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
     # Full operation correlation set (created + existing refs).
     referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] | None = None
-    rollback_data: WatsonxDeploymentUpdateRollback | None = Field(
-        default=None,
-        description="Pre-update rollback snapshot for DB-commit-failure compensation (adapter-only).",
-    )
 
     @field_validator("created_app_ids", mode="before")
     @classmethod
@@ -686,8 +682,7 @@ class WatsonxProviderUpdateApplyResult(BaseModel):
     removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     # Full operation correlation set (created + existing refs).
     referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
-    rollback_data: WatsonxDeploymentUpdateRollback | None = Field(
-        default=None,
+    rollback_data: WatsonxDeploymentUpdateRollback = Field(
         description="Pre-update rollback snapshot for DB-commit-failure compensation (adapter-only).",
     )
 

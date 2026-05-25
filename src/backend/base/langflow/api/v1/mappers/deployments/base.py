@@ -726,26 +726,6 @@ class BaseDeploymentMapper:
         )
         raise NotImplementedError(msg)
 
-    async def resolve_rollback_update(
-        self,
-        *,
-        user_id: UUID,
-        deployment_db_id: UUID,
-        deployment_resource_key: str,
-        db: AsyncSession,
-    ) -> AdapterDeploymentUpdate | None:
-        """Build a compensating update payload from current DB attachment state.
-
-        Called when a provider update succeeded but the subsequent DB commit
-        failed. The returned payload should restore the provider to match the
-        (still-committed) DB state.
-
-        Returns ``None`` when the mapper cannot construct a meaningful rollback,
-        in which case provider state may diverge from the DB.
-        """
-        _ = (user_id, deployment_db_id, deployment_resource_key, db)
-        return None
-
     def shape_deployment_operation_result(self, provider_result: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_result
 

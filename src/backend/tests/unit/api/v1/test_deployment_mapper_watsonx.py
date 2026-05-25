@@ -1837,6 +1837,7 @@ def test_watsonx_mapper_shapes_update_response_from_result_schema() -> None:
                 {"source_ref": str(new_flow_version_id), "tool_id": "new-tool-1", "created": True}
             ],
         },
+        rollback_data={},
     )
 
     shaped = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
@@ -1876,6 +1877,7 @@ def test_watsonx_mapper_update_response_rejects_non_uuid_source_ref() -> None:
                 {"source_ref": "not-a-uuid", "tool_id": "tool-1", "created": True},
             ],
         },
+        rollback_data={},
     )
 
     with pytest.raises(HTTPException) as exc:
@@ -1996,6 +1998,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
                 "created_snapshot_ids": ["snap-1"],
                 "added_snapshot_bindings": [{"source_ref": str(add_id), "tool_id": "snap-1", "created": True}],
             },
+            rollback_data={},
         ),
     )
     assert isinstance(created_ids, CreatedSnapshotIds)
@@ -2006,6 +2009,7 @@ def test_watsonx_mapper_exposes_reconciliation_resolvers() -> None:
             provider_result={
                 "added_snapshot_bindings": [{"source_ref": str(add_id), "tool_id": "snap-1", "created": True}],
             },
+            rollback_data={},
         ),
     )
     assert isinstance(update_bindings, UpdateSnapshotBindings)
@@ -3004,6 +3008,7 @@ def test_watsonx_mapper_shapes_update_response_with_tool_id() -> None:
                 ],
             )
         ),
+        rollback_data={},
     )
 
     response = mapper.shape_deployment_update_result(result, deployment_row, provider_key="watsonx-orchestrate")
@@ -3046,6 +3051,7 @@ def test_watsonx_mapper_shapes_update_response_with_non_uuid_source_ref() -> Non
                 ],
             )
         ),
+        rollback_data={},
     )
 
     with pytest.raises(HTTPException) as exc:
@@ -3079,6 +3085,7 @@ def test_watsonx_mapper_update_snapshot_bindings_filters_non_uuid_source_refs() 
                 ],
             )
         ),
+        rollback_data={},
     )
 
     bindings = mapper.util_update_snapshot_bindings(result=result)

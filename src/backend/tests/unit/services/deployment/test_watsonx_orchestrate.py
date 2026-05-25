@@ -32,7 +32,6 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentListParams,
     DeploymentType,
     DeploymentUpdate,
-    DeploymentUpdateRollback,
     EnvVarValueSpec,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -5035,7 +5034,7 @@ async def test_rollback_update_result_swallows_invalid_journal(monkeypatch):
     await service.rollback_update_result(
         user_id="user-1",
         deployment_id="dep-1",
-        payload=DeploymentUpdateRollback(provider_data={"not_a_valid_journal": True}),
+        payload={"not_a_valid_journal": True},
         db=object(),
     )
 
@@ -5065,11 +5064,77 @@ async def test_rollback_update_result_replays_journal(monkeypatch):
     await service.rollback_update_result(
         user_id="user-1",
         deployment_id="dep-1",
-        payload=DeploymentUpdateRollback(provider_data=journal),
+        payload=journal,
         db=object(),
     )
     assert captured["agent_id"] == "dep-1"
     assert captured["journal"].created_tool_ids == []
+
+
+@pytest.mark.anyio
+async def test_rollback_update_result_accepts_basemodel_payload(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(agent=FakeAgentClient({"id": "dep-1", "tools": []}))
+    captured: dict[str, Any] = {}
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    async def mock_rollback_from_journal(*, clients, agent_id, journal):  # noqa: ARG001
+        captured["agent_id"] = agent_id
+        captured["journal"] = journal
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(service_module, "rollback_update_from_journal", mock_rollback_from_journal)
+
+    journal_model = payloads_module.WatsonxDeploymentUpdateRollback(
+        rollback_agent_payload={"tools": ["tool-1"]},
+        original_tools={},
+        created_tool_ids=["tool-created"],
+        created_app_ids=["app-created"],
+    )
+
+    await service.rollback_update_result(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=journal_model,
+        db=object(),
+    )
+
+    assert captured["agent_id"] == "dep-1"
+    assert isinstance(captured["journal"], payloads_module.WatsonxDeploymentUpdateRollback)
+    assert captured["journal"].created_tool_ids == ["tool-created"]
+
+
+@pytest.mark.anyio
+async def test_rollback_update_result_swallows_when_rollback_slot_missing(monkeypatch):
+    from dataclasses import replace
+
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    service.payload_schemas = replace(service.payload_schemas, update_rollback=None)
+    fetch_calls = 0
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        nonlocal fetch_calls
+        fetch_calls += 1
+        return SimpleNamespace(agent=FakeAgentClient({"id": "dep-1", "tools": []}))
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    # Should not raise even when the rollback slot is misconfigured.
+    await service.rollback_update_result(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload={
+            "rollback_agent_payload": {},
+            "original_tools": {},
+            "created_tool_ids": [],
+            "created_app_ids": [],
+        },
+        db=object(),
+    )
+
+    assert fetch_calls == 0
 
 
 def test_build_update_rollback_journal_captures_tools_and_description():
@@ -5175,7 +5240,7 @@ async def test_rollback_update_result_replays_journal_on_provider(monkeypatch):
     await service.rollback_update_result(
         user_id="user-1",
         deployment_id="dep-1",
-        payload=DeploymentUpdateRollback(provider_data=journal),
+        payload=journal,
         db=object(),
     )
 
@@ -5207,6 +5272,39 @@ async def test_rollback_created_app_ids_deletes_configs(monkeypatch):
     )
 
     assert set(fake_connections.delete_calls) == {"app-1", "app-2"}
+
+
+@pytest.mark.anyio
+async def test_rollback_created_app_ids_continues_when_one_delete_fails(monkeypatch):
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import RollbackSourceOperation
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import retry as retry_module
+
+    attempted: list[str] = []
+
+    class PartiallyFailingConnections(FakeConnectionsClient):
+        def delete(self, app_id: str):
+            attempted.append(app_id)
+            if app_id == "app-fail":
+                msg = "delete failed"
+                raise RuntimeError(msg)
+            super().delete(app_id)
+
+    fake_clients = SimpleNamespace(connections=PartiallyFailingConnections())
+
+    async def immediate_retry(operation, *args, **kwargs):
+        return await operation(*args, **kwargs)
+
+    monkeypatch.setattr(retry_module, "retry_rollback", immediate_retry)
+    monkeypatch.setattr(shared_core_module, "retry_rollback", immediate_retry)
+    monkeypatch.setattr(retry_module.logger, "exception", lambda *_args, **_kwargs: None)
+
+    await shared_core_module.rollback_created_app_ids(
+        clients=fake_clients,
+        source_operation=RollbackSourceOperation.UPDATE,
+        created_app_ids=["app-ok", "app-fail", "app-next"],
+    )
+
+    assert attempted == ["app-ok", "app-fail", "app-next"]
 
 
 @pytest.mark.anyio
@@ -5486,6 +5584,73 @@ async def test_apply_provider_update_plan_tool_upload_failure_journals_created_t
 
 
 @pytest.mark.anyio
+async def test_apply_provider_update_plan_rename_failure_captures_original_tool_for_rollback(monkeypatch):
+    """If rename fails mid-flight, rollback journal still includes pre-rename tool payload."""
+    provider_update = payloads_module.WatsonxDeploymentUpdatePayload.model_validate(
+        {
+            "tools": {},
+            "connections": {},
+            "llm": TEST_WXO_LLM,
+            "operations": [
+                {
+                    "op": "rename_tool",
+                    "tool": {"source_ref": "fv-tool-1", "tool_id": "tool-1"},
+                    "new_name": "renamed-tool-1",
+                }
+            ],
+        }
+    )
+    plan = update_core_module.build_provider_update_plan(
+        agent={"id": "dep-1", "tools": ["tool-1"]},
+        provider_update=provider_update,
+    )
+    tool_before_rename = {
+        "id": "tool-1",
+        "name": "tool-1",
+        "display_name": "tool-1",
+        "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+    }
+
+    class RenameFailingToolClient(FakeToolClient):
+        def update(self, tool_id: str, payload: dict):
+            super().update(tool_id, payload)
+            if tool_id == "tool-1" and payload.get("name") == "renamed-tool-1":
+                msg = "rename failed"
+                raise RuntimeError(msg)
+
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
+        tool=RenameFailingToolClient([tool_before_rename]),
+        connections=FakeConnectionsClient(),
+    )
+    captured: dict[str, Any] = {}
+
+    async def immediate_retry(operation, *args, **kwargs):
+        return await operation(*args, **kwargs)
+
+    async def capture_rollback_journal(*, clients, agent_id, journal):  # noqa: ARG001
+        captured["journal"] = journal
+
+    monkeypatch.setattr(update_core_module, "rollback_update_from_journal", capture_rollback_journal)
+    monkeypatch.setattr(update_core_module, "retry_update", immediate_retry)
+
+    with pytest.raises(RuntimeError, match="rename failed"):
+        await update_core_module.apply_provider_update_plan_with_rollback(
+            clients=fake_clients,
+            user_id="user-1",
+            db=object(),
+            agent_id="dep-1",
+            agent={"id": "dep-1", "tools": ["tool-1"]},
+            update_payload={},
+            plan=plan,
+        )
+
+    assert captured["journal"].created_tool_ids == []
+    assert captured["journal"].created_app_ids == []
+    assert captured["journal"].original_tools["tool-1"]["name"] == "tool-1"
+
+
+@pytest.mark.anyio
 async def test_rollback_update_from_journal_continues_after_agent_restore_failure(monkeypatch):
     """Agent restore is best-effort; tool and connection rollback still run."""
     from langflow.services.adapters.deployment.watsonx_orchestrate.core import retry as retry_module
@@ -5550,14 +5715,12 @@ async def test_rollback_update_result_swallows_journal_replay_failure(monkeypatc
     await service.rollback_update_result(
         user_id="user-1",
         deployment_id="dep-1",
-        payload=DeploymentUpdateRollback(
-            provider_data={
-                "rollback_agent_payload": {},
-                "original_tools": {},
-                "created_tool_ids": [],
-                "created_app_ids": [],
-            }
-        ),
+        payload={
+            "rollback_agent_payload": {},
+            "original_tools": {},
+            "created_tool_ids": [],
+            "created_app_ids": [],
+        },
         db=object(),
     )
 
@@ -5608,6 +5771,37 @@ async def test_rollback_tools_restore_batch_continues_when_one_restore_fails(mon
 
     assert {tool_id for tool_id, _ in fake_tool.update_calls} == {"tool-a"}
     assert deleted == ["tool-new"]
+
+
+@pytest.mark.anyio
+async def test_rollback_tools_delete_batch_continues_when_one_delete_fails(monkeypatch):
+    """Delete failures are logged per tool and do not stop other deletes."""
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import RollbackSourceOperation
+    from langflow.services.adapters.deployment.watsonx_orchestrate.core import retry as retry_module
+
+    deleted_attempts: list[str] = []
+
+    async def immediate_retry(operation, *args, **kwargs):
+        return await operation(*args, **kwargs)
+
+    async def fake_delete_tool(clients, *, tool_id):  # noqa: ARG001
+        deleted_attempts.append(tool_id)
+        if tool_id == "tool-fail":
+            msg = "delete failed"
+            raise RuntimeError(msg)
+
+    monkeypatch.setattr(retry_module, "retry_rollback", immediate_retry)
+    monkeypatch.setattr(retry_module, "delete_tool_if_exists", fake_delete_tool)
+    monkeypatch.setattr(retry_module.logger, "exception", lambda *_args, **_kwargs: None)
+
+    await retry_module.rollback_tools(
+        clients=SimpleNamespace(tool=FakeToolClient([])),
+        source_operation=RollbackSourceOperation.UPDATE,
+        created_tool_ids=["tool-ok", "tool-fail", "tool-next"],
+        original_tools={},
+    )
+
+    assert deleted_attempts == ["tool-ok", "tool-fail", "tool-next"]
 
 
 # ---------------------------------------------------------------------------
@@ -6110,10 +6304,9 @@ async def test_update_spec_only_description_sends_update(monkeypatch):
     _, payload = fake_agent.update_calls[0]
     assert payload == {"description": "only desc"}
     assert "name" not in payload
-    assert result.provider_result.rollback_data is not None
-    assert result.provider_result.rollback_data.rollback_agent_payload == {"description": "old desc"}
-    assert result.provider_result.rollback_data.created_tool_ids == []
-    assert result.provider_result.rollback_data.created_app_ids == []
+    assert result.rollback_data["rollback_agent_payload"] == {"description": "old desc"}
+    assert result.rollback_data["created_tool_ids"] == []
+    assert result.rollback_data["created_app_ids"] == []
 
 
 # ---------------------------------------------------------------------------

@@ -584,15 +584,15 @@ class DeploymentUpdate(BaseModel):
         return self
 
 
+# Provider-specific rollback journal for failed deployment update DB commits.
+DeploymentUpdateRollback = T_DeploymentUpdateRollback
+
+
 class DeploymentUpdateResult(DeploymentOperationResult[T_DeploymentUpdateResult]):
     """Model representing a result for a deployment update operation."""
 
-
-class DeploymentUpdateRollback(BaseModel, Generic[T_DeploymentUpdateRollback]):
-    """Compensating rollback payload for failed deployment update DB commits."""
-
-    provider_data: T_DeploymentUpdateRollback = Field(
-        description="Provider-specific rollback journal captured before the forward update.",
+    rollback_data: T_DeploymentUpdateRollback = Field(
+        description="Pre-update journal for DB-commit-failure compensation (adapter-internal).",
     )
 
 

@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
@@ -60,7 +60,13 @@ from lfx.services.adapters.deployment.schema import (
     VerifyCredentialsResult,
     _normalize_and_validate_id,
 )
-from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPayloadValidationError
+from lfx.services.adapters.payload import (
+    AdapterPayload,
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+)
+from pydantic import BaseModel  # noqa: TC002
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator, get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -128,7 +134,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Any
 
     from lfx.services.settings.service import SettingsService
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -161,11 +166,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     def _parse_provider_payload(
         self,
         *,
-        slot,
+        slot: PayloadSlot | None,
         slot_name: str,
-        provider_data: object,
+        provider_data: AdapterPayload | BaseModel | None,
         error_prefix: ErrorPrefix,
-    ):
+    ) -> BaseModel:
         if slot is None:
             msg = f"{error_prefix.value} Required slot '{slot_name}' is not configured."
             raise DeploymentError(message=msg, error_code="deployment_error")
@@ -299,7 +304,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             journal = self._parse_provider_payload(
                 slot=self.payload_schemas.update_rollback,
                 slot_name="update_rollback",
-                provider_data=payload.provider_data,
+                provider_data=payload,
                 error_prefix=ErrorPrefix.UPDATE,
             )
             clients = await self._get_provider_clients(user_id=user_id, db=db)
@@ -505,7 +510,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
-                rollback_data = build_update_rollback_journal(
+                journal = build_update_rollback_journal(
                     agent=agent,
                     final_update_payload=update_payload,
                     original_tools={},
@@ -520,7 +525,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 )
                 return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
                     id=deployment_id,
-                    provider_result=WatsonxDeploymentUpdateResultData(rollback_data=rollback_data),
+                    provider_result=WatsonxDeploymentUpdateResultData(),
+                    rollback_data=journal.model_dump(),
                 )
 
             provider_plan = build_provider_update_plan(
@@ -549,9 +555,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         added_snapshot_bindings=apply_result.added_snapshot_bindings,
                         removed_snapshot_bindings=apply_result.removed_snapshot_bindings,
                         referenced_snapshot_bindings=apply_result.referenced_snapshot_bindings,
-                        rollback_data=apply_result.rollback_data,
                     )
                 ),
+                rollback_data=apply_result.rollback_data.model_dump(),
             )
 
         except (ClientAPIException, HTTPException) as exc:
