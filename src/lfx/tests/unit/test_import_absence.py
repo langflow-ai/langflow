@@ -118,3 +118,84 @@ class TestLfxImportsWithoutPIL:
 
     def test_pil_absent_from_graph_hot_path(self):
         _assert_modules_absent("from lfx.graph.graph.base import Graph", set(self.PIL_PKG))
+
+
+class TestLazyValidateExecGlobals:
+    """`_LazyExecGlobals` is the marker type returned by `prepare_global_scope`.
+
+    The class itself is a nominal `dict` subclass — CPython bypasses `__missing__` /
+    `__getitem__` on dict subclasses for class-body name lookups (CPython #33128),
+    so the laziness lives in the VALUES (`_LazyImportProxy` instances bound by
+    `prepare_global_scope` for each deferred import alias), not in the container.
+    These tests assert the marker type is preserved across copy() and that
+    proxies are actually bound for langchain-family modules.
+    """
+
+    def test_lazy_exec_globals_is_dict_subclass(self):
+        from lfx.custom.validate import _LazyExecGlobals
+
+        assert issubclass(_LazyExecGlobals, dict)
+        instance = _LazyExecGlobals({"a": 1})
+        assert isinstance(instance, dict)
+        assert instance["a"] == 1
+
+    def test_lazy_exec_globals_copy_preserves_marker_type(self):
+        # `dict.copy()` returns a plain dict, which would strip the marker
+        # type and silently drop the "this is a lazy scope" signal. Preserve
+        # _LazyExecGlobals so nested-exec callers keep the laziness contract.
+        from lfx.custom.validate import _LazyExecGlobals
+
+        original = _LazyExecGlobals({"k": "v"})
+        copied = original.copy()
+        assert isinstance(copied, _LazyExecGlobals)
+        assert copied == {"k": "v"}
+
+    def test_prepare_global_scope_returns_lazy_marker(self):
+        # No langchain symbols here, so no proxies are bound. The marker type
+        # is still expected so downstream code can rely on the contract
+        # regardless of which imports the module under exec carries.
+        import ast as _ast
+
+        from lfx.custom.validate import _LazyExecGlobals, prepare_global_scope
+
+        module = _ast.parse("import json\n")
+        scope = prepare_global_scope(module)
+        assert isinstance(scope, _LazyExecGlobals)
+
+    def test_prepare_global_scope_defers_langchain_import(self):
+        # `from langchain_classic.agents import AgentExecutor` must bind a
+        # _LazyImportProxy, not the real symbol, and must not touch
+        # `sys.modules["langchain_classic"]` until something accesses the
+        # proxy. Runs in a subprocess to get a clean sys.modules.
+        script = (
+            "import ast, sys\n"
+            "from lfx.custom.validate import prepare_global_scope, _LazyImportProxy\n"
+            "mod = ast.parse('from langchain_classic.agents import AgentExecutor\\n')\n"
+            "scope = prepare_global_scope(mod)\n"
+            "assert isinstance(scope['AgentExecutor'], _LazyImportProxy), type(scope['AgentExecutor'])\n"
+            "assert 'langchain_classic' not in sys.modules, sorted(sys.modules)\n"
+        )
+        result = subprocess.run(  # noqa: S603
+            [sys.executable, "-c", script],
+            capture_output=True,
+            timeout=30,
+            check=False,
+        )
+        if result.returncode != 0:
+            stderr = result.stderr.decode("utf-8", errors="replace")
+            msg = f"prepare_global_scope did not defer langchain_classic import:\n{stderr}"
+            raise AssertionError(msg)
+
+    def test_prepare_global_scope_eager_import_resolves(self):
+        # Non-langchain imports stay eager so strict Pydantic validators and
+        # call sites that expect real objects (e.g. string constants from
+        # `lfx.utils.constants`) behave unchanged. `import json` must bind the
+        # real module object, not a proxy.
+        import ast as _ast
+
+        from lfx.custom.validate import _LazyImportProxy, prepare_global_scope
+
+        module = _ast.parse("import json\n")
+        scope = prepare_global_scope(module)
+        assert not isinstance(scope["json"], _LazyImportProxy)
+        assert scope["json"].dumps({"k": 1}) == '{"k": 1}'
