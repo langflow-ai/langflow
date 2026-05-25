@@ -11,8 +11,13 @@ from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
 from lfx.log.logger import logger
 from lfx.services.adapters.deployment.exceptions import InvalidContentError, ResourceConflictError
 
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
+    RollbackErrorLabel,
+    RollbackSourceOperation,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import create_config, validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
+    _run_rollback_batch,
     delete_config_if_exists,
     retry_create,
     retry_rollback,
@@ -346,10 +351,12 @@ async def create_raw_tools_with_bindings(
 async def rollback_created_app_ids(
     *,
     clients: WxOClient,
+    source_operation: RollbackSourceOperation,
     created_app_ids: list[str],
 ) -> None:
-    for app_id in reversed(created_app_ids):
-        try:
-            await retry_rollback(delete_config_if_exists, clients, app_id=app_id)
-        except Exception:  # noqa: BLE001
-            logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", app_id)
+    await _run_rollback_batch(
+        source_operation=source_operation,
+        error_label=RollbackErrorLabel.CREATE_CONNECTION,
+        resource_ids=created_app_ids,
+        coroutines=[retry_rollback(delete_config_if_exists, clients, app_id=app_id) for app_id in created_app_ids],
+    )

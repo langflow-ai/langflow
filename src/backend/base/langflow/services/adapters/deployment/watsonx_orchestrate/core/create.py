@@ -15,13 +15,13 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.payload import AdapterPayloadValidationError
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix, RollbackSourceOperation
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_create,
     retry_update,
     rollback_created_resources,
-    rollback_update_resources,
+    rollback_tools,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
     ConnectionCreateBatchError,
@@ -278,10 +278,10 @@ async def apply_provider_create_plan_with_rollback(
         )
     except Exception:
         # undo tool<->connection bindings of existing tools
-        await rollback_update_resources(
+        await rollback_tools(
             clients=clients,
+            source_operation=RollbackSourceOperation.CREATE,
             created_tool_ids=[],
-            created_app_id=None,
             original_tools=original_tools,
         )
         logger.warning(

@@ -3000,7 +3000,7 @@ class WatsonxAdapterDirectE2E:
             "update_create_config": (update_core_module, "create_connection_with_conflict_mapping"),
             "update_create_tools": (update_core_module, "create_and_upload_wxo_flow_tools_with_bindings"),
             "update_bindings": (update_core_module, "_update_existing_tool_connection_deltas"),
-            "update_rollback_resources": (update_core_module, "rollback_update_resources"),
+            "update_rollback_resources": (update_core_module, "rollback_tools"),
         }
 
     async def _run_with_stage_hook(
@@ -3286,7 +3286,7 @@ class WatsonxAdapterDirectE2E:
             "rollback_delete_tool": (retry_module, "delete_tool_if_exists"),
             "rollback_delete_config": (retry_module, "delete_config_if_exists"),
             "update_bindings": (update_core_module, "_update_existing_tool_connection_deltas"),
-            "update_rollback_resources": (update_core_module, "rollback_update_resources"),
+            "update_rollback_resources": (update_core_module, "rollback_tools"),
         }
 
         for stage, config in inject.items():

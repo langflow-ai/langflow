@@ -13,12 +13,12 @@ from lfx.services.adapters.deployment.exceptions import (
     InvalidDeploymentOperationError,
 )
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix, RollbackSourceOperation
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.config import validate_connection
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import (
     retry_rollback,
     retry_update,
-    rollback_update_resources,
+    rollback_tools,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.shared import (
     ConnectionCreateBatchError,
@@ -43,6 +43,7 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxAttachToolOperation,
     WatsonxBindOperation,
     WatsonxDeploymentUpdatePayload,
+    WatsonxDeploymentUpdateRollback,
     WatsonxProviderUpdateApplyResult,
     WatsonxRemoveToolOperation,
     WatsonxRenameToolOperation,
@@ -410,6 +411,51 @@ async def _rollback_agent_update(
         logger.exception("Rollback failed for agent_id=%s — resource may be orphaned", agent_id)
 
 
+def build_update_rollback_journal(
+    *,
+    agent: dict[str, Any],
+    final_update_payload: dict[str, Any],
+    original_tools: dict[str, dict[str, Any]],
+    created_tool_ids: list[str],
+    created_app_ids: list[str],
+) -> WatsonxDeploymentUpdateRollback:
+    """Build a pre-update rollback journal from captured forward-update state."""
+    return WatsonxDeploymentUpdateRollback(
+        rollback_agent_payload=_build_agent_rollback_payload(
+            agent=agent,
+            final_update_payload=final_update_payload,
+        ),
+        original_tools=original_tools,
+        created_tool_ids=created_tool_ids,
+        created_app_ids=created_app_ids,
+    )
+
+
+async def rollback_update_from_journal(
+    *,
+    clients: WxOClient,
+    agent_id: str,
+    journal: WatsonxDeploymentUpdateRollback,
+) -> None:
+    """Replay a pre-update journal: agent restore, tool payloads, then created resources."""
+    await _rollback_agent_update(
+        clients=clients,
+        agent_id=agent_id,
+        rollback_agent_payload=journal.rollback_agent_payload,
+    )
+    await rollback_tools(
+        clients=clients,
+        source_operation=RollbackSourceOperation.UPDATE,
+        created_tool_ids=journal.created_tool_ids,
+        original_tools=journal.original_tools,
+    )
+    await rollback_created_app_ids(
+        clients=clients,
+        source_operation=RollbackSourceOperation.UPDATE,
+        created_app_ids=journal.created_app_ids,
+    )
+
+
 async def apply_provider_update_plan_with_rollback(
     *,
     clients: WxOClient,
@@ -452,7 +498,6 @@ async def apply_provider_update_plan_with_rollback(
     #     the agent by this update.
     # - referenced_snapshot_bindings: full operation correlation set.
     # - final_update_payload: outbound agent patch payload (spec + tools).
-    # - rollback_agent_payload: best-effort restore payload for agent rollback.
     # - created_app_ids_journal: app_ids recorded immediately after successful
     #     provider connection creation; used to ensure rollback sees partial
     #     successes even if create later fails before returning.
@@ -462,7 +507,6 @@ async def apply_provider_update_plan_with_rollback(
     added_snapshot_ids: list[str] = []
     created_snapshot_bindings: list[WatsonxResultToolRefBinding] = []
     final_update_payload = dict(update_payload)
-    rollback_agent_payload: WatsonxAgentRollbackUpdatePayload = {}
     created_app_ids_journal: list[str] = []
 
     # Pre-seed resolved_connections with bindings already attached to the
@@ -556,10 +600,6 @@ async def apply_provider_update_plan_with_rollback(
         added_snapshot_ids.extend(ref.tool_id for ref in plan.added_existing_tool_refs)
         final_tools = dedupe_list([*plan.final_existing_tool_ids, *created_tool_ids])
         final_update_payload["tools"] = final_tools
-        rollback_agent_payload = _build_agent_rollback_payload(
-            agent=agent,
-            final_update_payload=final_update_payload,
-        )
         if final_update_payload:
             await retry_update(asyncio.to_thread, clients.agent.update, agent_id, final_update_payload)
     except Exception:
@@ -569,23 +609,26 @@ async def apply_provider_update_plan_with_rollback(
             created_tool_ids,
             created_app_ids,
         )
-        await _rollback_agent_update(
+        await rollback_update_from_journal(
             clients=clients,
             agent_id=agent_id,
-            rollback_agent_payload=rollback_agent_payload,
-        )
-        await rollback_update_resources(
-            clients=clients,
-            created_tool_ids=created_tool_ids,
-            created_app_id=None,
-            original_tools=original_tools,
-        )
-        await rollback_created_app_ids(
-            clients=clients,
-            created_app_ids=created_app_ids,
+            journal=build_update_rollback_journal(
+                agent=agent,
+                final_update_payload=final_update_payload,
+                original_tools=original_tools,
+                created_tool_ids=created_tool_ids,
+                created_app_ids=created_app_ids,
+            ),
         )
         raise
 
+    rollback_data = build_update_rollback_journal(
+        agent=agent,
+        final_update_payload=final_update_payload,
+        original_tools=original_tools,
+        created_tool_ids=created_tool_ids,
+        created_app_ids=created_app_ids,
+    )
     return WatsonxProviderUpdateApplyResult(
         created_app_ids=dedupe_list(created_app_ids),
         created_snapshot_ids=dedupe_list(created_snapshot_ids),
@@ -594,6 +637,7 @@ async def apply_provider_update_plan_with_rollback(
         added_snapshot_bindings=[*plan.added_existing_tool_refs, *created_snapshot_bindings],
         removed_snapshot_bindings=plan.removed_existing_tool_refs,
         referenced_snapshot_bindings=[*plan.existing_tool_refs, *created_snapshot_bindings],
+        rollback_data=rollback_data,
     )
 
 

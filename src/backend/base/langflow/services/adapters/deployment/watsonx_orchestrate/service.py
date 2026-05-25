@@ -101,6 +101,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.update impor
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
     build_update_payload_from_spec,
+    build_update_rollback_journal,
+    rollback_update_from_journal,
     validate_provider_update_request_sections,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
@@ -292,9 +294,21 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
         db: AsyncSession,
     ) -> None:
         """Best-effort rollback of provider-side update mutations from a pre-update journal."""
-        _ = (user_id, deployment_id, payload, db)
-        msg = f"{ErrorPrefix.UPDATE.value} Update rollback executor is not implemented."
-        raise DeploymentError(message=msg, error_code="deployment_error")
+        try:
+            agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
+            journal = self._parse_provider_payload(
+                slot=self.payload_schemas.update_rollback,
+                slot_name="update_rollback",
+                provider_data=payload.provider_data,
+                error_prefix=ErrorPrefix.UPDATE,
+            )
+            clients = await self._get_provider_clients(user_id=user_id, db=db)
+            await rollback_update_from_journal(clients=clients, agent_id=agent_id, journal=journal)
+        except Exception:
+            logger.exception(
+                "Best-effort update rollback failed for deployment_id=%s",
+                deployment_id,
+            )
 
     async def list_types(
         self,
@@ -491,6 +505,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
+                rollback_data = build_update_rollback_journal(
+                    agent=agent,
+                    final_update_payload=update_payload,
+                    original_tools={},
+                    created_tool_ids=[],
+                    created_app_ids=[],
+                )
                 await retry_create(
                     asyncio.to_thread,
                     clients.agent.update,
@@ -498,7 +519,8 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     update_payload,
                 )
                 return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
-                    id=deployment_id, provider_result=WatsonxDeploymentUpdateResultData()
+                    id=deployment_id,
+                    provider_result=WatsonxDeploymentUpdateResultData(rollback_data=rollback_data),
                 )
 
             provider_plan = build_provider_update_plan(
@@ -527,6 +549,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         added_snapshot_bindings=apply_result.added_snapshot_bindings,
                         removed_snapshot_bindings=apply_result.removed_snapshot_bindings,
                         referenced_snapshot_bindings=apply_result.referenced_snapshot_bindings,
+                        rollback_data=apply_result.rollback_data,
                     )
                 ),
             )
