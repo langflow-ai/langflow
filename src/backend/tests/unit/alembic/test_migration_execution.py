@@ -538,7 +538,8 @@ def test_deployment_display_name_downgrade_restores_name_unique_constraint(db_ur
 
     assert "name" in column_names
     assert "display_name" not in column_names
-    assert {
-        "name": "uq_deployment_name_in_provider",
-        "column_names": ["deployment_provider_account_id", "name"],
-    } in unique_constraints
+    assert any(
+        constraint.get("name") == "uq_deployment_name_in_provider"
+        and constraint.get("column_names") == ["deployment_provider_account_id", "name"]
+        for constraint in unique_constraints
+    )
