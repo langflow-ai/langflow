@@ -84,6 +84,33 @@ async def _get_flow_by_slug(session, slug: str) -> Flow | None:
     return result.first()
 
 
+def _validate_inbound_message(message: Any) -> None:
+    """Reject A2A message bodies that carry no usable content.
+
+    An A2A ``message:send``/``message:stream`` body must contain a ``message``
+    with at least one part holding non-empty text or non-empty data. Empty,
+    missing, or content-less bodies are rejected up front with 422 rather than
+    executing the flow on empty input — which produces no meaningful artifact
+    and is a client error, not a flow failure.
+    """
+    parts = message.get("parts") if isinstance(message, dict) else None
+    if not isinstance(parts, list) or not parts:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A2A message must include at least one part",
+        )
+    has_content = any(
+        isinstance(part, dict)
+        and ((part.get("kind") == "text" and part.get("text")) or (part.get("kind") == "data" and part.get("data")))
+        for part in parts
+    )
+    if not has_content:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="A2A message parts must contain non-empty text or data",
+        )
+
+
 # ---------------------------------------------------------------------------
 # Public A2A protocol router
 # ---------------------------------------------------------------------------
@@ -173,6 +200,7 @@ async def message_send(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
     message = body.get("message", {})
+    _validate_inbound_message(message)
     requested_task_id = body.get("taskId")
     context_id = message.get("contextId") or str(uuid.uuid4())
 
@@ -328,6 +356,7 @@ async def message_stream(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Agent not found")
 
     message = body.get("message", {})
+    _validate_inbound_message(message)
     context_id = message.get("contextId") or str(uuid.uuid4())
     flow_secret = str(flow.id)
 

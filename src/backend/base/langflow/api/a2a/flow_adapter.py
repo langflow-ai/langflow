@@ -15,6 +15,8 @@ import hashlib
 import hmac
 import uuid
 
+from fastapi.encoders import jsonable_encoder
+
 
 async def translate_inbound(
     message: dict,
@@ -138,7 +140,11 @@ def _result_to_artifact(result, index: int = 0) -> dict | None:
         # Structured data output — unwrap the "data" key
         parts.append({"kind": "data", "data": results["data"]})
     else:
-        # Fallback: serialize as data
+        # Fallback: serialize as data. Always coerce through jsonable_encoder
+        # so the artifact is JSON-serializable even when the result embeds
+        # non-serializable objects (e.g. a nested Message). Otherwise the
+        # downstream task persist raises a DB serialization error whose raw
+        # text would leak back to the A2A caller.
         try:
             if hasattr(results, "model_dump"):
                 data = results.model_dump()
@@ -146,6 +152,7 @@ def _result_to_artifact(result, index: int = 0) -> dict | None:
                 data = results
             else:
                 data = {"result": str(results)}
+            data = jsonable_encoder(data)
         except Exception:
             data = {"result": str(results)}
         parts.append({"kind": "data", "data": data})

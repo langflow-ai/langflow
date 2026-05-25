@@ -15,8 +15,9 @@ Outbound (Langflow → A2A):
 These are pure logic tests — no database, no HTTP, no flow execution.
 """
 
-import pytest
+import json
 
+import pytest
 from langflow.api.a2a.flow_adapter import translate_inbound, translate_outbound
 
 pytestmark = pytest.mark.asyncio
@@ -82,7 +83,7 @@ class TestTranslateInbound:
         assert result["tweaks"] == {"temperature": 0.5, "max_tokens": 100}
 
     async def test_context_id_maps_to_session_id(self):
-        """contextId from the A2A message maps to a Langflow session_id.
+        """ContextId from the A2A message maps to a Langflow session_id.
 
         The mapping uses HMAC to prevent session ID guessing between
         different callers. Same contextId + same secret = same session.
@@ -218,6 +219,24 @@ class TestTranslateOutbound:
 
         assert "name" in artifacts[0]
         assert "artifactId" in artifacts[0]
+
+    async def test_result_embedding_raw_message_is_json_serializable(self):
+        """A result embedding a raw Message still yields a JSON-serializable artifact.
+
+        Regression: an empty-text Message nested under ``message`` fell through
+        to the data fallback and was emitted verbatim, so persisting the task
+        raised a DB serialization error whose raw text leaked to the A2A caller.
+        The fallback now coerces to a JSON-safe structure.
+        """
+        from lfx.schema.message import Message
+
+        # Exactly the shape that broke task persistence: a dict whose value is
+        # a non-JSON Message with empty text (so the text branch is skipped).
+        run_output = {"outputs": [{"results": {"message": Message(text="")}}]}
+        artifacts = await translate_outbound([run_output])
+
+        # Whatever shape it takes, the artifact must serialize cleanly.
+        json.dumps(artifacts)
 
 
 # ---------------------------------------------------------------------------

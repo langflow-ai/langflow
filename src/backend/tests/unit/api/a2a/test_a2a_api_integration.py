@@ -163,9 +163,7 @@ class TestA2ANotFoundHTTP:
         resp = await client.get("/a2a/never-exposed/.well-known/agent-card.json")
         assert resp.status_code == 404
 
-    async def test_instance_kill_switch_hides_enabled_agent(
-        self, client: AsyncClient, logged_in_headers, monkeypatch
-    ):
+    async def test_instance_kill_switch_hides_enabled_agent(self, client: AsyncClient, logged_in_headers, monkeypatch):
         """LANGFLOW_A2A_ENABLED=false 404s even an enabled agent; restored after."""
         await _expose_flow_as_a2a(client, logged_in_headers, slug="kill-switch", name="Killable Agent")
 
@@ -182,11 +180,10 @@ class TestA2ANotFoundHTTP:
         restored = await client.get("/a2a/kill-switch/.well-known/agent-card.json")
         assert restored.status_code == 200
 
-    async def test_instance_kill_switch_blocks_action_routes(
-        self, client: AsyncClient, logged_in_headers, monkeypatch
-    ):
+    async def test_instance_kill_switch_blocks_action_routes(self, client: AsyncClient, logged_in_headers, monkeypatch):
         """The kill switch 404s the action routes too (send/stream/tasks/cancel),
-        not just discovery — it is the documented instance-wide rollback."""
+        not just discovery — it is the documented instance-wide rollback.
+        """
         slug = "kill-actions"
         await _expose_flow_as_a2a(client, logged_in_headers, slug=slug, name="Killable Actions")
 
@@ -290,9 +287,7 @@ class TestA2AMessageSendHTTP:
 
     async def test_send_requires_auth(self, client: AsyncClient, logged_in_headers):
         await _expose_flow_as_a2a(client, logged_in_headers, slug="send-auth", name="Send Auth")
-        resp = await client.post(
-            "/a2a/send-auth/v1/message:send", json=_message_body("hello"), headers=_BAD_AUTH
-        )
+        resp = await client.post("/a2a/send-auth/v1/message:send", json=_message_body("hello"), headers=_BAD_AUTH)
         assert resp.status_code in (401, 403)
 
     async def test_send_unknown_slug_returns_404(self, client: AsyncClient, logged_in_headers):
@@ -450,9 +445,7 @@ class TestA2AMessageStreamHTTP:
 
     async def test_stream_requires_auth(self, client: AsyncClient, logged_in_headers):
         await _expose_flow_as_a2a(client, logged_in_headers, slug="stream-auth", name="Stream Auth Agent")
-        resp = await client.post(
-            "/a2a/stream-auth/v1/message:stream", json=_message_body("hi"), headers=_BAD_AUTH
-        )
+        resp = await client.post("/a2a/stream-auth/v1/message:stream", json=_message_body("hi"), headers=_BAD_AUTH)
         assert resp.status_code in (401, 403)
 
 
@@ -496,17 +489,38 @@ class TestA2AEdgeCasesHTTP:
         ids = [t["id"] for t in listing.json()]
         assert ids == [task_id]
 
-    async def test_malformed_message_body_is_handled_gracefully(self, client: AsyncClient, logged_in_headers):
-        """Missing/empty message bodies must not 500 the server."""
+    async def test_malformed_message_body_is_rejected_without_leaking_internals(
+        self, client: AsyncClient, logged_in_headers
+    ):
+        """Empty/content-less bodies are rejected with 422 up front.
+
+        They must not execute the flow on empty input, and the response must
+        never leak internal infrastructure details (SQL, tracebacks, DB table
+        names, serialization errors) — a real client should only ever see a
+        clean validation error.
+        """
         slug = "malformed"
         await _expose_flow_as_a2a(client, logged_in_headers, slug=slug, name="Malformed Agent")
 
-        no_message = await client.post(f"/a2a/{slug}/v1/message:send", json={}, headers=logged_in_headers)
-        assert no_message.status_code != 500
+        # Internal markers that must never appear in a client-facing response.
+        leak_markers = ("sql", "traceback", "a2a_task", "json serializable", "sqlalchemy", "[parameters:")
 
-        empty_parts = await client.post(
-            f"/a2a/{slug}/v1/message:send",
+        bodies = [
+            {},  # no message at all
+            {"message": {"role": "user", "parts": []}},  # no parts
+            {"message": {"role": "user", "parts": [{"kind": "text", "text": ""}]}},  # empty text
+        ]
+        for body in bodies:
+            resp = await client.post(f"/a2a/{slug}/v1/message:send", json=body, headers=logged_in_headers)
+            assert resp.status_code == 422, f"expected 422 for {body}, got {resp.status_code}: {resp.text}"
+            lowered = resp.text.lower()
+            leaked = [m for m in leak_markers if m in lowered]
+            assert not leaked, f"response leaked internal details {leaked} for {body}: {resp.text}"
+
+        # The stream endpoint validates the same way (422 before any SSE).
+        stream = await client.post(
+            f"/a2a/{slug}/v1/message:stream",
             json={"message": {"role": "user", "parts": []}},
             headers=logged_in_headers,
         )
-        assert empty_parts.status_code != 500
+        assert stream.status_code == 422, stream.text
