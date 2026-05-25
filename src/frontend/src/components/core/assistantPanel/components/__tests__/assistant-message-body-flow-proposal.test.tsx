@@ -184,8 +184,6 @@ describe("AssistantMessageBody — proposal-mode render (PR #12575 round 2)", ()
     };
     render(<AssistantMessageBody message={msg} isGeneratingCode={false} />);
 
-    expect(
-      screen.getByTestId("assistant-flow-add-button"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-flow-add-button")).toBeInTheDocument();
   });
 });

@@ -77,7 +77,9 @@ const mockValidateComponent = jest.fn();
 jest.mock(
   "@/controllers/API/queries/nodes/use-post-validate-component-code",
   () => ({
-    usePostValidateComponentCode: () => ({ mutateAsync: mockValidateComponent }),
+    usePostValidateComponentCode: () => ({
+      mutateAsync: mockValidateComponent,
+    }),
   }),
 );
 
@@ -143,7 +145,11 @@ const SAMPLE_FLOW = {
   name: "Chat Flow",
   data: {
     nodes: [
-      { id: "ChatInput-x", position: { x: 0, y: 0 }, data: { type: "ChatInput" } },
+      {
+        id: "ChatInput-x",
+        position: { x: 0, y: 0 },
+        data: { type: "ChatInput" },
+      },
       {
         id: "OpenAIModel-y",
         position: { x: 600, y: 0 },
@@ -237,9 +243,7 @@ describe("Proposal pipeline integration (PR #12575 round 2)", () => {
     // body — the user's eyes-on-screen check. The card MUST be reachable.
     render(<AssistantMessageBody message={msg} isGeneratingCode={false} />);
 
-    expect(
-      screen.getByTestId("assistant-flow-add-button"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-flow-add-button")).toBeInTheDocument();
     expect(
       screen.getByTestId("assistant-flow-dismiss-button"),
     ).toBeInTheDocument();
