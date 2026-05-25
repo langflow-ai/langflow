@@ -611,3 +611,147 @@ class TestLazyImportProxyResolution:
         first = proxy._resolve()
         second = proxy._resolve()
         assert first is second
+
+
+class TestLazyImportProxyTorchPrePrime:
+    """The pre-prime path inside ``_LazyImportProxy._resolve``.
+
+    torch 2.x has a fragile partial-init order: when first imported nested
+    inside another module's ``__init__`` chain (e.g. transformers under
+    ``langchain_classic.agents``), Python publishes a half-initialized
+    ``sys.modules["torch"]`` whose ``torch.library`` attribute does not yet
+    exist, surfacing on Windows + torch 2.x as
+    "partially initialized module 'torch' has no attribute 'library' …".
+
+    The fix loads torch top-level *before* the proxy walks the langchain
+    chain. These tests assert that torch is the first module loaded when
+    resolving a langchain-family proxy, but not loaded when resolving a
+    non-langchain proxy. The Windows-specific failure mode itself is not
+    reproducible on macOS / Linux dev envs; this test is a regression guard
+    on the *mechanism* (which langchain family triggers the pre-prime, in
+    what order).
+    """
+
+    @pytest.fixture
+    def import_module_tracker(self, monkeypatch):
+        """Wrap importlib.import_module to record the call order."""
+        import importlib as _importlib
+
+        calls: list[str] = []
+        real_import = _importlib.import_module
+
+        def tracking_import(name, *args, **kwargs):
+            calls.append(name)
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(_importlib, "import_module", tracking_import)
+        return calls
+
+    @pytest.mark.parametrize(
+        "module_name",
+        ["langchain_classic.agents", "langchain.agents", "langchain_community.tools"],
+    )
+    def test_langchain_family_pre_primes_torch(self, import_module_tracker, module_name):
+        # Skip cleanly if torch isn't installed in this env — the pre-prime is
+        # contextlib.suppress(ImportError) on purpose so absent torch is fine.
+        pytest.importorskip("torch")
+        # Skip if the langchain family isn't installed — we can't probe what we can't reach.
+        pytest.importorskip(module_name.split(".")[0])
+
+        proxy = _LazyImportProxy(
+            module_name,
+            "AgentExecutor" if "agents" in module_name else None,
+            is_module_binding="agents" not in module_name,
+            top_level=False,
+        )
+        # Resolution may fail in this env (e.g. AgentExecutor symbol not in
+        # langchain.agents directly); the pre-prime ordering is what we're
+        # asserting, not successful resolution.
+        import contextlib as _contextlib
+
+        with _contextlib.suppress(ImportError, AttributeError):
+            proxy._resolve()
+
+        # Only top-level (non-relative) module names matter for ordering: relative
+        # imports starting with "." are imported inside an already-running module's
+        # __init__ and don't trigger the torch partial-init race.
+        absolute = [c for c in import_module_tracker if not c.startswith(".")]
+        assert "torch" in absolute, f"torch was never imported; calls were {absolute[:10]}"
+        assert module_name in absolute, f"target module not imported; calls were {absolute[:10]}"
+        torch_idx = absolute.index("torch")
+        target_idx = absolute.index(module_name)
+        assert torch_idx < target_idx, (
+            f"torch must be imported BEFORE {module_name} to avoid nested partial-init; "
+            f"order was {absolute[: max(torch_idx, target_idx) + 1]}"
+        )
+
+    def test_non_langchain_proxy_skips_torch_pre_prime(self, import_module_tracker):
+        # `import json` is a stdlib module the proxy can resolve eagerly; the
+        # langchain pre-prime branch must not fire for it. We don't even require
+        # torch to be installed for this assertion.
+        proxy = _LazyImportProxy("json", None, is_module_binding=True, top_level=True)
+        proxy._resolve()
+        assert "torch" not in import_module_tracker, (
+            f"Pre-prime fired for a non-langchain module; calls were {import_module_tracker}"
+        )
+
+
+class TestCreateClassAttributeErrorHandler:
+    """The ``except AttributeError`` branch in :func:`create_class`.
+
+    Sibling case to the ImportError branch: when proxy resolution surfaces an
+    AttributeError (typically torch 2.x partial-init via transformers nested
+    under langchain), the generic ``except Exception`` would wrap it as
+    "Error creating class. AttributeError(...)" with no signal that the fix is
+    environment-level rather than a code typo. The dedicated branch detects
+    the partial-init signature and adds an actionable hint.
+    """
+
+    def test_partial_init_attribute_error_surfaces_actionable_hint(self, monkeypatch):
+        # Force prepare_global_scope to raise the exact AttributeError shape
+        # torch produces under partial init. The handler should catch it and
+        # add the torch/transformers/langchain hint to the ValueError.
+        from lfx.custom import validate as _validate
+
+        partial_init_msg = (
+            "partially initialized module 'torch' has no attribute 'library' (most likely due to a circular import)"
+        )
+
+        def boom(_module):
+            raise AttributeError(partial_init_msg)
+
+        monkeypatch.setattr(_validate, "prepare_global_scope", boom)
+        code = dedent("""
+            from lfx.custom import Component
+            class C(Component):
+                display_name = 'x'
+        """)
+        with pytest.raises(ValueError, match="Attribute error while creating class") as excinfo:
+            create_class(code, "C")
+        msg = str(excinfo.value)
+        assert "partially initialized module" in msg
+        # The actionable hint must surface the suggested fix area
+        assert "transitive C-extension import" in msg
+        assert "torch" in msg
+
+    def test_generic_attribute_error_does_not_get_torch_hint(self, monkeypatch):
+        # An AttributeError that does NOT match the partial-init signature
+        # still surfaces via the AttributeError branch, but without the
+        # torch-specific hint (so we don't mislead the user).
+        from lfx.custom import validate as _validate
+
+        generic_msg = "some other unrelated attribute error"
+
+        def boom(_module):
+            raise AttributeError(generic_msg)
+
+        monkeypatch.setattr(_validate, "prepare_global_scope", boom)
+        code = dedent("""
+            from lfx.custom import Component
+            class C(Component):
+                display_name = 'x'
+        """)
+        with pytest.raises(ValueError, match="Attribute error while creating class") as excinfo:
+            create_class(code, "C")
+        msg = str(excinfo.value)
+        assert "transitive C-extension import" not in msg

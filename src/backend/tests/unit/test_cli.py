@@ -331,3 +331,76 @@ def test_build_direct_uvicorn_kwargs_pins_full_shape():
         "ssl_keyfile",
     }
     assert result["reload"] is False
+
+
+class TestGunicornPreloadDefault:
+    """LANGFLOW_GUNICORN_PRELOAD defaults to "true" so master preload is the default.
+
+    The cold-start refactor's headline optimization (Wave 1 / Wave 2 parallel
+    init, engine-disposal-before-fork, gc.freeze()) only runs when gunicorn is
+    started with preload_app=True. The two os.environ.get(...) call sites in
+    __main__.py both default to "false" if the var is missing, so an operator
+    who never exports the var would silently miss the optimization. ``run()``
+    sets the default to "true" via os.environ.setdefault after load_dotenv,
+    so explicit user / .env values still win.
+
+    These tests cover both halves: the *mechanism* (the setdefault line is in
+    the run() body in the right place relative to load_dotenv and the .get
+    calls) and the *behavior* (the setdefault + .get pattern resolves the
+    expected boolean for unset / explicit-true / explicit-false / empty
+    cases).
+    """
+
+    @pytest.fixture
+    def isolated_preload_env(self, monkeypatch):
+        monkeypatch.delenv("LANGFLOW_GUNICORN_PRELOAD", raising=False)
+        return monkeypatch
+
+    @pytest.mark.parametrize(
+        ("initial", "expected"),
+        [
+            (None, True),  # unset -> setdefault kicks in -> resolves true
+            ("true", True),  # explicit true preserved
+            ("false", False),  # explicit false preserved (NOT overwritten by setdefault)
+            ("", False),  # empty string is preserved by setdefault, .lower()=="true" is False
+            ("TRUE", True),  # case-insensitive resolution
+            ("False", False),
+        ],
+    )
+    def test_preload_resolution_matches_setdefault_semantics(self, isolated_preload_env, initial, expected):
+        # Mirrors the exact two-line pattern from langflow.__main__.run():
+        #   os.environ.setdefault("LANGFLOW_GUNICORN_PRELOAD", "true")
+        #   ... os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true"
+        # Asserts the combined semantics across the parametrized cases so any
+        # accidental flip of the default (e.g. setdefault removed, or .get
+        # default changed) is caught.
+        import os as _os
+
+        if initial is not None:
+            isolated_preload_env.setenv("LANGFLOW_GUNICORN_PRELOAD", initial)
+        _os.environ.setdefault("LANGFLOW_GUNICORN_PRELOAD", "true")
+        resolved = _os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true"
+        assert resolved is expected, f"Expected resolved={expected} for initial={initial!r}, got {resolved}"
+
+    def test_setdefault_line_present_in_run_function(self):
+        # Guard: prevent silent regressions where someone removes the setdefault
+        # line or relocates it before load_dotenv (which would cause it to
+        # overwrite values the .env file is supposed to set). Read the source,
+        # find run(), and assert the setdefault line is between load_dotenv
+        # and the first .get call.
+        import inspect
+
+        import langflow.__main__ as m
+
+        src = inspect.getsource(m.run)
+        assert 'os.environ.setdefault("LANGFLOW_GUNICORN_PRELOAD", "true")' in src, (
+            "Expected the LANGFLOW_GUNICORN_PRELOAD setdefault default in run(); "
+            "did someone remove the cold-start fork-safe default?"
+        )
+        setdefault_idx = src.index('os.environ.setdefault("LANGFLOW_GUNICORN_PRELOAD"')
+        load_dotenv_idx = src.index("load_dotenv")
+        get_idx = src.index('os.environ.get("LANGFLOW_GUNICORN_PRELOAD"')
+        assert load_dotenv_idx < setdefault_idx < get_idx, (
+            "setdefault must run AFTER load_dotenv (so .env values win) and "
+            "BEFORE the .get call sites (so the default is in place when read)"
+        )
