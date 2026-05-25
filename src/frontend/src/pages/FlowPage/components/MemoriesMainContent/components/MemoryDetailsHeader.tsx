@@ -36,10 +36,10 @@ export function MemoryDetailsHeader({
     setIsRefreshing(true);
     try {
       await onRefresh();
-      setSuccessData({ title: `Memory "${memory.name}" refreshed` });
+      setSuccessData({ title: t("memory.refreshedSuccess", { name: memory.name }) });
     } catch (error) {
       setErrorData({
-        title: "Failed to refresh memory",
+        title: t("memory.refreshedError"),
         list: extractApiErrorMessages(error),
       });
     } finally {
@@ -156,7 +156,7 @@ export function MemoryDetailsHeader({
                 : "bg-muted-foreground",
             )}
           />
-          Auto-capture
+          {t("memory.autoCapture")}
         </Button>
 
         <Button
@@ -186,7 +186,7 @@ export function MemoryDetailsHeader({
             disabled={deleteMutation.isPending}
           >
             <IconComponent name="Trash2" className="h-4 w-4" />
-            Delete
+            {t("memory.deleteButton")}
           </Button>
         </DeleteConfirmationModal>
       </div>

@@ -219,7 +219,7 @@ export default function RecentFilesComponent({
       {
         onSuccess: (data) => {
           setSuccessData({
-            title: data?.message ?? "Files deleted successfully",
+            title: data?.message ?? t("files.deletedSuccessfully"),
           });
           setSelectedFiles([]);
         },

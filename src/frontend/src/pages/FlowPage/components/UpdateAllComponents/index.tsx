@@ -2,6 +2,7 @@ import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
   type UpdateNodesType,
@@ -20,13 +21,6 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
-const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
-const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
-  "There was an error updating the components.",
-  "If the error persists, please report it on our Discord or GitHub.",
-];
-const ERROR_MESSAGE_EDGES_LOST =
-  "Some edges were lost after updating the components. Please review the flow and reconnect them.";
 
 const CONTAINER_VARIANTS = {
   hidden: { opacity: 0, y: 20 },
@@ -37,6 +31,7 @@ const CONTAINER_VARIANTS = {
 export default function UpdateAllComponents() {
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
   const templates = useTypesStore((state) => state.templates);
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutateAsync: validateComponentCode } = usePostValidateComponentCode();
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -103,7 +98,7 @@ export default function UpdateAllComponents() {
       edgesUpdateRef.current.updateComponent
     ) {
       useAlertStore.getState().setNoticeData({
-        title: ERROR_MESSAGE_EDGES_LOST,
+        title: t("errors.edgesLost"),
       });
 
       resetEdgesUpdateRef();
@@ -112,9 +107,7 @@ export default function UpdateAllComponents() {
 
   const getSuccessTitle = (updatedCount: number) => {
     resetEdgesUpdateRef();
-    return `Successfully updated ${updatedCount} component${
-      updatedCount > 1 ? "s" : ""
-    }`;
+    return t("updateComponents.successCount", { count: updatedCount });
   };
 
   const breakingChanges = updatableComponents.filter(
@@ -208,8 +201,8 @@ export default function UpdateAllComponents() {
       })
       .catch((error) => {
         setErrorData({
-          title: ERROR_MESSAGE_UPDATING_COMPONENTS,
-          list: ERROR_MESSAGE_UPDATING_COMPONENTS_LIST,
+          title: t("errors.updateComponents"),
+          list: [t("errors.updateComponentsList"), t("errors.updateComponentsContact")],
         });
         console.error(error);
       })

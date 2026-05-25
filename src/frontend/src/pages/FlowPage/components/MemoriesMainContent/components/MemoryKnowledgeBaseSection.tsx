@@ -43,7 +43,7 @@ export function MemoryKnowledgeBaseSection({
         <div className="flex items-center gap-2">
           <h3 className="text-xs font-semibold">{t("memory.memoryBase")}</h3>
           <span className="text-xs text-muted-foreground">
-            {docsData?.total ?? 0} chunks
+            {t("memory.chunksCount", { count: docsData?.total ?? 0 })}
           </span>
         </div>
       </div>
@@ -70,11 +70,11 @@ export function MemoryKnowledgeBaseSection({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-24 text-xs">Sender</TableHead>
-                <TableHead className="w-40 text-xs">Job ID</TableHead>
-                <TableHead className="text-xs">Content</TableHead>
+                <TableHead className="w-24 text-xs">{t("memory.senderHeader")}</TableHead>
+                <TableHead className="w-40 text-xs">{t("memory.jobIdHeader")}</TableHead>
+                <TableHead className="text-xs">{t("memory.contentHeader")}</TableHead>
                 <TableHead className="w-44 text-xs">
-                  Ingestion Timestamp
+                  {t("memory.ingestionTimestampHeader")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -142,7 +142,7 @@ export function MemoryKnowledgeBaseSection({
                   <TableCell colSpan={4} className="py-4">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Loading size={16} className="text-muted-foreground" />
-                      Loading more...
+                      {t("memory.loadingMore")}
                     </div>
                   </TableCell>
                 </TableRow>

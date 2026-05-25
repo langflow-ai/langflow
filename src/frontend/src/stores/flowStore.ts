@@ -1074,7 +1074,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
             title:
-              "There are blocked or outdated components in the flow. The error could be related to them.",
+              i18n.t("errors.blockedComponents"),
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),

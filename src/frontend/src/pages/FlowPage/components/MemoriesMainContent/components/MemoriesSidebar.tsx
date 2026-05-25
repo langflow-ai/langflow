@@ -38,7 +38,7 @@ export function MemoriesSidebar({
               name="BrainCog"
               className="h-4 w-4 text-muted-foreground"
             />
-            <h2 className="text-sm font-semibold">Memories</h2>
+            <h2 className="text-sm font-semibold">{t("memory.sidebarTitle")}</h2>
           </div>
           <Button
             size="sm"
@@ -47,7 +47,7 @@ export function MemoriesSidebar({
             disabled={!currentFlowId}
           >
             <IconComponent name="Plus" className="h-3.5 w-3.5" />
-            Create
+            {t("memory.createButton")}
           </Button>
         </div>
       </div>
@@ -67,7 +67,7 @@ export function MemoriesSidebar({
               name="BrainCog"
               className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
-            <p className="text-xs text-muted-foreground">No memories found</p>
+            <p className="text-xs text-muted-foreground">{t("memory.noMemoriesFound")}</p>
           </div>
         )}
         {filteredMemories.length > 0 && (
@@ -98,13 +98,13 @@ export function MemoriesSidebar({
                         role="img"
                         aria-label={
                           memoryItem.is_active
-                            ? "Auto-capture enabled"
-                            : "Auto-capture disabled"
+                            ? t("memory.autoCaptureEnabled")
+                            : t("memory.autoCaptureDisabled")
                         }
                         title={
                           memoryItem.is_active
-                            ? "Auto-capture enabled"
-                            : "Auto-capture disabled"
+                            ? t("memory.autoCaptureEnabled")
+                            : t("memory.autoCaptureDisabled")
                         }
                       />
                       <div className="truncate text-sm font-medium">

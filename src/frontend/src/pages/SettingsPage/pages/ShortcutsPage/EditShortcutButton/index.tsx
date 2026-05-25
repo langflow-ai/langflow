@@ -86,7 +86,7 @@ export default function EditShortcutButton({
     if (!key) {
       setErrorData({
         title: t("errors.errorSavingKeyCombination"),
-        list: ["No key combination recorded."],
+        list: [t("shortcuts.noKeyCombination")],
       });
       return;
     }
@@ -94,7 +94,7 @@ export default function EditShortcutButton({
     if (isDuplicateCombination(shortcuts, shortcut[0], normalizedCombination)) {
       setErrorData({
         title: t("errors.errorSavingKeyCombination"),
-        list: ["This combination already exists!"],
+        list: [t("shortcuts.combinationExists")],
       });
       return;
     }
@@ -119,14 +119,14 @@ export default function EditShortcutButton({
     if (!defaultShortcut) {
       setErrorData({
         title: t("errors.errorResettingShortcut"),
-        list: ["Default shortcut not found."],
+        list: [t("shortcuts.defaultNotFound")],
       });
       return;
     }
     if (isDuplicateCombination(shortcuts, shortcut[0], defaultShortcut)) {
       setErrorData({
         title: t("errors.errorResettingShortcut"),
-        list: ["This combination already exists!"],
+        list: [t("shortcuts.combinationExists")],
       });
       return;
     }

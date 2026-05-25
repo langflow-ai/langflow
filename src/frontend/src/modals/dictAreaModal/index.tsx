@@ -45,7 +45,7 @@ export default function DictAreaModal({
         console.error("Error getting JSON:", error);
         setErrorData({
           title: t("errors.errorGettingDictionary"),
-          list: ["Check your dictionary format"],
+          list: [t("errors.checkDictionaryFormat")],
         });
       }
     }

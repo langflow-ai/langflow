@@ -339,7 +339,7 @@ export default function StepAttachFlows() {
       const detail = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail;
       setErrorData({
-        title: "Failed to create version from draft",
+        title: t("deployments.createVersionFromDraftError"),
         ...(detail ? { list: [detail] } : {}),
       });
     }

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ export function MetadataEditor({
   disabled = false,
   testIdScope = "kb",
 }: MetadataEditorProps) {
+  const { t } = useTranslation();
   const validation = useMemo(() => validateMetadataPairs(pairs), [pairs]);
 
   const updatePair = (index: number, patch: Partial<MetadataPair>) => {
@@ -71,7 +73,7 @@ export function MetadataEditor({
   return (
     <div className="flex flex-col gap-2">
       <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-        Custom Fields
+        {t("knowledge.metadataCustomFields")}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -103,7 +105,7 @@ export function MetadataEditor({
             className="text-xs text-muted-foreground italic"
             data-testid={`${testIdScope}-metadata-empty`}
           >
-            No metadata fields added.
+            {t("knowledge.metadataNoFields")}
           </div>
         )}
 
@@ -172,7 +174,7 @@ export function MetadataEditor({
           className="w-fit"
         >
           <ForwardedIconComponent name="Plus" className="mr-1 h-3.5 w-3.5" />
-          Add field
+          {t("knowledge.metadataAddField")}
         </Button>
       </div>
     </div>

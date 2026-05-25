@@ -59,14 +59,14 @@ export default function CreateMemoryModal({
       size="small-h-full"
       onSubmit={handleSubmit}
     >
-      <BaseModal.Header description={`Create a memory for \"${flowName}\"`}>
+      <BaseModal.Header description={t("memory.createModalDescription", { flowName })}>
         <ForwardedIconComponent name="BrainCog" className="mr-2 h-4 w-4" />
-        Create Memory
+        {t("memory.createModalTitle")}
       </BaseModal.Header>
       <BaseModal.Content className="flex flex-col gap-6 px-6 py-4">
         <div className="flex flex-col gap-2">
           <Label htmlFor="memory-name">
-            Name <span className="text-destructive">*</span>
+            {t("memory.nameLabel")} <span className="text-destructive">*</span>
           </Label>
           <Input
             id="memory-name"
@@ -79,7 +79,7 @@ export default function CreateMemoryModal({
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <div className="flex flex-col gap-2 md:col-span-2">
             <Label className="text-sm font-medium">
-              Embedding Model <span className="text-destructive">*</span>
+              {t("memory.embeddingModelLabel")} <span className="text-destructive">*</span>
             </Label>
             <div className={cn("rounded-md", "[&_button]:h-10")}>
               <ModelInputComponent
@@ -97,7 +97,7 @@ export default function CreateMemoryModal({
             </div>
             {selectedEmbeddingModel[0]?.provider && (
               <span className="text-xs text-muted-foreground">
-                Provider: {selectedEmbeddingModel[0].provider}
+                {t("memory.providerValue", { provider: selectedEmbeddingModel[0].provider })}
               </span>
             )}
           </div>
@@ -143,10 +143,10 @@ export default function CreateMemoryModal({
         <div className="flex items-center justify-between rounded-lg border border-border p-3">
           <div className="flex flex-col gap-0.5">
             <Label className="text-sm" htmlFor="llm-preprocessing-switch">
-              LLM Preprocessing
+              {t("memory.llmPreprocessingLabel")}
             </Label>
             <span className="text-xs text-muted-foreground">
-              Summarize messages with an LLM before ingestion
+              {t("memory.llmPreprocessingDescription")}
             </span>
           </div>
           <Switch
@@ -160,7 +160,7 @@ export default function CreateMemoryModal({
           <>
             <div className="flex flex-col gap-2">
               <Label className="text-sm font-medium">
-                Preprocessing Model <span className="text-destructive">*</span>
+                {t("memory.preprocessingModelLabel")} <span className="text-destructive">*</span>
               </Label>
               <div className={cn("rounded-md", "[&_button]:h-10")}>
                 <ModelInputComponent
@@ -178,13 +178,13 @@ export default function CreateMemoryModal({
               </div>
               {selectedPreprocessingModel[0]?.provider && (
                 <span className="text-xs text-muted-foreground">
-                  Provider: {selectedPreprocessingModel[0].provider}
+                  {t("memory.providerValue", { provider: selectedPreprocessingModel[0].provider })}
                 </span>
               )}
             </div>
             <div className="flex flex-col gap-2">
               <Label htmlFor="preprocessing-prompt">
-                Preprocessing Instructions (optional)
+                {t("memory.preprocessingInstructionsLabel")}
               </Label>
               <Textarea
                 id="preprocessing-prompt"
@@ -199,7 +199,7 @@ export default function CreateMemoryModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Create Memory",
+          label: t("memory.createModalTitle"),
           icon: <ForwardedIconComponent name="Plus" className="h-4 w-4" />,
           loading: createMemoryMutation.isPending,
           disabled:
