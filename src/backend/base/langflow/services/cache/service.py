@@ -177,7 +177,6 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
-
 # Serialization markers for identifying the format of cached values in Redis.
 # Using \x01 prefix which cannot appear at the start of valid pickled data.
 _SERIAL_JSON = b"json:"
@@ -243,9 +242,9 @@ def _deserialize_value(data: bytes) -> Any:
     Falls back to dill for backward compatibility with unmarked cached data.
     """
     if data.startswith(_SERIAL_JSON):
-        return json.loads(data[len(_SERIAL_JSON):].decode("utf-8"))
+        return json.loads(data[len(_SERIAL_JSON) :].decode("utf-8"))
     if data.startswith(_SERIAL_DILL):
-        return dill.loads(data[len(_SERIAL_DILL):])
+        return dill.loads(data[len(_SERIAL_DILL) :])
     # Backward compatibility: unmarked data was serialized with dill
     return dill.loads(data)
 
