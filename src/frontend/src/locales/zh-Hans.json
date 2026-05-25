@@ -951,7 +951,6 @@
   "memory.noChunksYet": "目前还没有块",
   "memory.noId": "(无ID)",
   "memory.preprocessing": "预处理：",
-  "memory.preprocessingPromptPlaceholder": "撰写一份简明扼要的摘要，概括关键事实和背景。",
   "memory.processedMessages": "已处理的消息",
   "memory.providerLabel": "提供商：",
   "memory.reloadSessions": "重新加载会话和消息",

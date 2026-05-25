@@ -1891,14 +1891,14 @@ class TestMemoriesAPIHandlers:
         assert exc_info.value.status_code == 404
 
     # ---------------------------------------------------------------- #
-    #  list_session_messages                                            #
+    #  list_memory_base_messages                                        #
     # ---------------------------------------------------------------- #
 
     @pytest.mark.asyncio
-    async def test_list_session_messages_not_found_raises_404(self, mock_user):
+    async def test_list_memory_base_messages_not_found_raises_404(self, mock_user):
         from fastapi import HTTPException
         from fastapi_pagination import Params
-        from langflow.api.v1.memories import list_session_messages
+        from langflow.api.v1.memories import list_memory_base_messages
 
         mock_db = AsyncMock()
         result_mock = MagicMock()
@@ -1916,7 +1916,7 @@ class TestMemoriesAPIHandlers:
             patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
             pytest.raises(HTTPException) as exc_info,
         ):
-            await list_session_messages(
+            await list_memory_base_messages(
                 memory_base_id=uuid.uuid4(),
                 session_id="s1",
                 current_user=mock_user,
@@ -1924,6 +1924,67 @@ class TestMemoriesAPIHandlers:
             )
 
         assert exc_info.value.status_code == 404
+
+    @pytest.mark.asyncio
+    async def test_list_memory_base_messages_without_session_id_not_found_raises_404(self, mock_user):
+        from fastapi import HTTPException
+        from fastapi_pagination import Params
+        from langflow.api.v1.memories import list_memory_base_messages
+
+        mock_db = AsyncMock()
+        result_mock = MagicMock()
+        result_mock.first = MagicMock(return_value=None)
+        mock_db.exec = AsyncMock(return_value=result_mock)
+
+        class FakeCtx:
+            async def __aenter__(self):
+                return mock_db
+
+            async def __aexit__(self, *a):
+                pass
+
+        with (
+            patch("langflow.api.v1.memories.session_scope", return_value=FakeCtx()),
+            pytest.raises(HTTPException) as exc_info,
+        ):
+            await list_memory_base_messages(
+                memory_base_id=uuid.uuid4(),
+                current_user=mock_user,
+                params=Params(),
+            )
+
+        assert exc_info.value.status_code == 404
+
+    def test_session_raw_messages_stmt_omits_session_filter_when_none(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        svc = MemoryBaseService.__new__(MemoryBaseService)
+        mb_id = uuid.uuid4()
+
+        stmt_filtered = svc.session_raw_messages_stmt(mb_id, "s1")
+        stmt_all = svc.session_raw_messages_stmt(mb_id)
+
+        sql_filtered = str(stmt_filtered.compile(compile_kwargs={"literal_binds": True}))
+        sql_all = str(stmt_all.compile(compile_kwargs={"literal_binds": True}))
+
+        # The filtered variant constrains on the session_id literal; the "all" variant must not.
+        assert "session_id = 's1'" in sql_filtered
+        assert "session_id =" not in sql_all
+
+    def test_session_preprocessed_outputs_stmt_omits_session_filter_when_none(self):
+        from langflow.services.memory_base.service import MemoryBaseService
+
+        svc = MemoryBaseService.__new__(MemoryBaseService)
+        mb_id = uuid.uuid4()
+
+        stmt_filtered = svc.session_preprocessed_outputs_stmt(mb_id, "s1")
+        stmt_all = svc.session_preprocessed_outputs_stmt(mb_id)
+
+        sql_filtered = str(stmt_filtered.compile(compile_kwargs={"literal_binds": True}))
+        sql_all = str(stmt_all.compile(compile_kwargs={"literal_binds": True}))
+
+        assert "session_id = 's1'" in sql_filtered
+        assert "session_id =" not in sql_all
 
     # ---------------------------------------------------------------- #
     #  MessageReadResponse schema                                       #

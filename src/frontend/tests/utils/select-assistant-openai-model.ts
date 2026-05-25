@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
 
+import { TEXTS } from "../utils/constants/texts";
 const PREFERRED_OPENAI_MODELS = [
   "gpt-4o-mini",
   "gpt-4.1-mini",
@@ -60,7 +61,7 @@ const enablePreferredOpenAiModel = async (page: Page) => {
     await toggle.click();
   }
 
-  await page.getByText("Close").last().click();
+  await page.getByText(TEXTS.close).last().click();
   return modelName;
 };
 

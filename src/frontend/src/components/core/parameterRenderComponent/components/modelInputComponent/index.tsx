@@ -156,14 +156,31 @@ export default function ModelInputComponent({
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
+    error: providersError,
+    refetch: refetchProviders,
   } = useGetModelProviders({});
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
+    error: enabledModelsError,
+    refetch: refetchEnabledModels,
   } = useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
+  const isFetching = isFetchingProviders || isFetchingEnabledModels;
+  // Only surface the retry UI when a query failed AND it has no usable data
+  // to fall back on. TanStack Query exposes ``data`` alongside ``error`` for
+  // refetch failures (the providers hook explicitly preserves stale data on
+  // error), so a transient background-refetch error should not replace a
+  // working dropdown with the "couldn't load models" affordance. We also
+  // wait until any in-flight refetch settles to avoid flicker.
+  const providersUnusable =
+    !!providersError && (!providersData || providersData.length === 0);
+  const enabledModelsUnusable =
+    !!enabledModelsError && enabledModelsData === undefined;
+  const hasInitialLoadError =
+    !isFetching && (providersUnusable || enabledModelsUnusable);
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -501,7 +518,7 @@ export default function ModelInputComponent({
     setOpen(false);
     setRefreshOptions(true);
     try {
-      await refreshAllModelInputs({ silent: true });
+      await refreshAllModelInputs({ silent: false });
     } catch {
       // refreshAllModelInputs handles its own error notifications via alertStore
     } finally {
@@ -561,6 +578,30 @@ export default function ModelInputComponent({
       disabled
     >
       <LoadingTextComponent text={t("modelInput.loadingModels")} />
+    </Button>
+  );
+
+  const handleRetryLoad = useCallback(() => {
+    void refetchProviders();
+    void refetchEnabledModels();
+  }, [refetchProviders, refetchEnabledModels]);
+
+  const renderErrorButton = () => (
+    <Button
+      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+      variant="primary"
+      size="xs"
+      data-testid="model-input-load-failed"
+      onClick={handleRetryLoad}
+    >
+      <span className="flex items-center gap-2 truncate text-left">
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
+        />
+        <span className="truncate">{t("modelInput.loadFailed")}</span>
+      </span>
+      <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
     </Button>
   );
 
@@ -642,6 +683,17 @@ export default function ModelInputComponent({
 
   if (!showParameter) {
     return null;
+  }
+
+  // Surface a retry affordance only when the queries failed AND we have no
+  // usable data to display. Without this the dropdown silently stays empty
+  // (or, before the api interceptor fix, looped on "Loading models…"
+  // indefinitely) when the auth/model endpoints reject the initial request.
+  // We deliberately ignore refetch errors that leave stale data intact so a
+  // transient background refresh failure doesn't replace a working dropdown
+  // with the error state.
+  if (hasInitialLoadError) {
+    return <div className="w-full">{renderErrorButton()}</div>;
   }
 
   // Show loading indicator only when actually loading data, not when options are genuinely empty
