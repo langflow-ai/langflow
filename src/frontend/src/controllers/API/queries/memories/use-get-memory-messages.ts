@@ -12,7 +12,7 @@ import {
   memoriesRetryDelay,
 } from "./memoriesQueryConfig";
 
-export type MemorySessionMessageApiItem = {
+export type MemoryMessageApiItem = {
   timestamp: string;
   sender: string;
   sender_name?: string;
@@ -23,23 +23,24 @@ export type MemorySessionMessageApiItem = {
   content_blocks?: unknown[];
 };
 
-export type GetMemorySessionMessagesApiResponse = {
-  items: MemorySessionMessageApiItem[];
+export type GetMemoryMessagesApiResponse = {
+  items: MemoryMessageApiItem[];
   total: number;
   page: number;
   size: number;
   pages: number;
 };
 
-export type GetMemorySessionMessagesParams = {
+export type GetMemoryMessagesParams = {
   memoryId: string;
-  sessionId: string;
+  sessionId?: string | null;
   size?: number;
 };
 
-type MessagesPage = GetMemorySessionMessagesApiResponse;
+type MessagesPage = GetMemoryMessagesApiResponse;
 
-const MESSAGES_INFINITE_QUERY_KEY = "useGetMemorySessionMessagesInfinite";
+const MESSAGES_INFINITE_QUERY_KEY = "useGetMemoryMessagesInfinite";
+const ALL_SESSIONS_KEY = "__all__";
 
 type MessagesQueryKey = readonly [
   typeof MESSAGES_INFINITE_QUERY_KEY,
@@ -48,8 +49,8 @@ type MessagesQueryKey = readonly [
   number,
 ];
 
-export const useGetMemorySessionMessages = (
-  params: GetMemorySessionMessagesParams,
+export const useGetMemoryMessages = (
+  params: GetMemoryMessagesParams,
   options?: Omit<
     UseInfiniteQueryOptions<
       MessagesPage,
@@ -62,7 +63,7 @@ export const useGetMemorySessionMessages = (
   >,
 ): UseInfiniteQueryResult<InfiniteData<MessagesPage, number>, unknown> => {
   const memoryId = params?.memoryId;
-  const sessionId = params?.sessionId;
+  const sessionId = params?.sessionId ?? null;
   const size = params?.size ?? MEMORIES_PAGE_SIZE;
 
   const getMessagesPage = async ({
@@ -73,18 +74,16 @@ export const useGetMemorySessionMessages = (
     if (!memoryId) {
       throw new Error("memoryId is required");
     }
-    if (!sessionId) {
-      throw new Error("sessionId is required");
-    }
 
-    const baseUrl = `${getURL("MEMORIES")}/${memoryId}/sessions/${sessionId}/messages`;
+    const baseUrl = `${getURL("MEMORIES")}/${memoryId}/messages`;
     const url = new URL(baseUrl, window.location.origin);
     url.searchParams.set("page", String(pageParam));
     url.searchParams.set("size", String(size));
+    if (sessionId) {
+      url.searchParams.set("session_id", sessionId);
+    }
 
-    const res = await api.get<GetMemorySessionMessagesApiResponse>(
-      url.toString(),
-    );
+    const res = await api.get<GetMemoryMessagesApiResponse>(url.toString());
 
     return {
       items: Array.isArray(res.data?.items) ? res.data.items : [],
@@ -102,7 +101,12 @@ export const useGetMemorySessionMessages = (
     MessagesQueryKey,
     number
   >({
-    queryKey: [MESSAGES_INFINITE_QUERY_KEY, memoryId, sessionId, size] as const,
+    queryKey: [
+      MESSAGES_INFINITE_QUERY_KEY,
+      memoryId,
+      sessionId ?? ALL_SESSIONS_KEY,
+      size,
+    ] as const,
     queryFn: getMessagesPage,
     initialPageParam: 1,
     getNextPageParam: (lastPage) =>
@@ -110,7 +114,7 @@ export const useGetMemorySessionMessages = (
     refetchOnWindowFocus: false,
     retry: MEMORIES_RETRY_MAX_ATTEMPTS,
     retryDelay: memoriesRetryDelay,
-    enabled: !!memoryId && !!sessionId,
+    enabled: !!memoryId,
     ...(options ?? {}),
   });
 };

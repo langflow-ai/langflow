@@ -3,7 +3,7 @@ import type {
   MemoryDocumentItem,
   MemorySessionInfo,
 } from "@/controllers/API/queries/memories/types";
-import { useGetMemorySessionMessages } from "@/controllers/API/queries/memories/use-get-memory-session-messages";
+import { useGetMemoryMessages } from "@/controllers/API/queries/memories/use-get-memory-messages";
 
 type UseMemoryDocumentsArgs = {
   memoryId?: string | null;
@@ -25,14 +25,14 @@ export const useMemoryDocuments = ({
     hasNextPage: hasNextMessagesPage,
     isFetchingNextPage: isFetchingNextMessagesPage,
     refetch: refetchMessages,
-  } = useGetMemorySessionMessages(
+  } = useGetMemoryMessages(
     {
       memoryId: memoryId ?? "",
-      sessionId: sessionId ?? "",
+      sessionId: sessionId ?? null,
       size: DEFAULT_PAGE_SIZE,
     },
     {
-      enabled: !!memoryId && !!sessionId,
+      enabled: !!memoryId,
     },
   );
 
@@ -72,10 +72,6 @@ export const useMemoryDocuments = ({
       })
       .filter((d) => d.content);
 
-    const sessionScopedDocuments = sessionId
-      ? rawDocuments.filter((doc) => doc.session_id === sessionId)
-      : rawDocuments;
-
     const sessions = Array.from(
       new Set(
         (memorySessions ?? [])
@@ -85,15 +81,14 @@ export const useMemoryDocuments = ({
     );
 
     const totalFromApi =
-      memoryMessagesInfinite?.pages?.[0]?.total ??
-      sessionScopedDocuments.length;
+      memoryMessagesInfinite?.pages?.[0]?.total ?? rawDocuments.length;
 
     return {
-      documents: sessionScopedDocuments,
+      documents: rawDocuments,
       total: totalFromApi,
       sessions,
     };
-  }, [memoryMessagesInfinite, memorySessions, sessionId]);
+  }, [memoryMessagesInfinite, memorySessions]);
 
   return {
     docsData,
