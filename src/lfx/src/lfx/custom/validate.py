@@ -55,6 +55,137 @@ _LEGACY_LFX_IMPORT_HINTS: dict[str, str] = {
 }
 
 
+def _resolve_import_module_for_name(missing: str | None) -> str | None:
+    """Return the module string a missing symbol should be imported from, if known.
+
+    Checks the legacy lfx hint table first, then falls back to the langchain
+    symbol table. The langchain lookup is lazy so the field-typing names module
+    doesn't get pulled at import time on the hot path; this helper is only
+    called from the cold error path.
+    """
+    if not missing:
+        return None
+    module = _LEGACY_LFX_IMPORT_HINTS.get(missing)
+    if module is not None:
+        return module
+    from lfx.field_typing.names import LANGCHAIN_SYMBOLS
+
+    symbol = LANGCHAIN_SYMBOLS.get(missing)
+    if symbol is not None:
+        return symbol[0]
+    return None
+
+
+def _format_undefined_name_message(missing: str | None, original: str) -> str:
+    """Format the user-facing NameError message with an actionable hint when possible.
+
+    Used by both the runtime NameError handler in :func:`create_class` and the
+    static analysis pass that walks function bodies, so both error paths phrase
+    the fix the same way.
+    """
+    module = _resolve_import_module_for_name(missing)
+    hint = (
+        f" If not already imported, add `from {module} import {missing}` to your "
+        f"component code; if already imported, verify that '{module}' is installed "
+        f"and importable in this environment."
+        if module
+        else ""
+    )
+    return f"Name error (possibly undefined variable): {original}.{hint}"
+
+
+def _check_function_body_name_resolution(module: ast.Module, exec_globals: dict) -> None:
+    """Static check: undefined symbols inside def-body code that exec(module) doesn't catch.
+
+    Compiling a class body succeeds whether or not its method bodies reference
+    real names — Python only resolves Name nodes at call time. The hint
+    formatter therefore only fires for class-body references when create_class
+    relies on the runtime NameError path. This pass walks every FunctionDef /
+    AsyncFunctionDef inside every ClassDef in the parsed module and raises a
+    ValueError (with the same actionable hint as the runtime path) when it
+    finds a free Name reference that is not in:
+
+      - the module's exec_globals (imports + class/function defs),
+      - the function's own locals (parameters, assignments, for/with targets,
+        comprehension iterators, except-as bindings, nested defs),
+      - Python builtins,
+      - the legacy/langchain hint tables.
+
+    The legacy/hint check is intentional: a symbol covered by the hint table is
+    almost certainly a missing import the user should be told about (the whole
+    point of the hint), so we DO surface it even if it would otherwise look
+    like a free name. Names with no hint are passed through silently to avoid
+    flagging dynamic/runtime-injected references.
+    """
+    import builtins as _builtins
+
+    builtin_names = set(dir(_builtins))
+
+    def _collect_target_names(node: ast.AST, out: set[str]) -> None:
+        if isinstance(node, ast.Name):
+            out.add(node.id)
+        elif isinstance(node, (ast.Tuple, ast.List)):
+            for elt in node.elts:
+                _collect_target_names(elt, out)
+        elif isinstance(node, ast.Starred):
+            _collect_target_names(node.value, out)
+
+    def _function_locals(fn: ast.FunctionDef | ast.AsyncFunctionDef | ast.Lambda) -> set[str]:
+        locals_: set[str] = set()
+        args = fn.args
+        for a in (*args.posonlyargs, *args.args, *args.kwonlyargs):
+            locals_.add(a.arg)
+        if args.vararg:
+            locals_.add(args.vararg.arg)
+        if args.kwarg:
+            locals_.add(args.kwarg.arg)
+        body = fn.body if isinstance(fn, (ast.FunctionDef, ast.AsyncFunctionDef)) else [fn.body]
+        for sub in ast.walk(ast.Module(body=body, type_ignores=[])):
+            if isinstance(sub, ast.Assign):
+                for tgt in sub.targets:
+                    _collect_target_names(tgt, locals_)
+            elif isinstance(sub, (ast.AnnAssign, ast.AugAssign, ast.For, ast.AsyncFor)):
+                _collect_target_names(sub.target, locals_)
+            elif isinstance(sub, (ast.With, ast.AsyncWith)):
+                for item in sub.items:
+                    if item.optional_vars is not None:
+                        _collect_target_names(item.optional_vars, locals_)
+            elif (isinstance(sub, ast.ExceptHandler) and sub.name) or isinstance(
+                sub, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
+            ):
+                locals_.add(sub.name)
+            elif isinstance(sub, ast.Import):
+                for alias in sub.names:
+                    locals_.add((alias.asname or alias.name).split(".")[0])
+            elif isinstance(sub, ast.ImportFrom):
+                for alias in sub.names:
+                    if alias.name != "*":
+                        locals_.add(alias.asname or alias.name)
+            elif isinstance(sub, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
+                for gen in sub.generators:
+                    _collect_target_names(gen.target, locals_)
+        return locals_
+
+    for class_node in (n for n in module.body if isinstance(n, ast.ClassDef)):
+        for fn in (n for n in class_node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))):
+            locals_ = _function_locals(fn)
+            for sub in ast.walk(fn):
+                if isinstance(sub, ast.Name) and isinstance(sub.ctx, ast.Load):
+                    name = sub.id
+                    if name in locals_ or name in exec_globals or name in builtin_names:
+                        continue
+                    # Only surface the typed hint when we actually know which
+                    # module the missing name should come from. Names without
+                    # a known import target are deliberately passed through:
+                    # they may be runtime-injected globals (graph-level
+                    # context, monkey-patched bases, etc.) and we don't want
+                    # to false-positive on those.
+                    if _resolve_import_module_for_name(name) is None:
+                        continue
+                    msg = _format_undefined_name_message(name, f"name '{name}' is not defined")
+                    raise ValueError(msg)
+
+
 def add_type_ignores() -> None:
     if not hasattr(ast, "TypeIgnore"):
 
@@ -305,6 +436,12 @@ def create_class(code, class_name):
     try:
         module = ast.parse(code)
         exec_globals = prepare_global_scope(module)
+        # Static check for symbols referenced inside method bodies that the
+        # exec above won't catch (Python only resolves Name nodes at call
+        # time, so a missing import that's only referenced inside
+        # ``def build(self):`` would otherwise pass validation and crash at
+        # runtime with no hint).
+        _check_function_body_name_resolution(module, exec_globals)
         # ``prepare_global_scope`` already exec'd the class definition into
         # ``exec_globals``. Mirror imported modules into our own globals so
         # subsequent executions share them (preserved from the prior
@@ -323,29 +460,12 @@ def create_class(code, class_name):
         raise ValueError(msg) from e
     except NameError as e:
         missing = getattr(e, "name", None)
-        module = _LEGACY_LFX_IMPORT_HINTS.get(missing) if missing else None
-        if module is None and missing:
-            # Lazy fallback to langchain symbols so we don't pull names.py at
-            # module import. The error path is cold by definition; cost here
-            # is irrelevant.
-            from lfx.field_typing.names import LANGCHAIN_SYMBOLS
-
-            symbol = LANGCHAIN_SYMBOLS.get(missing)
-            if symbol is not None:
-                module = symbol[0]
         # Cover both cases: the user forgot the import line entirely, AND the
         # case where they have the line but the underlying package is broken
         # (proxy resolution side-effects can surface as a NameError on a later
         # access even when the import statement parsed). The hint avoids
         # blaming the user for a missing line they already have.
-        hint = (
-            f" If not already imported, add `from {module} import {missing}` to your "
-            f"component code; if already imported, verify that '{module}' is installed "
-            f"and importable in this environment."
-            if module
-            else ""
-        )
-        msg = f"Name error (possibly undefined variable): {e!s}.{hint}"
+        msg = _format_undefined_name_message(missing, str(e))
         raise ValueError(msg) from e
     except ValidationError as e:
         messages = [error["msg"].split(",", 1) for error in e.errors()]
@@ -385,6 +505,12 @@ def create_class(code, class_name):
         )
         msg = f"Attribute error while creating class: {e!s}.{hint}"
         raise ValueError(msg) from e
+    except ValueError:
+        # Static analysis (_check_function_body_name_resolution) and any other
+        # branch above that already raises a fully-formatted ValueError. Pass
+        # through unchanged so the actionable hint reaches the caller without
+        # being wrapped as "Error creating class. ValueError(...)".
+        raise
     except Exception as e:
         msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
