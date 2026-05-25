@@ -163,4 +163,27 @@ describe("AssistantMessageBody — proposal-mode render (PR #12575 round 2)", ()
       screen.getByTestId("assistant-flow-dismiss-button"),
     ).toBeInTheDocument();
   });
+
+  // Variant: the message also has ``flowPreview`` set from a prior
+  // legacy ``flow_preview`` event. The proposal-card branch must still
+  // win over the legacy applied-state branch — otherwise the user sees
+  // a muted ``flowPreview`` card with no actions and loses the Apply
+  // affordance for the current proposal.
+  it("should_prefer_pending_proposal_card_over_legacy_flowPreview_branch", () => {
+    const msg: AssistantMessage = {
+      ...buildProposalMessage(),
+      flowPreview: {
+        flow: SAMPLE_PROPOSAL_FLOW as unknown as Record<string, unknown>,
+        name: "Chat Flow",
+        nodeCount: 3,
+        edgeCount: 2,
+        graph: "",
+      },
+    };
+    render(<AssistantMessageBody message={msg} isGeneratingCode={false} />);
+
+    expect(
+      screen.getByTestId("assistant-flow-add-button"),
+    ).toBeInTheDocument();
+  });
 });
