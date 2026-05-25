@@ -685,11 +685,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",
@@ -965,11 +965,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",
@@ -1245,11 +1245,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",
