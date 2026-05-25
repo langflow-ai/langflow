@@ -4570,6 +4570,8 @@
   "components.mcptools.inputs.mcp_server.info.a40e8466": "Select the MCP Server that will be used by this component",
   "components.mcptools.inputs.tool.display_name.2e53bdcd": "Tool",
   "components.mcptools.inputs.tool.info.8999dc11": "Select the tool to execute",
+  "components.mcptools.inputs.tool_execution_timeout.display_name.48b62b89": "Tool Execution Timeout (seconds)",
+  "components.mcptools.inputs.tool_execution_timeout.info.49de7c8b": "Maximum time to wait for tool execution before timing out. Supports decimal values for sub-second timeouts (e.g., 0.01 for 10ms). Set to 0 to use the global default timeout (180 seconds).",
   "components.mcptools.inputs.tool_placeholder.display_name.6d01d1af": "Tool Placeholder",
   "components.mcptools.inputs.tool_placeholder.info.91cae561": "Placeholder for the tool",
   "components.mcptools.inputs.use_cache.display_name.950b319b": "Use Cached Server",
