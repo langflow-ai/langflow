@@ -1586,8 +1586,6 @@
   "updateComponent.standard": "Standardwert",
   "updateComponent.updateButton": "Komponente aktualisieren",
   "updateComponent.updateButtonPlural": "Komponenten aktualisieren",
-  "updateComponents.blockedAndMustUpdate_one": "{{blocked}} Die benutzerdefinierte Komponente „ {{blockedPlural}} “ kann nicht ausgeführt werden, und die Komponente „ {{count}} “ muss aktualisiert werden, bevor dieser Ablauf ausgeführt werden kann",
-  "updateComponents.blockedAndMustUpdate_other": "{{blocked}} Die benutzerdefinierte Komponente „ {{blockedPlural}} “ kann nicht ausgeführt werden, und die Komponenten unter „ {{count}} “ müssen aktualisiert werden, bevor dieser Ablauf ausgeführt werden kann",
   "updateComponents.cannotRunDisabled_one": "{{count}} Benutzerdefinierte Komponenten können nicht ausgeführt werden, solange benutzerdefinierte Komponenten deaktiviert sind",
   "updateComponents.cannotRunDisabled_other": "{{count}} Benutzerdefinierte Komponenten können nicht ausgeführt werden, solange sie deaktiviert sind",
   "updateComponents.customComponentsDisabled": "Benutzerdefinierte Komponenten sind deaktiviert",

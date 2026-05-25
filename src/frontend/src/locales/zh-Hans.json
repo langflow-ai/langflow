@@ -1586,8 +1586,6 @@
   "updateComponent.standard": "标准",
   "updateComponent.updateButton": "更新组件",
   "updateComponent.updateButtonPlural": "更新组件",
-  "updateComponents.blockedAndMustUpdate_one": "{{blocked}} 自定义组件 {{blockedPlural}} 无法运行，且必须先更新 {{count}} 组件，该流程才能运行",
-  "updateComponents.blockedAndMustUpdate_other": "{{blocked}} 自定义组件 {{blockedPlural}} 无法运行，且必须先更新 {{count}} 组件，该流程才能运行",
   "updateComponents.cannotRunDisabled_one": "{{count}} 当自定义组件被禁用时，自定义组件无法运行",
   "updateComponents.cannotRunDisabled_other": "{{count}} 当自定义组件被禁用时，自定义组件无法运行",
   "updateComponents.customComponentsDisabled": "自定义组件已禁用",

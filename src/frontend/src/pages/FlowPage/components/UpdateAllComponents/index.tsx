@@ -271,11 +271,7 @@ export default function UpdateAllComponents() {
       : t("updateComponents.upgradeRequired")
     : !allowCustomComponents
       ? blockedComponents.length > 0 && updatableComponents.length > 0
-        ? t("updateComponents.blockedAndMustUpdate", {
-            count: updatableComponents.length,
-            blocked: blockedComponents.length,
-            blockedPlural: blockedComponents.length > 1 ? "s" : "",
-          })
+        ? `${t("updateComponents.blockedCannotRun", { count: blockedComponents.length })} ${t("updateComponents.andMustBeUpdated", { count: updatableComponents.length })}`
         : blockedComponents.length > 0
           ? t("updateComponents.cannotRunDisabled", {
               count: blockedComponents.length,

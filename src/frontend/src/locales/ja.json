@@ -1586,8 +1586,6 @@
   "updateComponent.standard": "標準",
   "updateComponent.updateButton": "コンポーネントの更新",
   "updateComponent.updateButtonPlural": "コンポーネントの更新",
-  "updateComponents.blockedAndMustUpdate_one": "{{blocked}} カスタムコンポーネント「 {{blockedPlural}} 」を実行できません。このフローを実行するには、コンポーネント「 {{count}} 」を更新する必要があります",
-  "updateComponents.blockedAndMustUpdate_other": "{{blocked}} カスタムコンポーネント「 {{blockedPlural}} 」を実行できません。このフローを実行するには、コンポーネント「 {{count}} 」を更新する必要があります",
   "updateComponents.cannotRunDisabled_one": "{{count}} カスタムコンポーネントが無効になっている間は、カスタムコンポーネントを実行できません",
   "updateComponents.cannotRunDisabled_other": "{{count}} カスタムコンポーネントが無効になっている間は、カスタムコンポーネントを実行できません",
   "updateComponents.customComponentsDisabled": "カスタムコンポーネントは無効になっています",

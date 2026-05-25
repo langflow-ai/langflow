@@ -1586,8 +1586,6 @@
   "updateComponent.standard": "Estándar",
   "updateComponent.updateButton": "Actualizar componente",
   "updateComponent.updateButtonPlural": "Actualizar componentes",
-  "updateComponents.blockedAndMustUpdate_one": "{{blocked}} El componente personalizado {{blockedPlural}} no se puede ejecutar y el componente {{count}} debe actualizarse antes de que este flujo pueda ejecutarse",
-  "updateComponents.blockedAndMustUpdate_other": "{{blocked}} El componente personalizado {{blockedPlural}} no se puede ejecutar y los componentes {{count}} deben actualizarse antes de que este flujo pueda ejecutarse",
   "updateComponents.cannotRunDisabled_one": "{{count}} El componente personalizado no se puede ejecutar mientras los componentes personalizados estén desactivados",
   "updateComponents.cannotRunDisabled_other": "{{count}} Los componentes personalizados no pueden ejecutarse mientras estén desactivados",
   "updateComponents.customComponentsDisabled": "Los componentes personalizados están desactivados",

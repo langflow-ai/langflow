@@ -45,6 +45,7 @@ from langflow.utils.i18n_keys import (
 from langflow.utils.i18n_keys import (
     safe_flow_key as _safe_flow_key,
 )
+from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -231,7 +232,7 @@ def translate_component_node(comp_name: str, node: dict[str, Any], locale: str) 
             out_name = out.get("name", "")
             # The tool-mode output is injected dynamically (not a static class output), so
             # it's stored under the sentinel norm "_toolmode" shared across all components.
-            out_norm = "_toolmode" if out_name == "component_as_tool" else norm
+            out_norm = "_toolmode" if out_name == TOOL_OUTPUT_NAME else norm
             out_updates = {}
             for sub in ("display_name", "info"):
                 val = out.get(sub, "")
