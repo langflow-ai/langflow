@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -10,55 +11,52 @@ import {
 } from "../../utils/open-advanced-options";
 
 // TODO: This component doesn't have slider needs updating
-test(
-  "user should be able to use slider input",
-  {
-    tag: ["@release", "@workspace"],
-  },
-  async ({ page }) => {
-    await awaitBootstrapTest(page);
+test("user should be able to use slider input", {
+  tag: ["@release", "@workspace"],
+}, async ({ page }) => {
+  await awaitBootstrapTest(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("ollama");
+  await page.waitForSelector('[data-testid="blank-flow"]', {
+    timeout: 30000,
+  });
+  await page.getByTestId("blank-flow").click();
+  await page.getByTestId("sidebar-search-input").click();
+  await page.getByTestId("sidebar-search-input").fill("ollama");
 
-    await page.waitForSelector('[data-testid="ollamaOllama"]', {
-      timeout: 3000,
-    });
+  await page.waitForSelector('[data-testid="ollamaOllama"]', {
+    timeout: 3000,
+  });
 
-    await page
-      .getByTestId("ollamaOllama")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'));
-    await page.mouse.up();
-    await page.mouse.down();
-    await adjustScreenView(page, { numberOfZoomOut: 2 });
+  await page
+    .getByTestId("ollamaOllama")
+    .dragTo(page.locator('//*[@id="react-flow-id"]'));
+  await page.mouse.up();
+  await page.mouse.down();
+  await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await page.getByTestId("title-Ollama").click();
-    await page.getByTestId("code-button-modal").last().click();
+  await page.getByTestId("title-Ollama").click();
+  await page.getByTestId("code-button-modal").last().click();
 
-    const cleanCode = await extractAndCleanCode(page);
+  const cleanCode = await extractAndCleanCode(page);
 
-    // Sanity-check: the original Ollama source has many lines. If we read it
-    // back as a single concatenated line, the textarea-value path is the
-    // problem and Ace surgery downstream cannot save us.
-    const cleanCodeNewlines = (cleanCode.match(/\n/g) || []).length;
-    if (cleanCodeNewlines < 50) {
-      throw new Error(
-        `extractAndCleanCode returned code with only ${cleanCodeNewlines} newlines (length ${cleanCode.length}); expected the multi-line Ollama source. The hidden #codeValue textarea may be returning a stripped value on this platform.`,
-      );
-    }
+  // Sanity-check: the original Ollama source has many lines. If we read it
+  // back as a single concatenated line, the textarea-value path is the
+  // problem and Ace surgery downstream cannot save us.
+  const cleanCodeNewlines = (cleanCode.match(/\n/g) || []).length;
+  if (cleanCodeNewlines < 50) {
+    throw new Error(
+      `extractAndCleanCode returned code with only ${cleanCodeNewlines} newlines (length ${cleanCode.length}); expected the multi-line Ollama source. The hidden #codeValue textarea may be returning a stripped value on this platform.`,
+    );
+  }
 
-    // Replace the multiline string in the code.
-    // Use a regex so the match is resilient to line-ending differences
-    // (LF on macOS/Linux vs CRLF on Windows after git checkout).
-    const originalSliderBlockRegex =
-      /name="temperature",\s+display_name="Temperature",\s+value=0\.1,\s+range_spec=RangeSpec\(min=0, max=1, step=0\.01\),\s+advanced=True,/;
-    const newCode = cleanCode.replace(
-      originalSliderBlockRegex,
-      `name="temperature",
+  // Replace the multiline string in the code.
+  // Use a regex so the match is resilient to line-ending differences
+  // (LF on macOS/Linux vs CRLF on Windows after git checkout).
+  const originalSliderBlockRegex =
+    /name="temperature",\s+display_name="Temperature",\s+value=0\.1,\s+range_spec=RangeSpec\(min=0, max=1, step=0\.01\),\s+advanced=True,/;
+  const newCode = cleanCode.replace(
+    originalSliderBlockRegex,
+    `name="temperature",
             display_name="Temperature",
             value=0.2,
             range_spec=RangeSpec(min=3, max=30, step=1),
@@ -70,84 +68,45 @@ test(
             slider_buttons_options=[],
             slider_input=False,
             advanced=False,`,
-    );
-    // make sure codes are different
-    expect(cleanCode).not.toEqual(newCode);
-    await setAceEditorValue(page, newCode);
-    await page.locator('//*[@id="checkAndSaveBtn"]').click();
-    await adjustScreenView(page);
+  );
+  // make sure codes are different
+  expect(cleanCode).not.toEqual(newCode);
+  await setAceEditorValue(page, newCode);
+  await page.locator('//*[@id="checkAndSaveBtn"]').click();
+  await adjustScreenView(page);
 
-    await mutualValidation(page);
+  await mutualValidation(page);
 
-    await moveSlider(page, "right", false);
+  await moveSlider(page, "right", false);
 
-    // wait for the slider to update
+  // wait for the slider to update
 
-    await page.waitForTimeout(500);
-    await adjustScreenView(page, { numberOfZoomOut: 1 });
+  await page.waitForTimeout(500);
+  await adjustScreenView(page, { numberOfZoomOut: 1 });
 
-    await disableInspectPanel(page);
+  await disableInspectPanel(page);
 
-    await openAdvancedOptions(page);
-    await expect(
-      page.getByTestId("default_slider_display_value_advanced"),
-    ).toHaveText("19.00");
+  await openAdvancedOptions(page);
+  await expect(
+    page.getByTestId("default_slider_display_value_advanced"),
+  ).toHaveText("19.00");
 
-    await moveSlider(page, "left", true);
-    // Wait for any potential updates
-    await page.waitForTimeout(500);
+  await moveSlider(page, "left", true);
+  // Wait for any potential updates
+  await page.waitForTimeout(500);
 
-    await expect(
-      page.getByTestId("default_slider_display_value_advanced"),
-    ).toHaveText("14.00");
+  await expect(
+    page.getByTestId("default_slider_display_value_advanced"),
+  ).toHaveText("14.00");
 
-    await closeAdvancedOptions(page);
+  await closeAdvancedOptions(page);
 
-    await expect(page.getByTestId("default_slider_display_value")).toHaveText(
-      "14.00",
-    );
+  await expect(page.getByTestId("default_slider_display_value")).toHaveText(
+    "14.00",
+  );
 
-    await enableInspectPanel(page);
-  },
-);
-
-async function extractAndCleanCode(page: Page): Promise<string> {
-  // The hidden `#codeValue` mirror is rendered with `<Input value={code} />`,
-  // i.e. a single-line `<input>` rather than a textarea. Browsers strip
-  // newlines from `.value` of single-line inputs by HTML spec, so reading
-  // `(el as HTMLInputElement).value` returns the entire source concatenated
-  // onto one line. The backend then rejects it as
-  // `invalid decimal literal (<unknown>, line 1)`.
-  //
-  // Read the rendered HTML attribute instead — React serializes the prop as
-  // `value="..."` with newlines encoded (`&#10;`, `&#13;`, or literal LF
-  // inside attribute text), and the regex below recovers them faithfully.
-  // This is the same strategy queryInputComponent.spec.ts uses.
-  const outerHTML = await page
-    .locator('//*[@id="codeValue"]')
-    .evaluate((el) => el.outerHTML);
-
-  const valueMatch = outerHTML.match(/value="([\s\S]*?)"/);
-  if (!valueMatch) {
-    throw new Error("Could not find value attribute in the #codeValue HTML");
-  }
-
-  const codeContent = valueMatch[1]
-    .replace(/&quot;/g, '"')
-    .replace(/&amp;/g, "&")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#x27;/g, "'")
-    .replace(/&#x2F;/g, "/")
-    .replace(/&#10;/g, "\n")
-    .replace(/&#13;/g, "\r")
-    .replace(/&#xA;/gi, "\n")
-    .replace(/&#xD;/gi, "\r");
-
-  // Normalize line endings so downstream string operations are OS-agnostic
-  // (Windows git checkouts of .py files can end up with CRLF).
-  return codeContent.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
-}
+  await enableInspectPanel(page);
+});
 
 // Set the Ace editor's content using the exact same pattern that
 // queryInputComponent.spec.ts uses successfully on Windows CI:

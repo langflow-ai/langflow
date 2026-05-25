@@ -1,6 +1,5 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -8,17 +7,14 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "dropDownComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Allow for legacy components
     await page.getByTestId("sidebar-options-trigger").click();
@@ -152,7 +148,6 @@ from langflow.io import BoolInput, DictInput, DropdownInput, StrInput
 from langflow.io import MessageInput
 from langflow.io import Output
 
-
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
     description: str = "Generate text using Amazon Bedrock LLMs."
@@ -248,7 +243,7 @@ class AmazonBedrockComponent(LCModelComponent):
         return output
   `;
     await page.locator("textarea").fill(emptyOptionsCode);
-    await page.getByRole("button", { name: "Check & Save" }).click();
+    await page.getByRole("button", { name: TEXTS.checkAndSave }).click();
     await page
       .getByText("No parameters are available for display.")
       .isVisible();

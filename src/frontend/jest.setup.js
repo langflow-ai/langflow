@@ -8,9 +8,18 @@ const interpolate = (str, params) => {
     k in params ? params[k] : `{{${k}}}`,
   );
 };
+const resolveKey = (key, params) => {
+  if (params && typeof params.count === "number") {
+    const suffix = params.count === 1 ? "one" : "other";
+    const pluralKey = `${key}_${suffix}`;
+    if (enTranslations[pluralKey] !== undefined) return pluralKey;
+  }
+  return key;
+};
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
-    t: (key, params) => interpolate(enTranslations[key] ?? key, params),
+    t: (key, params) =>
+      interpolate(enTranslations[resolveKey(key, params)] ?? key, params),
     i18n: { changeLanguage: jest.fn(), language: "en" },
   }),
   Trans: ({ children }) => children,

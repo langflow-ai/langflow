@@ -209,7 +209,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "lfx.components.arxiv.arxiv.ArXivComponent"
+              "module": "lfx_arxiv.components.arxiv.arxiv.ArXivComponent"
             },
             "minimized": false,
             "output_types": [],

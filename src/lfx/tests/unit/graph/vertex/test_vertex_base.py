@@ -4,6 +4,7 @@ This module contains tests for verifying the functionality of the ParameterHandl
 which is responsible for processing and managing parameters in vertices.
 """
 
+import pickle
 from unittest.mock import Mock
 from uuid import uuid4
 
@@ -16,6 +17,29 @@ from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
+
+
+def test_vertex_getstate_drops_custom_component_runtime_state():
+    """Graph cache serialization should rebuild component instances instead of pickling live runtime state."""
+
+    class UnpickleableComponent:
+        """Component stand-in that fails if live runtime state is serialized."""
+
+        def __getstate__(self):
+            """Raise when pickle tries to serialize the component instance."""
+            msg = "cannot pickle component runtime state"
+            raise TypeError(msg)
+
+    vertex = object.__new__(Vertex)
+    vertex._lock = Mock()
+    vertex.custom_component = UnpickleableComponent()
+    vertex.built_object = object()
+    vertex.built_result = object()
+
+    state = vertex.__getstate__()
+
+    assert state["custom_component"] is None
+    pickle.dumps(state)
 
 
 @pytest.fixture

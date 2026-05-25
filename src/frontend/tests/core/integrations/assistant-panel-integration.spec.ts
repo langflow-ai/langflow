@@ -1,23 +1,14 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { test, expect } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { expect, test } from "../../fixtures";
+import { selectAssistantOpenAiModel } from "../../utils/select-assistant-openai-model";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
   test.beforeEach(async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Basic Prompting");
 
     // Open assistant panel and wait for model selector
     await page.getByTestId("assistant-button").click();
@@ -25,6 +16,7 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     await expect(page.getByTestId("assistant-model-selector")).toBeVisible({
       timeout: 15000,
     });
+    await selectAssistantOpenAiModel(page);
   });
 
   test("should answer a Q&A question with real LLM response", async ({

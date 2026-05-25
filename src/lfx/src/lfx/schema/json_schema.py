@@ -52,6 +52,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
     model_cache: dict[str, type[BaseModel]] = {}
     # Tracks $def names currently being built to detect self-referential schemas
     building: set[str] = set()
+    # Monotonic counter for anonymous nested-object models. Using len(model_cache)
+    # is unsafe during recursive descent because the cache is populated only after
+    # a build completes, causing concurrent in-progress models to collide on the
+    # same name and falsely trigger the self-reference guard.
+    anon_counter: list[int] = [0]
+
+    def _next_anon_name() -> str:
+        n = anon_counter[0]
+        anon_counter[0] += 1
+        return f"AnonModel{n}"
 
     def resolve_ref(s: dict[str, Any] | None) -> dict[str, Any]:
         """Follow a $ref chain until you land on a real subschema."""
@@ -74,6 +84,10 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
         """Map a JSON Schema subschema to a Python type (possibly nested)."""
         if s is None:
             return None
+        # Preserve the original subschema so we can detect when an object was
+        # reached via a named $ref and route it through _build_model's $ref branch
+        # for stable naming and cache reuse.
+        original = s
         s = resolve_ref(s)
 
         if "anyOf" in s:
@@ -128,8 +142,12 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             # This preserves nested dictionaries (fixes issue #9881)
             if not s.get("properties"):
                 return dict[str, Any]
-            # Inline object with defined properties ⇒ nested model
-            return _build_model(f"AnonModel{len(model_cache)}", s)
+            # If the object was reached via a named $ref, pass the original $ref-bearing
+            # subschema so _build_model uses its $ref branch (stable name, cache reuse).
+            if isinstance(original, dict) and "$ref" in original:
+                return _build_model(_next_anon_name(), original)
+            # Inline object with defined properties ⇒ anonymous nested model
+            return _build_model(_next_anon_name(), s)
 
         # primitive fallback
         return {
@@ -143,12 +161,16 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
 
     def _build_model(name: str, subschema: dict[str, Any]) -> type[BaseModel]:
         """Create (or fetch) a BaseModel subclass for the given object schema."""
-        # If this came via a named $ref, use that name
+        # If this came via a named $ref, use that name. The recursive _build_model
+        # call below handles `building` tracking and cache population itself, so we
+        # must NOT pre-add `refname` to `building` here — doing so would cause the
+        # recursive call to falsely see itself as self-referential and fall back to
+        # dict on the very first visit of a non-recursive def.
         if "$ref" in subschema:
             refname = subschema["$ref"].split("/")[-1]
             if refname in model_cache:
                 return model_cache[refname]
-            # Self-referential: this $ref is already being built — fall back to dict
+            # Already in progress (true self-reference encountered via $ref)
             if refname in building:
                 logger.warning("Parsing input schema: Self-referential $ref '%s' detected, treating as dict", refname)
                 return dict  # type: ignore[return-value]
@@ -156,13 +178,7 @@ def create_input_schema_from_json_schema(schema: dict[str, Any]) -> type[BaseMod
             if not target:
                 msg = f"Definition '{refname}' not found"
                 raise ValueError(msg)
-            building.add(refname)
-            try:
-                cls = _build_model(refname, target)
-            finally:
-                building.discard(refname)
-            model_cache[refname] = cls
-            return cls
+            return _build_model(refname, target)
 
         # Named anonymous or inline: avoid clashes by name
         if name in model_cache:

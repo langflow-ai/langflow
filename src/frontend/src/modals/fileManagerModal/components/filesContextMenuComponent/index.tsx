@@ -1,4 +1,5 @@
 import { type ReactNode, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   DropdownMenu,
@@ -24,6 +25,7 @@ export default function FilesContextMenuComponent({
   handleRename: (id: string, name: string) => void;
   simplified?: boolean;
 }) {
+  const { t } = useTranslation();
   const isLocal = file.provider == null;
   const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
 
@@ -80,7 +82,7 @@ export default function FilesContextMenuComponent({
               aria-hidden="true"
               className="mr-2 h-4 w-4"
             />
-            Rename
+            {t("files.rename")}
           </DropdownMenuItem>
           <DropdownMenuItem
             onClick={(e) => {
@@ -95,7 +97,7 @@ export default function FilesContextMenuComponent({
               aria-hidden="true"
               className="mr-2 h-4 w-4"
             />
-            Download
+            {t("files.download")}
           </DropdownMenuItem>
           {!simplified && (
             <DropdownMenuItem
@@ -111,7 +113,7 @@ export default function FilesContextMenuComponent({
                 aria-hidden="true"
                 className="mr-2 h-4 w-4"
               />
-              Duplicate
+              {t("files.duplicate")}
             </DropdownMenuItem>
           )}
           <DropdownMenuItem
@@ -127,7 +129,7 @@ export default function FilesContextMenuComponent({
               aria-hidden="true"
               className="mr-2 h-4 w-4"
             />
-            {isLocal ? "Delete" : "Remove"}
+            {isLocal ? t("files.delete") : t("files.remove")}
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
@@ -135,17 +137,23 @@ export default function FilesContextMenuComponent({
         open={showDeleteConfirmation}
         onClose={() => setShowDeleteConfirmation(false)}
         onCancel={() => setShowDeleteConfirmation(false)}
-        title={isLocal ? "Delete File" : "Remove File"}
-        titleHeader={`Are you sure you want to ${isLocal ? "delete" : "remove"} "${file.name}"?`}
-        cancelText="Cancel"
+        title={
+          isLocal ? t("files.deleteFileTitle") : t("files.removeFileTitle")
+        }
+        titleHeader={
+          isLocal
+            ? t("files.deleteFileConfirm", { name: file.name })
+            : t("files.removeFileConfirm", { name: file.name })
+        }
+        cancelText={t("files.cancel")}
         size="x-small"
-        confirmationText={isLocal ? "Delete" : "Remove"}
+        confirmationText={isLocal ? t("files.delete") : t("files.remove")}
         icon={isLocal ? "Trash2" : "ListX"}
         destructive
         onConfirm={() => {
           deleteFile();
           setSuccessData({
-            title: "The file has been deleted successfully",
+            title: t("files.deleteFileSuccess"),
           });
           setShowDeleteConfirmation(false);
         }}
@@ -153,8 +161,8 @@ export default function FilesContextMenuComponent({
         <ConfirmationModal.Content>
           <div className="text-sm text-muted-foreground">
             {isLocal
-              ? "This action cannot be undone. The file will be permanently deleted."
-              : "This will remove the file from your list. You can add it back later if needed."}
+              ? t("files.deleteFilePermanent")
+              : t("files.removeFileDescription")}
           </div>
         </ConfirmationModal.Content>
       </ConfirmationModal>

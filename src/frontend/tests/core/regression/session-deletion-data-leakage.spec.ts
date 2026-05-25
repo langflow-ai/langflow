@@ -2,7 +2,9 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
   async function sendMessage(page: Page, message: string) {
@@ -78,21 +80,19 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     "should prevent data leakage when default session is deleted and recreated",
     { tag: ["@release", "@regression"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
+      skipIfMissing.openAiKey();
       await awaitBootstrapTest(page);
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -145,21 +145,19 @@ test.describe("Session Deletion Data Leakage Fix", () => {
     "should clear LLM context when session is deleted",
     { tag: ["@release", "@regression"] },
     async ({ page }) => {
-      test.skip(
-        !process?.env?.OPENAI_API_KEY,
-        "OPENAI_API_KEY required to run this test",
-      );
-
+      skipIfMissing.openAiKey();
       await awaitBootstrapTest(page);
 
       // Load a starter project with memory
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 

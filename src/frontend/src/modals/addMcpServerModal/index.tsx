@@ -375,7 +375,7 @@ export default function AddMcpServerModal({
                   data-testid="json-tab"
                   value="JSON"
                 >
-                  JSON
+                  {t("mcp.modal.tabJson")}
                 </TabsTrigger>
                 <TabsTrigger
                   className="flex-1"
@@ -383,7 +383,7 @@ export default function AddMcpServerModal({
                   disabled={!!initialData && type !== "STDIO"}
                   value="STDIO"
                 >
-                  STDIO
+                  {t("mcp.modal.tabStdio")}
                 </TabsTrigger>
                 <TabsTrigger
                   className="flex-1"
@@ -391,7 +391,7 @@ export default function AddMcpServerModal({
                   disabled={!!initialData && type !== "HTTP"}
                   value="HTTP"
                 >
-                  Streamable HTTP/SSE
+                  {t("mcp.modal.tabStreamableHttp")}
                 </TabsTrigger>
               </TabsList>
             </div>

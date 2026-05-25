@@ -144,7 +144,7 @@ export const useMcpServer = ({
     } catch (e) {
       console.error("Error generating API key:", e);
       setErrorData({
-        title: "Error generating API key",
+        title: i18n.t("errors.errorGeneratingApiKey"),
         list: [(e as Error).message],
       });
     } finally {

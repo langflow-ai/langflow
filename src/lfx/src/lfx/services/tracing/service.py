@@ -49,6 +49,7 @@ class TracingService(BaseTracingService):
         session_id: str | None,
         project_name: str | None = None,
         flow_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         """Start tracers (minimal implementation - just logs).
 
@@ -56,9 +57,10 @@ class TracingService(BaseTracingService):
             run_id: Run identifier
             flow_id: Flow identifier
             run_name: Run name
-            user_id: User identifier
+            user_id: Authenticated Langflow user identifier
             session_id: Session identifier
             project_name: Project name
+            tracing_user_id: Optional caller-supplied label forwarded to tracing providers
         """
         logger.debug(f"Trace started: {run_name}")
 

@@ -1,0 +1,88 @@
+---
+title: Text Operations
+slug: /text-operations
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **Text Operations** component performs operations on text strings.
+
+The output type depends on the selected operation: most operations return a `Message`, **Word Count** returns a `JSON` object, and **Text to DataFrame** returns a `Table`.
+
+## Use the Text Operations component in a flow
+
+The following example demonstrates how to use a **Text Operations** component to clean text output from a language model before passing it to another component:
+
+1. Create a flow with a **Language Model** component and a **Text Operations** component, and then connect the **Language Model** component's **Message** output to the **Text Operations** component's **Text Input**.
+
+    All operations in the **Text Operations** component require a text string as input.
+    If the preceding component doesn't produce `Message` or text output, you can use the [**Type Convert** component](/type-convert) to reformat the data first.
+
+2. In the **Operation** field, select the operation you want to perform.
+For this example, select **Text Clean**.
+
+    :::tip
+    You can select only one operation.
+    If you need to perform multiple operations, chain multiple **Text Operations** components together to execute each operation in sequence.
+    :::
+
+3. Configure the operation's parameters.
+For this example, enable **Remove Extra Spaces** and **Remove Empty Lines** to normalize the model's output.
+
+4. Optional: Connect the output to a **Chat Output** component to view the result in the **Playground**.
+
+5. Click <Icon name="Play" aria-hidden="true" /> **Run component** on the **Text Operations** component, and then click <Icon name="TextSearch" aria-hidden="true" /> **Inspect output** to view the result.
+
+## Text Operations parameters
+
+Many parameters are conditional based on the selected **Operation** (`operation`).
+
+<PartialParams />
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| text_input | Text Input | Input parameter. The text string to process. Required for all operations. |
+| operation | Operation | Input parameter. The operation to perform on the text. See [Available text operations](#available-text-operations). |
+| case_type | Case Type | Input parameter. The case conversion to apply. Options: `uppercase`, `lowercase`, `title`, `capitalize`, `swapcase`. Default: `lowercase`. Only shown for **Case Conversion**. |
+| search_pattern | Search Pattern | Input parameter. The text or regex pattern to find. Only shown for **Text Replace**. |
+| replacement_text | Replacement Text | Input parameter. The text to substitute for each match. Only shown for **Text Replace**. |
+| use_regex | Use Regex | Input parameter. If enabled, treats **Search Pattern** as a regular expression. Default: Disabled. Only shown for **Text Replace**. |
+| extract_pattern | Extract Pattern | Input parameter. The regular expression pattern to match against the text. Only shown for **Text Extract**. |
+| max_matches | Max Matches | Input parameter. Maximum number of matches to return. Default: `10`. Only shown for **Text Extract**. |
+| head_characters | Characters from Start | Input parameter. Number of characters to return from the beginning of the text. Must be non-negative. Default: `100`. Only shown for **Text Head**. |
+| tail_characters | Characters from End | Input parameter. Number of characters to return from the end of the text. Must be non-negative. Default: `100`. Only shown for **Text Tail**. |
+| strip_mode | Strip Mode | Input parameter. Which side(s) of the text to strip. Options: `both` (default), `left`, `right`. Only shown for **Text Strip**. |
+| strip_characters | Characters to Strip | Input parameter. Specific characters to remove. Leave empty to strip whitespace. Only shown for **Text Strip**. |
+| text_input_2 | Second Text Input | Input parameter. The second text string to join with the first. Only shown for **Text Join**. |
+| remove_extra_spaces | Remove Extra Spaces | Input parameter. Collapse multiple consecutive spaces into a single space. Default: Enabled. Only shown for **Text Clean**. |
+| remove_special_chars | Remove Special Characters | Input parameter. Remove all characters except alphanumeric and spaces. Default: Disabled. Only shown for **Text Clean**. |
+| remove_empty_lines | Remove Empty Lines | Input parameter. Remove blank lines from the text. Default: Disabled. Only shown for **Text Clean**. |
+| table_separator | Table Separator | Input parameter. The character used to delimit columns. Default: `\|`. Only shown for **Text to DataFrame**. |
+| has_header | Has Header | Input parameter. Whether the first row is a header row. Default: Enabled. Only shown for **Text to DataFrame**. |
+| count_words | Count Words | Input parameter. Include word count and unique word count in the output. Default: Enabled. Only shown for **Word Count**. |
+| count_characters | Count Characters | Input parameter. Include character count (with and without spaces) in the output. Default: Enabled. Only shown for **Word Count**. |
+| count_lines | Count Lines | Input parameter. Include total and non-empty line count in the output. Default: Enabled. Only shown for **Word Count**. |
+
+#### Available text operations
+
+Options for the `operation` input parameter are as follows.
+
+| Name | Required Inputs | Output | Process |
+|------|-----------------|--------|---------|
+| Word Count | None | `JSON` | Counts words, unique words, characters, and lines in the text. |
+| Case Conversion | `case_type` | `Message` | Converts the text to the specified case. |
+| Text Replace | `search_pattern`, `replacement_text`, `use_regex` | `Message` | Replaces occurrences of a pattern with replacement text. |
+| Text Extract | `extract_pattern`, `max_matches` | `Message` | Extracts all substrings matching a regex pattern, returned as newline-separated text. |
+| Text Head | `head_characters` | `Message` | Returns the first `n` characters of the text. |
+| Text Tail | `tail_characters` | `Message` | Returns the last `n` characters of the text. |
+| Text Strip | `strip_mode`, `strip_characters` | `Message` | Removes whitespace or specified characters from the edges of the text. |
+| Text Join | `text_input_2` | `Text`, `Message` | Concatenates two text inputs separated by a newline. |
+| Text Clean | `remove_extra_spaces`, `remove_special_chars`, `remove_empty_lines` | `Message` | Normalizes text by removing extra spaces, special characters, and empty lines. |
+| Text to DataFrame | `table_separator`, `has_header` | `Table` | Converts a delimiter-separated text table into a [`Table`](/data-types#table). |
+
+## See also
+
+* [Table Operations](/dataframe-operations)
+* [Parser](/parser)
+* [JSON Operations](/data-operations)

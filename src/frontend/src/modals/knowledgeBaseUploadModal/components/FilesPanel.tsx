@@ -1,6 +1,7 @@
 import { useState } from "react";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { formatFileSize } from "../utils";
 import { MetadataEditor, type MetadataPair } from "./MetadataEditor";
@@ -28,6 +29,7 @@ export function FilesPanel({
   perFileMetadata,
   onPerFileMetadataChange,
 }: FilesPanelProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
 
   const toggleExpanded = (key: string) => {
@@ -51,10 +53,11 @@ export function FilesPanel({
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-muted">
           <ForwardedIconComponent name="FileStack" className="h-4 w-4" />
         </div>
-        Sources
+        {t("knowledge.sourcesLabel")}
         {files.length > 0 && (
           <span className="text-xs font-normal text-muted-foreground">
-            ({files.length} {files.length === 1 ? "file" : "files"},{" "}
+            ({files.length}{" "}
+            {files.length === 1 ? t("knowledge.file") : t("knowledge.files")},{" "}
             {formatFileSize(files)})
           </span>
         )}
@@ -84,7 +87,9 @@ export function FilesPanel({
                         className="ml-1 rounded bg-accent-emerald-foreground/10 px-1 text-[10px] uppercase text-accent-emerald-foreground"
                         data-testid={`kb-file-metadata-badge-${index}`}
                       >
-                        {pairs.length} tag{pairs.length === 1 ? "" : "s"}
+                        {pairs.length === 1
+                          ? t("knowledge.oneTag")
+                          : t("knowledge.nTags", { count: pairs.length })}
                       </span>
                     )}
                   </div>
@@ -101,8 +106,12 @@ export function FilesPanel({
                       onClick={() => toggleExpanded(key)}
                       aria-label={
                         isOpen
-                          ? `Collapse metadata for ${file.name}`
-                          : `Expand metadata for ${file.name}`
+                          ? t("knowledge.collapseMetadataFor", {
+                              name: file.name,
+                            })
+                          : t("knowledge.expandMetadataFor", {
+                              name: file.name,
+                            })
                       }
                       data-testid={`kb-file-metadata-toggle-${index}`}
                     >

@@ -5,6 +5,7 @@ import re
 from copy import deepcopy
 from typing import TYPE_CHECKING
 
+import pandas as pd
 from langchain_core.tools import BaseTool, ToolException
 from langchain_core.tools.structured import StructuredTool
 
@@ -17,7 +18,6 @@ from lfx.serialization.serialization import serialize
 if TYPE_CHECKING:
     from collections.abc import Callable
 
-    import pandas as pd
     from langchain_core.callbacks import Callbacks
 
     from lfx.custom.custom_component.component import Component
@@ -135,8 +135,6 @@ def _build_output_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        import pandas as pd
-
         if isinstance(result, pd.DataFrame):
             return result
         # removing the model_dump() call here because it is not serializable
@@ -192,8 +190,6 @@ def _build_output_async_function(
             return result.get_text()
         if isinstance(result, Data):
             return result.data
-        import pandas as pd
-
         if isinstance(result, pd.DataFrame):
             return result
         # removing the model_dump() call here because it is not serializable
@@ -337,15 +333,15 @@ class ComponentToolkit:
         elif (tool_name or tool_description) and (flow_mode_inputs or len(tools) > 1):
             for tool in tools:
                 tool.name = _format_tool_name(str(tool_name) + "_" + str(tool.name)) or tool.name
-                tool.description = (
-                    str(tool_description) + " Output details: " + str(tool.description)
-                ) or tool.description
+                # Only prepend an explicit tool_description. Without one, keep the
+                # output-derived description so it stays equal to display_description
+                # and the Actions-panel merge logic can detect real user edits.
+                if tool_description:
+                    tool.description = f"{tool_description} Output details: {tool.description}"
                 tool.tags = [tool.name]
         return tools
 
     def get_tools_metadata_dictionary(self) -> dict:
-        import pandas as pd
-
         if isinstance(self.metadata, pd.DataFrame):
             try:
                 return {
@@ -363,8 +359,6 @@ class ComponentToolkit:
         tools: list[BaseTool | StructuredTool],
     ) -> list[BaseTool]:
         # update the tool_name and description according to the name and secriotion mentioned in the list
-        import pandas as pd
-
         if isinstance(self.metadata, pd.DataFrame):
             metadata_dict = self.get_tools_metadata_dictionary()
             filtered_tools = []

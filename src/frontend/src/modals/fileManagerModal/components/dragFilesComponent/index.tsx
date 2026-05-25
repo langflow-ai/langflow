@@ -175,9 +175,7 @@ export default function DragFilesComponent({
       });
 
       if (selected.length > 1000) {
-        throw new Error(
-          `Too many files detected (${selected.length}). This likely includes large/hidden directories. Please select a smaller folder or exclude folders like node_modules.`,
-        );
+        throw new Error(t("errors.tooManyFiles", { count: selected.length }));
       }
 
       const hiddenFiltered = filterHiddenAndIgnoredFolderFiles(selected);

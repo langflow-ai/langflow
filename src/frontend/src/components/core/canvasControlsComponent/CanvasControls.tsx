@@ -1,5 +1,6 @@
 import { Panel, useStoreApi } from "@xyflow/react";
 import { type ReactNode, useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -20,6 +21,7 @@ const CanvasControls = ({
   selectedNode: AllNodeType | null;
   effectiveLocked?: boolean;
 }) => {
+  const { t } = useTranslation();
   const reactFlowStoreApi = useStoreApi();
   const isFlowLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -105,7 +107,7 @@ const CanvasControls = ({
             {/* Colorful icon - hover state */}
             <img
               src={langflowAssistantIcon}
-              alt="Langflow Assistant"
+              alt={t("assistant.title")}
               className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-150 group-hover:opacity-100"
             />
           </Button>
@@ -116,7 +118,7 @@ const CanvasControls = ({
           size="icon"
           data-testid="canvas-add-note-button"
           className="group flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
-          title="Add Sticky Note"
+          title={t("canvas.addStickyNote")}
           onClick={handleAddNote}
         >
           <ForwardedIconComponent
