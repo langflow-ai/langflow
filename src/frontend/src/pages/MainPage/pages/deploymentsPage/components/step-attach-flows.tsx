@@ -200,27 +200,29 @@ export default function StepAttachFlows() {
     usePostCreateSnapshot();
   const { data: globalVariables } = useGetGlobalVariables();
   const globalVariableOptions = (globalVariables ?? []).map((v) => v.name);
-  const handledPreselectedAttachmentRef = useRef<string | null>(null);
+  const handledPreselectionRef = useRef(false);
 
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
+  // Runs at most once — subsequent selectedVersionByFlow changes must not re-trigger.
   useEffect(() => {
+    if (handledPreselectionRef.current) return;
     const preSelected = initialFlowId
       ? Array.from(selectedVersionByFlow.values()).find(
           (entry) => entry.flowId === initialFlowId,
         )
       : undefined;
     if (!preSelected) return;
-    if (handledPreselectedAttachmentRef.current === preSelected.key) return;
-    handledPreselectedAttachmentRef.current = preSelected.key;
+    handledPreselectionRef.current = true;
+
+    const flowName =
+      flows.find((flow) => flow.id === preSelected.flowId)?.name ??
+      DEFAULT_FLOW_NAME;
 
     setToolNameByFlow((prev) => {
       if (prev.has(preSelected.key)) {
         return prev;
       }
-      const flowName =
-        flows.find((flow) => flow.id === preSelected.flowId)?.name ??
-        DEFAULT_FLOW_NAME;
       const next = new Map(prev);
       next.set(
         preSelected.key,
@@ -233,7 +235,15 @@ export default function StepAttachFlows() {
       return next;
     });
 
+    setPendingAttachment({
+      key: preSelected.key,
+      flowId: preSelected.flowId,
+      flowName,
+      versionId: preSelected.versionId,
+      versionTag: preSelected.versionTag,
+    });
     setRightPanel("connections");
+    initConnectionsForFlow(preSelected.key);
 
     const detect = async () => {
       try {
@@ -257,6 +267,7 @@ export default function StepAttachFlows() {
     defaultToolNameScopeId,
     setErrorData,
     setToolNameByFlow,
+    initConnectionsForFlow,
     updateDetectedEnvVars,
   ]);
 

@@ -1,13 +1,11 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to see integrations in the sidebar when bundles is selected",
   { tag: ["@release", "@api", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="shad-sidebar"]', {
       timeout: 30000,
     });

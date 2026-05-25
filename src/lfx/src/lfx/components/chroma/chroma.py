@@ -4,6 +4,7 @@ from typing import TYPE_CHECKING
 from langchain_chroma import Chroma
 from typing_extensions import override
 
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.base.vectorstores.utils import chroma_collection_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, StrInput
@@ -119,6 +120,7 @@ class ChromaVectorStoreComponent(LCVectorStoreComponent):
                 client=client,
                 embedding_function=self.embedding,
                 collection_name=self.collection_name,
+                **chroma_langchain_collection_kwargs(),
             )
         except Exception as e:
             if isinstance(e, ChromaError):
