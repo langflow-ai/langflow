@@ -173,44 +173,44 @@ export default function CreateMemoryModal({
                     modelType="llm"
                   />
                 </div>
-                              {selectedPreprocessingModel[0]?.provider && (
-                <span className="text-xs text-muted-foreground">
-                  Provider: {selectedPreprocessingModel[0].provider}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-1.5">
-                <Label htmlFor="preprocessing-prompt">
-                  Preprocessing Instructions{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                <ShadTooltip
-                  content={t("memory.preprocessingInstructionsHint")}
-                  side="right"
-                >
-                  <button
-                    type="button"
-                    tabIndex={0}
-                    aria-label="Preprocessing instructions help"
-                    className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <ForwardedIconComponent
-                      name="Info"
-                      className="h-3.5 w-3.5 text-muted-foreground"
-                    />
-                  </button>
-                </ShadTooltip>
+                {selectedPreprocessingModel[0]?.provider && (
+                  <span className="text-xs text-muted-foreground">
+                    Provider: {selectedPreprocessingModel[0].provider}
+                  </span>
+                )}
               </div>
-              <Textarea
-                id="preprocessing-prompt"
-                value={preprocessingPrompt}
-                onChange={(e) => setPreprocessingPrompt(e.target.value)}
-                className="min-h-[80px] resize-y"
-              />
-            </div>
-          </>
-        )}
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-1.5">
+                  <Label htmlFor="preprocessing-prompt">
+                    Preprocessing Instructions{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <ShadTooltip
+                    content={t("memory.preprocessingInstructionsHint")}
+                    side="right"
+                  >
+                    <button
+                      type="button"
+                      tabIndex={0}
+                      aria-label="Preprocessing instructions help"
+                      className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                    >
+                      <ForwardedIconComponent
+                        name="Info"
+                        className="h-3.5 w-3.5 text-muted-foreground"
+                      />
+                    </button>
+                  </ShadTooltip>
+                </div>
+                <Textarea
+                  id="preprocessing-prompt"
+                  value={preprocessingPrompt}
+                  onChange={(e) => setPreprocessingPrompt(e.target.value)}
+                  className="min-h-[80px] resize-y"
+                />
+              </div>
+            </>
+          )}
         </div>
       </BaseModal.Content>
       <BaseModal.Footer
