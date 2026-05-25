@@ -95,15 +95,15 @@ class BochaSearchComponent(Component):
                     )
                 )
 
-            self.status = data_results
-            return data_results
-
         except httpx.TimeoutException:
             msg = "Bocha request timed out."
         except httpx.HTTPStatusError as exc:
             msg = f"Bocha HTTP error: {exc.response.status_code} - {exc.response.text}"
-        except Exception as exc:
+        except httpx.RequestError as exc:
             msg = f"Bocha request failed: {exc}"
+        else:
+            self.status = data_results
+            return data_results
 
         logger.error(msg)
         return [Data(text=msg, data={"error": msg})]
