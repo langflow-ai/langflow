@@ -103,7 +103,6 @@ dependencies = [
     "pyasn1>=0.6.3,<0.7.0",
     "langgraph-checkpoint>4.0.0,<5.0.0",
     "transformers>=5.6.0,<6.0.0",
-    "langchain-mongodb>=0.11.0",
 ]
 
 [dependency-groups]
@@ -200,7 +199,8 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.9.2"]
+qdrant-vectors = ["langchain-qdrant>=1.0.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -209,7 +209,7 @@ chroma = [
 upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 milvus = ["langchain-milvus~=0.3.2"]
-mongodb-vectors = ["langchain-mongodb>=0.7.0"]
+mongodb-vectors = ["langchain-mongodb>=0.11.0"]
 astradb = ["langchain-astradb~=1.0.0"]
 
 # Individual LLM providers
@@ -381,6 +381,7 @@ complete = [
     "langflow-base[elasticsearch]",
     "langflow-base[faiss]",
     "langflow-base[qdrant]",
+    "langflow-base[qdrant-vectors]",
     "langflow-base[weaviate]",
     "langflow-base[chroma]",
     "langflow-base[upstash]",
