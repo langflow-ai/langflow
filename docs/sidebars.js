@@ -103,6 +103,7 @@ module.exports = {
         "Agents/mcp-server",
         "Agents/langflow-mcp-client",
         "Agents/mcp-component-astra",
+        "Agents/mcp-component-browserless",
       ],
     },
     {
@@ -184,6 +185,27 @@ module.exports = {
           type: "doc",
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
+        },
+        {
+          type: "category",
+          label: "Build extensions",
+          items: [
+            {
+              type: "doc",
+              id: "Develop/extensions-quickstart",
+              label: "Build your first extension",
+            },
+            {
+              type: "doc",
+              id: "Develop/extensions-manifest",
+              label: "Manifest reference",
+            },
+            {
+              type: "doc",
+              id: "Develop/extensions-author-guide",
+              label: "Author guide",
+            },
+          ],
         },
       ],
     },
@@ -288,6 +310,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-extensions-production",
+          label: "Production install pattern for Extensions",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
@@ -326,6 +353,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -343,7 +371,7 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",
