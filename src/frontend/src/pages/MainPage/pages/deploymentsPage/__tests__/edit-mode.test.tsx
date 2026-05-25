@@ -198,10 +198,11 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(payload.provider_data?.display_name).toBe("Updated Agent");
   });
 
-  it("sends LLM in provider_data", () => {
+  it("sends LLM in provider_data when changed", () => {
     const { result } = renderEditHook();
+    act(() => result.current.setSelectedLlm("new-model"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.provider_data?.llm).toBe("test-model");
+    expect(payload.provider_data?.llm).toBe("new-model");
   });
 
   it("sends upsert_flows for newly attached flows", () => {
@@ -247,8 +248,8 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
   it("sends fallback description when nothing changed", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    // LLM is set so provider_data exists, but also check spec fallback logic
-    expect(payload.provider_data).toBeDefined();
+    expect(payload.provider_data).toBeUndefined();
+    expect(payload.description).toBe("A test agent");
   });
 
   it("includes tool_display_name on newly attached flow upsert", () => {
@@ -322,10 +323,9 @@ describe("Edit mode — no-op and partial update payloads", () => {
   it("sends fallback spec when nothing changed at all", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    // LLM is pre-filled so provider_data always has llm
     expect(payload.deployment_id).toBe("deploy-1");
-    expect(payload.provider_data?.llm).toBe("test-model");
-    // No spec change → no spec field (or fallback if no provider_data either)
+    expect(payload.provider_data).toBeUndefined();
+    expect(payload.description).toBe("A test agent");
   });
 
   it("sends only description in spec when only description changed", () => {

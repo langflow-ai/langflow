@@ -374,6 +374,7 @@ export function DeploymentStepperProvider({
         deploymentDescription,
         deploymentName,
         editingDeployment,
+        initialLlm: initialState?.initialLlm ?? "",
         initialConnectionsByFlow,
         initialToolNameByFlow,
         initialVersionByFlow,

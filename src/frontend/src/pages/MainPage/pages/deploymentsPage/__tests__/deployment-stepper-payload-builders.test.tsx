@@ -462,11 +462,12 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(payload.description).toBe("Brand new description");
   });
 
-  it("does not include description when it matches the initial deployment", () => {
+  it("uses description fallback when no provider_data changes are present", () => {
     const { result } = renderEditHook();
-    // Description is "A test agent" from mockDeployment — no change
+
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.description).toBeUndefined();
+    expect(payload.provider_data).toBeUndefined();
+    expect(payload.description).toBe("A test agent");
   });
 });
 

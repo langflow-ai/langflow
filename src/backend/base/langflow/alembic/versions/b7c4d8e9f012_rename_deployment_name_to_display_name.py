@@ -122,10 +122,19 @@ def upgrade() -> None:
                 OLD_NAME_COLUMN,
                 new_column_name=DISPLAY_NAME_COLUMN,
                 existing_type=sa.String(),
-                nullable=False,
+                nullable=True,
             )
         elif old_column_exists and display_name_exists:
             batch_op.drop_column(OLD_NAME_COLUMN)
+
+    # Keep display_name nullable on every upgrade path.
+    if migration.column_exists(DEPLOYMENT_TABLE, DISPLAY_NAME_COLUMN, conn):
+        with op.batch_alter_table(DEPLOYMENT_TABLE, schema=None) as batch_op:
+            batch_op.alter_column(
+                DISPLAY_NAME_COLUMN,
+                existing_type=sa.String(),
+                nullable=True,
+            )
 
 
 def downgrade() -> None:

@@ -179,6 +179,7 @@ export function buildDeploymentUpdatePayload({
   deploymentDescription,
   deploymentName,
   editingDeployment,
+  initialLlm,
   initialConnectionsByFlow,
   initialToolNameByFlow,
   initialVersionByFlow,
@@ -193,6 +194,7 @@ export function buildDeploymentUpdatePayload({
   deploymentDescription: string;
   deploymentName: string;
   editingDeployment: Deployment | null;
+  initialLlm: string;
   initialConnectionsByFlow: Map<string, string[]>;
   initialToolNameByFlow: Map<string, string>;
   initialVersionByFlow: Map<string, SelectedFlowVersion>;
@@ -319,7 +321,8 @@ export function buildDeploymentUpdatePayload({
     connections,
   });
 
-  const llmToSend = selectedLlm;
+  const llmChanged = selectedLlm !== initialLlm;
+  const llmToSend = llmChanged ? selectedLlm : undefined;
   if (
     llmToSend ||
     displayNameChanged ||

@@ -45,7 +45,12 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
         sa_column=Column(sa.Uuid(), nullable=True, index=True),
     )
     # TODO: Add DB-level length enforcement for provider-synced display_name and description.
-    display_name: str = Field(description="Deployment name synced from the provider.")
+    # nullable=True at the DB level to keep schema compatibility during migration transitions;
+    # application-layer validation still treats display_name as required.
+    display_name: str = Field(
+        sa_column=Column(sa.String(), nullable=True),
+        description="Deployment name synced from the provider.",
+    )
     description: str | None = Field(
         default=None,
         sa_column=Column(sa.Text(), nullable=True),

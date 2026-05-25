@@ -4463,8 +4463,8 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
         agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]}),
         tool=FakeToolClient(
             [
-                {"id": "tool-1", "name": "Tool One"},
-                {"id": "tool-2", "name": "Tool Two"},
+                {"id": "tool-1", "name": "Tool One", "display_name": "Tool One"},
+                {"id": "tool-2", "name": "Tool Two", "display_name": "Tool Two"},
             ]
         ),
         connections=FakeConnectionsClient(),
@@ -4515,7 +4515,7 @@ async def test_list_snapshots_partial_resolution_logs_stale_ids(monkeypatch, cap
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "deleted-tool"]}),
-        tool=FakeToolClient([{"id": "tool-1", "name": "Tool One"}]),
+        tool=FakeToolClient([{"id": "tool-1", "name": "Tool One", "display_name": "Tool One"}]),
         connections=FakeConnectionsClient(),
     )
 
@@ -4807,8 +4807,13 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
     fake_base = FakeBaseClient(
         get_payloads={
             "/tools": [
-                {"id": "tool-1", "name": "Tool One", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
-                {"id": "tool-2"},
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "display_name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                },
+                {"id": "tool-2", "name": "Tool Two", "display_name": "Tool Two"},
             ]
         }
     )
@@ -4833,7 +4838,7 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
         "display_name": "Tool One",
         "connections": {"cfg-1": "conn-1"},
     }
-    assert result.snapshots[1].provider_data == {"name": "tool-2", "display_name": "tool-2", "connections": {}}
+    assert result.snapshots[1].provider_data == {"name": "Tool Two", "display_name": "Tool Two", "connections": {}}
     assert result.provider_result == {}
 
 
