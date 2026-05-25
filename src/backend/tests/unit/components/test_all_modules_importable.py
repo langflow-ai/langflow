@@ -394,6 +394,8 @@ class TestDirectModuleImports:
                         "langchain_cohere",
                         "langchain_pinecone",
                         "langchain_chroma",
+                        "langchain_qdrant",
+                        "langchain_mongodb",
                         "qdrant_client",
                         "pymongo",
                         "cassandra",
