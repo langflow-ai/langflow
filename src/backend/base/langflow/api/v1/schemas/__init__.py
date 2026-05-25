@@ -353,6 +353,14 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+    user_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional end-user identifier forwarded to tracing providers (e.g. Langfuse) "
+            "as the trace's user_id. Does not affect authentication or authorization — the "
+            "API key owner remains the effective Langflow user."
+        ),
+    )
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {

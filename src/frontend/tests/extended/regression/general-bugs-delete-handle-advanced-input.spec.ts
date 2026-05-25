@@ -8,6 +8,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "the system must delete the handles from advanced fields when the code is updated",
   { tag: ["@release", "@components"] },
@@ -40,7 +41,7 @@ test(
     await closeAdvancedOptions(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 2000,
     });

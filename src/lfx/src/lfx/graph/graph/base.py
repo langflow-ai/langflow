@@ -91,6 +91,11 @@ class Graph:
         self.flow_name = flow_name
         self.description = description
         self.user_id = user_id
+        # Optional caller-supplied label forwarded to tracing providers. Kept
+        # distinct from ``self.user_id`` so request-supplied identifiers can be
+        # surfaced in external traces (e.g. Langfuse trace metadata) without
+        # leaking into authn/authz paths.
+        self.tracing_user_id: str | None = None
         self._is_input_vertices: list[str] = []
         self._is_output_vertices: list[str] = []
         self._is_state_vertices: list[str] | None = None
@@ -262,12 +267,16 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
-            if vertex_id in self.cycle_vertices:
-                self.run_manager.add_to_cycle_vertices(vertex_id)
+
+        self._cycle_vertices = None
+        self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self._cycle_vertices = None
+        self._is_cyclic = None
+        self.run_manager.cycle_vertices.clear()
         self.initialize()
 
     def add_component(self, component: Component, component_id: str | None = None) -> str:
@@ -675,6 +684,7 @@ class Graph:
                 user_id=self.user_id,
                 session_id=self.session_id,
                 flow_id=self.flow_id,
+                tracing_user_id=self.tracing_user_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
