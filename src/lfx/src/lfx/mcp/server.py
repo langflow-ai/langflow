@@ -601,6 +601,77 @@ async def remove_component(flow_id: str, component_id: str) -> dict[str, str]:
     return {"removed": component_id}
 
 
+_TRUTHY_STRINGS = {"true", "yes", "1", "on"}
+_FALSY_STRINGS = {"false", "no", "0", "off", ""}
+
+
+def _coerce_param_value(value: Any, field_type: str | None) -> Any:
+    """Coerce a spec-supplied value to the field's declared type.
+
+    YAML config blocks in create_flow_from_spec naturally produce ints, floats,
+    and bools where the underlying component field expects a different type
+    (e.g. `temperature: 0.5` for a float, `model_name: gpt-4o` for a string,
+    `should_store_message: true` for a bool). Without this coercion, the value
+    lands in the template as-is and the downstream build chokes (string-typed
+    fields like ChatInput.input_value cannot construct a Message from an int).
+
+    Only the four primitive shapes that YAML / JSON produce are handled:
+    ``str``, ``int``, ``float``, ``bool``. ``list``-typed fields, code, dicts,
+    and anything else pass through unchanged. None passes through unchanged
+    (clearing a field is a valid intent).
+    """
+    if value is None or field_type is None:
+        return value
+    if field_type == "str":
+        if isinstance(value, str):
+            return value
+        if isinstance(value, bool):
+            # Important: bool is a subclass of int in Python, so the str cast
+            # would give "True"/"False" (capitalized) when most templates
+            # expect lowercase. Match the YAML-spec convention.
+            return "true" if value else "false"
+        if isinstance(value, (int, float)):
+            return str(value)
+        return value
+    if field_type == "int":
+        if isinstance(value, bool):
+            return int(value)
+        if isinstance(value, int):
+            return value
+        if isinstance(value, float) and value.is_integer():
+            return int(value)
+        if isinstance(value, str):
+            try:
+                return int(value)
+            except ValueError:
+                return value
+        return value
+    if field_type == "float":
+        if isinstance(value, bool):
+            return float(value)
+        if isinstance(value, (int, float)):
+            return float(value)
+        if isinstance(value, str):
+            try:
+                return float(value)
+            except ValueError:
+                return value
+        return value
+    if field_type == "bool":
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, (int, float)):
+            return bool(value)
+        if isinstance(value, str):
+            lowered = value.strip().lower()
+            if lowered in _TRUTHY_STRINGS:
+                return True
+            if lowered in _FALSY_STRINGS:
+                return False
+        return value
+    return value
+
+
 @mcp.tool()
 @_tracked
 async def configure_component(
@@ -640,7 +711,16 @@ async def configure_component(
     # Separate dynamic fields from static ones
     static_params = {}
     warnings = []
-    for key, value in params.items():
+    for key, raw_value in params.items():
+        # Coerce primitive values (int / float / bool / str) to the field's
+        # declared type before doing anything else, so YAML-parsed config from
+        # create_flow_from_spec (where `temperature: 0.5` is a float and
+        # `should_store_message: true` is a bool) doesn't reach a string-typed
+        # field as the wrong primitive. Unknown / dict / list values pass
+        # through unchanged.
+        field_def = template.get(key) if isinstance(template.get(key), dict) else None
+        field_type = field_def.get("type") if field_def else None
+        value = _coerce_param_value(raw_value, field_type)
         if needs_server_update(template, key):
             # Handle tool_mode specially
             if key == "tool_mode":
