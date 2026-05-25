@@ -1271,7 +1271,8 @@ describe("useAssistantChat", () => {
           callbacks.onComplete({
             event: "complete",
             data: {
-              result: "Built a Chat Flow: ChatInput → OpenAIModel → ChatOutput.",
+              result:
+                "Built a Chat Flow: ChatInput → OpenAIModel → ChatOutput.",
               success: true,
               has_flow: true,
               continuation_expected: false,

@@ -78,7 +78,11 @@ const SAMPLE_PROPOSAL_FLOW = {
   name: "Chat Flow",
   data: {
     nodes: [
-      { id: "ChatInput-x", position: { x: 0, y: 0 }, data: { type: "ChatInput" } },
+      {
+        id: "ChatInput-x",
+        position: { x: 0, y: 0 },
+        data: { type: "ChatInput" },
+      },
       {
         id: "OpenAIModel-y",
         position: { x: 600, y: 0 },
@@ -156,9 +160,7 @@ describe("AssistantMessageBody — proposal-mode render (PR #12575 round 2)", ()
 
     // The primary Apply button is the contract for the proposal card.
     // If the card is rendered, this testid is reachable.
-    expect(
-      screen.getByTestId("assistant-flow-add-button"),
-    ).toBeInTheDocument();
+    expect(screen.getByTestId("assistant-flow-add-button")).toBeInTheDocument();
     expect(
       screen.getByTestId("assistant-flow-dismiss-button"),
     ).toBeInTheDocument();
