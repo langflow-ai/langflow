@@ -1,10 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to see errors on popups when raise an error",
   { tag: ["@release", "@workspace", "@components"] },
@@ -14,7 +15,6 @@ test(
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
 from langflow.schema import Data
-
 
 class CustomComponent(Component):
     display_name = "Custom Component"
@@ -44,9 +44,7 @@ class CustomComponent(Component):
         self.status = data
         return data
     `;
-
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -73,7 +71,7 @@ class CustomComponent(Component):
       .locator("textarea")
       .fill(customComponentCodeWithRaiseErrorMessage);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await page.getByTestId("button_run_custom component").click();
 

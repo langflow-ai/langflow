@@ -12,6 +12,11 @@ import {
   SNAPSHOTS_EMPTY_MOCK,
 } from "../../utils/deployment-mocks";
 
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
+
 // ---------------------------------------------------------------------------
 // Helper: set up all required API route mocks
 // ---------------------------------------------------------------------------
@@ -19,6 +24,7 @@ async function setupDeploymentMocks(
   page: Page,
   folderId: string,
   snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
 ) {
   // Broad catch-all registered FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
@@ -99,7 +105,7 @@ async function setupDeploymentMocks(
       });
       return;
     }
-    const flows = FLOWS_MOCK.map((f) => ({ ...f, folder_id: folderId }));
+    const flows = flowsMock.map((f) => ({ ...f, folder_id: folderId }));
     route.fulfill({
       status: 200,
       contentType: "application/json",
@@ -123,6 +129,7 @@ async function setupDeploymentMocks(
 async function openDeploymentStepper(
   page: Page,
   snapshotsMock: object = SNAPSHOTS_EMPTY_MOCK,
+  flowsMock: typeof FLOWS_MOCK = FLOWS_MOCK,
 ) {
   // Listen for the folders/projects API response BEFORE bootstrap to capture
   // the real myCollectionId. The step-attach-flows component filters flows by
@@ -148,7 +155,7 @@ async function openDeploymentStepper(
     // proceed with empty id — test will likely fail at flow-item assertion
   }
 
-  await setupDeploymentMocks(page, myCollectionId, snapshotsMock);
+  await setupDeploymentMocks(page, myCollectionId, snapshotsMock, flowsMock);
   await page.getByTestId("deployments-btn").click();
   await page.waitForSelector('[data-testid="subtab-deployments"]');
   await page.getByTestId("create-deployment-empty-btn").click();
@@ -223,11 +230,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await awaitBootstrapTest(page, { skipModal: true });
     await setupDeploymentMocks(page, "");
     await page.getByTestId("deployments-btn").click();
@@ -248,11 +250,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
 
     // Next should be disabled before selection
@@ -275,11 +272,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await selectProvider(page);
     await page.getByTestId("deployment-stepper-next").click();
@@ -316,11 +308,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await goToStepType(page);
 
@@ -365,11 +352,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await goToStepReview(page);
 
@@ -397,11 +379,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
 
     // Set up POST deployments mock (after bootstrap, before deploy click)
@@ -452,11 +429,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page);
     await goToStepReview(page);
 
@@ -491,11 +463,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
     await goToStepReview(page);
 
@@ -518,11 +485,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK);
     await goToStepReview(page);
 
@@ -545,11 +507,6 @@ test(
     tag: ["@deployment", "@workspace"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
     await goToStepReview(page);
 
@@ -579,5 +536,25 @@ test(
       page.getByText("Edit tool name (already exists in provider)"),
     ).not.toBeVisible({ timeout: 10000 });
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
+  },
+);
+
+test(
+  "deployment-create: review step shows inline error when flow name starts with number",
+  {
+    tag: ["@deployment", "@workspace"],
+  },
+  async ({ page }) => {
+    await openDeploymentStepper(page, SNAPSHOTS_EMPTY_MOCK, [
+      { ...FLOWS_MOCK[0], name: "12925" },
+    ]);
+    await goToStepReview(page);
+
+    await expect(
+      page.getByText(
+        "Tool name must start with a letter and contain at least one alphanumeric character.",
+      ),
+    ).toBeVisible();
+    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
   },
 );

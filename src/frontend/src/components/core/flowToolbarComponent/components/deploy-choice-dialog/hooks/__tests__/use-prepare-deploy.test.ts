@@ -216,6 +216,8 @@ describe("usePrepareDeploy — handleDeploy: no providers", () => {
     });
 
     expect(result.current.initialVersionByFlow.get("flow-1")).toEqual({
+      key: "flow-1:snap-xyz",
+      flowId: "flow-1",
       versionId: "snap-xyz",
       versionTag: "v3.0",
     });

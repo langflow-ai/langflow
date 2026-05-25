@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import {
   isCodeField,
@@ -25,6 +26,7 @@ export default function InspectionPanelFields({
   data,
   isEditingFields = false,
 }: InspectionPanelFieldsProps) {
+  const { t } = useTranslation();
   const isToolMode = data.node?.tool_mode;
 
   const connectedFieldNames = useFlowStore(
@@ -116,7 +118,7 @@ export default function InspectionPanelFields({
     if (allEditableFields.length === 0) {
       return (
         <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
-          No editable fields
+          {t("inspectionPanel.noEditableFields")}
         </div>
       );
     }
@@ -150,7 +152,7 @@ export default function InspectionPanelFields({
           name="Settings2"
           className="text-input w-6 h-6"
         />
-        No advanced settings
+        {t("inspectionPanel.noAdvancedSettings")}
       </div>
     );
   }

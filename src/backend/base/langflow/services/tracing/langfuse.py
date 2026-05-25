@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import os
+import threading
 from collections import OrderedDict
 from typing import TYPE_CHECKING, Any
+from uuid import UUID
 
 from lfx.log.logger import logger
 from typing_extensions import override
@@ -12,14 +14,142 @@ from langflow.services.tracing.base import BaseTracer
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from uuid import UUID
 
     from langchain_core.callbacks.base import BaseCallbackHandler
+    from langfuse import Langfuse
     from langfuse._client.span import LangfuseSpan
     from langfuse.types import TraceContext
     from lfx.graph.vertex.base import Vertex
 
     from langflow.services.tracing.schema import Log
+
+
+LANGFUSE_FEEDBACK_SCORE_NAME = "user-feedback"
+
+
+class _SharedClient:
+    """Process-wide cached Langfuse client.
+
+    The Langfuse SDK spawns background threads per client instantiation
+    (task_manager, prompt_cache, OTel exporters) and never joins them, so
+    creating one per flow run leaks threads under load.
+    See https://github.com/langflow-ai/langflow/issues/9066.
+    """
+
+    lock: threading.Lock = threading.Lock()
+    client: Langfuse | None = None
+    key: tuple[str, str, str] | None = None
+
+
+def _get_or_create_shared_client(config: dict) -> Langfuse:
+    """Return a process-wide Langfuse client, creating it once per credential set.
+
+    Keyed by (secret_key, public_key, host) so credential rotation produces a
+    fresh client rather than reusing a stale one.
+    """
+    from langfuse import Langfuse
+
+    key = (config["secret_key"], config["public_key"], config["host"])
+    with _SharedClient.lock:
+        if _SharedClient.client is None or _SharedClient.key != key:
+            _SharedClient.client = Langfuse(**config)
+            _SharedClient.key = key
+        return _SharedClient.client
+
+
+def _reset_shared_client_for_tests() -> None:
+    """Test-only hook: clear the cached client so each test gets a fresh mock."""
+    with _SharedClient.lock:
+        _SharedClient.client = None
+        _SharedClient.key = None
+
+
+def normalize_langfuse_trace_id(trace_id: UUID | str | None) -> str | None:
+    """Normalize a Langfuse trace identifier to 32-char hex format."""
+    if trace_id is None:
+        return None
+    if isinstance(trace_id, UUID):
+        return trace_id.hex
+    normalized = str(trace_id).replace("-", "").strip()
+    return normalized or None
+
+
+def feedback_score_id(message_id: UUID | str) -> str:
+    """Build a stable Langfuse score id from a message id."""
+    if isinstance(message_id, UUID):
+        return message_id.hex
+    return str(message_id).replace("-", "")
+
+
+def langfuse_is_configured() -> bool:
+    """Whether Langfuse credentials are set in the environment."""
+    return bool(LangFuseTracer._get_config())
+
+
+def _get_langfuse_client():
+    """Return the shared, process-wide Langfuse client.
+
+    Callers must gate on `langfuse_is_configured()` being truthy; this raises
+    rather than silently no-opping so background-task failures don't
+    disappear into the void.
+    """
+    config = LangFuseTracer._get_config()
+    if not config:
+        msg = (
+            "Langfuse credentials missing — set LANGFUSE_SECRET_KEY, LANGFUSE_PUBLIC_KEY, "
+            "and LANGFUSE_HOST (or LANGFUSE_BASE_URL)."
+        )
+        raise RuntimeError(msg)
+    return _get_or_create_shared_client(config)
+
+
+def sync_feedback_score(
+    *,
+    message_id: UUID | str,
+    trace_id: UUID | str | None,
+    session_id: str,
+    flow_id: UUID | str | None,
+    sender: str,
+    positive_feedback: bool,
+) -> None:
+    """Send message feedback to Langfuse as a trace-linked score.
+
+    Callers must gate this on tracing being enabled and Langfuse being
+    configured; this function raises rather than silently no-opping so
+    background-task failures surface in logs.
+    """
+    normalized_trace_id = normalize_langfuse_trace_id(trace_id)
+    if not normalized_trace_id:
+        msg = f"Cannot sync feedback score without a Langfuse trace id (message_id={message_id})."
+        raise ValueError(msg)
+
+    client = _get_langfuse_client()
+    client.create_score(
+        name=LANGFUSE_FEEDBACK_SCORE_NAME,
+        value=1.0 if positive_feedback else 0.0,
+        trace_id=normalized_trace_id,
+        score_id=feedback_score_id(message_id),
+        data_type="BOOLEAN",
+        comment="positive" if positive_feedback else "negative",
+        metadata={
+            "message_id": str(message_id),
+            "session_id": session_id,
+            "flow_id": str(flow_id) if flow_id else None,
+            "sender": sender,
+        },
+    )
+    client.flush()
+
+
+def delete_feedback_score(*, message_id: UUID | str) -> None:
+    """Delete the Langfuse feedback score previously synced for a message.
+
+    Used when a user clears their thumbs up/down so Langfuse stays in sync
+    with Langflow's UI state. Callers must gate on tracing being enabled
+    and Langfuse being configured.
+    """
+    client = _get_langfuse_client()
+    client.api.score.delete(score_id=feedback_score_id(message_id))
 
 
 class LangFuseTracer(BaseTracer):
@@ -31,6 +161,7 @@ class LangFuseTracer(BaseTracer):
 
     flow_id: str
     _trace_context: TraceContext
+    langfuse_trace_id: str | None
 
     def __init__(
         self,
@@ -40,15 +171,23 @@ class LangFuseTracer(BaseTracer):
         trace_id: UUID,
         user_id: str | None = None,
         session_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         self.project_name = project_name
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.trace_id = trace_id
+        # ``user_id`` remains the authenticated Langflow user and drives
+        # ``trace.userId`` unchanged from pre-#9505 behavior. ``tracing_user_id``
+        # is an optional caller-supplied label; when set, it is stamped into
+        # trace metadata as ``langflow.tracing_user_id`` so consumers can still
+        # access the override without redefining ``trace.userId``.
         self.user_id = user_id
+        self.tracing_user_id = tracing_user_id
         self.session_id = session_id
         self.flow_id = trace_name.split(" - ")[-1]
         self.spans: dict[str, LangfuseSpan] = OrderedDict()
+        self.langfuse_trace_id = None
 
         config = self._get_config()
         self._ready: bool = self._setup_langfuse(config) if config else False
@@ -67,7 +206,7 @@ class LangFuseTracer(BaseTracer):
             from langfuse import Langfuse
             from langfuse.types import TraceContext
 
-            self._client = Langfuse(**config)
+            self._client = _get_or_create_shared_client(config)
 
             # Health check using public API
             try:
@@ -80,6 +219,7 @@ class LangFuseTracer(BaseTracer):
 
             # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
             langfuse_trace_id = Langfuse.create_trace_id(seed=str(self.trace_id))
+            self.langfuse_trace_id = langfuse_trace_id
             # parent_span_id is NotRequired but ty doesn't fully support this yet
             self._trace_context = TraceContext(trace_id=langfuse_trace_id)  # type: ignore[call-arg]
 
@@ -90,12 +230,19 @@ class LangFuseTracer(BaseTracer):
                 metadata={"flow_id": self.flow_id, "project_name": self.project_name},
             )
 
-            # Set trace-level metadata (user_id, session_id)
-            self._root_span.update_trace(
-                name=self.flow_id,
-                user_id=self.user_id,
-                session_id=self.session_id,
-            )
+            # ``trace.userId`` stays the authenticated Langflow user so existing
+            # Langfuse consumers keep getting the same identity. When a caller
+            # provides an override via ``tracing_user_id``, stamp it under
+            # ``langflow.tracing_user_id`` so it is still recoverable from trace
+            # metadata without changing the meaning of ``trace.userId``.
+            trace_kwargs: dict[str, Any] = {
+                "name": self.flow_id,
+                "user_id": self.user_id,
+                "session_id": self.session_id,
+            }
+            if self.tracing_user_id and self.tracing_user_id != self.user_id:
+                trace_kwargs["metadata"] = {"langflow.tracing_user_id": self.tracing_user_id}
+            self._root_span.update_trace(**trace_kwargs)
 
         except ImportError:
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
@@ -190,6 +337,14 @@ class LangFuseTracer(BaseTracer):
 
         # End the root span
         self._root_span.end()
+
+        # Flush buffered events so they are delivered before the flow finishes.
+        # Best-effort: if the upstream is unreachable we still want flow end to
+        # complete without raising.
+        try:
+            self._client.flush()
+        except Exception as e:  # noqa: BLE001
+            logger.debug(f"Error flushing Langfuse client: {e}")
 
     def get_langchain_callback(self) -> BaseCallbackHandler | None:
         if not self._ready:

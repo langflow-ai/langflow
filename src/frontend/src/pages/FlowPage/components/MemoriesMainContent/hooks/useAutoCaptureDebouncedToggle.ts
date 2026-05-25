@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from "react";
-import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 import type {
   MemoryInfo,
   UpdateMemoryParams,
 } from "@/controllers/API/queries/memories/types";
+import useAlertStore from "@/stores/alertStore";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { AUTO_CAPTURE_DEBOUNCE_MS } from "../MemoriesMainContent.constants";
 
 type UpdateMemoryMutation = {
   mutate: (
     variables: UpdateMemoryParams,
-    options?: { onSuccess?: () => void; onError?: () => void },
+    options?: { onSuccess?: () => void; onError?: (error: unknown) => void },
   ) => void;
 };
 
@@ -25,6 +27,9 @@ export const useAutoCaptureDebouncedToggle = ({
   updateMemoryMutation,
   debounceMs = AUTO_CAPTURE_DEBOUNCE_MS,
 }: UseAutoCaptureDebouncedToggleArgs) => {
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
   const autoCaptureTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
@@ -92,9 +97,12 @@ export const useAutoCaptureDebouncedToggle = ({
       autoCaptureTimerRef.current = null;
     }
 
+    const capturedId = memory.id;
+    const capturedIsActive = memory.is_active;
+
     autoCaptureTimerRef.current = setTimeout(() => {
       // If the committed value already matches, skip a no-op update.
-      if ((committedIsActiveRef.current ?? memory.is_active) === nextIsActive) {
+      if ((committedIsActiveRef.current ?? capturedIsActive) === nextIsActive) {
         setAutoCaptureDraft(null);
         draftIsActiveRef.current = null;
         autoCaptureTimerRef.current = null;
@@ -106,15 +114,29 @@ export const useAutoCaptureDebouncedToggle = ({
         draftIsActiveRef.current = null;
       };
 
+      const currentName = memory?.name ?? capturedId;
+
       updateMemoryMutation.mutate(
         {
-          memoryId: memory.id,
+          memoryId: capturedId,
           auto_capture: nextIsActive,
         },
         {
-          onSuccess: clearDraft,
-          // On failure the draft never resolved — reset so UI reflects server state.
-          onError: clearDraft,
+          onSuccess: () => {
+            clearDraft();
+            setSuccessData({
+              title: nextIsActive
+                ? `Auto-capture enabled for memory "${currentName}"`
+                : `Auto-capture disabled for memory "${currentName}"`,
+            });
+          },
+          onError: (error: unknown) => {
+            clearDraft();
+            setErrorData({
+              title: "Failed to update auto-capture",
+              list: extractApiErrorMessages(error),
+            });
+          },
         },
       );
       autoCaptureTimerRef.current = null;

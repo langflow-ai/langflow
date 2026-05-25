@@ -124,6 +124,33 @@ class AuthService(BaseAuthService):
                 msg = "API key authentication failed"
                 raise InvalidCredentialsError(msg) from e
 
+        # AUTO_LOGIN parity with _api_key_security_impl: when AUTO_LOGIN is
+        # enabled and the operator has explicitly opted in via
+        # skip_auth_auto_login, fall back to the superuser instead of
+        # rejecting the request. Without this, ``get_current_user``-protected
+        # endpoints reject unauthenticated requests even though API-key
+        # endpoints accept them, breaking ADK/dev integrations that rely on
+        # AUTO_LOGIN.
+        auth_settings = self.settings.auth_settings
+        if auth_settings.AUTO_LOGIN and auth_settings.skip_auth_auto_login:
+            if not auth_settings.SUPERUSER:
+                msg = "Missing first superuser credentials"
+                raise InvalidCredentialsError(msg)
+            superuser = await get_user_by_username(db, auth_settings.SUPERUSER)
+            if superuser is None:
+                msg = "Superuser not found"
+                raise InvalidCredentialsError(msg)
+            # Mirror the active-user enforcement that token and API-key
+            # auth paths apply. ``CurrentActiveUser`` re-checks this for HTTP
+            # routes, but ``get_current_user_for_sse``/websocket dependencies
+            # call ``authenticate_with_credentials`` directly, so we must
+            # reject inactive superusers here too.
+            if not superuser.is_active:
+                msg = "User account is inactive"
+                raise InactiveUserError(msg)
+            logger.warning(AUTO_LOGIN_WARNING)
+            return superuser
+
         # No credentials provided
         msg = "No authentication credentials provided"
         raise MissingCredentialsError(msg)
@@ -237,6 +264,16 @@ class AuthService(BaseAuthService):
             if not query_param and not header_param:
                 if settings_service.auth_settings.skip_auth_auto_login:
                     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
+                    if result is None:
+                        raise HTTPException(
+                            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                            detail="Superuser not found in database",
+                        )
+                    if not result.is_active:
+                        raise HTTPException(
+                            status_code=status.HTTP_403_FORBIDDEN,
+                            detail="User account is inactive",
+                        )
                     logger.warning(AUTO_LOGIN_WARNING)
                     return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
@@ -286,6 +323,16 @@ class AuthService(BaseAuthService):
                 if not api_key:
                     if settings.auth_settings.skip_auth_auto_login:
                         result = await get_user_by_username(db, settings.auth_settings.SUPERUSER)
+                        if result is None:
+                            raise WebSocketException(
+                                code=status.WS_1011_INTERNAL_ERROR,
+                                reason="Superuser not found",
+                            )
+                        if not result.is_active:
+                            raise WebSocketException(
+                                code=status.WS_1008_POLICY_VIOLATION,
+                                reason="User account is inactive",
+                            )
                         logger.warning(AUTO_LOGIN_WARNING)
                     else:
                         raise WebSocketException(
@@ -428,20 +475,8 @@ class AuthService(BaseAuthService):
             logger.error(f"Webhook API key validation error: {exc}")
             raise HTTPException(status_code=403, detail="API key authentication failed") from exc
 
-        try:
-            flow_owner = await get_user_by_flow_id_or_endpoint_name(flow_id)
-            if flow_owner is None:
-                raise HTTPException(status_code=404, detail="Flow not found")
-        except HTTPException:
-            raise
-        except Exception as exc:
-            raise HTTPException(status_code=404, detail="Flow not found") from exc
-
-        if flow_owner.id != authenticated_user.id:
-            raise HTTPException(
-                status_code=403,
-                detail="Access denied: You can only execute webhooks for flows you own",
-            )
+        # The helper already enforces ownership and raises 404 if not found or not owned
+        await get_user_by_flow_id_or_endpoint_name(flow_id, user_id=authenticated_user.id)
 
         return authenticated_user
 

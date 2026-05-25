@@ -1,5 +1,6 @@
 import type { AgGridReact } from "ag-grid-react";
 import { type ForwardedRef, forwardRef } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import TableComponent, {
   type TableComponentProps,
@@ -37,6 +38,7 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
     }: TableModalProps,
     ref: ForwardedRef<AgGridReact>,
   ) => {
+    const { t } = useTranslation();
     const handleSetOpen = (newOpen: boolean) => {
       if (!newOpen && onCancel) {
         onCancel();
@@ -85,7 +87,11 @@ const TableModal = forwardRef<AgGridReact, TableModalProps>(
           ></TableComponent>
         </BaseModal.Content>
         <BaseModal.Footer
-          submit={onSave ? { label: "Save", onClick: onSave } : undefined}
+          submit={
+            onSave
+              ? { label: t("tableModal.save"), onClick: onSave }
+              : undefined
+          }
         ></BaseModal.Footer>
       </BaseModal>
     );

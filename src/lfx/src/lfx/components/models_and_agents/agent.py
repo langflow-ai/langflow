@@ -4,7 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any
 
-from lfx.components.models_and_agents.memory import MemoryComponent
+from lfx.components.models_and_agents.memory import MemoryComponent, aget_agent_chat_history
 
 if TYPE_CHECKING:
     from langchain_core.tools import Tool
@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 from lfx.base.agents.agent import LCToolsAgentComponent
 from lfx.base.agents.default_system_prompt import DEFAULT_SYSTEM_PROMPT_TEMPLATE
 from lfx.base.agents.events import ExceptionWithMessageError
+from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.unified_models import (
     get_language_model_options,
     get_llm,
@@ -90,6 +91,11 @@ class AgentComponent(ToolCallingAgentComponent):
             info="Select your model provider",
             real_time_refresh=True,
             required=True,
+            # Agents require tool calling — the filter is honored by
+            # ``handle_model_input_update`` so models that can't run with
+            # tools never reach the picker (and any saved selection that
+            # no longer satisfies the constraint is auto-replaced).
+            filters={"tool_calling": True},
         ),
         SecretStrInput(
             name="api_key",
@@ -212,6 +218,13 @@ class AgentComponent(ToolCallingAgentComponent):
         # removed memory inputs from agent component
         # *memory_inputs,
         BoolInput(
+            name="stream",
+            display_name="Stream",
+            info=STREAM_INFO_TEXT,
+            value=False,
+            advanced=True,
+        ),
+        BoolInput(
             name="add_current_date_tool",
             display_name="Current Date",
             advanced=True,
@@ -283,6 +296,7 @@ class AgentComponent(ToolCallingAgentComponent):
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
+            stream=bool(getattr(self, "stream", False)),
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
@@ -477,16 +491,15 @@ class AgentComponent(ToolCallingAgentComponent):
             return Data(data={"content": "", "error": str(exc)})
 
     async def get_memory_data(self):
-        # TODO: This is a temporary fix to avoid message duplication. We should develop a function for this.
-        messages = (
-            await MemoryComponent(**self.get_base_args())
-            .set(
-                session_id=self.graph.session_id,
-                context_id=self.context_id,
-                order="Ascending",
-                n_messages=self.n_messages,
-            )
-            .retrieve_messages()
+        # Scope by flow_id so default playground session names (e.g. "New Session 0")
+        # cannot leak chat history across unrelated flows. See issue #13059.
+        # The helper also returns [] when n_messages == 0, preserving the
+        # explicit "memory disabled" contract from MemoryComponent.retrieve_messages.
+        messages = await aget_agent_chat_history(
+            session_id=self.graph.session_id,
+            flow_id=getattr(self.graph, "flow_id", None),
+            context_id=self.context_id,
+            n_messages=self.n_messages,
         )
         return [
             message for message in messages if getattr(message, "id", None) != getattr(self.input_value, "id", None)
@@ -508,15 +521,16 @@ class AgentComponent(ToolCallingAgentComponent):
         field_value: list[dict],
         field_name: str | None = None,
     ) -> dotdict:
-        # Update model options with caching (for all field changes)
-        # Agents require tool calling, so filter for only tool-calling capable models
+        # Update model options with caching (for all field changes).
+        # The tool-calling constraint lives on the ModelInput's ``filters``
+        # field (declared above); ``handle_model_input_update`` reads it
+        # and applies the filter to both the dropdown options and the
+        # sticky-default re-injection path.
         build_config = handle_model_input_update(
             component=self,
             build_config=dict(build_config),
             field_value=field_value,
             field_name=field_name,
-            cache_key_prefix="language_model_options_tool_calling",
-            get_options_func=lambda user_id=None: get_language_model_options(user_id=user_id, tool_calling=True),
         )
         build_config = dotdict(build_config)
 
@@ -533,7 +547,6 @@ class AgentComponent(ToolCallingAgentComponent):
                 "add_current_date_tool",
                 "add_calculator_tool",
                 "system_prompt",
-                "agent_description",
                 "max_iterations",
                 "handle_parsing_errors",
                 "verbose",
@@ -546,14 +559,9 @@ class AgentComponent(ToolCallingAgentComponent):
 
     async def _get_tools(self) -> list[Tool]:
         component_toolkit = get_component_toolkit()
-        tools_names = self._build_tools_names()
-        agent_description = self.get_tool_description()
-        # TODO: Agent Description Depreciated Feature to be removed
-        description = f"{agent_description}{tools_names}"
 
         tools = component_toolkit(component=self).get_tools(
             tool_name="Call_Agent",
-            tool_description=description,
             # here we do not use the shared callbacks as we are exposing the agent as a tool
             callbacks=self.get_langchain_callbacks(),
         )

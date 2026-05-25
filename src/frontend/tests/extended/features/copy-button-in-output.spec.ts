@@ -1,15 +1,14 @@
 import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to copy JSON from output",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.waitForSelector('[data-testid="disclosure-data sources"]', {
       timeout: 3000,
       state: "visible",
@@ -38,7 +37,9 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.getByTestId("output-inspection-api response-apirequest").click();
 

@@ -9,6 +9,9 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to see api key in webhook component when auto login is disabled",
   { tag: ["@release"] },
@@ -77,7 +80,7 @@ test(
 
     expect(curl).toContain("x-api-key");
 
-    await page.getByText("Close", { exact: true }).last().click();
+    await page.getByText(TEXTS.close, { exact: true }).last().click();
 
     await closeAdvancedOptions(page);
 
@@ -103,13 +106,7 @@ test(
         },
       });
     });
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
 
     await page.getByTestId("sidebar-search-input").fill("webhook");
@@ -141,7 +138,7 @@ test(
 
     expect(curl).not.toContain("x-api-key");
 
-    await page.getByText("Close", { exact: true }).last().click();
+    await page.getByText(TEXTS.close, { exact: true }).last().click();
 
     await closeAdvancedOptions(page);
 
