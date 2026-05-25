@@ -35,7 +35,7 @@ def load_local_registry() -> dict[str, dict]:
         return _registry_cache
 
     try:
-        with _INDEX_PATH.open() as f:
+        with _INDEX_PATH.open(encoding="utf-8") as f:
             data = json.load(f)
     except FileNotFoundError:
         msg = f"Component registry not found at {_INDEX_PATH}. The lfx package may be installed incorrectly."

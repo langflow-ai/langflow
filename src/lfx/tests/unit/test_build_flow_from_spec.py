@@ -155,6 +155,37 @@ nodes:
         assert result["edge_count"] == 0
 
 
+class TestLoadLocalRegistryEncoding:
+    """Regression: registry JSON must be read as UTF-8 regardless of the OS locale.
+
+    Bug: on Windows the default text encoding is cp1252, which rejects the UTF-8
+    bytes embedded in ``component_index.json`` (first occurrence: byte 0x8f at
+    offset 590097). Every Flow Builder tool that touches the registry crashed
+    with ``UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f``.
+    """
+
+    def test_should_load_registry_when_system_default_encoding_is_cp1252(self, monkeypatch):
+        from pathlib import Path
+
+        from lfx.graph.flow_builder import builder as builder_module
+
+        monkeypatch.setattr(builder_module, "_registry_cache", None)
+
+        original_open = Path.open
+
+        def windows_like_open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+            if "b" not in mode and encoding is None:
+                encoding = "cp1252"
+            return original_open(self, mode, buffering, encoding, errors, newline)
+
+        monkeypatch.setattr(Path, "open", windows_like_open)
+
+        registry = builder_module.load_local_registry()
+
+        assert isinstance(registry, dict)
+        assert registry, "registry must contain at least one component after a successful UTF-8 load"
+
+
 class TestFlowToSpecSummary:
     def test_summary_of_built_flow(self):
         spec = """\
