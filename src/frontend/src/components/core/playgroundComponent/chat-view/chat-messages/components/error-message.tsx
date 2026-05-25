@@ -1,9 +1,5 @@
 import { AnimatePresence, motion } from "framer-motion";
-import { ComponentPropsWithoutRef } from "react";
-import Markdown from "react-markdown";
-import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
-import CodeTabsComponent from "@/components/core/codeTabsComponent";
 import {
   Accordion,
   AccordionContent,
@@ -14,63 +10,6 @@ import { TextShimmer } from "@/components/ui/TextShimmer";
 import { ChatMessageType, ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import { extractErrorMessage } from "../utils/extract-error-message";
-
-/**
- * Markdown components configuration for error messages.
- */
-const errorMarkdownComponents = {
-  a: ({ ...props }: ComponentPropsWithoutRef<"a">) => (
-    <a
-      href={props.href}
-      target="_blank"
-      className="underline"
-      rel="noopener noreferrer"
-    >
-      {props.children}
-    </a>
-  ),
-  p: ({ ...props }: ComponentPropsWithoutRef<"p">) => (
-    <span className="inline-block w-fit max-w-full text-xs">
-      {props.children}
-    </span>
-  ),
-  code: ({
-    inline,
-    className,
-    children,
-    ...props
-  }: ComponentPropsWithoutRef<"code"> & {
-    inline?: boolean;
-  }) => {
-    let content = children as string;
-    if (
-      Array.isArray(children) &&
-      children.length === 1 &&
-      typeof children[0] === "string"
-    ) {
-      content = children[0] as string;
-    }
-    if (typeof content === "string") {
-      if (content.length && content[0] === "▍") {
-        return <span className="form-modal-markdown-span"></span>;
-      }
-
-      const match = /language-(\w+)/.exec(className || "");
-
-      return !inline ? (
-        <CodeTabsComponent
-          language={(match && match[1]) || ""}
-          code={String(content).replace(/\n$/, "")}
-        />
-      ) : (
-        <code className={className} {...props}>
-          {content}
-        </code>
-      );
-    }
-    return null;
-  },
-};
 
 interface ErrorViewProps {
   blocks: ContentBlock[];
@@ -191,27 +130,30 @@ export const ErrorView = ({
       {showLoading ? (
         <ErrorLoadingState />
       ) : (
-        blocks.map((block, blockIndex) => (
-          <div
-            key={blockIndex}
-            className="w-full rounded-md border border-border pt-[6px] pr-[6px] pb-[6px] pl-[8px] text-sm text-foreground"
-          >
-            {block.contents.map((content, contentIndex) => {
-              if (content.type === "error") {
-                return (
-                  <ErrorAccordion
-                    key={contentIndex}
-                    content={content}
-                    chat={chat}
-                    closeChat={closeChat}
-                    fitViewNode={fitViewNode}
-                  />
-                );
-              }
-              return null;
-            })}
-          </div>
-        ))
+        <div className="flex flex-col gap-2" data-testid="error-card-stack">
+          {blocks.map((block, blockIndex) => (
+            <div
+              key={blockIndex}
+              className="w-full rounded-md border border-border pt-[6px] pr-[6px] pb-[6px] pl-[8px] text-sm text-foreground"
+              data-testid="error-card"
+            >
+              {block.contents.map((content, contentIndex) => {
+                if (content.type === "error") {
+                  return (
+                    <ErrorAccordion
+                      key={contentIndex}
+                      content={content}
+                      chat={chat}
+                      closeChat={closeChat}
+                      fitViewNode={fitViewNode}
+                    />
+                  );
+                }
+                return null;
+              })}
+            </div>
+          ))}
+        </div>
       )}
     </AnimatePresence>
   );
