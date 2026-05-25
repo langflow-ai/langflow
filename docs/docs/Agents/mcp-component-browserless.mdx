@@ -1,0 +1,71 @@
+---
+title: Connect a Browserless MCP server to Langflow
+slug: /mcp-component-browserless
+---
+
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
+This guide demonstrates how to [use Langflow as an MCP client](/mcp-client) by using the **MCP Tools** component to connect to the [Browserless MCP server](https://docs.browserless.io/mcp/overview) in an agent flow.
+
+[Browserless](https://browserless.io) is a hosted browser-as-an-MCP server. The remote MCP endpoint exposes tools for smart scraping, web/news/image search, sitemap mapping, full-site crawling, Lighthouse audits, custom Puppeteer execution, file downloads, native exports, and a persistent agentic-browsing loop with captcha solving and residential proxies. No local install is required.
+
+1. Create a [Browserless account](https://browserless.io/account/) and copy your API token.
+
+2. Create an [OpenAI](https://platform.openai.com/) API key.
+
+3. To follow along with this guide, create a flow based on the **Simple Agent** template.
+
+    You can also use an existing flow or create a blank flow.
+
+4. Remove the **URL** tool from the flow.
+
+5. Register the Browserless MCP server from the <McpIcon /> **MCP** sidebar and add **MCP Tools** to the canvas.
+Use the following values:
+
+    1. Select the **HTTP/SSE** connection type.
+
+    2. In the **Name** field, enter a name for the MCP server, such as `Browserless`.
+
+    3. In the **URL** field, enter the Browserless MCP endpoint:
+
+        ```text
+        https://mcp.browserless.io/mcp
+        ```
+
+    4. In the **Headers** fields, add the `Authorization` header with your Browserless API token:
+
+        | Key | Value |
+        | --- | --- |
+        | `Authorization` | `Bearer YOUR_BROWSERLESS_TOKEN` |
+
+        :::tip
+        For security, store your token as a [global variable](/configuration-global-variables) named `BROWSERLESS_TOKEN`, and then reference it in the header value field. Avoid pasting the raw token into the UI when possible.
+        :::
+
+    5. Click **Add Server**.
+
+6. In the **Agent** component, add your OpenAI API key.
+
+    The default model is an OpenAI model.
+    If you want to use a different model, edit the **Model Provider**, **Model Name**, and **API Key** fields accordingly.
+
+7. Open the **Playground**, and then ask the agent, `Scrape https://example.com and return the page content as markdown.`
+
+    Since Langflow is connected to Browserless through the MCP server, the agent chooses the correct tool (`browserless_smartscraper`) and returns the page content. For example:
+
+    ```text
+    # Example Domain
+
+    This domain is for use in illustrative examples in documents. You may use this
+    domain in literature without prior coordination or asking for permission.
+
+    [More information...](https://www.iana.org/domains/example)
+    ```
+
+    Try other prompts to exercise different tools provided by the Browserless MCP server:
+
+    - `Search the web for "browser automation" and return the top 3 results.` uses `browserless_search`.
+    - `Map all URLs on https://docs.browserless.io and return the top 50.` uses `browserless_map`.
+    - `Run a Lighthouse performance audit on https://browserless.io.` uses `browserless_performance`.
+    - `Take a screenshot of https://news.ycombinator.com.` uses `browserless_smartscraper` with the `screenshot` format.
