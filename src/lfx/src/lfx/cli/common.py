@@ -24,13 +24,13 @@ from urllib.parse import urlparse
 import httpx
 import typer
 
+from lfx.cli.runtime_variables import build_request_variables_from_global_vars
 from lfx.cli.script_loader import (
     extract_structured_result,
     find_graph_variable,
     load_graph_from_script,
 )
 from lfx.load import load_flow_from_json
-from lfx.cli.runtime_variables import build_request_variables_from_global_vars
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
 from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables

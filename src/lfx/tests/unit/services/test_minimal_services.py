@@ -288,9 +288,7 @@ class TestVariableService:
         """Request-scoped variables are read from LANGFLOW_REQUEST_VARIABLES."""
         import json
 
-        os.environ["LANGFLOW_REQUEST_VARIABLES"] = json.dumps(
-            {"runtime_token": "abc123", "normal_key": "value1"}
-        )
+        os.environ["LANGFLOW_REQUEST_VARIABLES"] = json.dumps({"runtime_token": "abc123", "normal_key": "value1"})
         try:
             assert await variables.get_variable("runtime_token") == "abc123"
             assert await variables.get_variable("normal_key") == "value1"
