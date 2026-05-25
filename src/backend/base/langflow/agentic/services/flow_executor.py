@@ -200,8 +200,18 @@ async def execute_flow_file_streaming(
         logger.error(f"Flow preparation error: {e}")
         raise HTTPException(status_code=400, detail=str(e)) from e
     except (json.JSONDecodeError, OSError, ValueError) as e:
+        # Include the underlying error message in the HTTP detail so the UI
+        # surfaces something actionable. The generic "An error occurred while
+        # preparing the flow." string hid the real failure (e.g. the torch
+        # partial-init AttributeError that `validate.create_class` re-raises
+        # as a ValueError), forcing users to dig through server logs to find
+        # the cause. ValueError messages from validate.py already include
+        # actionable hints; passing them through is safe.
         logger.error(f"Flow preparation error: {e}")
-        raise HTTPException(status_code=500, detail="An error occurred while preparing the flow.") from e
+        raise HTTPException(
+            status_code=500,
+            detail=f"An error occurred while preparing the flow: {e}",
+        ) from e
 
     event_queue: asyncio.Queue[tuple[str, bytes, float] | None] = asyncio.Queue(maxsize=STREAMING_QUEUE_MAX_SIZE)
     event_manager = create_default_event_manager(event_queue)

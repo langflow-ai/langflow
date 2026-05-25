@@ -364,6 +364,16 @@ def run(
             raise ValueError(err)
         load_dotenv(env_file, override=True)
 
+    # Fork-safe master preload is the headline optimization in the cold-start
+    # refactor: default it on so operators get the Wave 1 / Wave 2 parallel
+    # init, engine-disposal-before-fork, and gc.freeze() benefits without
+    # having to opt in. setdefault preserves any explicit value the user (or
+    # the .env file loaded above) supplied, so `LANGFLOW_GUNICORN_PRELOAD=false`
+    # still disables it. The two os.environ.get() call sites below intentionally
+    # keep "false" as their fallback so they remain correct even if this
+    # setdefault is ever removed.
+    os.environ.setdefault("LANGFLOW_GUNICORN_PRELOAD", "true")
+
     # Set and normalize log level, with precedence: cli > env > default
     log_level = (log_level or os.environ.get("LANGFLOW_LOG_LEVEL") or "info").lower()
     os.environ["LANGFLOW_LOG_LEVEL"] = log_level

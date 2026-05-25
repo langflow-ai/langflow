@@ -366,6 +366,25 @@ def create_class(code, class_name):
         )
         msg = f"Import error while creating class: {e!s}.{install_hint}"
         raise ValueError(msg) from e
+    except AttributeError as e:
+        # Sibling case to the ImportError branch above. The lazy-import refactor
+        # delays `importlib.import_module(...)` to first attribute access on a
+        # `_LazyImportProxy`, so a broken transitive import (e.g. torch's
+        # "partially initialized module 'torch' has no attribute 'library'"
+        # circular-import bug surfaced via `transformers`) raises AttributeError
+        # at proxy-resolution time rather than ImportError. Without this branch
+        # the generic catch-all wraps it as "Error creating class. AttributeError(...)"
+        # which reads like a code typo even though the fix is environment-level.
+        torch_partial_init = "partially initialized module" in str(e) or "circular import" in str(e)
+        hint = (
+            " This usually means a transitive C-extension import (commonly torch via transformers/"
+            "langchain) failed to fully initialize. Reinstalling the broken package, pinning a known-"
+            "good version, or restarting the interpreter typically resolves it."
+            if torch_partial_init
+            else ""
+        )
+        msg = f"Attribute error while creating class: {e!s}.{hint}"
+        raise ValueError(msg) from e
     except Exception as e:
         msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
@@ -514,6 +533,22 @@ class _LazyImportProxy:
         attr_name = object.__getattribute__(self, "_attr_name")
         is_module_binding = object.__getattribute__(self, "_is_module_binding")
         top_level = object.__getattribute__(self, "_top_level")
+
+        # torch 2.x has a fragile partial-init order: when it is first imported
+        # *nested* inside another module's __init__ chain (e.g. transformers
+        # under langchain_classic.agents), Python publishes a half-initialized
+        # `sys.modules["torch"]` whose ``torch.library`` attribute does not yet
+        # exist, surfacing as "partially initialized module 'torch' has no
+        # attribute 'library' (most likely due to a circular import)". This
+        # never happened on the pre-cold-start branch because the eager top-level
+        # imports in lfx.custom.validate forced torch to fully initialize once
+        # at lfx import time. Pre-load torch here when the lazy proxy is about
+        # to walk a transitive chain that almost always pulls it (langchain
+        # families known to depend on transformers/torch). Cheap when torch is
+        # already loaded, no-op when torch is not installed.
+        if module_name.startswith(("langchain_classic", "langchain.", "langchain_community")):
+            with contextlib.suppress(ImportError):
+                importlib.import_module("torch")
 
         try:
             if is_module_binding:
