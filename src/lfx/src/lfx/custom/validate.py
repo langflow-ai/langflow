@@ -164,26 +164,93 @@ def _check_function_body_name_resolution(module: ast.Module, exec_globals: dict)
             elif isinstance(sub, (ast.ListComp, ast.SetComp, ast.GeneratorExp, ast.DictComp)):
                 for gen in sub.generators:
                     _collect_target_names(gen.target, locals_)
+            elif isinstance(sub, ast.NamedExpr):
+                # Walrus operator (`if (Tool := load_tool()):`) introduces a
+                # new binding in the enclosing function scope. Without this,
+                # a walrus-assigned name that happens to live in the hint
+                # table (e.g. ``Tool``) would false-positive.
+                _collect_target_names(sub.target, locals_)
         return locals_
 
+    def _check_fn(fn: ast.FunctionDef | ast.AsyncFunctionDef, outer_visible: set[str]) -> None:
+        """Recurse into a function body, checking Name(Load) refs against the visible scope.
+
+        ``outer_visible`` is the union of names visible from enclosing scopes
+        (module globals + each enclosing function's locals). The function's own
+        locals_ extend that set for the body walk. Nested function definitions
+        recurse with their own (outer | self) visible set so their parameters
+        and locals don't false-positive against the caller's scope, and the
+        caller's locals don't shadow the nested function's lookup.
+        """
+        own_locals = _function_locals(fn)
+        visible = outer_visible | own_locals
+
+        # Walk only the function's direct body, descending into nested defs
+        # via explicit recursion instead of flat-walking — otherwise a Name
+        # reference inside a nested function would be checked against the
+        # outer function's locals and miss the nested function's own params.
+        def _visit(node: ast.AST) -> None:
+            for child in ast.iter_child_nodes(node):
+                if isinstance(child, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                    _check_fn(child, visible)
+                    continue
+                if isinstance(child, ast.Lambda):
+                    # Lambdas have their own scope; the parameters belong to
+                    # the lambda body only. Construct a synthetic FunctionDef
+                    # locals_ from the lambda's args.
+                    lambda_locals: set[str] = set()
+                    for a in (*child.args.posonlyargs, *child.args.args, *child.args.kwonlyargs):
+                        lambda_locals.add(a.arg)
+                    if child.args.vararg:
+                        lambda_locals.add(child.args.vararg.arg)
+                    if child.args.kwarg:
+                        lambda_locals.add(child.args.kwarg.arg)
+                    lambda_visible = visible | lambda_locals
+                    for sub in ast.walk(child.body):
+                        if isinstance(sub, ast.Name) and isinstance(sub.ctx, ast.Load):
+                            _maybe_flag(sub.id, lambda_visible)
+                    continue
+                if isinstance(child, ast.Name) and isinstance(child.ctx, ast.Load):
+                    _maybe_flag(child.id, visible)
+                _visit(child)
+
+        for stmt in fn.body:
+            # Top-level nested defs in this function's body. Skip _visit (which
+            # would treat the def's body items as direct children of fn) and
+            # recurse with the nested function's own (visible | self) scope.
+            if isinstance(stmt, (ast.FunctionDef, ast.AsyncFunctionDef)):
+                _check_fn(stmt, visible)
+                continue
+            _visit(stmt)
+
+    def _maybe_flag(name: str, visible: set[str]) -> None:
+        if name in visible or name in builtin_names:
+            return
+        # Only surface the typed hint when we actually know which module the
+        # missing name should come from. Names without a known import target
+        # are deliberately passed through: they may be runtime-injected
+        # globals (graph-level context, monkey-patched bases, etc.) and we
+        # don't want to false-positive on those.
+        if _resolve_import_module_for_name(name) is None:
+            return
+        msg = _format_undefined_name_message(name, f"name '{name}' is not defined")
+        raise ValueError(msg)
+
+    module_visible = set(exec_globals)
     for class_node in (n for n in module.body if isinstance(n, ast.ClassDef)):
+        # Names assigned at the class body level (e.g. `outputs = [...]`) are
+        # visible inside method bodies via the implicit `self.outputs` and
+        # also via plain name lookup during class-body exec. Add them to the
+        # visible set so methods referencing them don't false-positive.
+        class_visible = module_visible | {
+            tgt.id
+            for stmt in class_node.body
+            if isinstance(stmt, ast.Assign)
+            for tgt in stmt.targets
+            if isinstance(tgt, ast.Name)
+        }
         for fn in (n for n in class_node.body if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))):
-            locals_ = _function_locals(fn)
-            for sub in ast.walk(fn):
-                if isinstance(sub, ast.Name) and isinstance(sub.ctx, ast.Load):
-                    name = sub.id
-                    if name in locals_ or name in exec_globals or name in builtin_names:
-                        continue
-                    # Only surface the typed hint when we actually know which
-                    # module the missing name should come from. Names without
-                    # a known import target are deliberately passed through:
-                    # they may be runtime-injected globals (graph-level
-                    # context, monkey-patched bases, etc.) and we don't want
-                    # to false-positive on those.
-                    if _resolve_import_module_for_name(name) is None:
-                        continue
-                    msg = _format_undefined_name_message(name, f"name '{name}' is not defined")
-                    raise ValueError(msg)
+            _check_fn(fn, class_visible)
 
 
 def add_type_ignores() -> None:
@@ -487,23 +554,32 @@ def create_class(code, class_name):
         msg = f"Import error while creating class: {e!s}.{install_hint}"
         raise ValueError(msg) from e
     except AttributeError as e:
-        # Sibling case to the ImportError branch above. The lazy-import refactor
-        # delays `importlib.import_module(...)` to first attribute access on a
-        # `_LazyImportProxy`, so a broken transitive import (e.g. torch's
-        # "partially initialized module 'torch' has no attribute 'library'"
-        # circular-import bug surfaced via `transformers`) raises AttributeError
-        # at proxy-resolution time rather than ImportError. Without this branch
-        # the generic catch-all wraps it as "Error creating class. AttributeError(...)"
-        # which reads like a code typo even though the fix is environment-level.
-        torch_partial_init = "partially initialized module" in str(e) or "circular import" in str(e)
-        hint = (
-            " This usually means a transitive C-extension import (commonly torch via transformers/"
-            "langchain) failed to fully initialize. Reinstalling the broken package, pinning a known-"
-            "good version, or restarting the interpreter typically resolves it."
-            if torch_partial_init
-            else ""
-        )
-        msg = f"Attribute error while creating class: {e!s}.{hint}"
+        # Sibling case to the ImportError branch above, scoped narrowly to the
+        # circular-import / partial-init signature we know about (torch 2.x
+        # nested under langchain via transformers). The lazy-import refactor
+        # delays `importlib.import_module(...)` to first attribute access on
+        # a `_LazyImportProxy`, so a broken transitive import surfaces here
+        # as AttributeError rather than ImportError; without this branch the
+        # generic catch-all would wrap it as "Error creating class.
+        # AttributeError(...)" which reads like a code typo even though the
+        # fix is environment-level.
+        #
+        # Other AttributeErrors (legitimate user bugs like ``self.foo.bar``
+        # where ``foo`` is None) are wrapped with the same shape as the
+        # generic-Exception handler below ("Error creating class. AttributeError(...)")
+        # so the user sees the actual exception type and is not mis-directed
+        # toward a torch/transformers environment fix. Inlining instead of
+        # ``raise`` because Python does not re-enter the except chain.
+        msg_text = str(e)
+        if "partially initialized module" in msg_text or "circular import" in msg_text:
+            hint = (
+                " This usually means a transitive C-extension import (commonly torch via transformers/"
+                "langchain) failed to fully initialize. Reinstalling the broken package, pinning a known-"
+                "good version, or restarting the interpreter typically resolves it."
+            )
+            msg = f"Attribute error while creating class: {msg_text}.{hint}"
+        else:
+            msg = f"Error creating class. {type(e).__name__}({msg_text})."
         raise ValueError(msg) from e
     except ValueError:
         # Static analysis (_check_function_body_name_resolution) and any other
@@ -672,9 +748,18 @@ class _LazyImportProxy:
         # to walk a transitive chain that almost always pulls it (langchain
         # families known to depend on transformers/torch). Cheap when torch is
         # already loaded, no-op when torch is not installed.
-        if module_name.startswith(("langchain_classic", "langchain.", "langchain_community")):
+        #
+        # Scope: first-segment match, so bare ``langchain`` (the umbrella
+        # package, which re-exports langchain_classic.agents et al) is also
+        # covered. Direct user imports of transformers / torch from outside
+        # the langchain family are NOT pre-primed here; they go through the
+        # standard import path and inherit whatever partial-init risk Python
+        # gives them.
+        top_segment = module_name.split(".", 1)[0]
+        if top_segment in {"langchain", "langchain_classic", "langchain_community"}:
             with contextlib.suppress(ImportError):
                 importlib.import_module("torch")
+                logger.debug("Pre-primed torch for langchain-family proxy: %s", module_name)
 
         try:
             if is_module_binding:

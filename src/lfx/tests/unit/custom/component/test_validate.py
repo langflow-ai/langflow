@@ -649,7 +649,12 @@ class TestLazyImportProxyTorchPrePrime:
 
     @pytest.mark.parametrize(
         "module_name",
-        ["langchain_classic.agents", "langchain.agents", "langchain_community.tools"],
+        [
+            "langchain_classic.agents",
+            "langchain.agents",
+            "langchain",  # bare umbrella package -- regression guard for the prefix-vs-segment fix
+            "langchain_community.tools",
+        ],
     )
     def test_langchain_family_pre_primes_torch(self, import_module_tracker, module_name):
         # Skip cleanly if torch isn't installed in this env — the pre-prime is
@@ -658,11 +663,16 @@ class TestLazyImportProxyTorchPrePrime:
         # Skip if the langchain family isn't installed — we can't probe what we can't reach.
         pytest.importorskip(module_name.split(".")[0])
 
+        # Module-binding shape (`import X` / `import X.Y`) for plain package names
+        # like "langchain" or "langchain_community.tools"; from-import shape
+        # (`from langchain[_classic].agents import AgentExecutor`) for the .agents
+        # variants where the typical user-component code reaches for a class.
+        is_from_import = "agents" in module_name
         proxy = _LazyImportProxy(
             module_name,
-            "AgentExecutor" if "agents" in module_name else None,
-            is_module_binding="agents" not in module_name,
-            top_level=False,
+            "AgentExecutor" if is_from_import else None,
+            is_module_binding=not is_from_import,
+            top_level=not is_from_import,
         )
         # Resolution may fail in this env (e.g. AgentExecutor symbol not in
         # langchain.agents directly); the pre-prime ordering is what we're
@@ -694,6 +704,46 @@ class TestLazyImportProxyTorchPrePrime:
         assert "torch" not in import_module_tracker, (
             f"Pre-prime fired for a non-langchain module; calls were {import_module_tracker}"
         )
+
+    def test_langchain_core_proxy_skips_torch_pre_prime(self):
+        # `langchain_core` is intentionally NOT in the pre-prime set: it does
+        # not transitively pull torch (no transformers in its dep tree). The
+        # pre-prime is scoped to the langchain umbrella + langchain_classic +
+        # langchain_community where the torch import actually happens, so
+        # langchain_core resolves like any other module. Regression guard for
+        # the first-segment-set membership test in `_resolve`.
+        pytest.importorskip("langchain_core")
+        import importlib as _importlib
+
+        calls: list[str] = []
+        real_import = _importlib.import_module
+
+        def tracking_import(name, *args, **kwargs):
+            calls.append(name)
+            return real_import(name, *args, **kwargs)
+
+        original = _importlib.import_module
+        _importlib.import_module = tracking_import
+        try:
+            proxy = _LazyImportProxy(
+                "langchain_core.messages",
+                "AIMessage",
+                is_module_binding=False,
+                top_level=False,
+            )
+            import contextlib as _contextlib
+
+            with _contextlib.suppress(ImportError, AttributeError):
+                proxy._resolve()
+        finally:
+            _importlib.import_module = original
+
+        # We don't assert torch is absent (some other test in the session may
+        # have loaded it); we assert the pre-prime did NOT fire because the
+        # proxy's own _resolve loop never asked importlib for "torch" as a
+        # standalone call. The pre-prime is the only path that calls
+        # `importlib.import_module("torch")` from inside `_resolve()`.
+        assert "torch" not in calls, f"Pre-prime fired for langchain_core; calls were {calls}"
 
 
 class TestCreateClassAttributeErrorHandler:
@@ -734,10 +784,13 @@ class TestCreateClassAttributeErrorHandler:
         assert "transitive C-extension import" in msg
         assert "torch" in msg
 
-    def test_generic_attribute_error_does_not_get_torch_hint(self, monkeypatch):
+    def test_generic_attribute_error_falls_through_to_generic_handler(self, monkeypatch):
         # An AttributeError that does NOT match the partial-init signature
-        # still surfaces via the AttributeError branch, but without the
-        # torch-specific hint (so we don't mislead the user).
+        # MUST fall through to the generic ``except Exception`` handler so
+        # the wrapped message names the real exception type. Catching every
+        # AttributeError would mis-direct users with legitimate bugs (e.g.
+        # ``self.foo.bar`` where ``foo`` is None) toward a torch/transformers
+        # environment fix that has nothing to do with their problem.
         from lfx.custom import validate as _validate
 
         generic_msg = "some other unrelated attribute error"
@@ -751,7 +804,211 @@ class TestCreateClassAttributeErrorHandler:
             class C(Component):
                 display_name = 'x'
         """)
-        with pytest.raises(ValueError, match="Attribute error while creating class") as excinfo:
+        with pytest.raises(ValueError, match="Error creating class") as excinfo:
             create_class(code, "C")
         msg = str(excinfo.value)
+        # Routed through the generic handler -> "Error creating class. AttributeError(...)".
+        assert "AttributeError" in msg, f"expected exception type in wrap, got {msg!r}"
+        # The original message must survive the wrap so users see the real failure.
+        assert generic_msg in msg, f"original AttributeError message lost in wrap: {msg!r}"
+        # And the torch-specific hint must NOT appear for generic AttributeErrors.
         assert "transitive C-extension import" not in msg
+        assert "Attribute error while creating class" not in msg
+
+
+class TestCheckFunctionBodyNameResolution:
+    """Static AST pass for undefined-name references inside class method bodies.
+
+    Sub-PR #12786 removed DEFAULT_IMPORT_STRING auto-injection and added an
+    actionable NameError hint as compensation. The runtime NameError handler
+    only fires for class-body references; this static pass closes the gap for
+    method-body references so the hint applies to the common case
+    (``def build(self): return AgentExecutor(...)``).
+    """
+
+    def test_undefined_langchain_symbol_in_def_body_raises_with_hint(self):
+        # QA Fixture A from LE-1229. AgentExecutor referenced inside def build()
+        # without an import; release-1.10.0 had DEFAULT_IMPORT_STRING auto-inject
+        # AgentExecutor, cold-start removed that, so this is the user-facing
+        # case the hint mechanism must catch.
+        code = dedent("""
+            from lfx.custom import Component
+            from lfx.io import Output
+
+            class BadAgentComponent(Component):
+                display_name = 'Bad Agent'
+                outputs = [Output(display_name='Output', name='output', method='build')]
+
+                def build(self):
+                    return AgentExecutor.__name__
+        """)
+        with pytest.raises(ValueError, match="Name error") as excinfo:
+            create_class(code, "BadAgentComponent")
+        msg = str(excinfo.value)
+        assert "AgentExecutor" in msg
+        assert "langchain_classic.agents" in msg, f"hint should name the langchain_classic.agents module: {msg!r}"
+        assert "from langchain_classic.agents import AgentExecutor" in msg
+
+    def test_undefined_legacy_lfx_symbol_in_def_body_raises_with_hint(self):
+        # Same gap, lfx-side: a symbol from _LEGACY_LFX_IMPORT_HINTS referenced
+        # inside def build() without its import line. ``Output`` is one of the
+        # 24 legacy lfx names that used to come from DEFAULT_IMPORT_STRING.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class BadOutputComponent(Component):
+                display_name = 'x'
+                def build(self):
+                    return Output(display_name='o', name='o', method='build')
+        """)
+        with pytest.raises(ValueError, match="Name error") as excinfo:
+            create_class(code, "BadOutputComponent")
+        msg = str(excinfo.value)
+        assert "Output" in msg
+        assert "lfx.io" in msg
+
+    def test_dynamic_runtime_global_passes_silently(self):
+        # No-hint-no-flag rule (validate.py inside _check_function_body_name_resolution).
+        # A name we don't have a known import target for (could be a graph-level
+        # runtime-injected global, monkey-patched base, etc.) must NOT be flagged.
+        # Anything else would false-positive the legitimate dynamic-globals use
+        # case and refuse otherwise-valid components.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class DynComponent(Component):
+                display_name = 'd'
+                def build(self):
+                    return some_runtime_injected_global
+        """)
+        cls = create_class(code, "DynComponent")
+        assert cls.__name__ == "DynComponent"
+
+    def test_imported_symbol_in_def_body_passes(self):
+        # Sanity check: when the user *does* import the symbol, the static
+        # pass must not flag it. The hint table contains the name; the
+        # imports must take priority.
+        code = dedent("""
+            from lfx.custom import Component
+            from lfx.io import Output
+
+            class GoodComponent(Component):
+                display_name = 'g'
+                def build(self):
+                    return Output(display_name='o', name='o', method='build')
+        """)
+        cls = create_class(code, "GoodComponent")
+        assert cls.__name__ == "GoodComponent"
+
+    def test_locally_assigned_symbol_in_def_body_passes(self):
+        # Locals discovered via `_function_locals` must shadow the hint table.
+        # An assignment inside the method body to a name that happens to live
+        # in the legacy hint table must not raise.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class LocalAssignComponent(Component):
+                display_name = 'la'
+                def build(self):
+                    Output = 'overridden'
+                    return Output
+        """)
+        cls = create_class(code, "LocalAssignComponent")
+        assert cls.__name__ == "LocalAssignComponent"
+
+    def test_function_parameter_passes(self):
+        # Function parameters are locals: a method that takes a parameter
+        # named after a hint-table symbol must not be flagged.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class ParamComponent(Component):
+                display_name = 'p'
+                def transform(self, Output):
+                    return Output
+        """)
+        cls = create_class(code, "ParamComponent")
+        assert cls.__name__ == "ParamComponent"
+
+    def test_except_handler_alias_passes(self):
+        # `except E as Output:` binds Output for the handler body. The static
+        # pass must collect ExceptHandler.name into locals_ so the reference
+        # below doesn't false-positive.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class ExceptComponent(Component):
+                display_name = 'e'
+                def build(self):
+                    try:
+                        x = 1
+                    except Exception as Output:
+                        return str(Output)
+                    return x
+        """)
+        cls = create_class(code, "ExceptComponent")
+        assert cls.__name__ == "ExceptComponent"
+
+    def test_comprehension_iter_variable_passes(self):
+        # `[... for Output in xs]` binds Output as a comprehension iterator.
+        # _collect_target_names on the generator target must catch this so
+        # the Output reference inside the comprehension expression doesn't
+        # false-positive.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class CompComponent(Component):
+                display_name = 'c'
+                def build(self):
+                    return [Output for Output in range(3)]
+        """)
+        cls = create_class(code, "CompComponent")
+        assert cls.__name__ == "CompComponent"
+
+    def test_walrus_operator_binding_passes(self):
+        # `if (Output := load()):` binds Output via ast.NamedExpr. Regression
+        # guard for the NamedExpr branch in _function_locals.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class WalrusComponent(Component):
+                display_name = 'w'
+                def build(self):
+                    values = [1, 2, 3]
+                    if (Output := values[0]):
+                        return Output
+                    return None
+        """)
+        cls = create_class(code, "WalrusComponent")
+        assert cls.__name__ == "WalrusComponent"
+
+    def test_nested_function_locals_pass(self):
+        # Nested defs inside a method get their own locals_ via the recursive
+        # ast.walk; their parameters must not leak undefined-name errors.
+        code = dedent("""
+            from lfx.custom import Component
+
+            class NestedComponent(Component):
+                display_name = 'n'
+                def build(self):
+                    def helper(Output):
+                        return Output
+                    return helper('x')
+        """)
+        cls = create_class(code, "NestedComponent")
+        assert cls.__name__ == "NestedComponent"
+
+    def test_with_statement_alias_passes(self):
+        # `with ctx() as Output:` binds Output via With.items[].optional_vars.
+        code = dedent("""
+            import contextlib
+            from lfx.custom import Component
+
+            class WithComponent(Component):
+                display_name = 'wi'
+                def build(self):
+                    with contextlib.nullcontext('value') as Output:
+                        return Output
+        """)
+        cls = create_class(code, "WithComponent")
+        assert cls.__name__ == "WithComponent"

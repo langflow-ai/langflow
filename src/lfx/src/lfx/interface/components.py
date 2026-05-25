@@ -1218,10 +1218,17 @@ async def get_and_cache_all_types_dict(
                     # via pip-installed Extensions / seed dirs / dev / inline bundles, all
                     # independent of the lfx version stamp). Load them on every cache-hit
                     # so manifest-shipping bundles always win on collision, matching the
-                    # cache-miss path. Failures must never block the cache build.
+                    # cache-miss path. Narrow exception catch: at the cache-hit point the
+                    # built-ins are already loaded fine, so a failure here is much more
+                    # likely a real Extension System bug than a missing optional package.
+                    # `import_extension_components` already routes typed per-bundle errors
+                    # through `_emit_extension_diagnostics`; only catch the "expected"
+                    # absent-deps modes (ExtensionError + ImportError) and let unexpected
+                    # exceptions propagate so we see them instead of silently shrinking
+                    # the palette.
                     try:
                         extension_components = await import_extension_components(settings_service)
-                    except Exception as exc:  # noqa: BLE001
+                    except (ExtensionError, ImportError) as exc:
                         await logger.aerror("Extension System load failed; continuing without it: %s", exc)
                         extension_components = {}
                     component_cache.all_types_dict = {**merged, **custom_flat, **extension_components}
