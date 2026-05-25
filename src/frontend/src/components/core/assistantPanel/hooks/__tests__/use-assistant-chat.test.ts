@@ -1234,5 +1234,69 @@ describe("useAssistantChat", () => {
       expect(msg.pendingFlowProposal).toBeUndefined();
       expect(msg.flowProposalStatus).toBeUndefined();
     });
+
+    // Regression test for PR #12575 round 2 — proposal-mode build:
+    // backend emits ``flow_update set_flow`` (no auto_apply) followed by
+    // a ``progress flow_proposal_ready`` step and a terminal ``complete``
+    // with ``has_flow=true``. The hook must keep ``pendingFlowProposal``
+    // + ``flowProposalStatus="pending"`` on the message after the full
+    // sequence drains so the AssistantFlowPreview card actually renders.
+    // The earlier test ``should_buffer_set_flow_into_pendingFlowProposal``
+    // only fired ``set_flow`` in isolation and missed the clobber that
+    // can happen when ``onComplete`` overwrites the message AFTER the
+    // proposal fields were set.
+    it("should_keep_pendingFlowProposal_after_full_proposal_sequence_drains", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onProgress({
+            event: "progress",
+            step: "generating_flow",
+            attempt: 1,
+            max_attempts: 4,
+            message: "Working on the flow...",
+          });
+          callbacks.onFlowUpdate({
+            event: "flow_update",
+            action: "set_flow",
+            flow: SAMPLE_FLOW,
+            // Note: NO auto_apply — single-ask proposal-mode build.
+          });
+          callbacks.onProgress({
+            event: "progress",
+            step: "flow_proposal_ready",
+            attempt: 1,
+            max_attempts: 4,
+            message: "Flow ready — review and continue",
+          });
+          callbacks.onComplete({
+            event: "complete",
+            data: {
+              result: "Built a Chat Flow: ChatInput → OpenAIModel → ChatOutput.",
+              success: true,
+              has_flow: true,
+              continuation_expected: false,
+            },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend(
+          "Build a chat flow with ChatInput → OpenAI → ChatOutput",
+          TEST_MODEL,
+        );
+      });
+
+      const msg = result.current.messages[1];
+      expect(msg.flowProposalStatus).toBe("pending");
+      expect(msg.pendingFlowProposal).toBeDefined();
+      expect(msg.pendingFlowProposal?.nodeCount).toBe(3);
+      expect(msg.pendingFlowProposal?.edgeCount).toBe(1);
+      // Canvas must remain untouched — the whole point of the gate.
+      expect(mockSetNodes).not.toHaveBeenCalled();
+      expect(mockSetEdges).not.toHaveBeenCalled();
+    });
   });
 });

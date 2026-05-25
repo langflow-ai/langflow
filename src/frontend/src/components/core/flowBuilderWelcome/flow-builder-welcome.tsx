@@ -103,7 +103,7 @@ export function FlowBuilderWelcome({
         type="button"
         data-testid="flow-builder-welcome-backdrop"
         aria-label="Close welcome overlay"
-        className="absolute inset-0 cursor-default bg-background"
+        className="absolute inset-0 cursor-default bg-background/70"
         onClick={onClose}
       />
 
