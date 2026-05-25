@@ -50,8 +50,8 @@ export const NAV_ITEMS: NavItem[] = [
   {
     id: "memories",
     icon: "BrainCog",
-    label: "Memories",
-    tooltip: "Memories",
+    label: "memory.sidebarTitle",
+    tooltip: "memory.sidebarTitle",
   },
   {
     id: "traces",
