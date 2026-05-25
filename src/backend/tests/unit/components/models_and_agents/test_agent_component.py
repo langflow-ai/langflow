@@ -40,7 +40,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "_type": "Agent",
             "add_current_date_tool": True,
             "add_calculator_tool": True,
-            "agent_description": "A helpful agent",
             "model": MockLanguageModel(),
             "handle_parsing_errors": True,
             "input_value": "",
@@ -862,6 +861,131 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert prompt_input is not None
         assert "{current_date}" in prompt_input.value
         assert "{model_name}" in prompt_input.value
+
+    async def test_should_keep_description_in_sync_when_agent_used_as_tool(self, component_class, default_kwargs):
+        """Regression for GitHub issue #9155.
+
+        When an Agent is exposed as a tool, the deprecated agent_description
+        override made the generated tool's ``description`` diverge from
+        ``display_description`` on the very first build. That divergence made the
+        merge logic in ``_build_tools_metadata_input()`` permanently treat the
+        description as a user customization, so later changes to the agent's
+        description never reached the parent agent's Actions panel.
+
+        Invariant under test: on the first build, a non-user-edited
+        agent-as-tool entry must have ``description == display_description``,
+        exactly like regular tool components.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        await component._build_tools_metadata_input()
+
+        metadata = component.tools_metadata
+        assert metadata, "Agent-as-tool should produce at least one tool entry"
+        for item in metadata:
+            assert item["description"] == item["display_description"], (
+                "Agent-as-tool description diverged from display_description on "
+                f"first build (issue #9155): {item['description']!r} != {item['display_description']!r}"
+            )
+
+    async def test_should_propagate_description_change_when_agent_used_as_tool(self, component_class, default_kwargs):
+        """Regression for GitHub issue #9155 (user-visible symptom).
+
+        A change to the child agent's tool description must reach the parent
+        agent's Actions panel on the next build, as long as the user did not
+        manually customize it in the panel.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        await component._build_tools_metadata_input()
+        first_description = component.tools_metadata[0]["description"]
+
+        # Simulate the child agent's description changing (e.g. component.description),
+        # then the parent re-reading the tool. The new value must propagate.
+        component.description = "An updated agent description"
+        await component._build_tools_metadata_input()
+        second_description = component.tools_metadata[0]["description"]
+
+        assert second_description != first_description, (
+            "Description change on the child agent was not propagated to the "
+            f"Actions panel (issue #9155): still {second_description!r}"
+        )
+        assert "An updated agent description" in second_description
+
+    async def test_update_build_config_does_not_require_deprecated_agent_description(
+        self, component_class, default_kwargs
+    ):
+        """Regression for PR #13151 review (P0).
+
+        The deprecated ``agent_description`` input was removed from the agent
+        template. The concrete ``AgentComponent`` must no longer list it in the
+        ``update_build_config`` ``default_keys``, otherwise a model refresh
+        raises ``ValueError: Missing required keys`` because the key is gone
+        from the generated template.
+        """
+        from lfx.schema.dotdict import dotdict
+
+        with patch("lfx.components.models_and_agents.agent.get_language_model_options") as mock_opts:
+            mock_opts.return_value = [
+                {
+                    "name": "gpt-4o",
+                    "provider": "OpenAI",
+                    "icon": "OpenAI",
+                    "metadata": {
+                        "model_class": "ChatOpenAI",
+                        "model_name_param": "model",
+                        "api_key_param": "api_key",
+                    },
+                }
+            ]
+            component = await self.component_setup(component_class, default_kwargs)
+            frontend_node = component.to_frontend_node()
+            build_config = frontend_node["data"]["node"]["template"]
+
+            assert "agent_description" not in build_config, (
+                "Deprecated agent_description must not be present in the agent template"
+            )
+
+            # Must not raise "Missing required keys in build_config".
+            updated_config = await component.update_build_config(
+                dotdict(build_config), mock_opts.return_value, field_name="model"
+            )
+
+        assert "agent_description" not in updated_config
+
+    async def test_get_tools_does_not_call_removed_api(self, component_class, default_kwargs):
+        """Regression for PR #13151 review (P0).
+
+        The concrete ``AgentComponent._get_tools()`` used to call the removed
+        ``get_tool_description()`` for a tool-description override. Building the
+        agent-as-tool must not raise ``AttributeError`` and must succeed.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        tools = await component._get_tools()
+
+        assert tools, "Agent-as-tool must still produce at least one tool"
+
+    async def test_get_tool_description_backward_compat_shim(self, component_class, default_kwargs):
+        """Regression for PR #13151 review (P1).
+
+        Flows serialized with the pre-deprecation component code still call
+        ``self.get_tool_description()``. The base class must keep this shim so
+        those flows stay loadable: it returns the default when no
+        ``agent_description`` is set, and the old value when an old serialized
+        component still defines and sets it.
+        """
+        from lfx.base.agents.agent import DEFAULT_TOOLS_DESCRIPTION
+
+        component = await self.component_setup(component_class, default_kwargs)
+
+        # New components have no agent_description -> falls back to the default.
+        assert component.get_tool_description() == DEFAULT_TOOLS_DESCRIPTION
+
+        # Old serialized component code defines its own agent_description input
+        # and sets it; the shim must surface that value unchanged.
+        component.agent_description = "Legacy serialized description"
+        assert component.get_tool_description() == "Legacy serialized description"
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):

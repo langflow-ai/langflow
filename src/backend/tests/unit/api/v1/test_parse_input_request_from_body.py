@@ -64,6 +64,45 @@ async def test_multipart_form_data_preserves_session_id_and_input(parser_client:
 
 
 @pytest.mark.asyncio
+async def test_json_body_preserves_user_id(parser_client: AsyncClient):
+    """JSON body ``user_id`` must round-trip into ``SimplifiedAPIRequest`` (regression for #9505)."""
+    async with parser_client as client:
+        response = await client.post(
+            "/parse",
+            json={
+                "input_value": "What are the recommendations for this user?",
+                "user_id": "test123",
+                "session_id": "api-test-final",
+            },
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["user_id"] == "test123"
+    assert payload["session_id"] == "api-test-final"
+
+
+@pytest.mark.asyncio
+async def test_multipart_form_data_preserves_user_id(parser_client: AsyncClient):
+    """Multipart form fields must map ``user_id`` onto ``SimplifiedAPIRequest`` (regression for #9505)."""
+    async with parser_client as client:
+        response = await client.post(
+            "/parse",
+            data={
+                "input_value": "hello",
+                "user_id": "test123",
+                "session_id": "api-test-final",
+            },
+            files={"file": ("a.bin", io.BytesIO(b"bytes"), "application/octet-stream")},
+        )
+
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["user_id"] == "test123"
+    assert payload["session_id"] == "api-test-final"
+
+
+@pytest.mark.asyncio
 async def test_multipart_tweaks_parsed_as_json(parser_client: AsyncClient):
     tweaks = {"some-component-id": {"input_value": "abc"}}
 

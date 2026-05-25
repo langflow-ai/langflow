@@ -208,7 +208,7 @@ describe("MemoryDetails — Config popover", () => {
     expect(screen.getByText("gpt-4o-mini")).toBeInTheDocument();
   });
 
-  it("does not show Preprocessing Instructions when preprocessing is disabled", () => {
+  it("does not show Preprocessing Instructions section when preprocessing is disabled", () => {
     render(
       <MemoryDetails
         {...baseProps}
@@ -225,7 +225,17 @@ describe("MemoryDetails — Config popover", () => {
     ).not.toBeInTheDocument();
   });
 
-  it("shows Preprocessing Instructions when preprocessing is enabled and instructions are set", () => {
+  it("shows Preprocessing Instructions section when preprocessing is enabled", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={{ ...baseMemory, preprocessing_enabled: true }}
+      />,
+    );
+    expect(screen.getByText("Preprocessing instructions:")).toBeInTheDocument();
+  });
+
+  it("shows instructions value when preprocessing is enabled and instructions are set", () => {
     render(
       <MemoryDetails
         {...baseProps}
@@ -236,7 +246,6 @@ describe("MemoryDetails — Config popover", () => {
         }}
       />,
     );
-    // t("memory.preprocessingInstructions") = "Preprocessing instructions:"
     expect(screen.getByText("Preprocessing instructions:")).toBeInTheDocument();
     expect(screen.getByText("Summarise briefly.")).toBeInTheDocument();
   });

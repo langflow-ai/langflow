@@ -318,11 +318,18 @@ class TestChromaCloudMode:
         with (
             patch("chromadb.CloudClient", return_value=mock_client) as mock_cloud,
             patch("chromadb.PersistentClient") as mock_local,
+            patch("lfx.base.knowledge_bases.backends.chroma.Chroma", return_value=MagicMock()) as mock_chroma,
         ):
             bk._build_vector_store()
 
         mock_cloud.assert_called_once()
         mock_local.assert_not_called()
+        mock_chroma.assert_called_once_with(
+            client=mock_client,
+            collection_name="cloud_test_kb",
+            embedding_function=bk.embedding_function,
+            collection_configuration={"embedding_function": None},
+        )
 
     def test_get_cloud_client_passes_optional_host_port(self, tmp_path: Path):
         from unittest.mock import patch
