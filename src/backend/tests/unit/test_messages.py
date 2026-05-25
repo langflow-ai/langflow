@@ -232,7 +232,7 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
     assert isinstance(lc_message.content, list)
     assert lc_message.content[0] == {"type": "text", "text": "Hello"}
     assert lc_message.content[1]["type"] == "text"
-    assert "Attachment: table.csv" in lc_message.content[1]["text"]
+    assert "File 'table.csv' contents:" in lc_message.content[1]["text"]
     assert "name,role" in lc_message.content[1]["text"]
 
 
