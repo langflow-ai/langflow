@@ -550,6 +550,8 @@ class TestDirectModuleImports:
                         "langchain_chroma",
                         "langchain_pinecone",
                         "qdrant_client",
+                        "langchain_qdrant",
+                        "langchain_mongodb",
                         "weaviate",
                         "chromadb",
                         "pinecone",
