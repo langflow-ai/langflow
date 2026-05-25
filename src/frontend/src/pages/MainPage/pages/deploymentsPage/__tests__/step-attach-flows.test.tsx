@@ -598,9 +598,8 @@ describe("Detected env vars auto-population", () => {
       });
     });
 
-    // The pre-selected useEffect switches to the connection panel but defaults
-    // to the "available" tab. Switch to "Create Connection" to see env var rows.
-    await user.click(screen.getByText("Create Connection"));
+    // The pre-selected useEffect now calls initConnectionsForFlow which switches
+    // to the "create" tab when no connections exist — env var rows are already visible.
 
     await waitFor(() => {
       const keyInputs = screen.getAllByPlaceholderText("Key");
