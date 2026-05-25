@@ -64,9 +64,27 @@ class TestComponentLoadingFix:
 
     @pytest.fixture(autouse=True)
     def clear_component_cache(self):
-        """Clear component cache before each test."""
+        """Clear cache and disable cold-start short-circuits before each test.
+
+        Cold-start (#12784) added a cache-hit short-circuit in
+        ``get_and_cache_all_types_dict`` that reads the bundled
+        ``component_index.json`` BEFORE either ``import_langflow_components``
+        or ``aget_all_types_dict`` runs. Without these patches the per-test
+        mocks below are bypassed and the assertions get real component data
+        (FAISS, Notion, ...) instead of the fixtures.
+
+        - ``_read_component_index`` returning None forces the rebuild path so
+          the per-test ``import_langflow_components`` / ``aget_all_types_dict``
+          mocks apply.
+        - ``import_extension_components`` returning {} keeps installed lfx
+          bundles (lfx-arxiv, lfx-duckduckgo) from polluting the assertions.
+        """
         component_cache.all_types_dict = None
-        yield
+        with (
+            patch("lfx.interface.components._read_component_index", return_value=None),
+            patch("lfx.interface.components.import_extension_components", return_value={}),
+        ):
+            yield
         component_cache.all_types_dict = None
 
     @pytest.mark.asyncio
