@@ -5,7 +5,7 @@ import pickle
 import threading
 import time
 from collections import OrderedDict
-from typing import Generic, Union
+from typing import Any, Generic, Union
 
 import dill
 from lfx.log.logger import logger
@@ -177,13 +177,14 @@ class ThreadingInMemoryCache(CacheService, Generic[LockType]):
         return f"InMemoryCache(max_size={self.max_size}, expiration_time={self.expiration_time})"
 
 
+
 # Serialization markers for identifying the format of cached values in Redis.
 # Using \x01 prefix which cannot appear at the start of valid pickled data.
-_SERIAL_JSON = b"\x01json:"
-_SERIAL_DILL = b"\x01dill:"
+_SERIAL_JSON = b"json:"
+_SERIAL_DILL = b"dill:"
 
 
-def _json_default(obj):
+def _json_default(obj: Any) -> Any:
     """JSON encoder fallback for types not natively JSON-serializable.
 
     Handles Pydantic models, dataclasses, and other common Python types.
@@ -204,14 +205,11 @@ def _json_default(obj):
     if isinstance(obj, bytes):
         return obj.decode("utf-8", errors="replace")
     type_name = type(obj).__name__
-    msg = (
-        f"Object of type '{type_name}' is not JSON serializable. "
-        "Try converting the value to a dict or a simpler type."
-    )
+    msg = f"Object of type '{type_name}' is not JSON serializable. Try converting to a dict or simpler type."
     raise TypeError(msg)
 
 
-def _serialize_value(value):
+def _serialize_value(value: Any) -> bytes:
     """Serialize a value for Redis storage.
 
     Uses dill first (handles most Python objects), then falls back to JSON
@@ -238,16 +236,16 @@ def _serialize_value(value):
         raise TypeError(msg) from exc
 
 
-def _deserialize_value(data):
+def _deserialize_value(data: bytes) -> Any:
     """Deserialize a value from Redis storage.
 
     Detects the serialization format from the marker prefix.
     Falls back to dill for backward compatibility with unmarked cached data.
     """
     if data.startswith(_SERIAL_JSON):
-        return json.loads(data[len(_SERIAL_JSON) :].decode("utf-8"))
+        return json.loads(data[len(_SERIAL_JSON):].decode("utf-8"))
     if data.startswith(_SERIAL_DILL):
-        return dill.loads(data[len(_SERIAL_DILL) :])
+        return dill.loads(data[len(_SERIAL_DILL):])
     # Backward compatibility: unmarked data was serialized with dill
     return dill.loads(data)
 
