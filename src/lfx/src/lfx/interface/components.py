@@ -14,6 +14,17 @@ import orjson
 
 from lfx.constants import BASE_COMPONENTS_PATH
 from lfx.custom.utils import abuild_custom_components, create_component_template
+from lfx.extension import (
+    ExtensionError,
+    LoadResult,
+    discover_inline_bundles,
+    format_extension_error,
+    load_dev_extensions,
+    load_installed_extensions,
+    load_seed_extensions,
+)
+from lfx.extension.bundle_registry import BundleRecord, get_default_registry
+from lfx.extension.reload import register_post_swap_hook
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import collect_component_hash_lookups
 from lfx.utils.validate_cloud import (
@@ -72,6 +83,21 @@ class ComponentCache:
 
 # Singleton instance
 component_cache = ComponentCache()
+
+
+def _post_reload_refresh_cache(record: BundleRecord) -> None:
+    """Post-swap hook installed in :data:`_POST_SWAP_HOOKS`.
+
+    Defined here so the hook closes over :data:`component_cache` without
+    needing to thread it through ``lfx.extension.reload``.  Concrete logic
+    lives in :func:`refresh_bundle_cache_from_record` further down (the
+    forward reference is fine; the hook is fired only after first cache
+    build).
+    """
+    refresh_bundle_cache_from_record(record)
+
+
+register_post_swap_hook(_post_reload_refresh_cache)
 
 
 def _parse_dev_mode() -> tuple[bool, list[str] | None]:
@@ -734,6 +760,350 @@ def _build_code_hash_lookups(cache: ComponentCache) -> None:
     logger.debug(f"Built code hash lookups: {len(type_to_hash)} types, {len(all_hashes)} unique hashes")
 
 
+def _components_path_extension_paths(settings_service: "SettingsService") -> list[Path]:
+    """Inline-bundle parent paths derived from settings.components_path.
+
+    Each entry in components_path is treated as a parent directory whose
+    immediate subfolders are inline bundles at the @extra slot. The base
+    Langflow components path is excluded (it is not an inline-bundle root).
+
+    Comparison against ``BASE_COMPONENTS_PATH`` resolves both sides so a
+    trailing slash, ``./`` prefix, or symlink does not slip the base
+    components dir through as an inline-bundle root (which would produce
+    duplicate / garbage palette entries from walking it as a bundle parent).
+    """
+    try:
+        base_resolved = Path(BASE_COMPONENTS_PATH).resolve(strict=False)
+    except OSError:
+        base_resolved = Path(BASE_COMPONENTS_PATH)
+    paths: list[Path] = []
+    for raw in settings_service.settings.components_path or []:
+        candidate = Path(raw)
+        try:
+            candidate_resolved = candidate.resolve(strict=False)
+        except OSError:
+            candidate_resolved = candidate
+        if candidate_resolved == base_resolved:
+            continue
+        if candidate.is_dir():
+            paths.append(candidate)
+    return paths
+
+
+def _decorate_template_with_extension(
+    template: dict[str, Any],
+    *,
+    extension_id: str,
+    bundle: str,
+    extension_version: str,
+    namespaced_id: str,
+) -> dict[str, Any]:
+    """Stamp the AC-required identity fields onto a frontend-node template.
+
+    The ``namespaced_id`` is also written to the template so a consumer that
+    only looks at the value (not the dict key) still sees the canonical
+    ``ext:<bundle>:<Class>@<slot>`` identifier.
+    """
+    template["extension"] = extension_id
+    template["bundle"] = bundle
+    template["extension_version"] = extension_version
+    template["namespaced_id"] = namespaced_id
+    return template
+
+
+def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
+    """Surface typed errors/warnings from a batch of LoadResults to the logger.
+
+    The future events pipeline will replace this with structured
+    emission; until then we want operators to see what the loader
+    rejected without silently dropping the typed payload.
+    """
+    for result in results:
+        for err in result.errors:
+            logger.error("Extension load error: %s", format_extension_error(err))
+        for warn in result.warnings:
+            logger.warning("Extension load warning: %s", format_extension_error(warn))
+
+
+# Discovery-source precedence for cross-source bundle-name collisions.
+# Higher in the list wins.  Ordered from most-authoritative (pip-installed
+# distribution = explicit, packaged install) to least (LANGFLOW_COMPONENTS_PATH
+# = loose, legacy custom-components path).  Operators who stage a bundle in
+# multiple places almost always *want* the more-authoritative copy to win;
+# the typed warning is what catches the unintentional case.
+_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "dev", "inline")
+
+
+def _resolve_bundle_shadowing(
+    *,
+    extension_results: list[LoadResult],
+    seed_results: list[LoadResult],
+    dev_results: list[LoadResult],
+    inline_results: list[LoadResult],
+) -> tuple[list[LoadResult], list[LoadResult], list[LoadResult], list[LoadResult]]:
+    """Drop loser components and emit typed shadow warnings on lower-precedence dups.
+
+    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > dev > inline).
+    For each bundle name claimed by more than one source, the highest-precedence
+    source keeps its components; every other source has its ``components`` cleared
+    AND gains a typed warning naming the winning source's path so the operator can
+    diagnose without grepping.
+
+    Two distinct codes get emitted depending on which pair collided:
+
+      - ``seed-bundle-shadowed`` (the original code): emitted when an installed
+        Extension shadows a seed-directory bundle.  Preserved verbatim so the
+        existing CLI warn-only set, snapshot tests, and operator runbooks keep
+        working.
+      - ``bundle-shadowed`` (new generic code): emitted for every other shadow
+        pair (seed-shadows-dev, seed-shadows-inline, dev-shadows-inline,
+        installed-shadows-dev/inline).  Carries the loser's source_path as
+        ``location`` and the winner's source_path in the message body.
+
+    The returned tuple has the same shape and order as the inputs so the caller
+    can splice it back into ``all_results`` without re-ordering.
+
+    Within a single source list, duplicates are not handled here -- the
+    per-source loaders surface their own typed errors (``duplicate-distribution``,
+    ``duplicate-inline-bundle``) and that diagnostic stays on the result it
+    came from.
+    """
+    sources: dict[str, list[LoadResult]] = {
+        "installed": extension_results,
+        "seed": seed_results,
+        "dev": dev_results,
+        "inline": inline_results,
+    }
+
+    # First pass: pick the winning source per bundle name.
+    winner_for_bundle: dict[str, tuple[str, LoadResult]] = {}
+    for kind in _DISCOVERY_PRECEDENCE:
+        for result in sources[kind]:
+            if not result.bundle or not result.components:
+                continue
+            winner_for_bundle.setdefault(result.bundle, (kind, result))
+
+    # Second pass: for each non-winner, drop components and append typed warning.
+    for kind in _DISCOVERY_PRECEDENCE:
+        for result in sources[kind]:
+            if not result.bundle or not result.components:
+                continue
+            winner_kind, winner_result = winner_for_bundle[result.bundle]
+            if winner_result is result:
+                continue
+            loser_path = str(result.source_path) if result.source_path else result.bundle
+            winner_path = str(winner_result.source_path) if winner_result.source_path else winner_result.bundle
+            if winner_kind == "installed" and kind == "seed":
+                result.errors.append(
+                    ExtensionError(
+                        code="seed-bundle-shadowed",
+                        message=(
+                            f"Seed bundle {result.bundle!r} at {loser_path} is shadowed by an "
+                            f"installed Extension of the same name at {winner_path}; "
+                            "the seed copy is being skipped."
+                        ),
+                        location=loser_path,
+                        content=result.bundle,
+                        hint=(
+                            "Remove the seed-directory subdirectory or uninstall the conflicting "
+                            "pip distribution so each @official-slot bundle name has exactly one source."
+                        ),
+                    )
+                )
+            else:
+                result.errors.append(
+                    ExtensionError(
+                        code="bundle-shadowed",
+                        message=(
+                            f"Bundle {result.bundle!r} at {loser_path} (source: {kind}) is shadowed "
+                            f"by a higher-precedence source at {winner_path} (source: {winner_kind}); "
+                            "the lower-precedence copy is being skipped."
+                        ),
+                        location=loser_path,
+                        content=result.bundle,
+                        hint=(
+                            "Discovery precedence is installed > seed > dev > inline. "
+                            f"Either remove the {kind} copy of this bundle or rename it so each "
+                            "bundle name comes from exactly one source."
+                        ),
+                    )
+                )
+            result.components = []
+
+    return extension_results, seed_results, dev_results, inline_results
+
+
+async def import_extension_components(
+    settings_service: "SettingsService",
+) -> dict[str, dict[str, Any]]:
+    """Build templates for every Component loaded via the Extension System.
+
+    Two sources feed this:
+        - Installed Extensions (any pip-installed distribution shipping
+          ``extension.json``) -> ``@official`` slot.
+        - Subfolders of every ``LANGFLOW_COMPONENTS_PATH`` entry (parsed
+          via the settings layer's pathsep split) -> ``@extra`` slot.
+
+    For each :class:`LoadedComponent`, instantiates the class, builds a
+    frontend-node template via :func:`create_component_template`, and
+    stamps ``extension``, ``bundle``, and ``extension_version`` onto the
+    template so consumers of ``/api/v1/all`` can identify the source.
+
+    Returns a mapping shaped like ``{bundle_name: {namespaced_id: template}}``
+    where ``namespaced_id`` is the canonical ``ext:<bundle>:<Class>@<slot>``
+    address from :class:`LoadedComponent`. The bundle name remains the
+    top-level category so ``/all`` continues to group components by source,
+    matching the existing built-in / custom layout.
+
+    Components whose class fails to instantiate or template are skipped
+    with a logged warning -- one bad bundle must not abort the cache build.
+    """
+    extension_results = load_installed_extensions()
+    seed_results = load_seed_extensions()
+    dev_results = load_dev_extensions()
+    inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
+
+    deduped_extension_results, deduped_seed_results, deduped_dev_results, deduped_inline_results = (
+        _resolve_bundle_shadowing(
+            extension_results=extension_results,
+            seed_results=seed_results,
+            dev_results=dev_results,
+            inline_results=inline_results,
+        )
+    )
+
+    _emit_extension_diagnostics(
+        [*deduped_extension_results, *deduped_seed_results, *deduped_dev_results, *deduped_inline_results]
+    )
+
+    registry = get_default_registry()
+    all_results = [
+        *deduped_extension_results,
+        *deduped_seed_results,
+        *deduped_dev_results,
+        *deduped_inline_results,
+    ]
+    for result in all_results:
+        if not result.bundle or not result.components or result.slot is None:
+            continue
+        record = BundleRecord(
+            bundle=result.bundle,
+            extension_id=result.extension_id or result.bundle,
+            extension_version=result.extension_version or "0.0.0",
+            slot=result.slot,
+            components=tuple(result.components),
+            distribution=result.distribution,
+            source_path=result.source_path,
+        )
+        registry.install_bundle(record)
+
+    components_dict: dict[str, dict[str, Any]] = {}
+    for result in all_results:
+        if not result.bundle:
+            continue
+        bundle_dict = components_dict.setdefault(result.bundle, {})
+        for loaded in result.components:
+            try:
+                instance = loaded.klass()
+                template, _ = create_component_template(
+                    component_extractor=instance,
+                    module_name=loaded.module_name,
+                )
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(
+                    "Could not build template for %s in bundle %r (skipped): %s",
+                    loaded.class_name,
+                    loaded.bundle,
+                    exc,
+                )
+                continue
+            bundle_dict[loaded.namespaced_id] = _decorate_template_with_extension(
+                template,
+                extension_id=loaded.extension_id,
+                bundle=loaded.bundle,
+                extension_version=loaded.extension_version,
+                namespaced_id=loaded.namespaced_id,
+            )
+    return components_dict
+
+
+def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
+    """Rebuild ``component_cache.all_types_dict`` for a single bundle after reload.
+
+    The reload pipeline updates :class:`~lfx.extension.bundle_registry.BundleRegistry`
+    in place, but the palette / new-graph construction path reads from the
+    flat ``component_cache.all_types_dict``.  Without this, a successful
+    reload swaps the registry but leaves the palette stale until the next
+    server restart.  Called by :func:`lfx.extension.reload.reload_bundle`
+    in Stage 5.
+
+    Components whose class fails to instantiate or template are skipped
+    with a logged warning, mirroring :func:`import_extension_components`.
+    """
+    if component_cache.all_types_dict is None:
+        return
+    bundle_dict: dict[str, Any] = {}
+    failures: list[tuple[str, str]] = []
+    for loaded in record.components:
+        try:
+            instance = loaded.klass()
+            template, _ = create_component_template(
+                component_extractor=instance,
+                module_name=loaded.module_name,
+            )
+        except Exception as exc:  # noqa: BLE001
+            failures.append((loaded.class_name, repr(exc)))
+            logger.warning(
+                "Could not build template for %s in bundle %r during reload (skipped): %s",
+                loaded.class_name,
+                record.bundle,
+                exc,
+            )
+            continue
+        bundle_dict[loaded.namespaced_id] = _decorate_template_with_extension(
+            template,
+            extension_id=loaded.extension_id,
+            bundle=loaded.bundle,
+            extension_version=loaded.extension_version,
+            namespaced_id=loaded.namespaced_id,
+        )
+
+    expected = len(record.components)
+    succeeded = len(bundle_dict)
+    if expected > 0 and succeeded == 0:
+        logger.error(
+            "Cache rebuild for bundle %r produced zero templates from %d components; "
+            "preserving previous cache entry.  Failures: %s",
+            record.bundle,
+            expected,
+            failures,
+        )
+        first_failure = failures[0][1] if failures else "<none>"
+        msg = (
+            f"refresh_bundle_cache_from_record: every component in bundle "
+            f"{record.bundle!r} failed to template ({expected} attempted, 0 "
+            f"succeeded).  First failure: {first_failure}"
+        )
+        raise RuntimeError(msg)
+    if failures:
+        logger.error(
+            "Partial cache rebuild for bundle %r: %d of %d components failed (succeeded=%d).  Failures: %s",
+            record.bundle,
+            len(failures),
+            expected,
+            succeeded,
+            failures,
+        )
+
+    component_cache.all_types_dict[record.bundle] = bundle_dict
+
+    # Invalidate the precomputed code-hash lookups so flow validation
+    # picks up the freshly-loaded class bodies instead of comparing
+    # against the pre-reload hashes.
+    component_cache.type_to_current_hash = None
+    component_cache.all_known_hashes = None
+
+
 async def get_and_cache_all_types_dict(
     settings_service: "SettingsService",
     telemetry_service: Any | None = None,
@@ -844,7 +1214,17 @@ async def get_and_cache_all_types_dict(
                     # stays near-zero cost.
                     custom_components_dict = await _determine_loading_strategy(settings_service)
                     custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
-                    component_cache.all_types_dict = {**merged, **custom_flat}
+                    # Extension components are NOT stored in the built-in cache (they ship
+                    # via pip-installed Extensions / seed dirs / dev / inline bundles, all
+                    # independent of the lfx version stamp). Load them on every cache-hit
+                    # so manifest-shipping bundles always win on collision, matching the
+                    # cache-miss path. Failures must never block the cache build.
+                    try:
+                        extension_components = await import_extension_components(settings_service)
+                    except Exception as exc:  # noqa: BLE001
+                        await logger.aerror("Extension System load failed; continuing without it: %s", exc)
+                        extension_components = {}
+                    component_cache.all_types_dict = {**merged, **custom_flat, **extension_components}
 
                     component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
                     await logger.adebug(
@@ -857,14 +1237,24 @@ async def get_and_cache_all_types_dict(
                     await logger.adebug("Building components cache")
                     langflow_components = await import_langflow_components(settings_service, telemetry_service)
                     custom_components_dict = await _determine_loading_strategy(settings_service)
+                    try:
+                        extension_components = await import_extension_components(settings_service)
+                    except Exception as exc:  # noqa: BLE001
+                        # Extension loading failures should never block legacy component
+                        # loading: surface and continue.
+                        await logger.aerror("Extension System load failed; continuing without it: %s", exc)
+                        extension_components = {}
 
                     # Flatten custom dict if it has a "components" wrapper
                     custom_flat = custom_components_dict.get("components", custom_components_dict) or {}
 
-                    # Merge built-in and custom components (no wrapper at cache level)
+                    # Merge built-in, custom, and extension components (no wrapper at cache level).
+                    # Extension components win on collision so a manifest-shipping bundle
+                    # supersedes any same-named legacy entry.
                     component_cache.all_types_dict = {
                         **langflow_components["components"],
                         **custom_flat,
+                        **extension_components,
                     }
                     component_count = sum(len(comps) for comps in component_cache.all_types_dict.values())
                     await logger.adebug(f"Loaded {component_count} components")
