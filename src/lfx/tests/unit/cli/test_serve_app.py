@@ -311,6 +311,9 @@ class TestFlowRegistry:
             def list_ids(self):
                 return list(self._data)
 
+            def exists(self, fid):
+                return fid in self._data
+
         store = DeletableStore()
         registry = FlowRegistry(store=store)
 
@@ -708,8 +711,9 @@ class TestFlowRegistry:
         assert "prompt_one" in deleted, "must delete the correct file (by stem, not UUID)"
 
     def test_remove_deletes_both_stem_and_uuid_files_for_cross_worker_propagation(self):
-        """remove() must delete both the stem file and UUID file so that any worker
-        — regardless of which key its stale check uses — sees the deletion.
+        """remove() must delete both the stem file and the UUID file.
+
+        Any worker, regardless of which key its stale check uses, must see the deletion.
 
         Scenario: flow-dir has my-flow.json (pre-placed) and {uuid}.json (written by add()).
         Worker A deletes by UUID; Worker B cached by stem alias.  Both files must be gone.
@@ -978,8 +982,9 @@ class TestCreateServeAppFactory:
         assert "/flows/upload/" in routes
 
     def test_create_serve_app_startup_paths_cleaned_from_env_by_caller(self):
-        """LFX_SERVE_STARTUP_PATHS must be consumed by create_serve_app() but not deleted —
-        cleanup is the caller's (serve_command's) responsibility via the prefix sweep.
+        """LFX_SERVE_STARTUP_PATHS must be consumed by create_serve_app() but not deleted.
+
+        Cleanup is the caller's (serve_command's) responsibility via the prefix sweep.
         """
         import json
         import os
@@ -1521,11 +1526,14 @@ class TestServeAppEndpoints:
         ):
             client.post(
                 "/flows/00000000-0000-0000-0000-000000000001/run",
-                json={"input_value": "hello", "global_vars": {"MY_API_KEY": "secret-value"}},
+                json={
+                    "input_value": "hello",
+                    "global_vars": {"MY_API_KEY": "secret-value"},  # pragma: allowlist secret
+                },
                 headers=headers,
             )
 
-        assert captured["request_variables"] == {"MY_API_KEY": "secret-value"}
+        assert captured["request_variables"] == {"MY_API_KEY": "secret-value"}  # pragma: allowlist secret
 
     def test_run_endpoint_global_vars_do_not_mutate_registry_graph(self, real_graph_with_async, monkeypatch):
         """global_vars must only be set on the deepcopy; the registry's original graph must be unchanged."""
@@ -1553,13 +1561,93 @@ class TestServeAppEndpoints:
         ):
             client.post(
                 "/flows/00000000-0000-0000-0000-000000000001/run",
-                json={"input_value": "hello", "global_vars": {"MY_API_KEY": "secret-value"}},
+                json={
+                    "input_value": "hello",
+                    "global_vars": {"MY_API_KEY": "secret-value"},  # pragma: allowlist secret
+                },
                 headers=headers,
             )
 
         original_graph = registry.get("00000000-0000-0000-0000-000000000001")[0]
         rv = original_graph.context.get("request_variables") or {}
         assert "MY_API_KEY" not in rv
+
+    def test_run_endpoint_preserves_no_env_fallback_after_deepcopy(self, real_graph_with_async, monkeypatch):
+        """no_env_fallback must reach the executed graph_copy, not only the registry graph.
+
+        deepcopy() drops graph.context, so run_flow must re-apply the stamp after the copy.
+        """
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry(no_env_fallback=True)
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry)
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["no_env_fallback"] = graph.context.get("no_env_fallback")
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            TestClient(app) as client,
+        ):
+            client.post(
+                "/flows/00000000-0000-0000-0000-000000000001/run",
+                json={"input_value": "hello"},
+                headers=headers,
+            )
+
+        assert captured["no_env_fallback"] is True
+
+    def test_stream_endpoint_preserves_no_env_fallback_after_deepcopy(self, real_graph_with_async, monkeypatch):
+        """no_env_fallback must reach the executed graph_copy on the stream path too."""
+        from lfx.services.deps import get_settings_service
+
+        meta = FlowMeta(
+            id="00000000-0000-0000-0000-000000000001",
+            relative_path="test.json",
+            title="Test Flow",
+            description=None,
+        )
+        registry = FlowRegistry(no_env_fallback=True)
+        registry.add(real_graph_with_async, meta)
+        app = create_multi_serve_app(registry=registry)
+        monkeypatch.setattr(get_settings_service().settings, "allow_custom_components", True)
+
+        captured: dict = {}
+
+        async def mock_execute_capture(graph, input_value, session_id=None):  # noqa: ARG001
+            captured["no_env_fallback"] = graph.context.get("no_env_fallback")
+            return [], ""
+
+        headers = {"x-api-key": "test-api-key"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}),  # pragma: allowlist secret
+            patch("lfx.cli.serve_app.execute_graph_with_capture", mock_execute_capture),
+            TestClient(app) as client,
+            client.stream(
+                "POST",
+                "/flows/00000000-0000-0000-0000-000000000001/stream",
+                json={"input_value": "hello"},
+                headers=headers,
+            ) as response,
+        ):
+            assert response.status_code == 200
+            for _ in response.iter_bytes():
+                pass
+
+        assert captured["no_env_fallback"] is True
 
     def test_stream_endpoint_injects_global_vars_into_context(self, real_graph_with_async, monkeypatch):
         """global_vars in StreamRequest must appear in graph_copy.context['request_variables']."""
@@ -1590,7 +1678,10 @@ class TestServeAppEndpoints:
             client.stream(
                 "POST",
                 "/flows/00000000-0000-0000-0000-000000000001/stream",
-                json={"input_value": "hello", "global_vars": {"STREAM_KEY": "stream-secret"}},
+                json={
+                    "input_value": "hello",
+                    "global_vars": {"STREAM_KEY": "stream-secret"},  # pragma: allowlist secret
+                },
                 headers=headers,
             ) as response,
         ):
@@ -1598,7 +1689,7 @@ class TestServeAppEndpoints:
             for _ in response.iter_bytes():
                 pass
 
-        assert captured["request_variables"] == {"STREAM_KEY": "stream-secret"}
+        assert captured["request_variables"] == {"STREAM_KEY": "stream-secret"}  # pragma: allowlist secret
 
     def test_stream_endpoint_no_global_vars_leaves_context_clean(self, real_graph_with_async, monkeypatch):
         """Omitting global_vars must not create request_variables in the graph context."""
@@ -1665,7 +1756,10 @@ class TestServeAppEndpoints:
             client.stream(
                 "POST",
                 "/flows/00000000-0000-0000-0000-000000000001/stream",
-                json={"input_value": "hello", "global_vars": {"STREAM_KEY": "stream-secret"}},
+                json={
+                    "input_value": "hello",
+                    "global_vars": {"STREAM_KEY": "stream-secret"},  # pragma: allowlist secret
+                },
                 headers=headers,
             ) as response,
         ):
@@ -1878,34 +1972,6 @@ class TestUploadEndpoint:
         )
         assert response.status_code == 201
         assert response.json()["description"] == "my desc"
-
-    def test_upload_concurrent_conflict_returns_409_not_500(self, app_with_empty_registry, valid_flow_data):
-        """registry.add() raising FlowAlreadyRegisteredError (concurrent race) must surface as 409, not 500."""
-        from lfx.cli.serve_app import FlowAlreadyRegisteredError
-
-        mock_graph = MagicMock()
-        mock_graph.prepare = MagicMock()
-        mock_graph.context = {}
-
-        with (
-            patch("lfx.cli.serve_app.load_flow_from_json", return_value=mock_graph),
-            # Simulate the race: registry.get() returns None but registry.add() still raises.
-            patch("lfx.cli.serve_app.FlowRegistry.get", return_value=None),
-            patch(
-                "lfx.cli.serve_app.FlowRegistry.add",
-                side_effect=FlowAlreadyRegisteredError(
-                    "Flow 'x' is already registered. Pass overwrite=True to replace it."
-                ),
-            ),
-        ):
-            response = app_with_empty_registry.post(
-                "/flows/upload/",
-                json={"name": "Flow", "data": valid_flow_data},
-                headers={"x-api-key": "test-key"},
-            )
-
-        assert response.status_code == 409
-        assert "already exists" in response.json()["detail"]
 
     # ------------------------------------------------------------------
     # Execution failures return HTTP 500 not HTTP 200

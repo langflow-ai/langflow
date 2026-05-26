@@ -430,6 +430,10 @@ class Component(CustomComponent):
         kwargs = dict(config)
         kwargs["inputs"] = dict(inputs_raw)
         new_component = type(self)(**kwargs)
+        # Register in memo before the recursive deepcopy calls below so reference
+        # cycles (e.g. components linked through _components) resolve to this same
+        # copy instead of producing a duplicate.
+        memo[id(self)] = new_component
         new_component._code = self._code
         # Must deep-copy so each graph_copy has independent Output objects.
         # Output.cache=True by default, and output.value is set during execution.
@@ -478,7 +482,6 @@ class Component(CustomComponent):
         new_component._attributes = dict(self._attributes)
         new_component._output_logs = self._output_logs
         new_component._logs = self._logs  # type: ignore[attr-defined]
-        memo[id(self)] = new_component
         return new_component
 
     def set_class_code(self) -> None:

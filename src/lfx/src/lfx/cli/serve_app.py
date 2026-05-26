@@ -194,7 +194,12 @@ class FlowRegistry:
         self._store_ids_cache: list[str] | None = None
         self._store_ids_cache_ts: float = 0.0
 
-    def _stamp(self, graph: Graph) -> None:
+    def stamp(self, graph: Graph) -> None:
+        """Apply the registry's env-fallback policy to ``graph.context``.
+
+        Called again after ``deepcopy`` in the run/stream endpoints, since
+        ``Graph.__deepcopy__`` does not carry ``context`` over.
+        """
         if self._no_env_fallback:
             graph.context["no_env_fallback"] = True
 
@@ -225,7 +230,7 @@ class FlowRegistry:
             self._store.write(meta.id, raw_json)
             if getattr(self._store, "is_persistent", False):
                 self._store_sourced.add(meta.id)
-        self._stamp(graph)
+        self.stamp(graph)
         self._flows[meta.id] = (graph, meta)
         self._store_meta_cache.pop(meta.id, None)
         self._invalidate_store_ids_cache()
@@ -280,7 +285,7 @@ class FlowRegistry:
         graph = load_flow_from_json(raw_json)
         graph.prepare()
         graph.flow_id = meta.id
-        self._stamp(graph)
+        self.stamp(graph)
         if getattr(self._store, "is_persistent", False):
             self._store_sourced.add(meta.id)
         return graph, meta
@@ -305,9 +310,11 @@ class FlowRegistry:
                 continue
             # Skip flows deleted by another worker (still in our cache but gone from store).
             # Use the real store key (may be a filename stem for pre-placed flows).
+            # Check the store directly rather than the TTL-cached id list, so a delete
+            # by another worker is reflected immediately (same as the get() stale check).
             if meta.id in self._store_sourced:
                 store_key = self._store_keys.get(meta.id, meta.id)
-                if store_key not in store_ids:
+                if not self._store.exists(store_key):
                     continue
             result.append(meta)
             seen.add(meta.id)
@@ -654,6 +661,8 @@ def create_multi_serve_app(
         try:
             validate_flow_for_current_settings(graph)
             graph_copy = deepcopy(graph)
+            # deepcopy() drops graph.context; re-apply the registry's env policy.
+            registry.stamp(graph_copy)
             if request.global_vars:
                 if "request_variables" not in graph_copy.context:
                     graph_copy.context["request_variables"] = {}
@@ -717,6 +726,8 @@ def create_multi_serve_app(
             event_manager = create_stream_tokens_event_manager(queue=asyncio_queue)
 
             graph_copy = deepcopy(graph)
+            # deepcopy() drops graph.context; re-apply the registry's env policy.
+            registry.stamp(graph_copy)
             if request.global_vars:
                 if "request_variables" not in graph_copy.context:
                     graph_copy.context["request_variables"] = {}
