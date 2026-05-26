@@ -277,3 +277,124 @@ def test_serve_command_inline_json():
         assert args[1] == ".json"
         assert "verbose" in kwargs
         assert kwargs["verbose"] is True
+
+
+# ---------------------------------------------------------------------------
+# --upgrade-flow gate parity with `lfx run`
+#
+# `serve` and `run` share lfx.upgrade.cli_gate.apply_upgrade_gate; these tests
+# mirror TestUpgradeFlowOption in tests/unit/run/test_base.py so the two entry
+# points can't silently diverge.
+# ---------------------------------------------------------------------------
+
+_REGISTRY_CODE = "class MyComp:\n    pass  # v2"
+_NODE_CODE = "class MyComp:\n    pass  # v1"
+
+
+def _serve_registry():
+    return {
+        "Cat": {
+            "MyComp": {
+                "template": {"code": {"value": _REGISTRY_CODE}},
+                "outputs": [{"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}],
+                "metadata": {},
+            }
+        }
+    }
+
+
+def _serve_flow_json(code=_NODE_CODE, type_="MyComp"):
+    return json.dumps(
+        {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "data": {
+                        "id": "n1",
+                        "type": type_,
+                        "node": {
+                            "display_name": "My Component",
+                            "template": {"code": {"value": code}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
+    )
+
+
+def _serve_app():
+    import typer
+    from lfx.cli.commands import serve_command
+
+    app = typer.Typer()
+    app.command()(serve_command)
+    return app
+
+
+def test_serve_upgrade_flow_check_aborts_on_incompatible():
+    """`serve --upgrade-flow=check` refuses to serve an outdated flow and never starts uvicorn."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_cache.all_types_dict = _serve_registry()
+        result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "check"])
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called
+
+
+def test_serve_upgrade_flow_safe_blocked_aborts():
+    """`serve --upgrade-flow=safe` aborts when a component is blocked (not in the registry)."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_cache.all_types_dict = {}  # empty registry -> the node is blocked
+        result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "safe"])
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called
+
+
+def test_serve_upgrade_flow_bad_value_rejected():
+    """An unrecognized --upgrade-flow value is rejected before serving."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "typo"])
+        assert result.exit_code != 0
+        assert not mock_uvicorn.called
+
+
+def test_serve_upgrade_flow_safe_proceeds_to_serve():
+    """`serve --upgrade-flow=safe` applies safe upgrades and proceeds to start the server."""
+    from typer.testing import CliRunner
+
+    with (
+        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_cache.all_types_dict = _serve_registry()
+        mock_graph = MagicMock()
+        mock_graph.prepare = MagicMock()
+        mock_graph.nodes = {}
+        mock_load.return_value = mock_graph
+
+        result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "safe"])
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called

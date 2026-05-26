@@ -195,39 +195,21 @@ async def serve_command(
         verbose_print("Error: --upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path).")
         raise typer.Exit(1)
 
-    # --- upgrade compatibility check (before temp-file write) ---
+    # --- upgrade compatibility gate (shared with `lfx run`; before temp-file write) ---
+    # Runs before the temp-file write below so the server loads any upgraded content.
     if upgrade_flow and json_data is not None:
         from lfx.interface.components import component_cache
-        from lfx.upgrade.applier import apply_safe_upgrades
-        from lfx.upgrade.checker import check_flow_compatibility
+        from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
 
         all_types = component_cache.all_types_dict or {}
-        report = check_flow_compatibility(json_data, all_types)
-
-        if upgrade_flow == "check":
-            if not report.is_clean:
-                names = ", ".join(f"{n.display_name} ({n.status})" for n in report.nodes if n.status != "ok")
-                typer.echo(f"Error: flow has incompatible components (--upgrade-flow=check): {names}", err=True)
-                raise typer.Exit(1)
-
-        elif upgrade_flow == "safe":
-            if report.has_blocked or report.has_breaking:
-                names = ", ".join(
-                    f"{n.display_name} ({n.status})"
-                    for n in report.nodes
-                    if n.status in ("blocked", "outdated_breaking")
-                )
-                typer.echo(f"Error: flow has components that cannot be auto-upgraded: {names}", err=True)
-                raise typer.Exit(1)
-            if report.has_safe_updates:
-                json_data, count = apply_safe_upgrades(json_data, all_types, report, return_count=True)
-                if verbose:
-                    typer.echo(f"Applied {count} safe component upgrade(s).")
-
-        else:
-            typer.echo(f"Error: unknown --upgrade-flow value '{upgrade_flow}'. Use 'safe' or 'check'.", err=True)
-            raise typer.Exit(1)
-    # --- end upgrade check ---
+        try:
+            json_data, applied = apply_upgrade_gate(json_data, all_types, upgrade_flow)
+        except UpgradeFlowError as e:
+            typer.echo(f"Error: {e}", err=True)
+            raise typer.Exit(1) from e
+        if applied and verbose:
+            typer.echo(f"Applied {applied} safe component upgrade(s).")
+    # --- end upgrade gate ---
 
     # Write json_data to a temp file so the server can load it by path.
     # This happens after upgrade check so the server sees upgraded content.

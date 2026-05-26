@@ -21,6 +21,7 @@ def apply_safe_upgrades(
     report: CompatibilityReport,
     *,
     return_count: bool = False,
+    registry: dict[str, dict] | None = None,
 ) -> dict | tuple[dict, int]:
     """Return a deep copy of flow_data with safe node codes updated.
 
@@ -30,6 +31,8 @@ def apply_safe_upgrades(
         report: Pre-computed CompatibilityReport from ``check_flow_compatibility``.
         return_count: If True, return a (flow, count) tuple where count is the
                       number of nodes that were updated.
+        registry: Optional pre-built lookup from ``build_registry_lookup``. Pass this to avoid
+                  rebuilding it when the caller already built it for ``check_flow_compatibility``.
 
     Returns:
         Updated flow dict (deep copy), or (flow, count) if return_count=True.
@@ -39,7 +42,8 @@ def apply_safe_upgrades(
         updated = copy.deepcopy(flow_data)
         return (updated, 0) if return_count else updated
 
-    registry = build_registry_lookup(all_types_dict)
+    if registry is None:
+        registry = build_registry_lookup(all_types_dict)
     updated = copy.deepcopy(flow_data)
     count = _apply_to_nodes(updated.get("nodes", []), safe_ids, registry)
 

@@ -210,3 +210,46 @@ def test_upgrade_outer_envelope_write_updates_inner_nodes(tmp_path):
     nodes = written.get("data", {}).get("nodes", [])
     assert nodes, "Expected nodes inside data.nodes"
     assert nodes[0]["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
+
+
+# ---------------------------------------------------------------------------
+# fail-fast when the bundled registry is empty/missing
+# ---------------------------------------------------------------------------
+
+
+def test_load_registry_from_index_raises_when_empty(monkeypatch):
+    """A missing/empty bundled registry must fail loudly, not silently classify all-blocked."""
+    from lfx.cli.upgrade import load_registry_from_index
+
+    monkeypatch.setattr("lfx.interface.components._read_component_index", lambda _: None)
+    with pytest.raises(typer.Exit) as exc_info:
+        load_registry_from_index()
+    assert exc_info.value.exit_code != 0
+
+
+# ---------------------------------------------------------------------------
+# --strict treats pending safe upgrades as drift
+# ---------------------------------------------------------------------------
+
+
+def test_strict_exits_nonzero_on_pending_safe(flow_file):
+    with pytest.raises(typer.Exit) as exc_info:
+        upgrade_command(flow_file, write=False, strict=True, registry=_registry())
+    assert exc_info.value.exit_code != 0
+
+
+def test_strict_with_write_exits_zero(flow_file):
+    # --write applies the safe upgrade, so --strict has no remaining drift to fail on.
+    upgrade_command(flow_file, write=True, strict=True, registry=_registry())
+    updated = json.loads(flow_file.read_text())
+    assert updated["nodes"][0]["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
+
+
+def test_strict_clean_exits_zero(clean_flow_file):
+    # No pending upgrades -> --strict is a no-op and the command succeeds.
+    upgrade_command(clean_flow_file, write=False, strict=True, registry=_registry())
+
+
+def test_non_strict_pending_safe_exits_zero(flow_file):
+    # Default (no --strict): pending safe upgrades do not fail the command.
+    upgrade_command(flow_file, write=False, strict=False, registry=_registry())

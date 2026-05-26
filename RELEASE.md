@@ -159,6 +159,16 @@ Use `scripts/release-lfx.sh <version>`. The script warns if the LFX minor versio
 
 Users can pin `lfx~=X.Y.0` in their `requirements.txt` to receive all compatible LFX patch releases for a given Langflow minor.
 
+### Migrating from lfx 0.5.x to 1.10.0
+
+LFX was realigned from its standalone `0.5.x` line onto Langflow's `major.minor` line, so the version jumps from `0.5.0` to `1.10.0` in a single step. This is a version-numbering change, not 95 minors of feature churn. The jump affects downstream pins, and neither pip nor uv will flag it — so it must be called out in the release announcement, not just here:
+
+- `lfx==0.5.x` or `lfx<1.0` pins will **not** upgrade (intentional — those deployments stay put).
+- `lfx>=0.5,<1` pins will **not** upgrade.
+- `lfx>=0.5` with no upper bound **will** pull `1.10.0` on the next install — a major jump with no warning.
+
+Going forward, pin `lfx~=X.Y.0` (e.g. `lfx~=1.10.0`) so you track compatible patches for a given Langflow minor without silently crossing minor lines.
+
 ## Roles
 
 | Role                                    | Responsibility                                                    |

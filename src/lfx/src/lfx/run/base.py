@@ -55,6 +55,92 @@ def output_error(error_message: str, *, verbose: bool, exception: Exception | No
     return error_response
 
 
+def _materialize_flow_dict(
+    *,
+    flow_json: str | None,
+    stdin: bool,
+    script_path: Path | None,
+    upgrade_flow: str | None,
+    verbosity: int,
+    verbose: bool,
+) -> dict | None:
+    """Parse inline JSON / stdin / (for --upgrade-flow) a .json file into a flow dict.
+
+    Returns the unwrapped inner graph (any outer ``{"data": ...}`` envelope removed), or None
+    when there is no JSON source to materialize. A plain script path without ``--upgrade-flow``
+    is loaded later by file path, not here.
+
+    Raises:
+        RunError: on malformed JSON, an unreadable upgrade target, a non-JSON ``--upgrade-flow``
+            target, or a missing JSON source when ``--upgrade-flow`` was requested.
+    """
+    flow_dict: dict | None = None
+
+    if flow_json is not None:
+        if verbosity > 0:
+            sys.stderr.write("Processing inline JSON content...\n")
+        try:
+            raw = json.loads(flow_json)
+            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+            if verbosity > 0:
+                sys.stderr.write("JSON content is valid\n")
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON content: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+        except Exception as e:
+            error_msg = f"Error processing JSON content: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+    elif stdin:
+        if verbosity > 0:
+            sys.stderr.write("Reading JSON content from stdin...\n")
+        try:
+            stdin_content = sys.stdin.read().strip()
+            if not stdin_content:
+                error_msg = "No content received from stdin"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, None)
+            raw = json.loads(stdin_content)
+            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+            if verbosity > 0:
+                sys.stderr.write("JSON content from stdin is valid\n")
+        except json.JSONDecodeError as e:
+            error_msg = f"Invalid JSON content from stdin: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+        except Exception as e:
+            error_msg = f"Error reading from stdin: {e}"
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, e) from e
+
+    # For JSON file paths with --upgrade-flow: read into flow_dict so the gate fires and any
+    # applied upgrades are used when loading the graph (instead of the original file).
+    # .py scripts are not JSON flows and cannot be upgraded.
+    if upgrade_flow and flow_dict is None and script_path is not None:
+        if script_path.suffix.lower() == ".json":
+            try:
+                raw = json.loads(script_path.read_text(encoding="utf-8"))
+                flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+            except Exception as e:
+                error_msg = f"--upgrade-flow: could not read flow file '{script_path}': {e}"
+                output_error(error_msg, verbose=verbose)
+                raise RunError(error_msg, e) from e
+        else:
+            error_msg = f"--upgrade-flow is only supported for JSON flows, not '{script_path.suffix}' files."
+            output_error(error_msg, verbose=verbose)
+            raise RunError(error_msg, None)
+
+    # Fail fast if upgrade_flow was requested but we still have nothing to check.
+    # This guards against unexpected code paths that leave flow_dict None.
+    if upgrade_flow and flow_dict is None:
+        error_msg = "--upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path)."
+        output_error(error_msg, verbose=verbose)
+        raise RunError(error_msg, None)
+
+    return flow_dict
+
+
 async def run_flow(
     script_path: Path | None = None,
     input_value: str | None = None,
@@ -151,105 +237,31 @@ async def run_flow(
         output_error(error_msg, verbose=verbose)
         raise RunError(error_msg, None)
 
-    # Store parsed JSON dict for direct loading (avoids temp file round-trip)
-    flow_dict: dict | None = None
+    # Materialize a flow dict from inline JSON / stdin / (for --upgrade-flow) a .json file.
+    # Plain script paths without --upgrade-flow stay None and are loaded by path below.
+    flow_dict = _materialize_flow_dict(
+        flow_json=flow_json,
+        stdin=stdin,
+        script_path=script_path,
+        upgrade_flow=upgrade_flow,
+        verbosity=verbosity,
+        verbose=verbose,
+    )
 
-    if flow_json is not None:
-        if verbosity > 0:
-            sys.stderr.write("Processing inline JSON content...\n")
-        try:
-            raw = json.loads(flow_json)
-            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
-            if verbosity > 0:
-                sys.stderr.write("JSON content is valid\n")
-        except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON content: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-        except Exception as e:
-            error_msg = f"Error processing JSON content: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-    elif stdin:
-        if verbosity > 0:
-            sys.stderr.write("Reading JSON content from stdin...\n")
-        try:
-            stdin_content = sys.stdin.read().strip()
-            if not stdin_content:
-                error_msg = "No content received from stdin"
-                output_error(error_msg, verbose=verbose)
-                raise RunError(error_msg, None)
-            raw = json.loads(stdin_content)
-            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
-            if verbosity > 0:
-                sys.stderr.write("JSON content from stdin is valid\n")
-        except json.JSONDecodeError as e:
-            error_msg = f"Invalid JSON content from stdin: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-        except Exception as e:
-            error_msg = f"Error reading from stdin: {e}"
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, e) from e
-
-    # For JSON file paths with --upgrade-flow: read into flow_dict so the check below
-    # fires and any applied upgrades are used when loading the graph (instead of the
-    # original file).  .py scripts are not JSON flows and cannot be upgraded.
-    if upgrade_flow and flow_dict is None and script_path is not None:
-        if script_path.suffix.lower() == ".json":
-            try:
-                raw = json.loads(script_path.read_text(encoding="utf-8"))
-                flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
-            except Exception as e:
-                error_msg = f"--upgrade-flow: could not read flow file '{script_path}': {e}"
-                output_error(error_msg, verbose=verbose)
-                raise RunError(error_msg, e) from e
-        else:
-            error_msg = f"--upgrade-flow is only supported for JSON flows, not '{script_path.suffix}' files."
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, None)
-
-    # Fail fast if upgrade_flow was requested but we still have nothing to check.
-    # This guards against unexpected code paths that leave flow_dict None.
-    if upgrade_flow and flow_dict is None:
-        error_msg = "--upgrade-flow requires a JSON flow source (--flow-json, --stdin, or a .json file path)."
-        output_error(error_msg, verbose=verbose)
-        raise RunError(error_msg, None)
-
-    # --- upgrade compatibility check ---
+    # --- upgrade compatibility gate (shared with `lfx serve`) ---
     if upgrade_flow and flow_dict is not None:
         from lfx.interface.components import component_cache
-        from lfx.upgrade.applier import apply_safe_upgrades
-        from lfx.upgrade.checker import check_flow_compatibility
+        from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
 
         all_types = component_cache.all_types_dict or {}
-        report = check_flow_compatibility(flow_dict, all_types)
-
-        if upgrade_flow == "check":
-            if not report.is_clean:
-                outdated = [n for n in report.nodes if n.status != "ok"]
-                names = ", ".join(f"{n.display_name} ({n.status})" for n in outdated)
-                error_msg = f"Flow has incompatible components (--upgrade-flow=check): {names}"
-                output_error(error_msg, verbose=verbose)
-                raise RunError(error_msg, None)
-
-        elif upgrade_flow == "safe":
-            if report.has_blocked or report.has_breaking:
-                blockers = [n for n in report.nodes if n.status in ("blocked", "outdated_breaking")]
-                names = ", ".join(f"{n.display_name} ({n.status})" for n in blockers)
-                error_msg = f"Flow has components that cannot be auto-upgraded: {names}"
-                output_error(error_msg, verbose=verbose)
-                raise RunError(error_msg, None)
-            if report.has_safe_updates:
-                flow_dict, count = apply_safe_upgrades(flow_dict, all_types, report, return_count=True)
-                if verbose:
-                    sys.stderr.write(f"Applied {count} safe component upgrade(s).\n")
-
-        else:
-            error_msg = f"Unknown --upgrade-flow value '{upgrade_flow}'. Use 'safe' or 'check'."
-            output_error(error_msg, verbose=verbose)
-            raise RunError(error_msg, None)
-    # --- end upgrade check ---
+        try:
+            flow_dict, applied = apply_upgrade_gate(flow_dict, all_types, upgrade_flow)
+        except UpgradeFlowError as e:
+            output_error(str(e), verbose=verbose)
+            raise RunError(str(e), e) from e
+        if applied and verbose:
+            sys.stderr.write(f"Applied {applied} safe component upgrade(s).\n")
+    # --- end upgrade gate ---
 
     try:
         # Handle direct JSON dict (from stdin or --flow-json)

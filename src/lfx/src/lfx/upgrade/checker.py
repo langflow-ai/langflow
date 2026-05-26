@@ -52,20 +52,32 @@ def build_registry_lookup(all_types_dict: Mapping[str, Any]) -> dict[str, dict]:
     return {k: dict(v) for k, v in flatten_components_with_aliases(all_types_dict).items() if isinstance(v, Mapping)}
 
 
-def _outputs_are_equal(original: list[dict], user: list[dict]) -> bool:
-    user_map = {o["name"]: o for o in user}
-    orig_names = {o["name"] for o in original}
-    if orig_names != set(user_map):
+def _outputs_are_compatible(registry_outputs: list[dict], flow_outputs: list[dict]) -> bool:
+    """Return True if the saved flow's outputs are still valid against the registry's outputs.
+
+    Only *breaking* differences count:
+      - a changed output **name set** (a removed/renamed output breaks downstream edges),
+      - a changed ``method`` or ``allows_loop``,
+      - **narrowed** output types: the registry dropped a type the saved flow emitted.
+
+    A cosmetic ``display_name`` change (e.g. a typo fix in the registry) and **widened**
+    types (the registry now emits additional types) are not breaking and must not be flagged,
+    otherwise ``--upgrade-flow=safe`` would needlessly abort on a string edit.
+    """
+    flow_map = {o["name"]: o for o in flow_outputs}
+    registry_names = {o["name"] for o in registry_outputs}
+    if registry_names != set(flow_map):
         return False
-    for orig in original:
-        u = user_map.get(orig["name"])
-        if u is None:
+    for reg in registry_outputs:
+        flow_output = flow_map.get(reg["name"])
+        if flow_output is None:
             return False
+        flow_types = set(flow_output.get("types") or [])
+        registry_types = set(reg.get("types") or [])
         if (
-            orig.get("display_name") != u.get("display_name")
-            or sorted(orig.get("types") or []) != sorted(u.get("types") or [])
-            or orig.get("method") != u.get("method")
-            or orig.get("allows_loop") != u.get("allows_loop")
+            not flow_types.issubset(registry_types)  # narrowing breaks edges; widening is safe
+            or reg.get("method") != flow_output.get("method")
+            or reg.get("allows_loop") != flow_output.get("allows_loop")
         ):
             return False
     return True
@@ -75,37 +87,39 @@ def _template_keys_equal(original: dict, user: dict) -> bool:
     return sorted(original) == sorted(user)
 
 
-def _input_types_contained(original: dict, user: dict) -> bool:
-    """Check that all original input_types are present in user, AND user has no extra types the registry removed."""
-    for key, orig_field in original.items():
-        if not isinstance(orig_field, Mapping):
+def _input_types_contained(registry_template: dict, flow_template: dict) -> bool:
+    """Return True if no input field *narrowed* its accepted ``input_types``.
+
+    Narrowing (the registry no longer accepts a type the saved flow's edges feed into) is
+    breaking. Widening (the registry accepting *more* types than before) is safe and must
+    not be flagged.
+    """
+    for key, registry_field in registry_template.items():
+        if not isinstance(registry_field, Mapping):
             continue
-        orig_types = orig_field.get("input_types")
-        if not orig_types:
+        registry_types = registry_field.get("input_types")
+        if not registry_types:
             continue
-        user_field = user.get(key)
-        if not user_field:
+        flow_field = flow_template.get(key)
+        if not flow_field:
             return False
-        user_types = user_field.get("input_types") or []
-        # All registry types must be supported by the node
-        if not all(t in user_types for t in orig_types):
-            return False
-        # All node types must still be accepted by the registry (narrowing is a breaking change)
-        if not all(t in orig_types for t in user_types):
+        flow_types = flow_field.get("input_types") or []
+        # Every type the saved flow relied on must still be accepted by the registry.
+        if not all(t in registry_types for t in flow_types):
             return False
     return True
 
 
 def _has_breaking_change(registry_entry: dict, node_info: dict) -> bool:
-    orig_outputs = registry_entry.get("outputs") or []
-    user_outputs = node_info.get("outputs") or []
-    if orig_outputs and not _outputs_are_equal(orig_outputs, user_outputs):
+    registry_outputs = registry_entry.get("outputs") or []
+    flow_outputs = node_info.get("outputs") or []
+    if registry_outputs and not _outputs_are_compatible(registry_outputs, flow_outputs):
         return True
-    orig_template = registry_entry.get("template") or {}
-    user_template = node_info.get("template") or {}
-    if orig_template and not _template_keys_equal(orig_template, user_template):
+    registry_template = registry_entry.get("template") or {}
+    flow_template = node_info.get("template") or {}
+    if registry_template and not _template_keys_equal(registry_template, flow_template):
         return True
-    return bool(orig_template) and not _input_types_contained(orig_template, user_template)
+    return bool(registry_template) and not _input_types_contained(registry_template, flow_template)
 
 
 def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
@@ -143,22 +157,40 @@ def _classify_node(node: dict, registry: dict[str, dict]) -> NodeStatus | None:
     return NodeStatus(node_id=node_id, component_type=component_type, display_name=display_name, status="outdated_safe")
 
 
-def check_flow_compatibility(
-    flow_data: dict,
-    all_types_dict: Mapping[str, Any],
-) -> CompatibilityReport:
-    """Check all nodes in flow_data against the component registry."""
-    registry = build_registry_lookup(all_types_dict)
-    nodes = flow_data.get("nodes", [])
-    statuses: list[NodeStatus] = []
+def _classify_nodes_recursive(nodes: list[dict], registry: dict[str, dict], statuses: list[NodeStatus]) -> None:
+    """Classify every node, recursing fully into nested grouped-component flows.
+
+    Grouped components can nest arbitrarily deep (a group inside a group); each level lives
+    under ``node.data.node.flow.data.nodes``. Walking only the first level would silently skip
+    grandchildren, so we recurse all the way down, keeping the checker symmetric with the
+    applier, which also recurses fully.
+    """
     for node in nodes:
         status = _classify_node(node, registry)
         if status is not None:
             statuses.append(status)
-        node_info = node.get("data", {}).get("node", {})
-        nested_nodes = node_info.get("flow", {}).get("data", {}).get("nodes", [])
-        for nested_node in nested_nodes:
-            ns = _classify_node(nested_node, registry)
-            if ns is not None:
-                statuses.append(ns)
+        nested = node.get("data", {}).get("node", {}).get("flow", {}).get("data", {}).get("nodes")
+        if nested:
+            _classify_nodes_recursive(nested, registry, statuses)
+
+
+def check_flow_compatibility(
+    flow_data: dict,
+    all_types_dict: Mapping[str, Any],
+    *,
+    registry: dict[str, dict] | None = None,
+) -> CompatibilityReport:
+    """Check all nodes in flow_data against the component registry.
+
+    Args:
+        flow_data: Parsed flow JSON with a ``nodes`` list.
+        all_types_dict: Component registry (categories -> components).
+        registry: Optional pre-built lookup from ``build_registry_lookup``. Pass this to avoid
+            rebuilding the lookup when the caller also runs ``apply_safe_upgrades`` on the same
+            registry.
+    """
+    if registry is None:
+        registry = build_registry_lookup(all_types_dict)
+    statuses: list[NodeStatus] = []
+    _classify_nodes_recursive(flow_data.get("nodes", []), registry, statuses)
     return CompatibilityReport(nodes=statuses)

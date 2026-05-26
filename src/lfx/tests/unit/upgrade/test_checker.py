@@ -185,3 +185,84 @@ def test_nested_flow_nodes_are_classified():
     report = check_flow_compatibility({"nodes": [outer_node], "edges": []}, _registry())
     assert len(report.nodes) == 1
     assert report.nodes[0].status == "outdated_safe"
+
+
+def _group(node_id: str, type_: str, child: dict) -> dict:
+    """Wrap *child* inside a grouped-component node's nested flow."""
+    return {
+        "id": node_id,
+        "data": {
+            "type": type_,
+            "node": {
+                "display_name": type_,
+                "template": {},  # no code, so the group wrapper itself is skipped
+                "outputs": [],
+                "flow": {"data": {"nodes": [child], "edges": []}},
+            },
+        },
+    }
+
+
+# --- _outputs_are_compatible must not flag cosmetic / widening changes -----------------
+
+
+def _output(types, display_name="Output", method="run"):
+    return {"name": "out", "display_name": display_name, "types": types, "method": method, "allows_loop": False}
+
+
+def test_outdated_safe_when_output_display_name_changed():
+    """A cosmetic display_name change (e.g. a registry typo fix) is not breaking."""
+    node = _node(code=REGISTRY_CODE_V1, outputs=[_output(["Message"], display_name="Outpout")])
+    registry = _registry(code=REGISTRY_CODE_V2, outputs=[_output(["Message"], display_name="Output")])
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+def test_outdated_safe_when_output_types_widened():
+    """The registry adding a type to an output (widening) is safe, not breaking."""
+    node = _node(code=REGISTRY_CODE_V1, outputs=[_output(["Message"])])
+    registry = _registry(code=REGISTRY_CODE_V2, outputs=[_output(["Message", "Data"])])
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+def test_outdated_breaking_when_output_types_narrowed():
+    """The registry dropping a type the saved flow emitted (narrowing) breaks downstream edges."""
+    node = _node(code=REGISTRY_CODE_V1, outputs=[_output(["Message", "Data"])])
+    registry = _registry(code=REGISTRY_CODE_V2, outputs=[_output(["Message"])])
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_breaking"
+
+
+# --- _input_types_contained must allow widening ----------------------------------------
+
+
+def test_outdated_safe_when_input_types_widened():
+    """The registry accepting an additional input type (widening) is safe, not breaking."""
+    node = _node(code=REGISTRY_CODE_V1, template_extra={"inp": {"input_types": ["Message"]}})
+    registry = _registry(code=REGISTRY_CODE_V2, template_extra={"inp": {"input_types": ["Message", "Data"]}})
+    report = check_flow_compatibility(_flow(node), registry)
+    assert report.nodes[0].status == "outdated_safe"
+
+
+# --- full recursion into nested grouped components -------------------------------------
+
+
+def test_deeply_nested_flow_nodes_are_classified():
+    """A safe-upgradeable node two levels deep (group inside a group) must be classified."""
+    inner = _node(code=REGISTRY_CODE_V1)
+    middle = _group("group-2", "InnerGroup", inner)
+    outer = _group("group-1", "OuterGroup", middle)
+    report = check_flow_compatibility({"nodes": [outer], "edges": []}, _registry())
+    assert len(report.nodes) == 1
+    assert report.nodes[0].status == "outdated_safe"
+
+
+# --- pre-built registry lookup can be reused -------------------------------------------
+
+
+def test_check_accepts_prebuilt_registry():
+    all_types = _registry()
+    lookup = build_registry_lookup(all_types)
+    report = check_flow_compatibility(_flow(_node(code=REGISTRY_CODE_V1)), all_types, registry=lookup)
+    assert report.nodes[0].status == "outdated_safe"

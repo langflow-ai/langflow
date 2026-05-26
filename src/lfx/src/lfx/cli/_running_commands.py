@@ -2,6 +2,8 @@
 
 import typer
 
+from lfx.upgrade.cli_gate import UpgradeFlowMode
+
 
 def register(app: typer.Typer) -> None:
     """Register running-stage commands on *app*."""
@@ -68,7 +70,7 @@ def register(app: typer.Typer) -> None:
                 "Agent and Memory Components will use this to track conversation history."
             ),
         ),
-        upgrade_flow: str | None = typer.Option(
+        upgrade_flow: UpgradeFlowMode | None = typer.Option(
             None,
             "--upgrade-flow",
             help=(
@@ -140,7 +142,7 @@ def register(app: typer.Typer) -> None:
             "--check-variables/--no-check-variables",
             help="Check global variables for environment compatibility",
         ),
-        upgrade_flow: str | None = typer.Option(
+        upgrade_flow: UpgradeFlowMode | None = typer.Option(
             None,
             "--upgrade-flow",
             help=(
