@@ -1,7 +1,30 @@
 """Error handling and categorization for the Assistant API."""
 
+from __future__ import annotations
+
+import re
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from collections.abc import Iterable
+
 MAX_ERROR_MESSAGE_LENGTH = 150
 MIN_MEANINGFUL_PART_LENGTH = 10
+
+# Substrings (case-insensitive) that identify a *model unavailable* error
+# — e.g. OpenAI 403 model_not_found ("Project ... does not have access to
+# model ..."), Anthropic equivalent, or a runtime check that flagged the
+# selected model as missing from the provider's catalog. Used by the
+# assistant streamer to decide whether to fall back to the next candidate
+# model on the same provider.
+_MODEL_UNAVAILABLE_MARKERS: tuple[str, ...] = (
+    "model_not_found",
+    "does not have access to model",
+    "model is not available",
+    "the model does not exist",
+    "model not available",
+    "no access to model",
+)
 
 ERROR_PATTERNS: list[tuple[list[str], str]] = [
     (
@@ -41,7 +64,51 @@ def extract_friendly_error(error_msg: str) -> str:
     if "content" in error_lower and any(term in error_lower for term in ["filter", "policy", "safety"]):
         return "Request blocked by content policy. Please modify your prompt."
 
+    # Bug 4 [P2] — preserve diagnostic context. Many ``FlowExecutionError``s
+    # arrive wrapped as ``"Error building Component X: <real cause>"``. The
+    # default colon-split truncation would return the wrapper prefix and
+    # discard the actually useful detail (PR-12575 Bug 4). Try to surface
+    # the deepest meaningful cause before falling back to plain truncation.
+    deep_cause = _extract_deepest_meaningful_cause(error_msg)
+    if deep_cause:
+        return _truncate_error_message(deep_cause)
+
     return _truncate_error_message(error_msg)
+
+
+# Matches a Python-repr or JSON-style ``'message': '...'`` / ``"message": "..."``
+# value as it appears in provider client error reprs (OpenAI, Anthropic, etc.).
+_PROVIDER_MESSAGE_RE = re.compile(r"""['"]message['"]\s*:\s*['"]([^'"]+)['"]""")
+_COMPONENT_WRAPPER_PREFIX = "Error building Component"
+
+
+def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
+    """Pull the actionable cause out of a wrapped error message.
+
+    Strategy (first match wins):
+        1. If the message embeds a Python-repr / JSON ``'message': '...'``
+           value (OpenAI, Anthropic, similar) — return that. This is the
+           single most actionable string the user can read.
+        2. If the message is wrapped with ``Error building Component X: …``
+           — return the part after the first colon (the underlying error
+           the component build was trying to report).
+
+    Returns None when neither pattern applies so callers fall back to the
+    existing truncation behavior (zero behavior change for unwrapped errors).
+    """
+    match = _PROVIDER_MESSAGE_RE.search(error_msg)
+    if match:
+        return match.group(1).strip()
+
+    if error_msg.lstrip().startswith(_COMPONENT_WRAPPER_PREFIX) and ":" in error_msg:
+        # ``split(":", 1)`` keeps any embedded colons inside the cause (so
+        # ``Error code: 403`` stays readable).
+        _wrapper, _, cause = error_msg.partition(":")
+        cause = cause.strip()
+        if len(cause) >= MIN_MEANINGFUL_PART_LENGTH:
+            return cause
+
+    return None
 
 
 def _truncate_error_message(error_msg: str) -> str:
@@ -56,3 +123,39 @@ def _truncate_error_message(error_msg: str) -> str:
                 return stripped
 
     return f"{error_msg[:MAX_ERROR_MESSAGE_LENGTH]}..."
+
+
+def is_model_unavailable_error(error_msg: str | None) -> bool:
+    """Return True when the underlying error indicates the selected model is unreachable.
+
+    Drives the assistant's model-fallback chain: a True result means the
+    streamer should swap to the next candidate on the same provider rather
+    than surface the error to the user (auth / network / rate-limit errors
+    intentionally do NOT match — they would recur on the next model and
+    mask the real problem).
+
+    Why: PR-12575 Bug 1 — OpenAI 403 ``model_not_found`` (catalog default
+    not enabled for the user's project) was reaching the SSE error event
+    as the generic ``Error building Component Agent`` instead of trying a
+    sibling model.
+    """
+    if not error_msg:
+        return False
+    lowered = error_msg.lower()
+    return any(marker in lowered for marker in _MODEL_UNAVAILABLE_MARKERS)
+
+
+def format_models_exhausted_message(provider: str, tried_models: Iterable[str]) -> str:
+    """Build the user-facing error when every model on a provider was tried.
+
+    Names the provider and lists the exhausted models so the user can
+    request access to one of them or switch providers. Replaces the
+    pre-fix generic ``Error building Component Agent`` from Bug 1.
+    """
+    models = [m for m in tried_models if m]
+    models_str = ", ".join(models) if models else "(none)"
+    return (
+        f"No accessible model on {provider}. Tried: {models_str}. "
+        f"Configure access to one of these models in your {provider} account, "
+        f"or switch to a different provider in Settings → Model Providers."
+    )

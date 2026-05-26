@@ -14,7 +14,11 @@ from lfx.mcp.tool_cache import reset_tool_cache
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
 from langflow.agentic.helpers.code_security import scan_code_security
-from langflow.agentic.helpers.error_handling import extract_friendly_error
+from langflow.agentic.helpers.error_handling import (
+    extract_friendly_error,
+    format_models_exhausted_message,
+    is_model_unavailable_error,
+)
 from langflow.agentic.helpers.input_sanitization import REFUSAL_MESSAGE, sanitize_input
 from langflow.agentic.helpers.sse import (
     format_cancelled_event,
@@ -56,6 +60,7 @@ from langflow.agentic.services.flow_types import (
 )
 from langflow.agentic.services.helpers.intent_classification import _looks_like_run_request, classify_intent
 from langflow.agentic.services.helpers.intent_context import build_intent_context
+from langflow.agentic.services.provider_service import get_provider_model_candidates
 from langflow.agentic.services.request_framing import decide_progress_step
 from langflow.agentic.services.user_components import register_user_component_if_valid
 from langflow.agentic.services.user_components_context import (
@@ -583,6 +588,14 @@ async def execute_flow_with_validation_streaming(
         # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
         total_attempts = max_retries + 1
 
+        # Bug 1 [P1] — track every model attempted on this turn so the
+        # fallback chain can't pick a model that already returned
+        # `model_not_found`. Seeded with the resolver's default so the
+        # fallback walks PAST it instead of re-attempting.
+        tried_models: set[str] = set()
+        if model_name:
+            tried_models.add(model_name)
+
         for attempt in range(total_attempts):
             # Check if client disconnected before starting
             if await check_cancelled():
@@ -612,7 +625,15 @@ async def execute_flow_with_validation_streaming(
                 message=step_message,
             )
 
-            result = None
+            # Bug 1 [P1] — inner model-fallback loop. A `model_not_found`
+            # from the provider swaps `model_name` for the next candidate on
+            # the same provider and re-runs THIS attempt without consuming
+            # a slot from the outer component-validation retry budget.
+            # Every other error path (auth, rate-limit, network, runtime)
+            # exits the inner loop unchanged so existing semantics hold.
+            # Per-attempt state is hoisted above the loop so the static
+            # checker can see it stays bound across the post-loop branches.
+            result: dict | None = None
             cancelled = False
             execution_error: str | None = None
             has_flow_updates = False
@@ -627,85 +648,124 @@ async def execute_flow_with_validation_streaming(
             saw_run = False
             last_set_flow: dict | None = None
             set_flow_applied = False
-            # aclosing guarantees the async generator is closed on every exit path
-            # (normal completion, exception, or cancellation) — not relying on GC.
-            async with aclosing(
-                execute_flow_file_streaming(
-                    flow_filename=flow_filename,
-                    input_value=current_input,
-                    global_variables=global_variables,
-                    user_id=user_id,
-                    session_id=session_id,
-                    provider=provider,
-                    model_name=model_name,
-                    api_key_var=api_key_var,
-                    is_disconnected=is_disconnected,
-                    cancel_event=cancel_event,
-                )
-            ) as flow_generator:
-                try:
-                    async for event_type, event_data in flow_generator:
-                        if event_type == "token":
-                            # Drain flow_update events so the canvas reflects
-                            # the agent's incremental edits live. Reconcile
-                            # build+run deterministically: a `flow_ran` this
-                            # turn forces the built flow onto the canvas.
-                            (
-                                events_to_emit,
-                                auto_apply_flow,
-                                saw_set_flow,
-                                saw_run,
-                                last_set_flow,
-                                set_flow_applied,
-                            ) = _reconcile_flow_updates(
-                                drain_flow_events(),
-                                auto_apply_flow=auto_apply_flow,
-                                saw_set_flow=saw_set_flow,
-                                saw_run=saw_run,
-                                last_set_flow=last_set_flow,
-                                set_flow_applied=set_flow_applied,
-                            )
-                            if events_to_emit:
-                                has_flow_updates = True
-                            for emitted in events_to_emit:
-                                yield format_flow_update_event(emitted)
-                            # Drain file_written events the same way — each one
-                            # becomes a card on the frontend message.
-                            for file_event in drain_file_events():
-                                yield format_file_written_event(
-                                    action=file_event["action"],
-                                    path=file_event["path"],
-                                    size=file_event["size"],
-                                    content=file_event.get("content"),
+            swap_requested = True
+            while swap_requested:
+                swap_requested = False
+                # Reset per-iteration state so a swap retries cleanly without
+                # leaking flow updates / errors / cancel state from the prior
+                # candidate model into the fallback attempt.
+                result = None
+                cancelled = False
+                execution_error = None
+                has_flow_updates = False
+                saw_set_flow = False
+                saw_run = False
+                last_set_flow = None
+                set_flow_applied = False
+                # aclosing guarantees the async generator is closed on every exit path
+                # (normal completion, exception, or cancellation) — not relying on GC.
+                async with aclosing(
+                    execute_flow_file_streaming(
+                        flow_filename=flow_filename,
+                        input_value=current_input,
+                        global_variables=global_variables,
+                        user_id=user_id,
+                        session_id=session_id,
+                        provider=provider,
+                        model_name=model_name,
+                        api_key_var=api_key_var,
+                        is_disconnected=is_disconnected,
+                        cancel_event=cancel_event,
+                    )
+                ) as flow_generator:
+                    try:
+                        async for event_type, event_data in flow_generator:
+                            if event_type == "token":
+                                # Drain flow_update events so the canvas reflects
+                                # the agent's incremental edits live. Reconcile
+                                # build+run deterministically: a `flow_ran` this
+                                # turn forces the built flow onto the canvas.
+                                (
+                                    events_to_emit,
+                                    auto_apply_flow,
+                                    saw_set_flow,
+                                    saw_run,
+                                    last_set_flow,
+                                    set_flow_applied,
+                                ) = _reconcile_flow_updates(
+                                    drain_flow_events(),
+                                    auto_apply_flow=auto_apply_flow,
+                                    saw_set_flow=saw_set_flow,
+                                    saw_run=saw_run,
+                                    last_set_flow=last_set_flow,
+                                    set_flow_applied=set_flow_applied,
                                 )
-                            yield format_token_event(event_data)
-                        elif event_type == "flow_preview":
-                            has_flow_updates = True
-                            yield format_flow_preview_event(
-                                flow_data=event_data.get("flow", {}),
-                                name=event_data.get("name", ""),
-                                node_count=event_data.get("node_count", 0),
-                                edge_count=event_data.get("edge_count", 0),
-                            )
-                        elif event_type == "end":
-                            result = event_data
-                        elif event_type == "cancelled":
-                            logger.info("Flow execution cancelled by client disconnect")
-                            cancelled = True
-                            break
-                except GeneratorExit:
-                    logger.info("Assistant generator closed, setting cancel event")
-                    cancel_event.set()
-                    yield format_cancelled_event()
-                    return
-                except FlowExecutionError as e:
-                    # Internal retry loop reads the raw error to pick a friendly message;
-                    # the public HTTP detail stays generic (see FlowExecutionError docstring).
-                    execution_error = extract_friendly_error(e.original_error_message)
-                except HTTPException as e:
-                    execution_error = extract_friendly_error(str(e.detail))
-                except (ValueError, RuntimeError, OSError) as e:
-                    execution_error = extract_friendly_error(str(e))
+                                if events_to_emit:
+                                    has_flow_updates = True
+                                for emitted in events_to_emit:
+                                    yield format_flow_update_event(emitted)
+                                # Drain file_written events the same way — each one
+                                # becomes a card on the frontend message.
+                                for file_event in drain_file_events():
+                                    yield format_file_written_event(
+                                        action=file_event["action"],
+                                        path=file_event["path"],
+                                        size=file_event["size"],
+                                        content=file_event.get("content"),
+                                    )
+                                yield format_token_event(event_data)
+                            elif event_type == "flow_preview":
+                                has_flow_updates = True
+                                yield format_flow_preview_event(
+                                    flow_data=event_data.get("flow", {}),
+                                    name=event_data.get("name", ""),
+                                    node_count=event_data.get("node_count", 0),
+                                    edge_count=event_data.get("edge_count", 0),
+                                )
+                            elif event_type == "end":
+                                result = event_data
+                            elif event_type == "cancelled":
+                                logger.info("Flow execution cancelled by client disconnect")
+                                cancelled = True
+                                break
+                    except GeneratorExit:
+                        logger.info("Assistant generator closed, setting cancel event")
+                        cancel_event.set()
+                        yield format_cancelled_event()
+                        return
+                    except FlowExecutionError as e:
+                        # Bug 1 [P1] — model fallback: only attempted when the
+                        # underlying error is a `model_not_found`-class
+                        # signal AND the request carries a provider so the
+                        # candidate list can be looked up. Auth / rate-limit /
+                        # network errors fall through to the existing
+                        # friendly-error path unchanged.
+                        if is_model_unavailable_error(e.original_error_message) and provider:
+                            candidates = get_provider_model_candidates(provider)
+                            next_model = next((m for m in candidates if m not in tried_models), None)
+                            if next_model:
+                                logger.info(
+                                    "assistant.model_fallback from=%s to=%s provider=%s tried_so_far=%s",
+                                    model_name,
+                                    next_model,
+                                    provider,
+                                    sorted(tried_models),
+                                )
+                                tried_models.add(next_model)
+                                model_name = next_model
+                                # Copy on write so we don't mutate the caller's dict.
+                                global_variables = {**global_variables, "MODEL_NAME": next_model}
+                                swap_requested = True
+                            else:
+                                execution_error = format_models_exhausted_message(provider, tried_models)
+                        else:
+                            # Internal retry loop reads the raw error to pick a friendly message;
+                            # the public HTTP detail stays generic (see FlowExecutionError docstring).
+                            execution_error = extract_friendly_error(e.original_error_message)
+                    except HTTPException as e:
+                        execution_error = extract_friendly_error(str(e.detail))
+                    except (ValueError, RuntimeError, OSError) as e:
+                        execution_error = extract_friendly_error(str(e))
 
             if cancelled:
                 yield format_cancelled_event()

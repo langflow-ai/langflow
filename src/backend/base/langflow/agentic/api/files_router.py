@@ -46,7 +46,7 @@ from langflow.api.utils.core import CurrentActiveUser  # noqa: TC001
 
 logger = logging.getLogger(__name__)
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
+router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
 
 _MAX_PATH_LENGTH = 1024
