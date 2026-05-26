@@ -25,9 +25,8 @@ Langflow offers a few alternatives to the default database path:
 - **Config directory**: Set `LANGFLOW_SAVE_DB_IN_CONFIG_DIR=True` to store the database in your Langflow config directory as set in [`LANGFLOW_CONFIG_DIR`](/logging).
 
 - **External PostgreSQL database**: You can use an external PostgreSQL database for all of your Langflow storage.
+  External storage can be useful if you want to preserve the data after uninstalling Langflow or to share the same database between multiple virtual environments.
   For more information, see [Configure external memory](#configure-external-memory)
-
-      External storage can be useful if you want to preserve the data after uninstalling Langflow or to share the same database between multiple virtual environments.
 
 - **Separate chat memory**: You can selectively use external storage for chat memory only, separate from other Langflow storage.
   For more information, see [Store chat memory](#store-chat-memory).
@@ -82,7 +81,7 @@ To fine-tune your database connection pool and timeout settings, you can set the
 
 - `LANGFLOW_DB_CONNECT_TIMEOUT`: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the `pool_timeout` in `LANGFLOW_DB_CONNECTION_SETTINGS`. Default: 30.
 
-- `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace identifier for PostgreSQL advisory lock during migrations. If not provided, a hash of the database URL will be used. Useful when multiple Langflow instances share the same database and need coordinated migration locking
+- `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. This is useful when running multiple Langflow instances that share the same PostgreSQL database. Each instance should use a unique namespace to avoid conflicts. If not set, Langflow uses a default namespace. This setting only applies when using PostgreSQL as your database backend.
 
 - `LANGFLOW_DB_CONNECTION_SETTINGS`: A JSON dictionary containing the following database connection pool settings:
   - `pool_size`: The base number of connections to keep open in the connection pool. Default: 20.
@@ -100,8 +99,6 @@ To fine-tune your database connection pool and timeout settings, you can set the
 
   Don't use the deprecated environment variables `LANGFLOW_DB_POOL_SIZE` or `LANGFLOW_DB_MAX_OVERFLOW`.
   Instead, use `pool_size` and `max_overflow` in `LANGFLOW_DB_CONNECTION_SETTINGS`.
-
-- `LANGFLOW_MIGRATION_LOCK_NAMESPACE`: Optional namespace for PostgreSQL advisory locks used during database migrations. This is useful when running multiple Langflow instances that share the same PostgreSQL database. Each instance should use a unique namespace to avoid conflicts. If not set, Langflow uses a default namespace. This setting only applies when using PostgreSQL as your database backend.
 
 ## Configure cache memory
 
