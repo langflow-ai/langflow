@@ -107,6 +107,8 @@ export function SessionSelector({
   return (
     <div
       data-testid="session-selector"
+      data-active={isVisible ? "true" : undefined}
+      aria-current={isVisible ? "page" : undefined}
       onClick={(e) => {
         setNewSessionCloseVoiceAssistant(true);
         if (isEditing) e.stopPropagation();
@@ -114,8 +116,7 @@ export function SessionSelector({
       }}
       className={cn(
         "file-component-accordion-div group cursor-pointer rounded-md text-left text-mmd hover:bg-accent",
-        isVisible && !isSelected ? "bg-accent font-semibold" : "font-normal",
-        isSelected && "bg-accent",
+        isVisible ? "bg-accent font-semibold" : "font-normal",
       )}
     >
       <div className="flex h-8 items-center justify-between overflow-hidden w-full">
