@@ -5,6 +5,7 @@ from uuid import uuid4
 
 import pytest
 from langflow.custom import Component
+from lfx.base.agents.agent import LCAgentComponent
 from lfx.base.models.anthropic_constants import ANTHROPIC_MODELS
 from lfx.base.models.openai_constants import (
     OPENAI_CHAT_MODEL_NAMES,
@@ -348,6 +349,29 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert llm_model is connected_model
         assert mock_get_llm.call_args.kwargs["model"] is connected_model
 
+    def test_agent_runner_enables_streaming_for_bound_language_model(self):
+        """Saved Agent code that omits stream=True should still run with streaming LLMs."""
+        from langchain_classic.agents import AgentExecutor, create_tool_calling_agent
+        from langchain_core.prompts import ChatPromptTemplate
+        from langchain_openai import ChatOpenAI
+
+        llm = ChatOpenAI(model="gpt-4o", api_key="sk-test")
+        prompt = ChatPromptTemplate.from_messages(
+            [
+                ("human", "{input}"),
+                ("placeholder", "{agent_scratchpad}"),
+            ]
+        )
+        agent = create_tool_calling_agent(llm, [], prompt)
+        executor = AgentExecutor.from_agent_and_tools(agent=agent, tools=[])
+        bound_llm = next(step.bound for step in executor.agent.runnable.steps if hasattr(step, "bound"))
+
+        assert bound_llm.streaming is False
+
+        LCAgentComponent._enable_streaming_for_language_models(executor)
+
+        assert bound_llm.streaming is True
+
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")
     async def test_agent_passes_max_tokens_to_get_llm(
@@ -449,38 +473,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         assert call_kwargs["max_tokens"] == 1000
         # Note: The provider-specific field name mapping happens inside get_llm,
         # so we just verify max_tokens is passed correctly
-
-    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
-    @patch("lfx.components.models_and_agents.agent.get_llm")
-    async def test_should_force_stream_true_when_agent_builds_llm(
-        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
-    ):
-        """Agent must always instantiate its LLM with stream=True so token-level streaming fires.
-
-        Regression guard: without stream=True, get_llm() instantiates ChatOpenAI/ChatAnthropic/etc.
-        with streaming=False, and runnable.astream_events() never emits on_chat_model_stream chunks.
-        The Playground then receives the whole response in a single batch, which matches the
-        reported bug. Streaming is mandatory for the Agent (unlike the LanguageModel component,
-        where it is an opt-in toggle).
-        """
-        from unittest.mock import AsyncMock, MagicMock
-
-        mock_get_memory_data.return_value = AsyncMock(return_value=[])
-        mock_get_llm.return_value = MagicMock()
-
-        component = await self.component_setup(component_class, default_kwargs)
-        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
-
-        await component.get_agent_requirements()
-
-        mock_get_llm.assert_called_once()
-        call_kwargs = mock_get_llm.call_args.kwargs
-        assert call_kwargs.get("stream") is True, (
-            "Agent must call get_llm with stream=True so the underlying LLM "
-            "(ChatOpenAI/ChatAnthropic/ChatGoogleGenerativeAI/...) is instantiated with "
-            "streaming=True. Without this, token-level streaming is disabled and the "
-            "Playground receives the whole response in a single batch."
-        )
 
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):

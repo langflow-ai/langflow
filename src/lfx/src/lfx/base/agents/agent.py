@@ -1,6 +1,7 @@
 import re
 import uuid
 from abc import abstractmethod
+from contextlib import suppress
 from typing import TYPE_CHECKING, cast
 
 from langchain_classic.agents import AgentExecutor, BaseMultiActionAgent, BaseSingleActionAgent
@@ -144,6 +145,37 @@ class LCAgentComponent(Component):
 
         return messages
 
+    @staticmethod
+    def _enable_streaming_for_language_models(runnable) -> None:
+        """Enable streaming on language models embedded in an agent runnable."""
+        try:
+            from langchain_core.language_models import BaseLanguageModel
+        except ImportError:
+            return
+
+        visited: set[int] = set()
+
+        def visit(value) -> None:
+            value_id = id(value)
+            if value is None or value_id in visited:
+                return
+            visited.add(value_id)
+
+            if isinstance(value, BaseLanguageModel) and hasattr(value, "streaming"):
+                with suppress(Exception):
+                    value.streaming = True
+
+            for attr in ("agent", "runnable", "bound", "first", "last"):
+                with suppress(Exception):
+                    visit(getattr(value, attr))
+
+            for attr in ("middle", "steps"):
+                with suppress(Exception):
+                    for item in getattr(value, attr) or []:
+                        visit(item)
+
+        visit(runnable)
+
     async def run_agent(
         self,
         agent: Runnable | BaseSingleActionAgent | BaseMultiActionAgent | AgentExecutor,
@@ -162,6 +194,7 @@ class LCAgentComponent(Component):
                 verbose=verbose,
                 max_iterations=max_iterations,
             )
+        self._enable_streaming_for_language_models(runnable)
         # Convert input_value to proper format for agent
         lc_message = None
         if isinstance(self.input_value, Message):
