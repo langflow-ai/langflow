@@ -226,10 +226,16 @@ class AgentComponent(ToolCallingAgentComponent):
 
     def _get_llm(self):
         """Override parent to include max_tokens from the Agent's input field."""
+        # Streaming is mandatory for the Agent: runnable.astream_events() only emits
+        # on_chat_model_stream chunks when the underlying chat model is instantiated
+        # with streaming=True. Unlike the LanguageModel component (where stream is a
+        # user toggle), the Agent always streams so the Playground/API surface
+        # receives tokens incrementally.
         return get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
+            stream=True,
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
