@@ -68,7 +68,7 @@ export function MemoryDetailsHeader({
 
   const isAllSessions =
     !selectedSession || selectedSession === ALL_SESSIONS_VALUE;
-  const sessionLabel = isAllSessions ? "All Sessions" : selectedSession;
+  const sessionLabel = isAllSessions ?  t("memory.allSessions")  : selectedSession;
 
   return (
     <div className="flex items-end justify-between border-b border-border bg-background px-6 py-4">
@@ -139,7 +139,7 @@ export function MemoryDetailsHeader({
                     className="flex items-center justify-between"
                     onSelect={() => setSelectedSession(ALL_SESSIONS_VALUE)}
                   >
-                    <span className="truncate">All Sessions</span>
+                    <span className="truncate">{t("memory.allSessions")}</span>
                     <IconComponent
                       name="Check"
                       className={
