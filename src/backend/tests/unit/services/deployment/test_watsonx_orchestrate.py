@@ -5296,7 +5296,7 @@ async def test_rollback_created_app_ids_continues_when_one_delete_fails(monkeypa
 
     monkeypatch.setattr(retry_module, "retry_rollback", immediate_retry)
     monkeypatch.setattr(shared_core_module, "retry_rollback", immediate_retry)
-    monkeypatch.setattr(retry_module.logger, "exception", lambda *_args, **_kwargs: None)
+    monkeypatch.setattr(retry_module.logger, "error", lambda *_args, **_kwargs: None)
 
     await shared_core_module.rollback_created_app_ids(
         clients=fake_clients,
@@ -5319,8 +5319,8 @@ async def test_run_rollback_batch_continues_on_partial_failure(monkeypatch):
     completed: list[str] = []
     logged: list[tuple[Any, ...]] = []
 
-    def capture_exception(message, *args):
-        logged.append((message, args))
+    def capture_error(message, *args, **kwargs):
+        logged.append((message, args, kwargs))
 
     async def succeed():
         completed.append("ok")
@@ -5335,7 +5335,7 @@ async def test_run_rollback_batch_continues_on_partial_failure(monkeypatch):
         error_label=RollbackErrorLabel.CREATE_TOOL,
     )
 
-    monkeypatch.setattr(retry_module.logger, "exception", capture_exception)
+    monkeypatch.setattr(retry_module.logger, "error", capture_error)
 
     await retry_module._run_rollback_batch(
         source_operation=RollbackSourceOperation.UPDATE,
@@ -5346,11 +5346,14 @@ async def test_run_rollback_batch_continues_on_partial_failure(monkeypatch):
 
     assert set(completed) == {"ok", "fail"}
     assert len(logged) == 1
-    message, args = logged[0]
+    message, args, kwargs = logged[0]
     assert message == "%s [%d/%d] for %s: %s"
     assert args[0] == expected_label
     assert args[2] == 2
     assert args[3] == "fail-id"
+    exc_info = kwargs.get("exc_info")
+    assert exc_info is not None
+    assert exc_info[0] is RuntimeError
 
 
 # ---------------------------------------------------------------------------

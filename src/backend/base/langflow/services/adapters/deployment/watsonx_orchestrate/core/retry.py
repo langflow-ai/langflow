@@ -163,13 +163,14 @@ async def _run_rollback_batch(
     for index, (resource_id, result) in enumerate(zip(resource_ids, results, strict=True), start=1):
         if not isinstance(result, BaseException):
             continue
-        logger.exception(
+        logger.error(
             "%s [%d/%d] for %s: %s",
             log_label,
             index,
             total,
             resource_id,
             result,
+            exc_info=(type(result), result, result.__traceback__),
         )
 
 
