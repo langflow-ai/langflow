@@ -66,7 +66,8 @@ export function MemoryDetailsHeader({
     }
   };
 
-  const isAllSessions = !selectedSession || selectedSession === ALL_SESSIONS_VALUE;
+  const isAllSessions =
+    !selectedSession || selectedSession === ALL_SESSIONS_VALUE;
   const sessionLabel = isAllSessions ? "All Sessions" : selectedSession;
 
   return (

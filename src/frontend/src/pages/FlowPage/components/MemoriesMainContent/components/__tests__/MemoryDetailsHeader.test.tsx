@@ -526,12 +526,12 @@ describe("MemoryDetailsHeader", () => {
 
       const items = screen.getAllByRole("menuitem");
       // items[0] = All Sessions, items[1] = session-1, items[2] = session-2
-      expect(
-        items[2].querySelector("[data-icon='Check']"),
-      ).not.toHaveClass("opacity-0");
-      expect(
-        items[1].querySelector("[data-icon='Check']"),
-      ).toHaveClass("opacity-0");
+      expect(items[2].querySelector("[data-icon='Check']")).not.toHaveClass(
+        "opacity-0",
+      );
+      expect(items[1].querySelector("[data-icon='Check']")).toHaveClass(
+        "opacity-0",
+      );
     });
 
     it("clicking a specific session item calls setSelectedSession with that session id", () => {
