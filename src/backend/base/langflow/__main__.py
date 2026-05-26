@@ -81,14 +81,6 @@ except ImportError:
     # LFX not available, skip adding the sub-app
     pass
 
-# Add authz utilities (`langflow authz dry-run`, ...).
-try:
-    from langflow.cli.authz_dry_run import authz_app
-
-    app.add_typer(authz_app, name="authz")
-except ImportError:
-    pass
-
 
 class ProcessManager:
     """Manages the lifecycle of the backend process."""

@@ -542,12 +542,29 @@ async def get_flow_for_current_user(
     return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id, widen_for_shares=True)
 
 
+class SseAuth:
+    """Helper to carry both authenticated user and flow for SSE subscription."""
+
+    def __init__(self, user: User | UserRead, flow: FlowRead):
+        self.user = user
+        self.flow = flow
+
+
 async def get_flow_for_sse_user(
     flow_id_or_name: str,
     user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
-) -> FlowRead:
-    """Auth-aware wrapper around ``get_flow_by_id_or_endpoint_name`` for SSE routes."""
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id, widen_for_shares=True)
+) -> SseAuth:
+    """Auth-aware dependency for SSE routes.
+
+    Returns both the SSE user and the flow so the route can call
+    ``ensure_flow_permission`` *before* subscribing to the event stream.
+    Widening to share-aware lookup is safe here only because the route
+    immediately enforces ``flow:read``; without that enforcement, a non-owner
+    with cross-user fetch enabled could subscribe to another user's webhook
+    event stream and exfiltrate flow id/name plus event payloads.
+    """
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id, widen_for_shares=True)
+    return SseAuth(user=user, flow=flow)
 
 
 class WebhookAuth:
@@ -861,7 +878,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
-    flow: Annotated[FlowRead, Depends(get_flow_for_sse_user)],
+    auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -870,8 +887,21 @@ async def webhook_events_stream(
     of webhook execution progress, similar to clicking "Play" in the UI.
 
     Authentication: Requires user to be logged in (via cookie) or provide API key.
-    The user must own the flow to subscribe to its events.
+    The user must own the flow OR have an authorization-plugin-granted
+    ``flow:read`` permission to subscribe to its events.
     """
+    flow = auth.flow
+    # Enforce flow:read before subscribing — the SSE fetcher uses share-aware
+    # lookup, so without this check a non-owner with cross-user fetch enabled
+    # would receive another user's webhook event payloads.
+    await ensure_flow_permission(
+        auth.user,
+        FlowAction.READ,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=getattr(flow, "workspace_id", None),
+        folder_id=getattr(flow, "folder_id", None),
+    )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
