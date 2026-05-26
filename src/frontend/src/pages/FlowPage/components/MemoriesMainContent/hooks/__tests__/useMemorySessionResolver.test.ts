@@ -1,5 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
-import { useMemorySessionResolver } from "../useMemorySessionResolver";
+import {
+  ALL_SESSIONS_VALUE,
+  useMemorySessionResolver,
+} from "../useMemorySessionResolver";
 
 const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
@@ -147,12 +150,13 @@ describe("useMemorySessionResolver", () => {
     expect(result.current.refetchMemorySessions).toBe(mockRefetch);
   });
 
-  it("sets effectiveSessionId to the most recently synced session by default", () => {
+  it("defaults effectiveSessionId to null (all sessions) when sessions load", () => {
     const { result } = renderHook(() =>
       useMemorySessionResolver({ memoryId: "m1" }),
     );
 
-    expect(result.current.effectiveSessionId).toBe("s1");
+    expect(result.current.effectiveSessionId).toBeNull();
+    expect(result.current.selectedSession).toBe(ALL_SESSIONS_VALUE);
   });
 
   it("respects selectedSession when it exists in memorySessions", () => {
@@ -168,7 +172,7 @@ describe("useMemorySessionResolver", () => {
     expect(result.current.selectedSession).toBe("s2");
   });
 
-  it("falls back to default session when selectedSession is not in the list", () => {
+  it("falls back to null (all sessions) when selectedSession is not in the list", () => {
     const { result } = renderHook(() =>
       useMemorySessionResolver({ memoryId: "m1" }),
     );
@@ -177,7 +181,7 @@ describe("useMemorySessionResolver", () => {
       result.current.setSelectedSession("nonexistent");
     });
 
-    expect(result.current.effectiveSessionId).toBe("s1");
+    expect(result.current.effectiveSessionId).toBeNull();
   });
 
   it("resets selectedSession when memoryId changes", () => {
@@ -196,5 +200,126 @@ describe("useMemorySessionResolver", () => {
     rerender({ memoryId: "m2" });
 
     expect(result.current.selectedSession).toBeNull();
+  });
+
+  describe("ALL_SESSIONS_VALUE sentinel", () => {
+    it("exports ALL_SESSIONS_VALUE as '__all__'", () => {
+      expect(ALL_SESSIONS_VALUE).toBe("__all__");
+    });
+
+    it("returns null effectiveSessionId when ALL_SESSIONS_VALUE is selected", () => {
+      const { result } = renderHook(() =>
+        useMemorySessionResolver({ memoryId: "m1" }),
+      );
+
+      act(() => {
+        result.current.setSelectedSession(ALL_SESSIONS_VALUE);
+      });
+
+      expect(result.current.effectiveSessionId).toBeNull();
+    });
+
+    it("keeps selectedSession as ALL_SESSIONS_VALUE after memorySessions update", () => {
+      const { result, rerender } = renderHook(() =>
+        useMemorySessionResolver({ memoryId: "m1" }),
+      );
+
+      act(() => {
+        result.current.setSelectedSession(ALL_SESSIONS_VALUE);
+      });
+      expect(result.current.selectedSession).toBe(ALL_SESSIONS_VALUE);
+
+      // Simulate sessions data changing (new session arrives)
+      mockSessionPages = [
+        {
+          items: [
+            {
+              session_id: "s1",
+              last_sync_at: "2026-04-02T00:00:00.000Z",
+              total_processed: 5,
+              pending_count: 0,
+            },
+            {
+              session_id: "s3",
+              last_sync_at: "2026-05-01T00:00:00.000Z",
+              total_processed: 1,
+              pending_count: 0,
+            },
+          ],
+          total: 2,
+          page: 1,
+          size: 50,
+          pages: 1,
+        },
+      ];
+      rerender();
+
+      expect(result.current.selectedSession).toBe(ALL_SESSIONS_VALUE);
+      expect(result.current.effectiveSessionId).toBeNull();
+    });
+
+    it("does not treat ALL_SESSIONS_VALUE as a valid real session in effectiveSessionId fallback", () => {
+      mockSessionPages = [
+        {
+          items: [
+            {
+              session_id: ALL_SESSIONS_VALUE,
+              last_sync_at: "2026-04-02T00:00:00.000Z",
+              total_processed: 5,
+              pending_count: 0,
+            },
+          ],
+          total: 1,
+          page: 1,
+          size: 50,
+          pages: 1,
+        },
+      ];
+
+      const { result } = renderHook(() =>
+        useMemorySessionResolver({ memoryId: "m1" }),
+      );
+
+      act(() => {
+        result.current.setSelectedSession(ALL_SESSIONS_VALUE);
+      });
+
+      // Should still return null, not treat it as a real session match
+      expect(result.current.effectiveSessionId).toBeNull();
+    });
+
+    it("allows switching from ALL_SESSIONS_VALUE back to a specific session", () => {
+      const { result } = renderHook(() =>
+        useMemorySessionResolver({ memoryId: "m1" }),
+      );
+
+      act(() => {
+        result.current.setSelectedSession(ALL_SESSIONS_VALUE);
+      });
+      expect(result.current.effectiveSessionId).toBeNull();
+
+      act(() => {
+        result.current.setSelectedSession("s2");
+      });
+      expect(result.current.effectiveSessionId).toBe("s2");
+      expect(result.current.selectedSession).toBe("s2");
+    });
+
+    it("resets ALL_SESSIONS_VALUE to null when memoryId changes", () => {
+      const { result, rerender } = renderHook(
+        ({ memoryId }) => useMemorySessionResolver({ memoryId }),
+        { initialProps: { memoryId: "m1" } },
+      );
+
+      act(() => {
+        result.current.setSelectedSession(ALL_SESSIONS_VALUE);
+      });
+      expect(result.current.selectedSession).toBe(ALL_SESSIONS_VALUE);
+
+      mockSessionPages = [];
+      rerender({ memoryId: "m2" });
+
+      expect(result.current.selectedSession).toBeNull();
+    });
   });
 });

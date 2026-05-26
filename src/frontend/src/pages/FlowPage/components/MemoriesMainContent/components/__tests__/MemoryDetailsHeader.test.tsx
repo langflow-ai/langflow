@@ -6,6 +6,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
+import { ALL_SESSIONS_VALUE } from "../../hooks/useMemorySessionResolver";
 import type { MemoryDetailsHeaderProps } from "../../types";
 import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
 
@@ -23,7 +24,11 @@ jest.mock("@/stores/alertStore", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name }: { name: string }) => <span>{name}</span>,
+  default: ({ name, className }: { name: string; className?: string }) => (
+    <span data-icon={name} className={className}>
+      {name}
+    </span>
+  ),
 }));
 
 jest.mock("@/components/ui/switch", () => ({
@@ -433,5 +438,127 @@ describe("MemoryDetailsHeader", () => {
       "https://docs.langflow.org/memory-bases",
     );
     expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  describe("All Sessions dropdown option", () => {
+    it("renders 'All Sessions' as the first dropdown item", () => {
+      const props = makeProps({ sessions: ["session-1", "session-2"] });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const items = screen.getAllByRole("menuitem");
+      expect(items[0]).toHaveTextContent("All Sessions");
+    });
+
+    it("clicking 'All Sessions' calls setSelectedSession with ALL_SESSIONS_VALUE", () => {
+      const setSelectedSession = jest.fn();
+      const props = makeProps({
+        sessions: ["session-1"],
+        setSelectedSession,
+      });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const allSessionsItem = screen.getAllByRole("menuitem")[0];
+      fireEvent.click(allSessionsItem);
+
+      expect(setSelectedSession).toHaveBeenCalledWith(ALL_SESSIONS_VALUE);
+    });
+
+    it("shows 'All Sessions' label on trigger when selectedSession is null", () => {
+      const props = makeProps({ selectedSession: null });
+      render(<MemoryDetailsHeader {...props} />);
+
+      expect(
+        screen.getByRole("button", { name: "Session filter" }),
+      ).toHaveTextContent("All Sessions");
+    });
+
+    it("shows 'All Sessions' label on trigger when selectedSession is ALL_SESSIONS_VALUE", () => {
+      const props = makeProps({ selectedSession: ALL_SESSIONS_VALUE });
+      render(<MemoryDetailsHeader {...props} />);
+
+      expect(
+        screen.getByRole("button", { name: "Session filter" }),
+      ).toHaveTextContent("All Sessions");
+    });
+
+    it("shows the selected session ID on the trigger when a specific session is active", () => {
+      const props = makeProps({ selectedSession: "session-1" });
+      render(<MemoryDetailsHeader {...props} />);
+
+      expect(
+        screen.getByRole("button", { name: "Session filter" }),
+      ).toHaveTextContent("session-1");
+    });
+
+    it("marks the 'All Sessions' item as checked when selectedSession is null", () => {
+      const props = makeProps({ selectedSession: null });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const allSessionsItem = screen.getAllByRole("menuitem")[0];
+      const checkIcon = allSessionsItem.querySelector("[data-icon='Check']");
+      expect(checkIcon).not.toHaveClass("opacity-0");
+    });
+
+    it("marks the 'All Sessions' item as checked when selectedSession is ALL_SESSIONS_VALUE", () => {
+      const props = makeProps({ selectedSession: ALL_SESSIONS_VALUE });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const allSessionsItem = screen.getAllByRole("menuitem")[0];
+      const checkIcon = allSessionsItem.querySelector("[data-icon='Check']");
+      expect(checkIcon).not.toHaveClass("opacity-0");
+    });
+
+    it("does not mark 'All Sessions' as checked when a specific session is selected", () => {
+      const props = makeProps({ selectedSession: "session-1" });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const allSessionsItem = screen.getAllByRole("menuitem")[0];
+      const checkIcon = allSessionsItem.querySelector("[data-icon='Check']");
+      expect(checkIcon).toHaveClass("opacity-0");
+    });
+
+    it("marks the matching session item as checked and others as unchecked", () => {
+      const props = makeProps({
+        sessions: ["session-1", "session-2"],
+        selectedSession: "session-2",
+      });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const items = screen.getAllByRole("menuitem");
+      // items[0] = All Sessions, items[1] = session-1, items[2] = session-2
+      expect(
+        items[2].querySelector("[data-icon='Check']"),
+      ).not.toHaveClass("opacity-0");
+      expect(
+        items[1].querySelector("[data-icon='Check']"),
+      ).toHaveClass("opacity-0");
+    });
+
+    it("clicking a specific session item calls setSelectedSession with that session id", () => {
+      const setSelectedSession = jest.fn();
+      const props = makeProps({
+        sessions: ["session-1", "session-2"],
+        selectedSession: ALL_SESSIONS_VALUE,
+        setSelectedSession,
+      });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const items = screen.getAllByRole("menuitem");
+      fireEvent.click(items[1]); // session-1
+
+      expect(setSelectedSession).toHaveBeenCalledWith("session-1");
+    });
+
+    it("truncates long session IDs in the trigger button", () => {
+      const longId = "a-very-long-session-id-exceeding-limit";
+      const props = makeProps({
+        sessions: [longId],
+        selectedSession: longId,
+      });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const btn = screen.getByRole("button", { name: "Session filter" });
+      expect(btn).toHaveTextContent(`${longId.slice(0, 20)}...`);
+    });
   });
 });
