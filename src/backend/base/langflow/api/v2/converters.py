@@ -457,6 +457,7 @@ def run_response_to_workflow_response(
         status=JobStatus.COMPLETED,
         errors=[],
         inputs=workflow_request.inputs or {},
+        globals=workflow_request.globals or {},
         outputs=outputs,
         metadata={},
     )
@@ -509,6 +510,7 @@ def create_error_response(
         status=JobStatus.FAILED,
         errors=[error_detail],
         inputs=workflow_request.inputs or {},
+        globals=workflow_request.globals or {},
         outputs={},
         metadata={},
     )

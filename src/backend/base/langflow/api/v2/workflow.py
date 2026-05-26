@@ -26,7 +26,7 @@ from copy import deepcopy
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
@@ -45,7 +45,6 @@ from lfx.services.deps import get_settings_service, injectable_session_scope_rea
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
-from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.schemas import RunResponse
 from langflow.api.v2.converters import (
     create_error_response,
@@ -110,7 +109,6 @@ router = APIRouter(prefix="/workflows", tags=["Workflow"], dependencies=[Depends
 async def execute_workflow(
     workflow_request: WorkflowExecutionRequest,
     background_tasks: BackgroundTasks,
-    http_request: Request,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> WorkflowExecutionResponse | WorkflowJobResponse | StreamingResponse:
     """Execute a workflow with support for multiple execution modes.
@@ -128,7 +126,6 @@ async def execute_workflow(
     Args:
         workflow_request: The workflow execution request containing flow_id, inputs, and mode flags
         background_tasks: FastAPI background tasks for async operations
-        http_request: The HTTP request object for extracting headers
         api_key_user: Authenticated user from API key
 
     Returns:
@@ -158,7 +155,6 @@ async def execute_workflow(
                 flow=flow,
                 job_id=job_id,
                 api_key_user=api_key_user,
-                http_request=http_request,
             )
 
         # Streaming mode (to be implemented)
@@ -179,7 +175,6 @@ async def execute_workflow(
             job_id=job_id,
             api_key_user=api_key_user,
             background_tasks=background_tasks,
-            http_request=http_request,
         )
 
     except HTTPException as e:
@@ -265,7 +260,6 @@ async def execute_sync_workflow_with_timeout(
     job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,
-    http_request: Request,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -275,7 +269,6 @@ async def execute_sync_workflow_with_timeout(
         job_id: Generated job ID for tracking
         api_key_user: Authenticated user
         background_tasks: FastAPI background tasks
-        http_request: The HTTP request object for extracting headers
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -292,7 +285,6 @@ async def execute_sync_workflow_with_timeout(
                 job_id=job_id,
                 api_key_user=api_key_user,
                 background_tasks=background_tasks,
-                http_request=http_request,
             ),
             timeout=EXECUTION_TIMEOUT,
         )
@@ -306,7 +298,6 @@ async def execute_sync_workflow(
     job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
-    http_request: Request,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -320,7 +311,7 @@ async def execute_sync_workflow(
     Execution Flow:
         1. Parse flat inputs into tweaks and session_id
         2. Validate flow data exists
-        3. Extract context from HTTP headers
+        3. Extract context from request globals
         4. Build graph from flow data with tweaks applied
         5. Identify terminal nodes for execution
         6. Execute graph and collect results
@@ -332,7 +323,6 @@ async def execute_sync_workflow(
         job_id: Generated job ID for tracking this execution
         api_key_user: Authenticated user for permission checks
         background_tasks: FastAPI background tasks (unused in sync mode)
-        http_request: The HTTP request object for extracting headers
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -348,9 +338,9 @@ async def execute_sync_workflow(
         msg = f"Flow {flow.id} has no data. The flow may be corrupted."
         raise WorkflowValidationError(msg)
 
-    # Extract request-level variables from headers (similar to V1)
-    # Headers with prefix X-LANGFLOW-GLOBAL-VAR-* are extracted and made available to components
-    request_variables = extract_global_variables_from_headers(http_request.headers)
+    # V2 workflows accept request-level variables in the JSON body so arbitrary
+    # Unicode strings are transported safely instead of using legacy headers.
+    request_variables = dict(workflow_request.globals or {})
 
     # Build context from request variables (similar to V1's _run_flow_internal)
     context = {"request_variables": request_variables} if request_variables else None
@@ -439,7 +429,6 @@ async def execute_workflow_background(
     flow: FlowRead,
     job_id: JobId,
     api_key_user: UserRead,
-    http_request: Request,
 ) -> WorkflowJobResponse:
     """Execute workflow in the background and return job ID for the user to track the execution status."""
     try:
@@ -451,9 +440,9 @@ async def execute_workflow_background(
             msg = f"Flow {flow.id} has no data"
             raise ValueError(msg)
 
-        # Extract request-level variables from headers (similar to V1)
-        # Headers with prefix X-LANGFLOW-GLOBAL-VAR-* are extracted and made available to components
-        request_variables = extract_global_variables_from_headers(http_request.headers)
+        # V2 workflows accept request-level variables in the JSON body so arbitrary
+        # Unicode strings are transported safely instead of using legacy headers.
+        request_variables = dict(workflow_request.globals or {})
 
         # Build context from request variables (similar to V1's _run_flow_internal)
         context = {"request_variables": request_variables} if request_variables else None
@@ -524,7 +513,12 @@ async def execute_workflow_background(
             stream=False,
         )
         status = JobStatus.QUEUED
-        return WorkflowJobResponse(job_id=str(job_id), flow_id=workflow_request.flow_id, status=status)
+        return WorkflowJobResponse(
+            job_id=str(job_id),
+            flow_id=workflow_request.flow_id,
+            status=status,
+            globals=workflow_request.globals or {},
+        )
 
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         # Re-raise infrastructure/resource errors to be handled by the endpoint

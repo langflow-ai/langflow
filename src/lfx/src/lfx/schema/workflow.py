@@ -56,6 +56,10 @@ class WorkflowExecutionRequest(BaseModel):
     inputs: dict[str, Any] | None = Field(
         None, description="Component-specific inputs in flat format: 'component_id.param_name': value"
     )
+    globals: dict[str, str] | None = Field(
+        None,
+        description="Request-level global variables made available to workflow components.",
+    )
 
     @model_validator(mode="after")
     def validate_execution_mode(self) -> WorkflowExecutionRequest:
@@ -77,6 +81,10 @@ class WorkflowExecutionRequest(BaseModel):
                         "LLM-xyz.temperature": 0.7,
                         "LLM-xyz.max_tokens": 100,
                         "OpenSearch-def.opensearch_url": "https://opensearch:9200",
+                    },
+                    "globals": {
+                        "FILENAME": "relatorio-final.pdf",
+                        "OWNER_NAME": "Jose",
                     },
                 },
                 {
@@ -111,6 +119,7 @@ class WorkflowExecutionResponse(BaseModel):
     status: JobStatus
     errors: list[ErrorDetail] = []
     inputs: dict[str, Any] = {}
+    globals: dict[str, str] = Field(default_factory=dict)
     outputs: dict[str, ComponentOutput] = {}
 
 
@@ -124,6 +133,7 @@ class WorkflowJobResponse(BaseModel):
     status: JobStatus
     links: dict[str, str] = Field(default_factory=dict)
     errors: list[ErrorDetail] = []
+    globals: dict[str, str] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def build_links(self) -> WorkflowJobResponse:

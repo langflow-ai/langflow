@@ -40,6 +40,19 @@ from lfx.services.deps import session_scope
 from sqlalchemy.exc import OperationalError
 
 
+def _mock_empty_graph() -> MagicMock:
+    graph = MagicMock()
+    graph.vertices = []
+    graph.get_terminal_nodes.return_value = []
+    graph.run_id = None
+
+    def set_run_id(job_id):
+        graph.run_id = str(job_id)
+
+    graph.set_run_id.side_effect = set_run_id
+    return graph
+
+
 class TestWorkflowDeveloperAPIProtection:
     """Test developer API protection for workflow endpoints."""
 
@@ -869,6 +882,119 @@ class TestWorkflowSyncExecution:
                 if flow:
                     await session.delete(flow)
 
+    async def test_sync_execution_uses_body_globals_with_unicode(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """V2 workflow globals are accepted from the JSON body and passed to graph context."""
+        flow_id = uuid4()
+        body_globals = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Unicode Globals Flow",
+                description="Flow for body globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": False,
+                "stream": False,
+                "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+                "globals": body_globals,
+            }
+            graph = _mock_empty_graph()
+            mock_job_service = MagicMock()
+            mock_job_service.create_job = AsyncMock()
+            mock_job_service.execute_with_status = AsyncMock(return_value=([], "session-unicode"))
+            mock_task_service = MagicMock()
+            mock_task_service.fire_and_forget_task = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
+                patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
+                patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+            ):
+                headers = {"x-api-key": created_api_key.api_key}
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["globals"] == body_globals
+            assert mock_from_payload.call_args.kwargs["context"] == {"request_variables": body_globals}
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_sync_execution_ignores_legacy_global_variable_headers(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """V2 workflows no longer read X-LANGFLOW-GLOBAL-VAR-* headers."""
+        flow_id = uuid4()
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Legacy Header Globals Flow",
+                description="Flow for header globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": False,
+                "stream": False,
+                "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+            }
+            graph = _mock_empty_graph()
+            mock_job_service = MagicMock()
+            mock_job_service.create_job = AsyncMock()
+            mock_job_service.execute_with_status = AsyncMock(return_value=([], "session-header"))
+            mock_task_service = MagicMock()
+            mock_task_service.fire_and_forget_task = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
+                patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
+                patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+            ):
+                headers = {
+                    "x-api-key": created_api_key.api_key,
+                    "X-LANGFLOW-GLOBAL-VAR-FILENAME": "legacy-header.pdf",
+                }
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["globals"] == {}
+            assert mock_from_payload.call_args.kwargs["context"] is None
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
     async def test_sync_execution_with_llm_output(
         self,
         client: AsyncClient,
@@ -1208,6 +1334,62 @@ class TestWorkflowBackgroundQueueing:
                 assert "links" in result
                 assert "status" in result["links"]
                 assert mock_job_id in result["links"]["status"]
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_background_execution_uses_body_globals_with_unicode(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Background V2 workflow submissions pass body globals to graph context."""
+        flow_id = uuid4()
+        body_globals = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Background Unicode Globals Flow",
+                description="Flow for background body globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": True,
+                "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+                "globals": body_globals,
+            }
+            headers = {"x-api-key": created_api_key.api_key}
+            graph = _mock_empty_graph()
+            mock_job_service = MagicMock()
+            mock_job_service.create_job = AsyncMock()
+            mock_job_service.execute_with_status = AsyncMock()
+            mock_task_service = MagicMock()
+            mock_task_service.fire_and_forget_task = AsyncMock()
+
+            with (
+                patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
+                patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
+                patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+            ):
+                response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+
+            assert response.status_code == 200
+            result = response.json()
+            assert result["globals"] == body_globals
+            assert result["status"] == "queued"
+            assert mock_from_payload.call_args.kwargs["context"] == {"request_variables": body_globals}
 
         finally:
             async with session_scope() as session:

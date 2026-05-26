@@ -118,6 +118,7 @@ The asynchronous request contains `stream` parameter, but streaming is not yet s
 | `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
 | `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
 | `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+| `globals` | `object` | No | `{}` | Request-level global variables available to workflow components. Use this body field for arbitrary strings, including Unicode values. |
 
 ### Example response
 
@@ -133,6 +134,10 @@ The asynchronous request contains `stream` parameter, but streaming is not yet s
     "ChatInput-abc.input_type": "chat",
     "ChatInput-abc.input_value": "what is 2+2",
     "ChatInput-abc.session_id": "session-123"
+  },
+  "globals": {
+    "FILENAME": "relatório—final.pdf",
+    "OWNER_NAME": "José"
   },
   "outputs": {
     "ChatOutput-xyz": {
