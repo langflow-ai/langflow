@@ -67,10 +67,13 @@ export default function CreateMemoryModal({
         />
         Create Memory
       </BaseModal.Header>
-      <BaseModal.Content>
-        <div className="flex h-full w-full flex-col gap-4">
+      <BaseModal.Content className="-mr-6 pr-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground">
+        <div className="flex h-full w-full flex-col gap-4 pr-3">
           <div className="space-y-2">
-            <Label htmlFor="memory-name">{t("memory.nameLabel")}</Label>
+            <Label htmlFor="memory-name">
+              {t("memory.nameLabel")}{" "}
+              <span className="text-destructive">*</span>
+            </Label>
             <Input
               id="memory-name"
               value={name}
@@ -80,7 +83,10 @@ export default function CreateMemoryModal({
           </div>
 
           <div className="space-y-2">
-            <Label>{t("memory.embeddingModelLabel")}</Label>
+            <Label>
+              {t("memory.embeddingModelLabel")}{" "}
+              <span className="text-destructive">*</span>
+            </Label>
             <div className={cn("rounded-md", "[&_button]:h-10")}>
               <ModelInputComponent
                 id="memory-embedding-model"
@@ -104,7 +110,10 @@ export default function CreateMemoryModal({
 
           <div className="space-y-2">
             <div className="flex items-center gap-1.5">
-              <Label htmlFor="memory-batch-size">{t("memory.batchSize")}</Label>
+              <Label htmlFor="memory-batch-size">
+                {t("memory.batchSize")}{" "}
+                <span className="text-destructive">*</span>
+              </Label>
               <ShadTooltip
                 content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
                 side="right"
@@ -158,7 +167,10 @@ export default function CreateMemoryModal({
           {preprocessingEnabled && (
             <>
               <div className="space-y-2">
-                <Label>{t("memory.preprocessingModelLabel")}</Label>
+                <Label>
+                  {t("memory.preprocessingModelLabel")}{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
                 <div className={cn("rounded-md", "[&_button]:h-10")}>
                   <ModelInputComponent
                     id="memory-preprocessing-model"
@@ -174,15 +186,15 @@ export default function CreateMemoryModal({
                   />
                 </div>
                 {selectedPreprocessingModel[0]?.provider && (
-                  <span className="text-xs text-muted-foreground">
+                  <div className="text-xs text-muted-foreground">
                     Provider: {selectedPreprocessingModel[0].provider}
-                  </span>
+                  </div>
                 )}
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="space-y-2">
                 <div className="flex items-center gap-1.5">
                   <Label htmlFor="preprocessing-prompt">
-                    Preprocessing Instructions{" "}
+                    {t("memory.preprocessingInstructionsLabel")}{" "}
                     <span className="text-destructive">*</span>
                   </Label>
                   <ShadTooltip
