@@ -183,6 +183,8 @@ class Settings(BaseSettings):
     cache_type: Literal["async", "redis", "memory"] = "async"
     """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
     cache_expire: int = 3600
+    """The cache expire in seconds."""
+    cache_dir: str | None = None
     """Directory used by FlowEventsService for cross-worker event storage. Defaults to a temp dir if not set."""
     variable_store: str = "db"
     """The store can be 'db' or 'kubernetes'."""
@@ -562,6 +564,25 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             value = Path(value)
         # Resolve to absolute path to handle relative paths correctly
+        value = value.resolve()
+        if not value.exists():
+            value.mkdir(parents=True, exist_ok=True)
+
+        return str(value)
+
+    @field_validator("cache_dir", mode="before")
+    @classmethod
+    def validate_cache_dir(cls, value):
+        """Validate and normalize cache_dir path.
+
+        If not set, returns None and FlowEventsService will use its default temp directory.
+        If set, resolves to an absolute path and creates the directory if needed.
+        """
+        if not value:
+            return None
+
+        if isinstance(value, str):
+            value = Path(value)
         value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)
