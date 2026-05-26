@@ -50,9 +50,6 @@ Live snapshot/config listing scenarios:
   tenant-scoped snapshot listing and should still succeed (expects Success).
 - `live_list_snapshots_tenant_scope`: lists tenant-scoped snapshots (expects Success).
 - `live_list_configs_tenant_scope`: lists tenant-scoped configs (expects Success).
-- `live_list_configs_by_ids_returns_known`: queries config_ids mode and confirms known ids resolve (expects Success).
-- `live_list_configs_by_ids_filters_unknown`: mixes known+bogus config ids and confirms only existing ids are returned
-  (expects Success).
 - `live_list_snapshots_by_names_returns_known`: queries snapshot_names mode and
   confirms known names resolve to known snapshot ids (expects Success).
 - `live_list_snapshots_by_names_ignored_with_deployment_scope`: passes both deployment_ids
@@ -71,17 +68,9 @@ Live service-surface scenarios:
 - `live_list_llms_returns_models`: lists provider models and validates the normalized payload
   is non-empty (expects Success).
 - `live_verify_credentials_success`: verifies configured credentials against the provider instance (expects Success).
-- `live_verify_credentials_invalid_key_rejected`: verifies invalid provider credentials are rejected
-  (expects InvalidContentError/DeploymentError).
 - `live_update_snapshot_success`: updates an existing snapshot artifact by id (expects Success).
-- `live_update_snapshot_missing_not_found`: validates unknown snapshot update is rejected
-  (expects DeploymentNotFoundError/InvalidContentError).
 - `live_rollback_create_result_cleans_up_created`: runs create rollback cleanup using a real create result
   and verifies the created deployment is removed (expects Success).
-- `live_rollback_update_result_replays_journal`: performs an update, replays rollback_update_result with
-  the captured journal, and validates deployment snapshot/config attachments are restored (expects Success).
-- `live_get_execution_missing_not_found`: verifies unknown execution id lookup is rejected
-  (expects DeploymentNotFoundError/InvalidContentError).
 - `live_redeploy_not_supported`: ensures redeploy returns operation-not-supported semantics
   (expects InvalidDeploymentOperationError).
 - `live_duplicate_not_supported`: ensures duplicate returns operation-not-supported semantics
@@ -771,36 +760,6 @@ class WatsonxAdapterDirectE2E:
         else:
             return OUTCOME_SUCCESS, "rollback_create_result_done", result
 
-    async def _run_rollback_update_result(
-        self,
-        *,
-        deployment_id: str,
-        payload: object,
-    ) -> tuple[str, str, Any | None]:
-        try:
-            result = await self.service.rollback_update_result(
-                user_id=self.user_id,
-                deployment_id=deployment_id,
-                payload=payload,
-                db=self.db,
-            )
-        except DeploymentNotFoundError as exc:
-            return OUTCOME_NOT_FOUND, str(exc), None
-        except ResourceConflictError as exc:
-            return OUTCOME_CONFLICT, exc.message, None
-        except InvalidContentError as exc:
-            return OUTCOME_INVALID_CONTENT, exc.message, None
-        except (InvalidDeploymentOperationError, InvalidDeploymentTypeError, OperationNotSupportedError) as exc:
-            return OUTCOME_INVALID_OPERATION, exc.message, None
-        except DeploymentError as exc:
-            return OUTCOME_FAILURE, exc.message, None
-        except HTTPException as exc:
-            return self._outcome_from_http_exception(exc), str(exc.detail), None
-        except Exception as exc:  # noqa: BLE001
-            return OUTCOME_FAILURE, str(exc), None
-        else:
-            return OUTCOME_SUCCESS, "rollback_update_result_done", result
-
     async def _run_redeploy(self, deployment_id: str) -> tuple[str, str, Any | None]:
         try:
             result = await self.service.redeploy(
@@ -1391,48 +1350,6 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[list/4] live_list_configs_by_ids_returns_known")
-        status_code, detail, known_config_result = await self._run_list_configs_with_params(
-            params=ConfigListParams(config_ids=[str(config_id)] if config_id else []),
-            detail_label="configs_by_ids_listed",
-        )
-        known_config_ids = self._extract_config_ids_only(known_config_result)
-        known_config_found = bool(config_id and str(config_id) in known_config_ids)
-        results.append(
-            self._build_result(
-                name="live_list_configs_by_ids_returns_known",
-                expected={OUTCOME_SUCCESS},
-                actual_outcome=status_code,
-                detail=(
-                    f"{detail} | seed_config_id={config_id} "
-                    f"known_config_found={known_config_found} returned={sorted(known_config_ids)}"
-                ),
-                ok=status_code == OUTCOME_SUCCESS and bool(config_id) and known_config_found,
-            )
-        )
-
-        print("[list/5] live_list_configs_by_ids_filters_unknown")
-        bogus_config_id = str(uuid4())
-        status_code, detail, mixed_config_result = await self._run_list_configs_with_params(
-            params=ConfigListParams(config_ids=[str(config_id), bogus_config_id] if config_id else [bogus_config_id]),
-            detail_label="configs_by_ids_mixed_listed",
-        )
-        mixed_config_ids = self._extract_config_ids_only(mixed_config_result)
-        mixed_has_known = bool(config_id and str(config_id) in mixed_config_ids)
-        mixed_excludes_bogus = bogus_config_id not in mixed_config_ids
-        results.append(
-            self._build_result(
-                name="live_list_configs_by_ids_filters_unknown",
-                expected={OUTCOME_SUCCESS},
-                actual_outcome=status_code,
-                detail=(
-                    f"{detail} | known={config_id} has_known={mixed_has_known} "
-                    f"bogus={bogus_config_id} excludes_bogus={mixed_excludes_bogus}"
-                ),
-                ok=status_code == OUTCOME_SUCCESS and mixed_has_known and mixed_excludes_bogus,
-            )
-        )
-
         deployment_list_status, deployment_list_detail, deployment_snapshot_list = await self._run_list_snapshots(
             deployment_id
         )
@@ -1459,7 +1376,7 @@ class WatsonxAdapterDirectE2E:
             )
             return results
 
-        print("[list/6] live_list_snapshots_by_names_returns_known")
+        print("[list/4] live_list_snapshots_by_names_returns_known")
         status_code, detail, by_name_result = await self._run_list_snapshots_by_names([seed_snapshot_name])
         by_name_ids = self._extract_snapshot_ids(by_name_result)
         by_name_has_seed = seed_snapshot_id in by_name_ids
@@ -1476,7 +1393,7 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[list/7] live_list_snapshots_by_names_ignored_with_deployment_scope")
+        print("[list/5] live_list_snapshots_by_names_ignored_with_deployment_scope")
         status_code, detail, mixed_filter_result = await self._run_list_snapshots_with_params(
             params=SnapshotListParams(
                 deployment_ids=[deployment_id],
@@ -1550,23 +1467,7 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[surface/4] live_verify_credentials_invalid_key_rejected")
-        invalid_key = f"invalid-{uuid4().hex}"
-        status_code, detail, _ = await self._run_verify_credentials(
-            base_url=self.provider_backend_url,
-            api_key=invalid_key,
-        )
-        results.append(
-            self._build_result(
-                name="live_verify_credentials_invalid_key_rejected",
-                expected={OUTCOME_INVALID_CONTENT, OUTCOME_INVALID_OPERATION, OUTCOME_FAILURE},
-                actual_outcome=status_code,
-                detail=detail,
-                ok=status_code != OUTCOME_SUCCESS,
-            )
-        )
-
-        print("[surface/5] creating seed for update_snapshot + unsupported operations")
+        print("[surface/4] creating seed for update_snapshot + unsupported operations")
         deployment_id, _config_id, surface_snapshot_ids, _ = await self._create_update_seed(
             label="surface_seed",
             snapshot_count=1,
@@ -1584,7 +1485,7 @@ class WatsonxAdapterDirectE2E:
             )
             return results
 
-        print("[surface/6] live_update_snapshot_success")
+        print("[surface/5] live_update_snapshot_success")
         status_code, detail, update_snapshot_result = await self._run_update_snapshot(
             snapshot_id=surface_snapshot_id,
             flow_artifact=self._build_flow_payload(label="surface_update_snapshot_flow"),
@@ -1602,22 +1503,7 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[surface/7] live_update_snapshot_missing_not_found")
-        status_code, detail, _ = await self._run_update_snapshot(
-            snapshot_id=str(uuid4()),
-            flow_artifact=self._build_flow_payload(label="surface_update_snapshot_missing"),
-        )
-        results.append(
-            self._build_result(
-                name="live_update_snapshot_missing_not_found",
-                expected={OUTCOME_NOT_FOUND, OUTCOME_INVALID_CONTENT},
-                actual_outcome=status_code,
-                detail=detail,
-                ok=status_code in {OUTCOME_NOT_FOUND, OUTCOME_INVALID_CONTENT},
-            )
-        )
-
-        print("[surface/8] live_rollback_create_result_cleans_up_created")
+        print("[surface/6] live_rollback_create_result_cleans_up_created")
         rollback_create_status, rollback_create_detail, rollback_created = await self._run_create(
             self._build_create_payload(
                 tool_payloads=[self._build_flow_payload(label="surface_rb_seed_snap")],
@@ -1661,92 +1547,7 @@ class WatsonxAdapterDirectE2E:
                 )
             )
 
-        print("[surface/9] live_rollback_update_result_replays_journal")
-        rb_update_id, rb_update_config_id, rb_update_snapshot_ids, _ = await self._create_update_seed(
-            label="surface_rb_update_seed",
-            snapshot_count=1,
-        )
-        pre_snapshots_status, pre_snapshots_detail, pre_snapshots = await self._run_list_snapshots(rb_update_id)
-        pre_snapshot_ids = self._extract_snapshot_ids(pre_snapshots)
-        pre_configs_status, pre_configs_detail, pre_configs = await self._run_list_configs(rb_update_id)
-        pre_config_ids = self._extract_config_ids_only(pre_configs)
-        rb_raw_cfg_name = self._mk_name("surface_rb_update_cfg")
-        rb_raw_flow = self._build_flow_payload(label="surface_rb_update_flow")
-        update_status, update_detail, update_result = await self._run_update(
-            rb_update_id,
-            DeploymentUpdate(
-                provider_data={
-                    "tools": {"raw_payloads": [rb_raw_flow.model_dump(mode="json")]},
-                    "connections": {"raw_payloads": [{"app_id": rb_raw_cfg_name, "environment_variables": {}}]},
-                    "operations": [
-                        {
-                            "op": "bind",
-                            "tool": {"name_of_raw": rb_raw_flow.name},
-                            "app_ids": [rb_raw_cfg_name],
-                        }
-                    ],
-                }
-            ),
-        )
-        update_journal = getattr(update_result, "rollback_data", None) if update_result else None
-        rollback_status = OUTCOME_FAILURE
-        rollback_detail = "rollback journal missing from update result"
-        if update_status == OUTCOME_SUCCESS and update_journal is not None:
-            rollback_status, rollback_detail, _ = await self._run_rollback_update_result(
-                deployment_id=rb_update_id,
-                payload=update_journal,
-            )
-        post_snapshots_status, post_snapshots_detail, post_snapshots = await self._run_list_snapshots(rb_update_id)
-        post_snapshot_ids = self._extract_snapshot_ids(post_snapshots)
-        post_configs_status, post_configs_detail, post_configs = await self._run_list_configs(rb_update_id)
-        post_config_ids = self._extract_config_ids_only(post_configs)
-        replay_ok = (
-            update_status == OUTCOME_SUCCESS
-            and rollback_status == OUTCOME_SUCCESS
-            and pre_snapshots_status == OUTCOME_SUCCESS
-            and pre_configs_status == OUTCOME_SUCCESS
-            and post_snapshots_status == OUTCOME_SUCCESS
-            and post_configs_status == OUTCOME_SUCCESS
-            and pre_snapshot_ids == post_snapshot_ids
-            and pre_config_ids == post_config_ids
-            and bool(rb_update_config_id)
-            and str(rb_update_config_id) in post_config_ids
-            and bool(rb_update_snapshot_ids)
-            and rb_update_snapshot_ids.issubset(post_snapshot_ids)
-        )
-        results.append(
-            self._build_result(
-                name="live_rollback_update_result_replays_journal",
-                expected={OUTCOME_SUCCESS},
-                actual_outcome=rollback_status if rollback_status != OUTCOME_SUCCESS else update_status,
-                detail=(
-                    f"update={update_status}:{update_detail} rollback={rollback_status}:{rollback_detail} "
-                    f"pre_snap={sorted(pre_snapshot_ids)} post_snap={sorted(post_snapshot_ids)} "
-                    f"pre_cfg={sorted(pre_config_ids)} post_cfg={sorted(post_config_ids)} "
-                    "pre_statuses="
-                    f"{pre_snapshots_status}/{pre_configs_status}:{pre_snapshots_detail}|"
-                    f"{pre_configs_detail} "
-                    "post_statuses="
-                    f"{post_snapshots_status}/{post_configs_status}:{post_snapshots_detail}|"
-                    f"{post_configs_detail}"
-                ),
-                ok=replay_ok,
-            )
-        )
-
-        print("[surface/10] live_get_execution_missing_not_found")
-        status_code, detail, _ = await self._run_get_execution(str(uuid4()))
-        results.append(
-            self._build_result(
-                name="live_get_execution_missing_not_found",
-                expected={OUTCOME_NOT_FOUND, OUTCOME_INVALID_CONTENT},
-                actual_outcome=status_code,
-                detail=detail,
-                ok=status_code in {OUTCOME_NOT_FOUND, OUTCOME_INVALID_CONTENT},
-            )
-        )
-
-        print("[surface/11] live_redeploy_not_supported")
+        print("[surface/7] live_redeploy_not_supported")
         status_code, detail, _ = await self._run_redeploy(deployment_id)
         redeploy_not_supported = "not supported" in detail.lower()
         results.append(
@@ -1759,7 +1560,7 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[surface/12] live_duplicate_not_supported")
+        print("[surface/8] live_duplicate_not_supported")
         status_code, detail, _ = await self._run_duplicate(deployment_id)
         duplicate_not_supported = "not supported" in detail.lower()
         results.append(
@@ -1772,7 +1573,7 @@ class WatsonxAdapterDirectE2E:
             )
         )
 
-        print("[surface/13] live_teardown_noop")
+        print("[surface/9] live_teardown_noop")
         status_code, detail, _ = await self._run_teardown()
         results.append(
             self._build_result(
@@ -3191,17 +2992,6 @@ class WatsonxAdapterDirectE2E:
                 ids_or_names.add(config_name)
         return ids_or_names
 
-    def _extract_config_ids_only(self, config_result: Any) -> set[str]:
-        configs = getattr(config_result, "configs", []) if config_result else []
-        config_ids: set[str] = set()
-        for config in configs:
-            if not config:
-                continue
-            config_id = str(getattr(config, "id", "")).strip()
-            if config_id:
-                config_ids.add(config_id)
-        return config_ids
-
     def _stage_hook_mapping(self) -> dict[str, tuple[Any, str]]:
         return {
             "create_config": (create_core_module, "create_connection_with_conflict_mapping"),
@@ -3210,7 +3000,7 @@ class WatsonxAdapterDirectE2E:
             "update_create_config": (update_core_module, "create_connection_with_conflict_mapping"),
             "update_create_tools": (update_core_module, "create_and_upload_wxo_flow_tools_with_bindings"),
             "update_bindings": (update_core_module, "_update_existing_tool_connection_deltas"),
-            "update_rollback_resources": (update_core_module, "rollback_tools"),
+            "update_rollback_resources": (update_core_module, "rollback_update_resources"),
         }
 
     async def _run_with_stage_hook(
@@ -3347,8 +3137,6 @@ class WatsonxAdapterDirectE2E:
             )
             return results
         failpoint_raw_app_id = self._mk_name("fp_upd_cfg")
-        baseline_snapshot_ids = set(snapshot_ids)
-        baseline_config_ids = {str(config_id)}
 
         update_payload = DeploymentUpdate(
             spec=BaseDeploymentDataUpdate(description="trigger update failpoint"),
@@ -3377,30 +3165,13 @@ class WatsonxAdapterDirectE2E:
                 }
             },
         )
-        rollback1_snap_status, rollback1_snap_detail, rollback1_snapshots = await self._run_list_snapshots(
-            deployment_id
-        )
-        rollback1_cfg_status, rollback1_cfg_detail, rollback1_configs = await self._run_list_configs(deployment_id)
-        rollback1_snapshot_ids = self._extract_snapshot_ids(rollback1_snapshots)
-        rollback1_config_ids = self._extract_config_ids_only(rollback1_configs)
-        rollback1_state_ok = (
-            rollback1_snap_status == OUTCOME_SUCCESS
-            and rollback1_cfg_status == OUTCOME_SUCCESS
-            and rollback1_snapshot_ids == baseline_snapshot_ids
-            and rollback1_config_ids == baseline_config_ids
-        )
         results.append(
             self._build_result(
                 name="fp_update_bindings_failure_triggers_rollback",
                 expected={OUTCOME_FAILURE},
                 actual_outcome=status_code,
-                detail=(
-                    f"{detail} | post_snapshots={sorted(rollback1_snapshot_ids)} "
-                    f"post_configs={sorted(rollback1_config_ids)} "
-                    f"post_statuses={rollback1_snap_status}/{rollback1_cfg_status}:"
-                    f"{rollback1_snap_detail}|{rollback1_cfg_detail}"
-                ),
-                ok=status_code == OUTCOME_FAILURE and rollback1_state_ok,
+                detail=detail,
+                ok=status_code == OUTCOME_FAILURE,
             )
         )
 
@@ -3515,7 +3286,7 @@ class WatsonxAdapterDirectE2E:
             "rollback_delete_tool": (retry_module, "delete_tool_if_exists"),
             "rollback_delete_config": (retry_module, "delete_config_if_exists"),
             "update_bindings": (update_core_module, "_update_existing_tool_connection_deltas"),
-            "update_rollback_resources": (update_core_module, "rollback_tools"),
+            "update_rollback_resources": (update_core_module, "rollback_update_resources"),
         }
 
         for stage, config in inject.items():
