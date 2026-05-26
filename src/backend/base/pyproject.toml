@@ -108,7 +108,7 @@ dependencies = [
 
 [tool.uv]
 override-dependencies = [
-    "litellm>=1.83.0"
+    "litellm>=1.85.1,<2.0.0"
 ]
 
 [dependency-groups]
@@ -205,7 +205,7 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -292,10 +292,10 @@ numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = [
-    "litellm>=1.83.0",
+    "litellm>=1.85.1,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
-    # [proxy] extra pins boto3>=1.40.76, which conflicts with our aioboto3
+    # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
     # transitive cap, so we pull in just the missing modules instead.
     "apscheduler>=3.10.4,<4.0.0",
     "cryptography",
@@ -312,7 +312,7 @@ composio = [
 ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
-mem0 = ["mem0ai>=0.1.34"]
+mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]

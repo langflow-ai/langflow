@@ -37,6 +37,7 @@ from lfx.base.knowledge_bases.ingestion_sources import (
     KBIngestionSource,
 )
 from lfx.base.knowledge_bases.ingestion_sources.base import IngestionItemStatus, IngestionRunStatus
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 
@@ -192,7 +193,7 @@ class KBStorageHelper:
             has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
             if has_data:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                chroma = Chroma(client=client, collection_name=kb_name)
+                chroma = Chroma(client=client, collection_name=kb_name, **chroma_langchain_collection_kwargs())
                 with contextlib.suppress(Exception):
                     chroma.delete_collection()
                 chroma = None
@@ -419,7 +420,7 @@ class KBAnalysisHelper:
         try:
             if created_locally:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                chroma = Chroma(client=client, collection_name=kb_path.name)
+                chroma = Chroma(client=client, collection_name=kb_path.name, **chroma_langchain_collection_kwargs())
 
             if chroma is None:
                 return

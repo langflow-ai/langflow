@@ -771,6 +771,7 @@
   "modelInput.refreshList": "Refresh List",
   "modelInput.manageProviders": "Manage Model Providers",
   "modelInput.loadingModels": "Loading models",
+  "modelInput.loadFailed": "Couldn't load models — click to retry",
   "modelInput.connectOtherModels": "Connect other models",
   "knowledge.createTitle": "Create Knowledge Base",
   "knowledge.addSourcesTitle": "Add Files",
