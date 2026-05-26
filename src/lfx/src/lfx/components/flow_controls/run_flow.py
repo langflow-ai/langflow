@@ -19,6 +19,8 @@ class RunFlowComponent(RunFlowBaseComponent):
     name = "RunFlow"
     icon = "Workflow"
 
+    # Keep the concrete class templates detached from the base-class templates;
+    # Component.__init__ still makes the per-instance copies used at runtime.
     inputs = deepcopy(RunFlowBaseComponent.get_base_inputs())
     outputs = deepcopy(RunFlowBaseComponent.get_base_outputs())
 

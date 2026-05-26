@@ -29,7 +29,7 @@ class TestRunFlowComponentInitialization:
         second = RunFlowComponent()
 
         assert first.flow_tweak_data is not second.flow_tweak_data
-        assert first.flow_tweak_data is not RunFlowBaseComponent.flow_tweak_data
+        assert not isinstance(vars(RunFlowBaseComponent)["flow_tweak_data"], dict)
 
         first.flow_tweak_data["TextInput-AAA"] = {"input_value": "LEAK"}
 

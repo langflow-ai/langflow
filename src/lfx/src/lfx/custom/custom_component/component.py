@@ -104,6 +104,10 @@ def _get_secret_text(input_obj: Any, value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _copy_component_template(items: list[Any]) -> list[Any]:
+    return [item.model_copy(deep=True) if isinstance(item, BaseModel) else deepcopy(item) for item in items]
+
+
 class PlaceholderGraph(NamedTuple):
     """A placeholder graph structure for components, providing backwards compatibility.
 
@@ -150,8 +154,8 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
-        self.inputs = deepcopy(getattr(self.__class__, "inputs", []))
-        self.outputs = deepcopy(getattr(self.__class__, "outputs", []))
+        self.inputs = _copy_component_template(getattr(self.__class__, "inputs", []))
+        self.outputs = _copy_component_template(getattr(self.__class__, "outputs", []))
 
         # Initialize instance-specific attributes first
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
