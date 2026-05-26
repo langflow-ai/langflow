@@ -400,7 +400,9 @@ edges:
   D.component_as_tool -> B.tools
   B.response -> C.input_value
 """
-        result = await mcp_server_module.create_flow_from_spec(spec)
+        # validate=False because Agent requires a model + API key to build;
+        # this test only exercises tool_mode wiring (URLComponent -> Agent.tools).
+        result = await mcp_server_module.create_flow_from_spec(spec, validate=False)
         assert result["node_count"] == 4
         assert result["edge_count"] == 3
         # URLComponent should have tool_mode enabled
