@@ -1544,7 +1544,7 @@
   "memory.batchSize": "Batch Size",
   "memory.embeddingModelLabel": "Embedding Model",
   "memory.nameLabel": "Name",
-  "memory.preprocessingInstructionsLabel": "Preprocessing Instructions (optional)",
+  "memory.preprocessingInstructionsLabel": "Preprocessing Instructions",
   "memory.preprocessingModelLabel": "Preprocessing Model",
   "memory.chunkDetails": "Chunk Details",
   "memory.chunkDetailsTitle": "Memory chunk details",
