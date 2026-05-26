@@ -1,16 +1,10 @@
-"""Tests for the seed-system-roles migration (8d3a1f9c2e0b).
-
-The migration's job is to insert exactly three system roles — viewer,
-developer, admin — with stable permission templates and idempotent semantics.
-These tests pin the permission shape and the idempotency contract without
-executing the alembic harness.
-"""
+"""Tests for built-in authz system roles seeded by the foundations migration."""
 
 from __future__ import annotations
 
 import importlib
 
-_MIGRATION = importlib.import_module("langflow.alembic.versions.8d3a1f9c2e0b_seed_authz_system_roles")
+_MIGRATION = importlib.import_module("langflow.alembic.versions.7c8d9e0f1a2b_authz_foundations")
 
 
 def test_three_system_roles_are_seeded():
@@ -58,7 +52,7 @@ def test_permission_slugs_use_resource_action_format():
             assert verb, slug
 
 
-def test_revision_chain_pins_authz_foundations():
-    """Down-revision must be the authz foundations migration so the chain stays linear."""
-    assert _MIGRATION.revision == "8d3a1f9c2e0b"
-    assert _MIGRATION.down_revision == "7c8d9e0f1a2b"
+def test_revision_chain_is_linear_after_mb01():
+    """Foundations migration follows memory-base migration mb01b2c3d4e5."""
+    assert _MIGRATION.revision == "7c8d9e0f1a2b"
+    assert _MIGRATION.down_revision == "mb01b2c3d4e5"
