@@ -63,6 +63,22 @@ BROKEN CODE:
 
 Please provide a corrected version of the component code."""
 
+# Env var that disables the post-build flow-verification loop (kill
+# switch). Any value other than "0"/"false"/"no" keeps it enabled.
+FLOW_VERIFICATION_ENABLED_ENV = "LANGFLOW_ASSISTANT_VERIFY_FLOWS"
+
+# Fed back to the agent when a freshly built flow failed to RUN (not just
+# build). Distinct from the component template — this is about a runnable
+# graph, not a Python class.
+FLOW_VERIFICATION_RETRY_TEMPLATE = """The flow you just built was executed to verify it works, \
+but the run FAILED with this error:
+
+{error}
+
+Fix the flow so it runs end to end: correct the wiring, the component choice, the field values, \
+or add the missing model on the Agent. Then rebuild the flow with the build tool. Do not just \
+describe the fix — actually apply it."""
+
 EXECUTION_RETRY_TEMPLATE = """The previous attempt to generate a component failed during flow execution.
 
 ERROR:

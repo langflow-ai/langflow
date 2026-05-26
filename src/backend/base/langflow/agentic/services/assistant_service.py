@@ -3,13 +3,20 @@
 from __future__ import annotations
 
 import asyncio
+import copy
+import os
 from contextlib import aclosing
 from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from lfx.graph.flow_builder.flow import flow_to_spec_summary
 from lfx.log.logger import logger
-from lfx.mcp.flow_builder_tools import drain_flow_events, init_working_flow, reset_working_flow
+from lfx.mcp.flow_builder_tools import (
+    drain_flow_events,
+    get_working_flow,
+    init_working_flow,
+    reset_working_flow,
+)
 from lfx.mcp.tool_cache import reset_tool_cache
 
 from langflow.agentic.helpers.code_extraction import extract_component_code, extract_flow_json
@@ -46,10 +53,13 @@ from langflow.agentic.services.flow_executor import (
     execute_flow_file_streaming,
     extract_response_text,
 )
+from langflow.agentic.services.flow_run import run_working_flow
 from langflow.agentic.services.flow_types import (
     EDIT_CONTINUATION_INPUT,
     EXECUTION_RETRY_TEMPLATE,
     FLOW_BUILDER_ASSISTANT_FLOW,
+    FLOW_VERIFICATION_ENABLED_ENV,
+    FLOW_VERIFICATION_RETRY_TEMPLATE,
     MAX_VALIDATION_RETRIES,
     NO_ACTION_RETRY_TEMPLATE,
     OFF_TOPIC_REFUSAL_MESSAGE,
@@ -58,6 +68,7 @@ from langflow.agentic.services.flow_types import (
     VALIDATION_UI_DELAY_SECONDS,
     FlowExecutionError,
 )
+from langflow.agentic.services.flow_verification import FlowVerificationStatus, verify_built_flow
 from langflow.agentic.services.helpers.intent_classification import _looks_like_run_request, classify_intent
 from langflow.agentic.services.helpers.intent_context import build_intent_context
 from langflow.agentic.services.provider_service import get_provider_model_candidates
@@ -70,6 +81,69 @@ from langflow.agentic.services.user_components_context import (
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator, Callable, Coroutine
+
+
+def _flow_verification_enabled() -> bool:
+    """Kill switch — disabled when the env var is 0/false/no/off."""
+    return os.getenv(FLOW_VERIFICATION_ENABLED_ENV, "1").strip().lower() not in {"0", "false", "no", "off"}
+
+
+async def _verify_flow_before_delivery(
+    *,
+    flow_filename: str,
+    global_variables: dict[str, str],
+    user_id: str | None,
+    session_id: str | None,
+    provider: str | None,
+    model_name: str | None,
+    api_key_var: str | None,
+):
+    """Run the just-built flow for real; loop-fix fixable failures.
+
+    Returns a ``FlowVerificationResult`` or ``None`` when verification was
+    skipped (kill switch off, no FLOW_ID, empty canvas) or itself failed —
+    in which case the caller delivers the flow unverified (never broken
+    silently, never broken-by-our-bug either).
+    """
+    if not _flow_verification_enabled():
+        return None
+    flow_id = global_variables.get("FLOW_ID")
+    working = get_working_flow()
+    has_nodes = bool((working or {}).get("data", {}).get("nodes"))
+    if not flow_id or not has_nodes:
+        return None
+
+    async def _run(flow: dict) -> dict:
+        return await run_working_flow(flow_data=flow, flow_id=flow_id, user_id=user_id)
+
+    async def _fix(error: str) -> dict | None:
+        # Re-prompt the agent (non-streaming, same pattern as the
+        # component retry) to actually rebuild the flow so it runs.
+        await execute_flow_file(
+            flow_filename=flow_filename,
+            input_value=FLOW_VERIFICATION_RETRY_TEMPLATE.format(error=error),
+            global_variables=global_variables,
+            verbose=True,
+            user_id=user_id,
+            session_id=session_id,
+            provider=provider,
+            model_name=model_name,
+            api_key_var=api_key_var,
+        )
+        rebuilt = get_working_flow()
+        if rebuilt and rebuilt.get("data", {}).get("nodes"):
+            return copy.deepcopy(rebuilt)
+        return None
+
+    try:
+        return await verify_built_flow(
+            flow=copy.deepcopy(working),
+            run_fn=_run,
+            fix_fn=_fix,
+        )
+    except Exception as exc:  # noqa: BLE001 — verification must never break the build
+        logger.warning("assistant.flow_verification.skipped_on_error flow_id=%s: %s", flow_id, exc)
+        return None
 
 
 def inject_conversation_history(*, user_id: str | None, session_id: str | None, input_value: str) -> str:
@@ -848,6 +922,40 @@ async def execute_flow_with_validation_streaming(
             # — no Continue gate, no intermediate "Document ready" line.
 
             if has_flow_updates:
+                # Verify the freshly built flow by actually running it
+                # BEFORE handing it over: never deliver a flow that fails
+                # on first run. Fixable failures are auto-corrected (loop);
+                # non-fixable ones (missing user key/DB/file, timeout) are
+                # delivered with an honest caveat instead of as a confident
+                # success. Skipped (returns None) when the kill switch is
+                # off / no FLOW_ID / empty canvas → unchanged behavior.
+                if is_flow_request and saw_set_flow:
+                    verification = await _verify_flow_before_delivery(
+                        flow_filename=flow_filename,
+                        global_variables=global_variables,
+                        user_id=user_id,
+                        session_id=session_id,
+                        provider=provider,
+                        model_name=model_name,
+                        api_key_var=api_key_var,
+                    )
+                    if verification is not None and verification.status is not FlowVerificationStatus.PASSED:
+                        caveat = verification.caveat or "I couldn't fully verify this flow runs."
+                        base_text = (result.get("result") or "").rstrip()
+                        result = {
+                            **result,
+                            "result": f"{base_text}\n\n⚠️ {caveat}".strip(),
+                            "verified": False,
+                            "verification_caveat": caveat,
+                        }
+                    elif verification is not None:
+                        result = {**result, "verified": True}
+                    # A fix turn rebuilds the canvas in place — surface it.
+                    for update in drain_flow_events():
+                        if update.get("action") == "set_flow" and is_compound:
+                            update["auto_apply"] = True
+                        yield format_flow_update_event(update)
+
                 # Build-from-scratch path: gate the destructive canvas
                 # replacement behind an explicit Continue/Dismiss step.
                 # Incremental-edit runs (no set_flow) skip this — they
