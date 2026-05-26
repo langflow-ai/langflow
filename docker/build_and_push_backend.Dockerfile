@@ -79,9 +79,18 @@ COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Create home directory and ensure proper ownership
-# The user needs write access to /app/data (home) and /app (workdir)
+# The user needs write access to /app/data (home) and /app (workdir).
+# Also pre-create /app/langflow (LANGFLOW_CONFIG_DIR used by the docker_example
+# compose file) with the non-root user as owner, so a fresh named volume mounted
+# at /app/langflow inherits the correct ownership/permissions and the in-container
+# uid=1000 user can write secret_key, profile_pictures, etc. Without this, the
+# volume would be initialized as root:root and Langflow would crash with
+# PermissionError on /app/langflow/secret_key (issue #10437).
 # Note: .venv is already owned by 1000:0 via COPY --chown above, so no recursive chown needed
-RUN mkdir -p /app/data && chown -R 1000:0 /app/data && chown 1000:0 /app
+RUN mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/langflow \
+    && chown 1000:0 /app
 
 LABEL org.opencontainers.image.title=langflow-backend
 LABEL org.opencontainers.image.authors=['Langflow']
