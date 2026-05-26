@@ -68,7 +68,9 @@ export function MemoryDetailsHeader({
 
   const isAllSessions =
     !selectedSession || selectedSession === ALL_SESSIONS_VALUE;
-  const sessionLabel = isAllSessions ?  t("memory.allSessions")  : selectedSession;
+  const sessionLabel = isAllSessions
+    ? t("memory.allSessions")
+    : selectedSession;
 
   return (
     <div className="flex items-end justify-between border-b border-border bg-background px-6 py-4">
