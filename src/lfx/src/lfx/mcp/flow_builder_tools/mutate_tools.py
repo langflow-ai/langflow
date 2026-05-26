@@ -8,9 +8,6 @@ ones whose effects the user sees on the canvas immediately.
 from __future__ import annotations
 
 import json
-from typing import Any
-
-import yaml
 
 from lfx.custom import Component
 from lfx.graph.flow_builder.component import add_component as fb_add_component
@@ -221,16 +218,12 @@ class ConfigureComponent(Component):
             except json.JSONDecodeError:
                 return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
 
-        # Some LLM turns serialize the model selection as a JSON or YAML
-        # string instead of the canonical `[{"provider": X, "name": Y}]`
-        # list. Without parsing, the spec leaks into `template[model].value`
-        # verbatim, the catalog falls back to `provider='Unknown'`, and
-        # `get_llm` raises a confusing "missing provider" ValueError. Run
-        # the coercer before writing the template so the canvas stores the
-        # canonical shape regardless of the LLM's output format.
-        params = _coerce_model_fields_in_params(flow, self.component_id, params)
-
         try:
+            # Model-spec normalization (JSON / YAML / dict / list) is handled
+            # inside ``fb_configure`` so every caller path (this tool +
+            # ``build_flow_from_spec``) shares one choke point. The helper
+            # mutates ``params`` in place, so the post-configure mirror step
+            # below reads the canonical list[dict] shape.
             fb_configure(flow, self.component_id, params)
             # Special case: ModelInput (`type='model'`) has a frontend dropdown
             # that displays via `options.find(o.name === value[0].name)`. If
@@ -245,96 +238,6 @@ class ConfigureComponent(Component):
         except (ValueError, KeyError) as e:
             logger.warning("configure_component failed: %s", e)
             return Data(data={"error": str(e)})
-
-
-def _parse_serialized_model_text(text: str) -> dict | list | None:
-    """Try JSON then YAML; return ``None`` when the input is a bare name."""
-    stripped = (text or "").strip()
-    if not stripped:
-        return None
-    looks_structured = stripped.startswith(("{", "[", "- ")) or (": " in stripped and "\n" in stripped)
-    if not looks_structured:
-        return None
-    try:
-        parsed = json.loads(stripped)
-        if isinstance(parsed, (dict, list)):
-            return parsed
-    except json.JSONDecodeError:
-        pass
-    try:
-        parsed = yaml.safe_load(stripped)
-    except yaml.YAMLError:
-        return None
-    if isinstance(parsed, (dict, list)):
-        return parsed
-    return None
-
-
-def _coerce_single_model_entry(item: Any) -> Any:
-    """Unwrap a nested serialized spec from ``item['name']`` if present.
-
-    Why: when the LLM emits a list whose only dict has the serialized spec
-    stuffed into ``name`` (e.g. ``[{"name": "[{...JSON...}]", "provider":
-    "Unknown"}]``), the outer wrapper is harmless but the inner name still
-    needs unfurling so the catalog can resolve the real provider.
-    """
-    if not isinstance(item, dict):
-        return item
-    name = item.get("name")
-    if not isinstance(name, str):
-        return item
-    parsed = _parse_serialized_model_text(name)
-    if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
-        return parsed[0]
-    if isinstance(parsed, dict):
-        return parsed
-    return item
-
-
-def _coerce_model_value(value: Any) -> Any:
-    """Normalize a single model-field value to canonical ``list[dict]``.
-
-    Accepts:
-      - serialized JSON/YAML string of a list or dict
-      - already-canonical ``list[dict]`` (passed through, but each entry
-        is checked for a nested serialized spec)
-      - a bare name string (left as-is so the existing catalog path runs)
-    """
-    if isinstance(value, list):
-        return [_coerce_single_model_entry(item) for item in value]
-    if isinstance(value, dict):
-        return [_coerce_single_model_entry(value)]
-    if isinstance(value, str):
-        parsed = _parse_serialized_model_text(value)
-        if isinstance(parsed, dict):
-            return [_coerce_single_model_entry(parsed)]
-        if isinstance(parsed, list):
-            return [_coerce_single_model_entry(item) for item in parsed]
-    return value
-
-
-def _coerce_model_fields_in_params(flow: dict, component_id: str, params: dict) -> dict:
-    """Return a copy of ``params`` with model-typed values coerced.
-
-    Iterates over the target node's template and only coerces fields whose
-    declared type is ``"model"`` — non-model fields are passed through
-    untouched so the normalizer can never corrupt e.g. a literal string
-    that happens to contain JSON-shaped content.
-    """
-    node = _find_node(flow, component_id)
-    if node is None:
-        return params
-    template = node.get("data", {}).get("node", {}).get("template", {})
-    if not isinstance(template, dict):
-        return params
-    out: dict[str, Any] = {}
-    for key, value in params.items():
-        field = template.get(key)
-        if isinstance(field, dict) and field.get("type") == "model":
-            out[key] = _coerce_model_value(value)
-        else:
-            out[key] = value
-    return out
 
 
 def _mirror_model_value_into_options(flow: dict, component_id: str, params: dict) -> None:
