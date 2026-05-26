@@ -4,10 +4,10 @@ from pydantic import BaseModel
 
 
 class CacheSettings(BaseModel):
-    """In-memory, disk, and Redis cache settings."""
+    """In-memory and Redis cache settings."""
 
-    cache_type: Literal["async", "redis", "memory", "disk"] = "async"
-    """The cache type can be 'async' or 'redis'."""
+    cache_type: Literal["async", "redis", "memory"] = "async"
+    """The cache backend: 'async' (default in-memory), 'memory' (sync in-memory), or 'redis'."""
     cache_expire: int = 3600
     """The cache expire in seconds."""
     langchain_cache: str = "InMemoryCache"
