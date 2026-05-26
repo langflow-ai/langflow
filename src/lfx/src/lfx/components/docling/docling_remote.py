@@ -20,9 +20,7 @@ from lfx.utils.util import transform_localhost_url
 
 class DoclingRemoteComponent(BaseFileComponent):
     display_name = "Docling Serve"
-    description = (
-        "Uses Docling to process input documents connecting to your instance of Docling Serve."
-    )
+    description = "Uses Docling to process input documents connecting to your instance of Docling Serve."
     documentation = "https://docling-project.github.io/docling/"
     trace_type = "tool"
     icon = "Docling"
@@ -139,14 +137,18 @@ class DoclingRemoteComponent(BaseFileComponent):
         *BaseFileComponent.get_base_outputs(),
     ]
 
-    def _process_headers(self) -> dict[str, str]:
-        """Process the headers input into a valid dictionary."""
-        if not self.api_headers:
-            return {}
+    @staticmethod
+    def _add_header(headers: dict[str, str], key: Any, value: Any) -> None:
+        key_str = str(key).strip()
+        if not key_str or key_str == "None":
+            return
+        headers[key_str] = str(value)
 
-        component_headers_dict = {}
-        # TableInput normalizes to list
-        items = self.api_headers if isinstance(self.api_headers, list) else [self.api_headers]
+    def _process_headers_input(self, headers_input: Any, component_headers_dict: dict[str, str]) -> None:
+        if not headers_input:
+            return
+
+        items = headers_input if isinstance(headers_input, list) else [headers_input]
 
         for item in items:
             if not item:
@@ -156,21 +158,21 @@ class DoclingRemoteComponent(BaseFileComponent):
             if hasattr(item, "data") and isinstance(item.data, dict):
                 data = item.data
                 if "key" in data and "value" in data:
-                    component_headers_dict[str(data["key"])] = str(data["value"])
+                    self._add_header(component_headers_dict, data["key"], data["value"])
                 else:
                     # Fallback: merge all keys from Data object
                     for k, v in data.items():
                         if k not in ("text_key", "default_value"):
-                            component_headers_dict[str(k)] = str(v)
+                            self._add_header(component_headers_dict, k, v)
 
             # Case 2: Dictionary (Table row)
             elif isinstance(item, dict):
                 if "key" in item and "value" in item:
-                    component_headers_dict[str(item["key"])] = str(item["value"])
+                    self._add_header(component_headers_dict, item["key"], item["value"])
                 else:
                     # Fallback: merge all keys
                     for k, v in item.items():
-                        component_headers_dict[str(k)] = str(v)
+                        self._add_header(component_headers_dict, k, v)
 
             # Case 3: Message object
             elif hasattr(item, "text") and isinstance(item.text, str):
@@ -178,21 +180,20 @@ class DoclingRemoteComponent(BaseFileComponent):
                     parsed = json.loads(item.text)
                     if isinstance(parsed, dict):
                         for k, v in parsed.items():
-                            component_headers_dict[str(k)] = str(v)
+                            self._add_header(component_headers_dict, k, v)
                 except json.JSONDecodeError:
                     pass
 
+    def _process_headers(self) -> dict[str, str]:
+        """Process the headers input into a valid dictionary."""
+        component_headers_dict: dict[str, str] = {}
+        self._process_headers_input(self.api_headers, component_headers_dict)
         return component_headers_dict
 
-    def update_build_config(
-        self, build_config: dotdict, field_value: Any, field_name: str | None = None
-    ) -> dotdict:
+    def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         if field_name == "api_headers":
             if isinstance(field_value, dict):
-                # If it's a dict, convert to list of {key, value} pairs for TableInput
-                # This handles migration from NestedDictInput to TableInput
-                new_value = [{"key": k, "value": v} for k, v in field_value.items()]
-                build_config["api_headers"]["value"] = new_value
+                build_config["api_headers"]["value"] = [{"key": k, "value": v} for k, v in field_value.items()]
                 return build_config
             if field_value is None:
                 build_config["api_headers"]["value"] = []
@@ -220,11 +221,8 @@ class DoclingRemoteComponent(BaseFileComponent):
         retry_status_end = 600
         start_wait_time = time.monotonic()
 
-        response = client.get(f"{base_url}/status/poll/{task_id}")
-        response.raise_for_status()
-        task = response.json()
-
-        while task["task_status"] not in ("success", "failure"):
+        task_status = None
+        while task_status not in ("success", "failure"):
             processing_time = time.monotonic() - start_wait_time
             if processing_time >= self.max_poll_timeout:
                 msg = (
@@ -235,19 +233,21 @@ class DoclingRemoteComponent(BaseFileComponent):
                 self.log(msg)
                 raise RuntimeError(msg)
 
-            time.sleep(2)
             response = client.get(f"{base_url}/status/poll/{task_id}")
 
             if retry_status_start <= response.status_code < retry_status_end:
                 http_failures += 1
                 if http_failures > self.MAX_500_RETRIES:
-                    self.log(
-                        f"The status requests got a http response {response.status_code} too many times."
-                    )
+                    self.log(f"The status requests got a http response {response.status_code} too many times.")
                     return None
+                time.sleep(2)
                 continue
 
+            response.raise_for_status()
             task = response.json()
+            task_status = task["task_status"]
+            if task_status not in ("success", "failure"):
+                time.sleep(2)
 
         result_resp = client.get(f"{base_url}/result/{task_id}")
         result_resp.raise_for_status()
@@ -304,21 +304,15 @@ class DoclingRemoteComponent(BaseFileComponent):
             return self._process_task_id()
         return super().load_files_base()
 
-    def process_files(
-        self, file_list: list[BaseFileComponent.BaseFile]
-    ) -> list[BaseFileComponent.BaseFile]:
+    def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:
         transformed_url = transform_localhost_url(self.api_url)
         base_url = f"{transformed_url}/v1"
 
-        def _convert_document(
-            client: httpx.Client, file_path: Path, options: dict[str, Any]
-        ) -> Data | None:
+        def _convert_document(client: httpx.Client, file_path: Path, options: dict[str, Any]) -> Data | None:
             encoded_doc = base64.b64encode(file_path.read_bytes()).decode()
             payload = {
                 "options": options,
-                "sources": [
-                    {"kind": "file", "base64_string": encoded_doc, "filename": file_path.name}
-                ],
+                "sources": [{"kind": "file", "base64_string": encoded_doc, "filename": file_path.name}],
             }
 
             response = client.post(f"{base_url}/convert/source/async", json=payload)
@@ -344,9 +338,7 @@ class DoclingRemoteComponent(BaseFileComponent):
                     processed_data.append(None)
                     continue
 
-                futures.append(
-                    (i, executor.submit(_convert_document, client, file.path, docling_options))
-                )
+                futures.append((i, executor.submit(_convert_document, client, file.path, docling_options)))
 
             for _index, future in futures:
                 try:
