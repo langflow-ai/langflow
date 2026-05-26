@@ -106,10 +106,10 @@ const CanvasControlsDropdown = ({
           unstyled
           title={t("canvas.controls")}
         >
-          <div className="flex items-center justify-center gap-0.5">
-            <div className="w-11 text-center text-sm text-muted-foreground group-hover:text-foreground">
+          <div className="flex items-center justify-center gap-1">
+            <span className="text-sm text-muted-foreground group-hover:text-foreground">
               {formatZoomPercentage(zoom)}
-            </div>
+            </span>
             <IconComponent
               name={isOpen ? "ChevronDown" : "ChevronUp"}
               aria-hidden="true"
