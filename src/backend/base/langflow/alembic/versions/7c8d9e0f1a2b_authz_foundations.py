@@ -1,20 +1,34 @@
 """Authz foundations: tables, workspace_id columns, and built-in system roles.
 
+Phase: EXPAND
 Revision ID: 7c8d9e0f1a2b
 Revises: mb01b2c3d4e5
 Create Date: 2026-05-20
+
+This migration is purely additive (new tables + nullable ``workspace_id``
+columns on flow/folder/deployment) and follows the expand-contract pattern
+under the EXPAND phase: no destructive operations on existing schema.
+
+Downgrade is intentionally lossy: every authz_* row, every casbin_rule, and
+every authz_share / authz_audit_log entry is dropped. Operators running
+``alembic downgrade`` past this revision will lose all RBAC policy and audit
+state. There is no in-place rollback path for enterprise deployments — back
+up the authz tables before downgrading if you intend to roll forward again.
 """
 
 from __future__ import annotations
 
-from collections.abc import Sequence
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 from uuid import uuid4
 
 import sqlalchemy as sa
 import sqlmodel
 from alembic import op
 from langflow.utils import migration
+
+if TYPE_CHECKING:
+    from collections.abc import Sequence
 
 revision: str = "7c8d9e0f1a2b"  # pragma: allowlist secret
 down_revision: str | None = "mb01b2c3d4e5"  # pragma: allowlist secret

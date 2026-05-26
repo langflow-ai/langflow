@@ -152,6 +152,17 @@ class AuthSettings(BaseSettings):
             "contend with concurrent write transactions ('database is locked')."
         ),
     )
+    AUTHZ_AUDIT_RETENTION_DAYS: int = Field(
+        default=90,
+        ge=0,
+        description=(
+            "Number of days to retain rows in ``authz_audit_log``. Older rows are deleted on "
+            "startup and by the periodic cleanup task. Set to 0 to disable retention pruning "
+            "(append-only — the table will grow without bound; pair with an external archival "
+            "or partitioning job). The default of 90 days bounds steady-state size for typical "
+            "enterprise deployments."
+        ),
+    )
 
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 

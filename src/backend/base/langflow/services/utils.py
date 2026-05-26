@@ -410,6 +410,49 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         # Don't re-raise since this is a cleanup task
 
 
+async def clean_authz_audit_log(settings_service: SettingsService, session: AsyncSession) -> int:
+    """Delete authz_audit_log rows older than ``AUTHZ_AUDIT_RETENTION_DAYS``.
+
+    Retention is configured via ``AuthSettings.AUTHZ_AUDIT_RETENTION_DAYS``;
+    setting it to ``0`` disables pruning so operators relying on an external
+    archival pipeline (Postgres partitioning, SIEM export) can opt out without
+    losing rows here. The function is intentionally best-effort: failures are
+    logged and swallowed so startup never fails because the audit table is
+    transiently unreachable.
+
+    Returns the number of rows deleted (best-effort; ``-1`` when the rowcount
+    is unavailable from the driver).
+    """
+    try:
+        retention_days = int(getattr(settings_service.auth_settings, "AUTHZ_AUDIT_RETENTION_DAYS", 90))
+    except Exception:  # noqa: BLE001 — settings shape can vary in tests/stubs
+        retention_days = 90
+    if retention_days <= 0:
+        logger.debug("authz_audit_log retention disabled (AUTHZ_AUDIT_RETENTION_DAYS=%d)", retention_days)
+        return 0
+
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    try:
+        delete_stmt = delete(AuthzAuditLog).where(col(AuthzAuditLog.timestamp) < cutoff)
+        result = await session.exec(delete_stmt)
+        deleted = getattr(result, "rowcount", None)
+        deleted_count = int(deleted) if deleted is not None and deleted >= 0 else -1
+        logger.debug(
+            "authz_audit_log cleanup removed %s rows older than %d days",
+            deleted_count if deleted_count >= 0 else "?",
+            retention_days,
+        )
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
+        logger.warning("authz_audit_log cleanup failed: %s", exc)
+        return -1
+    else:
+        return deleted_count
+
+
 async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old vertex builds from the database.
 
@@ -568,3 +611,4 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with session_scope() as session:
         await clean_transactions(settings_service, session)
         await clean_vertex_builds(settings_service, session)
+        await clean_authz_audit_log(settings_service, session)
