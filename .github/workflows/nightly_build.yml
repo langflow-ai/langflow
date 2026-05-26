@@ -301,15 +301,27 @@ jobs:
       # When triggered manually, use the provided value (default is also true)
       push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
+  db-migration-validation:
+    name: Run DB Migration Validation
+    needs: [create-nightly-tag, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && always() && needs.release-nightly-build.result == 'success' }}
+    uses: ./.github/workflows/db-migration-validation.yml
+    with:
+      # Pass Docker image reference for docker-compose and version without 'v' prefix for pip
+      # release_tag format: v1.10.0.dev20260522
+      # We need: langflowai/langflow-nightly:1.10.0.dev20260522 for Docker
+      nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
+    secrets: inherit
+
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build, db-migration-validation]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' }}
         run: |
           # Determine which job failed
           FAILED_JOB="unknown"
@@ -321,6 +333,8 @@ jobs:
             FAILED_JOB="frontend-tests-windows (non-blocking)"
           elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
             FAILED_JOB="backend-unit-tests"
+          elif [ "${{ needs.db-migration-validation.result }}" == "failure" ]; then
+            FAILED_JOB="db-migration-validation"
           fi
 
           curl -X POST -H 'Content-type: application/json' \
@@ -366,7 +380,7 @@ jobs:
           }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
       - name: Send success notification to Slack
-        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
+        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' && needs.db-migration-validation.result != 'failure' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{
