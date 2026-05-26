@@ -2,7 +2,11 @@
 
 from __future__ import annotations
 
+import os
 import re
+import tempfile
+from pathlib import Path
+from urllib.parse import urlparse
 
 _IDENTIFIER_PATTERN = re.compile(r"^[A-Za-z][A-Za-z0-9_]{0,127}$")
 _HOSTNAME_PATTERN = re.compile(r"^[A-Za-z0-9.-]{1,253}$")
@@ -127,6 +131,142 @@ def create_safe_error_message(error: Exception, context: str | None = None) -> s
         prefix = f"{prefix} {context}"
 
     return f"{prefix}: {redacted_text}"
+
+
+def validate_ssl_certificate_path(cert_path: str | None) -> tuple[str | None, str | None]:
+    """Validate and resolve SSL certificate path.
+
+    Args:
+        cert_path: Path to certificate file (local path or URL), or None
+
+    Returns:
+        Tuple of (resolved_path, error_message)
+        - If valid: (resolved_path, None)
+        - If invalid: (None, error_message)
+        - If None/empty: (None, None) - indicates use system defaults
+
+    Raises:
+        ValueError: If certificate path is invalid or file doesn't exist
+    """
+    if not cert_path or not cert_path.strip():
+        # Empty path means use system defaults
+        return None, None
+
+    cert_path = cert_path.strip()
+
+    # Check if it's a URL
+    parsed = urlparse(cert_path)
+    if parsed.scheme in ("http", "https"):
+        # URL-based certificate - will be downloaded later
+        return cert_path, None
+
+    # Local file path - validate it exists and is readable
+    try:
+        # Resolve path (handles relative paths, ~, etc.)
+        resolved_path = Path(cert_path).expanduser().resolve()
+
+        # Check if file exists
+        if not resolved_path.exists():
+            return None, f"Certificate file not found: {cert_path}"
+
+        # Check if it's a file (not a directory)
+        if not resolved_path.is_file():
+            return None, f"Certificate path is not a file: {cert_path}"
+
+        # Check if file is readable
+        if not os.access(resolved_path, os.R_OK):
+            return None, f"Certificate file is not readable: {cert_path}"
+
+        # Validate file extension
+        valid_extensions = {".crt", ".pem", ".cer", ".cert"}
+        if resolved_path.suffix.lower() not in valid_extensions:
+            return (
+                None,
+                f"Invalid certificate file extension: {resolved_path.suffix}. "
+                f"Expected one of: {', '.join(valid_extensions)}",
+            )
+
+        return str(resolved_path), None
+
+    except (OSError, ValueError) as e:
+        return None, f"Error validating certificate path: {e}"
+
+
+def download_certificate(url: str) -> tuple[str | None, str | None]:
+    """Download SSL certificate from URL to temporary file.
+
+    Args:
+        url: URL to download certificate from
+
+    Returns:
+        Tuple of (temp_file_path, error_message)
+        - If successful: (temp_file_path, None)
+        - If failed: (None, error_message)
+    """
+    try:
+        import urllib.error
+        import urllib.request
+
+        # Create temporary file with appropriate extension
+        temp_fd, temp_path = tempfile.mkstemp(suffix=".crt", prefix="db2_ssl_")
+
+        try:
+            # Download certificate
+            with urllib.request.urlopen(url, timeout=30) as response:  # noqa: S310
+                cert_data = response.read()
+
+            # Write to temporary file
+            with os.fdopen(temp_fd, "wb") as f:
+                f.write(cert_data)
+
+        except (OSError, ValueError, urllib.error.URLError) as download_error:
+            # Clean up temp file on error
+            try:
+                os.close(temp_fd)
+                Path(temp_path).unlink(missing_ok=True)
+            except OSError:
+                # Ignore cleanup errors
+                pass
+            return None, f"Failed to download certificate from {url}: {download_error}"
+        else:
+            return temp_path, None
+
+    except (OSError, ValueError) as e:
+        return None, f"Error setting up certificate download: {e}"
+
+
+def validate_and_prepare_ssl_certificate(cert_path: str | None) -> tuple[str | None, bool, str | None]:
+    """Validate and prepare SSL certificate for use.
+
+    Args:
+        cert_path: Path to certificate file (local path or URL), or None
+
+    Returns:
+        Tuple of (resolved_path, is_temp_file, error_message)
+        - resolved_path: Path to use for SSL connection (None means use system defaults)
+        - is_temp_file: True if the file is temporary and should be cleaned up
+        - error_message: Error message if validation failed, None otherwise
+    """
+    if not cert_path or not cert_path.strip():
+        # No certificate provided - use system defaults
+        return None, False, None
+
+    # First validate the path/URL
+    validated_path, error = validate_ssl_certificate_path(cert_path)
+    if error:
+        return None, False, error
+
+    # Check if it's a URL that needs downloading
+    parsed = urlparse(cert_path)
+    if parsed.scheme in ("http", "https"):
+        # Download certificate to temporary file
+        temp_path, download_error = download_certificate(cert_path)
+        if download_error:
+            return None, False, download_error
+        return temp_path, True, None
+
+    # Local file path - already validated
+    return validated_path, False, None
 
 
 # Made with Bob

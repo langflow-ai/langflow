@@ -1,8 +1,12 @@
 """IBM Db2 Vector Store Component for Langflow."""
 
+import contextlib
+from pathlib import Path
+
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.components.ibm.db2_security import (
     create_safe_error_message,
+    validate_and_prepare_ssl_certificate,
     validate_database_name,
     validate_hostname,
     validate_identifier,
@@ -94,6 +98,35 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             required=True,
             advanced=True,
             info="Db2 database password",
+        ),
+        # SSL/TLS Configuration
+        BoolInput(
+            name="use_ssl",
+            display_name="Use SSL/TLS",
+            value=False,
+            advanced=True,
+            info="Enable SSL/TLS encryption for database connection. Recommended for production environments.",
+        ),
+        StrInput(
+            name="ssl_certificate_path",
+            display_name="SSL Certificate Path",
+            required=False,
+            advanced=True,
+            info=(
+                "Optional: Path to SSL certificate file (.crt, .pem, .cer) or URL to download certificate. "
+                "Supports local paths (relative/absolute) and URLs (https://...). "
+                "Leave empty to use system default CA certificates (recommended for IBM Cloud DB2)."
+            ),
+        ),
+        SecretStrInput(
+            name="ssl_certificate_password",
+            display_name="SSL Certificate Password",
+            required=False,
+            advanced=True,
+            info=(
+                "Optional: Password for password-protected SSL certificate/keystore. "
+                "Only required if your certificate file is encrypted with a password."
+            ),
         ),
         # Advanced Settings
         BoolInput(
@@ -243,6 +276,35 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             msg = "Missing required credentials: username and password are required"
             raise ValueError(msg)
 
+        # Handle SSL certificate if provided
+        ssl_cert_path = None
+        is_temp_cert = False
+        temp_cert_cleanup = None
+
+        if self.use_ssl:
+            self.log("SSL/TLS enabled for database connection")
+
+            # Validate and prepare SSL certificate
+            cert_path_input = getattr(self, "ssl_certificate_path", None)
+            if cert_path_input and cert_path_input.strip():
+                self.log(f"Validating SSL certificate: {cert_path_input}")
+                ssl_cert_path, is_temp_cert, cert_error = validate_and_prepare_ssl_certificate(cert_path_input)
+
+                if cert_error:
+                    msg = f"SSL certificate validation failed: {cert_error}"
+                    self.log(f"❌ {msg}")
+                    raise ValueError(msg)
+
+                if is_temp_cert:
+                    self.log(f"Downloaded SSL certificate to temporary file: {ssl_cert_path}")
+                    temp_cert_cleanup = ssl_cert_path
+                else:
+                    self.log(f"Using SSL certificate: {ssl_cert_path}")
+            else:
+                self.log("No SSL certificate provided - using system default CA certificates")
+        else:
+            self.log("SSL/TLS disabled - connecting without encryption")
+
         # Create connection string with validated parameters
         conn_str = (
             f"DATABASE={validated_database};"
@@ -253,14 +315,45 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             f"PWD={self.password};"
         )
 
+        # Add SSL parameters if enabled
+        if self.use_ssl:
+            conn_str += "SECURITY=SSL;"
+            if ssl_cert_path:
+                # Use SSLServerCertificate parameter for DB2
+                conn_str += f"SSLServerCertificate={ssl_cert_path};"
+
+                # Add certificate password if provided
+                ssl_cert_password = getattr(self, "ssl_certificate_password", None)
+                if ssl_cert_password and ssl_cert_password.strip():
+                    conn_str += f"SSLClientKeystorePassword={ssl_cert_password};"
+                    self.log("SSL connection configured with custom certificate and password")
+                else:
+                    self.log("SSL connection configured with custom certificate (no password)")
+            else:
+                self.log("SSL connection configured with system certificates")
+
         # Create connection with safe error handling
         try:
             connection = ibm_db_dbi.connect(conn_str, "", "")
-            self.log(f"Connected to DB2 database: {validated_database}")
+            self.log(f"✓ Connected to DB2 database: {validated_database}")
+
+            # Clean up temporary certificate file if it was downloaded
+            if temp_cert_cleanup:
+                try:
+                    Path(temp_cert_cleanup).unlink(missing_ok=True)
+                    self.log("Cleaned up temporary certificate file")
+                except OSError as cleanup_error:
+                    self.log(f"Warning: Could not clean up temporary certificate: {cleanup_error}")
+
         except Exception as e:
+            # Clean up temporary certificate on connection failure
+            if temp_cert_cleanup:
+                with contextlib.suppress(OSError):
+                    Path(temp_cert_cleanup).unlink(missing_ok=True)
+
             # SECURITY: Use safe error messages that don't expose sensitive info
             safe_msg = create_safe_error_message(e, "while connecting to database")
-            self.log(f"Connection failed: {safe_msg}")
+            self.log(f"❌ Connection failed: {safe_msg}")
             raise ConnectionError(safe_msg) from e
 
         # Map distance strategy
