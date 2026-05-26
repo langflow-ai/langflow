@@ -74,19 +74,23 @@ class _StubAuthz:
 
 @pytest.fixture
 def patch_authz(monkeypatch):
-    """Install a stub authz service into both the shares module and utils."""
-    from langflow.services.authorization import utils as authz_utils
+    """Install a stub authz service into the shares module and the split helper modules."""
+    from langflow.services.authorization import audit as authz_audit
+    from langflow.services.authorization import guards as authz_guards
+    from langflow.services.authorization import listing as authz_listing
 
     def _apply(*, cross_user: bool = False, enabled: bool = False) -> _StubAuthz:
         stub = _StubAuthz(cross_user=cross_user, enabled=enabled)
         monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
-        monkeypatch.setattr(authz_utils, "get_authorization_service", lambda: stub)
+        for module in (authz_guards, authz_listing):
+            monkeypatch.setattr(module, "get_authorization_service", lambda: stub)
         # Disable audit + AUTHZ_ENABLED gating so audit calls inside ensure_*
         # don't open real sessions.
         settings = SimpleNamespace(
             auth_settings=SimpleNamespace(AUTHZ_ENABLED=False, AUTHZ_AUDIT_ENABLED=False),
         )
-        monkeypatch.setattr(authz_utils, "get_settings_service", lambda: settings)
+        for module in (authz_audit, authz_guards, authz_listing):
+            monkeypatch.setattr(module, "get_settings_service", lambda s=settings: s)
         return stub
 
     return _apply

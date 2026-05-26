@@ -130,8 +130,20 @@ async def test_authz_role_assignment_blocks_duplicate_global(authz_async_session
     await authz_async_session.commit()
 
     authz_async_session.add(AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="global"))
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    # Assert the *specific* constraint fires (the partial unique index over
+    # user_id+role_id+domain_type, WHERE domain_id IS NULL) — otherwise a
+    # generic NOT NULL or random regression could mask the missing partial
+    # index. SQLite reports column names rather than the constraint name; we
+    # inspect only the failure clause before ``[SQL: ...]`` (which echoes every
+    # column in the INSERT and would otherwise smuggle ``domain_id`` in).
+    failure_clause = str(excinfo.value).lower().split("[sql:")[0]
+    assert "unique constraint failed" in failure_clause
+    assert "domain_type" in failure_clause
+    # Unscoped index does not cover domain_id; its absence distinguishes it
+    # from the scoped index (which also lists ``domain_id``).
+    assert "domain_id" not in failure_clause
     await authz_async_session.rollback()
 
 
@@ -163,8 +175,13 @@ async def test_authz_role_assignment_blocks_duplicate_non_global_with_null_domai
     await authz_async_session.commit()
 
     authz_async_session.add(AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="org"))
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    failure_clause = str(excinfo.value).lower().split("[sql:")[0]
+    assert "unique constraint failed" in failure_clause
+    assert "domain_type" in failure_clause
+    # Widened (unscoped) partial index — domain_id is NOT part of the constraint key.
+    assert "domain_id" not in failure_clause
     await authz_async_session.rollback()
 
 
@@ -194,8 +211,12 @@ async def test_authz_role_assignment_blocks_duplicate_scoped(authz_async_session
     authz_async_session.add(
         AuthzRoleAssignment(user_id=user.id, role_id=role.id, domain_type="workspace", domain_id=workspace_id)
     )
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    failure_clause = str(excinfo.value).lower().split("[sql:")[0]
+    assert "unique constraint failed" in failure_clause
+    # The scoped index covers domain_id — its presence distinguishes it from the unscoped one.
+    assert "domain_id" in failure_clause
     await authz_async_session.rollback()
 
 
@@ -338,8 +359,12 @@ async def test_authz_share_blocks_duplicate_targeted(authz_async_session: AsyncS
             created_by=user.id,
         )
     )
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    failure_clause = str(excinfo.value).lower().split("[sql:")[0]
+    assert "unique constraint failed" in failure_clause
+    # targeted index covers target_id; untargeted does not
+    assert "target_id" in failure_clause
     await authz_async_session.rollback()
 
 
@@ -384,8 +409,13 @@ async def test_authz_share_blocks_duplicate_untargeted(authz_async_session: Asyn
             created_by=user.id,
         )
     )
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    failure_clause = str(excinfo.value).lower().split("[sql:")[0]
+    assert "unique constraint failed" in failure_clause
+    # The untargeted index covers (resource_type, resource_id, scope) — no target_id column.
+    assert "target_id" not in failure_clause
+    assert "scope" in failure_clause
     await authz_async_session.rollback()
 
 
@@ -457,8 +487,9 @@ async def test_authz_share_rejects_unknown_scope(authz_async_session: AsyncSessi
             created_by=user.id,
         )
     )
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    assert "ck_authz_share_scope_enum" in str(excinfo.value).lower()
     await authz_async_session.rollback()
 
 
@@ -487,8 +518,9 @@ async def test_authz_share_rejects_targeted_with_null_target(authz_async_session
             created_by=user.id,
         )
     )
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    assert "ck_authz_share_scope_target_consistency" in str(excinfo.value).lower()
     await authz_async_session.rollback()
 
 
@@ -519,8 +551,9 @@ async def test_authz_share_rejects_untargeted_with_target(authz_async_session: A
             created_by=user.id,
         )
     )
-    with pytest.raises(IntegrityError):
+    with pytest.raises(IntegrityError) as excinfo:
         await authz_async_session.commit()
+    assert "ck_authz_share_scope_target_consistency" in str(excinfo.value).lower()
     await authz_async_session.rollback()
 
 

@@ -9,10 +9,12 @@ from langflow.services.authorization.actions import (
     ShareAction,
     VariableAction,
 )
-from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.service import LangflowAuthorizationService
-from langflow.services.authorization.utils import (
+from langflow.services.authorization.audit import (
     audit_decision,
+    drain_pending_audit_writes,
+)
+from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
+from langflow.services.authorization.guards import (
     ensure_deployment_permission,
     ensure_file_permission,
     ensure_flow_permission,
@@ -21,8 +23,9 @@ from langflow.services.authorization.utils import (
     ensure_project_permission,
     ensure_share_permission,
     ensure_variable_permission,
-    filter_visible_resources,
 )
+from langflow.services.authorization.listing import filter_visible_resources
+from langflow.services.authorization.service import LangflowAuthorizationService
 
 __all__ = [
     "DeploymentAction",
@@ -36,6 +39,7 @@ __all__ = [
     "audit_decision",
     "authorized_or_owner_scoped",
     "deny_to_404",
+    "drain_pending_audit_writes",
     "ensure_deployment_permission",
     "ensure_file_permission",
     "ensure_flow_permission",

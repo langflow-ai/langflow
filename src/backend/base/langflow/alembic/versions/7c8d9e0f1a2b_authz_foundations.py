@@ -146,7 +146,19 @@ def _seed_system_roles(conn: sa.Connection) -> None:
             ).scalar()
             if already_present:
                 continue
-            conn.execute(authz_role.insert().values(**values))
+            # Why: SELECT-then-INSERT is racy on dialects without
+            # ``on_conflict_do_nothing``. Two concurrent migration runners can
+            # both observe ``already_present=False`` and both INSERT, losing
+            # the second one to the unique-constraint. Wrap in a SAVEPOINT and
+            # swallow IntegrityError so the migration stays idempotent under
+            # concurrent first-deploys. See PR #13153 review item R5.
+            from sqlalchemy.exc import IntegrityError
+
+            try:
+                with conn.begin_nested():
+                    conn.execute(authz_role.insert().values(**values))
+            except IntegrityError:
+                continue
 
 
 def upgrade() -> None:

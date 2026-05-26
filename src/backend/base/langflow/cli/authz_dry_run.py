@@ -173,7 +173,8 @@ class DryRunResult:
 @contextmanager
 def _install_stubs(stub: _StubAuthorizationService, audit_sink: list[dict[str, Any]]):
     """Swap the live authz helpers for the dry-run stubs for the duration of the run."""
-    from langflow.services.authorization import utils as authz_utils
+    from langflow.services.authorization import audit as authz_audit
+    from langflow.services.authorization import guards as authz_guards
 
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
@@ -186,20 +187,25 @@ def _install_stubs(stub: _StubAuthorizationService, audit_sink: list[dict[str, A
     async def _record_audit(**kwargs: Any) -> None:
         audit_sink.append(kwargs)
 
-    saved_settings = authz_utils.get_settings_service
-    saved_authz = authz_utils.get_authorization_service
-    saved_audit = authz_utils.audit_decision
+    saved = {
+        "guards_settings": authz_guards.get_settings_service,
+        "guards_authz": authz_guards.get_authorization_service,
+        "audit_settings": authz_audit.get_settings_service,
+        "audit_decision": authz_audit.audit_decision,
+    }
 
-    authz_utils.get_settings_service = lambda: settings  # type: ignore[assignment]
-    authz_utils.get_authorization_service = lambda: stub  # type: ignore[assignment]
-    authz_utils.audit_decision = _record_audit  # type: ignore[assignment]
+    authz_guards.get_settings_service = lambda: settings  # type: ignore[assignment]
+    authz_guards.get_authorization_service = lambda: stub  # type: ignore[assignment]
+    authz_audit.get_settings_service = lambda: settings  # type: ignore[assignment]
+    authz_audit.audit_decision = _record_audit  # type: ignore[assignment]
 
     try:
         yield
     finally:
-        authz_utils.get_settings_service = saved_settings  # type: ignore[assignment]
-        authz_utils.get_authorization_service = saved_authz  # type: ignore[assignment]
-        authz_utils.audit_decision = saved_audit  # type: ignore[assignment]
+        authz_guards.get_settings_service = saved["guards_settings"]  # type: ignore[assignment]
+        authz_guards.get_authorization_service = saved["guards_authz"]  # type: ignore[assignment]
+        authz_audit.get_settings_service = saved["audit_settings"]  # type: ignore[assignment]
+        authz_audit.audit_decision = saved["audit_decision"]  # type: ignore[assignment]
 
 
 async def _run_one(
@@ -213,7 +219,7 @@ async def _run_one(
     audit_sink: list[dict[str, Any]],
 ) -> DryRunResult:
     """Invoke ``ensure_flow_permission`` for one (guard, actor) pair and record the outcome."""
-    from langflow.services.authorization import utils as authz_utils
+    from langflow.services.authorization import guards as authz_utils
     from langflow.services.authorization.actions import FlowAction
 
     actor_id = owner_id if actor.is_flow_owner else uuid4()
