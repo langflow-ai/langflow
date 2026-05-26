@@ -72,6 +72,26 @@ def test_payload_schema_slot_registered_for_deployment_update() -> None:
     assert slot.execution_status_result.adapter_model is WatsonxAgentExecutionResultData
 
 
+def test_update_result_schema_dedupes_id_lists() -> None:
+    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    assert slot is not None
+    assert slot.deployment_update_result is not None
+
+    applied = slot.deployment_update_result.apply(
+        {
+            "name": "agent-name",
+            "display_name": "Agent Name",
+            "created_app_ids": ["app-1", "app-1", "app-2"],
+            "created_snapshot_ids": ["tool-1", "tool-1", "tool-2"],
+            "added_snapshot_ids": ["tool-1", "tool-2", "tool-1"],
+        }
+    )
+
+    assert applied["created_app_ids"] == ["app-1", "app-2"]
+    assert applied["created_snapshot_ids"] == ["tool-1", "tool-2"]
+    assert applied["added_snapshot_ids"] == ["tool-1", "tool-2"]
+
+
 def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:
     slot = WatsonxOrchestrateDeploymentService.payload_schemas
     assert slot is not None

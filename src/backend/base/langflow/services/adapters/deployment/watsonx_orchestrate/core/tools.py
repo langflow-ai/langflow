@@ -283,10 +283,12 @@ def create_wxo_flow_tool(
 
     tool_display_name = flow_provider_data.tool_display_name
     technical_tool_name = flow_provider_data.tool_name
+    flow_id = flow_definition["id"]
+    flow_name = flow_definition["name"]
     logger.debug(
         "create_wxo_flow_tool",
-        langflow_flow_name=flow_definition.get("name"),
-        flow_id=flow_definition.get("id"),
+        langflow_flow_name=flow_name,
+        flow_id=flow_id,
         tool_name=technical_tool_name,
         tool_display_name=tool_display_name,
         connection_app_ids=sorted(connections),
@@ -295,7 +297,7 @@ def create_wxo_flow_tool(
     flow_definition.update(
         {
             "name": technical_tool_name,
-            "id": str(flow_definition.get("id")),
+            "id": str(flow_id),
         }
     )
 

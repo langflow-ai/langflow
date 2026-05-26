@@ -633,6 +633,11 @@ class WatsonxDeploymentUpdateResultData(BaseModel):
     referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     tool_app_bindings: list[WatsonxToolAppBinding] | None = None
 
+    @field_validator("created_app_ids", "created_snapshot_ids", "added_snapshot_ids")
+    @classmethod
+    def dedupe_result_ids(cls, value: list[str]) -> list[str]:
+        return list(dict.fromkeys(value))
+
 
 class WatsonxAgentExecutionResultData(BaseModel):
     """Provider result payload for agent execution create/status."""

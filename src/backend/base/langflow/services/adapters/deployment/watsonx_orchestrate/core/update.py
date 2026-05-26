@@ -565,9 +565,9 @@ async def apply_provider_update_plan_with_rollback(
 
     return {
         **update_result_metadata,
-        "created_app_ids": dedupe_list(created_app_ids),
-        "created_snapshot_ids": dedupe_list(created_snapshot_ids),
-        "added_snapshot_ids": dedupe_list(added_snapshot_ids),
+        "created_app_ids": created_app_ids,
+        "created_snapshot_ids": created_snapshot_ids,
+        "added_snapshot_ids": added_snapshot_ids,
         "created_snapshot_bindings": created_snapshot_bindings,
         "added_snapshot_bindings": [*plan.added_existing_tool_refs, *created_snapshot_bindings],
         "removed_snapshot_bindings": plan.removed_existing_tool_refs,
