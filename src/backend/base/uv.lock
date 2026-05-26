@@ -540,7 +540,7 @@ wheels = [
 
 [[package]]
 name = "apify-client"
-version = "3.0.1"
+version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
 resolution-markers = [
     "python_full_version >= '3.14' and sys_platform == 'win32'",
@@ -564,9 +564,9 @@ dependencies = [
     { name = "more-itertools", marker = "python_full_version >= '3.11'" },
     { name = "pydantic", extra = ["email"], marker = "python_full_version >= '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2f/58/f394a457e8a5abad1d3f81cfaf54dd5fea1fbebba9796434c5c7a6923618/apify_client-3.0.1.tar.gz", hash = "sha256:f15627d61c3687b5b31128212146be9318a0cfb8c7d5767e758a22d51ced7f68", size = 119964, upload-time = "2026-05-22T15:23:36.759Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/64/08/5d6c2fa64fd93b837325368aedaa23f57897030eff31a150873f3aa697e3/apify_client-3.0.2.tar.gz", hash = "sha256:e34dc9c8ac951154a0382adfce785d9658639c373425b43ac54df510d076ac0d", size = 122200, upload-time = "2026-05-26T07:23:43.691Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/58/08/37659aea62fb3b55ba2e32d2fc4ce37baef54cf645dd2ad38064b8889d76/apify_client-3.0.1-py3-none-any.whl", hash = "sha256:41ff8c7c61d41284d4a29834ef9e40bd3963c7133b2647dd161953373f5cd444", size = 139098, upload-time = "2026-05-22T15:23:34.884Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/32/ac2ab06f8713f9a1313912815f57431d495cf04861a9f9a2436310dcf38e/apify_client-3.0.2-py3-none-any.whl", hash = "sha256:d78e188eb98e8357a21b57d9b31b139410b517eecc2d125c80f054cdc604296f", size = 141197, upload-time = "2026-05-26T07:23:42.039Z" },
 ]
 
 [[package]]
@@ -2818,7 +2818,7 @@ wheels = [
 
 [[package]]
 name = "docling-core"
-version = "2.77.0"
+version = "2.77.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "defusedxml" },
@@ -2835,9 +2835,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/8e/62/9d5abcb7b32370408be572f5fe738de521d7992d09cce817f87133fcbe0f/docling_core-2.77.0.tar.gz", hash = "sha256:d6655c7b351706cad3b91d166aed99cea9a38f45fd8c9575f8454bc3c36ff160", size = 327171, upload-time = "2026-05-19T13:47:44.477Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/5b/2c57066e2900b815d177e73d19e78a7766a3e4da3e5762df48b83493a135/docling_core-2.77.1.tar.gz", hash = "sha256:d93c7cdc0de4bbf36ef74fb4c3c3d49bb8420ff27201f3b66908672326835b47", size = 328061, upload-time = "2026-05-26T15:23:24.967Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c8/e0/1ae5ad39ba674a901099b9c7887f2b0445fbc365c4444c827e5e1e3cdf6a/docling_core-2.77.0-py3-none-any.whl", hash = "sha256:ae2cca9b6baa0d283d21dabebcf835e02abfbe58e0d144e1d97a20a98c1e9074", size = 283745, upload-time = "2026-05-19T13:47:41.936Z" },
+    { url = "https://files.pythonhosted.org/packages/f0/ed/00dc4f21b9b47a6e89e026f0aeaa4d5aab03fe8135867aeeff66bd153fe8/docling_core-2.77.1-py3-none-any.whl", hash = "sha256:4e38df7143e2ecfe69ecf05278e8e25063a9ec1b6d0b5e28e3b8f1db7cc5ed72", size = 283903, upload-time = "2026-05-26T15:23:23.272Z" },
 ]
 
 [package.optional-dependencies]
@@ -6672,7 +6672,7 @@ all = [
     { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "aioboto3" },
     { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "apify-client", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "apify-client", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astrapy" },
@@ -6793,7 +6793,7 @@ anthropic = [
 ]
 apify = [
     { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "apify-client", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "apify-client", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
 ]
 arize = [
     { name = "arize-phoenix-otel" },
@@ -6841,7 +6841,7 @@ complete = [
     { name = "agent-lifecycle-toolkit", marker = "(python_full_version < '3.14' and platform_machine != 'x86_64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "aioboto3" },
     { name = "apify-client", version = "2.5.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
-    { name = "apify-client", version = "3.0.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "apify-client", version = "3.0.2", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "arize-phoenix-otel" },
     { name = "assemblyai" },
     { name = "astrapy" },
@@ -10580,7 +10580,7 @@ wheels = [
 
 [[package]]
 name = "opik"
-version = "2.0.47"
+version = "2.0.48"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3-stubs", extra = ["bedrock-runtime"] },
@@ -10603,9 +10603,9 @@ dependencies = [
     { name = "uuid6" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/4b/47/017f441773b15c52492772f1322e58891ed452534cc48924e3a1514350bc/opik-2.0.47.tar.gz", hash = "sha256:ea5278b11a219516a5c7625c8331e8ff8e276219d7189bc4db260d04af0e1ea3", size = 1005249, upload-time = "2026-05-25T04:44:06.104Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/5c/d5/c02677fc6e6856969ebed7234227058a9f812dfaff7b2ade736dd47e0840/opik-2.0.48.tar.gz", hash = "sha256:3870d8c0934478ae7bc4e2a8417b5bc22514f3383f8b8673597cc4fed5ab0a3d", size = 1005438, upload-time = "2026-05-26T10:29:49.23Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3b/72/58dcedaca964398d64824b0d85311e89031cf13ec100ee0440c65d87e5cc/opik-2.0.47-py3-none-any.whl", hash = "sha256:aa1a1aadbff5c804355a6645e55b78739fe44d6d055d74676495a42d756c4451", size = 1623856, upload-time = "2026-05-25T04:44:03.994Z" },
+    { url = "https://files.pythonhosted.org/packages/c7/82/c7740519ab341e80c79a44d74e310de545981289e41b5aff47fe93e7ba73/opik-2.0.48-py3-none-any.whl", hash = "sha256:9caff96e17be2b67fb6c3cf681f5bc55e7c8ce52737d213d0783b4c4616eec7d", size = 1624068, upload-time = "2026-05-26T10:29:46.209Z" },
 ]
 
 [[package]]
@@ -12477,14 +12477,14 @@ wheels = [
 
 [[package]]
 name = "pypdf"
-version = "6.12.1"
+version = "6.12.2"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "typing-extensions", marker = "python_full_version < '3.11'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/54/4d/39e48f5294a5a6bb78313839aae820666c2d30daeadb652ed50bd46cafac/pypdf-6.12.1.tar.gz", hash = "sha256:3953a097b9f26d4e0ead5ff95943d9971377557662a91d8872186053cd71d30a", size = 6467595, upload-time = "2026-05-22T10:07:59.979Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/0a/6d/20879428577c1e57ecd41b69dc86beabf43db9287ad2e702207f8b48c751/pypdf-6.12.2.tar.gz", hash = "sha256:111669eb6680c04495ae0c113a1476e3bf93a95761d23c7406b591c80a6490b1", size = 6468184, upload-time = "2026-05-26T13:31:26.911Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5e/aa/4d17fe9ff165d1341878c570b14f5b7291106d63411adf640942a7e638aa/pypdf-6.12.1-py3-none-any.whl", hash = "sha256:8fa2a2321cf16247ed848bd7c97f193a60c08670d04abed5b0138327e51c43b0", size = 343787, upload-time = "2026-05-22T10:07:57.801Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/44/fee070a16639d9869bb6a7e0f3a1b3946da1d66f32b9260b4d19cb90d7b2/pypdf-6.12.2-py3-none-any.whl", hash = "sha256:67b2699357a1f3f4c945940ea80826349ee507c9e2577724a14b4941982c104d", size = 343865, upload-time = "2026-05-26T13:31:25.068Z" },
 ]
 
 [[package]]
@@ -12598,16 +12598,16 @@ wheels = [
 
 [[package]]
 name = "pytest-asyncio"
-version = "1.3.0"
+version = "1.4.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "backports-asyncio-runner", marker = "python_full_version < '3.11'" },
     { name = "pytest" },
     { name = "typing-extensions", marker = "python_full_version < '3.13'" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/90/2c/8af215c0f776415f3590cac4f9086ccefd6fd463befeae41cd4d3f193e5a/pytest_asyncio-1.3.0.tar.gz", hash = "sha256:d7f52f36d231b80ee124cd216ffb19369aa168fc10095013c6b014a34d3ee9e5", size = 50087, upload-time = "2025-11-10T16:07:47.256Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/43/7c/d36d04db312ecf4298932ef77e6e4a9e8ad017906e24e34f0b0c361a2473/pytest_asyncio-1.4.0.tar.gz", hash = "sha256:c6c0d2259945122819f171a32ecea2c349ead889ee28176caaf492143424be42", size = 58514, upload-time = "2026-05-26T09:56:04.083Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e5/35/f8b19922b6a25bc0880171a2f1a003eaeb93657475193ab516fd87cac9da/pytest_asyncio-1.3.0-py3-none-any.whl", hash = "sha256:611e26147c7f77640e6d0a92a38ed17c3e9848063698d5c93d5aa7aa11cebff5", size = 15075, upload-time = "2025-11-10T16:07:45.537Z" },
+    { url = "https://files.pythonhosted.org/packages/03/e2/08a497ef684b88559c9cc5f4ad53a37e7b99e727094a86d6ea32536d5d3c/pytest_asyncio-1.4.0-py3-none-any.whl", hash = "sha256:933ca923a23075a87fb7070c0ec272a6848489824d887c85c812670932835aa1", size = 16930, upload-time = "2026-05-26T09:56:02.576Z" },
 ]
 
 [[package]]
