@@ -1,5 +1,5 @@
 import weaviate
-from langchain_community.vectorstores import Weaviate
+from langchain_weaviate import WeaviateVectorStore
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -36,7 +36,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> Weaviate:
+    def build_vector_store(self) -> WeaviateVectorStore:
         if self.api_key:
             auth_config = weaviate.AuthApiKey(api_key=self.api_key)
             client = weaviate.Client(url=self.url, auth_client_secret=auth_config)
@@ -58,7 +58,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents and self.embedding:
-            return Weaviate.from_documents(
+            return WeaviateVectorStore.from_documents(
                 client=client,
                 index_name=self.index_name,
                 documents=documents,
@@ -66,7 +66,7 @@ class WeaviateVectorStoreComponent(LCVectorStoreComponent):
                 by_text=self.search_by_text,
             )
 
-        return Weaviate(
+        return WeaviateVectorStore(
             client=client,
             index_name=self.index_name,
             text_key=self.text_key,
