@@ -1077,11 +1077,17 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            input_obj = self._inputs.get(name)
+            if input_obj is not None and hasattr(input_obj, "load_from_db"):
+                frontend_node.set_field_load_from_db_in_template(name, bool(input_obj.load_from_db))
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
+                input_obj = self._inputs.get(name)
+                if input_obj is not None and "load_from_db" in template[name] and hasattr(input_obj, "load_from_db"):
+                    template[name]["load_from_db"] = bool(input_obj.load_from_db)
             except KeyError as e:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:
