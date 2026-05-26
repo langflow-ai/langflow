@@ -242,21 +242,11 @@ class JobQueueService(Service):
         # Cancel the associated task if it is still running.
         if task and not task.done():
             await logger.adebug(f"Cancelling active task for job_id {job_id}")
-            task.cancel()
+            task.cancel("LANGFLOW_USER_CANCELLED")
             try:
                 await task
-            except asyncio.CancelledError as exc:
-                # Check if this was a user-initiated cancellation (user called task.cancel())
-                if task.cancelled():
-                    # User-initiated cancellation so we explicitly called task.cancel() above
-                    await logger.adebug(f"Task for job_id {job_id} was successfully cancelled.")
-                    # Re-raise with user cancellation message code
-                    exc.args = ("LANGFLOW_USER_CANCELLED",)
-                    raise
-                # System-initiated cancellation for other reasons
-                await logger.adebug(f"Task for job_id {job_id} was cancelled by system.")
-                exc.args = ("LANGFLOW_SYSTEM_CANCELLED",)
-                raise
+            except asyncio.CancelledError:
+                await logger.adebug(f"Task for job_id {job_id} was successfully cancelled.")
             except Exception as exc:
                 await logger.aerror(f"Error in task for job_id {job_id} during cancellation: {exc}")
                 raise
