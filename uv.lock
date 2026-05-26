@@ -5305,15 +5305,15 @@ wheels = [
 
 [[package]]
 name = "hypothesis"
-version = "6.152.10"
+version = "6.152.11"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "exceptiongroup", marker = "python_full_version < '3.11'" },
     { name = "sortedcontainers" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/de/c8/857f2a57812b22d14c4615e7c7e5b5b8808e7b0a6a330ffab0eaad15a91c/hypothesis-6.152.10.tar.gz", hash = "sha256:313245552fcdfbc9a37787293eda783da18c2baac280626c922b2c7fd2aa1e26", size = 471995, upload-time = "2026-05-25T20:31:24.492Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/2f/de/7437cb6baa558e7f520fe41ef55bbd944d17351cee299f7993f032a637f1/hypothesis-6.152.11.tar.gz", hash = "sha256:13167fb2fd61710ff9e9ad3fd6ac02bc683c9999a4166c9877b0b0422a908134", size = 472721, upload-time = "2026-05-26T00:15:57.82Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/d7/8c/2ad9a273f80550b08cbe2a94e7816a09488dcf1e0e4b450a50d39f8d7497/hypothesis-6.152.10-py3-none-any.whl", hash = "sha256:7479246f2ea941d0f82fdc64fd17397f35d951a4253597cac9fc69eda93a4ea8", size = 538155, upload-time = "2026-05-25T20:31:22.423Z" },
+    { url = "https://files.pythonhosted.org/packages/44/63/1ff40142fd3cd641f93e8a1f70c6b9fe24255f6111a137a25f2fcbd4ba71/hypothesis-6.152.11-py3-none-any.whl", hash = "sha256:deffc64bf3c178ca8225ce56926c345e43aacbc3d8b8d6df6f766c514f48e81f", size = 538883, upload-time = "2026-05-26T00:15:54.754Z" },
 ]
 
 [[package]]
@@ -6820,6 +6820,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-perplexity"
+version = "1.2.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "perplexityai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/85/7c/dbf40a6b04d859b2844564a687af8637656df5c699c8fec2c1c67b410252/langchain_perplexity-1.2.0.tar.gz", hash = "sha256:87a031bbf47bd117ae9f760cf8276ae6c296cf2000147ae97b27a80b9cc92bd8", size = 146177, upload-time = "2026-04-29T21:57:57.122Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/19/ed/534b0a450c7eed8345b4e1f6fc6bd81c2829eb4d8d27f9e3cf214c1bbbe9/langchain_perplexity-1.2.0-py3-none-any.whl", hash = "sha256:2992ed788dbff13cf8b80d9fb265acda20d5c3956c712ea8da47733b7b5ede3e", size = 18260, upload-time = "2026-04-29T21:57:56.05Z" },
+]
+
+[[package]]
 name = "langchain-pinecone"
 version = "0.2.13"
 source = { registry = "https://pypi.org/simple" }
@@ -6924,6 +6937,22 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/de/83/7d0821c03868d69c52a385891772a9c6f931a8a6cd7c16a2e397c01a5ee2/langchain_unstructured-1.0.1.tar.gz", hash = "sha256:9b4b832b8fcdef8598ff634ec6fc0e344e6d8fdae854c5727f717d605d28e406", size = 6418, upload-time = "2025-12-27T23:23:03.848Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/cc/17/803613614fa4cec18d7dc9953a6029aa038ae4e693ef1b8375d08c30718c/langchain_unstructured-1.0.1-py3-none-any.whl", hash = "sha256:1cdb00b3bccc05daa6f03bc3991b0a76270fd2fc095b358c23bd08c5f0e05f50", size = 6942, upload-time = "2025-12-27T23:23:02.801Z" },
+]
+
+[[package]]
+name = "langchain-weaviate"
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "simsimd" },
+    { name = "weaviate-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/07/dd989027b4e25c30427589ffc6093ffbe8d292561e42c1f19802a1018585/langchain_weaviate-0.0.6.tar.gz", hash = "sha256:762be0e66a1a63ebe01068483ceecd549e1b0e44c0511258de30c24dd60ba58e", size = 9740, upload-time = "2025-11-04T17:14:22.569Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7d/0d/4dd7a439e3a19bdd664cf7964d60460c3727a530c46864b3ca2cf795d128/langchain_weaviate-0.0.6-py3-none-any.whl", hash = "sha256:a5805bd45bfccf3c1ef40f7d112fe38e69e4e225361ff3625f1b1801bb2be16c", size = 10070, upload-time = "2025-11-04T17:14:19.673Z" },
 ]
 
 [[package]]
@@ -7137,7 +7166,9 @@ dependencies = [
     { name = "langchain-experimental" },
     { name = "langchain-ibm", marker = "python_full_version < '3.14'" },
     { name = "langchain-mongodb" },
+    { name = "langchain-perplexity" },
     { name = "langchain-qdrant" },
+    { name = "langchain-weaviate" },
     { name = "langchainhub" },
     { name = "langgraph-checkpoint" },
     { name = "lfx" },
@@ -7905,11 +7936,13 @@ requires-dist = [
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "~=1.0.0" },
     { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "~=0.3.10" },
     { name = "langchain-openai", marker = "extra == 'openai'", specifier = ">=1.1.6" },
+    { name = "langchain-perplexity", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
     { name = "langchain-qdrant", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-qdrant", marker = "extra == 'qdrant-vectors'", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-sambanova", marker = "extra == 'sambanova'", specifier = "~=1.0.0" },
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
+    { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "langflow-base", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8049,7 +8082,7 @@ requires-dist = [
     { name = "opentelemetry-exporter-prometheus", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-fastapi", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
-    { name = "opik", marker = "extra == 'opik'", specifier = ">=1.6.3,<2.0.0" },
+    { name = "opik", marker = "extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -8417,7 +8450,9 @@ integration = [
     { name = "langchain-community" },
     { name = "langchain-mongodb" },
     { name = "langchain-openai" },
+    { name = "langchain-perplexity" },
     { name = "langchain-qdrant" },
+    { name = "langchain-weaviate" },
     { name = "lxml" },
 ]
 
@@ -8483,7 +8518,9 @@ integration = [
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-mongodb", specifier = ">=0.11.0" },
     { name = "langchain-openai", specifier = ">=1.1.12,<2.0.0" },
+    { name = "langchain-perplexity", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-qdrant", specifier = ">=1.1.0" },
+    { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "lxml", specifier = ">=5.0.0" },
 ]
 
@@ -11202,7 +11239,7 @@ wheels = [
 
 [[package]]
 name = "opik"
-version = "1.11.14"
+version = "2.0.47"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3-stubs", extra = ["bedrock-runtime"] },
@@ -11225,9 +11262,9 @@ dependencies = [
     { name = "uuid6" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/65/00eb1eb10e301e4cc7498193e0d0a34fb1204f300f0a62e2a9d1a8635aa2/opik-1.11.14.tar.gz", hash = "sha256:9e1e0580e84caea5b0ef987160911f4d2f3dd62285a58ac6ad595565efdb9ab8", size = 890564, upload-time = "2026-04-17T08:14:19.095Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/4b/47/017f441773b15c52492772f1322e58891ed452534cc48924e3a1514350bc/opik-2.0.47.tar.gz", hash = "sha256:ea5278b11a219516a5c7625c8331e8ff8e276219d7189bc4db260d04af0e1ea3", size = 1005249, upload-time = "2026-05-25T04:44:06.104Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/27/7baba6a280574a5cfe840600b1db1835bc583288d511a81ef1498cbc36c6/opik-1.11.14-py3-none-any.whl", hash = "sha256:72fe9491f67ad032ebae37cb77f43d7559d272aba3b140a73a29bd709d3047a5", size = 1475478, upload-time = "2026-04-17T08:14:17.601Z" },
+    { url = "https://files.pythonhosted.org/packages/3b/72/58dcedaca964398d64824b0d85311e89031cf13ec100ee0440c65d87e5cc/opik-2.0.47-py3-none-any.whl", hash = "sha256:aa1a1aadbff5c804355a6645e55b78739fe44d6d055d74676495a42d756c4451", size = 1623856, upload-time = "2026-05-25T04:44:03.994Z" },
 ]
 
 [[package]]
@@ -11597,6 +11634,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/9f/09/a3b2a32ce498f405dce4320267e99b1b076c1ea39ad01151a353bc7f81d7/peewee-4.0.6.tar.gz", hash = "sha256:ea2f78f24ff9e3660281dc5b0be8bc00d9a9514bdc40c98e416fcd042b66ac6a", size = 724591, upload-time = "2026-05-20T13:18:17.26Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/69/6a/e1455b94ee48f5666f2e7831b6247098794bfe9747da457111be4d0bea10/peewee-4.0.6-py3-none-any.whl", hash = "sha256:5fa665913c410f0b5faef1469ed0aa9eceb9fef262665ebbb6f29408f826eeeb", size = 146222, upload-time = "2026-05-20T13:18:15.694Z" },
+]
+
+[[package]]
+name = "perplexityai"
+version = "0.34.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/62/55/3b0f2551a1ff143f3f3118f6374be147fefac41e9fd647355c6b51222db4/perplexityai-0.34.0.tar.gz", hash = "sha256:c2f70eaaa8b51681e2e9a17b0d0f30f573739641cc2f639fa1c926a48eb9497f", size = 138733, upload-time = "2026-05-13T22:52:50.513Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/ac/44/6bc67dcc5c7fa0ffaea51990bdf6158846e968da434c5eb7272f0db57c8a/perplexityai-0.34.0-py3-none-any.whl", hash = "sha256:df08280b320ff755777d5d044f74d03fed44789337ad16ed6d75f07619e64a03", size = 131934, upload-time = "2026-05-13T22:52:48.425Z" },
 ]
 
 [[package]]
