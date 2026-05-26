@@ -1,5 +1,5 @@
 ---
-title: Deploy Langflow on watsonx Orchestrate
+title: Deploy Langflow agents on watsonx Orchestrate
 slug: /deployment-wxo
 ---
 
@@ -12,7 +12,7 @@ Create a flow and deploy it to [IBM watsonx Orchestrate](https://www.ibm.com/doc
 
 Deploying a flow on IBM watsonx Orchestrate is different from the other Langflow deployment options.
 This workflow **does not** deploy a full-featured Langflow server and flow builder UI.
-Instead, Langflow packages your selected flow and flow version, and then publishes it to IBM watsonx Orchestrate as a tool that an IBM watsonx Orchestrate agent can call.
+Instead, Langflow packages your selected flow and flow version, and then publishes it to IBM watsonx Orchestrate as a tool that an IBM watsonx Orchestrate agent can execute.
 Langflow is used to build and configure the flow, while IBM watsonx Orchestrate hosts the agent experience and invokes the deployed flow as part of that agent's toolset.
 
 ## Prerequisites
@@ -25,7 +25,7 @@ Langflow is used to build and configure the flow, while IBM watsonx Orchestrate 
 
 1. Create a flow in the Langflow UI, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).
 
-2. Click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+2. To deploy this flow to watsonx Orchestrate, click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
 The **Provider** pane opens.
 
 3. Enter the **Name**, **Service Instance URL**, and **API Key** from your IBM watsonx Orchestrate instance.
@@ -40,18 +40,23 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
 
 4. Click **Next**.
    The **Deployment Type** pane opens.
-5. Enter a **Type**, **Agent Name**, **Model**, and **Description**.
+5. Enter a **Type**, **Agent Name**, **Model**, and **Description**, and then click **Next**.
 
     The **Type** is always **Agent**. The deployed flow is an IBM watsonx Orchestrate agent with your flow available as a tool the agent can call.
 
     The **Model** list is populated from the connected watsonx Orchestrate instance, not Langflow.
 
-6. To open the **Attach Flows** pane, click the **Attach Flows** tab. Select a flow and flow version to deploy.
-7. To open the **Create Connections** pane, click the **Create Connections** tab. Create a new connection, or select an existing connection to bind to the flow.
+6. In the **Attach Flows** pane, in the **Available Flows** list, select a flow and flow version to deploy.
+    For this example, select the simple agent flow you created.
+    By default, the flow is version 1.
+7. To configure the watsonx Orchestrate connection, click **Create Connection**.
+   In this tab, you can create a new connection, or select an existing connection to bind to the flow.
 
    To create a new connection, do the following:
 
-      1. Enter a **Connection Name** and any environment variables the flow requires, such as the `OPENAI_API_KEY`. Langflow auto-detects global variables from the flow JSON file, and you can add additional variables.
+      1. Enter a **Connection Name** and any environment variables the flow requires, such as the `OPENAI_API_KEY` for the simple agent flow.
+      Langflow auto-detects global variables from the flow JSON file.
+      Click <Icon name="Plus" aria-hidden="true"/> **Add variable** to add any additional environment variables.
 
       2. To add the new connection to the list of available connections, click **Create Connection**.
 
@@ -75,7 +80,15 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
 
 10. Click **Test** to open a chat window with your agent on watsonx Orchestrate.
     Enter a question, and the agent responds using the connected flow as a tool.
-11. Navigate to your IBM watsonx Orchestrate deployment, and then confirm that your Langflow flow is listed as an agent.
+11. In your IBM watsonx Orchestrate deployment, navigate to **Agent Chat** > **Manage Agents**, and confirm that your Langflow flow is listed as an agent.
+12. To test the agent in watsonx Orchestrate, click **Talk to agent**, and then enter a question.
+    The agent responds using your Langflow flow as a tool connected to watsonx Orchestrate.
+13. To deploy the watsonx Orchestrate agent to a live environment, click **Deploy**.
+14. Optionally, click **Activate agent monitoring**.
+15. To view your agent's metrics, click **Agent chat** > **Agent analytics**, and then select your agent.
+    This page includes metrics for your agent, such as Total messages, Failed messages, and Latency average.
+    To view traces for each agent request, click **Trace Detail**.
+    For more information, see [Monitoring agents](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=monitoring-agents).
 
 ## Manage deployments in Langflow
 
