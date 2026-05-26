@@ -12,7 +12,6 @@ from lfx.components.ibm.db2_security import (
     validate_identifier,
     validate_port,
 )
-from lfx.helpers.data import docs_to_data
 from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.io import Output, QueryInput
 from lfx.schema.data import Data
@@ -236,17 +235,25 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
 
-        # Add documents with metadata filtering (like Chroma)
+        # Add documents with minimal metadata only to avoid storing file/session-related fields.
         if documents and self.embedding is not None:
             self.log(f"Adding {len(documents)} documents to the Vector Store.")
             try:
                 from langchain_community.vectorstores.utils import filter_complex_metadata
 
                 filtered_documents = filter_complex_metadata(documents)
-                vector_store.add_documents(filtered_documents)
+                minimal_documents = []
+                for doc in filtered_documents:
+                    doc.metadata = {}
+                    minimal_documents.append(doc)
+                vector_store.add_documents(minimal_documents)
             except ImportError:
-                self.log("Warning: Could not import filter_complex_metadata. Adding documents without filtering.")
-                vector_store.add_documents(documents)
+                self.log("Warning: Could not import filter_complex_metadata. Adding documents with stripped metadata.")
+                minimal_documents = []
+                for doc in documents:
+                    doc.metadata = {}
+                    minimal_documents.append(doc)
+                vector_store.add_documents(minimal_documents)
         else:
             self.log("No documents to add to the Vector Store.")
 
@@ -447,7 +454,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 k=self.number_of_results,
             )
 
-        return docs_to_data(docs)
+        return [Data(text=doc.page_content, data={"text": doc.page_content}) for doc in docs]
 
     def build(self):  # type: ignore[override]
         """Build the component based on the selected mode."""
