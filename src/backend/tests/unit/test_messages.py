@@ -189,14 +189,14 @@ def test_convert_to_langchain(method_name):
 
 
 def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
-    warnings: list[str] = []
+    events: list[str] = []
 
-    def warning(event: str, **_kwargs):
-        warnings.append(event)
+    def record(event: str, **_kwargs):
+        events.append(event)
 
     monkeypatch.setattr(
         "lfx.schema.message.logger",
-        SimpleNamespace(warning=warning, error=lambda *_args, **_kwargs: None),
+        SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
     )
 
     message = Message(
@@ -211,7 +211,7 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
 
     assert lc_message.type == "human"
     assert lc_message.content == [{"type": "text", "text": "Hello"}]
-    assert any("Skipping attachment during message conversion" in event for event in warnings)
+    assert any("Skipping attachment during message conversion" in event for event in events)
 
 
 def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
@@ -232,7 +232,7 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
     assert isinstance(lc_message.content, list)
     assert lc_message.content[0] == {"type": "text", "text": "Hello"}
     assert lc_message.content[1]["type"] == "text"
-    assert "Attachment: table.csv" in lc_message.content[1]["text"]
+    assert "File 'table.csv' contents:" in lc_message.content[1]["text"]
     assert "name,role" in lc_message.content[1]["text"]
 
 
