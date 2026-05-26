@@ -1,17 +1,11 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test.describe("Assistant Panel UI", { tag: ["@release"] }, () => {
   test("should open and close from canvas controls", async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    skipIfMissing.openAiKey();
+    await openStarterProject(page, "Basic Prompting");
 
     // Panel should not be visible initially
     await expect(page.getByTestId("assistant-panel")).not.toBeVisible();

@@ -1,24 +1,29 @@
 import { renderHook } from "@testing-library/react";
+import type {
+  GetMemoryMessagesApiResponse,
+  MemoryMessageApiItem,
+} from "@/controllers/API/queries/memories/use-get-memory-messages";
 import { useMemoryDocuments } from "../useMemoryDocuments";
 
 const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
 
-let mockPages: any[] = [];
+type MessagePageFixture = Partial<GetMemoryMessagesApiResponse> & {
+  items: Partial<MemoryMessageApiItem>[];
+};
 
-jest.mock(
-  "@/controllers/API/queries/memories/use-get-memory-session-messages",
-  () => ({
-    useGetMemorySessionMessages: () => ({
-      data: { pages: mockPages, pageParams: [1] },
-      isLoading: false,
-      fetchNextPage: mockFetchNextPage,
-      hasNextPage: false,
-      isFetchingNextPage: false,
-      refetch: mockRefetch,
-    }),
+let mockPages: MessagePageFixture[] = [];
+
+jest.mock("@/controllers/API/queries/memories/use-get-memory-messages", () => ({
+  useGetMemoryMessages: () => ({
+    data: { pages: mockPages, pageParams: [1] },
+    isLoading: false,
+    fetchNextPage: mockFetchNextPage,
+    hasNextPage: false,
+    isFetchingNextPage: false,
+    refetch: mockRefetch,
   }),
-);
+}));
 
 const memorySessions = [
   {
@@ -106,7 +111,10 @@ describe("useMemoryDocuments", () => {
     expect(result.current.docsData.documents![0].content).toBe("Valid");
   });
 
-  it("filters documents to the active sessionId", () => {
+  it("returns every message from the API without re-filtering by session", () => {
+    // Server is now the source of truth for session filtering; the hook
+    // must surface whatever the API returned, even when multiple sessions
+    // are present in the payload (e.g. when sessionId is null).
     mockPages = [
       {
         items: [
@@ -127,11 +135,13 @@ describe("useMemoryDocuments", () => {
     ];
 
     const { result } = renderHook(() =>
-      useMemoryDocuments({ memoryId: "m1", sessionId: "s1", memorySessions }),
+      useMemoryDocuments({ memoryId: "m1", sessionId: null, memorySessions }),
     );
 
-    expect(result.current.docsData.documents).toHaveLength(1);
-    expect(result.current.docsData.documents![0].content).toBe("From s1");
+    expect(result.current.docsData.documents).toHaveLength(2);
+    const contents = result.current.docsData.documents!.map((d) => d.content);
+    expect(contents).toContain("From s1");
+    expect(contents).toContain("From s2");
   });
 
   it("builds the sessions list from memorySessions", () => {

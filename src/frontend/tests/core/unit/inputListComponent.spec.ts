@@ -8,6 +8,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "InputListComponent",
   { tag: ["@release", "@workspace"] },
@@ -16,7 +17,7 @@ test(
 
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
 
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,

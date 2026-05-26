@@ -3,8 +3,8 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
-import useFlowStore from "@/stores/flowStore";
 import useAlertStore from "@/stores/alertStore";
+import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
 import { useGetFlowId } from "../../../hooks/use-get-flow-id";
 import { SessionSelector } from "./session-selector";
@@ -142,18 +142,23 @@ export function ChatSidebar({
       ) : (
         <div className="flex flex-col gap-1">
           {sessions.map((session, index) => {
-            const isDefaultSession = session === currentFlowId;
             const isFirstNonDefaultSession =
               index > 0 && sessions[index - 1] === currentFlowId;
 
             return (
               <div key={session}>
-                {/* Show Select All controls after the default session */}
+                {/* Show Select All controls after the default session.
+                    Wrapper is sized + padded to mirror a SessionSelector
+                    row (h-8, no extra vertical padding) so the trash
+                    button lines up vertically and horizontally with the
+                    `⋮` MoreMenu triggers in the session rows below. */}
                 {isFirstNonDefaultSession && selectableSessions.length > 0 && (
-                  <div className="flex items-center justify-between px-2 py-1 mb-1">
-                    <div
-                      className="flex items-center gap-2 cursor-pointer"
+                  <div className="flex h-8 items-center justify-between">
+                    <button
+                      type="button"
+                      className="flex items-center gap-2 cursor-pointer px-2 bg-transparent border-0 p-0"
                       onClick={handleSelectAll}
+                      aria-pressed={allSelected}
                       data-testid="select-all-checkbox"
                     >
                       <div className="flex items-center justify-center w-4 h-4 flex-shrink-0">
@@ -170,31 +175,29 @@ export function ChatSidebar({
                       <span className="text-sm text-muted-foreground select-none">
                         {t("chat.selectAll")}
                       </span>
-                    </div>
-                    <div className="w-8 h-8 flex items-center justify-center">
-                      {selectedSessions.size > 0 && (
-                        <ShadTooltip
-                          styleClasses="z-50"
-                          content={t("chat.deleteSessionsCount", {
-                            count: selectedSessions.size,
-                          })}
-                          side="top"
+                    </button>
+                    {selectedSessions.size > 0 && (
+                      <ShadTooltip
+                        styleClasses="z-50"
+                        content={t("chat.deleteSessionsCount", {
+                          count: selectedSessions.size,
+                        })}
+                        side="top"
+                      >
+                        <Button
+                          data-testid="bulk-delete-button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 p-2 rounded text-status-red hover:text-status-red hover:bg-error-background"
+                          onClick={handleBulkDelete}
                         >
-                          <Button
-                            data-testid="bulk-delete-button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 w-8 p-0 text-status-red hover:text-status-red hover:bg-error-background"
-                            onClick={handleBulkDelete}
-                          >
-                            <ForwardedIconComponent
-                              name="Trash2"
-                              className="h-4 w-4"
-                            />
-                          </Button>
-                        </ShadTooltip>
-                      )}
-                    </div>
+                          <ForwardedIconComponent
+                            name="Trash2"
+                            className="h-4 w-4"
+                          />
+                        </Button>
+                      </ShadTooltip>
+                    )}
                   </div>
                 )}
                 <SessionSelector
