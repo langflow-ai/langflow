@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypeVar
+from uuid import uuid4
 
 from lfx.services.adapters.deployment.exceptions import InvalidContentError
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
@@ -11,13 +12,90 @@ from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey,
 from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
-    build_langflow_wxo_resource_name,
-    validate_technical_name,
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
+    WXO_SANITIZE_RE,
+    WXO_TRANSLATE,
 )
 
 RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+LANGFLOW_WXO_RESOURCE_NAME_PREFIX = "langflow_"
+T = TypeVar("T")
+
+
+def normalize_wxo_name(name: str) -> str:
+    return WXO_SANITIZE_RE.sub("", name.translate(WXO_TRANSLATE))
+
+
+def validate_wxo_name(name: str, *, field_label: str) -> str:
+    """Normalize and validate a wxO resource name."""
+    normalized_name = normalize_wxo_name(str(name))
+    if not normalized_name:
+        msg = f"{field_label} must include at least one alphanumeric character."
+        raise InvalidContentError(message=msg)
+    if not normalized_name[0].isalpha():
+        msg = f"{field_label} must start with a letter."
+        raise InvalidContentError(message=msg)
+    return normalized_name
+
+
+def normalize_wxo_display_name_segment(display_name: str, *, resource: str) -> str:
+    normalized_display_name = normalize_wxo_name(display_name).strip("_")
+    if normalized_display_name:
+        return normalized_display_name
+    normalized_resource = normalize_wxo_name(resource).strip("_").lower()
+    if not normalized_resource:
+        msg = (
+            "Display name did not include any alphanumeric characters, so fallback naming used the 'resource' "
+            "argument. The 'resource' argument must include at least one alphanumeric character. "
+            f"Received: '{resource}'"
+        )
+        raise InvalidContentError(message=msg)
+    return normalized_resource
+
+
+def build_langflow_wxo_resource_name(display_name: str, *, resource: str) -> str:
+    normalized_display_name = normalize_wxo_display_name_segment(display_name, resource=resource)
+    return f"{LANGFLOW_WXO_RESOURCE_NAME_PREFIX}{normalized_display_name}_{uuid4().hex[:8]}"
+
+
+def validate_technical_name(name: str | None, *, field_label: str) -> str:
+    technical_name = ensure_field_not_none(name, field_label=field_label)
+    if not technical_name:
+        msg = f"{field_label} must include at least one alphanumeric character."
+        raise InvalidContentError(message=msg)
+    if not technical_name[0].isalpha():
+        msg = f"{field_label} must start with a letter."
+        raise InvalidContentError(message=msg)
+    if WXO_SANITIZE_RE.search(technical_name):
+        msg = f"{field_label} must only contain letters, numbers, and underscores."
+        raise InvalidContentError(message=msg)
+    return technical_name
+
+
+def ensure_field_not_none(value: T | None, *, field_label: str) -> T:
+    """Validate that an explicitly provided field is not null."""
+    if value is None:
+        msg = f"{field_label} cannot be set to null."
+        raise InvalidContentError(message=msg)
+    return value
+
+
+def ensure_field_not_empty(value: str | None, *, field_label: str) -> str:
+    """Validate that an explicitly provided string field is neither null nor blank."""
+    field_value = ensure_field_not_none(value, field_label=field_label)
+    if not field_value.strip():
+        msg = f"{field_label} cannot be empty."
+        raise InvalidContentError(message=msg)
+    return field_value
+
+
+def validate_description(description: str | None, *, field_label: str) -> str | None:
+    """Validate an explicit description update."""
+    if description is not None and not description.strip():
+        msg = f"{field_label} cannot be empty."
+        raise InvalidContentError(message=msg)
+    return description
 
 
 def _validate_non_empty_string(value: str) -> str:

@@ -21,11 +21,13 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     FlowToolBindingSpec,
     create_and_upload_wxo_flow_tools_with_bindings,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxResultToolRefBinding
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxResultToolRefBinding,
+    validate_wxo_name,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_error_detail,
-    validate_wxo_name,
 )
 
 if TYPE_CHECKING:

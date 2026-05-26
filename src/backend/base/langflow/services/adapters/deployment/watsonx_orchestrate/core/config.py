@@ -31,10 +31,10 @@ from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPay
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import resolve_runtime_credentials
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
 from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import extract_langflow_connections_binding
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     raise_as_deployment_error,
     require_single_deployment_id,
-    validate_wxo_name,
 )
 
 logger = logging.getLogger(__name__)

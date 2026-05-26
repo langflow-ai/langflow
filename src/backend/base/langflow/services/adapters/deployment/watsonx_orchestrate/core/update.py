@@ -45,14 +45,12 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxRenameToolOperation,
     WatsonxResultToolRefBinding,
     WatsonxUnbindOperation,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_langflow_wxo_resource_name,
-    dedupe_list,
     ensure_field_not_empty,
     validate_description,
     validate_technical_name,
 )
+from langflow.services.adapters.deployment.watsonx_orchestrate.utils import dedupe_list
 
 if TYPE_CHECKING:
     from lfx.services.adapters.deployment.schema import (

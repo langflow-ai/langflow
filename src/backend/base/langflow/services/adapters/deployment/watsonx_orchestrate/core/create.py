@@ -47,13 +47,13 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxProviderCreateApplyResult,
     WatsonxToolAppBinding,
     WatsonxToolRefBinding,
+    build_langflow_wxo_resource_name,
+    validate_technical_name,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
-    build_langflow_wxo_resource_name,
     dedupe_list,
     raise_as_deployment_error,
-    validate_technical_name,
 )
 
 if TYPE_CHECKING:

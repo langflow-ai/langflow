@@ -81,24 +81,24 @@ TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
 def _normalized_provider_app_id(app_id: str) -> str:
-    return utils_module.validate_wxo_name(app_id, field_label="Connection app id")
+    return payloads_module.validate_wxo_name(app_id, field_label="Connection app id")
 
 
 def _assert_langflow_agent_name(agent_name: str, *, display_name: str | None = None) -> None:
     prefix = "langflow_"
     assert agent_name.startswith(prefix)
     if display_name is not None:
-        normalized_display_name = utils_module.normalize_wxo_name(display_name).strip("_")
+        normalized_display_name = payloads_module.normalize_wxo_name(display_name).strip("_")
         assert normalized_display_name
         assert agent_name.startswith(f"{prefix}{normalized_display_name}_")
     uuid_segment = agent_name.rsplit("_", maxsplit=1)[-1]
     assert len(uuid_segment) == 8
     assert all(char in "0123456789abcdef" for char in uuid_segment)
-    assert utils_module.validate_wxo_name(agent_name, field_label="Agent name") == agent_name
+    assert payloads_module.validate_wxo_name(agent_name, field_label="Agent name") == agent_name
 
 
 def _agent_technical_name(display_name: str = "my deployment") -> str:
-    normalized_display_name = utils_module.normalize_wxo_name(display_name).strip("_")
+    normalized_display_name = payloads_module.normalize_wxo_name(display_name).strip("_")
     return f"langflow_{normalized_display_name}_1234abcd"
 
 
@@ -6268,7 +6268,7 @@ def test_wxo_client_initializes_subclients_eagerly(monkeypatch):
 
 
 def test_normalize_wxo_name():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import normalize_wxo_name
 
     assert normalize_wxo_name("Hello World!") == "Hello_World"
     assert normalize_wxo_name("test-name-123") == "test_name_123"
@@ -6277,21 +6277,21 @@ def test_normalize_wxo_name():
 
 
 def test_validate_wxo_name_valid():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 
     assert validate_wxo_name("my_deployment", field_label="Tool name") == "my_deployment"
     assert validate_wxo_name("My Deployment!", field_label="Tool name") == "My_Deployment"
 
 
 def test_validate_wxo_name_empty():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 
     with pytest.raises(InvalidContentError, match="Tool name must include at least one alphanumeric character"):
         validate_wxo_name("!!!", field_label="Tool name")
 
 
 def test_validate_wxo_name_starts_with_digit():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 
     with pytest.raises(InvalidContentError, match="Tool name must start with a letter"):
         validate_wxo_name("123abc", field_label="Tool name")
@@ -8518,7 +8518,9 @@ def test_flow_artifact_provider_data_uses_resource_fallback_for_symbol_only_labe
     )
 
     assert provider_data.tool_name.startswith("langflow_tool_")
-    assert utils_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+    assert (
+        payloads_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+    )
 
 
 def test_flow_artifact_provider_data_accepts_leading_digit_display_label():
@@ -8530,7 +8532,9 @@ def test_flow_artifact_provider_data_accepts_leading_digit_display_label():
     )
 
     assert provider_data.tool_name.startswith("langflow_123flow_")
-    assert utils_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+    assert (
+        payloads_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+    )
 
 
 def test_flow_artifact_provider_data_validates_explicit_provider_technical_name():

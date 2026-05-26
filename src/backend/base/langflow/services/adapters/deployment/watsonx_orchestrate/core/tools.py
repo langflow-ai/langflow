@@ -28,10 +28,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
     WatsonxToolRefBinding,
+    normalize_wxo_name,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
-    normalize_wxo_name,
     raise_as_deployment_error,
     require_tool_id,
 )
