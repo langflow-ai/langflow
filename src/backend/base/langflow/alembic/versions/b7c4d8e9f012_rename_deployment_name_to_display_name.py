@@ -14,7 +14,6 @@ This is intentionally an atomic expand/contract migration, matching the
 deployment-table migration style used on this branch.
 """
 
-from collections import defaultdict
 from collections.abc import Sequence
 
 import sqlalchemy as sa
@@ -38,58 +37,6 @@ NAME_INDEX = "ix_deployment_name"
 def _index_exists(conn, table_name: str, index_name: str) -> bool:
     inspector = sa.inspect(conn)
     return index_name in {index["name"] for index in inspector.get_indexes(table_name)}
-
-
-def _dedupe_labels_for_unique_name(conn, column_name: str) -> None:
-    """Suffix duplicate labels so downgrade can restore the old unique name constraint."""
-    rows = (
-        conn.execute(
-            sa.text(
-                f"""
-                SELECT id, deployment_provider_account_id, {column_name} AS label
-                FROM deployment
-                ORDER BY deployment_provider_account_id, {column_name}, id
-                """  # noqa: S608 - column_name is selected from migration constants only.
-            )
-        )
-        .mappings()
-        .all()
-    )
-    used_by_provider: dict[str, set[str]] = defaultdict(set)
-    updates: list[dict[str, str]] = []
-
-    for row in rows:
-        provider_id = str(row["deployment_provider_account_id"])
-        deployment_id = str(row["id"])
-        label = str(row["label"] or "")
-        used_labels = used_by_provider[provider_id]
-
-        if label not in used_labels:
-            used_labels.add(label)
-            continue
-
-        candidate = f"{label} ({deployment_id})"
-        counter = 2
-        while candidate in used_labels:
-            candidate = f"{label} ({deployment_id}-{counter})"
-            counter += 1
-
-        used_labels.add(candidate)
-        updates.append({"id": deployment_id, "label": candidate})
-
-    if not updates:
-        return
-
-    conn.execute(
-        sa.text(
-            f"""
-            UPDATE deployment
-            SET {column_name} = :label
-            WHERE id = :id
-            """  # noqa: S608 - column_name is selected from migration constants only.
-        ),
-        updates,
-    )
 
 
 def upgrade() -> None:
@@ -145,20 +92,37 @@ def downgrade() -> None:
     old_column_exists = migration.column_exists(DEPLOYMENT_TABLE, OLD_NAME_COLUMN, conn)
     display_name_exists = migration.column_exists(DEPLOYMENT_TABLE, DISPLAY_NAME_COLUMN, conn)
     should_restore_name_unique_constraint = old_column_exists or display_name_exists
+    id_to_text = "CAST(id AS TEXT)"
 
     if display_name_exists and old_column_exists:
+        # Deterministically suffix every restored name with deployment ID so
+        # per-provider uniqueness can be recreated without collision scanning.
+        # Use a single UPDATE so partial/intermediate states never expose
+        # transient duplicate `name` values.
         conn.execute(
             sa.text(
-                """
+                f"""
                 UPDATE deployment
-                SET name = display_name
-                WHERE name IS NULL AND display_name IS NOT NULL
-                """
+                SET name = CASE
+                    WHEN name IS NOT NULL THEN name || ' (' || {id_to_text} || ')'
+                    WHEN display_name IS NOT NULL THEN display_name || ' (' || {id_to_text} || ')'
+                    ELSE {id_to_text}
+                END
+                """  # noqa: S608 - id_to_text is a migration-local constant.
             )
         )
-        _dedupe_labels_for_unique_name(conn, OLD_NAME_COLUMN)
     elif display_name_exists:
-        _dedupe_labels_for_unique_name(conn, DISPLAY_NAME_COLUMN)
+        conn.execute(
+            sa.text(
+                f"""
+                UPDATE deployment
+                SET display_name = CASE
+                    WHEN display_name IS NOT NULL THEN display_name || ' (' || {id_to_text} || ')'
+                    ELSE {id_to_text}
+                END
+                """  # noqa: S608 - id_to_text is a migration-local constant.
+            )
+        )
 
     with op.batch_alter_table(DEPLOYMENT_TABLE, schema=None) as batch_op:
         if display_name_exists and not old_column_exists:
