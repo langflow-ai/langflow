@@ -18,6 +18,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
@@ -33,14 +34,12 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
 import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -77,12 +76,12 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
-import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
