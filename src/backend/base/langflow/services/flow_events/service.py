@@ -90,6 +90,7 @@ class FlowEventsService(Service):
         if event_type not in self._VALID_EVENT_TYPES:
             msg = f"Invalid event type: {event_type!r}. Must be one of {sorted(self._VALID_EVENT_TYPES)}"
             raise ValueError(msg)
+
         now = time.time()
         event = FlowEvent(type=event_type, timestamp=now, summary=summary)
         expires_at = now + self.TTL_SECONDS
@@ -146,7 +147,6 @@ class FlowEventsService(Service):
             ).fetchall()
 
         all_events = [FlowEvent(type=r[0], timestamp=r[1], summary=r[2]) for r in rows]
-
         after = [e for e in all_events if e.timestamp > since]
 
         if not after and not all_events:
