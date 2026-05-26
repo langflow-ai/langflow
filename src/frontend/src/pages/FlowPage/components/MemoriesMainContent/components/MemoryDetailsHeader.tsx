@@ -9,6 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
@@ -65,17 +71,35 @@ export function MemoryDetailsHeader({
     <div className="flex items-end justify-between border-b border-border bg-background px-6 py-4">
       <div className="flex flex-col gap-3">
         <h2 className="text-base font-semibold">{memory.name}</h2>
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-muted-foreground">
-            {t("memory.activate")}
-          </span>
-          <Switch
-            checked={memory.is_active}
-            onCheckedChange={(checked) => handleToggleActive(checked)}
-            aria-label={t("memory.toggleAutoCapture")}
-            className="data-[state=checked]:bg-accent-emerald-foreground"
-          />
-        </div>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <div className="flex cursor-default items-center gap-2">
+                <span className="text-sm text-muted-foreground">
+                  {t("memory.activate")}
+                </span>
+                <Switch
+                  checked={memory.is_active}
+                  onCheckedChange={(checked) => handleToggleActive(checked)}
+                  aria-label={t("memory.toggleAutoCapture")}
+                  className="data-[state=checked]:bg-accent-emerald-foreground"
+                />
+              </div>
+            </TooltipTrigger>
+            <TooltipContent className="max-w-xs">
+              <p>{t("memory.autoCaptureTooltip")}</p>
+              <a
+                href="https://docs.langflow.org/memory-bases"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 flex items-center gap-1 text-xs text-primary underline"
+              >
+                {t("memory.readTheDocs")}
+                <IconComponent name="ExternalLink" className="h-3 w-3" />
+              </a>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
 
       <div className="flex items-center gap-4">
