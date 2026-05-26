@@ -1,0 +1,397 @@
+name: DB Migration Validation
+
+on:
+  workflow_call:
+    inputs:
+      nightly_tag:
+        description: "Nightly tag to test migration to"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      nightly_tag:
+        description: "Nightly tag to test migration to (e.g., langflowai/langflow-nightly:latest)"
+        required: false
+        type: string
+        default: "langflowai/langflow-nightly:latest"
+  # Note: This workflow is called by nightly_build.yml after Docker images are built
+
+env:
+  PYTHON_VERSION: "3.13"
+  POSTGRES_DB: langflow_test
+  POSTGRES_USER: langflow
+  POSTGRES_PASSWORD: langflow_test_pass  # pragma: allowlist secret
+
+jobs:
+  migration-pip-venv:
+    name: "Migration Test: pip/venv (stable → nightly)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Create test directory
+        run: |
+          mkdir -p migration-test
+          cd migration-test
+
+      - name: Install latest stable Langflow with PostgreSQL
+        working-directory: migration-test
+        run: |
+          echo "Installing latest stable langflow[postgresql]..."
+          uv venv
+          source .venv/bin/activate
+          uv pip install "langflow[postgresql]"
+
+          # Verify installation
+          python -c "import langflow; print(f'Installed Langflow version: {langflow.__version__}')"
+
+      - name: Initialize database with stable version
+        working-directory: migration-test
+        env:
+          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
+          LANGFLOW_SUPERUSER: admin
+          LANGFLOW_SUPERUSER_PASSWORD: admin123  # pragma: allowlist secret
+        run: |
+          source .venv/bin/activate
+
+          echo "Starting Langflow to initialize database..."
+          timeout 120 bash -c '
+            python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+            LANGFLOW_PID=$!
+            until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do
+              sleep 2
+            done
+            kill $LANGFLOW_PID
+            wait $LANGFLOW_PID 2>/dev/null || true
+          ' || {
+            echo "Failed to start Langflow stable version"
+            exit 1
+          }
+
+          echo "Database initialized successfully with stable version"
+
+      - name: Create witness flow
+        working-directory: migration-test
+        env:
+          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+        run: |
+          source .venv/bin/activate
+
+          # Start Langflow briefly to create test data
+          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          LANGFLOW_PID=$!
+
+          # Wait for startup
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
+
+          # Create a simple flow via API
+          curl -fsSL -X POST http://127.0.0.1:7860/api/v1/flows/ \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "Migration Witness Flow",
+              "description": "Test flow to verify data persistence across migration",
+              "data": {"nodes": [], "edges": []}
+            }' > flow_response.json
+
+          # Verify flow was created
+          if ! grep -q '"id"' flow_response.json; then
+            echo "❌ Flow creation failed - no id in response"
+            cat flow_response.json
+            exit 1
+          fi
+          echo "✅ Witness flow created successfully"
+
+          # Stop Langflow
+          kill $LANGFLOW_PID
+          wait $LANGFLOW_PID 2>/dev/null || true
+
+          echo "Witness data created"
+
+      - name: Upgrade to nightly version
+        working-directory: migration-test
+        run: |
+          source .venv/bin/activate
+
+          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
+          echo "Upgrading to nightly version: $NIGHTLY_TAG"
+
+          # Extract version from Docker tag (format: langflowai/langflow-nightly:v1.10.0.dev20260522)
+          if [[ "$NIGHTLY_TAG" == *":"* ]]; then
+            VERSION="${NIGHTLY_TAG##*:}"
+            echo "Extracted version from tag: $VERSION"
+
+            # Strip 'v' prefix if present (PyPI doesn't use 'v' prefix)
+            VERSION="${VERSION#v}"
+            echo "Version for PyPI: $VERSION"
+
+            if [[ "$VERSION" == "latest" ]]; then
+              # Install latest nightly from PyPI
+              uv pip install --upgrade langflow-nightly[postgresql]
+            else
+              # Install specific version
+              uv pip install --upgrade "langflow-nightly[postgresql]==$VERSION"
+            fi
+          else
+            # Direct version string (strip 'v' prefix if present)
+            VERSION="${NIGHTLY_TAG#v}"
+            uv pip install --upgrade "langflow-nightly[postgresql]==$VERSION"
+          fi
+
+          # Verify upgrade
+          python -c "import langflow; print(f'Upgraded to Langflow version: {langflow.__version__}')"
+
+      - name: Run migration and verify startup
+        working-directory: migration-test
+        env:
+          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
+          LANGFLOW_SUPERUSER: admin
+          LANGFLOW_SUPERUSER_PASSWORD: admin123  # pragma: allowlist secret
+        run: |
+          source .venv/bin/activate
+
+          echo "Starting Langflow nightly to run migrations..."
+          timeout 180 bash -c '
+            python -m langflow run --host 127.0.0.1 --port 7860 --backend-only > langflow_nightly.log 2>&1 &
+            LANGFLOW_PID=$!
+
+            until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do
+              if ! kill -0 $LANGFLOW_PID 2>/dev/null; then
+                echo "Langflow process died during startup"
+                cat langflow_nightly.log
+                exit 1
+              fi
+              sleep 2
+            done
+
+            echo "Langflow nightly started successfully"
+            kill $LANGFLOW_PID
+            wait $LANGFLOW_PID 2>/dev/null || true
+          ' || {
+            echo "Failed to start Langflow nightly version"
+            cat langflow_nightly.log || true
+            exit 1
+          }
+
+      - name: Verify witness data persisted
+        working-directory: migration-test
+        env:
+          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+        run: |
+          source .venv/bin/activate
+
+          # Start Langflow to query data
+          python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
+          LANGFLOW_PID=$!
+
+          timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
+
+          # Verify witness flow exists
+          curl -f http://127.0.0.1:7860/api/v1/flows/ > flows_after_migration.json
+
+          if grep -q "Migration Witness Flow" flows_after_migration.json; then
+            echo "✅ Witness flow found after migration"
+          else
+            echo "❌ Witness flow NOT found after migration"
+            cat flows_after_migration.json
+            kill $LANGFLOW_PID
+            exit 1
+          fi
+
+          kill $LANGFLOW_PID
+          wait $LANGFLOW_PID 2>/dev/null || true
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: migration-pip-venv-logs
+          path: |
+            migration-test/*.log
+            migration-test/*.json
+          retention-days: 7
+
+  migration-docker-compose:
+    name: "Migration Test: Docker Compose (stable → nightly)"
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+
+      - name: Create Docker Compose test directory
+        run: |
+          mkdir -p docker-migration-test
+          cd docker-migration-test
+
+      - name: Create Docker Compose file for stable
+        working-directory: docker-migration-test
+        run: |
+          cat > docker-compose.yml <<'EOF'
+          version: "3.8"
+
+          services:
+            langflow:
+              image: langflowai/langflow:latest
+              ports:
+                - "7860:7860"
+              environment:  # pragma: allowlist secret
+                - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow  # pragma: allowlist secret
+                - LANGFLOW_SUPERUSER=admin
+                - LANGFLOW_SUPERUSER_PASSWORD=admin123  # pragma: allowlist secret
+              depends_on:
+                postgres:
+                  condition: service_healthy
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:7860/health_check"]
+                interval: 10s
+                timeout: 5s
+                retries: 10
+
+            postgres:
+              image: postgres:16
+              environment:  # pragma: allowlist secret
+                - POSTGRES_USER=langflow
+                - POSTGRES_PASSWORD=langflow  # pragma: allowlist secret
+                - POSTGRES_DB=langflow
+              volumes:
+                - langflow_postgres_data:/var/lib/postgresql/data
+              healthcheck:
+                test: ["CMD-SHELL", "pg_isready -U langflow"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+
+          volumes:
+            langflow_postgres_data:
+          EOF
+
+      - name: Start stable Langflow with Docker Compose
+        working-directory: docker-migration-test
+        run: |
+          echo "Starting Langflow stable version..."
+          docker compose up -d
+
+          echo "Waiting for Langflow to be healthy..."
+          timeout 180 bash -c 'until docker compose exec -T langflow curl -f http://localhost:7860/health_check 2>/dev/null; do sleep 5; done' || {
+            echo "Langflow stable failed to start"
+            docker compose logs
+            exit 1
+          }
+
+          echo "Langflow stable is running"
+
+      - name: Create witness flow via API
+        working-directory: docker-migration-test
+        run: |
+          echo "Creating witness flow..."
+          curl -fsSL -X POST http://localhost:7860/api/v1/flows/ \
+            -H "Content-Type: application/json" \
+            -d '{
+              "name": "Docker Migration Witness Flow",
+              "description": "Test flow for Docker Compose migration",
+              "data": {"nodes": [], "edges": []}
+            }' > flow_response.json
+
+          # Verify flow was created
+          if ! grep -q '"id"' flow_response.json; then
+            echo "❌ Flow creation failed - no id in response"
+            cat flow_response.json
+            exit 1
+          fi
+          echo "✅ Witness flow created successfully"
+
+      - name: Stop stable Langflow (keep PostgreSQL volume)
+        working-directory: docker-migration-test
+        run: |
+          echo "Stopping Langflow stable..."
+          docker compose stop langflow
+          docker compose rm -f langflow
+
+      - name: Update to nightly image
+        working-directory: docker-migration-test
+        run: |
+          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
+          echo "Updating to nightly: $NIGHTLY_TAG"
+
+          # Update docker-compose.yml to use nightly image
+          sed -i "s|image: langflowai/langflow:latest|image: $NIGHTLY_TAG|" docker-compose.yml
+
+          cat docker-compose.yml
+
+      - name: Start nightly Langflow with same PostgreSQL volume
+        working-directory: docker-migration-test
+        run: |
+          echo "Starting Langflow nightly version..."
+          docker compose up -d langflow
+
+          echo "Waiting for Langflow nightly to be healthy..."
+          timeout 180 bash -c 'until docker compose exec -T langflow curl -f http://localhost:7860/health_check 2>/dev/null; do sleep 5; done' || {
+            echo "Langflow nightly failed to start"
+            docker compose logs langflow
+            exit 1
+          }
+
+          echo "Langflow nightly started successfully"
+
+      - name: Verify witness data persisted
+        working-directory: docker-migration-test
+        run: |
+          echo "Verifying witness flow..."
+          curl -f http://localhost:7860/api/v1/flows/ > flows_after_migration.json
+
+          if grep -q "Docker Migration Witness Flow" flows_after_migration.json; then
+            echo "✅ Witness flow found after Docker migration"
+          else
+            echo "❌ Witness flow NOT found after Docker migration"
+            cat flows_after_migration.json
+            exit 1
+          fi
+
+      - name: Collect logs on failure
+        if: failure()
+        working-directory: docker-migration-test
+        run: |
+          docker compose logs > docker-compose-logs.txt
+
+      - name: Upload logs on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: migration-docker-compose-logs
+          path: |
+            docker-migration-test/*.log
+            docker-migration-test/*.json
+            docker-migration-test/*.txt
+          retention-days: 7
+
+      - name: Cleanup
+        if: always()
+        working-directory: docker-migration-test
+        run: |
+          docker compose down -v
