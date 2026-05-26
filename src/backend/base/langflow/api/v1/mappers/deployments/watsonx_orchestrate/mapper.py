@@ -18,6 +18,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentUpdateResult,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    ItemResult,
     SnapshotListResult,
     VerifyCredentials,
 )
@@ -77,7 +78,6 @@ from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiProviderAccountCreate,
     WatsonxApiProviderAccountResponse,
     WatsonxApiProviderAccountUpdate,
-    WatsonxApiProviderDeploymentListItem,
     WatsonxApiSnapshotListProviderData,
     WatsonxApiUpsertFlowItem,
     WatsonxApiUpsertToolItem,
@@ -1251,26 +1251,17 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
         result: DeploymentListResult,
     ) -> DeploymentListResponse:
         provider_result = {
-            "deployments": [
-                self._shape_provider_deployment_list_entry(item) for item in result.deployments if str(item.id).strip()
-            ]
+            "deployments": [self._shape_provider_deployment_list_entry(item) for item in result.deployments]
         }
-        slot = self.api_payloads.deployment_list_result
-        if slot is None:
-            msg = "Watsonx deployment_list_result payload slot is not configured."
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        try:
-            validated_payload = slot.apply(provider_result)
-        except AdapterPayloadValidationError as exc:
-            first_error = exc.error.errors()[0] if exc.error.errors() else {}
-            detail = str(first_error.get("msg") or exc)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Invalid deployment list provider_data payload: {detail}",
-            ) from exc
+        validated_payload = self.parse_adapter_slot(
+            slot=self.api_payloads.deployment_list_result,
+            slot_name="deployment_list_result",
+            raw=provider_result,
+            operation="building deployment list provider payload",
+        )
         return DeploymentListResponse(
             deployments=None,
-            provider_data=validated_payload,
+            provider_data=validated_payload.model_dump(mode="json"),
         )
 
     def shape_deployment_list_items(
@@ -1503,34 +1494,19 @@ class WatsonxOrchestrateDeploymentMapper(BaseDeploymentMapper):
 
         return item_data_by_snapshot_id
 
-    def _shape_provider_deployment_list_entry(self, item: Any) -> dict[str, Any]:
+    def _shape_provider_deployment_list_entry(self, item: ItemResult) -> dict[str, Any]:
         item_provider_data = item.provider_data
-        if item_provider_data is not None and not isinstance(item_provider_data, dict):
-            msg = "Invalid deployment list item provider_data payload: expected object or null."
+        if not isinstance(item_provider_data, dict):
+            msg = "Invalid deployment list item provider_data payload: expected object."
             raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
-        provider_data = dict(item_provider_data or {})
-        provider_data.pop("name", None)
-        try:
-            return WatsonxApiProviderDeploymentListItem.model_validate(
-                {
-                    "id": str(item.id),
-                    "name": item.name,
-                    "type": item.type,
-                    "description": getattr(item, "description", None),
-                    "created_at": item.created_at,
-                    "updated_at": item.updated_at,
-                    **provider_data,
-                }
-            ).model_dump(
-                mode="json",
-            )
-        except ValidationError as exc:
-            first_error = exc.errors()[0] if exc.errors() else {}
-            detail = str(first_error.get("msg") or exc)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Invalid deployment list item provider_data payload: {detail}",
-            ) from exc
+        return {
+            **item_provider_data,
+            "id": str(item.id),
+            "name": item.name,
+            "type": item.type,
+            "created_at": item.created_at,
+            "updated_at": item.updated_at,
+        }
 
     def shape_deployment_get_data(
         self,

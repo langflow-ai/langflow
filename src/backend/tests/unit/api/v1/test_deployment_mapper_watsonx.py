@@ -200,7 +200,7 @@ def test_watsonx_mapper_provider_list_entry_rejects_non_dict_provider_data() -> 
         mapper._shape_provider_deployment_list_entry(item)
 
     assert exc_info.value.status_code == 500
-    assert exc_info.value.detail == "Invalid deployment list item provider_data payload: expected object or null."
+    assert exc_info.value.detail == "Invalid deployment list item provider_data payload: expected object."
 
 
 def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id() -> None:
@@ -226,11 +226,11 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
 
     assert shaped["id"] == "agent-1"
     assert shaped["name"] == "Agent 1"
-    assert shaped["type"] == DeploymentType.AGENT.value
+    assert shaped["type"] == DeploymentType.AGENT
     assert shaped["description"] == "desc"
     assert shaped["display_name"] == "Agent 1"
-    assert shaped["created_at"] == now.isoformat().replace("+00:00", "Z")
-    assert shaped["updated_at"] == now.isoformat().replace("+00:00", "Z")
+    assert shaped["created_at"] == now
+    assert shaped["updated_at"] == now
     assert shaped["tool_ids"] == ["tool-1", "tool-2"]
     assert shaped["llm"] == TEST_WXO_LLM
     assert shaped["environments"] == ["draft", "live"]
@@ -241,11 +241,10 @@ def test_watsonx_mapper_provider_list_entry_flattens_provider_data_and_uses_id()
 def test_watsonx_mapper_provider_list_entry_rejects_blank_tool_id() -> None:
     mapper = WatsonxOrchestrateDeploymentMapper()
     now = datetime.now(tz=timezone.utc)
-    item = SimpleNamespace(
+    item = ItemResult(
         id="agent-1",
         name="Agent 1",
         type=DeploymentType.AGENT,
-        description="desc",
         created_at=now,
         updated_at=now,
         provider_data={
@@ -257,11 +256,12 @@ def test_watsonx_mapper_provider_list_entry_rejects_blank_tool_id() -> None:
         },
     )
 
+    result = DeploymentListResult(deployments=[item])
     with pytest.raises(HTTPException) as exc_info:
-        mapper._shape_provider_deployment_list_entry(item)
+        mapper.shape_deployment_list_result(result)
 
     assert exc_info.value.status_code == 500
-    assert "Invalid deployment list item provider_data payload:" in str(exc_info.value.detail)
+    assert "Unexpected result while building deployment list provider payload" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_shapes_deployment_list_result_with_flattened_entries() -> None:
@@ -330,7 +330,7 @@ def test_watsonx_mapper_deployment_list_result_rejects_unknown_flattened_entry_f
         mapper.shape_deployment_list_result(result)
 
     assert exc_info.value.status_code == 500
-    assert "Invalid deployment list item provider_data payload:" in str(exc_info.value.detail)
+    assert "Unexpected result while building deployment list provider payload" in str(exc_info.value.detail)
 
 
 def test_watsonx_mapper_extracts_list_item_provider_data() -> None:
