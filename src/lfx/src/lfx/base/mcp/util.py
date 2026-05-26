@@ -55,6 +55,18 @@ def _get_mcp_setting(key: str, default: Any = None) -> Any:
     return _mcp_settings_cache[key]
 
 
+def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) -> float:
+    """Resolve MCP tool execution timeout from explicit input or MCP settings."""
+    if tool_execution_timeout is not None:
+        return float(tool_execution_timeout)
+
+    configured = _get_mcp_setting("mcp_tool_execution_timeout", None)
+    mcp_server_timeout = _get_mcp_setting("mcp_server_timeout", None)
+
+    configured_timeouts = [float(value) for value in (configured, mcp_server_timeout) if value is not None]
+    return max(configured_timeouts) if configured_timeouts else 180.0
+
+
 def get_max_sessions_per_server() -> int:
     """Get maximum number of sessions per server to prevent resource exhaustion."""
     return _get_mcp_setting("mcp_max_sessions_per_server")
@@ -1554,20 +1566,7 @@ class MCPStdioClient:
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
-        # Set timeout with backward compatibility:
-        # 1. Use provided tool_execution_timeout if not None
-        # 2. Fall back to mcp_tool_execution_timeout global setting if configured
-        # 3. Fall back to max(mcp_server_timeout, 180) for backward compatibility
-        if tool_execution_timeout is not None:
-            self._tool_execution_timeout = float(tool_execution_timeout)
-        else:
-            configured = _get_mcp_setting("mcp_tool_execution_timeout", None)
-            if configured is not None:
-                self._tool_execution_timeout = float(configured)
-            else:
-                # Preserve backward compatibility: use max(mcp_server_timeout, 180)
-                mcp_server_timeout = _get_mcp_setting("mcp_server_timeout", 20)
-                self._tool_execution_timeout = max(float(mcp_server_timeout), 180.0)
+        self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     async def _connect_to_server(self, command_str: str, env: dict[str, str] | None = None) -> list[StructuredTool]:
         """Connect to MCP server using stdio transport (SDK style).
@@ -1801,20 +1800,7 @@ class MCPStreamableHttpClient:
         self._connected = False
         self._session_context: str | None = None
         self._component_cache = component_cache
-        # Set timeout with backward compatibility:
-        # 1. Use provided tool_execution_timeout if not None
-        # 2. Fall back to mcp_tool_execution_timeout global setting if configured
-        # 3. Fall back to max(mcp_server_timeout, 180) for backward compatibility
-        if tool_execution_timeout is not None:
-            self._tool_execution_timeout = float(tool_execution_timeout)
-        else:
-            configured = _get_mcp_setting("mcp_tool_execution_timeout", None)
-            if configured is not None:
-                self._tool_execution_timeout = float(configured)
-            else:
-                # Preserve backward compatibility: use max(mcp_server_timeout, 180)
-                mcp_server_timeout = _get_mcp_setting("mcp_server_timeout", 20)
-                self._tool_execution_timeout = max(float(mcp_server_timeout), 180.0)
+        self._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     def _get_session_manager(self) -> MCPSessionManager:
         """Get or create session manager from component cache."""

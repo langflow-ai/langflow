@@ -99,13 +99,11 @@ class MCPToolsComponent(ComponentWithCache):
         # Initialize cache keys to avoid CacheMiss when accessing them
         self._ensure_cache_structure()
 
-        # Initialize clients with access to the component cache
-        # Timeout will be read at execution time (like use_cache and headers)
-        self.stdio_client: MCPStdioClient = MCPStdioClient(
-            component_cache=self._shared_component_cache, tool_execution_timeout=None
-        )
+        # Initialize clients with access to the component cache.
+        # Per-component timeout is normalized and applied immediately before MCP calls.
+        self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
         self.streamable_http_client: MCPStreamableHttpClient = MCPStreamableHttpClient(
-            component_cache=self._shared_component_cache, tool_execution_timeout=None
+            component_cache=self._shared_component_cache
         )
         # One MCP stdio/streamable client pair per component; concurrent update_tool_list calls
         # otherwise race (session DELETE vs POST) and the MCP SDK surfaces HTTP 404 as "Session terminated".
@@ -141,6 +139,16 @@ class MCPToolsComponent(ComponentWithCache):
             return {str(k): str(v) for k, v in component_headers.items()}
         return {}
 
+    def _normalize_tool_execution_timeout(self) -> float | None:
+        """Normalize the timeout input and reject negative values with a field-specific error."""
+        timeout_value = getattr(self, "tool_execution_timeout", 0.0)
+
+        if timeout_value < 0:
+            msg = "Tool Execution Timeout must be greater than or equal to 0."
+            raise ValueError(msg)
+
+        return float(timeout_value) if timeout_value else None
+
     def _mcp_servers_cache_key(self, server_name: str) -> str:
         """Cache key for shared servers map.
 
@@ -149,12 +157,7 @@ class MCPToolsComponent(ComponentWithCache):
         if not server_name:
             return ""
 
-        # Get normalized timeout value (0 means use global default)
-        timeout_value = getattr(self, "tool_execution_timeout", 0.0)
-        # Validate timeout is non-negative
-        if timeout_value < 0:
-            timeout_value = 0.0
-        normalized_timeout = float(timeout_value) if timeout_value else 0.0
+        normalized_timeout = self._normalize_tool_execution_timeout() or 0.0
 
         hdrs = self._normalized_headers_for_cache()
 
@@ -260,9 +263,10 @@ class MCPToolsComponent(ComponentWithCache):
             info=(
                 "Maximum time to wait for tool execution before timing out. "
                 "Supports decimal values for sub-second timeouts (e.g., 0.01 for 10ms). "
-                "Set to 0 to use the global default timeout (180 seconds)."
+                "Set to 0 to use the system-configured MCP timeout."
             ),
             value=0.0,
+            range_spec={"min": 0.0, "max": 3600.0, "step": 0.01},
             advanced=True,
         ),
         DropdownInput(
@@ -495,16 +499,7 @@ class MCPToolsComponent(ComponentWithCache):
                     else "list-or-empty",
                 )
 
-                # Get timeout from component input or use None (will default to global setting)
-                # Convert to float and treat 0 as None (use global default)
-                timeout_value = getattr(self, "tool_execution_timeout", 0.0)
-
-                # Validate timeout is non-negative
-                if timeout_value < 0:
-                    msg = "tool_execution_timeout must be non-negative"
-                    raise ValueError(msg)
-
-                timeout = float(timeout_value) if timeout_value else None
+                timeout = self._normalize_tool_execution_timeout()
 
                 _, tool_list, tool_cache = await update_tools(
                     server_name=server_name,
