@@ -299,6 +299,210 @@ def test_update_source_handle():
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
 
 
+def test_process_flow_grouped_loop_uses_output_proxy_when_internal_edges_are_cyclic():
+    loop_id = "LoopComponent-loop"
+    converter_id = "TypeConverterComponent-converter"
+    group_id = "groupComponent-loop"
+    sink_id = "ChatOutput-sink"
+    flow_data = {
+        "nodes": [
+            {
+                "id": group_id,
+                "data": {
+                    "id": group_id,
+                    "type": "GroupNode",
+                    "node": {
+                        "template": {},
+                        "outputs": [
+                            {
+                                "name": f"{loop_id}_done",
+                                "proxy": {"id": loop_id, "name": "done", "nodeDisplayName": "Loop"},
+                                "types": ["DataFrame"],
+                            }
+                        ],
+                        "flow": {
+                            "data": {
+                                "nodes": [
+                                    {
+                                        "id": loop_id,
+                                        "data": {
+                                            "type": "LoopComponent",
+                                            "node": {
+                                                "template": {},
+                                                "outputs": [
+                                                    {"name": "item", "types": ["Data"], "allows_loop": True},
+                                                    {"name": "done", "types": ["DataFrame"]},
+                                                ],
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "id": converter_id,
+                                        "data": {
+                                            "type": "TypeConverterComponent",
+                                            "node": {
+                                                "template": {},
+                                                "outputs": [{"name": "message_output", "types": ["Message"]}],
+                                            },
+                                        },
+                                    },
+                                ],
+                                "edges": [
+                                    {
+                                        "source": loop_id,
+                                        "target": converter_id,
+                                        "data": {
+                                            "sourceHandle": {
+                                                "dataType": "LoopComponent",
+                                                "id": loop_id,
+                                                "name": "item",
+                                                "output_types": ["Data"],
+                                            },
+                                            "targetHandle": {
+                                                "fieldName": "input_data",
+                                                "id": converter_id,
+                                                "inputTypes": ["Data"],
+                                                "type": "other",
+                                            },
+                                        },
+                                    },
+                                    {
+                                        "source": converter_id,
+                                        "target": loop_id,
+                                        "data": {
+                                            "sourceHandle": {
+                                                "dataType": "TypeConverterComponent",
+                                                "id": converter_id,
+                                                "name": "message_output",
+                                                "output_types": ["Message"],
+                                            },
+                                            "targetHandle": {
+                                                "dataType": "LoopComponent",
+                                                "id": loop_id,
+                                                "name": "item",
+                                                "output_types": ["Data", "Message"],
+                                            },
+                                        },
+                                    },
+                                ],
+                            }
+                        },
+                    },
+                },
+            },
+            {
+                "id": sink_id,
+                "data": {"type": "ChatOutput", "node": {"template": {}, "outputs": []}},
+            },
+        ],
+        "edges": [
+            {
+                "source": group_id,
+                "target": sink_id,
+                "data": {
+                    "sourceHandle": {
+                        "dataType": "GroupNode",
+                        "id": group_id,
+                        "name": f"{loop_id}_done",
+                        "output_types": ["DataFrame"],
+                    },
+                    "targetHandle": {
+                        "fieldName": "input_value",
+                        "id": sink_id,
+                        "inputTypes": ["DataFrame"],
+                        "type": "other",
+                    },
+                },
+            }
+        ],
+    }
+
+    processed_flow = process_flow(flow_data)
+
+    updated_edge = next(edge for edge in processed_flow["edges"] if edge["target"] == sink_id)
+    assert updated_edge["source"] == loop_id
+    assert updated_edge["data"]["sourceHandle"] == {
+        "dataType": "LoopComponent",
+        "id": loop_id,
+        "name": "done",
+        "output_types": ["DataFrame"],
+    }
+
+
+def test_add_nodes_and_edges_recomputes_grouped_loop_cycles_after_processing(monkeypatch):
+    loop_id = "LoopComponent-loop"
+    converter_id = "TypeConverterComponent-converter"
+    group_id = "groupComponent-loop"
+    sink_id = "ChatOutput-sink"
+    flow_data = {
+        "nodes": [
+            {
+                "id": group_id,
+                "data": {
+                    "id": group_id,
+                    "type": "GroupNode",
+                    "node": {
+                        "template": {},
+                        "outputs": [
+                            {
+                                "name": f"{loop_id}_done",
+                                "proxy": {"id": loop_id, "name": "done", "nodeDisplayName": "Loop"},
+                            }
+                        ],
+                        "flow": {
+                            "data": {
+                                "nodes": [
+                                    {"id": loop_id, "data": {"type": "LoopComponent", "node": {"template": {}}}},
+                                    {
+                                        "id": converter_id,
+                                        "data": {"type": "TypeConverterComponent", "node": {"template": {}}},
+                                    },
+                                ],
+                                "edges": [
+                                    {
+                                        "source": loop_id,
+                                        "target": converter_id,
+                                        "data": {
+                                            "sourceHandle": {"id": loop_id, "name": "item"},
+                                            "targetHandle": {"id": converter_id, "fieldName": "input_data"},
+                                        },
+                                    },
+                                    {
+                                        "source": converter_id,
+                                        "target": loop_id,
+                                        "data": {
+                                            "sourceHandle": {"id": converter_id, "name": "message_output"},
+                                            "targetHandle": {"id": loop_id, "name": "item"},
+                                        },
+                                    },
+                                ],
+                            }
+                        },
+                    },
+                },
+            },
+            {"id": sink_id, "data": {"type": "ChatOutput", "node": {"template": {}}}},
+        ],
+        "edges": [
+            {
+                "source": group_id,
+                "target": sink_id,
+                "data": {
+                    "sourceHandle": {"id": group_id, "name": f"{loop_id}_done"},
+                    "targetHandle": {"id": sink_id, "fieldName": "input_value"},
+                },
+            }
+        ],
+    }
+
+    monkeypatch.setattr(Graph, "initialize", lambda _: None)
+
+    graph = Graph()
+    graph.add_nodes_and_edges(flow_data["nodes"], flow_data["edges"])
+
+    assert graph.cycle_vertices == {loop_id, converter_id}
+
+
 # TODO: Move to Langflow tests
 @pytest.mark.skip(reason="Temporarily disabled")
 async def test_serialize_graph():

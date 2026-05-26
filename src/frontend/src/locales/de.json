@@ -951,7 +951,6 @@
   "memory.noChunksYet": "Noch keine Brocken",
   "memory.noId": "(keine ID)",
   "memory.preprocessing": "Vorverarbeitung:",
-  "memory.preprocessingPromptPlaceholder": "Erstellen Sie eine prägnante Zusammenfassung, die die wichtigsten Fakten und den Kontext erfasst.",
   "memory.processedMessages": "Verarbeitete Nachrichten",
   "memory.providerLabel": "Leistungserbringer:",
   "memory.reloadSessions": "Sitzungen und Nachrichten neu laden",

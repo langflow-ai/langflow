@@ -139,6 +139,35 @@ describe("Edit mode — basic state", () => {
     expect(result.current.currentStep).toBe(2);
     expect(result.current.canGoNext).toBe(true);
   });
+
+  it("preExistingFlowIds tracks initial versions in edit mode", () => {
+    const { result } = renderEditHook();
+    expect(result.current.isEditMode).toBe(true);
+    expect(result.current.preExistingFlowIds).toBeInstanceOf(Set);
+  });
+
+  it("handleRemoveAttachedFlow soft-removes via removedFlowIds when key is pre-existing", () => {
+    const { result } = renderEditHook();
+
+    // Manually add a version so we can test the soft-remove path.
+    act(() => {
+      result.current.handleSelectVersion({
+        flowId: "flow-new",
+        flowName: "Flow",
+        versionId: "ver-new",
+        versionTag: "v1",
+      });
+    });
+    expect(result.current.selectedVersionByFlow.has(flowNewKey)).toBe(true);
+
+    // Remove the newly added version — should hard-delete since it's not pre-existing.
+    act(() => {
+      result.current.handleRemoveAttachedFlow(flowNewKey);
+    });
+
+    expect(result.current.selectedVersionByFlow.has(flowNewKey)).toBe(false);
+    expect(result.current.removedFlowIds.has(flowNewKey)).toBe(false);
+  });
 });
 
 describe("Edit mode — buildDeploymentUpdatePayload", () => {

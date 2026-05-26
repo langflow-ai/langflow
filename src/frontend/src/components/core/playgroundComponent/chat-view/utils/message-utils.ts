@@ -85,6 +85,21 @@ export const updateMessage = (updatedMessage: Message) => {
         existingMessage.sender_name || newMessage.sender_name;
       newMessage.timestamp = existingMessage.timestamp || newMessage.timestamp;
       newMessage.files = existingMessage.files || newMessage.files;
+      // Preserve agent-step tool blocks (and any other content blocks /
+      // category / properties.source) attached by prior `add_message` events.
+      // Token-event payloads from the backend don't carry these — without
+      // this preservation the first streamed chunk clobbers the cached
+      // content_blocks and the Playground "Agent Steps" panel goes blank.
+      // (QA UI-014.)
+      newMessage.content_blocks =
+        newMessage.content_blocks ?? existingMessage.content_blocks;
+      newMessage.category = newMessage.category ?? existingMessage.category;
+      if (existingMessage.properties || newMessage.properties) {
+        newMessage.properties = {
+          ...(existingMessage.properties ?? {}),
+          ...(newMessage.properties ?? {}),
+        };
+      }
     } else if (isStreamingToken && !existingMessage) {
       // First token - ensure we have all required fields
       if (!newMessage.id) {

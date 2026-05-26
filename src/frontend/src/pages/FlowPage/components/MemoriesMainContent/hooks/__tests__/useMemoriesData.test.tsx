@@ -5,9 +5,9 @@ import type {
   MemorySessionInfo,
 } from "@/controllers/API/queries/memories/types";
 import type {
-  GetMemorySessionMessagesParams,
-  MemorySessionMessageApiItem,
-} from "@/controllers/API/queries/memories/use-get-memory-session-messages";
+  GetMemoryMessagesParams,
+  MemoryMessageApiItem,
+} from "@/controllers/API/queries/memories/use-get-memory-messages";
 import { useMemoriesData } from "../useMemoriesData";
 
 // ---------------------------------------------------------------------------
@@ -163,7 +163,7 @@ jest.mock("@/controllers/API/queries/memories/use-get-memory-sessions", () => ({
   }),
 }));
 
-let messagesBySession: Record<string, MemorySessionMessageApiItem[]> = {
+let messagesBySession: Record<string, MemoryMessageApiItem[]> = {
   s1: [
     {
       timestamp: "2026-04-01T19:29:07",
@@ -191,26 +191,25 @@ let messagesBySession: Record<string, MemorySessionMessageApiItem[]> = {
 };
 
 const mockRefetchMessages = jest.fn();
-jest.mock(
-  "@/controllers/API/queries/memories/use-get-memory-session-messages",
-  () => ({
-    useGetMemorySessionMessages: (params: GetMemorySessionMessagesParams) => {
-      const { sessionId } = params;
-      const items = sessionId ? (messagesBySession[sessionId] ?? []) : [];
-      return {
-        data: {
-          pages: [{ items, total: items.length, page: 1, size: 50, pages: 1 }],
-          pageParams: [1],
-        },
-        isLoading: false,
-        fetchNextPage: jest.fn(),
-        hasNextPage: false,
-        isFetchingNextPage: false,
-        refetch: mockRefetchMessages,
-      };
-    },
-  }),
-);
+jest.mock("@/controllers/API/queries/memories/use-get-memory-messages", () => ({
+  useGetMemoryMessages: (params: GetMemoryMessagesParams) => {
+    const { sessionId } = params;
+    const items = sessionId
+      ? (messagesBySession[sessionId] ?? [])
+      : Object.values(messagesBySession).flat();
+    return {
+      data: {
+        pages: [{ items, total: items.length, page: 1, size: 50, pages: 1 }],
+        pageParams: [1],
+      },
+      isLoading: false,
+      fetchNextPage: jest.fn(),
+      hasNextPage: false,
+      isFetchingNextPage: false,
+      refetch: mockRefetchMessages,
+    };
+  },
+}));
 
 const deleteMutation = { mutate: jest.fn(), isPending: false };
 const updateMemoryMutation = { mutate: jest.fn(), isPending: false };
