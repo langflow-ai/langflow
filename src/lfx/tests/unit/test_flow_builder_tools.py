@@ -548,6 +548,128 @@ class TestConfigureComponentModelField:
         assert "options" not in agent_node["data"]["node"]["template"]["system_prompt"]
 
 
+def _make_agent_node_for_model_test():
+    """Reset the working flow and add a fresh Agent node ready for configure."""
+    from lfx.mcp.flow_builder_tools import (
+        AddComponent,
+        drain_flow_events,
+        reset_working_flow,
+    )
+
+    reset_working_flow()
+    agent = AddComponent()
+    agent.set(component_type="Agent")
+    agent_id = agent.add_component().data["id"]
+    drain_flow_events()
+    return agent_id
+
+
+def _read_model_field_value(agent_id):
+    from lfx.mcp.flow_builder_tools import _ensure_working_flow
+
+    flow = _ensure_working_flow()
+    agent_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == agent_id)
+    return agent_node["data"]["node"]["template"]["model"]["value"]
+
+
+class TestConfigureComponentModelFieldSerializedSpec:
+    r"""Regression: PR-12575 round 6 bug 2.
+
+    The flow-builder LLM sometimes emits the model spec as a serialized
+    string instead of the canonical ``[{"provider": X, "name": Y}]``
+    list. Two formats observed in QA, ~30 min apart, same prompt:
+
+      Run 1 (JSON):  ``[{"provider": "OpenAI", "name": "gpt-5.4"}]``
+      Run 2 (YAML):  ``- provider: OpenAI\n  name: gpt-5.4``
+
+    The previous code passed the string through as-is, so the canvas
+    stored ``model[0].name = <serialized spec>`` and ``provider="Unknown"``
+    (the catalog fallback). Downstream, ``get_llm`` raises ``ValueError:
+    The selected model is missing a provider...``. ConfigureComponent must
+    parse and normalize these formats before writing to the template.
+    """
+
+    def test_should_parse_provider_and_name_when_model_value_is_json_list_string(self):
+        """Parse a JSON-array-of-dict string emitted as the bare value."""
+        from lfx.mcp.flow_builder_tools import ConfigureComponent
+
+        agent_id = _make_agent_node_for_model_test()
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id=agent_id,
+            # Value is a JSON-array string — exactly what QA round 6 captured.
+            params='{"model": "[{\\"provider\\": \\"OpenAI\\", \\"name\\": \\"gpt-5.4\\"}]"}',
+        )
+        result = cfg.configure_component()
+        assert "error" not in result.data, f"configure failed: {result.data}"
+
+        value = _read_model_field_value(agent_id)
+        assert isinstance(value, list)
+        assert len(value) == 1, f"expected canonical 1-element list, got {value!r}"
+        assert value[0].get("provider") == "OpenAI", (
+            f"provider must be parsed from the JSON spec, got provider={value[0].get('provider')!r} (was the "
+            f"catalog 'Unknown' fallback firing)"
+        )
+        assert value[0].get("name") == "gpt-5.4", f"name must be the bare model name, got {value[0].get('name')!r}"
+
+    def test_should_parse_provider_and_name_when_model_value_is_yaml_string(self):
+        """Same bug, YAML format — observed in the round 6 double-check run."""
+        from lfx.mcp.flow_builder_tools import ConfigureComponent
+
+        agent_id = _make_agent_node_for_model_test()
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id=agent_id,
+            # YAML block emitted by the LLM, embedded as a JSON string.
+            params='{"model": "- provider: OpenAI\\n  name: gpt-5.4"}',
+        )
+        result = cfg.configure_component()
+        assert "error" not in result.data, f"configure failed: {result.data}"
+
+        value = _read_model_field_value(agent_id)
+        assert isinstance(value, list)
+        assert len(value) == 1, f"expected canonical 1-element list, got {value!r}"
+        assert value[0].get("provider") == "OpenAI", (
+            f"provider must be parsed from the YAML spec, got provider={value[0].get('provider')!r}"
+        )
+        assert value[0].get("name") == "gpt-5.4", f"name must be the bare model name, got {value[0].get('name')!r}"
+
+    def test_should_parse_when_model_value_is_single_dict_json_string(self):
+        """LLM emits a single object instead of a list — same parsing pipeline."""
+        from lfx.mcp.flow_builder_tools import ConfigureComponent
+
+        agent_id = _make_agent_node_for_model_test()
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id=agent_id,
+            params='{"model": "{\\"provider\\": \\"OpenAI\\", \\"name\\": \\"gpt-4o\\"}"}',
+        )
+        result = cfg.configure_component()
+        assert "error" not in result.data, f"configure failed: {result.data}"
+
+        value = _read_model_field_value(agent_id)
+        assert isinstance(value, list)
+        assert len(value) == 1
+        assert value[0].get("provider") == "OpenAI"
+        assert value[0].get("name") == "gpt-4o"
+
+    def test_should_preserve_canonical_list_when_model_value_is_already_well_formed(self):
+        """Regression guard: canonical input must round-trip unchanged."""
+        from lfx.mcp.flow_builder_tools import ConfigureComponent
+
+        agent_id = _make_agent_node_for_model_test()
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id=agent_id,
+            params='{"model": [{"provider": "OpenAI", "name": "gpt-4o"}]}',
+        )
+        result = cfg.configure_component()
+        assert "error" not in result.data, f"configure failed: {result.data}"
+
+        value = _read_model_field_value(agent_id)
+        assert value == [{"provider": "OpenAI", "name": "gpt-4o"}]
+
+
 class TestConnectComponents:
     def test_connect_pushes_event(self):
         reset_working_flow()
