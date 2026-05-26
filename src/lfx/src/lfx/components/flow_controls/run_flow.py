@@ -1,3 +1,4 @@
+from copy import deepcopy
 from datetime import datetime
 from typing import Any
 
@@ -18,8 +19,8 @@ class RunFlowComponent(RunFlowBaseComponent):
     name = "RunFlow"
     icon = "Workflow"
 
-    inputs = RunFlowBaseComponent.get_base_inputs()
-    outputs = RunFlowBaseComponent.get_base_outputs()
+    inputs = deepcopy(RunFlowBaseComponent.get_base_inputs())
+    outputs = deepcopy(RunFlowBaseComponent.get_base_outputs())
 
     async def update_build_config(
         self,

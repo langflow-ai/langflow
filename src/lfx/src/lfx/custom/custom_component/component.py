@@ -150,6 +150,9 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
+        self.inputs = deepcopy(getattr(self.__class__, "inputs", []))
+        self.outputs = deepcopy(getattr(self.__class__, "outputs", []))
+
         # Initialize instance-specific attributes first
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
@@ -428,7 +431,7 @@ class Component(CustomComponent):
         inputs_raw = getattr(self, "_Component__inputs", {})
 
         kwargs = dict(config)
-        kwargs["inputs"] = dict(inputs_raw)
+        kwargs.update(inputs_raw)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
