@@ -49,9 +49,11 @@ class _FakeAsyncSession:
 class _StubAuthz:
     """Pass-through authz service: allow everything, no cross-user fetch."""
 
-    def __init__(self, *, cross_user: bool = False, enabled: bool = False) -> None:
+    def __init__(self, *, cross_user: bool = False, enabled: bool = False, allow: bool = True) -> None:
         self._cross_user = cross_user
         self._enabled = enabled
+        self._allow = allow
+        self.enforce_calls: list[dict] = []
 
     async def supports_cross_user_fetch(self) -> bool:
         return self._cross_user
@@ -59,11 +61,12 @@ class _StubAuthz:
     async def is_enabled(self) -> bool:
         return self._enabled
 
-    async def enforce(self, **_kwargs) -> bool:
-        return True
+    async def enforce(self, **kwargs) -> bool:
+        self.enforce_calls.append(kwargs)
+        return self._allow
 
     async def batch_enforce(self, **kwargs) -> list[bool]:
-        return [True] * len(kwargs.get("requests", []))
+        return [self._allow] * len(kwargs.get("requests", []))
 
     async def invalidate_user(self, *_args, **_kwargs) -> None:
         return None
@@ -79,15 +82,16 @@ def patch_authz(monkeypatch):
     from langflow.services.authorization import guards as authz_guards
     from langflow.services.authorization import listing as authz_listing
 
-    def _apply(*, cross_user: bool = False, enabled: bool = False) -> _StubAuthz:
-        stub = _StubAuthz(cross_user=cross_user, enabled=enabled)
+    def _apply(*, cross_user: bool = False, enabled: bool = False, allow: bool = True) -> _StubAuthz:
+        stub = _StubAuthz(cross_user=cross_user, enabled=enabled, allow=allow)
         monkeypatch.setattr(shares_module, "get_authorization_service", lambda: stub)
         for module in (authz_guards, authz_listing):
             monkeypatch.setattr(module, "get_authorization_service", lambda: stub)
-        # Disable audit + AUTHZ_ENABLED gating so audit calls inside ensure_*
-        # don't open real sessions.
+        # Mirror the requested AUTHZ_ENABLED state so the guard's early-return
+        # only fires under OSS. Audit is always off so we don't open real
+        # sessions for background writes.
         settings = SimpleNamespace(
-            auth_settings=SimpleNamespace(AUTHZ_ENABLED=False, AUTHZ_AUDIT_ENABLED=False),
+            auth_settings=SimpleNamespace(AUTHZ_ENABLED=enabled, AUTHZ_AUDIT_ENABLED=False),
         )
         for module in (authz_audit, authz_guards, authz_listing):
             monkeypatch.setattr(module, "get_settings_service", lambda s=settings: s)
@@ -367,3 +371,113 @@ async def test_floor_is_skipped_when_plugin_active(patch_authz, silence_audit): 
     # written. If the floor still fired we'd see a 403 instead.
     assert result.resource_id == flow.id
     assert len(session.added) == 1
+
+
+@pytest.mark.asyncio
+async def test_create_share_invokes_plugin_enforce_for_non_owner(patch_authz, silence_audit):  # noqa: ARG001
+    """Regression: plugin enforce() must run for non-owner share-create.
+
+    Previously ``create_share`` passed ``share_user_id=current_user.id`` which
+    tripped the owner-override fast path in ``ensure_share_permission`` and
+    the plugin was never consulted — letting any authenticated user mint share
+    rows once the OSS floor was bypassed.  The fix passes the *resource*
+    owner so only the resource owner gets the override.
+    """
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = patch_authz(cross_user=True, enabled=True)
+
+    owner = _make_user()
+    delegate = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = _payload_for(flow.id)
+
+    await shares_module.create_share(payload=payload, current_user=delegate, session=session)
+
+    # enforce() was actually called for the non-owner.
+    assert any(call.get("user_id") == delegate.id for call in stub.enforce_calls), (
+        f"expected at least one enforce() call for delegate, got: {stub.enforce_calls}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_create_share_denied_when_plugin_denies_non_owner(patch_authz, silence_audit):  # noqa: ARG001
+    """Regression: plugin deny on share-create must yield 403 and no DB write."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=True, enabled=True, allow=False)
+
+    owner = _make_user()
+    delegate = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    session = _FakeAsyncSession({(Flow, flow.id): flow})
+    payload = _payload_for(flow.id)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.create_share(payload=payload, current_user=delegate, session=session)
+
+    assert excinfo.value.status_code == 403
+    assert session.added == []
+
+
+@pytest.mark.asyncio
+async def test_update_share_invokes_plugin_enforce_for_share_creator(patch_authz, silence_audit):  # noqa: ARG001
+    """Regression: share *creator* who is not the resource owner must hit plugin enforce()."""
+    from langflow.services.database.models.flow.model import Flow
+
+    stub = patch_authz(cross_user=True, enabled=True)
+
+    owner = _make_user()
+    delegate = _make_user()  # not the resource owner, but is the share row creator
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.USER.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=delegate.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+    update = ShareUpdate(permission_level=SharePermissionLevel.WRITE.value)
+
+    await shares_module.update_share(
+        share_id=share.id,
+        payload=update,
+        current_user=delegate,
+        session=session,
+    )
+
+    assert any(call.get("user_id") == delegate.id for call in stub.enforce_calls), (
+        f"expected plugin enforce() to run for share creator non-owner, got: {stub.enforce_calls}"
+    )
+
+
+@pytest.mark.asyncio
+async def test_delete_share_denied_when_plugin_denies_share_creator(patch_authz, silence_audit):  # noqa: ARG001
+    """Regression: share creator can no longer bypass plugin policy on DELETE."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=True, enabled=True, allow=False)
+
+    owner = _make_user()
+    delegate = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.USER.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=delegate.id,
+    )
+    session = _FakeAsyncSession({(AuthzShare, share.id): share, (Flow, flow.id): flow})
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.delete_share(share_id=share.id, current_user=delegate, session=session)
+
+    assert excinfo.value.status_code == 403
+    assert session.deleted == []

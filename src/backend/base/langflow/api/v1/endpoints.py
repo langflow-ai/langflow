@@ -529,7 +529,9 @@ async def get_flow_for_api_key_user(
     share-aware (load by id, route guard decides access). The OSS pass-through
     default keeps the owner-scoped lookup.
     """
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id)
+    # These wrappers always pair with ``ensure_flow_permission`` in the route
+    # handler, so opting in to share-aware widening is safe.
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id, widen_for_shares=True)
 
 
 async def get_flow_for_current_user(
@@ -537,7 +539,7 @@ async def get_flow_for_current_user(
     current_user: CurrentActiveUser,
 ) -> FlowRead:
     """Session-auth variant of :func:`get_flow_for_api_key_user`."""
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id)
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id, widen_for_shares=True)
 
 
 async def get_flow_for_sse_user(
@@ -545,7 +547,7 @@ async def get_flow_for_sse_user(
     user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
 ) -> FlowRead:
     """Auth-aware wrapper around ``get_flow_by_id_or_endpoint_name`` for SSE routes."""
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id)
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id, widen_for_shares=True)
 
 
 class WebhookAuth:
@@ -565,7 +567,9 @@ async def get_webhook_auth(
     Centralizes the security logic for webhook run endpoints.
     """
     webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
-    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id)
+    # Webhook route also calls ``ensure_flow_permission`` after, so widening
+    # for shared resources is acceptable here.
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
     return WebhookAuth(user=webhook_user, flow=flow)
 
 

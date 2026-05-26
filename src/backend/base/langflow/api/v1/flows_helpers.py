@@ -375,29 +375,64 @@ async def _update_existing_flow(
     Similar to update_flow but:
     - Fails on name/endpoint_name conflict with OTHER flows (409)
     - Keeps existing folder_id if not provided in request
+
+    ``current_user`` is the *actor* (the API caller). The flow's owner is
+    ``existing_flow.user_id``. When the actor is not the owner — a cross-user
+    shared edit allowed by an enterprise authorization plugin — ownership-
+    bound state (folder, fs_path, ownership) must stay rooted at the owner,
+    otherwise the write silently retargets folders/storage that belong to the
+    actor. This mirrors the cross-user semantics already enforced by
+    ``_patch_flow``.
     """
     settings_service = get_settings_service()
-    user_id = current_user.id
+    actor_user_id = current_user.id
+    owner_user_id: UUID = existing_flow.user_id
+    is_owner_edit = owner_user_id == actor_user_id
 
-    # Validate fs_path if provided (use `is not None` to catch empty strings)
+    # Non-owner edits cannot relocate the flow into folders or storage they
+    # own, nor transfer ownership. Reject early so the failure is explicit
+    # rather than corrupting scope downstream.
+    if not is_owner_edit:
+        if flow.folder_id is not None and flow.folder_id != existing_flow.folder_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change folder of a flow you do not own.",
+            )
+        if flow.fs_path is not None and flow.fs_path != existing_flow.fs_path:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change fs_path of a flow you do not own.",
+            )
+        if flow.user_id is not None and flow.user_id != owner_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot transfer ownership of a flow you do not own.",
+            )
+
+    # Validate fs_path if provided (use `is not None` to catch empty strings).
+    # Path safety is scoped to the *owner* — fs_path lives under the owner's
+    # storage namespace, so we must not authorize it against the actor's.
     if flow.fs_path is not None:
-        await _verify_fs_path(flow.fs_path, user_id, storage_service)
+        await _verify_fs_path(flow.fs_path, owner_user_id, storage_service)
 
-    # Validate folder_id if provided
+    # Validate folder_id if provided — scoped to the owner so a non-owner
+    # cannot land the flow in their own default folder via this code path.
     if flow.folder_id is not None:
         folder = (
-            await session.exec(select(Folder).where(Folder.id == flow.folder_id, Folder.user_id == user_id))
+            await session.exec(select(Folder).where(Folder.id == flow.folder_id, Folder.user_id == owner_user_id))
         ).first()
         if not folder:
             raise HTTPException(status_code=400, detail="Folder not found")
 
-    # Check name uniqueness (excluding current flow)
+    # Check name uniqueness against the *owner's* flows (the unique constraint
+    # is (user_id, name); checking against the actor's namespace would miss
+    # collisions when actor != owner).
     if flow.name and flow.name != existing_flow.name:
         name_conflict = (
             await session.exec(
                 select(Flow).where(
                     Flow.name == flow.name,
-                    Flow.user_id == user_id,
+                    Flow.user_id == owner_user_id,
                     Flow.id != existing_flow.id,
                 )
             )
@@ -405,13 +440,13 @@ async def _update_existing_flow(
         if name_conflict:
             raise HTTPException(status_code=409, detail="Name must be unique")
 
-    # Check endpoint_name uniqueness (excluding current flow)
+    # Check endpoint_name uniqueness — same owner-scope rationale.
     if flow.endpoint_name and flow.endpoint_name != existing_flow.endpoint_name:
         endpoint_conflict = (
             await session.exec(
                 select(Flow).where(
                     Flow.endpoint_name == flow.endpoint_name,
-                    Flow.user_id == user_id,
+                    Flow.user_id == owner_user_id,
                     Flow.id != existing_flow.id,
                 )
             )
@@ -453,7 +488,8 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
-    await _save_flow_to_fs(existing_flow, user_id, storage_service)
+    # Writes happen under the owner's storage namespace, not the actor's.
+    await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
     return FlowRead.model_validate(existing_flow, from_attributes=True)
 

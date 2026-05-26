@@ -636,7 +636,11 @@ async def create_response(
     # also enforce ``flow:execute`` explicitly — otherwise an API key with
     # cross-user fetch enabled would skip policy here.
     try:
-        flow = await get_flow_by_id_or_endpoint_name(request.model, str(api_key_user.id))
+        flow = await get_flow_by_id_or_endpoint_name(
+            request.model,
+            str(api_key_user.id),
+            widen_for_shares=True,
+        )
     except HTTPException:
         flow = None
 

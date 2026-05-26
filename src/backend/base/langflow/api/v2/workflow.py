@@ -153,7 +153,11 @@ async def execute_workflow(
         # share-aware when an authorization plugin is registered, so we must
         # also enforce ``flow:execute`` explicitly — otherwise an API key
         # with cross-user fetch enabled would bypass policy here.
-        flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
+        flow = await get_flow_by_id_or_endpoint_name(
+            workflow_request.flow_id,
+            api_key_user.id,
+            widen_for_shares=True,
+        )
         await ensure_flow_permission(
             api_key_user,
             FlowAction.EXECUTE,
@@ -632,7 +636,11 @@ async def get_workflow_status(
         if job.status == JobStatus.COMPLETED:
             # Get the flow (share-aware fetch — also enforce flow:read so an
             # API key with cross-user fetch cannot read foreign job output).
-            flow = await get_flow_by_id_or_endpoint_name(flow_id_str, api_key_user.id)
+            flow = await get_flow_by_id_or_endpoint_name(
+                flow_id_str,
+                api_key_user.id,
+                widen_for_shares=True,
+            )
             await ensure_flow_permission(
                 api_key_user,
                 FlowAction.READ,

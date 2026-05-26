@@ -438,13 +438,29 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
-    """Resolve a flow by UUID or endpoint_name (share-aware when enforcement is on)."""
+async def get_flow_by_id_or_endpoint_name(
+    flow_id_or_name: str,
+    user_id: str | UUID | None = None,
+    *,
+    widen_for_shares: bool = False,
+) -> FlowRead:
+    """Resolve a flow by UUID or endpoint_name.
+
+    By default this is owner-scoped (``user_id`` must match the flow owner)
+    even when an enterprise authorization plugin is registered.  Callers that
+    immediately follow up with ``ensure_flow_permission(...)`` and therefore
+    *want* the widening — so a shared flow becomes reachable — can opt in by
+    passing ``widen_for_shares=True``.  Helpers that read ``flow.data`` without
+    a subsequent permission check (e.g. agentic MCP tools) must leave the
+    default, otherwise widening leaks graph metadata for another user's flow
+    before any policy decision runs.
+    """
     from langflow.services.deps import get_authorization_service
 
     authz = get_authorization_service()
-    # Widen lookup only when cross-user fetch and AUTHZ_ENABLED are both on.
-    share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+    # Widening also requires the plugin contract to advertise cross-user fetch
+    # AND AUTHZ_ENABLED to be on, in addition to the opt-in flag above.
+    share_aware = widen_for_shares and await authz.supports_cross_user_fetch() and await authz.is_enabled()
 
     async with session_scope() as session:
         # SECURITY: previously the UUID branch below called

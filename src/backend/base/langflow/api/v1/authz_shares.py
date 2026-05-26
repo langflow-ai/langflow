@@ -132,10 +132,15 @@ async def create_share(
         # UUID privacy: missing resource → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+    # SECURITY: pass the *resource* owner (not the caller) so the owner-override
+    # in ensure_share_permission only fast-paths the real resource owner. With
+    # share_user_id=current_user.id the override would always trip and the
+    # enterprise plugin's enforce() would never run for non-owner creators when
+    # the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
     await ensure_share_permission(
         current_user,
         ShareAction.CREATE,
-        share_user_id=current_user.id,
+        share_user_id=owner_id,
     )
 
     row = AuthzShare(
@@ -281,27 +286,28 @@ async def get_share(
     if row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 
+    owner_id = await _resolve_resource_owner(
+        session,
+        resource_type=row.resource_type,
+        resource_id=row.resource_id,
+    )
+    # See create_share: owner_id is the *resource* owner so non-owners are
+    # forced through ensure_share_permission's plugin enforce() path.
     await ensure_share_permission(
         current_user,
         ShareAction.READ,
         share_id=share_id,
-        share_user_id=row.created_by,
+        share_user_id=owner_id,
     )
 
-    if not getattr(current_user, "is_superuser", False):
-        owner_id = await _resolve_resource_owner(
-            session,
-            resource_type=row.resource_type,
-            resource_id=row.resource_id,
-        )
-        if not await _user_can_see_share(
-            session,
-            row=row,
-            user_id=current_user.id,
-            resource_owner_id=owner_id,
-        ):
-            # UUID privacy: forbidden share → 404.
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
+    if not getattr(current_user, "is_superuser", False) and not await _user_can_see_share(
+        session,
+        row=row,
+        user_id=current_user.id,
+        resource_owner_id=owner_id,
+    ):
+        # UUID privacy: forbidden share → 404.
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 
     return ShareRead.model_validate(row, from_attributes=True)
 
@@ -324,11 +330,13 @@ async def update_share(
         resource_id=row.resource_id,
     )
     await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+    # See create_share: owner_id is the *resource* owner so non-owners are
+    # forced through ensure_share_permission's plugin enforce() path.
     await ensure_share_permission(
         current_user,
         ShareAction.UPDATE,
         share_id=share_id,
-        share_user_id=row.created_by,
+        share_user_id=owner_id,
     )
 
     # Validate permission_level (422 before DB CHECK).
@@ -384,11 +392,13 @@ async def delete_share(
         resource_id=row.resource_id,
     )
     await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
+    # See create_share: owner_id is the *resource* owner so non-owners are
+    # forced through ensure_share_permission's plugin enforce() path.
     await ensure_share_permission(
         current_user,
         ShareAction.DELETE,
         share_id=share_id,
-        share_user_id=row.created_by,
+        share_user_id=owner_id,
     )
 
     target_id = row.target_id
