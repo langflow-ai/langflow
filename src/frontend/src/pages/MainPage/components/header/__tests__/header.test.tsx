@@ -248,7 +248,7 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
     it("should hide the New Flow button when the feature flag is enabled", () => {
       act(() => {
         useUtilityStore.setState({
-          featureFlags: { hide_new_flow_button: true },
+          hideNewFlowButton: true,
         });
       });
 

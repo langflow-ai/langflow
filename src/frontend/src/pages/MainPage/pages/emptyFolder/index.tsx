@@ -15,9 +15,7 @@ type EmptyFolderProps = {
 export const EmptyFolder = ({ setOpenModal, onNewFlow }: EmptyFolderProps) => {
   const { t } = useTranslation();
   const folders = useFolderStore((state) => state.folders);
-  const hideNewFlowButton = useUtilityStore(
-    (state) => state.featureFlags.hide_new_flow_button === true,
-  );
+  const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
 
   return (
     <div className="m-0 flex w-full justify-center">

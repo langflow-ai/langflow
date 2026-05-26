@@ -15,9 +15,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
   const { t } = useTranslation();
   const folders = useFolderStore((state) => state.folders);
   const handleFileDrop = useFileDrop(undefined);
-  const hideNewFlowButton = useUtilityStore(
-    (state) => state.featureFlags.hide_new_flow_button === true,
-  );
+  const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
 
   return (
     <CardsWrapComponent

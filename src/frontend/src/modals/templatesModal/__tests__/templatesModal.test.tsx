@@ -83,6 +83,17 @@ describe("TemplatesModal", () => {
 
     expect(screen.getByTestId("templates-nav")).toBeInTheDocument();
     expect(navProps.at(-1)?.currentTab).toBe("all-templates");
+
+    const categories = navProps.at(-1)?.categories as
+      | Array<{ items: Array<{ id: string }> }>
+      | undefined;
+
+    const categoryItemIds =
+      categories?.flatMap((category) =>
+        category.items.map((item) => item.id),
+      ) ?? [];
+
+    expect(categoryItemIds).not.toContain("get-started");
   });
 
   it("keeps get-started selected in the nav when starter projects are visible", () => {
