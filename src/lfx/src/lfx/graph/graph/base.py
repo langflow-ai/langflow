@@ -44,6 +44,11 @@ from lfx.services.cache.utils import CacheMiss
 from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
 
+INPUT_TYPE_COMPONENT_TYPES = {
+    "chat": {InterfaceComponentTypes.ChatInput.value},
+    "text": {InterfaceComponentTypes.TextInput.value},
+}
+
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator, Callable, Generator, Iterable
     from typing import Any
@@ -757,22 +762,24 @@ class Graph:
     def _set_inputs(self, input_components: list[str], inputs: dict[str, str], input_type: InputType | None) -> None:
         """Updates input vertices' parameters with the provided inputs, filtering by component list and input type.
 
-        Only vertices whose IDs or display names match the specified input components and whose IDs contain
+        Only vertices whose IDs or display names match the specified input components and whose component type matches
         the input type (unless input type is 'any' or None) are updated. Raises a ValueError if a specified
         vertex is not found.
         """
         for vertex_id in self._is_input_vertices:
             vertex = self.get_vertex(vertex_id)
-            # If the vertex is not in the input_components list
-            if input_components and (vertex_id not in input_components and vertex.display_name not in input_components):
-                continue
-            # If the input_type is not any and the input_type is not in the vertex id
-            # Example: input_type = "chat" and vertex.id = "OpenAI-19ddn"
-            if input_type is not None and input_type != "any" and input_type not in vertex.id.lower():
-                continue
             if vertex is None:
                 msg = f"Vertex {vertex_id} not found"
                 raise ValueError(msg)
+            # If the vertex is not in the input_components list
+            if input_components and (vertex_id not in input_components and vertex.display_name not in input_components):
+                continue
+            if (
+                input_type is not None
+                and input_type != "any"
+                and vertex.data.get("type") not in INPUT_TYPE_COMPONENT_TYPES.get(input_type, set())
+            ):
+                continue
             vertex.update_raw_params(inputs, overwrite=True)
 
     async def _run(
