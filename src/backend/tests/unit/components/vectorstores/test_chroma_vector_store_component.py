@@ -1,11 +1,68 @@
 from pathlib import Path
 from typing import Any
+from unittest.mock import MagicMock, patch
 
 import pytest
+from lfx.base.vectorstores.chroma_security import (
+    chroma_client_create_collection_kwargs,
+    chroma_langchain_collection_kwargs,
+)
 from lfx.components.chroma import ChromaVectorStoreComponent
 from lfx.schema.data import Data
 
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
+
+
+def test_remote_chroma_server_uses_http_client() -> None:
+    mock_client = MagicMock()
+    mock_chroma = MagicMock()
+    mock_chroma.get.return_value = {"ids": [], "documents": [], "metadatas": []}
+
+    with (
+        patch("chromadb.Client", return_value=mock_client),
+        patch("langchain_chroma.Chroma", return_value=mock_chroma) as mock_chroma_class,
+    ):
+        component = ChromaVectorStoreComponent().set(
+            collection_name="remote_collection",
+            persist_directory=None,
+            embedding=None,
+            ingest_data=[],
+            chroma_server_cors_allow_origins=[],
+            chroma_server_host="localhost",
+            chroma_server_http_port=8000,
+            chroma_server_grpc_port=None,
+            chroma_server_ssl_enabled=False,
+        )
+        component._cached_vector_store = None
+
+        component.build_vector_store()
+
+    mock_chroma_class.assert_called_once_with(
+        persist_directory=None,
+        client=mock_client,
+        embedding_function=None,
+        collection_name="remote_collection",
+        collection_configuration={"embedding_function": None},
+    )
+
+
+def test_chroma_collection_security_kwargs_disable_server_side_embedding_functions() -> None:
+    assert chroma_langchain_collection_kwargs() == {
+        "collection_configuration": {"embedding_function": None},
+    }
+    assert chroma_client_create_collection_kwargs() == {
+        "configuration": {"embedding_function": None},
+        "embedding_function": None,
+    }
+
+
+def test_chroma_collection_security_kwargs_are_fresh_dicts() -> None:
+    first = chroma_langchain_collection_kwargs()
+    first["collection_configuration"]["embedding_function"] = "unsafe"
+
+    assert chroma_langchain_collection_kwargs() == {
+        "collection_configuration": {"embedding_function": None},
+    }
 
 
 @pytest.mark.api_key_required
