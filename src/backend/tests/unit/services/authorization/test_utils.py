@@ -264,13 +264,7 @@ async def test_ensure_flow_permission_falls_back_to_project_domain(monkeypatch, 
 
 @pytest.mark.anyio
 async def test_ensure_flow_permission_project_beats_workspace(monkeypatch, fake_user):
-    """When both workspace_id and folder_id are set, the project domain wins.
-
-    Casbin g2 is directional (children inherit from parents). Passing the
-    project domain lets workspace-scoped grants flow down via g2 *and* keeps
-    project-scoped grants visible. Passing workspace would make project
-    grants invisible — that was the original (buggy) behavior.
-    """
+    """Project domain wins when both workspace_id and folder_id are set."""
     _install_settings(monkeypatch, authz_enabled=True)
     service = _StubAuthorizationService(allow=True)
     _install_authz(monkeypatch, service)
@@ -306,13 +300,7 @@ async def test_ensure_flow_permission_wildcard_domain_when_neither_set(monkeypat
 
 
 def test_resolve_casbin_domain_precedence():
-    """Unit test the precedence rule directly (project > workspace > '*').
-
-    Project is more specific than workspace; passing it lets workspace grants
-    flow down via Casbin g2 inheritance while keeping project-scoped grants
-    visible to the enforcer. Helper renamed from ``_resolve_flow_domain`` to
-    ``_resolve_casbin_domain`` because it serves flows AND deployments.
-    """
+    """Domain precedence: project > workspace > '*'."""
     ws, scope = uuid4(), uuid4()
     assert authz_utils._resolve_casbin_domain(workspace_id=ws, scope_id=scope) == f"project:{scope}"
     assert authz_utils._resolve_casbin_domain(workspace_id=ws, scope_id=None) == f"workspace:{ws}"
@@ -601,7 +589,7 @@ async def test_ensure_permission_fails_closed_on_plugin_exception(monkeypatch, f
 
     class _BrokenPlugin:
         async def enforce(self, **_kwargs):
-            msg = "casbin db down"
+            msg = "policy store down"
             raise RuntimeError(msg)
 
         async def batch_enforce(self, **_kwargs):
@@ -701,7 +689,7 @@ async def test_filter_visible_resources_groups_by_extracted_domain(monkeypatch, 
     """With ``domain_extractor`` set, batch_enforce is called once per unique domain.
 
     Each call sees only the candidates that resolved to that domain, so the
-    enterprise plugin evaluates each candidate against the right Casbin tuple
+    authorization plugin evaluates each candidate against the right policy tuple
     (the single-domain default would force every candidate through the same
     wildcard domain, hiding project-scoped grants).
     """
@@ -749,7 +737,7 @@ async def test_filter_visible_resources_owner_override_skips_enforcer(monkeypatc
     """Items owned by the caller are force-included without consulting the enforcer.
 
     Mirrors the owner-override short-circuit in ``_ensure_resource_permission``
-    so list and direct-read agree under enterprise enforcement. Without this,
+    so list and direct-read agree under plugin enforcement. Without this,
     a deny-all plugin would hide the caller's own rows from the listing
     response while letting them read the same rows directly.
     """
@@ -834,7 +822,7 @@ async def test_deployment_owner_override_skips_enforce(monkeypatch, fake_user):
 
 @pytest.mark.anyio
 async def test_kb_permission_uses_kb_id_object_slug(monkeypatch, fake_user):
-    """KB shares store UUIDs; the Casbin obj slug must use ``kb_id``."""
+    """KB shares store UUIDs; the policy object slug must use ``kb_id``."""
     _install_settings(monkeypatch, authz_enabled=True)
     service = _StubAuthorizationService(allow=True)
     _install_authz(monkeypatch, service)

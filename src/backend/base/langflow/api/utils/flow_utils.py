@@ -116,7 +116,7 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # authz_share is polymorphic over resource_type/resource_id with no
         # FK, so DB cascades cannot remove stale share rows when the flow is
         # deleted. Clean them up here so a deleted flow's grants do not
-        # silently survive — that would let an enterprise plugin keep
+        # silently survive — that would let an authorization plugin keep
         # honoring share rows that point at a tombstoned resource.
         await session.exec(
             delete(AuthzShare).where(AuthzShare.resource_type == "flow").where(AuthzShare.resource_id == flow_id)

@@ -1,4 +1,4 @@
-"""Langflow authorization service (OSS default — allows all; enterprise plugin enforces RBAC)."""
+"""Langflow authorization service (OSS pass-through; plugins enforce RBAC)."""
 
 from __future__ import annotations
 
@@ -18,15 +18,10 @@ if TYPE_CHECKING:
 
 
 class LangflowAuthorizationService(BaseAuthorizationService):
-    """OSS authorization service (pass-through).
-
-    ``ensure_*`` helpers still run when ``AUTHZ_ENABLED`` is True so routes stay wired,
-    but this implementation always allows. Register an enterprise
-    ``authorization_service`` (e.g. Casbin) via ``lfx.toml`` for real enforcement.
-    """
+    """OSS pass-through authorization service (always allows)."""
 
     def __init__(self, settings_service: SettingsService) -> None:
-        """Initialize the service with a reference to the live settings service."""
+        """Store the settings service reference."""
         super().__init__()
         self.settings_service = settings_service
         self.set_ready()
@@ -38,11 +33,11 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         return ServiceType.AUTHORIZATION_SERVICE.value
 
     def _authz_settings(self) -> AuthSettings:
-        """Return the live AuthSettings snapshot from the settings service."""
+        """Return the live AuthSettings snapshot."""
         return self.settings_service.auth_settings
 
     async def is_enabled(self) -> bool:
-        """Return True when AUTHZ_ENABLED is set in AuthSettings."""
+        """Return True when AUTHZ_ENABLED is set."""
         return self._authz_settings().AUTHZ_ENABLED
 
     async def enforce(
@@ -54,7 +49,7 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         act: str,  # noqa: ARG002
         context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> bool:
-        """Always allow — enterprise plugin overrides this for real enforcement."""
+        """Allow every request in the OSS default."""
         return True
 
     async def batch_enforce(
@@ -65,5 +60,5 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         requests: Sequence[tuple[str, str]],
         context: dict[str, Any] | None = None,  # noqa: ARG002
     ) -> list[bool]:
-        """Return a True list matching the request count."""
+        """Return True for each request."""
         return [True] * len(requests)

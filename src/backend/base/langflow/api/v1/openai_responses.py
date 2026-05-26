@@ -632,7 +632,7 @@ async def create_response(
         return OpenAIErrorResponse(error=error_response["error"])
 
     # Get flow using the model field (which contains flow_id). The lookup
-    # becomes share-aware when an enterprise plugin is registered, so we
+    # becomes share-aware when an authorization plugin is registered, so we
     # also enforce ``flow:execute`` explicitly — otherwise an API key with
     # cross-user fetch enabled would skip policy here.
     try:

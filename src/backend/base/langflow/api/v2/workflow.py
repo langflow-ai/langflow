@@ -150,7 +150,7 @@ async def execute_workflow(
 
     try:
         # Validate flow exists and user has permission. The lookup becomes
-        # share-aware when an enterprise plugin is registered, so we must
+        # share-aware when an authorization plugin is registered, so we must
         # also enforce ``flow:execute`` explicitly — otherwise an API key
         # with cross-user fetch enabled would bypass policy here.
         flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)

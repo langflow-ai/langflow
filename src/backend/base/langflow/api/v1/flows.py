@@ -160,12 +160,7 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
-            # When AUTHZ_ENABLED=true, drop any flows the user can't read. OSS
-            # default is pass-through (returns the input list unchanged); the
-            # enterprise plugin uses batch_enforce to apply share/role checks.
-            # Per-flow ``domain_extractor`` groups requests so project-scoped
-            # grants are evaluated against the right Casbin tuple — flows in
-            # different workspaces/projects can't share a single domain.
+            # Filter list rows when AUTHZ_ENABLED (per-flow domain_extractor).
             flows = await filter_visible_resources(
                 current_user,
                 resource_type="flow",
@@ -193,15 +188,7 @@ async def read_flows(
             )
             page = await apaginate(session, stmt, params=params)
 
-        # Apply the same authz filter the get_all branch uses so both modes of
-        # this endpoint behave consistently. OSS pass-through returns the page
-        # items unchanged; an enterprise plugin filters per-flow. The
-        # ``owner_extractor`` lets the helper short-circuit owner-allow without
-        # round-tripping through the enforcer — without it, an enterprise
-        # plugin lacking an explicit owner-allow policy would hide the caller's
-        # own flows from paginated results. ``page.total`` may overcount denied
-        # items — a fully accurate count requires SQL-level prefiltering via
-        # authz_share (Phase 3 work).
+        # Same authz filter as get_all (page.total may overcount denied rows).
         page.items = await filter_visible_resources(
             current_user,
             resource_type="flow",
@@ -227,9 +214,7 @@ async def read_flow(
     current_user: CurrentActiveUser,
 ):
     """Read a flow."""
-    # ``_read_flow`` is share-aware when an enterprise plugin is registered;
-    # otherwise it stays owner-scoped. A plugin deny becomes 404 here so we
-    # don't disclose existence of a flow the caller can't reach.
+    # Share-aware fetch; plugin deny → 404 (UUID privacy).
     if user_flow := await _read_flow(session, flow_id, current_user.id):
         try:
             await ensure_flow_permission(
@@ -263,11 +248,7 @@ async def get_note_translations(
     """
     from langflow.utils.i18n import translate
 
-    # Scope the fetch to flows the caller already owns; an enterprise plugin
-    # extends visibility through ensure_flow_permission below. Returning ``{}``
-    # rather than 404 here matches the helper's "no notes" path so that
-    # missing-flow vs not-owned vs not-authorized are indistinguishable to
-    # an attacker probing UUIDs.
+    # Owner-scoped fetch; empty dict preserves UUID privacy vs 404.
     flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
     if not flow or not flow.data:
         return {}
@@ -448,15 +429,7 @@ async def upsert_flow(
         existing_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
         if existing_flow is not None:
-            # OSS floor: when the registered service cannot widen fetch (OSS
-            # pass-through, or any path where AUTHZ_ENABLED is off), non-owners
-            # must not be able to upsert by id. Without this guard, the
-            # ``Flow.id == flow_id``-only fetch above would let a non-owner
-            # overwrite another user's flow because ``ensure_flow_permission``
-            # is a no-op when AUTHZ_ENABLED=false. With an enterprise plugin
-            # registered, ``ensure_flow_permission`` below is authoritative —
-            # a valid WRITE share grant must be honored, and a deny converts
-            # to 404 to preserve UUID privacy.
+            # Block non-owner upsert when cross-user fetch is off (UUID privacy).
             from langflow.services.deps import get_authorization_service
 
             authz = get_authorization_service()
@@ -748,13 +721,7 @@ async def delete_multiple_flows(
         async def _delete_operation() -> int:
             if not flow_ids:
                 return 0
-            # Widen the fetch when an enterprise plugin can authorize cross-user
-            # DELETE via share grants. Without this, pre-scoping by
-            # ``Flow.user_id == user.id`` silently drops non-owned flows from
-            # the working set so a valid DELETE share is never honored and
-            # ``ensure_flow_permission`` never emits a deny audit row. In OSS
-            # default the query stays owner-scoped — the no-op pass-through
-            # cannot widen visibility.
+            # Widen fetch when cross-user DELETE is supported; else owner-scoped.
             from langflow.services.deps import get_authorization_service
 
             authz = get_authorization_service()
@@ -765,10 +732,7 @@ async def delete_multiple_flows(
                 stmt = base_stmt.where(Flow.user_id == user.id)
             flows_to_delete = (await db.exec(stmt)).all()
             for flow in flows_to_delete:
-                # A deny from the enterprise plugin raises 403. We let it
-                # propagate so the audit row is written and the caller knows
-                # the bulk delete was rejected for at least one flow — the
-                # alternative (silent skip) would mask policy violations.
+                # Propagate plugin deny (403) so bulk delete fails audibly.
                 await ensure_flow_permission(
                     user,
                     FlowAction.DELETE,
@@ -811,11 +775,7 @@ async def download_multiple_file(
     # TODO: Full-version download (include_version parameter) is planned as a follow-up feature.
     # When implemented, add an include_version: bool = False parameter and embed version
     # entries in each flow dict using get_flow_versions_with_provider_status and strip_version_data.
-    # Widen the fetch when the enterprise plugin can authorize cross-user READ
-    # via share grants. Pre-scoping by ``Flow.user_id == user.id`` here would
-    # silently drop shared flows from the working set so a valid READ share is
-    # never honored and no audit row is written. OSS default keeps the query
-    # owner-scoped so the no-op pass-through cannot widen visibility.
+    # Widen fetch when cross-user READ is supported; else owner-scoped.
     from langflow.services.deps import get_authorization_service
 
     authz = get_authorization_service()
@@ -830,9 +790,7 @@ async def download_multiple_file(
         raise HTTPException(status_code=404, detail="No flows found.")
 
     for flow in flows:
-        # Convert deny to 404 to preserve UUID privacy — a caller probing
-        # arbitrary IDs cannot distinguish "doesn't exist" from "exists but
-        # not shared with me".
+        # Plugin deny → 404 (UUID privacy).
         try:
             await ensure_flow_permission(
                 user,

@@ -1,10 +1,4 @@
-"""Tests for the share-aware fetch helpers in ``services/authorization/fetch``.
-
-The OSS pass-through must NEVER cause cross-user fetch to succeed — only an
-enterprise service that opts in via ``SUPPORTS_CROSS_USER_FETCH=True`` is
-allowed to load resources by id alone. These tests pin both branches so the
-strict-pass-through contract from the design note can't regress.
-"""
+"""Tests for share-aware fetch helpers (strict pass-through contract)."""
 
 from __future__ import annotations
 
@@ -29,7 +23,7 @@ class _StubService(BaseAuthorizationService):
 
     Cross-user fetch in the helper requires *both* the plugin capability
     *and* ``is_enabled()`` to be true, so tests opt into both together via
-    ``supports_cross_user`` to mirror an enterprise plugin with
+    ``supports_cross_user`` to mirror an authorization plugin with
     ``AUTHZ_ENABLED=true``.
     """
 
@@ -97,7 +91,7 @@ async def test_owner_scoped_when_service_does_not_support_cross_user_fetch():
 
 @pytest.mark.anyio
 async def test_id_only_when_service_supports_cross_user_fetch():
-    """Enterprise plugin loads by id alone; route guard then decides access."""
+    """Authorization plugin loads by id alone; route guard then decides access."""
     session = _FakeSession(returns=object())
     service = _StubService(supports_cross_user=True)
     with patch(

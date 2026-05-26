@@ -49,7 +49,7 @@ def test_admin_has_share_administration_permissions():
 
 
 def test_permission_slugs_use_resource_action_format():
-    """Slugs must match ``{resource}:{action}`` so enterprise PolicySync can split them."""
+    """Slugs must match ``{resource}:{action}`` so PolicySync can split them."""
     for _, _, permissions in _MIGRATION._SYSTEM_ROLES:
         for slug in permissions:
             assert slug.count(":") == 1, slug

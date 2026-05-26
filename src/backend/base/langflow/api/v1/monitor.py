@@ -97,14 +97,7 @@ async def _ensure_flow_action_or_404(
     user: User,
     action: FlowAction,
 ) -> Flow | None:
-    """Load a flow (share-aware) and run ``ensure_flow_permission`` on it.
-
-    Returns the flow row, or ``None`` if no such flow exists (the caller
-    decides whether to 404 or to return an empty payload). Raises 403 if the
-    enterprise plugin denies; under the OSS pass-through default the
-    owner-scoped lookup ensures only the owner's flow is found at all so this
-    is effectively a no-op when no enterprise plugin is registered.
-    """
+    """Load a flow (share-aware), enforce permission, return None if missing."""
     flow = await authorized_or_owner_scoped(
         session,
         Flow,
@@ -199,7 +192,7 @@ async def get_message_sessions(
         # When a flow_id is provided, gate on flow READ permission so a viewer
         # without flow access cannot enumerate sessions. The bulk path
         # (flow_id is None) keeps the user-scoped JOIN — share-aware listing
-        # across all visible flows is an enterprise-side optimisation.
+        # across all visible flows is an plugin optimisation.
         if flow_id is not None:
             flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
             if flow is None:

@@ -16,11 +16,7 @@ from lfx.services.schema import ServiceType
 
 @register_service(ServiceType.AUTHORIZATION_SERVICE)
 class AuthorizationService(BaseAuthorizationService):
-    """Default LFX authorization service that permits all actions.
-
-    Langflow registers its own implementation at startup. Enterprise plugins may
-    override via the ``lfx.services`` entry point with ``authorization_service``.
-    """
+    """Default LFX authorization service that permits all actions."""
 
     def __init__(self) -> None:
         """Mark the no-op service as ready immediately (no external resources)."""

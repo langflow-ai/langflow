@@ -1,9 +1,4 @@
-"""Pydantic schemas for the ``/api/v1/authz/shares`` router.
-
-Mirrors the ``AuthzShare`` SQLModel but flattens the enum values to literals so
-clients see a clear allow-list in the OpenAPI schema rather than the raw
-SQLAlchemy enum class.
-"""
+"""Pydantic schemas for /api/v1/authz/shares."""
 
 from __future__ import annotations
 
@@ -13,9 +8,7 @@ from uuid import UUID
 
 from pydantic import BaseModel, Field, model_validator
 
-# Centralised slugs that match the Casbin object prefixes used elsewhere in
-# this module. Keep this list aligned with the action-enum modules; adding a
-# new shareable resource type requires touching both places.
+# Shareable resource slugs (keep aligned with authorization action modules).
 ShareResourceType = Literal[
     "flow",
     "deployment",
@@ -30,13 +23,7 @@ SharePermissionLiteral = Literal["read", "write", "execute", "admin"]
 
 
 class ShareCreate(BaseModel):
-    """Payload for creating an ``authz_share`` row.
-
-    Targeted scopes (``team``, ``user``) require a ``target_id``; untargeted
-    scopes (``private``, ``public``) forbid one. The DB CHECK constraint
-    ``scope_target_consistency`` enforces the same shape — the validator below
-    is just so the API returns 422 instead of leaking the DB error.
-    """
+    """Payload for creating an authz_share row."""
 
     resource_type: ShareResourceType
     resource_id: UUID
@@ -46,35 +33,27 @@ class ShareCreate(BaseModel):
 
     @model_validator(mode="after")
     def _check_scope_target_consistency(self) -> ShareCreate:
+        """Require target_id for user/team scopes; forbid it for private/public."""
         targeted = self.scope in ("team", "user")
-        has_target = self.target_id is not None
-        if targeted and not has_target:
-            msg = f"scope={self.scope!r} requires target_id"
+        if targeted and self.target_id is None:
+            msg = f"scope {self.scope!r} requires target_id"
             raise ValueError(msg)
-        if not targeted and has_target:
-            msg = f"scope={self.scope!r} must not include a target_id"
+        if not targeted and self.target_id is not None:
+            msg = f"scope {self.scope!r} must not set target_id"
             raise ValueError(msg)
         return self
 
 
 class ShareUpdate(BaseModel):
-    """Payload for updating an ``authz_share`` row.
-
-    Only ``permission_level`` is editable. Changing target_id or scope means
-    you wanted a different share — revoke and recreate.
-    """
+    """Payload for updating an authz_share permission level."""
 
     permission_level: SharePermissionLiteral
 
 
 class ShareRead(BaseModel):
-    """Read-only projection of an ``authz_share`` row."""
+    """Serialized authz_share row returned by the API."""
 
     id: UUID
-    # Use the same Literal as ``ShareCreate.resource_type`` so OpenAPI clients
-    # see a stable enum on both sides of the round trip. A bare ``str`` here
-    # would let a row inserted by a future code path with a typoed
-    # ``resource_type`` round-trip back unvalidated.
     resource_type: ShareResourceType
     resource_id: UUID
     scope: ShareScopeLiteral

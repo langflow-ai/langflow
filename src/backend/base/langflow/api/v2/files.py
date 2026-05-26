@@ -90,7 +90,7 @@ async def byte_stream_generator(file_input, chunk_size: int = 8192) -> AsyncGene
 
 async def fetch_file_object(file_id: uuid.UUID, current_user: CurrentActiveUser, session: DbSession):
     # Share-aware fetch. Under the OSS pass-through this keeps the existing
-    # owner-scoped query (cannot widen visibility). Enterprise plugins set
+    # owner-scoped query (cannot widen visibility). Authorization plugins set
     # ``SUPPORTS_CROSS_USER_FETCH=True`` so a share grant can resolve here.
     file = await authorized_or_owner_scoped(
         session,
@@ -455,7 +455,7 @@ async def delete_files_batch(
 ):
     """Delete multiple files by their IDs."""
     try:
-        # Share-aware fetch: when an enterprise plugin supports cross-user
+        # Share-aware fetch: when an authorization plugin supports cross-user
         # access, the SELECT loads by id alone so each row's true owner
         # surfaces and per-row ``ensure_file_permission`` can decide. The OSS
         # pass-through keeps the owner-scoped query.

@@ -222,9 +222,9 @@ async def read_projects(
         ).all()
         projects = [project for project in projects if project.name != STARTER_FOLDER_NAME]
         # When AUTHZ_ENABLED=true, drop projects the user can't read. OSS
-        # default is pass-through; the enterprise plugin honors role + share grants.
+        # default is pass-through; the authorization plugin honors role + share grants.
         # ``domain_extractor`` groups requests by workspace so each batch is
-        # evaluated against the right Casbin tuple. Projects are the resource
+        # evaluated against the right policy tuple. Projects are the resource
         # itself, so the domain falls back to workspace (or ``*``).
         projects = await filter_visible_resources(
             current_user,
@@ -256,7 +256,7 @@ async def read_project(
     search: str = "",
 ):
     try:
-        # Share-aware fetch: when an enterprise authorization service is
+        # Share-aware fetch: when an authorization plugin is
         # registered (``SUPPORTS_CROSS_USER_FETCH=True``) the project is
         # loaded by id alone and ``ensure_project_permission`` below decides
         # access. The OSS pass-through keeps the owner-scoped query so the
@@ -347,7 +347,7 @@ async def read_project(
             # A project share grant implies access to the project itself, but
             # per-flow policy (deny rules, lower scopes) still applies. Without
             # this call, ``list(project.flows)`` would leak every flow in the
-            # project regardless of finer-grained Casbin rules the plugin may
+            # project regardless of finer-grained policy engine rules the plugin may
             # have. OSS pass-through returns the input list unchanged, so this
             # has no effect on default OSS installs.
             visible_flows = await filter_visible_resources(

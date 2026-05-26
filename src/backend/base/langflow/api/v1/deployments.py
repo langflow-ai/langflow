@@ -774,7 +774,7 @@ async def list_deployments(
         )
     # Per-deployment authorization filter. Mirrors GET /flows/ and GET /projects/:
     # the coarse READ check above gates whether the caller can list deployments
-    # at all; this call drops individual rows the enterprise plugin denies. OSS
+    # at all; this call drops individual rows the authorization plugin denies. OSS
     # pass-through returns the input unchanged. ``rows_with_counts`` is
     # ``list[tuple[Deployment, int, list[...]]]`` so the key/domain extractors
     # operate on the first element. ``total`` may overcount denied items —

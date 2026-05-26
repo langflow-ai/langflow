@@ -232,7 +232,7 @@ async def build_flow(
     # since build is a valid operation on shared flows.
     #
     # Phase 3 prerequisite: the owner-OR-public filter below short-circuits an
-    # enterprise execute-grant on a non-owned private flow. Cross-user build
+    # plugin execute-grant on a non-owned private flow. Cross-user build
     # support requires share-aware loading (load by id, then check via the
     # plugin, then convert deny to 404 for UUID-privacy) which lands with the
     # `authz_share` CRUD work. See `langflow.services.authorization.utils`.
@@ -251,7 +251,7 @@ async def build_flow(
             )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
 
-    # Authorize the execute action — runs the enterprise plugin if registered,
+    # Authorize the execute action — runs the authorization plugin if registered,
     # no-op in OSS pass-through. Audited regardless.
     await ensure_flow_permission(
         current_user,

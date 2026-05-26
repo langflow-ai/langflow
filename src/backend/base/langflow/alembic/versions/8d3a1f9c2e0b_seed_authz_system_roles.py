@@ -1,23 +1,8 @@
-"""seed authz system roles — viewer / developer / admin
+"""Seed built-in authz roles (viewer, developer, admin).
 
 Revision ID: 8d3a1f9c2e0b
 Revises: 7c8d9e0f1a2b
 Create Date: 2026-05-21
-
-Phase: EXPAND
-
-Phase 4 of the OSS RBAC rollout. Inserts the three built-in roles referenced
-by the design document so an enterprise plugin has a stable bootstrap set
-without having to ship its own seed migration. EXPAND because the change is
-additive — new rows in an existing table, no schema or data semantics change.
-
-OSS does not interpret these JSON permission lists — they are pure metadata.
-The enterprise Casbin plugin reads them during ``PolicySync`` to compile
-matching ``p`` rules in ``casbin_rule``.
-
-Idempotent: existing rows with the same ``name`` are left untouched (each
-insert is gated by a ``WHERE NOT EXISTS`` subquery against ``name``). Safe to
-re-run.
 """
 
 from __future__ import annotations
@@ -39,7 +24,7 @@ depends_on: str | Sequence[str] | None = None
 
 
 # Permission templates use ``"{resource}:{action}"`` slugs that map directly
-# to Casbin object/action pairs. Enterprise plugins read these to seed
+# to policy object/action pairs. Authorization plugins read these to seed
 # matching ``p`` rules during ``PolicySync``.
 _VIEWER_PERMISSIONS: tuple[str, ...] = (
     "flow:read",
@@ -126,7 +111,7 @@ def upgrade() -> None:
     # so we pass real UUID objects here.
     # ``sa.JSON`` serializes Python lists natively on both SQLite and Postgres.
     # ``json.dumps`` here would write the JSON-encoded string *inside* the
-    # JSON column, which downstream readers (Enterprise PolicySync expects a
+    # JSON column, which downstream readers (PolicySync expects a
     # list) would have to peel a second time.
     for name, description, permissions in _SYSTEM_ROLES:
         # Use an atomic check-then-insert to harden against concurrent

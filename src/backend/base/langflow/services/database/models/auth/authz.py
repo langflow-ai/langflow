@@ -1,17 +1,4 @@
-"""Authorization (RBAC) plugin tables.
-
-Tables are owned by Langflow OSS (Alembic migrations). Enterprise plugins populate
-policy data and may use the Casbin SQLAlchemy adapter against ``casbin_rule``.
-
-Partial unique indexes use ``postgresql_where`` / ``sqlite_where``. The project
-targets PostgreSQL and SQLite only; on any other dialect those kwargs are
-silently ignored and the indexes would lose their uniqueness guarantee — see
-``pyproject.toml`` for the supported driver set.
-
-Timestamps standardize on ``DateTime(timezone=True)`` to match the rest of the
-project (``deployment/model.py``, ``api_key/model.py``, etc.) and avoid TZ-naive
-columns on Postgres that strip ``tzinfo`` on write.
-"""
+"""Authorization (RBAC) tables (Alembic-owned; plugins populate policy data)."""
 
 from datetime import datetime, timezone
 from enum import Enum
@@ -53,11 +40,7 @@ def _tz_column(*, nullable: bool = False, index: bool = False) -> Column:
 
 
 class CasbinRule(SQLModel, table=True):  # type: ignore[call-arg]
-    """Casbin policy storage (SQLAlchemy adapter compatible).
-
-    Casbin's loader filters by ``ptype`` on every ``load_policy()`` /
-    ``AddPolicy()``; the index is required for non-trivial policy volumes.
-    """
+    """Policy rule storage (ptype-indexed for loader queries)."""
 
     __tablename__ = "casbin_rule"
     __table_args__ = (Index("ix_casbin_rule_ptype", "ptype"),)
@@ -73,7 +56,7 @@ class CasbinRule(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class AuthzRole(SQLModel, table=True):  # type: ignore[call-arg]
-    """Role metadata for admin UI; enforceable policies live in ``casbin_rule``."""
+    """Role metadata for admin UI."""
 
     __tablename__ = "authz_role"
 
@@ -130,7 +113,7 @@ class AuthzRoleAssignment(SQLModel, table=True):  # type: ignore[call-arg]
             sqlite_where=text("domain_id IS NULL"),
         ),
         # Hot-path lookup: "all assignments for user X scoped to a domain"
-        # — every enterprise enforce() call. Composite avoids two non-covering
+        # Composite index for enforce() lookups.
         # single-column scans.
         Index(
             "ix_authz_role_assignment_user_domain",
@@ -212,7 +195,7 @@ class AuthzShare(SQLModel, table=True):  # type: ignore[call-arg]
         # a bitmap-AND of two single-column indexes.
         Index("ix_authz_share_resource", "resource_type", "resource_id"),
         # Bound scope and permission_level to known enum values at the DB
-        # level. Without this, an enterprise plugin (or a manual INSERT) could
+        # Without this, a plugin (or manual INSERT) could
         # write a typo like ``scope='PRIVATE'`` that silently bypasses the
         # partial unique indexes (which match on the lowercase form).
         CheckConstraint(
@@ -284,7 +267,7 @@ class AuthzEditLock(SQLModel, table=True):  # type: ignore[call-arg]
     expires_at: datetime = Field(sa_column=_tz_column(index=True))
 
 
-# TODO: AuthzAuditLog is append-only and unbounded. At enterprise scale this
+# TODO: AuthzAuditLog is append-only and unbounded. At large scale this
 # table will outgrow practical query windows. Decide between (a) Postgres native
 # partitioning by ``timestamp`` (monthly/quarterly), (b) an out-of-band
 # archival/TTL job, or (c) SIEM export per design note §5.3 Phase 5. The

@@ -12,8 +12,8 @@ from langflow.services.authorization.actions import (
 )
 
 
-def test_flow_action_values_match_casbin_strings():
-    """Casbin policies use lowercase action strings; the enum values must match."""
+def test_flow_action_values_match_policy_strings():
+    """Policy action strings match FlowAction enum values."""
     assert FlowAction.READ.value == "read"
     assert FlowAction.WRITE.value == "write"
     assert FlowAction.CREATE.value == "create"
@@ -34,8 +34,8 @@ def test_flow_action_is_iterable_and_complete():
     assert values == {"read", "write", "create", "delete", "execute", "deploy"}
 
 
-def test_deployment_action_values_match_casbin_strings():
-    """Casbin policies use lowercase action strings; the enum values must match."""
+def test_deployment_action_values_match_policy_strings():
+    """Policy action strings match DeploymentAction enum values."""
     assert DeploymentAction.READ.value == "read"
     assert DeploymentAction.WRITE.value == "write"
     assert DeploymentAction.CREATE.value == "create"

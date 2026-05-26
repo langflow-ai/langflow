@@ -346,7 +346,7 @@ async def _read_flow(
     """Read a flow.
 
     When the registered authorization service supports cross-user fetch
-    (enterprise Casbin), the row is loaded by id alone and the caller's
+    (authorization plugin), the row is loaded by id alone and the caller's
     ``ensure_flow_permission`` decides access. Otherwise the query stays
     owner-scoped so the OSS pass-through default cannot widen visibility.
     """

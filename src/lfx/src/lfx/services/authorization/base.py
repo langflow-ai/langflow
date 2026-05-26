@@ -15,33 +15,7 @@ if TYPE_CHECKING:
 
 
 class AuthzContext(TypedDict, total=False):
-    """Documented shape of the ``context`` dict passed to authz plugins.
-
-    Plugins receive a ``dict[str, Any]`` for forward compatibility — new
-    callers may add fields without forcing a plugin recompile — but this
-    TypedDict documents the keys the framework promises to populate and the
-    keys plugins should be prepared to read.
-
-    Framework-populated keys
-    ------------------------
-    is_superuser : bool
-        Always present. ``getattr(user, "is_superuser", False)``.
-
-    Resource-owner hints (one is populated per call, others omitted)
-    ----------------------------------------------------------------
-    flow_user_id, deployment_user_id, project_user_id, knowledge_base_user_id,
-    variable_user_id, file_user_id, share_user_id : UUID | None
-        The id of the user who owns the resource being authorized. The
-        framework's ``ensure_*_permission`` helpers short-circuit on owner
-        match, so this key is the source of truth for the owner-override path.
-
-    Domain / scope hints
-    --------------------
-    workspace_id : UUID | None
-        The workspace this resource belongs to, when applicable.
-    folder_id : UUID | None
-        The folder/project this resource belongs to, when applicable.
-    """
+    """Documented keys for the enforce/batch_enforce context dict."""
 
     is_superuser: bool
     flow_user_id: _UUID | None
@@ -56,20 +30,11 @@ class AuthzContext(TypedDict, total=False):
 
 
 class BaseAuthorizationService(Service, abc.ABC):
-    """Abstract base class for authorization (RBAC) services.
-
-    Authentication establishes identity; authorization decides what that identity may do.
-    Enterprise plugins provide Casbin-backed implementations; OSS ships a no-op default.
-    """
+    """Abstract base class for authorization (RBAC) services."""
 
     name = ServiceType.AUTHORIZATION_SERVICE.value
 
-    # Capability flag. Implementations that can authorize non-owner access (share
-    # grants, domain roles) set this to True so share-aware fetch helpers load
-    # resources by id and rely on enforce() to gate access. The OSS pass-through
-    # leaves this False so fetch helpers keep their owner-scoped queries — that
-    # way enabling AUTHZ_ENABLED without an enterprise plugin does not silently
-    # widen visibility.
+    # True when the service can authorize non-owner access (share-aware fetch).
     SUPPORTS_CROSS_USER_FETCH: ClassVar[bool] = False
 
     async def supports_cross_user_fetch(self) -> bool:

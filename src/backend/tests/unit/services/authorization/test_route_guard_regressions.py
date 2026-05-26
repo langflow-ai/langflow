@@ -1,18 +1,4 @@
-"""Regression tests for route guard fixes from the OSS authorization PR review.
-
-Source-level checks asserting that:
-
-* The paginated ``read_flows`` branch passes ``owner_extractor`` to
-  ``filter_visible_resources`` (so an enterprise enforcer cannot hide the
-  caller's own flows in paginated mode).
-* ``upsert_flow`` consults ``supports_cross_user_fetch`` + ``is_enabled``
-  before falling back to the hardcoded ownership check, and wraps
-  ``ensure_flow_permission`` with ``deny_to_404``.
-* ``delete_multiple_flows`` and ``download_multiple_file`` do not pre-scope by
-  ``Flow.user_id == user.id`` unconditionally; they gate that filter on the
-  same capability check.
-* ``load_flow`` authorizes EXECUTE before returning a Graph.
-"""
+"""Source-level regression tests for authorization route guard wiring."""
 
 from __future__ import annotations
 
@@ -69,7 +55,7 @@ def test_read_flows_paginated_branch_passes_owner_extractor(flows_routes):
 
     Both branches of read_flows (``get_all=True`` and pagination) must give
     the enforcer the same hint about which flows are owner-owned. Omitting it
-    on the paginated branch lets an enterprise plugin without an explicit
+    on the paginated branch lets an authorization plugin without an explicit
     owner-allow policy hide the caller's own flows when paginating.
     """
     func = flows_routes["read_flows"]
@@ -85,7 +71,7 @@ def test_read_flows_paginated_branch_passes_owner_extractor(flows_routes):
 def test_upsert_flow_consults_cross_user_fetch_capability(flows_routes):
     """upsert_flow must not unconditionally raise 404 for non-owners.
 
-    With an enterprise plugin registered, a valid WRITE share grant must be
+    With an authorization plugin registered, a valid WRITE share grant must be
     honored. The current shape gates the hardcoded ownership floor on
     ``supports_cross_user_fetch() and is_enabled()``.
     """

@@ -426,7 +426,7 @@ async def get_deployment_row_or_404(
     user_id: UUID,
     db: DbSession,
 ) -> Deployment:
-    # ``get_deployment_db`` is share-aware when an enterprise plugin is
+    # ``get_deployment_db`` is share-aware when an authorization plugin is
     # registered and ``LANGFLOW_AUTHZ_ENABLED`` is on; otherwise it stays
     # owner-scoped. Routes still call ``ensure_deployment_permission`` after
     # this to authorize the actor against the resolved deployment.

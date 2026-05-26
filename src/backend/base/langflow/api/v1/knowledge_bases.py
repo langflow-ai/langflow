@@ -101,7 +101,7 @@ async def _guard_kb_action(
     """Guard a KB-scoped action and return the effective KB owner context.
 
     Looks up ``KnowledgeBaseRecord(user_id=current_user.id, name=kb_name)`` so
-    the Casbin object key (``knowledge_base:{record.id}``) lines up with the
+    the policy object key (``knowledge_base:{record.id}``) lines up with the
     UUID-typed ``authz_share.resource_id`` column. Legacy disk-only KBs (no
     ``KnowledgeBaseRecord`` row) fall back to ``kb_id=None`` so the enforcer
     sees ``knowledge_base:*`` and the owner-override path still applies.
@@ -272,7 +272,7 @@ def _check_memory_base_association(kb_name: str, current_user: CurrentActiveUser
 
     Owner-scoped early gate — runs as ``Depends(...)`` before the route
     body and only sees the actor. For shared KBs reached through an
-    enterprise share grant the actor has no same-named local KB so this
+    shared grant the actor has no same-named local KB so this
     dep returns early; the route body then re-runs the check against the
     resolved owner via :func:`_assert_kb_not_memory_base` so a shared
     Memory-Base-managed KB still gets blocked.
@@ -1308,7 +1308,7 @@ async def list_knowledge_bases(
     """
     # List-level guard: a viewer-role user may still see the KBs they own,
     # but a role with ``knowledge_base:read`` revoked entirely is rejected
-    # here. Per-row filtering is the enterprise plugin's responsibility once
+    # here. Per-row filtering is the authorization plugin's responsibility once
     # KB share grants exist.
     await _guard_kb_action(current_user=current_user, action=KnowledgeBaseAction.READ, kb_name=None)
     try:
@@ -2118,7 +2118,7 @@ async def delete_knowledge_bases_bulk(
 ) -> dict[str, object]:
     """Delete multiple knowledge bases."""
     # Per-KB guard. Resolve each guard upfront so the loop body can use the
-    # owner context (path + DB row owner) when an enterprise plugin authorizes
+    # owner context (path + DB row owner) when an authorization plugin authorizes
     # a non-owner via a share grant.
     kb_guards: dict[str, _KbGuardResult] = {}
     for kb_name in request.kb_names:

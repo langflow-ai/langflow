@@ -1,9 +1,4 @@
-"""Tests for the BaseAuthorizationService cross-user-fetch capability flag.
-
-The capability is the single switch that decides whether share-aware fetch
-helpers load resources by id alone. The OSS pass-through must never opt in;
-enterprise plugins may.
-"""
+"""Tests for the cross-user-fetch capability flag."""
 
 from __future__ import annotations
 
@@ -46,7 +41,7 @@ async def test_langflow_pass_through_does_not_support_cross_user_fetch():
 
 @pytest.mark.anyio
 async def test_subclass_can_opt_in():
-    """Enterprise plugins flip ``SUPPORTS_CROSS_USER_FETCH=True``; the base accepts it."""
+    """Authorization plugins flip ``SUPPORTS_CROSS_USER_FETCH=True``; the base accepts it."""
 
     class _Enterprise(LangflowAuthorizationService):
         SUPPORTS_CROSS_USER_FETCH = True

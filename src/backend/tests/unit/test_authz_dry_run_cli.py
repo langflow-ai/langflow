@@ -183,7 +183,7 @@ def test_deny_writes_blocks_writes_allows_reads():
 def test_domain_is_project_prefixed():
     """The recorded domain uses the project:{uuid} form for in-scope scenarios.
 
-    ``_resolve_flow_domain`` prefers project over workspace because Casbin g2
+    ``_resolve_flow_domain`` prefers project over workspace because g2
     inheritance is directional — passing the more specific domain lets both
     workspace-scoped and project-scoped grants match. The dry-run CLI passes
     both ids on every scenario, so every audited row resolves to ``project:``.

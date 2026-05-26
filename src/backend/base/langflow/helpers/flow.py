@@ -166,24 +166,7 @@ async def get_flow_by_id_or_name(
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
-    """Load a flow as a Graph after authorizing the caller.
-
-    ``user_id`` is the caller (the user executing the graph), and ``flow_id``
-    identifies the flow to load. This function is reachable from custom
-    components, sub-flow runners, and ``run_flow`` — anywhere a user-supplied
-    ``flow_id`` might end up. We must authorize EXECUTE here so a malicious
-    component or webhook cannot pass an arbitrary id and pull another user's
-    flow definition (which contains the flow author's prompts, tools, and
-    embedded credentials).
-
-    OSS default (``AUTHZ_ENABLED=false`` or no enterprise plugin): the fetch
-    stays owner-scoped, so a non-owner ``flow_id`` returns ``None`` and the
-    function raises ``ValueError`` exactly as before.
-
-    Enterprise (``AUTHZ_ENABLED=true`` and ``supports_cross_user_fetch=True``):
-    the fetch widens to id-only and ``ensure_flow_permission(EXECUTE)`` decides
-    access via the plugin's policy.
-    """
+    """Load a flow graph after authorizing EXECUTE for the caller."""
     from lfx.graph.graph.base import Graph
 
     from langflow.processing.process import process_tweaks
@@ -216,11 +199,7 @@ async def load_flow(
             msg = f"Flow {flow_id} not found"
             raise ValueError(msg)
 
-        # Authorize EXECUTE. ``ensure_flow_permission`` short-circuits on owner
-        # override, so the OSS pass-through path is unchanged. With an
-        # enterprise plugin a deny raises ``HTTPException(403)`` which we
-        # translate back to ``ValueError`` so callers (component execution,
-        # ``run_flow``) keep the existing exception contract.
+        # Map plugin deny (403) to ValueError for existing callers.
         caller = await session.get(User, uuid_user_id)
         if caller is None:
             msg = "Session is invalid"
@@ -460,20 +439,11 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
 
 
 async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
-    """Resolve a flow by UUID or ``endpoint_name``.
-
-    When the registered authorization service supports cross-user fetch
-    (enterprise Casbin), the owner-equality check is skipped and the route's
-    ``ensure_flow_permission`` decides access. The OSS pass-through default
-    keeps the owner-scoped lookup so enabling ``LANGFLOW_AUTHZ_ENABLED`` alone
-    cannot widen visibility.
-    """
+    """Resolve a flow by UUID or endpoint_name (share-aware when enforcement is on)."""
     from langflow.services.deps import get_authorization_service
 
     authz = get_authorization_service()
-    # Cross-user fetch is only safe when enforcement is also active — otherwise
-    # the route guards are no-ops and widening the lookup would silently
-    # expose foreign flows without any policy check.
+    # Widen lookup only when cross-user fetch and AUTHZ_ENABLED are both on.
     share_aware = await authz.supports_cross_user_fetch() and await authz.is_enabled()
 
     async with session_scope() as session:

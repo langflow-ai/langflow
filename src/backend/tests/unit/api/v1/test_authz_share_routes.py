@@ -1,15 +1,4 @@
-"""Route-level tests for the OSS share-administration floor.
-
-These tests assert the documented OSS contract: only the resource owner or a
-superuser may administer ``authz_share`` rows for a resource when the
-authorization service is the pass-through default (no enterprise plugin). The
-schema-level happy path is covered in ``test_authz_share_schemas.py``; what
-these tests prevent is the floor being silently dropped on a refactor.
-
-We exercise the handlers directly (not via the FastAPI app) using a fake async
-session that records writes. This keeps the test fast and isolates the floor
-logic from DB and Casbin concerns.
-"""
+"""Route-level tests for the OSS share-administration owner floor."""
 
 from __future__ import annotations
 
@@ -345,13 +334,13 @@ async def test_delete_share_allows_owner_under_oss_passthrough(patch_authz, sile
 
 
 # --------------------------------------------------------------------------- #
-# Floor behavior when the enterprise plugin is active
+# Floor behavior when the authorization plugin is active
 # --------------------------------------------------------------------------- #
 
 
 @pytest.mark.asyncio
-async def test_floor_is_skipped_when_enterprise_plugin_active(patch_authz, silence_audit):  # noqa: ARG001
-    """OSS floor is skipped when the enterprise plugin is actively enforcing.
+async def test_floor_is_skipped_when_plugin_active(patch_authz, silence_audit):  # noqa: ARG001
+    """OSS floor is skipped when the authorization plugin is actively enforcing.
 
     When supports_cross_user_fetch=True AND AUTHZ_ENABLED=true, the OSS floor
     is skipped so a plugin-granted share:create role can administer shares on
@@ -363,7 +352,7 @@ async def test_floor_is_skipped_when_enterprise_plugin_active(patch_authz, silen
     patch_authz(cross_user=True, enabled=True)
 
     owner = _make_user()
-    delegate = _make_user()  # non-owner, but allowed by enterprise policy
+    delegate = _make_user()  # non-owner, but allowed by plugin policy
     flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
     session = _FakeAsyncSession({(Flow, flow.id): flow})
     payload = _payload_for(flow.id)

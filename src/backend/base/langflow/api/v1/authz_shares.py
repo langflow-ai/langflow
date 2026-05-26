@@ -1,25 +1,4 @@
-"""CRUD API for ``authz_share`` rows.
-
-This router is the OSS-side admin surface for resource-level shares. It does
-not interpret share rows for enforcement — that is the Enterprise plugin's
-job — but it writes the canonical rows so plugins have something to compile
-into Casbin policy via ``PolicySync``.
-
-Authorization model
--------------------
-
-* Creating, listing, updating, or deleting a share on a resource is gated by
-  ``share:{action}`` (via :func:`ensure_share_permission`) and falls through
-  to the OSS pass-through (allow-all) unless an enterprise plugin is
-  registered.
-* The route handler also enforces an OSS-side floor: only the resource owner
-  or a superuser may write shares for that resource. This prevents the OSS
-  pass-through default from silently letting a viewer-role user hand out
-  grants on someone else's resource.
-* Non-owners listing shares only see rows whose ``target_id`` matches their
-  own user id (so users can see what's been shared *with* them without
-  seeing the full grant ledger).
-"""
+"""CRUD API for authz_share rows (enforcement is delegated to authorization plugins)."""
 
 from __future__ import annotations
 
@@ -48,10 +27,7 @@ from langflow.services.deps import get_authorization_service
 router = APIRouter(prefix="/authz/shares", tags=["Authorization"])
 
 
-# Map resource type slug → (SQLModel, FK-to-user column attribute). Knowledge
-# bases use ``KnowledgeBaseRecord`` (UUID primary key) so the share row's
-# UUID-typed ``resource_id`` aligns with the Casbin object key
-# (``knowledge_base:{kb_id}``) emitted by ``ensure_knowledge_base_permission``.
+# resource_type slug → (model, owner column).
 _RESOURCE_OWNER_LOOKUPS: dict[str, tuple[type, str]] = {
     "flow": (Flow, "user_id"),
     "deployment": (Deployment, "user_id"),
@@ -86,16 +62,7 @@ async def _user_can_see_share(
     user_id: UUID,
     resource_owner_id: UUID | None,
 ) -> bool:
-    """Return True when ``user_id`` is permitted to see ``row`` in list/get.
-
-    Visibility tiers (any one is sufficient):
-
-    * resource owner — full visibility on shares of their own resource;
-    * share creator — needs to manage their own grants;
-    * user-scoped target — needs to know what's been shared with them;
-    * team-scoped target — caller is a member of ``row.target_id``;
-    * public scope — anyone in the system can see the row exists.
-    """
+    """Return True when the user may see this share row."""
     if user_id in {resource_owner_id, row.created_by}:
         return True
     scope = row.scope
@@ -114,15 +81,7 @@ async def _user_can_see_share(
 
 
 async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
-    """Drop cached policy after a share write, scoped to the share's audience.
-
-    The plugin-side ``invalidate_user(uuid)`` API only knows about user ids,
-    so ``target_id`` is *only* a valid argument when ``scope == "user"``.
-    For team / private / public shares (and for unknown scopes), fall back
-    to ``invalidate_all`` — otherwise we'd hand the enforcer a team uuid as
-    if it were a user uuid and the actual team members' cache would stay
-    stale.
-    """
+    """Invalidate cached policy after a share write (user scope vs invalidate_all)."""
     authz = get_authorization_service()
     if scope == ShareScope.USER.value and target_id is not None:
         await authz.invalidate_user(target_id)
@@ -135,24 +94,14 @@ async def _ensure_can_administer_share(
     user: User,
     owner_id: UUID | None,
 ) -> None:
-    """OSS floor: only resource owner or superuser may write shares.
-
-    When an enterprise plugin is actively enforcing (cross-user fetch
-    supported AND ``LANGFLOW_AUTHZ_ENABLED=true``) this floor is skipped so
-    a workspace/admin role with ``share:create`` can administer shares for
-    resources it doesn't own; ``ensure_share_permission`` is the
-    authoritative check in that mode. Under the OSS pass-through (allow-all
-    enforce) the floor stays in place so a viewer cannot mint share rows for
-    someone else's resource.
-    """
+    """Require resource owner or superuser unless cross-user enforcement is active."""
     if getattr(user, "is_superuser", False):
         return
     if owner_id is not None and owner_id == user.id:
         return
     authz = get_authorization_service()
     if await authz.supports_cross_user_fetch() and await authz.is_enabled():
-        # Enterprise plugin is active — let ``ensure_share_permission``
-        # decide (its decision will fire downstream of this helper).
+        # Defer to ensure_share_permission when enforcement is active.
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -167,19 +116,14 @@ async def create_share(
     current_user: CurrentActiveUser,
     session: DbSession,
 ) -> ShareRead:
-    """Create an ``authz_share`` row granting access to a resource.
-
-    The caller must be the resource owner or a superuser. The plugin-level
-    ``share:create`` guard fires after the OSS owner check, so an enterprise
-    plugin can additionally deny owners with insufficient role.
-    """
+    """Create an authz_share row for a resource."""
     owner_id = await _resolve_resource_owner(
         session,
         resource_type=payload.resource_type,
         resource_id=payload.resource_id,
     )
     if owner_id is None:
-        # The resource simply does not exist — UUID privacy: 404.
+        # UUID privacy: missing resource → 404.
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Resource not found")
     await _ensure_can_administer_share(user=current_user, owner_id=owner_id)
     await ensure_share_permission(
@@ -201,9 +145,7 @@ async def create_share(
     try:
         await session.flush()
     except Exception as exc:
-        # Log the raw exception server-side; the client gets a fixed string
-        # so we don't leak table/column/constraint names through the 409
-        # body (security rule: error messages don't disclose schema).
+        # Log server-side; return a fixed 409 message (no schema leakage).
         await session.rollback()
         logger.warning("authz_share insert rejected: %s", exc)
         raise HTTPException(
@@ -212,9 +154,7 @@ async def create_share(
         ) from exc
     await session.refresh(row)
 
-    # Tell the enforcer (if any) to drop its cached policy. Use the share's
-    # scope to pick the right invalidation — a team's target_id is a team
-    # uuid, not a user uuid, so ``invalidate_user`` would not reach members.
+    # Invalidate policy cache for the share audience.
     await _invalidate_for_share(payload.scope, payload.target_id)
 
     await audit_decision(
@@ -248,17 +188,7 @@ async def list_shares(
     limit: Annotated[int, Query(ge=1, le=_LIST_SHARES_MAX_LIMIT)] = _LIST_SHARES_DEFAULT_LIMIT,
     offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[ShareRead]:
-    """List share rows.
-
-    Resource owners and superusers see every matching row. Non-owners only
-    see rows whose ``target_id`` is their own user id, rows scoped to a team
-    they belong to, public rows, or rows on resources they own.
-
-    Always paginated — ``limit`` is capped at 200 to bound DB load. The
-    previous unbounded implementation issued an N+1 ``select(AuthzTeamMember)``
-    per row; this version pre-fetches the caller's team memberships once and
-    uses an in-memory set lookup.
-    """
+    """List share rows visible to the caller (paginated, max 200)."""
     await ensure_share_permission(
         current_user,
         ShareAction.READ,
@@ -273,16 +203,14 @@ async def list_shares(
     if target_id is not None:
         stmt = stmt.where(AuthzShare.target_id == target_id)
     if scope is not None:
-        # Validate scope literal against the enum so unknown values 422 early.
+        # Reject unknown scope values early (422).
         try:
             scope_value = ShareScope(scope).value
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=f"Unknown scope {scope!r}") from exc
         stmt = stmt.where(AuthzShare.scope == scope_value)
 
-    # Stable ordering + bounded fetch. ``created_at`` is monotonically
-    # increasing for a given operator so this is effectively cursor-like;
-    # callers wanting strict cursor pagination can layer ``id`` ties.
+    # Stable ordering with offset/limit pagination.
     stmt = stmt.order_by(AuthzShare.created_at.desc(), AuthzShare.id).offset(offset).limit(limit)
 
     rows = list(await session.exec(stmt))
@@ -291,13 +219,11 @@ async def list_shares(
     if is_superuser:
         return [ShareRead.model_validate(row, from_attributes=True) for row in rows]
 
-    # Pre-fetch the caller's team memberships once — the previous per-row
-    # ``select(AuthzTeamMember)`` was an N+1 that scaled with the page size.
+    # Pre-fetch team memberships (avoid N+1 per row).
     team_membership_stmt = select(AuthzTeamMember.team_id).where(AuthzTeamMember.user_id == current_user.id)
     caller_team_ids: set[UUID] = set(await session.exec(team_membership_stmt))
 
-    # Non-superuser visibility: owner / creator / direct user target / team
-    # member / public. See ``_user_can_see_share`` for the full rule set.
+    # Filter rows by visibility rules for non-superusers.
     visible: list[ShareRead] = []
     owner_cache: dict[tuple[str, UUID], UUID | None] = {}
     for row in rows:
@@ -325,12 +251,7 @@ def _row_visible_to(
     resource_owner_id: UUID | None,
     caller_team_ids: set[UUID],
 ) -> bool:
-    """In-memory variant of ``_user_can_see_share`` for the batch list path.
-
-    Same rules as ``_user_can_see_share`` but team membership is checked via
-    the pre-fetched ``caller_team_ids`` set so the list loop is O(N) instead
-    of issuing one ``select(AuthzTeamMember)`` per row.
-    """
+    """Batch list visibility check using pre-fetched team ids."""
     if user_id in {resource_owner_id, row.created_by}:
         return True
     scope = row.scope
@@ -373,7 +294,7 @@ async def get_share(
             user_id=current_user.id,
             resource_owner_id=owner_id,
         ):
-            # UUID privacy — caller is not allowed to know this share exists.
+            # UUID privacy: forbidden share → 404.
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Share not found")
 
     return ShareRead.model_validate(row, from_attributes=True)
@@ -404,8 +325,7 @@ async def update_share(
         share_user_id=row.created_by,
     )
 
-    # Validate against the enum to keep the DB CHECK constraint happy and
-    # surface unknown values as 422 instead of a constraint error.
+    # Validate permission_level (422 before DB CHECK).
     try:
         row.permission_level = SharePermissionLevel(payload.permission_level).value
     except ValueError as exc:
@@ -414,9 +334,7 @@ async def update_share(
             detail=f"Unknown permission_level {payload.permission_level!r}",
         ) from exc
     session.add(row)
-    # Match the create_share error contract: rollback + fixed-string 409 +
-    # server-side log so a constraint violation on update doesn't return a
-    # raw SQLAlchemy stacktrace to the client.
+    # Rollback + fixed 409 on constraint failure (same as create_share).
     try:
         await session.flush()
     except Exception as exc:

@@ -525,7 +525,7 @@ async def get_flow_for_api_key_user(
     authenticated user from ``api_key_security`` and passes it to the helper,
     so cross-user access fails closed with 404 at the helper layer.
 
-    When an enterprise authorization service is registered, the lookup is
+    When an authorization plugin is registered, the lookup is
     share-aware (load by id, route guard decides access). The OSS pass-through
     default keeps the owner-scoped lookup.
     """
@@ -603,7 +603,7 @@ async def _run_flow_internal(
     # Authorization happens upstream: every caller of _run_flow_internal must
     # have called ensure_flow_permission(FlowAction.EXECUTE, ...) before
     # invoking us. The owner-only check that used to live here would reject any
-    # enterprise execute-grant on a shared flow, defeating the plugin's
+    # plugin execute-grant on a shared flow, defeating the plugin's
     # purpose. Adding a defense-in-depth check here would re-introduce the
     # same regression.
     telemetry_service = get_telemetry_service()

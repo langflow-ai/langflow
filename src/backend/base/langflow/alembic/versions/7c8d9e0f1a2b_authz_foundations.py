@@ -1,29 +1,8 @@
-"""authz foundations — casbin_rule, authz_* tables, workspace_id columns
+"""Authz foundations: policy rules, authz_* tables, workspace_id columns.
 
 Revision ID: 7c8d9e0f1a2b
 Revises: mb01b2c3d4e5
 Create Date: 2026-05-20
-
-Phase: EXPAND
-
-Single consolidated migration for the OSS authorization layer (PR #13153).
-Emits the final schema directly — partial unique indexes that handle NULL
-columns, ``DateTime(timezone=True)`` everywhere, CHECK constraints on
-``authz_share`` enum-like columns, and the ``workspace_id`` column on flow /
-folder / deployment.
-
-This replaces what was previously a chain of six smaller migrations that were
-collapsed before any of them shipped:
-
-* ``f7a8b9c0d1e2`` (initial authz tables)
-* ``c8e5f4b2a9d7`` (workspace_id columns)
-* ``d9e8f7a6b5c4`` (partial unique indexes on authz_role_assignment)
-* ``e4f5a6b7c8d9`` (partial unique indexes on authz_share)
-* ``f0a1b2c3d4e5`` (timestamps tz-aware, ptype index, FK fix, composite index, widened partial index)
-* ``b2c3d4e5f6a1`` (CHECK constraints on authz_share)
-
-Partial unique indexes use ``postgresql_where`` / ``sqlite_where`` — the
-project targets PostgreSQL and SQLite only.
 """
 
 from collections.abc import Sequence
@@ -45,9 +24,7 @@ _WORKSPACE_TABLES = ("flow", "folder", "deployment")
 def upgrade() -> None:
     conn = op.get_bind()
 
-    # ------------------------------------------------------------------
-    # casbin_rule — Casbin policy storage (SQLAlchemy adapter compatible)
-    # ------------------------------------------------------------------
+    # policy rules table
     if not migration.table_exists("casbin_rule", conn):
         op.create_table(
             "casbin_rule",
@@ -61,7 +38,7 @@ def upgrade() -> None:
             sa.Column("v5", sqlmodel.sql.sqltypes.AutoString(length=255), nullable=True),
             sa.PrimaryKeyConstraint("id"),
         )
-        # Casbin's loader filters by ``ptype`` on every load_policy() and
+        # The policy loader's loader filters by ``ptype`` on every load_policy() and
         # AddPolicy() — required for non-trivial policy volumes.
         op.create_index("ix_casbin_rule_ptype", "casbin_rule", ["ptype"])
 
@@ -116,7 +93,7 @@ def upgrade() -> None:
             batch_op.create_index(batch_op.f("ix_authz_role_assignment_domain_id"), ["domain_id"], unique=False)
 
         # Hot-path lookup index: "all assignments for user X scoped to domain
-        # (type, id)" — the canonical query an enterprise enforcer issues on
+        # (type, id)" — the canonical query an authorization plugin issues on
         # every request to compute effective roles. Single-column indexes
         # leave the planner with a choice between two non-covering scans;
         # this composite gives a single index seek.
@@ -289,7 +266,7 @@ def upgrade() -> None:
             # ``owner_override`` is the third value the framework writes
             # (see ``_AUDIT_OWNER_OVERRIDE`` in
             # ``services/authorization/utils.py``) — without it in the CHECK
-            # set, an enterprise plugin's owner-shortcircuit audit row would
+            # set, an authorization plugin's owner-shortcircuit audit row would
             # silently violate the constraint.
             sa.CheckConstraint(
                 "result IN ('allow', 'deny', 'owner_override')",

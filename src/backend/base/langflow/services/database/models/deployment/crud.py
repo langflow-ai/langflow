@@ -115,7 +115,7 @@ async def get_deployment(
     """Load a deployment by id, with share-aware fetch when supported.
 
     When the registered authorization service supports cross-user fetch
-    (enterprise Casbin), the deployment is loaded by id alone and the route's
+    (authorization plugin), the deployment is loaded by id alone and the route's
     ``ensure_deployment_permission`` decides whether the caller may see it.
     Otherwise the query stays owner-scoped so the OSS pass-through default
     cannot widen visibility.

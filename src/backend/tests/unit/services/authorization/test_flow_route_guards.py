@@ -1,10 +1,4 @@
-"""Regression tests asserting every flow CRUD route is wired through ensure_flow_permission.
-
-These are intentionally source-level checks rather than full FastAPI integration tests:
-the helper-level behavior is covered exhaustively in ``test_utils.py``; what these
-tests prevent is the route being silently dropped or reverting to a bare action
-string. A future PR will add a full app fixture + stub enterprise plugin.
-"""
+"""Source-level tests that flow routes call ensure_flow_permission."""
 
 from __future__ import annotations
 
@@ -192,7 +186,7 @@ def test_update_flow_authorizes_destination_on_move(routes):
 
     Without this, a caller could write to a flow in scope A and move it into
     scope B even when they lack permission to write at B (e.g., share-based
-    access in Phase 3 or workspace-scoped roles in enterprise).
+    access in Phase 3 or workspace-scoped roles in plugin).
     """
     func = routes["update_flow"]
     assert _has_destination_check(
@@ -237,7 +231,7 @@ def test_get_note_translations_is_owner_scoped_and_guarded(routes):
     filter and no ensure_flow_permission, so any authenticated user could read
     note text from any flow by guessing the UUID. Fix scopes the fetch through
     ``_read_flow(..., user_id=current_user.id)`` and adds an explicit
-    ``ensure_flow_permission(FlowAction.READ, ...)`` so enterprise plugins can
+    ``ensure_flow_permission(FlowAction.READ, ...)`` so authorization plugins can
     extend visibility via shares.
     """
     func = routes["get_note_translations"]
@@ -264,7 +258,7 @@ def test_read_flows_list_uses_filter_visible_resources(routes):
     """GET /flows/ applies filter_visible_resources on BOTH the get_all and paginated paths.
 
     The list helper drops items the user can't read. In OSS pass-through it
-    returns the input unchanged; the enterprise plugin uses batch_enforce to
+    returns the input unchanged; the authorization plugin uses batch_enforce to
     honor role + share grants. Per-item ensure_flow_permission is intentionally
     NOT used here — filtering is the right primitive for list endpoints.
 
@@ -325,8 +319,8 @@ def test_check_flow_user_permission_is_gone():
     """The standalone owner-only ``check_flow_user_permission`` helper has been removed.
 
     It duplicated the work that ``ensure_flow_permission`` now does at the
-    route boundary, AND it would have rejected legitimate enterprise execute
-    grants on shared flows (a real bug under Casbin enforcement). The new
+    route boundary, AND it would have rejected legitimate plugin execute
+    grants on shared flows (a real bug under policy engine enforcement). The new
     contract is "every ``_run_flow_internal`` caller authorizes EXECUTE first";
     leaving a downstream owner-only check would silently re-introduce the
     regression on any future route that wires up the internal helper without

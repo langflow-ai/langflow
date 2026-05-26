@@ -6,12 +6,7 @@ from enum import Enum
 
 
 class FlowAction(str, Enum):
-    """Actions that can be authorized on a flow resource.
-
-    Values are the Casbin ``act`` strings consumed by the enterprise policy
-    engine. Subclassing ``str`` lets these be passed wherever a bare string is
-    accepted, so callers can migrate incrementally.
-    """
+    """Actions authorized on a flow resource."""
 
     READ = "read"
     WRITE = "write"
@@ -22,7 +17,7 @@ class FlowAction(str, Enum):
 
 
 class DeploymentAction(str, Enum):
-    """Actions that can be authorized on a deployment resource."""
+    """Actions authorized on a deployment resource."""
 
     READ = "read"
     WRITE = "write"
@@ -32,12 +27,7 @@ class DeploymentAction(str, Enum):
 
 
 class ProjectAction(str, Enum):
-    """Actions that can be authorized on a project (folder) resource.
-
-    Projects are the OSS-side persistent name for the folder model; the
-    ``project:`` Casbin object prefix matches the API surface and the
-    ``project:{folder_id}`` domain used by ``_resolve_flow_domain``.
-    """
+    """Actions authorized on a project (folder) resource."""
 
     READ = "read"
     WRITE = "write"
@@ -46,13 +36,7 @@ class ProjectAction(str, Enum):
 
 
 class KnowledgeBaseAction(str, Enum):
-    """Actions that can be authorized on a knowledge base resource.
-
-    Knowledge bases are name-keyed (``knowledge_base:{kb_name}``) rather than
-    UUID-keyed, but the action vocabulary mirrors other resources. ``ingest``
-    is a distinct verb because ingesting documents has a different cost and
-    permission posture than ordinary writes.
-    """
+    """Actions authorized on a knowledge base resource."""
 
     READ = "read"
     WRITE = "write"
@@ -62,7 +46,7 @@ class KnowledgeBaseAction(str, Enum):
 
 
 class VariableAction(str, Enum):
-    """Actions that can be authorized on a variable resource."""
+    """Actions authorized on a variable resource."""
 
     READ = "read"
     WRITE = "write"
@@ -71,7 +55,7 @@ class VariableAction(str, Enum):
 
 
 class FileAction(str, Enum):
-    """Actions that can be authorized on a user-file resource (v2 files)."""
+    """Actions authorized on a user-file resource (v2 files)."""
 
     READ = "read"
     WRITE = "write"
@@ -80,12 +64,7 @@ class FileAction(str, Enum):
 
 
 class ShareAction(str, Enum):
-    """Actions that can be authorized on an authz_share row itself.
-
-    Shares are themselves authorizable: creating a share grants someone access
-    to a resource you own, so the action vocabulary lives in a dedicated enum
-    so audit rows can distinguish ``share:create`` from ``flow:create``.
-    """
+    """Actions authorized on an authz_share row."""
 
     READ = "read"
     CREATE = "create"

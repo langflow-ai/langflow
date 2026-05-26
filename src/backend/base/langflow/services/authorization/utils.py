@@ -1,26 +1,4 @@
-"""Authorization helpers for API routes.
-
-Phase 1 contract (this PR)
----------------------------
-
-Route guards (``ensure_flow_permission``, ``ensure_deployment_permission``,
-``ensure_project_permission``) sit on top of fetch helpers that still scope
-queries by ``current_user.id`` — see ``_read_flow`` in ``flows_helpers.py``,
-``get_flow_for_api_key_user`` in ``endpoints.py``, ``get_deployment`` in
-``deployment.crud``, and the owner-scoped folder reads in ``projects.py``.
-
-That means an enterprise plugin which would otherwise grant a non-owner
-shared / read / write / execute access to a flow, folder, or deployment
-**still returns 404 at the fetch layer before** ``ensure_*_permission`` can
-authorize the request. Cross-user enforcement therefore lands in Phase 3
-alongside ``authz_share`` CRUD APIs and the share-aware fetch helpers that
-load by id first and convert plugin denies to 404 to preserve UUID-privacy.
-
-In Phase 1 the OSS pass-through allows all and the owner-scoped fetch is the
-only effective gate; in Phase 2 (this PR) the guards exist, are wired, and
-emit audit rows, but cross-user access is not yet reachable. See PR #13153
-description and the Phase 3 prerequisite captured in the planning notes.
-"""
+"""Authorization helpers for guarded API routes."""
 
 from __future__ import annotations
 
@@ -51,12 +29,12 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
-# Audit result strings — kept here so callers and tests share the vocabulary.
+# Shared audit result vocabulary.
 _AUDIT_ALLOW = "allow"
 _AUDIT_DENY = "deny"
 _AUDIT_OWNER_OVERRIDE = "owner_override"
 
-# Context keys that name the resource owner — used by audit-detail extraction.
+# Resource-owner keys included in audit details.
 _OWNER_CONTEXT_KEYS = (
     "flow_user_id",
     "deployment_user_id",
@@ -67,7 +45,7 @@ _OWNER_CONTEXT_KEYS = (
     "share_user_id",
 )
 
-# Action enum types we coerce to their string value.
+# Action enums coerced to string values.
 _ACTION_ENUMS = (
     FlowAction,
     DeploymentAction,
@@ -117,29 +95,19 @@ def _split_obj(obj: str) -> tuple[str | None, UUID | None]:
         return resource_type, None
 
 
-# In-flight audit tasks. Keeping a strong reference prevents the event loop
-# from garbage-collecting a pending task before it writes — and gives
-# ``drain_pending_audit_writes`` (called on shutdown) something to await.
-# A bare ``asyncio.create_task`` without this reference can be dropped by
-# the GC mid-write and silently lose the audit row.
+# Strong refs for in-flight audit tasks (awaited on shutdown).
 _pending_audit_tasks: set[asyncio.Task[None]] = set()
 
 
 async def drain_pending_audit_writes(timeout: float = 5.0) -> None:
-    """Wait for any in-flight audit-write tasks to complete.
-
-    Called on application shutdown so audit rows scheduled mid-request still
-    land in the DB before the event loop closes. Returns silently after
-    ``timeout`` even if some tasks are still pending — audit must never block
-    shutdown indefinitely.
-    """
+    """Await in-flight audit writes during shutdown (bounded by timeout)."""
     pending = {task for task in _pending_audit_tasks if not task.done()}
     if not pending:
         return
     done, still_pending = await asyncio.wait(pending, timeout=timeout)
     if still_pending:
         logger.warning("drain_pending_audit_writes timed out with %d pending tasks", len(still_pending))
-    # Surface task exceptions in logs but never raise — audit must not block shutdown.
+    # Log task failures; never block shutdown.
     for task in done:
         exc = task.exception() if not task.cancelled() else None
         if exc is not None:
@@ -154,22 +122,10 @@ async def audit_decision(
     result: str,
     details: dict[str, Any] | None = None,
 ) -> None:
-    """Write an AuthzAuditLog row, fire-and-forget.
-
-    Schedules an asyncio task and returns immediately. Failures inside the task
-    are logged but never propagate to the caller so audit writes can never
-    block a real API response. The task reference is held in
-    ``_pending_audit_tasks`` until completion so the event loop cannot GC it
-    mid-write; ``drain_pending_audit_writes`` awaits this set on shutdown so
-    pending rows are not lost.
-    """
+    """Schedule an AuthzAuditLog write (fire-and-forget)."""
     settings = get_settings_service()
     auth_settings = settings.auth_settings
-    # Audit is independent of enforcement: an operator can keep audit on
-    # while AUTHZ_ENABLED=false to observe traffic before flipping the
-    # flag. Previously this short-circuited on AUTHZ_ENABLED too, which
-    # meant share CRUD writes (which the OSS floor allows in default mode)
-    # produced no audit trail at all.
+    # Audit can run while AUTHZ_ENABLED is false.
     if not getattr(auth_settings, "AUTHZ_AUDIT_ENABLED", True):
         return
 
@@ -207,23 +163,15 @@ async def ensure_permission(
     act: str,
     context: dict[str, Any] | None = None,
 ) -> None:
-    """Raise HTTP 403 if the user is not allowed to perform the action.
-
-    Writes an audit row on both allow and deny paths.
-    """
+    """Raise HTTP 403 when the user may not perform the action (audited)."""
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED:
         return
 
     authz = get_authorization_service()
-    # User-derived auth fields (e.g. is_superuser) must remain authoritative; caller
-    # context is merged first so it cannot overwrite them.
+    # Caller context first; user auth fields cannot be overwritten.
     merged_context = {**(context or {}), **_auth_context(user)}
-    # Fail-closed contract: if the plugin's ``enforce`` raises (Casbin DB
-    # down, policy parse error, etc.), we treat the request as denied and
-    # log an explicit error-audit row. Returning False from ``enforce`` is
-    # the plugin's documented way to deny; raising should not silently
-    # become an HTTP 500 that bypasses both the deny path and the audit log.
+    # Fail closed when enforce() raises (deny + audit, not HTTP 500).
     audit_action = f"{obj.split(':', 1)[0]}:{act}" if ":" in obj else act
     audit_details = {"domain": domain}
     for owner_key in _OWNER_CONTEXT_KEYS:
@@ -267,27 +215,7 @@ async def ensure_permission(
 
 
 def _resolve_casbin_domain(workspace_id: UUID | None, scope_id: UUID | None) -> str:
-    """Pick the most specific Casbin domain for a resource check.
-
-    ``scope_id`` is the folder/project id for flows and deployments, or ``None``
-    when the resource itself is the project (the project helper passes ``None``
-    so the domain falls back to workspace).
-
-    Precedence (inner → outer):
-      1. ``project:{scope_id}`` when set,
-      2. ``workspace:{workspace_id}`` when only a workspace is set,
-      3. ``"*"`` when neither is set.
-
-    Enterprise Casbin policies link the two via ``g2`` (e.g.
-    ``g2, project:xyz, workspace:abc``) so that when the enforcer checks
-    against the **project** domain, both project-scoped and workspace-scoped
-    role grants match (workspace grants flow down to projects via g2).
-    Passing the workspace domain when a project is known would make
-    project-scoped grants invisible because g2 is directional — children
-    inherit from parents, not the other way round. ``workspace_id`` is also
-    forwarded in the enforce context for plugins that prefer ABAC-style
-    matchers.
-    """
+    """Resolve policy domain: project scope, then workspace, else ``*``."""
     if scope_id is not None:
         return f"project:{scope_id}"
     if workspace_id is not None:
@@ -295,7 +223,7 @@ def _resolve_casbin_domain(workspace_id: UUID | None, scope_id: UUID | None) -> 
     return "*"
 
 
-# Backward-compatible alias for callers/tests that imported the old name.
+# Backward-compatible alias.
 _resolve_flow_domain = _resolve_casbin_domain
 
 
@@ -309,23 +237,10 @@ async def _ensure_resource_permission(
     resolved_domain: str,
     extra_context: dict[str, Any],
 ) -> None:
-    """Shared core for the per-resource ``ensure_*_permission`` helpers.
-
-    Builds the canonical ``{resource_type}:{id}|*`` object key, short-circuits
-    on owner override (audited as ``owner_override``), and otherwise delegates
-    to ``ensure_permission``. ``extra_context`` is forwarded verbatim — callers
-    own the key names so each resource type's audit row stays self-describing.
-
-    ``resource_id`` accepts either a UUID (flows, deployments, projects, files,
-    variables) or a string slug (knowledge bases are name-keyed).
-    """
+    """Build object key, apply owner override, else delegate to ensure_permission."""
     obj = f"{resource_type}:{resource_id}" if resource_id else f"{resource_type}:*"
 
-    # Owner override: a resource owner can always operate on their own resource.
     if owner_id is not None and getattr(user, "id", None) == owner_id:
-        # ``audit_decision`` is gated on ``AUTHZ_AUDIT_ENABLED`` internally;
-        # we no longer suppress the call on ``AUTHZ_ENABLED=false`` so
-        # operators observing pre-enforcement traffic see owner overrides too.
         await audit_decision(
             user_id=user.id,
             action=f"{resource_type}:{act_str}",
@@ -354,15 +269,7 @@ async def ensure_flow_permission(
     folder_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check flow-scoped permission with workspace/project domain + owner override.
-
-    The flow owner is always allowed (audited as ``owner_override``). Otherwise
-    delegates through :func:`ensure_permission` with the canonical Casbin tuple
-    ``(user, domain, obj=flow:{id}|flow:*, act=<FlowAction>)`` where the domain
-    follows :func:`_resolve_casbin_domain`. Both ``workspace_id`` and
-    ``folder_id`` are forwarded in the context dict so the enterprise plugin
-    can use whichever fits its policy model.
-    """
+    """Check flow permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="flow",
@@ -388,11 +295,7 @@ async def ensure_deployment_permission(
     project_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check deployment-scoped permission with workspace/project domain + owner override.
-
-    Deployments use ``project_id`` (folder row) for the Casbin project domain, same as
-    flows use ``folder_id``. The deployment owner may always access their deployment.
-    """
+    """Check deployment permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="deployment",
@@ -417,13 +320,7 @@ async def ensure_project_permission(
     workspace_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check project-scoped permission with workspace domain + owner override.
-
-    Projects are the OSS persistent name for folders. The Casbin object is
-    ``project:{project_id}`` (or ``project:*`` for list/create). The domain
-    resolves to ``workspace:{workspace_id}`` when set, otherwise ``*`` — the
-    project itself is the resource, not the scope.
-    """
+    """Check project (folder) permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="project",
@@ -449,17 +346,7 @@ async def ensure_knowledge_base_permission(
     project_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check knowledge-base-scoped permission with owner override.
-
-    Knowledge bases are tracked by ``KnowledgeBaseRecord`` (UUID primary key,
-    ``(user_id, name)`` unique). The Casbin object slug is
-    ``knowledge_base:{kb_id}`` so it matches the ``authz_share.resource_id``
-    column (UUID) without an extra translation. ``kb_name`` is forwarded in
-    the audit context for human-readable debugging.
-
-    For create-style checks (no KB row yet), pass ``kb_id=None``; the slug
-    becomes ``knowledge_base:*``.
-    """
+    """Check knowledge-base permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="knowledge_base",
@@ -486,7 +373,7 @@ async def ensure_variable_permission(
     workspace_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check variable-scoped permission with owner override."""
+    """Check variable permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="variable",
@@ -510,7 +397,7 @@ async def ensure_file_permission(
     workspace_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check file-scoped permission (v2 user files) with owner override."""
+    """Check file permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="file",
@@ -533,12 +420,7 @@ async def ensure_share_permission(
     share_user_id: UUID | None = None,
     domain: str | None = None,
 ) -> None:
-    """Check authz_share-scoped permission with owner override.
-
-    A share row is "owned" by the user who created it (``created_by``). The
-    resource owner is therefore always allowed to administer their own
-    shares; enterprise plugins decide everything else.
-    """
+    """Check share-row permission (owner override, then plugin enforce)."""
     await _ensure_resource_permission(
         user,
         resource_type="share",
@@ -563,32 +445,7 @@ async def filter_visible_resources(
     owner_extractor: Callable[[T], UUID | None] | None = None,
     act: FlowAction | str = FlowAction.READ,
 ) -> list[T]:
-    """Return the subset of `candidates` that the user is allowed to read.
-
-    No-op when ``AUTHZ_ENABLED=false`` — returns the input list unchanged.
-    Plumbing for list endpoints; the OSS pass-through always returns the full
-    list, so calling this is safe to add ahead of enterprise plugin rollout.
-
-    ``domain_extractor`` lets callers compute a per-candidate domain string
-    (typically via :func:`_resolve_casbin_domain`). Without it, every request
-    in the batch evaluates against the same ``domain``, which makes
-    project-scoped policy grants invisible when candidates live in different
-    workspaces or projects. With it, candidates are grouped by their resolved
-    domain and the enforcer is called once per group, so each request is
-    evaluated against the right Casbin tuple.
-
-    ``owner_extractor`` returns the owner UUID for each candidate. Items
-    owned by the calling user are force-included **without** consulting the
-    enforcer, mirroring the owner-override short-circuit in
-    :func:`_ensure_resource_permission`. Without this, an enterprise plugin
-    that lacks an explicit owner policy would hide a caller's own rows from
-    a list view even though the same caller can read each row directly via
-    the single-resource guard — list and direct read would disagree, which
-    is the symptom this parameter is here to prevent.
-
-    The OSS pass-through ignores ``domain`` entirely and returns
-    ``[True] * len(requests)`` for either path.
-    """
+    """Return candidates the user may read (no-op when AUTHZ_ENABLED is false)."""
     settings = get_settings_service()
     if not settings.auth_settings.AUTHZ_ENABLED or not candidates:
         return candidates
@@ -598,8 +455,7 @@ async def filter_visible_resources(
     act_str = _coerce_action(act)
     user_id = getattr(user, "id", None)
 
-    # Owner-override partition. Items the caller owns skip the enforcer
-    # entirely (matches the direct-read owner short-circuit).
+    # Owned rows skip batch_enforce (matches direct-read owner override).
     owned_indices: set[int] = set()
     enforce_indices: list[int] = []
     enforce_items: list[T] = []
@@ -615,13 +471,8 @@ async def filter_visible_resources(
         decisions[index] = True
 
     if enforce_items:
-        # Use the already-extracted ``user_id`` instead of re-reading
-        # ``user.id`` here. The earlier owner-override partition used
-        # ``getattr(user, "id", None)``, so consistency means a non-User
-        # dependency (e.g. a thin context proxy) lands an explicit None
-        # rather than an AttributeError at this call site.
         if domain_extractor is None:
-            # Single-domain fast path. Preserves the original single-call shape.
+            # Single-domain batch_enforce.
             requests = [(f"{resource_type}:{extractor(item)}", act_str) for item in enforce_items]
             results = await authz.batch_enforce(
                 user_id=user_id,
@@ -632,10 +483,7 @@ async def filter_visible_resources(
             for original_index, allowed in zip(enforce_indices, results, strict=True):
                 decisions[original_index] = allowed
         else:
-            # Group candidates by their resolved domain so each batch_enforce
-            # call evaluates against a single Casbin tuple. Preserves input
-            # order on output by carrying the original index through the
-            # per-domain bucket.
+            # One batch_enforce per resolved domain.
             buckets: dict[str, list[tuple[int, T]]] = {}
             for original_index, item in zip(enforce_indices, enforce_items, strict=True):
                 buckets.setdefault(domain_extractor(item), []).append((original_index, item))

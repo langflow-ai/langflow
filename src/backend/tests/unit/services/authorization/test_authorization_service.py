@@ -31,7 +31,7 @@ async def test_enforce_allows_all_when_disabled(authz_service):
 
 @pytest.mark.anyio
 async def test_enforce_allows_non_superuser_when_enabled():
-    """OSS stub does not deny; enterprise Casbin replaces this service for enforcement."""
+    """OSS stub does not deny; authorization plugin replaces this service for enforcement."""
     settings = SimpleNamespace(
         auth_settings=SimpleNamespace(
             AUTHZ_ENABLED=True,

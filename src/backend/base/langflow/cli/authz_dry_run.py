@@ -1,13 +1,13 @@
 """``langflow authz dry-run`` — simulate every flow guard against a stub policy.
 
 The OSS ``LangflowAuthorizationService`` always allows, so a real install can't
-demonstrate enforcement without the enterprise Casbin plugin. This subcommand
+demonstrate enforcement without the authorization plugin. This subcommand
 replaces the live authorization service with a small in-memory stub for one
 invocation, walks every flow-CRUD guard site, and prints what *would* happen
-under the chosen policy — including the Casbin tuple, the audit row that
+under the chosen policy — including the policy tuple, the audit row that
 would have been written, and the resulting HTTP outcome. Useful for:
 
-* Validating that ``AUTHZ_ENABLED=true`` + a future Casbin policy will produce
+* Validating that ``AUTHZ_ENABLED=true`` + a future policy will produce
   the expected behaviour before shipping it to production.
 * Showing operators what the audit log will look like.
 * Smoke-testing the guard wiring after a refactor.
@@ -51,7 +51,7 @@ _console = Console()
 
 
 class StubPolicy(str, Enum):
-    """Built-in stand-ins for an enterprise Casbin policy."""
+    """Built-in stand-ins for an authorization plugin policy."""
 
     ALLOW_ALL = "allow-all"
     DENY_NON_OWNER = "deny-non-owner"
@@ -428,7 +428,7 @@ def dry_run(
 
     The command runs entirely in-process. No HTTP request is made, no row is
     written to the real ``authz_audit_log`` table — the report describes the
-    Casbin tuple and audit row that *would* be produced if an enterprise
+    policy tuple and audit row that *would* be produced if an plugin
     plugin enforcing ``--policy`` were registered.
     """
     rows = asyncio.run(_run_all(policy))

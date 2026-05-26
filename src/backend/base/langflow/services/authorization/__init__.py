@@ -1,4 +1,4 @@
-"""Langflow OSS authorization service package (pass-through; enterprise plugin enforces)."""
+"""OSS authorization service package (pass-through default; plugins enforce)."""
 
 from langflow.services.authorization.actions import (
     DeploymentAction,
