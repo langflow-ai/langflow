@@ -35,11 +35,6 @@ jest.mock("@/components/ui/accordion", () => ({
   ),
 }));
 
-jest.mock("@/components/core/codeTabsComponent", () => ({
-  __esModule: true,
-  default: () => <div data-testid="code-tabs" />,
-}));
-
 jest.mock("@/components/ui/TextShimmer", () => ({
   TextShimmer: ({ children }: { children: React.ReactNode }) => (
     <span>{children}</span>
@@ -74,8 +69,8 @@ const baseChat: ChatMessageType = {
   properties: { source: { id: "node-1" } },
 } as unknown as ChatMessageType;
 
-describe("ErrorView — multi-card spacing", () => {
-  it("renders a single error card inside the gap-aware stack", () => {
+describe("ErrorView — multi-card structure", () => {
+  it("renders one error card inside the stack for a single block", () => {
     render(
       <ErrorView
         blocks={[makeErrorBlock("Boom A")]}
@@ -86,15 +81,16 @@ describe("ErrorView — multi-card spacing", () => {
       />,
     );
 
-    const stack = screen.getByTestId("error-card-stack");
-    expect(stack).toBeInTheDocument();
-    expect(stack.className).toContain("flex");
-    expect(stack.className).toContain("flex-col");
-    expect(stack.className).toContain("gap-2");
+    expect(screen.getByTestId("error-card-stack")).toBeInTheDocument();
     expect(screen.getAllByTestId("error-card")).toHaveLength(1);
   });
 
-  it("renders each error block as its own card inside the gap stack", () => {
+  it("renders one error card per block, each as a direct child of the stack", () => {
+    // Direct-child relationship is the behavioural guarantee that lets
+    // the stack's spacing rule (whatever it is — gap utility today, CSS
+    // module tomorrow) actually apply. If a future change wraps cards
+    // in an extra div, the gap would silently break and this test fails
+    // without us having to encode the Tailwind class names.
     render(
       <ErrorView
         blocks={[
@@ -109,12 +105,9 @@ describe("ErrorView — multi-card spacing", () => {
       />,
     );
 
+    const stack = screen.getByTestId("error-card-stack");
     const cards = screen.getAllByTestId("error-card");
     expect(cards).toHaveLength(3);
-    const stack = screen.getByTestId("error-card-stack");
-    expect(stack.className).toContain("gap-2");
-    // Each card must be a direct child of the stack so the gap utility
-    // applies. (Wrapping a card in an extra div would defeat the gap.)
     cards.forEach((card) => {
       expect(card.parentElement).toBe(stack);
     });
