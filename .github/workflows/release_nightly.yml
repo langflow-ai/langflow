@@ -194,15 +194,18 @@ jobs:
           name_without_extras=$(echo $name | sed 's/\[.*\]//')
           if [ "$name_without_extras" != "langflow-base-nightly" ]; then
             echo "Name $name_without_extras does not match langflow-base-nightly. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           # Strip the leading `v` from the version
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
+          echo "skipped=false" >> $GITHUB_OUTPUT
 
       - name: Build Langflow Base for distribution
         run: |
