@@ -4,10 +4,12 @@ from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
+    from datetime import datetime
     from uuid import UUID
 
     from sqlmodel.ext.asyncio.session import AsyncSession
 
+from sqlalchemy import update
 from sqlmodel import col, or_, select
 
 from langflow.services.database.models.jobs.model import Job, JobStatus
@@ -56,24 +58,34 @@ async def get_job_by_job_id(db: AsyncSession, job_id: UUID, user_id: UUID | None
     return result.first()
 
 
-async def update_job_status(db: AsyncSession, job_id: UUID, status: JobStatus) -> Job | None:
+async def update_job_status(
+    db: AsyncSession,
+    job_id: UUID,
+    status: JobStatus,
+    *,
+    finished_timestamp: datetime | None = None,
+) -> Job | None:
     """Update the status of a job.
 
     Args:
         db: Async database session
         job_id: The job ID to update
         status: The new status value
+        finished_timestamp: Optional timestamp to set atomically with the status
 
     Returns:
         Updated Job object or None if not found
     """
-    job = await get_job_by_job_id(db, job_id)
-    if job:
-        job.status = status
-        db.add(job)
-        await db.flush()
-        await db.refresh(job)
-    return job
+    values = {"status": status}
+    if finished_timestamp is not None:
+        values["finished_timestamp"] = finished_timestamp
+
+    result = await db.exec(
+        update(Job).where(Job.job_id == job_id).values(**values).execution_options(synchronize_session=False)
+    )
+    if result.rowcount == 0:
+        return None
+    return await get_job_by_job_id(db, job_id)
 
 
 async def get_latest_jobs_by_asset_ids(db: AsyncSession, asset_ids: Sequence[UUID]) -> dict[UUID, Job]:
