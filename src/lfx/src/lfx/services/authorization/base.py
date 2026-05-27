@@ -86,6 +86,67 @@ class BaseAuthorizationService(Service, abc.ABC):
         )
         return [action for action, allowed in zip(actions, results, strict=True) if allowed]
 
+    async def list_visible_resource_ids(
+        self,
+        *,
+        user_id: UUID,
+        resource_type: str,
+        domain: str = "*",
+        act: str = "read",
+        context: dict[str, Any] | None = None,
+    ) -> list[UUID] | None:
+        """Return resource IDs of `resource_type` the user can `act` on, or ``None``.
+
+        Plugin override returns a concrete list — typically by querying its
+        policy store (e.g. SQL join on ``casbin_rule``) so list endpoints can
+        prefilter at the DB layer and avoid fetching invisible rows.
+
+        Base returns ``None`` meaning "no prefilter available; caller should
+        fetch all candidates and apply :func:`filter_visible_resources` for
+        in-memory filtering via :meth:`batch_enforce`." OSS pass-through stays
+        on ``None`` so the existing list endpoints behave unchanged.
+        """
+        _ = (user_id, resource_type, domain, act, context)
+        return None
+
+    async def get_effective_permissions(
+        self,
+        *,
+        user_id: UUID,
+        resource_type: str,
+        resource_ids: Sequence[UUID],
+        actions: Sequence[str],
+        domain: str = "*",
+        context: dict[str, Any] | None = None,
+    ) -> dict[UUID, list[str]]:
+        """Return per-resource allowed actions for ``user_id``.
+
+        Used by the frontend permission-gating layer to grey out buttons
+        without round-tripping to a 403. Default implementation issues a single
+        :meth:`batch_enforce` over the cartesian product of ``resource_ids`` x
+        ``actions``; plugins can override with a tighter query.
+        """
+        if not resource_ids or not actions:
+            return {rid: [] for rid in resource_ids}
+
+        requests: list[tuple[str, str]] = [
+            (f"{resource_type}:{rid}", action) for rid in resource_ids for action in actions
+        ]
+        flat = await self.batch_enforce(
+            user_id=user_id,
+            domain=domain,
+            requests=requests,
+            context=context,
+        )
+
+        result: dict[UUID, list[str]] = {}
+        action_count = len(actions)
+        for index, rid in enumerate(resource_ids):
+            start = index * action_count
+            slice_ = flat[start : start + action_count]
+            result[rid] = [action for action, allowed in zip(actions, slice_, strict=True) if allowed]
+        return result
+
     async def invalidate_user(self, user_id: UUID) -> None:
         """Drop cached policy for a single user. Plugin override; OSS no-op."""
 
