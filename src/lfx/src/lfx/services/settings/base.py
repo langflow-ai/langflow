@@ -503,7 +503,12 @@ class Settings(BaseSettings):
     # Embedded mode flags
     embedded_mode: bool = False
     """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
-    standalone installations (logout button, new project/flow buttons, starter projects, etc.)."""
+    standalone installations (logout button, new project/flow buttons, starter projects, etc.).
+
+    This flag does not implicitly enable security controls such as
+    ``mcp_servers_locked`` or ``custom_component_admin_only``. Configure those
+    explicitly based on your deployment hardening requirements.
+    """
     hide_getting_started_progress: bool = Field(
         default=False,
         validation_alias=AliasChoices(
@@ -523,8 +528,11 @@ class Settings(BaseSettings):
 
     # MCP Server management
     mcp_servers_locked: bool = False
-    """If set to True, users cannot add or modify MCP servers via the UI. Only admin/superuser
-    can modify them through backend configuration. ContextForge remains the single ingress."""
+    """If set to True, users cannot add or modify MCP servers via the UI/API.
+
+    This control is independent from ``embedded_mode`` and must be enabled
+    explicitly when you want to lock MCP server management.
+    """
 
     @field_validator("runtime_port", mode="before")
     @classmethod
