@@ -115,6 +115,7 @@ class _SecurityChecker(ast.NodeVisitor):
     def visit_Call(self, node: ast.Call):
         self._check_name_call(node)
         self._check_attribute_call(node)
+        self._check_getattr_call(node)
         self.generic_visit(node)
 
     def _check_name_call(self, node: ast.Call):
@@ -136,6 +137,26 @@ class _SecurityChecker(ast.NodeVisitor):
             if module_name == mod and method_name == method:
                 self.violations.append(message)
                 return
+
+    def _check_getattr_call(self, node: ast.Call):
+        """Check getattr(os, 'system') style bypass attempts."""
+        if not isinstance(node.func, ast.Name) or node.func.id != "getattr":
+            return
+        if len(node.args) < 2:
+            return
+        first_arg = node.args[0]
+        second_arg = node.args[1]
+        if (
+            isinstance(first_arg, ast.Name)
+            and isinstance(second_arg, ast.Constant)
+            and isinstance(second_arg.value, str)
+        ):
+            module_name = first_arg.id
+            method_name = second_arg.value
+            for mod, method, message in DANGEROUS_ATTR_CALLS:
+                if module_name == mod and method_name == method:
+                    self.violations.append(message)
+                    return
 
 
 def scan_code_security(code: str) -> SecurityScanResult:
