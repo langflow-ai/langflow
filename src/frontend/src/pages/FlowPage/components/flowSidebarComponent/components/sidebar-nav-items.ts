@@ -44,15 +44,15 @@ export const NAV_ITEMS: SidebarNavItem[] = [
     tooltip: "sidebar.nav.versionHistory",
   },
   {
-    id: "traces",
-    icon: "Activity",
-    label: "sidebar.nav.traces",
-    tooltip: "sidebar.nav.traces",
-  },
-  {
     id: "memories",
     icon: "BrainCog",
     label: "Memories",
     tooltip: "Memories",
+  },
+  {
+    id: "traces",
+    icon: "Activity",
+    label: "sidebar.nav.traces",
+    tooltip: "sidebar.nav.traces",
   },
 ];

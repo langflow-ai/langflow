@@ -311,7 +311,6 @@ class ComponentToolkit:
         # fallback below (only safe for single-output components).
         eligible_outputs = [o for o in self.component.outputs if not self._should_skip_output(o)]
         for output in eligible_outputs:
-
             if not output.method:
                 msg = f"Output {output.name} does not have a method defined"
                 raise ValueError(msg)
