@@ -46,13 +46,23 @@ def _get_or_create_shared_client(config: dict) -> Langfuse:
 
     Keyed by (secret_key, public_key, host) so credential rotation produces a
     fresh client rather than reusing a stale one.
+
+    An isolated OpenTelemetry ``TracerProvider`` is passed to ``Langfuse(...)``
+    so the SDK does not register itself as the global tracer provider. Without
+    this, any library that uses the global provider (notably
+    ``FastAPIInstrumentor`` in ``langflow.main``) would emit every HTTP request
+    as a span into Langfuse, polluting traces with unrelated routes like health
+    checks and flow list calls. See
+    https://github.com/langflow-ai/langflow/issues/13319.
     """
     from langfuse import Langfuse
+    from opentelemetry.sdk.trace import TracerProvider
 
     key = (config["secret_key"], config["public_key"], config["host"])
     with _SharedClient.lock:
         if _SharedClient.client is None or _SharedClient.key != key:
-            _SharedClient.client = Langfuse(**config)
+            isolated_tracer_provider = TracerProvider()
+            _SharedClient.client = Langfuse(**config, tracer_provider=isolated_tracer_provider)
             _SharedClient.key = key
         return _SharedClient.client
 

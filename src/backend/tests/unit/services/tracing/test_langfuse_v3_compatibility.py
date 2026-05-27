@@ -486,6 +486,60 @@ class TestLangfuseClientSingleton:
             assert mock_langfuse_class.call_count == 2
 
 
+class TestLangfuseIsolatedTracerProvider:
+    """Verify Langfuse is initialized with an isolated OTel ``TracerProvider``.
+
+    Regression test for https://github.com/langflow-ai/langflow/issues/13319.
+
+    Without an explicit ``tracer_provider``, the Langfuse v3 SDK registers
+    itself as the global OTel tracer provider. Because ``langflow.main`` calls
+    ``FastAPIInstrumentor.instrument_app(app)`` (which uses the global
+    provider), every FastAPI HTTP request span would then be exported to
+    Langfuse — flooding traces with health checks, flow list calls, and other
+    unrelated routes. Passing an isolated provider keeps Langfuse spans
+    private to the langfuse client.
+    """
+
+    def test_shared_client_uses_isolated_tracer_provider(self):
+        """``Langfuse(...)`` must receive an explicit, non-global ``TracerProvider``."""
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+        from opentelemetry.sdk.trace import TracerProvider
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.return_value = MagicMock()
+
+            _get_langfuse_client()
+
+            mock_langfuse_class.assert_called_once()
+            call_kwargs = mock_langfuse_class.call_args.kwargs
+            assert "tracer_provider" in call_kwargs, (
+                "Langfuse() must be called with an explicit tracer_provider so it does not"
+                " register itself as the global OTel tracer provider (issue #13319)."
+            )
+            assert isinstance(call_kwargs["tracer_provider"], TracerProvider)
+
+    def test_global_tracer_provider_is_not_replaced_by_langfuse_init(self):
+        """Initializing the Langfuse client must not swap out the global TracerProvider.
+
+        If Langfuse becomes the global provider, ``FastAPIInstrumentor`` will
+        emit HTTP request spans into Langfuse, which is the symptom reported
+        in #13319.
+        """
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+        from opentelemetry import trace as otel_trace_api
+
+        before = otel_trace_api.get_tracer_provider()
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.return_value = MagicMock()
+            _get_langfuse_client()
+
+        after = otel_trace_api.get_tracer_provider()
+        assert after is before, (
+            "Global OTel TracerProvider must not change when the Langfuse client is initialized (issue #13319)."
+        )
+
+
 class TestLangfuseSetupFailureVisibility:
     """Regression for https://github.com/langflow-ai/langflow/issues/13317.
 
