@@ -23,6 +23,11 @@ from langflow.api.utils import (
     normalize_code_for_import,
     validate_is_component,
 )
+from langflow.api.v1.authz_route_dependencies import (
+    AuthorizedDeleteFlow,
+    AuthorizedReadFlow,
+    AuthorizedWriteFlow,
+)
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
@@ -209,35 +214,16 @@ async def read_flows(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
-    session: DbSession,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
+    flow: AuthorizedReadFlow,
 ):
     """Read a flow."""
-    # Share-aware fetch; plugin deny → 404 (UUID privacy).
-    if user_flow := await _read_flow(session, flow_id, current_user.id):
-        try:
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.READ,
-                flow_id=flow_id,
-                flow_user_id=user_flow.user_id,
-                workspace_id=user_flow.workspace_id,
-                folder_id=user_flow.folder_id,
-            )
-        except HTTPException as exc:
-            raise deny_to_404(exc, detail="Flow not found") from exc
-        # Convert to FlowRead while session is still active to avoid detached instance errors
-        return FlowRead.model_validate(user_flow, from_attributes=True)
-    raise HTTPException(status_code=404, detail="Flow not found")
+    return FlowRead.model_validate(flow, from_attributes=True)
 
 
 @router.get("/{flow_id}/note_translations", status_code=200)
 async def get_note_translations(
     *,
-    session: DbSession,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
+    flow: AuthorizedReadFlow,
     request: Request,
 ) -> dict[str, str]:
     """Return translated note node descriptions for the current locale.
@@ -248,19 +234,8 @@ async def get_note_translations(
     """
     from langflow.utils.i18n import translate
 
-    # Owner-scoped fetch; empty dict preserves UUID privacy vs 404.
-    flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-    if not flow or not flow.data:
+    if not flow.data:
         return {}
-
-    await ensure_flow_permission(
-        current_user,
-        FlowAction.READ,
-        flow_id=flow_id,
-        flow_user_id=flow.user_id,
-        workspace_id=flow.workspace_id,
-        folder_id=flow.folder_id,
-    )
 
     locale = getattr(request.state, "locale", "en")
     nodes = flow.data.get("nodes", [])
@@ -295,28 +270,13 @@ async def update_flow(
     *,
     session: DbSession,
     flow_id: UUID,
+    db_flow: AuthorizedWriteFlow,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Update a flow."""
     try:
-        db_flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-        if not db_flow:
-            raise HTTPException(status_code=404, detail="Flow not found")
-
-        try:
-            await ensure_flow_permission(
-                current_user,
-                FlowAction.WRITE,
-                flow_id=flow_id,
-                flow_user_id=db_flow.user_id,
-                workspace_id=db_flow.workspace_id,
-                folder_id=db_flow.folder_id,
-            )
-        except HTTPException as exc:
-            raise deny_to_404(exc, detail="Flow not found") from exc
-
         # Destination check: if the payload moves the flow into a new
         # workspace/folder, the caller must also be authorized to write at the
         # destination scope. ``_patch_flow`` applies payload values via
@@ -534,27 +494,10 @@ async def delete_flow(
     *,
     session: DbSession,
     flow_id: UUID,
+    flow: AuthorizedDeleteFlow,
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    flow = await _read_flow(
-        session=session,
-        flow_id=flow_id,
-        user_id=current_user.id,
-    )
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
-    try:
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.DELETE,
-            flow_id=flow_id,
-            flow_user_id=flow.user_id,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-        )
-    except HTTPException as exc:
-        raise deny_to_404(exc, detail="Flow not found") from exc
     await retry_flow_operation_on_deployment_guard(
         db=session,
         user_id=current_user.id,

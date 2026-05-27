@@ -140,12 +140,20 @@ def test_load_flow_calls_ensure_flow_permission(helpers_funcs):
     """
     func = helpers_funcs["load_flow"]
     calls = _calls(func, "ensure_flow_permission")
-    assert calls, "load_flow must call ensure_flow_permission"
-    # Action must be EXECUTE — the function loads a Graph for execution.
+    if calls:
+        saw_execute = False
+        for call in calls:
+            if len(call.args) >= 2:
+                arg = call.args[1]
+                if isinstance(arg, ast.Attribute) and arg.attr == "EXECUTE":
+                    saw_execute = True
+        assert saw_execute, "load_flow must authorize FlowAction.EXECUTE"
+        return
+
+    requires_calls = _calls(func, "requires_flow_permission")
+    assert requires_calls, "load_flow must use requires_flow_permission or ensure_flow_permission"
     saw_execute = False
-    for call in calls:
-        if len(call.args) >= 2:
-            arg = call.args[1]
-            if isinstance(arg, ast.Attribute) and arg.attr == "EXECUTE":
-                saw_execute = True
-    assert saw_execute, "load_flow must authorize FlowAction.EXECUTE"
+    for call in requires_calls:
+        if call.args and isinstance(call.args[0], ast.Attribute) and call.args[0].attr == "EXECUTE":
+            saw_execute = True
+    assert saw_execute, "load_flow must authorize FlowAction.EXECUTE via decorator"

@@ -24,6 +24,7 @@ from langflow.services.authorization.guards import (
     ensure_share_permission,
     ensure_variable_permission,
 )
+from langflow.services.authorization.decorators import requires_flow_permission, requires_resource_permission
 from langflow.services.authorization.listing import filter_visible_resources
 from langflow.services.authorization.service import LangflowAuthorizationService
 
@@ -49,4 +50,6 @@ __all__ = [
     "ensure_share_permission",
     "ensure_variable_permission",
     "filter_visible_resources",
+    "requires_flow_permission",
+    "requires_resource_permission",
 ]
