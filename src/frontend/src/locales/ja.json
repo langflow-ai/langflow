@@ -965,6 +965,7 @@
   "memory.readTheDocs": "ドキュメントを読む",
   "memory.reloadSessions": "セッションとメッセージを再読み込みする",
   "memory.searchMemories": "思い出を検索…",
+  "memory.seePromptExamples": "プロンプトの例を見る",
   "memory.selectEmbeddingModel": "埋め込みモデルを選択",
   "memory.selectPreprocessingModel": "前処理モデルを選択する",
   "memory.senderLabel": "差出人：",

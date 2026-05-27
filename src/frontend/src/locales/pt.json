@@ -965,6 +965,7 @@
   "memory.readTheDocs": "Leia a documentação",
   "memory.reloadSessions": "Atualizar sessões e mensagens",
   "memory.searchMemories": "Pesquisar memórias...",
+  "memory.seePromptExamples": "Veja exemplos de prompts",
   "memory.selectEmbeddingModel": "Selecionar modelo de incorporação",
   "memory.selectPreprocessingModel": "Selecionar modelo de pré-processamento",
   "memory.senderLabel": "Remetente:",

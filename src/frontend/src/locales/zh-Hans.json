@@ -965,6 +965,7 @@
   "memory.readTheDocs": "阅读文档",
   "memory.reloadSessions": "重新加载会话和消息",
   "memory.searchMemories": "搜索记忆……",
+  "memory.seePromptExamples": "查看提示示例",
   "memory.selectEmbeddingModel": "选择嵌入模型",
   "memory.selectPreprocessingModel": "选择预处理模型",
   "memory.senderLabel": "发件人：",
