@@ -585,7 +585,7 @@
                   },
                   {
                     "name": "langchain_ibm",
-                    "version": null
+                    "version": "1.0.11"
                   }
                 ],
                 "total_dependencies": 12
