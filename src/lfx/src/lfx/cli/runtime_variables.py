@@ -5,6 +5,8 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
+
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
 
@@ -20,7 +22,8 @@ def build_request_variables_from_global_vars(global_vars: dict[str, str] | None)
     - ``x-langflow-global-var-*`` aliases
 
     Parsed JSON is applied first; explicit keys in *global_vars* (except the JSON
-    blob key itself) override on collision so connection_details wins over context.
+    blob key itself) override on collision. Under the TRM contract connection_details
+    is sent as raw keys and context inside the JSON blob, so connection_details wins.
     """
     if not global_vars:
         return {}
@@ -30,10 +33,18 @@ def build_request_variables_from_global_vars(global_vars: dict[str, str] | None)
     if raw_json:
         try:
             parsed = json.loads(raw_json)
-        except json.JSONDecodeError:
+        except json.JSONDecodeError as exc:
+            logger.warning(
+                f"Failed to parse {_LANGFLOW_REQUEST_VARIABLES_KEY} JSON ({exc}); "
+                "credentials carried only in this blob will be unavailable."
+            )
             parsed = None
         if isinstance(parsed, dict):
             merged.update({str(key): str(value) for key, value in parsed.items()})
+        elif parsed is not None:
+            logger.warning(
+                f"{_LANGFLOW_REQUEST_VARIABLES_KEY} must be a JSON object, got {type(parsed).__name__}; ignoring blob."
+            )
 
     for key, value in global_vars.items():
         if key == _LANGFLOW_REQUEST_VARIABLES_KEY:

@@ -213,6 +213,7 @@ class TestGraphExecution:
             yield mock_result
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
 
         results, logs = await execute_graph_with_capture(mock_graph, "test input")
@@ -234,12 +235,49 @@ class TestGraphExecution:
             yield mock_result
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
 
         results, _ = await execute_graph_with_capture(mock_graph, "test input")
 
         assert len(results) == 1
         assert results[0].message.text == "Message text"
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_activates_request_scope_from_context(self):
+        """Activate the request scope + no_env_fallback from graph.context, then reset them.
+
+        The flag and variables must be live during execution and cleared afterward so
+        nothing leaks to the next request. Covers the wiring (graph.context -> ContextVars)
+        that the serve_app tests skip by mocking out execute_graph_with_capture.
+        """
+        from lfx.services.variable.request_scope import (
+            get_active_request_variables,
+            is_env_fallback_disabled,
+        )
+
+        observed: dict[str, object] = {}
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            observed["scope"] = get_active_request_variables()
+            observed["no_env_fallback"] = is_env_fallback_disabled()
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.context = {
+            "request_variables": {"access_token": "secret"},
+            "no_env_fallback": True,
+        }
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        # During execution the scope reflected this request's global_vars + flag.
+        assert observed["scope"] == {"access_token": "secret"}
+        assert observed["no_env_fallback"] is True
+        # After execution both ContextVars are reset (no bleed into the next request).
+        assert get_active_request_variables() is None
+        assert is_env_fallback_disabled() is False
 
     @pytest.mark.asyncio
     async def test_execute_graph_with_capture_error(self):
@@ -251,6 +289,7 @@ class TestGraphExecution:
             yield  # This line never executes but makes it an async generator
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start_error
 
         with pytest.raises(RuntimeError, match="Execution failed"):
@@ -268,6 +307,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
 
         await execute_graph_with_capture(mock_graph, "test input")
@@ -283,6 +323,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
 
         await execute_graph_with_capture(mock_graph, "test input", session_id="fixed-session")
@@ -302,6 +343,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
         memory_vertex = MagicMock()
         memory_vertex.raw_params = {}
@@ -324,6 +366,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
         pinned_vertex = MagicMock()
         pinned_vertex.raw_params = {"session_id": "hardcoded-in-flow"}
@@ -348,6 +391,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
         mock_graph.user_id = None
 
@@ -364,6 +408,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
         mock_graph.user_id = "preset-user-uuid"
 
@@ -385,6 +430,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
 
         await execute_graph_with_capture(mock_graph, "test input")
@@ -401,6 +447,7 @@ class TestGraphExecution:
             yield MagicMock(results={"text": "ok"})
 
         mock_graph = MagicMock()
+        mock_graph.context = {}
         mock_graph.async_start = mock_async_start
         mock_settings = MagicMock()
         mock_settings.settings.fallback_to_env_var = False

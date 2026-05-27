@@ -305,6 +305,29 @@ class TestVariableService:
         finally:
             reset_request_variables(token)
 
+    async def test_request_scope_overrides_env(self, variables):
+        """A request-scoped variable wins over an env var of the same name (core feature)."""
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        os.environ["SHARED_VAR"] = "env-value"
+        token = activate_request_variables({"SHARED_VAR": "request-value"})
+        try:
+            assert await variables.get_variable("SHARED_VAR") == "request-value"
+        finally:
+            reset_request_variables(token)
+            del os.environ["SHARED_VAR"]
+
+    async def test_in_memory_overrides_request_scope(self, variables):
+        """An in-memory variable wins over a request-scoped variable of the same name."""
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        variables.set_variable("SHARED_VAR", "memory-value")
+        token = activate_request_variables({"SHARED_VAR": "request-value"})
+        try:
+            assert await variables.get_variable("SHARED_VAR") == "memory-value"
+        finally:
+            reset_request_variables(token)
+
     async def test_teardown(self, variables):
         """Test service teardown clears variables."""
         variables.set_variable("test_key", "test_value")
