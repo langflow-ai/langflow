@@ -164,6 +164,64 @@ def stub_authz(monkeypatch):
 # =====================================================================
 
 
+def test_role_create_accepts_canonical_permission_slugs():
+    """``<resource>:<action>`` slugs from the system-role catalog parse cleanly."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    payload = RoleCreate(
+        name="ops",
+        permissions=[
+            "flow:read",
+            "flow:execute",
+            "deployment:deploy",
+            "share:create",
+            "knowledge_base:ingest",
+            "file:*",
+        ],
+    )
+    # Wildcard action survives intact, no normalization surprises.
+    assert payload.permissions[-1] == "file:*"
+
+
+@pytest.mark.parametrize(
+    "bad_slug",
+    [
+        "flow:*:read",  # legacy three-segment form rejected
+        "flow",  # missing action
+        "flow:read:extra",  # too many segments
+        "Flow:read",  # uppercase resource
+        "flow:READ",  # uppercase action
+        "unknown:read",  # unknown resource
+        "flow:invent",  # unknown action
+        "*:read",  # resource wildcard not allowed
+        "",  # empty
+    ],
+)
+def test_role_create_rejects_non_canonical_permission_slugs(bad_slug):
+    """Anything outside the canonical ``<resource>:<action>`` form is 422 at the API boundary."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        RoleCreate(name="bad", permissions=[bad_slug])
+
+
+def test_role_update_validates_permissions_when_provided():
+    """RoleUpdate also runs the slug validator (so PATCH cannot smuggle bad slugs in)."""
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from pydantic import ValidationError
+
+    # None is still allowed (the handler maps it to a 400 separately).
+    RoleUpdate(permissions=None)
+    # Empty list is the canonical "clear permissions" payload.
+    RoleUpdate(permissions=[])
+    # Valid slugs pass.
+    RoleUpdate(permissions=["flow:read", "deployment:execute"])
+    # A single bad slug fails the whole payload.
+    with pytest.raises(ValidationError):
+        RoleUpdate(permissions=["flow:read", "flow:*:read"])
+
+
 @pytest.mark.asyncio
 async def test_create_role_requires_superuser(stub_authz):
     from langflow.api.v1 import authz_roles
@@ -172,7 +230,7 @@ async def test_create_role_requires_superuser(stub_authz):
     stub_authz()
     session = _FakeAsyncSession()
     user = _make_user(is_superuser=False)
-    payload = RoleCreate(name="custom", description=None, permissions=["flow:*:read"])
+    payload = RoleCreate(name="custom", description=None, permissions=["flow:read"])
 
     with pytest.raises(HTTPException) as excinfo:
         await authz_roles.create_role(payload=payload, current_user=user, session=session)
@@ -190,7 +248,7 @@ async def test_create_role_persists_and_invalidates(stub_authz):
     authz = stub_authz()
     session = _FakeAsyncSession()
     user = _make_user(is_superuser=True)
-    payload = RoleCreate(name="runner", description="x", permissions=["flow:*:execute"])
+    payload = RoleCreate(name="runner", description="x", permissions=["flow:execute"])
 
     result = await authz_roles.create_role(payload=payload, current_user=user, session=session)
     assert result.name == "runner"
@@ -323,7 +381,7 @@ async def test_update_role_omitted_fields_untouched(stub_authz):
         id=role_id,
         name="custom",
         description="keep me",
-        permissions=["flow:*:read"],
+        permissions=["flow:read"],
         parent_role_id=parent_id,
     )
     session = _FakeAsyncSession({(AuthzRole, role_id): role})
@@ -339,7 +397,7 @@ async def test_update_role_omitted_fields_untouched(stub_authz):
     )
     assert role.name == "renamed"
     assert role.description == "keep me"
-    assert role.permissions == ["flow:*:read"]
+    assert role.permissions == ["flow:read"]
     assert role.parent_role_id == parent_id
 
 
@@ -387,7 +445,7 @@ async def test_update_role_clears_permissions_via_empty_list(stub_authz):
         id=role_id,
         name="custom",
         description=None,
-        permissions=["flow:*:read", "flow:*:write"],
+        permissions=["flow:read", "flow:write"],
         parent_role_id=None,
     )
     session = _FakeAsyncSession({(AuthzRole, role_id): role})
@@ -417,7 +475,7 @@ async def test_update_role_rejects_null_permissions(stub_authz):
         name="custom",
         description=None,
         is_system=False,
-        permissions=["flow:*:read"],
+        permissions=["flow:read"],
         parent_role_id=None,
         updated_at=None,
     )
@@ -510,6 +568,59 @@ async def test_delete_role_blocks_system_role(stub_authz):
 # =====================================================================
 # /authz/role-assignments
 # =====================================================================
+
+
+def test_role_assignment_create_global_must_omit_domain_id():
+    """``domain_type='global'`` with a ``domain_id`` is a 422 — the row would not match any domain."""
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from pydantic import ValidationError
+
+    # Allowed: global + null id
+    RoleAssignmentCreate(user_id=uuid4(), role_id=uuid4())
+    # Rejected: global + non-null id
+    with pytest.raises(ValidationError):
+        RoleAssignmentCreate(
+            user_id=uuid4(),
+            role_id=uuid4(),
+            domain_type="global",
+            domain_id=uuid4(),
+        )
+
+
+@pytest.mark.parametrize("domain_type", ["org", "workspace", "project"])
+def test_role_assignment_create_scoped_requires_domain_id(domain_type):
+    """Scoped ``domain_type`` values without ``domain_id`` are 422."""
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from pydantic import ValidationError
+
+    # Allowed when paired with an id
+    RoleAssignmentCreate(
+        user_id=uuid4(),
+        role_id=uuid4(),
+        domain_type=domain_type,
+        domain_id=uuid4(),
+    )
+    # Rejected without an id
+    with pytest.raises(ValidationError):
+        RoleAssignmentCreate(
+            user_id=uuid4(),
+            role_id=uuid4(),
+            domain_type=domain_type,
+        )
+
+
+def test_role_assignment_create_rejects_unknown_domain_type():
+    """Free-form ``domain_type`` strings are 422 (typo guard)."""
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError):
+        RoleAssignmentCreate(
+            user_id=uuid4(),
+            role_id=uuid4(),
+            domain_type="organization",  # not in the Literal
+            domain_id=uuid4(),
+        )
 
 
 @pytest.mark.asyncio
@@ -685,6 +796,72 @@ async def test_update_team_omitted_description_untouched(stub_authz):
     )
     assert team.team_name == "Renamed"
     assert team.description == "keep me"
+
+
+@pytest.mark.asyncio
+async def test_update_team_display_only_change_skips_invalidate_all(stub_authz):
+    """Renaming or re-describing a team doesn't touch policy — no cache flush."""
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamUpdate
+    from langflow.services.database.models.auth import AuthzTeam
+
+    authz = stub_authz()
+    team_id = uuid4()
+    team = _make_team_row(id=team_id, team_name="Eng", adom_name="eng", is_active=True)
+    session = _FakeAsyncSession({(AuthzTeam, team_id): team})
+    user = _make_user(is_superuser=True)
+
+    await authz_teams.update_team(
+        team_id=team_id,
+        payload=TeamUpdate(team_name="Engineering", description="new desc"),
+        current_user=user,
+        session=session,
+    )
+    assert authz.invalidate_all_calls == 0
+
+
+@pytest.mark.asyncio
+async def test_update_team_adom_change_triggers_invalidate_all(stub_authz):
+    """``adom_name`` is the slug a plugin may compile against — invalidate on change."""
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamUpdate
+    from langflow.services.database.models.auth import AuthzTeam
+
+    authz = stub_authz()
+    team_id = uuid4()
+    team = _make_team_row(id=team_id, adom_name="eng")
+    session = _FakeAsyncSession({(AuthzTeam, team_id): team})
+    user = _make_user(is_superuser=True)
+
+    await authz_teams.update_team(
+        team_id=team_id,
+        payload=TeamUpdate(adom_name="engineering"),
+        current_user=user,
+        session=session,
+    )
+    assert authz.invalidate_all_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_update_team_is_active_change_triggers_invalidate_all(stub_authz):
+    """Deactivating a team must take effect on the next enforce call."""
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamUpdate
+    from langflow.services.database.models.auth import AuthzTeam
+
+    authz = stub_authz()
+    team_id = uuid4()
+    team = _make_team_row(id=team_id, is_active=True)
+    session = _FakeAsyncSession({(AuthzTeam, team_id): team})
+    user = _make_user(is_superuser=True)
+
+    await authz_teams.update_team(
+        team_id=team_id,
+        payload=TeamUpdate(is_active=False),
+        current_user=user,
+        session=session,
+    )
+    assert authz.invalidate_all_calls == 1
 
 
 @pytest.mark.asyncio

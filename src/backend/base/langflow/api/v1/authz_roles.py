@@ -13,6 +13,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
+from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
 
@@ -119,6 +120,17 @@ async def create_role(
         ) from exc
     await session.refresh(role)
     await get_authorization_service().invalidate_all()
+    await audit_decision(
+        user_id=current_user.id,
+        action="role:create",
+        obj=f"role:{role.id}",
+        result="allow",
+        details={
+            "role_name": role.name,
+            "permissions": list(role.permissions),
+            "parent_role_id": str(role.parent_role_id) if role.parent_role_id else None,
+        },
+    )
     logger.info("Created role %s (id=%s)", role.name, role.id)
     return RoleRead.model_validate(role)
 
@@ -207,6 +219,16 @@ async def update_role(
         ) from exc
     await session.refresh(role)
     await get_authorization_service().invalidate_role(role.id)
+    await audit_decision(
+        user_id=current_user.id,
+        action="role:update",
+        obj=f"role:{role.id}",
+        result="allow",
+        details={
+            "role_name": role.name,
+            "fields_changed": sorted(fields_set),
+        },
+    )
     logger.info("Updated role %s (id=%s)", role.name, role.id)
     return RoleRead.model_validate(role)
 
@@ -242,7 +264,15 @@ async def delete_role(
             detail="Role still has active assignments — revoke them before deleting",
         )
 
+    role_name = role.name
     await session.delete(role)
     await session.commit()
     await get_authorization_service().invalidate_role(role_id)
+    await audit_decision(
+        user_id=current_user.id,
+        action="role:delete",
+        obj=f"role:{role_id}",
+        result="allow",
+        details={"role_name": role_name},
+    )
     logger.info("Deleted role id=%s", role_id)

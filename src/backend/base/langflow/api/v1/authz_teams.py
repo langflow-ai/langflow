@@ -24,6 +24,7 @@ from langflow.api.v1.schemas.authz_teams import (
     TeamRead,
     TeamUpdate,
 )
+from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
@@ -97,6 +98,13 @@ async def create_team(
             detail=f"Team with adom_name {payload.adom_name!r} already exists",
         ) from exc
     await session.refresh(team)
+    await audit_decision(
+        user_id=current_user.id,
+        action="team:create",
+        obj=f"team:{team.id}",
+        result="allow",
+        details={"team_name": team.team_name, "adom_name": team.adom_name},
+    )
     logger.info("Created team %s (id=%s)", team.team_name, team.id)
     return TeamRead.model_validate(team)
 
@@ -113,17 +121,29 @@ async def update_team(
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
 
-    if payload.team_name is not None:
+    # Track whether the change affects fields a plugin may read during
+    # policy sync (the team's domain slug or active state). description-only
+    # / team_name-only edits are display metadata; adom_name and is_active
+    # can influence which rules match.
+    policy_relevant_changed = False
+    changed_fields: list[str] = []
+    if payload.team_name is not None and team.team_name != payload.team_name:
         team.team_name = payload.team_name
-    if payload.adom_name is not None:
+        changed_fields.append("team_name")
+    if payload.adom_name is not None and team.adom_name != payload.adom_name:
         team.adom_name = payload.adom_name
+        changed_fields.append("adom_name")
+        policy_relevant_changed = True
     # description is nullable on the DB side, so use a presence check
     # (model_fields_set) instead of ``is not None`` — an explicit "description":
     # null in the body clears the field, while omitting it leaves the row alone.
-    if "description" in payload.model_fields_set:
+    if "description" in payload.model_fields_set and team.description != payload.description:
         team.description = payload.description
-    if payload.is_active is not None:
+        changed_fields.append("description")
+    if payload.is_active is not None and team.is_active != payload.is_active:
         team.is_active = payload.is_active
+        changed_fields.append("is_active")
+        policy_relevant_changed = True
     team.updated_at = datetime.now(timezone.utc)
 
     try:
@@ -135,7 +155,19 @@ async def update_team(
             detail="adom_name conflict — another team already uses this slug",
         ) from exc
     await session.refresh(team)
-    # Team metadata change doesn't require policy reload — only memberships do.
+    # Pure display edits (team_name, description) don't change policy. But
+    # adom_name is the slug a plugin may use to compile rules against, and
+    # is_active gates whether the team's memberships should grant access at
+    # all — invalidate so the next enforce reflects the new state.
+    if policy_relevant_changed:
+        await get_authorization_service().invalidate_all()
+    await audit_decision(
+        user_id=current_user.id,
+        action="team:update",
+        obj=f"team:{team.id}",
+        result="allow",
+        details={"team_name": team.team_name, "fields_changed": sorted(changed_fields)},
+    )
     logger.info("Updated team %s (id=%s)", team.team_name, team.id)
     return TeamRead.model_validate(team)
 
@@ -150,11 +182,19 @@ async def delete_team(
     team = await session.get(AuthzTeam, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
+    team_name = team.team_name
     # Cascade on team_members handles cleanup; share rows targeting this team
     # are left in place (caller may want to migrate them before deleting).
     await session.delete(team)
     await session.commit()
     await get_authorization_service().invalidate_all()
+    await audit_decision(
+        user_id=current_user.id,
+        action="team:delete",
+        obj=f"team:{team_id}",
+        result="allow",
+        details={"team_name": team_name},
+    )
     logger.info("Deleted team id=%s", team_id)
 
 
@@ -218,6 +258,17 @@ async def add_member(
         ) from exc
     await session.refresh(member)
     await get_authorization_service().invalidate_user(payload.user_id)
+    await audit_decision(
+        user_id=current_user.id,
+        action="team_member:create",
+        obj=f"team:{team_id}",
+        result="allow",
+        details={
+            "team_name": team.team_name,
+            "user_id": str(payload.user_id),
+            "source": payload.source,
+        },
+    )
     logger.info("Added user=%s to team=%s", payload.user_id, team_id)
     return TeamMemberRead.model_validate(member)
 
@@ -249,4 +300,11 @@ async def remove_member(
     await session.delete(member)
     await session.commit()
     await get_authorization_service().invalidate_user(user_id)
+    await audit_decision(
+        user_id=current_user.id,
+        action="team_member:delete",
+        obj=f"team:{team_id}",
+        result="allow",
+        details={"user_id": str(user_id)},
+    )
     logger.info("Removed user=%s from team=%s", user_id, team_id)

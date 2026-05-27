@@ -22,6 +22,7 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentCreate,
     RoleAssignmentRead,
 )
+from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
@@ -107,6 +108,19 @@ async def create_assignment(
         ) from exc
     await session.refresh(assignment)
     await get_authorization_service().invalidate_user(payload.user_id)
+    await audit_decision(
+        user_id=current_user.id,
+        action="role_assignment:create",
+        obj=f"user:{payload.user_id}",
+        result="allow",
+        details={
+            "assignment_id": str(assignment.id),
+            "role_id": str(payload.role_id),
+            "role_name": role.name,
+            "domain_type": payload.domain_type,
+            "domain_id": str(payload.domain_id) if payload.domain_id else None,
+        },
+    )
     logger.info(
         "Assigned role=%s to user=%s (domain=%s/%s)",
         role.name,
@@ -129,7 +143,22 @@ async def delete_assignment(
     if assignment is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Assignment not found")
     user_id = assignment.user_id
+    role_id = assignment.role_id
+    domain_type = assignment.domain_type
+    domain_id = assignment.domain_id
     await session.delete(assignment)
     await session.commit()
     await get_authorization_service().invalidate_user(user_id)
+    await audit_decision(
+        user_id=current_user.id,
+        action="role_assignment:delete",
+        obj=f"user:{user_id}",
+        result="allow",
+        details={
+            "assignment_id": str(assignment_id),
+            "role_id": str(role_id),
+            "domain_type": domain_type,
+            "domain_id": str(domain_id) if domain_id else None,
+        },
+    )
     logger.info("Revoked role assignment id=%s (user=%s)", assignment_id, user_id)
