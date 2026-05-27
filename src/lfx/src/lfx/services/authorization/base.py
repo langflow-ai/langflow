@@ -138,6 +138,19 @@ class BaseAuthorizationService(Service, abc.ABC):
             requests=requests,
             context=context,
         )
+        # Fail fast on contract violation: each request must produce exactly
+        # one result, in order. Without this, a too-short result would silently
+        # truncate later resources to `[]` (out-of-bounds slice returns empty)
+        # and a too-long result would drop tail entries — both yielding wrong
+        # per-resource permissions without any error.
+        expected = len(requests)
+        if len(flat) != expected:
+            msg = (
+                f"batch_enforce returned {len(flat)} results for {expected} requests "
+                f"({len(resource_ids)} resources x {len(actions)} actions); "
+                f"plugin must return one result per request in order."
+            )
+            raise ValueError(msg)
 
         result: dict[UUID, list[str]] = {}
         action_count = len(actions)
