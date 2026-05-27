@@ -5,13 +5,13 @@ slug: /extensions-overview
 
 import Icon from "@site/src/components/icon";
 
-Langflow ships component bundles that are maintained and released separately from `langflow-core` as Extensions.
-Instead of every integration being built into `langflow`, each bundle is its own pip-installable package, such as `lfx-duckduckgo` or `lfx-openai`.
+Langflow ships component bundles that are maintained and released separately from the core Langflow server as Extensions.
+Instead of every integration being built into `langflow`, each bundle is its own pip-installable package, such as `lfx-duckduckgo` or `lfx-arxiv`.
 
-When you run `pip install langflow`, you install:
+When you run `uv pip install langflow`, you install:
 
 * All Langflow core components
-* All bundles that ship as dependencies of the `langflow` metapackage — the same set you had before extensions existed
+* All bundles that ship as dependencies of the `langflow` metapackage
 
 Some bundles that were previously included in `langflow` are moved into standalone packages.
 The `langflow` metapackage adds them as regular pip dependencies, so `pip install langflow` continues to include them.
@@ -42,8 +42,8 @@ Use the bundle name from the hint, such as `duckduckgo` in this example, to find
 If a bundle you need is not included in your Langflow environment, install it with pip:
 
 ```bash
-pip install lfx-duckduckgo
-langflow run
+uv pip install lfx-duckduckgo
+uv run langflow run
 ```
 
 Langflow discovers the package at server startup and loads the components into the palette automatically.
