@@ -1575,6 +1575,7 @@
   "memory.sessionLabel": "Session:",
   "memory.timestampLabel": "Timestamp:",
   "memory.toggleAutoCapture": "Toggle auto-capture",
+  "memory.allSessions": "All sessions",
   "modal.caution": "Caution",
   "modal.discardChanges": "Discard Changes",
   "modal.logs": "Logs",

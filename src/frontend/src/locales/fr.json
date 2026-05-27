@@ -951,6 +951,8 @@
   "memory.noChunksYet": "Pas encore de morceaux",
   "memory.noId": "(sans identifiant)",
   "memory.preprocessing": "Prétraitement :",
+  "memory.preprocessingInstructions": "Instructions de prétraitement :",
+  "memory.preprocessingModel": "Modèle de prétraitement :",
   "memory.processedMessages": "Messages traités",
   "memory.providerLabel": "Fournisseur :",
   "memory.reloadSessions": "Actualiser les sessions et les messages",
