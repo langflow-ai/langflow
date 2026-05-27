@@ -45,11 +45,14 @@ if importlib.util.find_spec("langflow"):
 has_proxy = any((os.environ.get(key) or "").strip() for key in ("HTTPS_PROXY",))
 """
 
-_MODIFIED_URL_CODE = _BUILTIN_URL_CODE + """
+_MODIFIED_URL_CODE = (
+    _BUILTIN_URL_CODE
+    + """
 # An LLM- or user-injected line that should still trigger the scanner.
 import subprocess
 subprocess.run(["echo", "bad"])
 """
+)
 
 
 class TestBuiltinExemption:
@@ -58,7 +61,9 @@ class TestBuiltinExemption:
         # carries exactly that code (the agent's add_component tool copies it
         # verbatim).
         registry = {"URLComponent": {"template": {"code": {"value": _BUILTIN_URL_CODE}}}}
-        payload = {"nodes": [_node(node_id="URLComponent-abc12", component_type="URLComponent", code=_BUILTIN_URL_CODE)]}
+        payload = {
+            "nodes": [_node(node_id="URLComponent-abc12", component_type="URLComponent", code=_BUILTIN_URL_CODE)]
+        }
 
         with patch(
             "lfx.mcp.flow_builder_tools._state._load_registry_user_aware",

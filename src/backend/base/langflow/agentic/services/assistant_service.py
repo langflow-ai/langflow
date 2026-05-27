@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import copy
 import os
 from contextlib import aclosing
@@ -530,7 +531,7 @@ async def execute_flow_with_validation_streaming(
         # fix turn. Structured fields so log indices (Sentry/Datadog) can
         # group by phase and alert on outliers.
         if phase:
-            try:
+            with contextlib.suppress(TypeError, ValueError):
                 logger.info(
                     "assistant.tokens.phase phase=%s user_id=%s session_id=%s input=%s output=%s total=%s",
                     phase,
@@ -540,8 +541,6 @@ async def execute_flow_with_validation_streaming(
                     int(tokens.get("output_tokens", 0) or 0),
                     int(tokens.get("total_tokens", 0) or 0),
                 )
-            except (TypeError, ValueError):
-                pass
 
     def _complete(data: dict) -> str:
         payload = {
