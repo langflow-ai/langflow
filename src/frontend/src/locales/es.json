@@ -951,7 +951,6 @@
   "memory.noChunksYet": "Todavía no hay fragmentos",
   "memory.noId": "(sin ID)",
   "memory.preprocessing": "Preprocesamiento:",
-  "memory.preprocessingPromptPlaceholder": "Elabora un resumen conciso que recoja los datos clave y el contexto.",
   "memory.processedMessages": "Mensajes procesados",
   "memory.providerLabel": "Proveedor:",
   "memory.reloadSessions": "Actualizar sesiones y mensajes",

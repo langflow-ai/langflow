@@ -492,14 +492,7 @@ def migrate_flow_payload(
         if record.error is not None:
             report.errors.append(record.error)
 
-    # TODO: when the events pipeline (ExtensionEventsService) lands,
-    # emit a single ``flow-migrated`` event per flow per session here when
-    # ``report.any_rewritten`` is True.  The event payload should be:
-    #   {
-    #       "flow_id": <caller-supplied>,
-    #       "rewritten_count": report.rewritten_count,
-    #       "records": [r as dict for r in report.records if r.outcome == "rewritten"],
-    #   }
-    # Best-effort: deserialization must not block on event service health,
-    # so the emit happens in a fire-and-forget try/except in the caller.
+    # flow_migrated and extension_error events are emitted by the caller
+    # (Graph.from_payload in base.py) which has the flow_id in scope.
+    # See LE-1017.
     return report

@@ -267,12 +267,16 @@ class Graph:
         for vertex in self._vertices:
             if vertex_id := vertex.get("id"):
                 self.top_level_vertices.append(vertex_id)
-            if vertex_id in self.cycle_vertices:
-                self.run_manager.add_to_cycle_vertices(vertex_id)
+
+        self._cycle_vertices = None
+        self._is_cyclic = None
         self._graph_data = process_flow(self.raw_graph_data)
 
         self._vertices = self._graph_data["nodes"]
         self._edges = self._graph_data["edges"]
+        self._cycle_vertices = None
+        self._is_cyclic = None
+        self.run_manager.cycle_vertices.clear()
         self.initialize()
 
     def add_component(self, component: Component, component_id: str | None = None) -> str:
@@ -1212,13 +1216,42 @@ class Graph:
                 migration_error.hint,
                 migration_error.message,
             )
-        # TODO: when the extension events pipeline lands, emit a
-        # single ``flow-migrated`` event per flow per session here using
-        # ExtensionEventsService, plus one event per ``ExtensionError`` in
-        # ``migration_report.errors`` so the frontend can surface the
-        # ``component-not-found-with-hint`` / ``component-name-ambiguous``
-        # codes inline.  Until then the warnings above are the only
-        # external-facing surface for these errors.
+        # Emit extension events so the frontend can surface migration results.
+        try:
+            from lfx.services.deps import get_extension_events_service
+
+            _svc = get_extension_events_service()
+            if _svc is not None:
+                # Per-user keyspace so flow_id / migration error details only
+                # reach the user that loaded the flow; fall back to "global"
+                # for unauthenticated paths (CLI, tests, single-user dev).
+                _keyspace = f"user:{user_id}" if user_id else "global"
+                if migration_report.any_rewritten:
+                    _svc.emit(
+                        "flow_migrated",
+                        {
+                            "flow_id": str(flow_id) if flow_id else None,
+                            "rewritten_count": migration_report.rewritten_count,
+                        },
+                        keyspace=_keyspace,
+                    )
+                for migration_error in migration_report.errors:
+                    _svc.emit(
+                        "extension_error",
+                        {
+                            "flow_id": str(flow_id) if flow_id else None,
+                            "code": migration_error.code,
+                            "message": migration_error.message,
+                            "hint": migration_error.hint,
+                            "location": migration_error.location,
+                        },
+                        keyspace=_keyspace,
+                    )
+        except Exception:  # noqa: BLE001 -- best-effort emit; never break flow load on an event-bus failure
+            logger.warning(
+                "extension.event_emit_failed: failed to emit migration events in from_payload.",
+                exc_info=True,
+            )
         # Defense-in-depth: validate here so that no code path can construct
         # a graph with blocked/custom components, even if an API endpoint
         # forgets its own pre-check. Ideally this would live only at the API
