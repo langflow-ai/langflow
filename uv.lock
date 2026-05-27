@@ -5679,6 +5679,7 @@ sdist = { url = "https://files.pythonhosted.org/packages/f3/ff/c9baf0997266d398a
 name = "ibm-db"
 version = "3.2.9"
 source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/36/8cd1503b7f947293bb045ec86e6fa60a0bef3bacf1a601840ea65c4b78de/ibm_db-3.2.9.tar.gz", hash = "sha256:0ad6dc4575519a5563fd7f845fc6bc00d688020e1d3ae78d382e79183bc32b0b", size = 276595, upload-time = "2026-05-26T15:41:25.98Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/bf/cc/4db3062ce3b404098e73ec67498b25c672b212303a870c2703ac8f9a00c6/ibm_db-3.2.9-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:e130a461a0ce3fecdb9896ec767d95d89d4f14e5eb4b8b5e63aca249790c5155", size = 24166574, upload-time = "2026-04-22T16:27:50.985Z" },
     { url = "https://files.pythonhosted.org/packages/ec/62/98bd8e55a9a2fdd20997bd81e8d8f68b8956fa55d8c2c0cae2fd94ccd2f5/ibm_db-3.2.9-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:4edde94384f452720b6bc58b94ed03c9b3f5dadb7343d983a55c1122b4a38cf0", size = 20391416, upload-time = "2026-04-22T16:27:54.236Z" },
@@ -7745,6 +7746,7 @@ all = [
     { name = "opik" },
     { name = "pgvector" },
     { name = "pyarrow" },
+    { name = "pydantic" },
     { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -7912,6 +7914,7 @@ complete = [
     { name = "opik" },
     { name = "pgvector" },
     { name = "pyarrow" },
+    { name = "pydantic" },
     { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -8039,6 +8042,7 @@ langchain-unstructured = [
 ]
 langfuse = [
     { name = "langfuse" },
+    { name = "pydantic" },
 ]
 langsmith = [
     { name = "langsmith" },
@@ -8501,6 +8505,7 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyasn1", specifier = ">=0.6.3,<0.7.0" },
     { name = "pydantic", specifier = ">=2.13.0,<3.0.0" },
+    { name = "pydantic", marker = "extra == 'langfuse'", specifier = ">=2.13.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
     { name = "pymongo", marker = "extra == 'mongodb'", specifier = "==4.10.1" },
