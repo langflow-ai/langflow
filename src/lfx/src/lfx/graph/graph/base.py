@@ -999,11 +999,9 @@ class Graph:
         visited.add(vertex_id)
 
         for child_id in self.parent_child_map[vertex_id]:
-            # Only child_id that have an edge with the vertex_id through the output_name
-            # should be marked
             if output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
+                edges = [e for e in self.edges if e.source_id == vertex_id and e.target_id == child_id]
+                if not any(e.source_handle.name == output_name for e in edges):
                     continue
             self._mark_branch(child_id, state, visited)
         return visited
@@ -1029,7 +1027,8 @@ class Graph:
                     active_predecessors = [
                         p_id
                         for p_id in self.predecessor_map.get(v_id, [])
-                        if p_id not in visited and self.get_vertex(p_id).is_active()
+                        if self.get_vertex(p_id).is_active()
+                        and (p_id not in visited or p_id == vertex_id)
                     ]
                     if active_predecessors:
                         self.mark_vertex(v_id, VertexStates.ACTIVE)
@@ -1126,13 +1125,14 @@ class Graph:
             excluded.add(vertex_id)
 
         for child_id in self.parent_child_map[vertex_id]:
-            # If we're at the router (skip_first=True) and have an output_name,
-            # only follow edges from that specific output
             if skip_first and output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
+                edges = [e for e in self.edges if e.source_id == vertex_id and e.target_id == child_id]
+                if not any(e.source_handle.name == output_name for e in edges):
                     continue
-            # After the first level, exclude all descendants
+                # If the child also receives input through a different output of the
+                # source, it is a shared/merge vertex — skip it and its descendants.
+                if any(e.source_handle.name != output_name for e in edges):
+                    continue
             self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
