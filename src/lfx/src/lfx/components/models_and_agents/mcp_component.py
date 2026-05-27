@@ -143,11 +143,19 @@ class MCPToolsComponent(ComponentWithCache):
         """Normalize the timeout input and reject negative values with a field-specific error."""
         timeout_value = getattr(self, "tool_execution_timeout", 0.0)
 
-        if timeout_value < 0:
+        if timeout_value in (None, ""):
+            return None
+
+        try:
+            val = float(timeout_value)
+        except (ValueError, TypeError):
+            return None
+
+        if val < 0:
             msg = "Tool Execution Timeout must be greater than or equal to 0."
             raise ValueError(msg)
 
-        return float(timeout_value) if timeout_value else None
+        return val if val else None
 
     def _mcp_servers_cache_key(self, server_name: str) -> str:
         """Cache key for shared servers map.
@@ -157,7 +165,8 @@ class MCPToolsComponent(ComponentWithCache):
         if not server_name:
             return ""
 
-        normalized_timeout = self._normalize_tool_execution_timeout() or 0.0
+        raw_timeout = getattr(self, "tool_execution_timeout", 0.0) or 0.0
+        normalized_timeout = max(0.0, float(raw_timeout))
 
         hdrs = self._normalized_headers_for_cache()
 
@@ -267,6 +276,7 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             value=0.0,
             range_spec={"min": 0.0, "max": 3600.0, "step": 0.01},
+            real_time_refresh=True,
             advanced=True,
         ),
         DropdownInput(
@@ -790,6 +800,18 @@ class MCPToolsComponent(ComponentWithCache):
                         await logger.aexception(msg)
                         build_config["tool"]["options"] = []
                         build_config["tool"]["placeholder"] = msg
+            elif field_name == "tool_execution_timeout":
+                try:
+                    val = float(field_value) if field_value not in (None, "") else 0.0
+                except (ValueError, TypeError):
+                    val = 0.0
+                if val < 0:
+                    build_config["tool_execution_timeout"]["placeholder"] = (
+                        "⚠ Value must be ≥ 0. Negative timeouts cause immediate failures."
+                    )
+                    build_config["tool_execution_timeout"]["value"] = 0.0
+                else:
+                    build_config["tool_execution_timeout"]["placeholder"] = ""
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
 

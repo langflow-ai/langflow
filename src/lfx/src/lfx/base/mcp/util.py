@@ -56,8 +56,18 @@ def _get_mcp_setting(key: str, default: Any = None) -> Any:
 
 
 def _resolve_mcp_tool_execution_timeout(tool_execution_timeout: float | None) -> float:
-    """Resolve MCP tool execution timeout from explicit input or MCP settings."""
-    if tool_execution_timeout is not None:
+    """Resolve MCP tool execution timeout from explicit input or MCP settings.
+
+    Priority for picking the timeout:
+    1. `tool_execution_timeout`: Custom UI override directly on the component (Highest).
+    2. Global Settings: The maximum value between `mcp_tool_execution_timeout`
+       and `mcp_server_timeout` from global settings.
+    3. Fallback: 180.0 seconds if no custom or global settings exist (Lowest).
+
+    Negative values are treated as unset (use system default) because
+    ``asyncio.wait_for`` immediately raises ``TimeoutError`` for any timeout < 0.
+    """
+    if tool_execution_timeout is not None and float(tool_execution_timeout) > 0:
         return float(tool_execution_timeout)
 
     configured = _get_mcp_setting("mcp_tool_execution_timeout", None)
@@ -2101,9 +2111,11 @@ async def update_tools(
 
     if mcp_stdio_client is None:
         mcp_stdio_client = MCPStdioClient(tool_execution_timeout=tool_execution_timeout)
-    # Update timeout on existing client only if a new timeout is provided
+    # Update timeout on existing client only if a new timeout is provided.
+    # Route through _resolve_mcp_tool_execution_timeout so that negative values
+    # (entered before UI validation fires) never reach asyncio.wait_for.
     elif tool_execution_timeout is not None:
-        mcp_stdio_client._tool_execution_timeout = tool_execution_timeout
+        mcp_stdio_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     # Backward compatibility: accept mcp_sse_client parameter
     if mcp_streamable_http_client is None:
@@ -2111,12 +2123,14 @@ async def update_tools(
             mcp_streamable_http_client = mcp_sse_client
             # Set timeout on the aliased client if provided
             if tool_execution_timeout is not None:
-                mcp_streamable_http_client._tool_execution_timeout = tool_execution_timeout
+                mcp_streamable_http_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(
+                    tool_execution_timeout
+                )
         else:
             mcp_streamable_http_client = MCPStreamableHttpClient(tool_execution_timeout=tool_execution_timeout)
     # Update timeout on existing client only if a new timeout is provided
     elif tool_execution_timeout is not None:
-        mcp_streamable_http_client._tool_execution_timeout = tool_execution_timeout
+        mcp_streamable_http_client._tool_execution_timeout = _resolve_mcp_tool_execution_timeout(tool_execution_timeout)
 
     # Fetch server config from backend
     # Determine mode from config, defaulting to Streamable_HTTP if URL present

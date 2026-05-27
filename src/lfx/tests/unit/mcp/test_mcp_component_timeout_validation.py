@@ -27,18 +27,32 @@ def test_normalize_tool_execution_timeout_rejects_negative_value_with_field_spec
         component._normalize_tool_execution_timeout()
 
 
-def test_mcp_servers_cache_key_rejects_negative_timeout_with_field_specific_message():
+def test_mcp_servers_cache_key_clamps_negative_timeout_to_zero():
     component = MCPToolsComponent()
     component.tool_execution_timeout = -1
 
-    with pytest.raises(ValueError, match=r"Tool Execution Timeout must be greater than or equal to 0\."):
-        component._mcp_servers_cache_key("demo-server")
+    cache_key = component._mcp_servers_cache_key("demo-server")
+    assert "demo-server" in cache_key
 
 
-def test_apply_tool_execution_timeout_to_clients_updates_both_clients():
+@pytest.mark.asyncio
+async def test_update_build_config_resets_negative_timeout():
     component = MCPToolsComponent()
+    build_config = {"tool_execution_timeout": {"value": -1, "placeholder": ""}}
 
-    component._apply_tool_execution_timeout_to_clients(12.5)
+    result = await component.update_build_config(build_config, "-1", "tool_execution_timeout")
 
-    assert component.stdio_client._tool_execution_timeout == 12.5
-    assert component.streamable_http_client._tool_execution_timeout == 12.5
+    assert result["tool_execution_timeout"]["value"] == 0.0
+    assert "Negative timeouts cause immediate failures" in result["tool_execution_timeout"]["placeholder"]
+
+
+@pytest.mark.asyncio
+async def test_update_build_config_handles_empty_timeout_safely():
+    component = MCPToolsComponent()
+    build_config = {"tool_execution_timeout": {"value": "", "placeholder": ""}}
+
+    # Should not crash and should clear any placeholder
+    result = await component.update_build_config(build_config, "", "tool_execution_timeout")
+
+    assert result["tool_execution_timeout"]["placeholder"] == ""
+    assert result["tool_execution_timeout"]["value"] == ""

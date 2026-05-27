@@ -250,9 +250,9 @@ class TestMCPTimeoutBehavior:
             client1 = MCPStdioClient(tool_execution_timeout=None)
             assert client1._tool_execution_timeout == 180
 
-            # Test with 0 - should use provided 0 (explicit value)
+            # Test with 0 - should fall back to global setting since 0 is an invalid explicit timeout
             client2 = MCPStdioClient(tool_execution_timeout=0)
-            assert client2._tool_execution_timeout == 0.0  # 0 is explicit, not None
+            assert client2._tool_execution_timeout == 180
 
     @pytest.mark.asyncio
     async def test_multiple_clients_independent_timeouts(self):
