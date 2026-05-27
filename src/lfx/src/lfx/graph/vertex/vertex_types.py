@@ -415,7 +415,7 @@ class InterfaceVertex(ComponentVertex):
         self.params[INPUT_FIELD_NAME] = complete_message
         if isinstance(self.built_object, dict):
             for key, value in self.built_object.items():
-                if hasattr(value, "text") and (isinstance(value.text, AsyncIterator | Iterator) or value.text == ""):
+                if hasattr(value, "text_stream") and (value.text_stream is not None or value.text == ""):
                     self.built_object[key] = message
         else:
             self.built_object = message

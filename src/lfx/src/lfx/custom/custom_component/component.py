@@ -1884,9 +1884,9 @@ class Component(CustomComponent):
                 if (
                     self._should_stream_message(stored_message, message)
                     and message is not None
-                    and isinstance(message.text, AsyncIterator | Iterator)
+                    and message.text_stream is not None
                 ):
-                    complete_message, usage_data = await self._stream_message(message.text, stored_message)
+                    complete_message, usage_data = await self._stream_message(message.text_stream, stored_message)
                     stored_message.text = complete_message
                     if complete_message:
                         stored_message.properties.state = "complete"
@@ -1973,7 +1973,7 @@ class Component(CustomComponent):
             hasattr(self, "_event_manager")
             and self._event_manager
             and stored_message.has_id()
-            and not isinstance(original_message.text, str)
+            and original_message.text_stream is not None
         )
 
     async def _update_stored_message(self, message: Message) -> Message:
