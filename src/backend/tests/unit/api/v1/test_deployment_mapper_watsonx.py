@@ -20,6 +20,17 @@ from langflow.api.v1.mappers.deployments.contracts import (
     FlowVersionPatch,
     UpdateSnapshotBindings,
 )
+
+try:
+    from langflow.services.adapters.deployment.watsonx_orchestrate import (
+        WatsonxOrchestrateDeploymentService,  # noqa: F401
+    )
+except ModuleNotFoundError:
+    pytest.skip(
+        "Skipping Watsonx mapper tests: optional IBM SDK dependencies not available.",
+        allow_module_level=True,
+    )
+
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
     WatsonxApiDeploymentCreatePayload,

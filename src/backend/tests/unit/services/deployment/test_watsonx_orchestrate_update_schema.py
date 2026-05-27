@@ -5,6 +5,17 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
+
+try:
+    from langflow.services.adapters.deployment.watsonx_orchestrate import (
+        WatsonxOrchestrateDeploymentService,  # noqa: F401
+    )
+except ModuleNotFoundError:
+    pytest.skip(
+        "Skipping Watsonx deployment tests: optional IBM SDK dependencies not available.",
+        allow_module_level=True,
+    )
+
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     PAYLOAD_SCHEMAS,
     WatsonxAgentExecutionResultData,
