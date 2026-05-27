@@ -66,7 +66,9 @@ export function MemoriesSidebar({
               name="BrainCog"
               className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
-            <p className="text-xs text-muted-foreground">{t("memory.noMemoriesFound")}</p>
+            <p className="text-xs text-muted-foreground">
+              {t("memory.noMemoriesFound")}
+            </p>
           </div>
         )}
         {filteredMemories.length > 0 && (

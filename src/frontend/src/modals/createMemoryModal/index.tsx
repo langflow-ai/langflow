@@ -59,7 +59,9 @@ export default function CreateMemoryModal({
       size="x-small"
       onSubmit={handleSubmit}
     >
-      <BaseModal.Header description={t("memory.createModalDescription", { flowName })}>
+      <BaseModal.Header
+        description={t("memory.createModalDescription", { flowName })}
+      >
         <ForwardedIconComponent
           name="BrainCog"
           className="h-6 w-6 pr-1 text-primary"
@@ -103,7 +105,9 @@ export default function CreateMemoryModal({
             </div>
             {selectedEmbeddingModel[0]?.provider && (
               <div className="text-xs text-muted-foreground">
-                {t("memory.providerValue", { provider: selectedEmbeddingModel[0].provider })}
+                {t("memory.providerValue", {
+                  provider: selectedEmbeddingModel[0].provider,
+                })}
               </div>
             )}
           </div>
@@ -114,10 +118,7 @@ export default function CreateMemoryModal({
                 {t("memory.batchSize")}{" "}
                 <span className="text-destructive">*</span>
               </Label>
-              <ShadTooltip
-                content={t("memory.batchSizeTooltip")}
-                side="right"
-              >
+              <ShadTooltip content={t("memory.batchSizeTooltip")} side="right">
                 <button
                   type="button"
                   tabIndex={0}

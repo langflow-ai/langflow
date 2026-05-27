@@ -24,9 +24,7 @@ export const useCustomHandleBulkFilesDownload = () => {
         onError: (error) => {
           setErrorData({
             title: t("errors.errorDownloadingFiles"),
-            list: [
-              error.message || t("errors.downloadFilesDefault"),
-            ],
+            list: [error.message || t("errors.downloadFilesDefault")],
           });
           setIsDownloading(false);
         },

@@ -114,9 +114,15 @@ export function MemoryKnowledgeBaseSection({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-24 text-xs">{t("memory.senderHeader")}</TableHead>
-                <TableHead className="w-40 text-xs">{t("memory.jobIdHeader")}</TableHead>
-                <TableHead className="text-xs">{t("memory.contentHeader")}</TableHead>
+                <TableHead className="w-24 text-xs">
+                  {t("memory.senderHeader")}
+                </TableHead>
+                <TableHead className="w-40 text-xs">
+                  {t("memory.jobIdHeader")}
+                </TableHead>
+                <TableHead className="text-xs">
+                  {t("memory.contentHeader")}
+                </TableHead>
                 <TableHead className="w-44 text-xs">
                   {t("memory.ingestionTimestampHeader")}
                 </TableHead>

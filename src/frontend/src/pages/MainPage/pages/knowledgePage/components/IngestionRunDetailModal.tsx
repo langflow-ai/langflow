@@ -80,14 +80,27 @@ const IngestionRunDetailModal = ({
                   value={data.succeeded}
                   tone="success"
                 />
-                <Metric label={t("knowledge.metricFailed")} value={data.failed} tone="error" />
-                <Metric label={t("knowledge.metricSkipped")} value={data.skipped} tone="muted" />
-                <Metric label={t("knowledge.metricChunks")} value={data.chunks_created} />
+                <Metric
+                  label={t("knowledge.metricFailed")}
+                  value={data.failed}
+                  tone="error"
+                />
+                <Metric
+                  label={t("knowledge.metricSkipped")}
+                  value={data.skipped}
+                  tone="muted"
+                />
+                <Metric
+                  label={t("knowledge.metricChunks")}
+                  value={data.chunks_created}
+                />
               </div>
 
               {data.error_message && (
                 <div className="rounded-md border border-error-red-border bg-error-red p-3 text-xs text-accent-red-foreground">
-                  <span className="font-medium">{t("knowledge.errorLabel")}</span>{" "}
+                  <span className="font-medium">
+                    {t("knowledge.errorLabel")}
+                  </span>{" "}
                   {data.error_message}
                 </div>
               )}

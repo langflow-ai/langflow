@@ -21,7 +21,6 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
-
 const CONTAINER_VARIANTS = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
@@ -202,7 +201,10 @@ export default function UpdateAllComponents() {
       .catch((error) => {
         setErrorData({
           title: t("errors.updateComponents"),
-          list: [t("errors.updateComponentsList"), t("errors.updateComponentsContact")],
+          list: [
+            t("errors.updateComponentsList"),
+            t("errors.updateComponentsContact"),
+          ],
         });
         console.error(error);
       })

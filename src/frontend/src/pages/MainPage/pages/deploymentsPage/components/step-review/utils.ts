@@ -209,15 +209,9 @@ export function buildToolNameErrors({
 
     const firstAttachmentKey = batchNames.get(normalized);
     if (firstAttachmentKey) {
-      errors.set(
-        item.attachmentKey,
-        i18n.t("deployments.duplicateToolName"),
-      );
+      errors.set(item.attachmentKey, i18n.t("deployments.duplicateToolName"));
       if (!errors.has(firstAttachmentKey)) {
-        errors.set(
-          firstAttachmentKey,
-          i18n.t("deployments.duplicateToolName"),
-        );
+        errors.set(firstAttachmentKey, i18n.t("deployments.duplicateToolName"));
       }
     } else {
       batchNames.set(normalized, item.attachmentKey);

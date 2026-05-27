@@ -134,7 +134,9 @@ export function MetadataEditor({
                   variant="ghost"
                   size="iconSm"
                   onClick={() => removePair(index)}
-                  aria-label={t("knowledge.metadataRemoveField", { index: index + 1 })}
+                  aria-label={t("knowledge.metadataRemoveField", {
+                    index: index + 1,
+                  })}
                   data-testid={`${testIdScope}-metadata-remove-${index}`}
                   disabled={disabled}
                 >

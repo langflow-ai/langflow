@@ -132,7 +132,9 @@ export default function DictAreaModal({
       </BaseModal.Trigger>
       {renderHeader()}
       {renderContent()}
-      <BaseModal.Footer submit={onChange ? { label: t("dictAreaModal.saveButton") } : undefined} />
+      <BaseModal.Footer
+        submit={onChange ? { label: t("dictAreaModal.saveButton") } : undefined}
+      />
     </BaseModal>
   );
 }

@@ -39,7 +39,11 @@ export default function DeploymentsContent({
   const deploymentDelete = useDeleteWithConfirmation<
     Deployment,
     { deployment_id: string }
-  >(deleteDeployment, buildDeploymentDeleteParams, t("deployments.errorDeletingDeployment"));
+  >(
+    deleteDeployment,
+    buildDeploymentDeleteParams,
+    t("deployments.errorDeletingDeployment"),
+  );
 
   const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
     null,

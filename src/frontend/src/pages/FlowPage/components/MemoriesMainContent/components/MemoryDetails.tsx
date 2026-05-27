@@ -34,7 +34,9 @@ export function MemoryDetails({
   const [configOpen, setConfigOpen] = useState(false);
   const { t } = useTranslation();
   const pendingLabel =
-    memory.batch_size > 1 ? t("memory.pendingThisBatch") : t("memory.pendingMessages");
+    memory.batch_size > 1
+      ? t("memory.pendingThisBatch")
+      : t("memory.pendingMessages");
   const pendingValue =
     memory.batch_size > 1
       ? `${memory.pending_messages_count}/${memory.batch_size}`
@@ -81,7 +83,9 @@ export function MemoryDetails({
                   />
                 </div>
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <span className="text-xs text-muted-foreground">{t("memory.configLabel")}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {t("memory.configLabel")}
+                  </span>
                   <span className="truncate text-sm font-medium">
                     {memory.embedding_model}
                   </span>
@@ -128,7 +132,9 @@ export function MemoryDetails({
                     {t("memory.preprocessing")}
                   </span>
                   <span className="text-foreground">
-                    {memory.preprocessing_enabled ? t("memory.enabled") : t("memory.disabled")}
+                    {memory.preprocessing_enabled
+                      ? t("memory.enabled")
+                      : t("memory.disabled")}
                   </span>
                 </div>
                 {memory.preprocessing_enabled && memory.preprocessing_model && (

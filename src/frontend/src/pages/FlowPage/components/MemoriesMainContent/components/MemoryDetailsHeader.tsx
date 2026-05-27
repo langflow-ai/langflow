@@ -43,7 +43,9 @@ export function MemoryDetailsHeader({
     setIsRefreshing(true);
     try {
       await onRefresh();
-      setSuccessData({ title: t("memory.refreshedSuccess", { name: memory.name }) });
+      setSuccessData({
+        title: t("memory.refreshedSuccess", { name: memory.name }),
+      });
     } catch (error) {
       setErrorData({
         title: t("memory.refreshedError"),

@@ -1073,8 +1073,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         );
         if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
-            title:
-              i18n.t("errors.blockedComponents"),
+            title: i18n.t("errors.blockedComponents"),
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),

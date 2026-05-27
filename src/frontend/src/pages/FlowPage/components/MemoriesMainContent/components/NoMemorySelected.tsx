@@ -18,7 +18,10 @@ export const NoMemorySelected = () => {
           className="mb-3 h-12 w-12 text-muted-foreground opacity-50"
         />
       </span>
-      <p id="no-memory-selected-title" className="text-sm text-muted-foreground">
+      <p
+        id="no-memory-selected-title"
+        className="text-sm text-muted-foreground"
+      >
         {t("memory.noMemorySelected")}
       </p>
       <p

@@ -119,7 +119,9 @@ export default function AddProviderModal({
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogTitle data-testid="add-provider-modal-title">
-          {provider ? t("deployments.configureEnvironment") : t("deployments.addEnvironment")}
+          {provider
+            ? t("deployments.configureEnvironment")
+            : t("deployments.addEnvironment")}
         </DialogTitle>
         <DialogDescription className="sr-only">
           {provider
@@ -135,7 +137,9 @@ export default function AddProviderModal({
             onCredentialsChange={setCredentials}
             apiKeyRequired={!provider}
             apiKeyPlaceholder={
-              provider ? t("deployments.enterNewApiKey") : t("deployments.enterApiKey")
+              provider
+                ? t("deployments.enterNewApiKey")
+                : t("deployments.enterApiKey")
             }
             urlRequired={!provider}
             urlReadOnly={!!provider}
@@ -156,7 +160,11 @@ export default function AddProviderModal({
             disabled={!canSave || isSaving}
             data-testid="add-provider-save"
           >
-            {isSaving ? t("deployments.saving") : provider ? t("deployments.updateButton") : t("deployments.saveButton")}
+            {isSaving
+              ? t("deployments.saving")
+              : provider
+                ? t("deployments.updateButton")
+                : t("deployments.saveButton")}
           </Button>
         </div>
       </DialogContent>
