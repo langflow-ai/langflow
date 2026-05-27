@@ -28,6 +28,7 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.services.deps import session_scope
 from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
+from lfx.services.settings.base import Settings
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -899,6 +900,13 @@ async def test_is_mcp_servers_locked_does_not_fire_for_magicmock_settings():
 async def test_is_mcp_servers_locked_respects_explicit_true_flag():
     settings = SimpleNamespace(mcp_servers_locked=True)
     assert is_mcp_servers_locked(settings) is True
+
+
+async def test_settings_model_declares_mcp_servers_locked_field(monkeypatch):
+    """Regression guard: mcp lock must be configurable via Settings/env vars."""
+    assert "mcp_servers_locked" in Settings.model_fields
+    monkeypatch.setenv("LANGFLOW_MCP_SERVERS_LOCKED", "true")
+    assert Settings().mcp_servers_locked is True
 
 
 async def test_v2_mcp_servers_locked_blocks_non_superuser_add_patch_delete(
