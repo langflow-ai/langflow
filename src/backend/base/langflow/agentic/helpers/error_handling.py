@@ -79,7 +79,16 @@ def extract_friendly_error(error_msg: str) -> str:
 # Matches a Python-repr or JSON-style ``'message': '...'`` / ``"message": "..."``
 # value as it appears in provider client error reprs (OpenAI, Anthropic, etc.).
 _PROVIDER_MESSAGE_RE = re.compile(r"""['"]message['"]\s*:\s*['"]([^'"]+)['"]""")
-_COMPONENT_WRAPPER_PREFIX = "Error building Component"
+# Generic wrapper prefixes whose body up to the first ``:`` is uninformative
+# on its own — without unwrapping, the default colon-split truncation in
+# ``_truncate_error_message`` returns just the wrapper (e.g. ``"Error
+# building Component"`` / ``"Error running graph"``) and discards the
+# underlying cause. Each entry must be a literal prefix the message lstrips
+# to; the cause is the substring after the first ``:``.
+_WRAPPER_PREFIXES: tuple[str, ...] = (
+    "Error building Component",
+    "Error running graph",
+)
 
 
 def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
@@ -89,9 +98,12 @@ def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
         1. If the message embeds a Python-repr / JSON ``'message': '...'``
            value (OpenAI, Anthropic, similar) — return that. This is the
            single most actionable string the user can read.
-        2. If the message is wrapped with ``Error building Component X: …``
+        2. If the message is wrapped with one of the known prefixes
+           (``Error building Component X: …``, ``Error running graph: …``)
            — return the part after the first colon (the underlying error
-           the component build was trying to report).
+           the wrapper was trying to report). Without this, the default
+           colon-split truncation returns just the wrapper and the user
+           sees something useless like ``"Error running graph"``.
 
     Returns None when neither pattern applies so callers fall back to the
     existing truncation behavior (zero behavior change for unwrapped errors).
@@ -100,8 +112,9 @@ def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
     if match:
         return match.group(1).strip()
 
-    if error_msg.lstrip().startswith(_COMPONENT_WRAPPER_PREFIX) and ":" in error_msg:
-        # ``split(":", 1)`` keeps any embedded colons inside the cause (so
+    stripped_msg = error_msg.lstrip()
+    if ":" in error_msg and any(stripped_msg.startswith(prefix) for prefix in _WRAPPER_PREFIXES):
+        # ``partition(":", )`` keeps any embedded colons inside the cause (so
         # ``Error code: 403`` stays readable).
         _wrapper, _, cause = error_msg.partition(":")
         cause = cause.strip()

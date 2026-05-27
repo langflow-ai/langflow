@@ -49,6 +49,16 @@ def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
         "_resolve_auto_login",
         lambda self: False,  # noqa: ARG005
     )
+
+    # Defensive: other tests in the broader suite may leave the
+    # ``_current_user_id_var`` ContextVar set OR leak ``_OVERLAY_ENTRY_CACHE``
+    # entries that point at sandboxes from a prior tmp_path. Reset both so
+    # this fixture is robust to whatever ordering pytest-xdist picks.
+    from langflow.agentic.services.user_components_context import reset_current_user_id
+    from langflow.agentic.services.user_components_overlay import _OVERLAY_ENTRY_CACHE
+
+    reset_current_user_id()
+    _OVERLAY_ENTRY_CACHE.clear()
     return tmp_path
 
 
