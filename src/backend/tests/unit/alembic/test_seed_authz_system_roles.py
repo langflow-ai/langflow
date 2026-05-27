@@ -52,7 +52,7 @@ def test_permission_slugs_use_resource_action_format():
             assert verb, slug
 
 
-def test_revision_chain_is_linear_after_mb01():
-    """Foundations migration follows memory-base migration mb01b2c3d4e5."""
+def test_revision_chain_is_linear_after_api_key_expires_at():
+    """Foundations migration follows api_key expires_at migration f6b3ce6845d4."""
     assert _MIGRATION.revision == "7c8d9e0f1a2b"
-    assert _MIGRATION.down_revision == "mb01b2c3d4e5"
+    assert _MIGRATION.down_revision == "f6b3ce6845d4"

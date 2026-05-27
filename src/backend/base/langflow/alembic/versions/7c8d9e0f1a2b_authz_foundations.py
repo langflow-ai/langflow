@@ -2,7 +2,7 @@
 
 Phase: EXPAND
 Revision ID: 7c8d9e0f1a2b
-Revises: mb01b2c3d4e5
+Revises: f6b3ce6845d4
 Create Date: 2026-05-20
 
 This migration is purely additive (new tables + nullable ``workspace_id``
@@ -31,7 +31,7 @@ if TYPE_CHECKING:
     from collections.abc import Sequence
 
 revision: str = "7c8d9e0f1a2b"  # pragma: allowlist secret
-down_revision: str | None = "mb01b2c3d4e5"  # pragma: allowlist secret
+down_revision: str | None = "f6b3ce6845d4"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
