@@ -107,6 +107,18 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
 
         llm = self._get_llm()
 
+        # Backward-compat: serialized flows embed an older AgentComponent whose
+        # _get_llm() does not pass stream=True to get_llm(), so the resolved
+        # chat model is instantiated with streaming=False. Force streaming here
+        # — at the live parent chokepoint — so astream_events() emits
+        # on_chat_model_stream chunks regardless of the embedded code version.
+        # Agent streaming is mandatory and has no opt-out.
+        if getattr(llm, "streaming", True) is False:
+            try:
+                llm.streaming = True
+            except (AttributeError, TypeError, ValueError):
+                pass
+
         # Enhance prompt for IBM Granite models (they need explicit tool usage instructions)
         if is_granite_model(llm) and self.tools:
             effective_system_prompt = get_enhanced_system_prompt(effective_system_prompt, self.tools)

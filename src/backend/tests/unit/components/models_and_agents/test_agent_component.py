@@ -482,6 +482,60 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "Playground receives the whole response in a single batch."
         )
 
+    async def test_should_force_streaming_true_when_legacy_serialized_agent_skips_stream_kwarg(
+        self, component_class, default_kwargs
+    ):
+        """Backward-compat: legacy serialized AgentComponent flows must still stream.
+
+        Repro for the openrag_agent.json bug (code_hash 154c71cf7441): the flow embeds
+        the pre-PR-13356 ``AgentComponent`` class body whose ``_get_llm()`` does NOT
+        pass ``stream=True`` to ``get_llm()``. When the flow loads, ``exec()`` rebinds
+        the old ``_get_llm`` onto a class that still inherits from the LIVE
+        ``ToolCallingAgentComponent`` (Python resolves parent classes at exec time).
+        ``ToolCallingAgentComponent.create_agent_runnable()`` MUST therefore force
+        ``streaming=True`` on the resolved LLM, otherwise ``runnable.astream_events()``
+        never emits ``on_chat_model_stream`` chunks and the Playground/API receive the
+        whole response in a single batch.
+        """
+        from unittest.mock import Mock, patch
+
+        component = await self.component_setup(component_class, default_kwargs)
+        component.tools = []
+        component.system_prompt = "Test prompt"
+
+        # Simulate legacy serialized _get_llm(): returns a chat model that get_llm
+        # built with streaming=False (no stream kwarg was passed).
+        legacy_llm = Mock()
+        legacy_llm.__class__.__name__ = "ChatOpenAI"
+        legacy_llm.__class__.__module__ = "langchain_openai"
+        legacy_llm.model_id = "gpt-4o"
+        legacy_llm.model_name = "gpt-4o"
+        legacy_llm.streaming = False
+        legacy_llm.bind_tools = Mock(return_value=legacy_llm)
+
+        captured: dict[str, object] = {}
+
+        def _capture(llm, _tools, _prompt):
+            captured["llm"] = llm
+            return Mock()
+
+        with (
+            patch.object(component, "_get_llm", return_value=legacy_llm),
+            patch(
+                "lfx.components.langchain_utilities.tool_calling.create_tool_calling_agent",
+                side_effect=_capture,
+            ),
+        ):
+            component.create_agent_runnable()
+
+        assert captured["llm"] is legacy_llm, "create_tool_calling_agent should receive the resolved LLM"
+        assert legacy_llm.streaming is True, (
+            "ToolCallingAgentComponent.create_agent_runnable() must force streaming=True "
+            "on the resolved LLM so serialized flows whose embedded AgentComponent code "
+            "predates PR #13356 (e.g. openrag_agent.json with code_hash 154c71cf7441) "
+            "still emit token-level events through astream_events()."
+        )
+
 
 class TestAgentComponentWithClient(ComponentTestBaseWithClient):
     @pytest.fixture
