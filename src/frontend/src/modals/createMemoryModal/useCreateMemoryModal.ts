@@ -131,6 +131,14 @@ export function useCreateMemoryModal({
       return;
     }
 
+    if (preprocessingEnabled && !preprocessingPrompt.trim()) {
+      setErrorData({
+        title: "Validation error",
+        list: ["Please provide preprocessing instructions"],
+      });
+      return;
+    }
+
     const parsedThreshold = Math.max(1, parseInt(batchSizeInput, 10) || 1);
     const embeddingSelection = selectedEmbeddingModel[0];
 
@@ -144,10 +152,9 @@ export function useCreateMemoryModal({
       preproc_model: preprocessingEnabled
         ? selectedPreprocessingModel[0]?.name
         : undefined,
-      preproc_instructions:
-        preprocessingEnabled && preprocessingPrompt.trim()
-          ? preprocessingPrompt.trim()
-          : undefined,
+      preproc_instructions: preprocessingEnabled
+        ? preprocessingPrompt.trim()
+        : undefined,
     });
   };
 

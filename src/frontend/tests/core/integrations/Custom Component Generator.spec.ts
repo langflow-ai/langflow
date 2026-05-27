@@ -1,11 +1,11 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { selectAnthropicModel } from "../../utils/select-anthropic-model";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
+import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Custom Component Generator",
   { tag: ["@release", "@starter-projects"] },
@@ -14,11 +14,7 @@ withEventDeliveryModes(
       !process?.env?.ANTHROPIC_API_KEY,
       "ANTHROPIC_API_KEY required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
 
     await awaitBootstrapTest(page);
@@ -44,7 +40,7 @@ withEventDeliveryModes(
 
     await page.waitForTimeout(1000);
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "hidden", timeout: 30000 * 3 });
 
     const textContents = await getAllResponseMessage(page);

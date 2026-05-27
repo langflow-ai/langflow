@@ -141,17 +141,16 @@ export function MemoryDetails({
                     </span>
                   </div>
                 )}
-                {memory.preprocessing_enabled &&
-                  memory.preproc_instructions && (
-                    <div className="flex flex-col gap-0.5 border-t border-border pt-3">
-                      <span className="font-medium text-muted-foreground">
-                        {t("memory.preprocessingInstructions")}
-                      </span>
-                      <p className="leading-relaxed text-foreground">
-                        {memory.preproc_instructions}
-                      </p>
-                    </div>
-                  )}
+                {memory.preprocessing_enabled && (
+                  <div className="flex flex-col gap-0.5 border-t border-border pt-3">
+                    <span className="font-medium text-muted-foreground">
+                      {t("memory.preprocessingInstructions")}
+                    </span>
+                    <p className="leading-relaxed text-foreground">
+                      {memory.preproc_instructions}
+                    </p>
+                  </div>
+                )}
               </div>
             </PopoverContent>
           </Popover>
