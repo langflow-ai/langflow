@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.9.5",
+    "langflow-base[complete]>=1.9.5",
 ]
 
 
