@@ -1,9 +1,9 @@
 """CRUD API for authz_role_assignment rows.
 
 Assignments bind a user to a role within an optional domain. The actual policy
-compilation (rule rows in ``casbin_rule``) is performed by the authorization
-plugin — OSS keeps the assignment table and invalidates the plugin's cache on
-write so the next ``enforce()`` picks up the change.
+compilation (rule rows in the policy-rule table) is performed by the
+authorization plugin — OSS keeps the assignment table and invalidates the
+plugin's cache on write so the next ``enforce()`` picks up the change.
 """
 
 from __future__ import annotations

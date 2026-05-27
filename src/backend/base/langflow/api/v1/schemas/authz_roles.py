@@ -17,8 +17,8 @@ class RoleCreate(BaseModel):
         default_factory=list,
         description=(
             "Permission strings in the form ``<resource_type>:<obj_pattern>:<action>`` — "
-            "for example ``flow:*:read``, ``deployment:*:execute``. Plugin (e.g. enterprise "
-            "Casbin) is responsible for compiling these to its policy format."
+            "for example ``flow:*:read``, ``deployment:*:execute``. A registered "
+            "authorization plugin is responsible for compiling these to its policy format."
         ),
     )
     parent_role_id: UUID | None = Field(default=None)

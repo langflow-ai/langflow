@@ -41,7 +41,7 @@ from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
 from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.authorization.utils import _resolve_casbin_domain
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -165,7 +165,7 @@ async def read_flows(
                 current_user,
                 resource_type="flow",
                 candidates=list(flows),
-                domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+                domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )
@@ -193,7 +193,7 @@ async def read_flows(
             current_user,
             resource_type="flow",
             candidates=list(page.items),
-            domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+            domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
             owner_extractor=lambda flow: flow.user_id,
             act=FlowAction.READ,
         )

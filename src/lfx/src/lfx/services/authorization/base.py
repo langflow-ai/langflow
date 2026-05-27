@@ -98,8 +98,8 @@ class BaseAuthorizationService(Service, abc.ABC):
         """Return resource IDs of `resource_type` the user can `act` on, or ``None``.
 
         Plugin override returns a concrete list — typically by querying its
-        policy store (e.g. SQL join on ``casbin_rule``) so list endpoints can
-        prefilter at the DB layer and avoid fetching invisible rows.
+        policy store (e.g. SQL join on the policy-rule table) so list endpoints
+        can prefilter at the DB layer and avoid fetching invisible rows.
 
         Base returns ``None`` meaning "no prefilter available; caller should
         fetch all candidates and apply :func:`filter_visible_resources` for

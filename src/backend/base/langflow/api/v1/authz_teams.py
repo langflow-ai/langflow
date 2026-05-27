@@ -1,8 +1,8 @@
 """CRUD API for authz_team and authz_team_member rows.
 
-Teams group users for bulk role assignment and share targeting. The plugin
-compiles team memberships to its own representation (e.g. enterprise Casbin
-emits ``g, user:{id}, team:{id}, *`` rules during share PolicySync).
+Teams group users for bulk role assignment and share targeting. The
+authorization plugin compiles team memberships into its own representation
+during policy sync.
 """
 
 from __future__ import annotations

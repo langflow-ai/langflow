@@ -4,8 +4,8 @@ The UI calls this once per page load with the list of resource IDs it wants to
 render and learns which actions to enable/disable per resource — without making
 a 403-triggering request for each one. Backed by
 :meth:`BaseAuthorizationService.get_effective_permissions`; OSS pass-through
-returns every action for every ID (no policy applied) and the Casbin plugin
-overrides it with a tighter implementation.
+returns every action for every ID (no policy applied) and a registered
+authorization plugin overrides it with a tighter implementation.
 """
 
 from __future__ import annotations
@@ -32,7 +32,7 @@ ResourceTypeLiteral = Literal[
     "component",
 ]
 
-# Default action vocabulary — matches Casbin's KNOWN_ACTIONS in EE roles.py.
+# Default action vocabulary aligned with the authorization plugin's known actions.
 _DEFAULT_ACTIONS: tuple[str, ...] = ("read", "write", "execute", "delete", "create")
 _MAX_RESOURCE_IDS = 500
 # Cap actions per request to bound the batch_enforce cartesian product
@@ -59,7 +59,7 @@ class EffectivePermissionsRequest(BaseModel):
     )
     domain: str = Field(
         default="*",
-        description="Casbin domain — typically ``project:{folder_id}`` or ``*``.",
+        description="Authorization domain — typically ``project:{folder_id}`` or ``*``.",
     )
 
     @field_validator("actions")

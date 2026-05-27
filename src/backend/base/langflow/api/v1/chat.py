@@ -228,10 +228,10 @@ async def build_flow(
         Dict with job_id that can be used to poll for build status
     """
     # Share-aware load: when the authorization plugin signals cross-user fetch
-    # support (enterprise Casbin), the row loads by id alone and the plugin
-    # decides. Otherwise we keep the historical owner-or-PUBLIC scoping so the
-    # OSS pass-through default cannot widen visibility. PUBLIC flows stay
-    # buildable by any authenticated user in both modes.
+    # support, the row loads by id alone and the plugin decides. Otherwise we
+    # keep the historical owner-or-PUBLIC scoping so the OSS pass-through
+    # default cannot widen visibility. PUBLIC flows stay buildable by any
+    # authenticated user in both modes.
     from langflow.api.v1.flows_helpers import _read_flow
 
     async with session_scope() as session:
