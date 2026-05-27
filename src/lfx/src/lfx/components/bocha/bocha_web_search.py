@@ -54,11 +54,7 @@ class BochaWebSearchComponent(Component):
             value=True,
         ),
         IntInput(
-            name="count",
-            display_name="Max Results",
-            info="The maximum number of results to return (1-50).",
-            value=10,
-            tool_mode=True,
+            name="count", display_name="Max Results", info="The maximum number of results to return (1-50).", value=10
         ),
         MessageTextInput(
             name="include",
