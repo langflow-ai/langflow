@@ -12,6 +12,7 @@ from langflow.agentic.services.flow_executor import (
 )
 from langflow.agentic.services.flow_types import (
     EDIT_CONTINUATION_INPUT,
+    PLAN_APPROVAL_INPUT,
     TRANSLATION_FLOW,
     IntentResult,
 )
@@ -49,6 +50,19 @@ def _looks_like_run_request(text: str) -> bool:
     """
     message = text.rsplit("User message:", 1)[-1] if "User message:" in text else text
     return bool(_RUN_FLOW_RE.search(message))
+
+
+def _with_tokens(result: IntentResult, tokens: dict[str, int] | None) -> IntentResult:
+    """Attach the TranslationFlow's token usage to the IntentResult.
+
+    Why a tiny wrapper: there are six different return points inside
+    ``classify_intent`` after the LLM call (happy path + five JSON-parsing
+    fallbacks). Threading tokens through ``_finalize`` would couple unrelated
+    concerns (run-flow rescue vs cost accounting); a one-line attach keeps
+    both rules independent and leaves the fallback paths byte-identical.
+    """
+    result.tokens = tokens
+    return result
 
 
 def _finalize(translation: str, intent: str, text: str) -> IntentResult:
@@ -109,6 +123,16 @@ async def classify_intent(
         logger.info("intent.build_flow.deterministic: edit-approval continuation signal")
         return IntentResult(translation=text, intent="build_flow")
 
+    # Deterministic: the plan-approval continuation is also a backend protocol
+    # string (sent verbatim by the frontend when the user clicks Continue on a
+    # proposed plan or via skip-all auto-approve). It MUST route to build_flow
+    # so the agent proceeds to execute the plan. Skipping TranslationFlow here
+    # avoids one full LLM round-trip per approval click — pure cost win, byte-
+    # identical UX (the classifier would route this to build_flow anyway).
+    if text.strip() == PLAN_APPROVAL_INPUT:
+        logger.info("intent.build_flow.deterministic: plan-approval continuation signal")
+        return IntentResult(translation=text, intent="build_flow")
+
     flow_input = f"{context}\n\nUser message: {text}" if context else text
 
     try:
@@ -127,6 +151,17 @@ async def classify_intent(
             timeout=INTENT_CLASSIFICATION_TIMEOUT_SECONDS,
         )
 
+        # Consume the executor's per-run metrics BEFORE handing the dict to
+        # extract_response_text — leaving ``_metrics`` in place would either
+        # be silently ignored by extract_response_text (today) or, if the dict
+        # falls through to ``str(result)``, leak the cost dict into the
+        # user-facing text.
+        translation_tokens: dict[str, int] | None = None
+        if isinstance(result, dict):
+            popped = result.pop("_metrics", None)
+            if isinstance(popped, dict):
+                translation_tokens = popped
+
         response_text = extract_response_text(result)
         if response_text:
             try:
@@ -134,14 +169,17 @@ async def classify_intent(
                 translation = parsed.get("translation", text)
                 intent = parsed.get("intent", "question")
                 logger.debug(f"Intent: {intent}, Translation: '{translation[:50]}'")
-                return _finalize(translation, intent, text)
+                return _with_tokens(_finalize(translation, intent, text), translation_tokens)
             except json.JSONDecodeError:
                 # Fallback 1: JSON wrapped in markdown code block (```json ... ```)
                 md_match = _MARKDOWN_JSON_RE.search(response_text)
                 if md_match:
                     try:
                         parsed = json.loads(md_match.group(1).strip())
-                        return _finalize(parsed.get("translation", text), parsed.get("intent", "question"), text)
+                        return _with_tokens(
+                            _finalize(parsed.get("translation", text), parsed.get("intent", "question"), text),
+                            translation_tokens,
+                        )
                     except json.JSONDecodeError:
                         pass
 
@@ -150,7 +188,10 @@ async def classify_intent(
                 if json_match:
                     try:
                         parsed = json.loads(json_match.group(0))
-                        return _finalize(parsed.get("translation", text), parsed.get("intent", "question"), text)
+                        return _with_tokens(
+                            _finalize(parsed.get("translation", text), parsed.get("intent", "question"), text),
+                            translation_tokens,
+                        )
                     except json.JSONDecodeError:
                         pass
 
@@ -164,12 +205,12 @@ async def classify_intent(
                 if intent_match:
                     matched_intent = intent_match.group(1)
                     logger.info("Extracted %s intent from non-JSON response via pattern match", matched_intent)
-                    return _finalize(text, matched_intent, text)
+                    return _with_tokens(_finalize(text, matched_intent, text), translation_tokens)
 
                 logger.warning("Intent flow returned non-JSON, treating as question")
-                return _finalize(response_text, "question", text)
+                return _with_tokens(_finalize(response_text, "question", text), translation_tokens)
 
-        return _finalize(text, "question", text)
+        return _with_tokens(_finalize(text, "question", text), translation_tokens)
     except asyncio.TimeoutError:
         logger.warning(
             "intent.classification.timeout: TranslationFlow exceeded %ss, defaulting to question",

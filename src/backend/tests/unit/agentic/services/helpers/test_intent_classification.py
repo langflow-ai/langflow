@@ -514,6 +514,32 @@ class TestDeterministicEditContinuation:
             mock_execute.assert_not_called()
 
 
+class TestDeterministicPlanApproval:
+    """The plan-approval continuation signal must route as a flow request.
+
+    When the user clicks Continue on a proposed plan (manual approve or
+    skip-all auto-approve), the frontend sends ``PLAN_APPROVAL_INPUT``
+    verbatim so the agent proceeds to execute the plan. That string must
+    deterministically classify as ``build_flow`` and MUST skip the
+    TranslationFlow LLM call — same cost pattern as the edit-approval
+    fast path. The classifier would route it to build_flow anyway, so the
+    fast path is a pure cost win with byte-identical UX.
+    """
+
+    @pytest.mark.asyncio
+    async def test_plan_approval_signal_forces_flow_request_without_llm(self):
+        from langflow.agentic.services.flow_types import PLAN_APPROVAL_INPUT
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+        ) as mock_execute:
+            result = await classify_intent(text=PLAN_APPROVAL_INPUT, global_variables={})
+            assert result.intent == "build_flow"
+            assert result.translation == PLAN_APPROVAL_INPUT
+            mock_execute.assert_not_called()
+
+
 class TestClassifyIntentWithContext:
     """WS-1 / RC-1: classify_intent forwards a disambiguation context block.
 
@@ -603,3 +629,83 @@ class TestIntentResult:
 
         assert result1 == result2
         assert result1 != result3
+
+
+class TestClassifyIntentTokenUsage:
+    """TranslationFlow LLM cost must be exposed to the upstream service.
+
+    The classifier turn is one of two LLM calls per assistant turn and the
+    user must see its cost. ``classify_intent`` exposes the TranslationFlow's
+    token usage so the upstream assistant service can sum it with the agent's.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_expose_tokens_from_translation_flow_result(self):
+        translation_tokens = {"input_tokens": 11, "output_tokens": 4, "total_tokens": 15}
+        mock_result = {
+            "result": '{"translation": "create a component", "intent": "generate_component"}',
+            "_metrics": translation_tokens,
+        }
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(
+                text="crie um componente",
+                global_variables={},
+            )
+
+        assert result.tokens == translation_tokens
+
+    @pytest.mark.asyncio
+    async def test_should_return_none_tokens_when_translation_flow_metrics_are_missing(self):
+        """Older / non-instrumented flow paths return no ``_metrics`` key — must not crash."""
+        mock_result = {"result": '{"translation": "hi", "intent": "question"}'}
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(text="oi", global_variables={})
+
+        assert result.tokens is None
+
+    @pytest.mark.asyncio
+    async def test_should_return_none_tokens_when_translation_flow_times_out(self):
+        import asyncio
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            side_effect=asyncio.TimeoutError(),
+        ):
+            result = await classify_intent(text="hi", global_variables={})
+
+        assert result.tokens is None
+
+    @pytest.mark.asyncio
+    async def test_should_not_leak_metrics_key_to_extract_response_text(self):
+        """``_metrics`` must be consumed before extract_response_text runs.
+
+        Otherwise the executor's internal envelope would surface as user-facing
+        text via the ``str(dict)`` coercion fallback of extract_response_text.
+        """
+        translation_tokens = {"input_tokens": 3, "output_tokens": 2, "total_tokens": 5}
+        mock_result = {
+            "result": '{"translation": "hi", "intent": "question"}',
+            "_metrics": translation_tokens,
+        }
+
+        with patch(
+            "langflow.agentic.services.helpers.intent_classification.execute_flow_file",
+            new_callable=AsyncMock,
+            return_value=mock_result,
+        ):
+            result = await classify_intent(text="oi", global_variables={})
+
+        # tokens captured AND removed from the dict passed to extract_response_text.
+        assert result.tokens == translation_tokens
+        assert "_metrics" not in mock_result, "_metrics should be popped by classify_intent"

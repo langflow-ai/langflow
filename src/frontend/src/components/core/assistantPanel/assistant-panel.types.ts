@@ -64,6 +64,18 @@ export interface AssistantMessage {
    * every reopen.
    */
   validationAcknowledged?: boolean;
+  /** Per-turn LLM cost reported by the backend on the ``complete`` SSE event.
+   * Used by ``MessageMetadata`` (the playground's renderer, reused here) to
+   * display the token-count + duration badge with the breakdown tooltip. */
+  usage?: {
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+    total_tokens?: number | null;
+  };
+  /** Wall-clock duration of the turn in milliseconds (already converted from
+   * the backend's ``duration_seconds``). Same units that ``MessageMetadata``
+   * expects in the playground. */
+  duration?: number;
 }
 
 /** A single incremental canvas operation surfaced to the user as a task. */

@@ -27,6 +27,13 @@ MAX_FLOW_VALIDATION_ATTEMPTS = 3
 # caveat string emitted by ``_failed_caveat``.
 MAX_FLOW_VERIFICATION_ATTEMPTS = 3
 VALIDATION_UI_DELAY_SECONDS = 0.3
+# Hard cap on the canvas-summary string injected into prompts. Large canvases
+# (50+ components, long sticky notes, big custom-component code) can produce
+# multi-kB summaries that get re-sent on every LLM turn — exploding cost and
+# crowding out the user's actual instruction. 2000 chars is a few hundred
+# tokens, enough to convey shape (node/edge graph) without dumping field-level
+# detail. ``flow_to_spec_summary`` already runs first; this is the safety net.
+MAX_CANVAS_SUMMARY_CHARS = 2000
 LANGFLOW_ASSISTANT_FLOW = "LangflowAssistant.json"
 FLOW_BUILDER_ASSISTANT_FLOW = "flow_builder_assistant"
 TRANSLATION_FLOW = "translation_flow.py"
@@ -114,6 +121,12 @@ class IntentResult:
 
     translation: str
     intent: str  # "generate_component", "build_flow", "manage_files", "question", or "off_topic"
+    # TranslationFlow LLM cost for this classification turn. ``None`` when no
+    # LLM call ran (empty text / EDIT_CONTINUATION_INPUT short-circuit) or when
+    # the call failed before producing usage (timeout / generic exception).
+    # The upstream assistant service sums it into the per-turn ``usage`` field
+    # rendered by the chat ``MessageMetadata`` badge.
+    tokens: dict[str, int] | None = None
 
 
 @dataclass

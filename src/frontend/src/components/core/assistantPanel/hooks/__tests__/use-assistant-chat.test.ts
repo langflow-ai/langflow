@@ -299,6 +299,95 @@ describe("useAssistantChat", () => {
       expect(result.current.currentStep).toBeNull();
     });
 
+    it("should_propagate_usage_and_duration_from_complete_event", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onComplete({
+            event: "complete",
+            data: {
+              result: "done",
+              validated: true,
+              usage: {
+                input_tokens: 110,
+                output_tokens: 54,
+                total_tokens: 164,
+              },
+              duration_seconds: 1.234,
+            },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("hi", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages[1];
+      expect(assistantMsg.usage).toEqual({
+        input_tokens: 110,
+        output_tokens: 54,
+        total_tokens: 164,
+      });
+      // Duration is stored in milliseconds to match the playground's
+      // MessageMetadata renderer (which formats seconds from a ms input).
+      expect(assistantMsg.duration).toBe(1234);
+    });
+
+    it("should_leave_usage_and_duration_undefined_when_complete_event_omits_them", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onComplete({
+            event: "complete",
+            data: { result: "done", validated: true },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("hi", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages[1];
+      expect(assistantMsg.usage).toBeUndefined();
+      expect(assistantMsg.duration).toBeUndefined();
+    });
+
+    it("should_keep_existing_complete_fields_alongside_usage_and_duration", async () => {
+      mockPostAssistStream.mockImplementation(
+        async (_request: unknown, callbacks: Record<string, Function>) => {
+          callbacks.onComplete({
+            event: "complete",
+            data: {
+              result: "hello",
+              validated: true,
+              class_name: "X",
+              usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+              duration_seconds: 0.5,
+            },
+          });
+        },
+      );
+
+      const { result } = renderHook(() => useAssistantChat());
+
+      await act(async () => {
+        await result.current.handleSend("hi", TEST_MODEL);
+      });
+
+      const assistantMsg = result.current.messages[1];
+      // Existing finalize-message behavior is preserved.
+      expect(assistantMsg.status).toBe("complete");
+      expect(assistantMsg.content).toBe("hello");
+      expect(assistantMsg.result?.className).toBe("X");
+      // New fields land alongside the existing ones.
+      expect(assistantMsg.usage?.total_tokens).toBe(2);
+      expect(assistantMsg.duration).toBe(500);
+    });
+
     it("should set error status on error callback", async () => {
       mockPostAssistStream.mockImplementation(
         async (_request: unknown, callbacks: Record<string, Function>) => {

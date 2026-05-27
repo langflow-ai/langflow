@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import langflowAssistantIcon from "@/assets/langflow_assistant.svg";
+import MessageMetadata from "@/components/common/messageMetadataComponent";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
 import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
@@ -175,14 +176,23 @@ export function AssistantMessageItem({
           </div>
         )}
         <div className="flex min-w-0 flex-1 flex-col">
-          <span
-            className={cn(
-              "text-[13px] font-semibold leading-4",
-              isUser ? "text-foreground" : "text-accent-pink-foreground",
+          <div className="flex items-center gap-2">
+            <span
+              className={cn(
+                "text-[13px] font-semibold leading-4",
+                isUser ? "text-foreground" : "text-accent-pink-foreground",
+              )}
+            >
+              {isUser ? t("assistant.user") : t("assistant.title")}
+            </span>
+            {!isUser && message.status === "complete" && (
+              <MessageMetadata
+                usage={message.usage}
+                duration={message.duration}
+                subtle
+              />
             )}
-          >
-            {isUser ? t("assistant.user") : t("assistant.title")}
-          </span>
+          </div>
           {!isUser && message.buildTasks && message.buildTasks.length > 0 && (
             <AssistantBuildTasks tasks={message.buildTasks} />
           )}

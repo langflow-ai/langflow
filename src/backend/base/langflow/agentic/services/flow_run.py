@@ -131,6 +131,48 @@ def extract_run_result_text(run_outputs: list[Any]) -> str:
     return text if len(text) <= MAX_RESULT_CHARS else text[:MAX_RESULT_CHARS]
 
 
+def _normalize_code(code: str) -> str:
+    """Strip per-line trailing whitespace + outer blanks for byte comparison.
+
+    The registry → JSON → flow round-trip occasionally adds or removes trailing
+    newlines / mismatched line endings. Normalize before comparing canonical
+    code against a node's code so a benign serialization artifact doesn't force
+    an unnecessary re-scan (and thus a false-positive on a trusted built-in).
+    """
+    return "\n".join(line.rstrip() for line in (code or "").splitlines()).strip()
+
+
+def _get_canonical_code_map() -> dict[str, str]:
+    """Return ``{component_type: canonical_code}`` from the loaded registry.
+
+    Used to exempt nodes whose ``code`` field is byte-identical to the
+    canonical template provided by the registry — those are trusted built-ins
+    the agent added via ``add_component`` (verbatim registry copy).
+
+    Failure modes (registry not loaded, ImportError, downstream exception)
+    return an empty dict. Empty dict → the caller scans every node, matching
+    the prior behavior. We never trust unverified code on the degraded path.
+    """
+    try:
+        from lfx.mcp.flow_builder_tools._state import _load_registry_user_aware
+
+        registry = _load_registry_user_aware()
+    except Exception:  # noqa: BLE001 — defensive: any failure falls back to scan-all
+        return {}
+    canonical: dict[str, str] = {}
+    if not isinstance(registry, dict):
+        return canonical
+    for component_type, template_dict in registry.items():
+        if not isinstance(template_dict, dict):
+            continue
+        code_field = (template_dict.get("template") or {}).get("code")
+        if isinstance(code_field, dict):
+            value = code_field.get("value")
+            if isinstance(value, str):
+                canonical[component_type] = value
+    return canonical
+
+
 def _scan_flow_component_code(payload: dict) -> list[str]:
     """Security-scan every node's inline component ``code`` before run.
 
@@ -139,16 +181,31 @@ def _scan_flow_component_code(payload: dict) -> list[str]:
     build_flow with inline code, an overlay ``.components/*.py``, an
     imported flow). The run engine ``exec``s that code, so scan it here
     and refuse to run on any violation. Deterministic, never executes.
+
+    Built-in exemption: when a node's ``code`` is byte-identical (after
+    whitespace normalization) to the registry's canonical template for that
+    ``type``, skip the scan. Built-ins like ``URLComponent`` legitimately use
+    patterns the LLM-generated-code scanner forbids (``importlib.util.find_spec``
+    for optional dependency detection, ``os.environ.get`` for proxy env vars).
+    Scanning them produces false-positives that block legitimate runs. If the
+    code differs from canonical (LLM- or user-modified), it is scanned
+    unchanged. Registry-lookup failure falls back to scan-all.
     """
+    canonical_code_by_type = _get_canonical_code_map()
     violations: list[str] = []
     for node in (payload or {}).get("nodes", []) or []:
         if not isinstance(node, dict):
             continue
         node_data = node.get("data") or {}
+        component_type = node_data.get("type") if isinstance(node_data, dict) else None
         template = (node_data.get("node") or {}).get("template") or {}
         code_field = template.get("code")
         code = code_field.get("value") if isinstance(code_field, dict) else None
         if not isinstance(code, str) or not code.strip():
+            continue
+        canonical = canonical_code_by_type.get(component_type) if isinstance(component_type, str) else None
+        if canonical is not None and _normalize_code(code) == _normalize_code(canonical):
+            # Trusted built-in: code matches registry verbatim — skip scan.
             continue
         result = scan_code_security(code)
         if not result.is_safe:

@@ -46,6 +46,18 @@ export interface AgenticCompleteData {
    * edit, so approving a man-in-the-loop edit should fire the continuation
    * turn. Absent/false for a pure edit. */
   continuation_expected?: boolean;
+  /** Accumulated LLM token usage for the whole turn — TranslationFlow
+   * classification + every agent attempt. Same shape as the playground's
+   * message metadata (``properties.usage``) so the ``MessageMetadata`` badge
+   * is reused unchanged. Absent only if no LLM call ran on this turn. */
+  usage?: {
+    input_tokens?: number | null;
+    output_tokens?: number | null;
+    total_tokens?: number | null;
+  };
+  /** Wall-clock duration of the turn, measured server-side around the whole
+   * pipeline. Rendered as the duration half of the cost badge. */
+  duration_seconds?: number;
 }
 
 export interface AgenticFlowPreviewEvent {

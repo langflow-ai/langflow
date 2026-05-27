@@ -304,11 +304,18 @@ def get_graph(
     # Set model configuration
     llm.set_input_value("model", _build_model_config(provider, model_name))
 
-    # Configure LLM
+    # Configure LLM.
+    # ``max_tokens=300`` is a hard ceiling for the classifier output, which is
+    # always a small JSON object ({"translation": "...", "intent": "..."}).
+    # Typical output is 60-120 tokens; 300 leaves 2x headroom for
+    # very long translations of non-Latin scripts. Without this cap the model
+    # can over-generate (long explanations the parser strips anyway), so this
+    # is pure cost containment with no observable UX impact.
     llm_config = {
         "input_value": chat_input.message_response,
         "system_message": TRANSLATION_PROMPT,
         "temperature": 0.1,  # Low temperature for consistent JSON output
+        "max_tokens": 300,
     }
 
     if api_key_var:

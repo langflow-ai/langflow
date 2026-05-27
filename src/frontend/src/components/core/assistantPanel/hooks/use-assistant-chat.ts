@@ -1,14 +1,13 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { useCallback, useRef, useState } from "react";
 import ShortUniqueId from "short-unique-id";
-
-import { BASE_URL_API } from "@/customization/config-constants";
 import {
   type AgenticFlowUpdateEvent,
   type AgenticStepType,
   postAssistStream,
 } from "@/controllers/API/queries/agentic";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import { BASE_URL_API } from "@/customization/config-constants";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useFlowStore from "@/stores/flowStore";
@@ -563,6 +562,16 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   validationAttempts: event.data.validation_attempts,
                   validationError: event.data.validation_error,
                 },
+                // Per-turn LLM cost reported by the backend. Stored in the
+                // message so panel close/reopen still shows the badge.
+                // Duration is converted to milliseconds to match the units
+                // ``MessageMetadata`` (the playground renderer reused here)
+                // expects in its ``duration`` prop.
+                usage: event.data.usage,
+                duration:
+                  typeof event.data.duration_seconds === "number"
+                    ? event.data.duration_seconds * 1000
+                    : undefined,
               }));
               setCurrentStep(null);
               setIsProcessing(false);

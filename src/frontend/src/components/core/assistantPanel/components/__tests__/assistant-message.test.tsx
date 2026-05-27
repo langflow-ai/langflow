@@ -116,6 +116,35 @@ jest.mock("@/utils/codeBlockUtils", () => ({
   isCodeBlock: () => false,
 }));
 
+jest.mock("@/components/common/messageMetadataComponent", () => ({
+  __esModule: true,
+  default: ({
+    usage,
+    duration,
+  }: {
+    usage?: {
+      input_tokens?: number;
+      output_tokens?: number;
+      total_tokens?: number;
+    };
+    duration?: number;
+  }) => {
+    const hasTokens =
+      typeof usage?.total_tokens === "number" && usage.total_tokens > 0;
+    const hasDuration = typeof duration === "number" && duration > 0;
+    if (!hasTokens && !hasDuration) return null;
+    return (
+      <span
+        data-testid="chat-message-token-usage"
+        data-total-tokens={usage?.total_tokens ?? ""}
+        data-input-tokens={usage?.input_tokens ?? ""}
+        data-output-tokens={usage?.output_tokens ?? ""}
+        data-duration={duration ?? ""}
+      />
+    );
+  },
+}));
+
 function createMessage(overrides: Partial<AssistantMessage>): AssistantMessage {
   return {
     id: "msg-1",
@@ -614,6 +643,72 @@ describe("AssistantMessageItem", () => {
       ).not.toThrow();
       // Unhidden on the SAME fiber: content renders (hooks stayed stable).
       expect(screen.getByText("Working on the flow...")).toBeInTheDocument();
+    });
+  });
+
+  describe("token usage badge", () => {
+    it("should_render_token_usage_badge_when_assistant_message_has_usage", () => {
+      const message = createMessage({
+        role: "assistant",
+        content: "Done.",
+        status: "complete",
+        usage: { input_tokens: 110, output_tokens: 54, total_tokens: 164 },
+        duration: 1234,
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      const badge = screen.getByTestId("chat-message-token-usage");
+      expect(badge).toBeInTheDocument();
+      expect(badge.getAttribute("data-total-tokens")).toBe("164");
+      expect(badge.getAttribute("data-input-tokens")).toBe("110");
+      expect(badge.getAttribute("data-output-tokens")).toBe("54");
+      expect(badge.getAttribute("data-duration")).toBe("1234");
+    });
+
+    it("should_not_render_token_usage_badge_when_assistant_message_has_no_usage", () => {
+      const message = createMessage({
+        role: "assistant",
+        content: "Done.",
+        status: "complete",
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(screen.queryByTestId("chat-message-token-usage")).toBeNull();
+    });
+
+    it("should_not_render_token_usage_badge_for_user_messages_even_if_usage_present", () => {
+      // User messages never carry cost in this product (cost is the
+      // assistant's calls). Defensive: even if a user message somehow
+      // gets a ``usage`` payload, the badge must not appear on it.
+      const message = createMessage({
+        role: "user",
+        content: "Hi",
+        status: "complete",
+        usage: { input_tokens: 1, output_tokens: 1, total_tokens: 2 },
+        duration: 500,
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(screen.queryByTestId("chat-message-token-usage")).toBeNull();
+    });
+
+    it("should_not_render_token_usage_badge_while_assistant_message_is_streaming", () => {
+      // The badge belongs to the final cost of a turn — flashing a
+      // half-aggregated number mid-stream would be misleading.
+      const message = createMessage({
+        role: "assistant",
+        content: "Working...",
+        status: "streaming",
+        usage: { input_tokens: 50, output_tokens: 0, total_tokens: 50 },
+        duration: 200,
+      });
+
+      render(<AssistantMessageItem message={message} />);
+
+      expect(screen.queryByTestId("chat-message-token-usage")).toBeNull();
     });
   });
 });
