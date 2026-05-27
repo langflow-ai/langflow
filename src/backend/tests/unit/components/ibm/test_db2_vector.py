@@ -85,9 +85,8 @@ class TestDB2VectorStoreComponent(ComponentTestBaseWithoutClient):
         comp = DB2VectorStoreComponent()
         assert comp.display_name == "IBM Db2 Vector Store"
         expected_desc = (
-            "IBM Db2 Vector Store with search capabilities. "
-            "Use Generic-typed global variables for connection parameters "
-            "(database, hostname, username). Only password should use Credential-typed variables."
+            "IBM Db2 Vector Store with search capabilities. Use Generic-typed global variables for "
+            "connection parameters (database, hostname, username). Only password should use Credential-typed variables."
         )
         assert comp.description == expected_desc
         assert comp.icon == "DB2"
