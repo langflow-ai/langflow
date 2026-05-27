@@ -10,8 +10,14 @@ test("user must be able to update outdated components by update all button", asy
   await page.locator("span").filter({ hasText: "Close" }).first().click();
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read your file into a buffer.
-  const jsonContent = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  // Read the asset and rename the flow uniquely so we can wait for THIS
+  // upload to appear in the list — avoids racing against the bootstrap-seeded
+  // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
+  const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+  const jsonContent = JSON.stringify({ ...JSON.parse(rawJson), name: flowName });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
@@ -29,15 +35,12 @@ test("user must be able to update outdated components by update all button", asy
     dataTransfer,
   });
 
-  // Wait for the upload-complete toast before clicking — bootstrap pre-seeds a
-  // "Basic Prompting" flow, so racing the generic list-card selector picks the
-  // wrong card before the dropped flow appears in the refetched list.
-  await expect(page.getByText("All files uploaded successfully")).toBeVisible({
-    timeout: 30000,
-  });
-
-  // List is sorted by updated_at DESC, so the newest (just-dropped) card is first.
-  await page.getByTestId("list-card").first().click();
+  // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
+  const droppedCard = page
+    .getByTestId("list-card")
+    .filter({ hasText: flowName });
+  await droppedCard.waitFor({ state: "visible", timeout: 30000 });
+  await droppedCard.click();
 
   await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
@@ -95,8 +98,14 @@ test("user must be able to update outdated components by each outdated component
   await page.locator("span").filter({ hasText: "Close" }).first().click();
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
-  // Read your file into a buffer.
-  const jsonContent = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  // Read the asset and rename the flow uniquely so we can wait for THIS
+  // upload to appear in the list — avoids racing against the bootstrap-seeded
+  // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
+  const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
+  const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
+    .toString(36)
+    .slice(2, 8)}`;
+  const jsonContent = JSON.stringify({ ...JSON.parse(rawJson), name: flowName });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
@@ -114,15 +123,12 @@ test("user must be able to update outdated components by each outdated component
     dataTransfer,
   });
 
-  // Wait for the upload-complete toast before clicking — bootstrap pre-seeds a
-  // "Basic Prompting" flow, so racing the generic list-card selector picks the
-  // wrong card before the dropped flow appears in the refetched list.
-  await expect(page.getByText("All files uploaded successfully")).toBeVisible({
-    timeout: 30000,
-  });
-
-  // List is sorted by updated_at DESC, so the newest (just-dropped) card is first.
-  await page.getByTestId("list-card").first().click();
+  // Wait for the freshly-dropped flow card (by unique name) to appear, then click it.
+  const droppedCard = page
+    .getByTestId("list-card")
+    .filter({ hasText: flowName });
+  await droppedCard.waitFor({ state: "visible", timeout: 30000 });
+  await droppedCard.click();
 
   await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
