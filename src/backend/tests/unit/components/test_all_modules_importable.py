@@ -394,6 +394,8 @@ class TestDirectModuleImports:
                         "langchain_cohere",
                         "langchain_pinecone",
                         "langchain_chroma",
+                        "langchain_qdrant",
+                        "langchain_mongodb",
                         "qdrant_client",
                         "pymongo",
                         "cassandra",
@@ -548,6 +550,8 @@ class TestDirectModuleImports:
                         "langchain_chroma",
                         "langchain_pinecone",
                         "qdrant_client",
+                        "langchain_qdrant",
+                        "langchain_mongodb",
                         "weaviate",
                         "chromadb",
                         "pinecone",
@@ -593,7 +597,7 @@ class TestDirectModuleImports:
             assert QdrantVectorStoreComponent.display_name == "Qdrant"
 
         except ImportError as e:
-            if "qdrant_client" in str(e) or "langchain_community" in str(e):
+            if "qdrant_client" in str(e) or "langchain_qdrant" in str(e):
                 pytest.skip("Qdrant dependencies not installed (expected in test environment)")
             pytest.fail(f"Failed to import QdrantVectorStoreComponent: {e}")
         except AttributeError as e:
