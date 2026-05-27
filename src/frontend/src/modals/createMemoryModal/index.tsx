@@ -171,38 +171,6 @@ export default function CreateMemoryModal({
                   {t("memory.preprocessingModelLabel")}{" "}
                   <span className="text-destructive">*</span>
                 </Label>
-                <ShadTooltip
-                  content={
-                    <span>
-                      {t("memory.preprocessingInstructionsHint")}{" "}
-                      <a
-                        href="https://docs.langflow.org/memory-bases#preprocessing-prompt-examples"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="inline-flex items-center gap-0.5 text-tooltip-foreground underline opacity-80 hover:opacity-100"
-                      >
-                        {t("memory.seePromptExamples")}
-                        <ForwardedIconComponent
-                          name="ExternalLink"
-                          className="h-3 w-3"
-                        />
-                      </a>
-                    </span>
-                  }
-                  side="right"
-                >
-                  <button
-                    type="button"
-                    tabIndex={0}
-                    aria-label="Preprocessing instructions help"
-                    className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-                  >
-                    <ForwardedIconComponent
-                      name="Info"
-                      className="h-3.5 w-3.5 text-muted-foreground"
-                    />
-                  </button>
-                </ShadTooltip>
                 <div className={cn("rounded-md", "[&_button]:h-10")}>
                   <ModelInputComponent
                     id="memory-preprocessing-model"
@@ -230,7 +198,23 @@ export default function CreateMemoryModal({
                     <span className="text-destructive">*</span>
                   </Label>
                   <ShadTooltip
-                    content={t("memory.preprocessingInstructionsHint")}
+                    content={
+                      <span>
+                        {t("memory.preprocessingInstructionsHint")}{" "}
+                        <a
+                          href="https://docs.langflow.org/memory-bases#preprocessing-prompt-examples"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-tooltip-foreground underline opacity-80 hover:opacity-100"
+                        >
+                          {t("memory.seePromptExamples")}
+                          <ForwardedIconComponent
+                            name="ExternalLink"
+                            className="h-3 w-3"
+                          />
+                        </a>
+                      </span>
+                    }
                     side="right"
                   >
                     <button
