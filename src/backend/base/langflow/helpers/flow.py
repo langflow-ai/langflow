@@ -165,7 +165,7 @@ async def get_flow_by_id_or_name(
 
 async def _build_graph_from_authorized_flow(
     *,
-    caller: "User",
+    caller: User,
     flow: Flow,
     flow_id: str,
     user_id: str,
@@ -175,7 +175,6 @@ async def _build_graph_from_authorized_flow(
     from lfx.graph.graph.base import Graph
 
     from langflow.processing.process import process_tweaks
-    from langflow.services.database.models.user.model import User  # noqa: TC001
 
     graph_data = flow.data
     if not graph_data:

@@ -25,7 +25,9 @@ async def test_requires_flow_permission_denies_before_body(monkeypatch, fake_use
     flow_id = uuid4()
     ran = False
 
-    @requires_flow_permission(FlowAction.READ, user_param="user", flow_id_param="flow_id", flow_user_id_param="owner_id")
+    @requires_flow_permission(
+        FlowAction.READ, user_param="user", flow_id_param="flow_id", flow_user_id_param="owner_id"
+    )
     async def handler(*, user, flow_id, owner_id):
         nonlocal ran
         ran = True
@@ -69,7 +71,6 @@ async def test_requires_flow_permission_maps_forbidden_to_value_error(monkeypatc
 
 def test_requires_flow_permission_raises_on_missing_user_param():
     """Misconfigured decorators fail at decoration time."""
-
     with pytest.raises(TypeError, match="must have a 'actor' parameter"):
 
         @requires_flow_permission(FlowAction.READ, user_param="actor")

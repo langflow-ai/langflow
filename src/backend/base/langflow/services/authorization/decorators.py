@@ -30,8 +30,6 @@ from langflow.services.authorization.guards import (
 )
 
 if TYPE_CHECKING:
-    from uuid import UUID
-
     from langflow.services.database.models.user.model import User, UserRead
 
 _Action = (
