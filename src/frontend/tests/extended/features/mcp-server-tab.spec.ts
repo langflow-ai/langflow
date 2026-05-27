@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
@@ -70,7 +71,7 @@ test(
     await expect(checkbox).toBeChecked();
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     // Wait for modal to close
     await expect(page.getByText("MCP Server Tools")).not.toBeVisible();
@@ -116,7 +117,7 @@ test(
     await page.getByTestId("input_update_name").fill("mcp test name");
 
     // Close the modal
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     // Wait for modal to close
     await expect(page.getByText("MCP Server Tools")).not.toBeVisible();

@@ -19,8 +19,12 @@ class TestCORSConfiguration:
         with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
             settings = Settings()
 
-            # Current behavior: wildcard origins with credentials ENABLED (insecure)
-            assert settings.cors_origins == "*"
+            # Current behavior: wildcard origins with credentials ENABLED (insecure).
+            # pydantic-settings normalizes the env var "*" differently across Python
+            # versions (Python 3.13 -> "*", Python 3.14+ -> ["*"]). Both shapes mean
+            # "all origins" semantically; the test must accept either to stay
+            # cross-version stable.
+            assert settings.cors_origins in ("*", ["*"])
             assert settings.cors_allow_credentials is True  # Currently defaults to True (insecure)
             assert settings.cors_allow_methods == "*"
             assert settings.cors_allow_headers == "*"
@@ -92,7 +96,11 @@ class TestCORSConfiguration:
             ),
         ):
             settings = Settings()
-            assert settings.cors_origins == "*"
+            # pydantic-settings parses LANGFLOW_CORS_ORIGINS="*" as the raw string
+            # on Python 3.13 and as ["*"] on Python 3.14+ (the str | list[str] union
+            # resolves differently across versions). Accept either; both represent
+            # the same "all origins" semantic.
+            assert settings.cors_origins in ("*", ["*"])
             # Current behavior: credentials are NOT prevented (INSECURE!)
             assert settings.cors_allow_credentials is True
 

@@ -1,5 +1,3 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
@@ -11,6 +9,7 @@ import {
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should not be able to hide connected inputs",
   { tag: ["@release", "@api", "@database"] },
@@ -18,13 +17,15 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector("text=Language Model", { timeout: 30000 });
 
     await page
       .getByTestId("div-generic-node")
-      .getByText("Language Model", { exact: true })
+      .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
     await openAdvancedOptions(page);
 
@@ -43,7 +44,7 @@ test(
 
     await page
       .getByTestId("div-generic-node")
-      .getByText("Language Model", { exact: true })
+      .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
     await openAdvancedOptions(page);
 
@@ -68,7 +69,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await disableInspectPanel(page);
 
@@ -76,7 +79,7 @@ test(
 
     await page
       .getByTestId("div-generic-node")
-      .getByText("Language Model", { exact: true })
+      .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
     await openAdvancedOptions(page);
 
@@ -101,7 +104,7 @@ test(
 
     await page
       .getByTestId("div-generic-node")
-      .getByText("Language Model", { exact: true })
+      .getByText(TEXTS.componentLanguageModel, { exact: true })
       .click();
     await openAdvancedOptions(page);
 

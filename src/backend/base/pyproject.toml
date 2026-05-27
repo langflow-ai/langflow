@@ -205,7 +205,7 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -239,7 +239,12 @@ sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
-langfuse = ["langfuse~=3.8"]
+# pydantic>=2.13 is required because langfuse v3 imports pydantic.v1.BaseModel,
+# which only supports Python 3.14 from pydantic 2.13 onward. Without this guard
+# the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
+# 3.14 environments (e.g. the official Docker image), causing tracing to
+# silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
+langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
 langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
@@ -312,7 +317,7 @@ composio = [
 ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
-mem0 = ["mem0ai>=0.1.34"]
+mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]

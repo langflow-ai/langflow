@@ -9,7 +9,9 @@ from sqlmodel import col, delete, select
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.schema.message import MessageResponse
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
+from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.fetch import authorized_or_owner_scoped
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.crud import (
     delete_messages_for_user,
@@ -35,6 +37,29 @@ from langflow.services.tracing.langfuse import (
 )
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+
+@router.get("/job_queue", dependencies=[Depends(get_current_active_superuser)])
+async def job_queue_metrics() -> dict:
+    """Return a snapshot of job-queue observability metrics.
+
+    For the in-memory backend this exposes only ``backend`` and ``active_jobs``.
+    For the Redis backend the snapshot also includes bridge counts, consumer
+    wrappers, cancel-dispatcher liveness, and the cancel-stats counters
+    (``published`` / ``marker_hit`` / ``dispatched_owned`` /
+    ``dispatched_foreign`` / ``publish_errors`` / ``dispatcher_reconnects`` /
+    ``polling_watchdog_kills`` / ``activity_touch_errors`` /
+    ``activity_get_errors`` / ``activity_parse_errors`` /
+    ``dispatcher_internal_errors``). ``dispatcher_reconnects`` tracks explicit
+    dispatcher-loop retries and redis-py transparent pubsub reconnect callbacks.
+
+    Restricted to superusers because the snapshot exposes process-wide tenant
+    activity (live job counts, cancel rates) — useful for ops, sensitive in
+    multi-tenant deployments.
+    """
+    from langflow.services.deps import get_queue_service
+
+    return get_queue_service().metrics_snapshot()
 
 
 def _get_positive_feedback_value(db_message: MessageTable) -> bool | None:
@@ -63,6 +88,35 @@ def _langfuse_feedback_sync_enabled() -> bool:
     if tracing_service.deactivated:
         return False
     return langfuse_is_configured()
+
+
+async def _ensure_flow_action_or_404(
+    session: DbSession,
+    *,
+    flow_id: UUID,
+    user: User,
+    action: FlowAction,
+) -> Flow | None:
+    """Load a flow (share-aware), enforce permission, return None if missing."""
+    flow = await authorized_or_owner_scoped(
+        session,
+        Flow,
+        id_column=Flow.id,
+        resource_id=flow_id,
+        owner_column=Flow.user_id,
+        owner_id=user.id,
+    )
+    if flow is None:
+        return None
+    await ensure_flow_permission(
+        user,
+        action,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=getattr(flow, "workspace_id", None),
+        folder_id=getattr(flow, "folder_id", None),
+    )
+    return flow
 
 
 async def _purge_memory_base_session_data(user_id: UUID, session_ids: list[str]) -> None:
@@ -99,8 +153,13 @@ async def get_vertex_builds(
         # Ownership is enforced in the data access layer.
         # Foreign flow IDs intentionally resolve to an empty payload (200)
         # to avoid leaking whether the target flow exists.
-        vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id, user_id=current_user.id)
+        flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
+        if flow is None:
+            return VertexBuildMapModel.from_list_of_dicts([])
+        vertex_builds = await get_vertex_builds_by_flow_id(session, flow_id, user_id=flow.user_id)
         return VertexBuildMapModel.from_list_of_dicts(vertex_builds)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -113,7 +172,12 @@ async def delete_vertex_builds(
 ) -> None:
     try:
         # Keep endpoint idempotent while preventing cross-user deletion.
-        await delete_vertex_builds_by_flow_id(session, flow_id, user_id=current_user.id)
+        flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.WRITE)
+        if flow is None:
+            return
+        await delete_vertex_builds_by_flow_id(session, flow_id, user_id=flow.user_id)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -125,18 +189,31 @@ async def get_message_sessions(
     flow_id: Annotated[UUID | None, Query()] = None,
 ) -> list[str]:
     try:
-        # Use JOIN instead of subquery for better performance
+        # When a flow_id is provided, gate on flow READ permission so a viewer
+        # without flow access cannot enumerate sessions. The bulk path
+        # (flow_id is None) keeps the user-scoped JOIN — share-aware listing
+        # across all visible flows is an plugin optimisation.
+        if flow_id is not None:
+            flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
+            if flow is None:
+                return []
+            stmt = select(MessageTable.session_id).distinct()
+            stmt = stmt.where(MessageTable.flow_id == flow_id)
+            stmt = stmt.where(col(MessageTable.session_id).isnot(None))
+            stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
+            session_ids = await session.exec(stmt)
+            return list(session_ids)
+
         stmt = select(MessageTable.session_id).distinct()
         stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
         stmt = stmt.where(col(MessageTable.session_id).isnot(None))
         stmt = stmt.where(~col(MessageTable.session_id).startswith("agentic_"))
         stmt = stmt.where(Flow.user_id == current_user.id)
 
-        if flow_id:
-            stmt = stmt.where(MessageTable.flow_id == flow_id)
-
         session_ids = await session.exec(stmt)
         return list(session_ids)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
 
@@ -152,10 +229,19 @@ async def get_messages(
     order_by: Annotated[str | None, Query()] = "timestamp",
 ) -> list[MessageResponse]:
     try:
+        # When a flow_id is provided, gate on flow READ permission first; the
+        # share-aware path lets a non-owner with a read grant see the flow's
+        # messages.
+        if flow_id is not None:
+            flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
+            if flow is None:
+                return []
+
         # Use JOIN instead of subquery for better performance
         stmt = select(MessageTable)
         stmt = stmt.join(Flow, MessageTable.flow_id == Flow.id)
-        stmt = stmt.where(Flow.user_id == current_user.id)
+        if flow_id is None:
+            stmt = stmt.where(Flow.user_id == current_user.id)
 
         if flow_id:
             stmt = stmt.where(MessageTable.flow_id == flow_id)
@@ -214,6 +300,13 @@ async def update_message(
     if not db_message:
         # Intentionally return 404 for both "not found" and "not owned".
         raise HTTPException(status_code=404, detail="Message not found")
+
+    # Bind the parent flow's authorization to message writes so a viewer-role
+    # user cannot edit messages on a flow they only have READ on.
+    if db_message.flow_id is not None:
+        await _ensure_flow_action_or_404(
+            session, flow_id=db_message.flow_id, user=current_user, action=FlowAction.WRITE
+        )
 
     try:
         previous_positive_feedback = _get_positive_feedback_value(db_message)
@@ -563,14 +656,18 @@ async def get_transactions(
     params: Annotated[Params | None, Depends(custom_params)],
 ) -> Page[TransactionLogsResponse]:
     try:
-        # Flow ownership is part of the SQL filter.
+        # Flow ownership / share-grant is verified via the parent flow guard.
         # For foreign flow IDs, the endpoint returns an empty page (200)
         # to preserve response shape and avoid existence leakage.
+        flow = await _ensure_flow_action_or_404(session, flow_id=flow_id, user=current_user, action=FlowAction.READ)
+        if flow is None:
+            from fastapi_pagination import Page as _Page
+
+            return _Page(items=[], total=0, page=1, size=params.size if params else 50, pages=0)
         stmt = (
             select(TransactionTable)
             .join(Flow, TransactionTable.flow_id == Flow.id)
             .where(TransactionTable.flow_id == flow_id)
-            .where(Flow.user_id == current_user.id)
             .order_by(col(TransactionTable.timestamp).desc())
         )
         import warnings
@@ -580,5 +677,7 @@ async def get_transactions(
                 "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
             )
             return await apaginate(session, stmt, params=params, transformer=transform_transaction_table_for_logs)
+    except HTTPException:
+        raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e)) from e
