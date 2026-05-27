@@ -63,7 +63,7 @@ class SemanticScholarSearchComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data_output", method="search_papers"),
+        Output(display_name="JSON", name="data_output", method="search_papers"),
         Output(display_name="Table", name="dataframe", method="search_papers_dataframe"),
     ]
 
