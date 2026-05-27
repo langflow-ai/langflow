@@ -102,3 +102,37 @@ def test_route_is_mounted_unconditionally() -> None:
     assert any("/extensions/" in p and "/reload" in p for p in paths), (
         f"Extension reload route must be mounted unconditionally; mounted paths: {paths}"
     )
+
+
+def test_no_runtime_mutation_routes() -> None:
+    """CI guard: no extension route may match install/uninstall/registry patterns.
+
+    Invariant for the LE-905 first-delivery slice: runtime mutation
+    (install/uninstall/registry changes) must never happen on a live server.
+
+    Fix hint:
+      Mode B/C (Docker/self-hosted): rebuild the image with the new package.
+      Mode A (local dev): use ``lfx extension dev`` which sets
+      LANGFLOW_ENABLE_EXTENSION_RELOAD=true.
+    """
+    from langflow.api.router import router
+
+    def collect_paths(routes, prefix: str = "") -> list[str]:
+        out: list[str] = []
+        for route in routes:
+            if hasattr(route, "routes"):
+                out.extend(collect_paths(route.routes, prefix + getattr(route, "prefix", "")))
+            elif hasattr(route, "path"):
+                out.append(prefix + route.path)
+        return out
+
+    paths = collect_paths(router.routes)
+    forbidden = {"install", "uninstall", "registry_add", "registry_remove"}
+    violations = [p for p in paths if "/extensions" in p and any(f in p.lower() for f in forbidden)]
+    assert not violations, (
+        f"Extension router contains forbidden mutation routes: {violations}. "
+        "Runtime install/uninstall/registry mutation is not permitted on a live server. "
+        "Fix hint — Mode B/C (Docker/self-hosted): rebuild the image with the new package. "
+        "Mode A (local dev): use `lfx extension dev` which sets "
+        "LANGFLOW_ENABLE_EXTENSION_RELOAD=true."
+    )

@@ -53,6 +53,7 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
 
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
+    """Create a new API key, storing an encrypted value and a SHA-256 hash for fast lookup."""
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
@@ -64,6 +65,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
         name=api_key_create.name,
         user_id=user_id,
         created_at=api_key_create.created_at or datetime.datetime.now(datetime.timezone.utc),
+        expires_at=api_key_create.expires_at,
     )
 
     session.add(api_key)
@@ -75,6 +77,7 @@ async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, us
 
 
 async def delete_api_key(session: AsyncSession, api_key_id: UUID, user_id: UUID) -> None:
+    """Delete an API key, raising ValueError if not found or not owned by user_id."""
     api_key = await session.get(ApiKey, api_key_id)
     if api_key is None:
         msg = "API Key not found"
@@ -116,11 +119,13 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
     incoming_hash = hash_api_key(api_key)
 
     # Fast path: O(1) indexed lookup by hash
-    query = select(ApiKey).where(ApiKey.api_key_hash == incoming_hash)
+    query = select(ApiKey).where(ApiKey.api_key_hash == incoming_hash, ApiKey.is_active.is_(True))
     matches = (await session.exec(query)).all()
 
     if len(matches) == 1:
         api_key_obj = matches[0]
+        if api_key_obj.expires_at and datetime.datetime.now(datetime.timezone.utc) > api_key_obj.expires_at:
+            return None
         if settings_service.settings.disable_track_apikey_usage is not True:
             api_key_obj.total_uses += 1
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
@@ -139,7 +144,7 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
         return None
 
     # Slow path: legacy keys without hash (plaintext from 1.6.x or encrypted without hash)
-    query = select(ApiKey).where(ApiKey.api_key_hash.is_(None))  # type: ignore[union-attr]
+    query = select(ApiKey).where(ApiKey.api_key_hash.is_(None), ApiKey.is_active.is_(True))  # type: ignore[union-attr]
     legacy_keys = (await session.exec(query)).all()
 
     for api_key_obj in legacy_keys:
@@ -155,6 +160,8 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             matched = candidate == api_key
 
         if matched:
+            if api_key_obj.expires_at and datetime.datetime.now(datetime.timezone.utc) > api_key_obj.expires_at:
+                return None
             # Backfill hash for future O(1) lookups
             api_key_obj.api_key_hash = incoming_hash
             if settings_service.settings.disable_track_apikey_usage is not True:
