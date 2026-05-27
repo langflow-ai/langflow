@@ -142,32 +142,59 @@ async def update_role(
             detail="System roles cannot be modified",
         )
 
-    if payload.parent_role_id is not None:
-        # Validate parent exists and would not create a cycle.
-        if payload.parent_role_id == role.id:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="A role cannot be its own parent",
-            )
-        parent = await session.get(AuthzRole, payload.parent_role_id)
-        if parent is None:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="parent_role_id does not reference an existing role",
-            )
-        if await _detect_parent_cycle(session, role_id=role.id, proposed_parent_id=payload.parent_role_id):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Setting this parent would create a role hierarchy cycle",
-            )
-        role.parent_role_id = payload.parent_role_id
+    # Use presence checks (model_fields_set) rather than ``is not None`` so PATCH
+    # can clear nullable fields. An explicit ``"description": null`` in the body
+    # marks the field as set and assigns None; omitting it leaves the row alone.
+    fields_set = payload.model_fields_set
 
-    if payload.name is not None:
-        role.name = payload.name
-    if payload.description is not None:
+    if "parent_role_id" in fields_set:
+        if payload.parent_role_id is None:
+            role.parent_role_id = None
+        else:
+            if payload.parent_role_id == role.id:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="A role cannot be its own parent",
+                )
+            parent = await session.get(AuthzRole, payload.parent_role_id)
+            if parent is None:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="parent_role_id does not reference an existing role",
+                )
+            if await _detect_parent_cycle(session, role_id=role.id, proposed_parent_id=payload.parent_role_id):
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="Setting this parent would create a role hierarchy cycle",
+                )
+            role.parent_role_id = payload.parent_role_id
+
+    if "description" in fields_set:
+        # description is nullable on the DB side — None is a legitimate clear.
         role.description = payload.description
-    if payload.permissions is not None:
+
+    if "name" in fields_set:
+        # name is NOT NULL + unique on the DB side; reject an explicit null at
+        # the boundary so the caller gets a clear 400 instead of an opaque
+        # IntegrityError that the catch block below mislabels as "Name conflict".
+        if payload.name is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="name cannot be null",
+            )
+        role.name = payload.name
+
+    if "permissions" in fields_set:
+        # permissions column is nullable=False (default_factory=list). An empty
+        # list is the natural "clear" — None would violate the constraint at
+        # commit, so reject it up front.
+        if payload.permissions is None:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="permissions cannot be null; pass an empty list to clear",
+            )
         role.permissions = list(payload.permissions)
+
     role.updated_at = datetime.now(timezone.utc)
 
     try:

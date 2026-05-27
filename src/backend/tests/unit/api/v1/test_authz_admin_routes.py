@@ -119,6 +119,33 @@ def _make_user(*, is_superuser: bool = False) -> SimpleNamespace:
     return SimpleNamespace(id=uuid4(), is_superuser=is_superuser, username="u")
 
 
+def _make_role_row(
+    *,
+    id: UUID,  # noqa: A002
+    name: str,
+    description: str | None,
+    permissions: list[str],
+    parent_role_id: UUID | None,
+    is_system: bool = False,
+) -> SimpleNamespace:
+    """Build a fake AuthzRole row carrying every field RoleRead serializes."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    return SimpleNamespace(
+        id=id,
+        name=name,
+        description=description,
+        is_system=is_system,
+        permissions=permissions,
+        parent_role_id=parent_role_id,
+        workspace_id=None,
+        created_at=now,
+        updated_at=now,
+        created_by=None,
+    )
+
+
 @pytest.fixture
 def stub_authz(monkeypatch):
     from langflow.api.v1 import authz_me, authz_role_assignments, authz_roles, authz_teams
@@ -219,6 +246,194 @@ async def test_update_role_blocks_system_role(stub_authz):
         )
     assert excinfo.value.status_code == 400
     assert "System roles" in excinfo.value.detail
+
+
+@pytest.mark.asyncio
+async def test_update_role_clears_description_via_explicit_null(stub_authz):
+    """PATCH with description=null clears the field — presence check honors null."""
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.database.models.auth import AuthzRole
+
+    stub_authz()
+    role_id = uuid4()
+    role = _make_role_row(
+        id=role_id,
+        name="custom",
+        description="old description",
+        permissions=[],
+        parent_role_id=None,
+    )
+    session = _FakeAsyncSession({(AuthzRole, role_id): role})
+    user = _make_user(is_superuser=True)
+    payload = RoleUpdate(description=None)
+    # Sanity: description is in model_fields_set even though it's None
+    assert "description" in payload.model_fields_set
+
+    await authz_roles.update_role(
+        role_id=role_id,
+        payload=payload,
+        current_user=user,
+        session=session,
+    )
+    assert role.description is None
+
+
+@pytest.mark.asyncio
+async def test_update_role_clears_parent_via_explicit_null(stub_authz):
+    """PATCH with parent_role_id=null removes the parent (no validation needed)."""
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.database.models.auth import AuthzRole
+
+    stub_authz()
+    role_id = uuid4()
+    role = _make_role_row(
+        id=role_id,
+        name="custom",
+        description=None,
+        permissions=[],
+        parent_role_id=uuid4(),
+    )
+    session = _FakeAsyncSession({(AuthzRole, role_id): role})
+    user = _make_user(is_superuser=True)
+    payload = RoleUpdate(parent_role_id=None)
+    assert "parent_role_id" in payload.model_fields_set
+
+    await authz_roles.update_role(
+        role_id=role_id,
+        payload=payload,
+        current_user=user,
+        session=session,
+    )
+    assert role.parent_role_id is None
+
+
+@pytest.mark.asyncio
+async def test_update_role_omitted_fields_untouched(stub_authz):
+    """Omitting a field leaves the existing row value alone (no clearing)."""
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.database.models.auth import AuthzRole
+
+    stub_authz()
+    role_id = uuid4()
+    parent_id = uuid4()
+    role = _make_role_row(
+        id=role_id,
+        name="custom",
+        description="keep me",
+        permissions=["flow:*:read"],
+        parent_role_id=parent_id,
+    )
+    session = _FakeAsyncSession({(AuthzRole, role_id): role})
+    user = _make_user(is_superuser=True)
+    # Only update name — description, permissions, parent_role_id must stay.
+    payload = RoleUpdate(name="renamed")
+
+    await authz_roles.update_role(
+        role_id=role_id,
+        payload=payload,
+        current_user=user,
+        session=session,
+    )
+    assert role.name == "renamed"
+    assert role.description == "keep me"
+    assert role.permissions == ["flow:*:read"]
+    assert role.parent_role_id == parent_id
+
+
+@pytest.mark.asyncio
+async def test_update_role_rejects_null_name(stub_authz):
+    """Explicit name=null returns 400 (DB column is NOT NULL)."""
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.database.models.auth import AuthzRole
+
+    stub_authz()
+    role_id = uuid4()
+    role = _make_role_row(
+        id=role_id,
+        name="custom",
+        description=None,
+        permissions=[],
+        parent_role_id=None,
+    )
+    session = _FakeAsyncSession({(AuthzRole, role_id): role})
+    user = _make_user(is_superuser=True)
+    payload = RoleUpdate(name=None)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.update_role(
+            role_id=role_id,
+            payload=payload,
+            current_user=user,
+            session=session,
+        )
+    assert excinfo.value.status_code == 400
+    assert "name cannot be null" in excinfo.value.detail
+
+
+@pytest.mark.asyncio
+async def test_update_role_clears_permissions_via_empty_list(stub_authz):
+    """An empty permissions list is the natural 'clear' — distinct from null."""
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.database.models.auth import AuthzRole
+
+    stub_authz()
+    role_id = uuid4()
+    role = _make_role_row(
+        id=role_id,
+        name="custom",
+        description=None,
+        permissions=["flow:*:read", "flow:*:write"],
+        parent_role_id=None,
+    )
+    session = _FakeAsyncSession({(AuthzRole, role_id): role})
+    user = _make_user(is_superuser=True)
+    payload = RoleUpdate(permissions=[])
+
+    await authz_roles.update_role(
+        role_id=role_id,
+        payload=payload,
+        current_user=user,
+        session=session,
+    )
+    assert role.permissions == []
+
+
+@pytest.mark.asyncio
+async def test_update_role_rejects_null_permissions(stub_authz):
+    """Explicit permissions=null returns 400 (DB column is nullable=False)."""
+    from langflow.api.v1 import authz_roles
+    from langflow.api.v1.schemas.authz_roles import RoleUpdate
+    from langflow.services.database.models.auth import AuthzRole
+
+    stub_authz()
+    role_id = uuid4()
+    role = SimpleNamespace(
+        id=role_id,
+        name="custom",
+        description=None,
+        is_system=False,
+        permissions=["flow:*:read"],
+        parent_role_id=None,
+        updated_at=None,
+    )
+    session = _FakeAsyncSession({(AuthzRole, role_id): role})
+    user = _make_user(is_superuser=True)
+    payload = RoleUpdate(permissions=None)
+
+    with pytest.raises(HTTPException) as excinfo:
+        await authz_roles.update_role(
+            role_id=role_id,
+            payload=payload,
+            current_user=user,
+            session=session,
+        )
+    assert excinfo.value.status_code == 400
+    assert "permissions cannot be null" in excinfo.value.detail
 
 
 @pytest.mark.asyncio
