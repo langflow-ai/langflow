@@ -17,7 +17,10 @@ test("user must be able to update outdated components by update all button", asy
   const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-  const jsonContent = JSON.stringify({ ...JSON.parse(rawJson), name: flowName });
+  const jsonContent = JSON.stringify({
+    ...JSON.parse(rawJson),
+    name: flowName,
+  });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
@@ -105,7 +108,10 @@ test("user must be able to update outdated components by each outdated component
   const flowName = `Outdated Test Flow ${Date.now()}-${Math.random()
     .toString(36)
     .slice(2, 8)}`;
-  const jsonContent = JSON.stringify({ ...JSON.parse(rawJson), name: flowName });
+  const jsonContent = JSON.stringify({
+    ...JSON.parse(rawJson),
+    name: flowName,
+  });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
