@@ -1045,9 +1045,7 @@ class Graph:
             affected = set(visited)
             for v_id in visited:
                 affected.update(self.parent_child_map.get(v_id, []))
-            new_predecessor_map = {
-                k: v for k, v in new_predecessor_map.items() if k in affected
-            }
+            new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in affected}
         else:
             new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
 
