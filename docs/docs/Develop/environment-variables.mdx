@@ -412,8 +412,17 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
 | `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. Can reduce per-worker startup cost; behavior and compatibility may change. |
-| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. |
-| `LANGFLOW_REDIS_QUEUE_DB` | Integer | `1` | Redis database index used by the Redis job queue backend. |
+| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers in a multi-worker deployment. |
+| `LANGFLOW_REDIS_QUEUE_URL` | String | Not set | Full Redis connection URL for the job queue (e.g. `redis://localhost:6379/1`). Takes priority over `LANGFLOW_REDIS_QUEUE_HOST`/`PORT`/`DB` when set. |
+| `LANGFLOW_REDIS_QUEUE_HOST` | String | `LANGFLOW_REDIS_HOST` | Redis host for the job queue. Falls back to the general `LANGFLOW_REDIS_HOST` setting when not set. |
+| `LANGFLOW_REDIS_QUEUE_PORT` | Integer | `LANGFLOW_REDIS_PORT` | Redis port for the job queue. Falls back to the general `LANGFLOW_REDIS_PORT` setting when not set. |
+| `LANGFLOW_REDIS_QUEUE_DB` | Integer | `1` | Redis database index for the job queue. Defaults to `1` to avoid conflicts with the cache, which uses DB `0` by default. |
+| `LANGFLOW_REDIS_QUEUE_TTL` | Integer | `3600` | TTL in seconds for job stream and ownership keys in Redis. |
+| `LANGFLOW_REDIS_QUEUE_STARTUP_GRACE_S` | Float | `30.0` | Seconds a consumer waits for the producer's first write before treating a missing stream as end-of-stream. Increase this for deployments with slow worker cold-starts. Set to `0` to disable. |
+| `LANGFLOW_REDIS_QUEUE_CANCEL_CHANNEL_ENABLED` | Boolean | `True` | When `true`, each worker runs a Redis pub/sub dispatcher so that `POST /build/{id}/cancel` cancels a build running on any worker, not just the one that received the cancel request. |
+| `LANGFLOW_REDIS_QUEUE_CANCEL_MARKER_TTL` | Integer | `60` | TTL in seconds for the cancel-marker key. The marker closes a race condition where a cancel signal is published before the target worker's dispatcher has subscribed. Must be greater than `0`. |
+| `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S` | Float | `90.0` | Seconds without client activity before the polling watchdog cancels an abandoned build. Polling clients have no persistent connection, so the server tracks heartbeats to detect abandoned sessions. Set to `0` to disable the watchdog entirely. |
+| `LANGFLOW_REDIS_QUEUE_POLLING_WATCHDOG_INTERVAL_S` | Float | `15.0` | How often in seconds the polling watchdog scans for stale jobs. Lower values reclaim resources faster at the cost of more Redis reads. |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
@@ -436,14 +445,27 @@ Here is what these arguments do:
 
 #### High-load and multi-worker environments
 
-For high-concurrency deployments (such as when increasing `LANGFLOW_WORKERS`), consider the following best practices:
-- **Enable Gunicorn preload (experimental):**
-  Set `LANGFLOW_GUNICORN_PRELOAD=true` to enable Gunicorn’s `preload_app` mode, which can reduce per-worker startup overhead (non-Windows only).
+When `LANGFLOW_WORKERS` is greater than `1`, multiple Gunicorn/Uvicorn worker processes handle requests independently. Because each worker has its own in-memory state, a flow build started on one worker and polled or streamed from another worker will fail with a `JobQueueNotFoundError` unless you configure a shared job queue backend.
+
+For high-concurrency deployments, consider the following best practices:
+
 - **Use Redis-backed job queue:**
-  Set `LANGFLOW_JOB_QUEUE_TYPE=redis` to share queue events across workers.
-  **Note:** Always configure a dedicated Redis database for the job queue, separate from the cache database.
+  Set `LANGFLOW_JOB_QUEUE_TYPE=redis` so that flow build events are stored in Redis Streams and accessible to any worker. This is required when `LANGFLOW_WORKERS > 1` and you want streaming or polling event delivery. Always use a dedicated Redis database for the job queue (the default is DB `1`) to avoid conflicts with the cache (DB `0`).
+
+  Minimal configuration:
+  ```text
+  LANGFLOW_JOB_QUEUE_TYPE=redis
+  LANGFLOW_REDIS_QUEUE_URL=redis://your-redis-host:6379/1
+  ```
+
+  With the Redis job queue enabled, cross-worker build cancellation works automatically via a Redis pub/sub channel. Any worker that receives a `POST /build/{id}/cancel` request publishes a cancel signal that the owning worker picks up and acts on. To disable this channel, set `LANGFLOW_REDIS_QUEUE_CANCEL_CHANNEL_ENABLED=false`.
+
+- **Enable Gunicorn preload (experimental):**
+  Set `LANGFLOW_GUNICORN_PRELOAD=true` to load the application in the master process before workers fork. This reduces per-worker startup overhead. Non-Windows only; behavior may change.
+
 - **Disable tracing:**
   Set `LANGFLOW_DEACTIVATE_TRACING=True` to turn off tracing, which may cause concurrency bottlenecks under high load or in multi-worker environments.
+
 - **Use PostgreSQL instead of SQLite:**
   SQLite can experience database locks and deadlocks with concurrent, write-heavy usage. For production or multi-worker environments, configure Langflow to use PostgreSQL by setting the `LANGFLOW_DATABASE_URL` environment variable (see [Memory management options](/memory#configure-external-memory)). This is strongly recommended to avoid operational issues.
 
