@@ -165,7 +165,7 @@ class TestMetadataComponent(Component):
     assert "restricted to administrators" in response.json().get("detail", "")
 
 
-async def test_custom_component_create_admin_only_blocks_non_superuser(
+async def test_custom_component_create_admin_only_allows_known_template_refresh(
     client: AsyncClient,
     logged_in_headers: dict,
     monkeypatch,
@@ -230,8 +230,16 @@ async def test_custom_component_create_admin_only_allows_superuser(
     monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
     monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
 
-    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
-    code = await Path(agent_component_file).read_text(encoding="utf-8")
+    code = """
+from lfx.custom import Component
+
+class SuperUserMetadataComponent(Component):
+    display_name = "SuperUser Metadata Component"
+    description = "Test component for superuser bypass"
+
+    def run(self) -> str:
+        return "ok"
+"""
 
     request = CustomComponentRequest(code=code)
     response = await client.post(
@@ -242,6 +250,45 @@ async def test_custom_component_create_admin_only_allows_superuser(
 
     assert response.status_code == status.HTTP_200_OK, response.json()
     assert "data" in response.json()
+
+
+async def test_custom_component_update_admin_only_allows_superuser(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict,
+    monkeypatch,
+):
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class SuperUserUpdateMetadataComponent(Component):
+    display_name = "SuperUser Update Metadata Component"
+    description = "Test component update for superuser bypass"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = UpdateCustomComponentRequest(
+        code=component_code,
+        frontend_node={"outputs": []},
+        field="tool_mode",
+        field_value=False,
+        template={},
+    )
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
 
 
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
