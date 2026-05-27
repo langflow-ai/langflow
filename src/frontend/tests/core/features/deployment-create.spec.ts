@@ -510,13 +510,20 @@ test(
 
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
 
+    await expect(page.getByTestId("edit-tool-name")).toBeVisible();
     await page.getByTestId("edit-tool-name").click();
     const toolNameInput = page.getByTestId("tool-name-input");
+    await expect(toolNameInput).toBeVisible();
     await toolNameInput.fill("Unique Tool Name");
     await toolNameInput.press("Enter");
 
     await expect(toolNameInput).not.toBeVisible();
-    await expect(page.getByText("Unique Tool Name")).toBeVisible();
+    await expect(
+      page
+        .getByTestId("edit-tool-name")
+        .locator("..")
+        .getByText("Unique Tool Name"),
+    ).toBeVisible();
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
   },
 );
@@ -532,7 +539,10 @@ test(
     ]);
     await goToStepReview(page);
 
-    await expect(page.getByText("12925")).toBeVisible();
+    // Flow name also appears in the summary card; scope to the tool display row.
+    await expect(
+      page.getByTestId("edit-tool-name").locator("..").getByText("12925"),
+    ).toBeVisible();
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
   },
 );
