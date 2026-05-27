@@ -92,8 +92,15 @@ def _get_all_provider_specific_field_names() -> set[str]:
 
 
 def get_model_providers() -> list[str]:
-    """Return a sorted list of unique provider names."""
-    return sorted({md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group})
+    """Return a sorted list of unique provider names.
+
+    Includes both providers with static model catalogs (MODELS_DETAILED)
+    and providers registered in MODEL_PROVIDER_METADATA (e.g. vLLM, which
+    only has dynamic model discovery via LIVE_MODEL_PROVIDERS).
+    """
+    providers = {md.get("provider", "Unknown") for group in MODELS_DETAILED for md in group}
+    providers.update(model_provider_metadata.keys())
+    return sorted(providers)
 
 
 def get_provider_for_model_name(model_name: str) -> str:
