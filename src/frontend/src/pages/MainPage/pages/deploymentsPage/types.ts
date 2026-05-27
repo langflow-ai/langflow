@@ -94,11 +94,6 @@ export function getDeploymentDisplayName(deployment: Deployment | null) {
   );
 }
 
-export function getDeploymentTechnicalName(deployment: Deployment | null) {
-  if (!deployment) return "";
-  return deployment.provider_data?.name ?? deployment.resource_key ?? "";
-}
-
 export interface SnapshotUpdateResponse {
   flow_version_id: string;
   provider_snapshot_id: string;

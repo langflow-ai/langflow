@@ -57,12 +57,12 @@ describe("DeploymentInfoGrid", () => {
     expect(screen.getByText("Production")).toBeInTheDocument();
   });
 
-  it("renders display name and technical name without exposing the short ID", () => {
+  it("renders display name without exposing the short ID or technical name", () => {
     renderGrid(makeDeployment());
     expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("My Agent")).toBeInTheDocument();
-    expect(screen.getByText("Technical Name")).toBeInTheDocument();
-    expect(screen.getByText("my_agent")).toBeInTheDocument();
+    expect(screen.queryByText("Technical Name")).not.toBeInTheDocument();
+    expect(screen.queryByText("my_agent")).not.toBeInTheDocument();
     expect(screen.queryByText("Display Name")).not.toBeInTheDocument();
     expect(screen.queryByText("ID")).not.toBeInTheDocument();
   });
@@ -72,7 +72,7 @@ describe("DeploymentInfoGrid", () => {
       makeDeployment({ provider_data: null, resource_key: "agent-1" }),
     );
 
-    expect(screen.getAllByText("agent-1")).toHaveLength(2);
+    expect(screen.getByText("agent-1")).toBeInTheDocument();
   });
 
   describe("date formatting", () => {

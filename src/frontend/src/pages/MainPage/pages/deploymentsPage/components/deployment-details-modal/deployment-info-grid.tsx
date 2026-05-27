@@ -1,10 +1,6 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import {
-  type Deployment,
-  getDeploymentDisplayName,
-  getDeploymentTechnicalName,
-} from "../../types";
+import { type Deployment, getDeploymentDisplayName } from "../../types";
 
 interface DeploymentInfoGridProps {
   deployment: Deployment | null;
@@ -27,7 +23,6 @@ export default function DeploymentInfoGrid({
 }: DeploymentInfoGridProps) {
   const { t } = useTranslation();
   const displayName = getDeploymentDisplayName(deployment);
-  const technicalName = getDeploymentTechnicalName(deployment);
 
   return (
     <div className="grid grid-cols-[auto_1fr_auto_1fr] items-baseline gap-x-3 gap-y-2">
@@ -59,11 +54,6 @@ export default function DeploymentInfoGrid({
       </span>
       <span className="text-sm text-foreground">
         {deployment?.updated_at ? formatDate(deployment.updated_at) : "—"}
-      </span>
-
-      <span className="text-xs text-muted-foreground">Technical Name</span>
-      <span className="col-span-3 min-w-0 break-words text-sm text-foreground">
-        {technicalName || "—"}
       </span>
 
       {deployment?.description && (
