@@ -111,6 +111,7 @@ class DoclingRemoteComponent(BaseFileComponent):
                 {
                     "name": "value",
                     "display_name": "Value",
+                    "load_from_db": True,
                     "type": "string",
                     "description": "Value of the header",
                 },
