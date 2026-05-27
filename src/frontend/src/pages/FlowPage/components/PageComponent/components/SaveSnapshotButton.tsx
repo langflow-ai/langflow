@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useSidebar } from "@/components/ui/sidebar";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version";
@@ -13,6 +14,7 @@ interface SaveSnapshotButtonProps {
 export default function SaveSnapshotButton({
   flowId,
 }: SaveSnapshotButtonProps) {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { setActiveSection, open, toggleSidebar } = useSidebar();
@@ -40,7 +42,7 @@ export default function SaveSnapshotButton({
       { flowId, description },
       {
         onSuccess: () => {
-          setSuccessData({ title: "Version saved" });
+          setSuccessData({ title: t("success.versionSaved") });
           setIsSavingDisplay(false);
           setSavedSuccess(true);
         },
@@ -48,7 +50,7 @@ export default function SaveSnapshotButton({
           const detail = (err as { response?: { data?: { detail?: string } } })
             ?.response?.data?.detail;
           setErrorData({
-            title: "Failed to save version",
+            title: t("errors.failedToSaveVersion"),
             ...(detail ? { list: [detail] } : {}),
           });
           setIsSavingDisplay(false);
@@ -65,7 +67,7 @@ export default function SaveSnapshotButton({
             name="Loader2"
             className="h-3.5 w-3.5 animate-spin"
           />
-          Saving…
+          {t("flowVersion.saving")}
         </>
       );
     }
@@ -73,23 +75,23 @@ export default function SaveSnapshotButton({
       return (
         <>
           <ForwardedIconComponent name="Check" className="h-3.5 w-3.5" />
-          Saved
+          {t("flowVersion.saved")}
         </>
       );
     }
-    return "Save";
+    return t("nodeToolbar.save");
   };
 
   return (
     <>
       <CanvasBanner
         icon="BookMarked"
-        title="Save a version of your flow"
-        description="Capture the current state as a restore point"
+        title={t("flow.saveVersion")}
+        description={t("flowVersion.captureStateDescription")}
         actionSlot={
           <div className="flex items-center gap-2">
             <CanvasBannerButton variant="outline" onClick={handleDismiss}>
-              Keep Building
+              {t("flowVersion.keepBuilding")}
             </CanvasBannerButton>
             <CanvasBannerButton
               onClick={() => setShowModal(true)}

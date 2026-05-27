@@ -5,6 +5,7 @@ import type {
 import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
 import { isMarkdownTable } from "@/utils/markdownUtils";
@@ -24,10 +25,12 @@ export default function TableNodeComponent({
   disabled = false,
   table_options,
   trigger_icon = "Table",
-  trigger_text = "Open Table",
+  trigger_text,
   table_icon,
   showParameter = true,
 }: InputProps<any[], TableComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
+  const effectiveTriggerText = trigger_text ?? t("component.openTable");
   const dataTypeDefinitions: {
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
@@ -308,7 +311,7 @@ export default function TableNodeComponent({
               name={trigger_icon}
               className="mt-px h-4 w-4"
             />
-            <span className="font-normal">{trigger_text}</span>
+            <span className="font-normal">{effectiveTriggerText}</span>
           </Button>
         </TableModal>
       </div>

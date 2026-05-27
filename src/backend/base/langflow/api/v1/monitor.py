@@ -9,7 +9,7 @@ from sqlmodel import col, delete, select
 from langflow.api.utils import DbSession, custom_params
 from langflow.api.utils.flow_utils import compute_virtual_flow_id
 from langflow.schema.message import MessageResponse
-from langflow.services.auth.utils import get_current_active_user
+from langflow.services.auth.utils import get_current_active_superuser, get_current_active_user
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.message.crud import (
     delete_messages_for_user,
@@ -35,6 +35,29 @@ from langflow.services.tracing.langfuse import (
 )
 
 router = APIRouter(prefix="/monitor", tags=["Monitor"])
+
+
+@router.get("/job_queue", dependencies=[Depends(get_current_active_superuser)])
+async def job_queue_metrics() -> dict:
+    """Return a snapshot of job-queue observability metrics.
+
+    For the in-memory backend this exposes only ``backend`` and ``active_jobs``.
+    For the Redis backend the snapshot also includes bridge counts, consumer
+    wrappers, cancel-dispatcher liveness, and the cancel-stats counters
+    (``published`` / ``marker_hit`` / ``dispatched_owned`` /
+    ``dispatched_foreign`` / ``publish_errors`` / ``dispatcher_reconnects`` /
+    ``polling_watchdog_kills`` / ``activity_touch_errors`` /
+    ``activity_get_errors`` / ``activity_parse_errors`` /
+    ``dispatcher_internal_errors``). ``dispatcher_reconnects`` tracks explicit
+    dispatcher-loop retries and redis-py transparent pubsub reconnect callbacks.
+
+    Restricted to superusers because the snapshot exposes process-wide tenant
+    activity (live job counts, cancel rates) — useful for ops, sensitive in
+    multi-tenant deployments.
+    """
+    from langflow.services.deps import get_queue_service
+
+    return get_queue_service().metrics_snapshot()
 
 
 def _get_positive_feedback_value(db_message: MessageTable) -> bool | None:

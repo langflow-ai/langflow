@@ -214,6 +214,61 @@ class TestStarterProjects:
             error_msg = "\n".join(errors)
             pytest.fail(f"Node overlaps in {template_file.name}:\n{error_msg}")
 
+    def test_knowledge_retrieval_starter_includes_parser(self):
+        """Knowledge Retrieval starter must format the Knowledge Table via a Parser.
+
+        Knowledge node outputs a ``Table``; without a Parser between Knowledge
+        and ChatOutput the raw table arrives unformatted (BUG-02 additional
+        finding). The Vector Store RAG starter sets the precedent — the
+        Knowledge Retrieval starter must follow it so first-run users see
+        a working flow, not a JSON dump in chat.
+        """
+        path = get_starter_projects_path() / "Knowledge Retrieval.json"
+        with path.open(encoding="utf-8") as f:
+            data = json.load(f)
+        node_types = [n["data"].get("type") for n in data["data"]["nodes"]]
+        assert "parser" in node_types, (
+            "Knowledge Retrieval starter must include a Parser node between Knowledge and "
+            "ChatOutput so Table → Message conversion is wired by default."
+        )
+        # The topology should be Knowledge → parser → ChatOutput. Pin the
+        # adjacency so future edits can't silently disconnect the path.
+        edges = data["data"]["edges"]
+        knowledge_id = next(n["id"] for n in data["data"]["nodes"] if n["data"].get("type") == "Knowledge")
+        chatout_id = next(n["id"] for n in data["data"]["nodes"] if n["data"].get("type") == "ChatOutput")
+        parser_id = next(n["id"] for n in data["data"]["nodes"] if n["data"].get("type") == "parser")
+        assert any(e["source"] == knowledge_id and e["target"] == parser_id for e in edges), (
+            "Knowledge -> Parser edge missing in Knowledge Retrieval starter"
+        )
+        assert any(e["source"] == parser_id and e["target"] == chatout_id for e in edges), (
+            "Parser -> ChatOutput edge missing in Knowledge Retrieval starter"
+        )
+        assert not any(e["source"] == knowledge_id and e["target"] == chatout_id for e in edges), (
+            "Stale direct Knowledge -> ChatOutput edge must be removed when the Parser is present"
+        )
+
+    def test_knowledge_starters_keep_single_typed_retrieve_handle(self):
+        """Saved Knowledge ``retrieve_data`` edges must stay single-typed.
+
+        Saved edges in starters must keep ``output_types=['Table']`` for
+        Knowledge ``retrieve_data`` outputs. The live component must advertise
+        the same single-type list (BUG-02 primary), so this test pins the
+        starter side of the contract — the component side is pinned in
+        ``test_knowledge.TestOutputHandleTypesMatchStarterEdges``.
+        """
+        for name in ("Knowledge Retrieval.json", "Vector Store RAG.json"):
+            path = get_starter_projects_path() / name
+            with path.open(encoding="utf-8") as f:
+                data = json.load(f)
+            for edge in data["data"]["edges"]:
+                src_handle = edge.get("data", {}).get("sourceHandle") or {}
+                if src_handle.get("dataType") == "Knowledge" and src_handle.get("name") == "retrieve_data":
+                    assert src_handle.get("output_types") == ["Table"], (
+                        f"{name}: Knowledge retrieve_data edge must store output_types=['Table'] "
+                        f"(found {src_handle.get('output_types')!r}). Widening here re-breaks "
+                        f"React Flow handle matching against the live API."
+                    )
+
     @pytest.mark.asyncio
     @pytest.mark.parametrize("template_file", get_basic_template_files(), ids=lambda x: x.name)
     async def test_basic_template_flow_execution(self, template_file, client, logged_in_headers):

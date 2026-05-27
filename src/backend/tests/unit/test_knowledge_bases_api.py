@@ -223,6 +223,11 @@ class TestKnowledgeBaseAPI:
         assert data["name"] == "New KB"
         assert data["backend_type"] == "opensearch"
         assert data["backend_config"] == {"index_name": "new_kb_index"}
+        mock_fresh_client.return_value.create_collection.assert_called_once_with(
+            name=kb_name,
+            configuration={"embedding_function": None},
+            embedding_function=None,
+        )
         record = await knowledge_base_service.get_by_user_and_name(active_user.id, kb_name)
         assert record is not None
         assert record.model_selection == model_selection

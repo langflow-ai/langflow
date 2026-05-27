@@ -298,6 +298,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-extensions-production",
+          label: "Production install pattern for Extensions",
+        },
+        {
+          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
@@ -336,6 +341,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -353,7 +359,7 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",

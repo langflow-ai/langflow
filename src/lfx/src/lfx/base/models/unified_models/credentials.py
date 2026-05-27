@@ -354,8 +354,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
+    validation_model = model_name or first_model
+
     # For providers that need a model to test credentials
-    if not first_model and provider in [
+    if not validation_model and provider in [
         "OpenAI",
         "Anthropic",
         "Google Generative AI",
@@ -370,7 +372,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
+            llm = ChatOpenAI(api_key=api_key, model_name=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Anthropic":
@@ -379,7 +381,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("ANTHROPIC_API_KEY")
             if not api_key:
                 return
-            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Google Generative AI":
@@ -388,7 +390,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("GOOGLE_API_KEY")
             if not api_key:
                 return
-            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
@@ -402,11 +404,45 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
-                model_id=first_model,
+                model_id=validation_model,
                 project_id=project_id,
                 params={"max_new_tokens": 1},
             )
             llm.invoke("test")
+
+        elif provider == "OpenRouter":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("OPENROUTER_API_KEY")
+            if not api_key:
+                return
+
+            # ``/api/v1/models`` is a public OpenRouter endpoint (200 for any
+            # bearer, including missing/invalid). Use ``/api/v1/auth/key``
+            # instead — it's documented for key validation, returns 401 on
+            # invalid keys, and only costs a tiny metadata round-trip.
+            try:
+                response = requests.get(
+                    "https://openrouter.ai/api/v1/auth/key",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code == HTTPStatus.UNAUTHORIZED:
+                    msg = "Invalid OpenRouter API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                # Network/timeout/5xx during validation: surface as ValueError so
+                # the variable API returns a user-facing 400 instead of an
+                # unhandled 500 (api/v1/variable.py only catches ValueError).
+                msg = f"Could not reach OpenRouter to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
 
         elif provider == "Ollama":
             import requests

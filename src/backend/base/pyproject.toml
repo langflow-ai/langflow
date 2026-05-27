@@ -108,7 +108,7 @@ dependencies = [
 
 [tool.uv]
 override-dependencies = [
-    "litellm>=1.83.0"
+    "litellm>=1.85.1,<2.0.0"
 ]
 
 [dependency-groups]
@@ -205,7 +205,7 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -239,7 +239,12 @@ sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
-langfuse = ["langfuse~=3.8"]
+# pydantic>=2.13 is required because langfuse v3 imports pydantic.v1.BaseModel,
+# which only supports Python 3.14 from pydantic 2.13 onward. Without this guard
+# the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
+# 3.14 environments (e.g. the official Docker image), causing tracing to
+# silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
+langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
 langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
@@ -260,6 +265,14 @@ serpapi = ["google-search-results>=2.4.1,<3.0.0"]
 google-api = ["google-api-python-client~=2.161"]
 wikipedia = ["wikipedia==1.4.0"]
 fake-useragent = ["fake-useragent>=2.0.0"]
+# duckduckgo: the runtime dep for the extracted lfx-duckduckgo bundle.
+# Public consumers should install lfx-duckduckgo directly (pip-installing
+# langflow-base no longer pulls in ddgs by default).  The extra remains
+# defined here so docker/build_and_push_base.Dockerfile can route ddgs
+# through the locked sync (``uv sync --extra duckduckgo``) instead of an
+# unpinned ``uv pip install ddgs`` that would silently drift across
+# rebuilds.  Keep the version range in lockstep with the bundle's
+# pyproject so the lockfile resolves a single ddgs version.
 duckduckgo = ["ddgs>=9.0.0"]
 yfinance = ["yfinance==0.2.50"]
 wolframalpha = ["wolframalpha==5.1.3"]
@@ -284,10 +297,10 @@ numexpr = ["numexpr==2.10.2"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = [
-    "litellm>=1.83.0",
+    "litellm>=1.85.1,<2.0.0",
     # Runtime deps from litellm[proxy] that langflow-ide hits when logging
     # to langfuse via litellm.proxy.proxy_server (issue #12228). The full
-    # [proxy] extra pins boto3>=1.40.76, which conflicts with our aioboto3
+    # [proxy] extra pins boto3==1.43.1, which conflicts with our aioboto3
     # transitive cap, so we pull in just the missing modules instead.
     "apscheduler>=3.10.4,<4.0.0",
     "cryptography",
@@ -304,7 +317,7 @@ composio = [
 ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
-mem0 = ["mem0ai>=0.1.34"]
+mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
@@ -317,14 +330,14 @@ spider = ["spider-client>=0.0.27,<1.0.0"]
 # ALTK (Agent Lifecycle Toolkit)
 # Updated to 0.10.1+ for PyTorch 2.6.0 compatibility (addresses torch.load RCE vulnerability)
 # Upper bound prevents breaking changes in future major versions
-# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2 (see LE-172)
+# Excluded on macOS x86_64: PyTorch dropped Intel Mac wheel builds after v2.2.2
 altk = ["agent-lifecycle-toolkit>=0.10.1,<1.0; (sys_platform != 'darwin' or platform_machine != 'x86_64') and python_version < '3.14'"]
 
 # Toolguard Integration
 toolguard = ["toolguard>=0.2.16,<1.0.0"]
 
 # Additional LangChain integrations
-# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels (see LE-172)
+# Excluded on macOS x86_64: transitive torch dependency (via sentence-transformers) has no Intel Mac wheels
 langchain-huggingface = ["langchain-huggingface~=1.2.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 langchain-unstructured = ["langchain-unstructured~=1.0.0"]
 graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
@@ -422,7 +435,8 @@ complete = [
     "langflow-base[google-api]",
     "langflow-base[wikipedia]",
     "langflow-base[fake-useragent]",
-    "langflow-base[duckduckgo]",
+    # duckduckgo was an extra of langflow-base; it has been moved to
+    # the standalone lfx-duckduckgo bundle (now a regular dep of langflow).
     "langflow-base[yfinance]",
     "langflow-base[wolframalpha]",
     "langflow-base[pyarrow]",
