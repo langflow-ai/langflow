@@ -1027,8 +1027,7 @@ class Graph:
                     active_predecessors = [
                         p_id
                         for p_id in self.predecessor_map.get(v_id, [])
-                        if self.get_vertex(p_id).is_active()
-                        and (p_id not in visited or p_id == vertex_id)
+                        if self.get_vertex(p_id).is_active() and (p_id not in visited or p_id == vertex_id)
                     ]
                     if active_predecessors:
                         self.mark_vertex(v_id, VertexStates.ACTIVE)
