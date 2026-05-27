@@ -29,14 +29,14 @@ from lfx.inputs.inputs import MessageTextInput
 from lfx.io import Output
 from lfx.schema.message import Message
 
-
 # --- Test components ---------------------------------------------------
 
 
 class RandomMenuItem(Component):
-    """Mirrors the user's failing case: a custom tool with no inputs and a
-    generic method name (``output``). The class name carries all the
-    semantic signal."""
+    """Mirrors the user's failing case: no inputs, generic method name (``output``).
+
+    The class name carries all the semantic signal.
+    """
 
     display_name = "RandomMenuItem"
     description = "Returns a random menu item from the bar."
@@ -53,9 +53,11 @@ class RandomMenuItem(Component):
 
 
 class DrinkPrice(Component):
-    """LLM-generated component with the other common generic method name
-    (``process``). Has one tool_mode input — the schema is fine, only the
-    tool name is uninformative."""
+    """LLM-generated component with the other common generic method name (``process``).
+
+    Has one tool_mode input — the schema is fine, only the tool name is
+    uninformative.
+    """
 
     display_name = "DrinkPrice"
     description = "Returns the price of a drink."
@@ -74,9 +76,11 @@ class DrinkPrice(Component):
 
 
 class GetWeather(Component):
-    """LLM-generated component that DID name its method well
-    (``get_forecast``). The fallback must NOT touch this — the method
-    name is the authoritative tool name when it is descriptive."""
+    """LLM-generated component that DID name its method well (``get_forecast``).
+
+    The fallback must NOT touch this — the method name is the
+    authoritative tool name when it is descriptive.
+    """
 
     display_name = "GetWeather"
     description = "Returns the weather forecast for a city."
@@ -95,10 +99,12 @@ class GetWeather(Component):
 
 
 class MultiOutputComponent(Component):
-    """A multi-output component with generic-named methods. The fallback
-    must NOT apply here — collapsing both tools to the same class-derived
-    name would shadow one of them, which is worse than uninformative
-    names. Existing behavior (method-name → tool-name) is correct.
+    """A multi-output component with generic-named methods.
+
+    The fallback must NOT apply here — collapsing both tools to the same
+    class-derived name would shadow one of them, which is worse than
+    uninformative names. Existing behavior (method-name → tool-name) is
+    correct.
     """
 
     display_name = "MultiOutputComponent"
@@ -130,9 +136,9 @@ class MultiOutputComponent(Component):
     ],
 )
 def test_generic_method_name_falls_back_to_class_name(component_cls, expected_tool_name):
-    """A single-output component with a generic method name should expose
-    a tool whose name is derived from the component's class name. This is
-    the fix for the production "agent can't use my custom tool" failure.
+    """Single-output components with a generic method name expose a class-derived tool name.
+
+    Fix for the production "agent can't use my custom tool" failure.
     """
     toolkit = ComponentToolkit(component=component_cls())
     tools = toolkit.get_tools()
@@ -147,9 +153,10 @@ def test_generic_method_name_falls_back_to_class_name(component_cls, expected_to
 
 
 def test_meaningful_method_name_is_preserved():
-    """When the method name is already descriptive, the fallback must NOT
-    apply — overriding it would discard intent the LLM (or component
-    author) deliberately encoded.
+    """Descriptive method names must NOT be rewritten by the fallback.
+
+    Overriding them would discard intent the LLM (or component author)
+    deliberately encoded.
     """
     toolkit = ComponentToolkit(component=GetWeather())
     tools = toolkit.get_tools()
@@ -162,8 +169,9 @@ def test_meaningful_method_name_is_preserved():
 
 
 def test_multi_output_component_keeps_method_names():
-    """The fallback must only apply to single-output components — for
-    multi-output components, collapsing several tools to the same
+    """The fallback must only apply to single-output components.
+
+    For multi-output components, collapsing several tools to the same
     class-derived name would shadow one of them, which is a regression.
     """
     toolkit = ComponentToolkit(component=MultiOutputComponent())
@@ -189,10 +197,11 @@ def test_multi_output_component_keeps_method_names():
     ],
 )
 def test_class_to_tool_name_handles_common_casing(class_name, expected_snake):
-    """The CamelCase→snake_case helper must handle acronyms and existing
-    underscores correctly — these patterns appear in real LLM-generated
-    components and a bad conversion produces tool names that are even
-    less helpful than the generic ones.
+    """CamelCase→snake_case helper handles acronyms and existing underscores correctly.
+
+    These patterns appear in real LLM-generated components and a bad
+    conversion produces tool names that are even less helpful than the
+    generic ones.
     """
     from lfx.base.tools.component_tool import _class_name_to_tool_name
 
@@ -203,19 +212,20 @@ def test_class_to_tool_name_handles_common_casing(class_name, expected_snake):
 
 
 class UserDeclaredReservedNameComponent(Component):
-    """The component the user actually ran into (2026-05-27): the LLM
-    declared ``Output(name="component_as_tool", ...)``. Reproduces the
-    ZERO-TOOL failure: the reserved-name filter in
-    ``ComponentToolkit._should_skip_output`` was intended only to skip
-    the synthetic output that ``to_toolkit()`` adds — but the same
-    filter also drops user-declared outputs that happen to share the
-    name, so the agent receives an empty tool list and silently does
-    nothing.
+    """The component the user actually ran into (2026-05-27).
 
-    The whole point of the user wiring this component to the agent was
-    to give it that one tool. Returning [] is wrong; the user-declared
-    output must be exposed as a normal tool (with a method-derived or
-    class-derived name)."""
+    The LLM declared ``Output(name="component_as_tool", ...)``. Reproduces
+    the ZERO-TOOL failure: the reserved-name filter in
+    ``ComponentToolkit._should_skip_output`` was intended only to skip the
+    synthetic output that ``to_toolkit()`` adds — but the same filter also
+    drops user-declared outputs that happen to share the name, so the
+    agent receives an empty tool list and silently does nothing.
+
+    The whole point of the user wiring this component to the agent was to
+    give it that one tool. Returning [] is wrong; the user-declared output
+    must be exposed as a normal tool (with a method-derived or class-derived
+    name).
+    """
 
     display_name = "Random Menu Item"
     description = "Returns a random item from the bar menu."
@@ -239,12 +249,13 @@ class UserDeclaredReservedNameComponent(Component):
 
 
 def test_user_declared_reserved_output_name_still_produces_a_tool():
-    """The CORE production bug. With the fix in place,
-    ``ComponentToolkit.get_tools()`` must still emit a usable tool for
-    the user's component even when the LLM-generated code declared the
-    output with the reserved name ``component_as_tool``. Otherwise the
-    agent receives an empty list and the wired tool silently does
-    nothing — which is exactly the failure the user reported across
+    """The CORE production bug: user-declared reserved-name output must still produce a tool.
+
+    With the fix in place, ``ComponentToolkit.get_tools()`` must still emit
+    a usable tool for the user's component even when the LLM-generated
+    code declared the output with the reserved name ``component_as_tool``.
+    Otherwise the agent receives an empty list and the wired tool silently
+    does nothing — which is exactly the failure the user reported across
     three attempts in the production video.
     """
     toolkit = ComponentToolkit(component=UserDeclaredReservedNameComponent())

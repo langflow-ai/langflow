@@ -1,6 +1,6 @@
-"""Reject generated component code that uses the reserved synthetic
-Tool sentinel — defense-in-depth on top of the runtime ComponentToolkit
-fix.
+"""Reject generated component code that uses the reserved synthetic Tool sentinel.
+
+Defense-in-depth on top of the runtime ComponentToolkit fix.
 
 Production failure (2026-05-27): the assistant produced a
 ``RandomMenuItemComponent`` whose ``outputs`` listed

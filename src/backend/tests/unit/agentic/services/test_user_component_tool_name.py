@@ -1,5 +1,4 @@
-"""Run-level proof that a user-registered component with a generic output
-method name is exposed to the agent as a tool with a meaningful name.
+"""Run-level proof that a user component with a generic method gets a meaningful tool name.
 
 Production failure (2026-05-27 video): user asks the assistant to create
 ``RandomMenuItem`` as a tool for the agent. The assistant generates code
@@ -13,12 +12,13 @@ path (``load_registry_with_user_overlay`` →
 derived from the class name, NOT the generic method. The unit-level
 behavior of the rename rule is covered in
 ``src/lfx/tests/unit/custom/component/test_tool_name_fallback.py``;
-this file is the integration glue."""
+this file is the integration glue.
+"""
 
 from __future__ import annotations
 
 import secrets
-from pathlib import Path
+from typing import TYPE_CHECKING
 
 import pytest
 from langflow.agentic.services.user_components import register_user_component
@@ -26,12 +26,16 @@ from langflow.agentic.services.user_components_overlay import load_registry_with
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
 
 @pytest.fixture
 def isolated_sandbox(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Path:
-    """Pin the per-user components dir to a tmp_path so this test never
-    pollutes the developer's real ``~/.components`` and never inherits
-    leftover files from earlier failed runs.
+    """Pin the per-user components dir to a tmp_path for test isolation.
+
+    Avoids polluting the developer's real ``~/.components`` and never
+    inherits leftover files from earlier failed runs.
 
     Duplicated from ``test_user_components_overlay.py`` instead of
     promoted to a conftest because that fixture also stubs the
@@ -65,10 +69,10 @@ _RANDOM_MENU_ITEM_CODE = (
 async def test_registered_component_with_generic_method_exposes_class_named_tool(
     isolated_sandbox: Path,  # noqa: ARG001 — fixture isolates the per-user .components dir
 ) -> None:
-    """The end-to-end production path: register → load overlay →
-    instantiate → ``to_toolkit`` → assert the LLM-facing tool name.
+    """End-to-end production path through register/overlay/toolkit, asserting the LLM-facing name.
 
-    Closing the loop here is critical because the runtime rename rule
+    Register → load overlay → instantiate → ``to_toolkit`` → assert the
+    LLM-facing tool name. Closing the loop here is critical because the runtime rename rule
     lives in ``ComponentToolkit.get_tools`` and could silently regress
     when the overlay path is refactored (e.g. if a future change builds
     the toolkit from the static template dict instead of the

@@ -54,10 +54,11 @@ def generator_prompt() -> str:
 
 
 class TestAgentToolCompatibilitySection:
-    """The prompt must teach the LLM the three things that decide whether a
-    generated component is usable as an agent tool: meaningful method
-    name, descriptive ``description``, and explicit ``tool_mode=True`` on
-    LLM-passed inputs."""
+    """Prompt covers the three traits that make a generated component agent-callable.
+
+    Meaningful method name, descriptive ``description``, and explicit
+    ``tool_mode=True`` on LLM-passed inputs.
+    """
 
     def test_section_is_present(self, generator_prompt: str):
         assert "Agent Tool Compatibility" in generator_prompt, (
