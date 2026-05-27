@@ -1010,6 +1010,22 @@ class Graph:
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
         visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+
+        # Reactivate common downstream vertices that have at least one active predecessor
+        # outside the stopped branch. Without this, merge/combine nodes that receive input
+        # from both active and inactive branches would be blocked forever.
+        if state == VertexStates.INACTIVE:
+            for v_id in list(visited):
+                vertex = self.get_vertex(v_id)
+                active_predecessors = [
+                    p_id
+                    for p_id in self.predecessor_map.get(v_id, [])
+                    if p_id not in visited and self.get_vertex(p_id).is_active()
+                ]
+                if active_predecessors:
+                    self.mark_vertex(v_id, VertexStates.ACTIVE)
+                    visited.discard(v_id)
+
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1052,6 +1068,12 @@ class Graph:
         # Track which vertices this source excluded
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
+
+        # Remove conditionally excluded vertices from the run_manager's predecessor
+        # lists so that downstream merge/combine nodes can proceed with available
+        # inputs instead of waiting forever for data from the excluded branch.
+        for excluded_id in excluded:
+            self.run_manager.remove_from_predecessors(excluded_id)
 
     def _exclude_branch_conditionally(
         self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
