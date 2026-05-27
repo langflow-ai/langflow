@@ -138,17 +138,16 @@ async def _call_layout_flow_tool(flow_id, _flow):
         await layout_flow_tool(flow_id)
 
 
-async def _call_update_flow_from_spec(flow_id, flow):
+async def _call_update_flow_from_spec(flow_id, _flow):
     from lfx.mcp.server import update_flow_from_spec
 
     parsed = {"name": "T", "description": "", "nodes": [{"id": "A", "type": "ChatInput"}], "edges": [], "config": {}}
     with (
         patch("lfx.mcp.server.parse_flow_spec", return_value=parsed),
         patch("lfx.mcp.server.validate_spec_references"),
-        patch("lfx.mcp.server.empty_flow", return_value=flow),
-        patch("lfx.mcp.server.fb_add_component", return_value={"id": "X-1"}),
-        patch("lfx.mcp.server.layout_flow"),
-        patch("lfx.mcp.server.fb_spec_summary", return_value="A: ChatInput"),
+        patch("lfx.mcp.server.add_component", new_callable=AsyncMock, return_value={"id": "X-1"}),
+        patch("lfx.mcp.server._create_prompt_template_vars", new_callable=AsyncMock),
+        patch("lfx.mcp.server.get_flow_info", new_callable=AsyncMock, return_value={"id": flow_id}),
     ):
         await update_flow_from_spec(flow_id, "nodes:\n  A: ChatInput")
 
@@ -162,7 +161,7 @@ TOOL_CASES = [
     ("freeze_component", _call_freeze_component, "component_configured"),
     ("unfreeze_component", _call_unfreeze_component, "component_configured"),
     ("layout_flow_tool", _call_layout_flow_tool, "flow_updated"),
-    ("update_flow_from_spec", _call_update_flow_from_spec, "flow_updated"),
+    ("update_flow_from_spec", _call_update_flow_from_spec, "flow_settled"),
 ]
 
 
@@ -207,7 +206,7 @@ class TestCreateFlowFromSpecEmitsSettled:
             patch("lfx.mcp.server.validate_spec_references"),
             patch("lfx.mcp.server.create_flow", new_callable=AsyncMock, return_value=created),
             patch("lfx.mcp.server.add_component", new_callable=AsyncMock, return_value={"id": "X-1"}),
-            patch("lfx.mcp.server.build_flow", new_callable=AsyncMock),
+            patch("lfx.mcp.server.validate_flow", new_callable=AsyncMock, return_value={"valid": True}),
             patch("lfx.mcp.server.get_flow_info", new_callable=AsyncMock, return_value={"id": "flow-new"}),
         ):
             await create_flow_from_spec("nodes:\n  A: ChatInput")

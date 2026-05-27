@@ -41,6 +41,10 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
             sa.Uuid(), ForeignKey("deployment_provider_account.id", ondelete="CASCADE"), nullable=False, index=True
         )
     )
+    workspace_id: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), nullable=True, index=True),
+    )
     name: str = Field(index=True)
     description: str | None = Field(
         default=None,

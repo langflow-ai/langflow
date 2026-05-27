@@ -580,6 +580,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
+        },
+        {
+          type: "doc",
           id: "Support/contributing-github-issues",
           label: "Get help and request enhancements",
         },

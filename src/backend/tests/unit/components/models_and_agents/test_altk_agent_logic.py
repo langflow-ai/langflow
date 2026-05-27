@@ -1640,3 +1640,45 @@ class TestConversationContextOrdering:
                 direct_fix_worked = "353454" in first_content and "plus" in last_content
                 logger.debug(f"Direct method fix worked: {direct_fix_worked}")
                 assert direct_fix_worked, "Direct method should fix the ordering"
+
+
+class TestALTKAgentRunnableType:
+    """ALTK Agent runs on legacy AgentExecutor.
+
+    Its create_agent_runnable must NOT return a langgraph CompiledStateGraph (the new
+    create_agent return type inherited from AgentComponent). Wrapping a
+    CompiledStateGraph in AgentExecutor.from_agent_and_tools surfaces as
+    `TypeError: unsupported operand type(s) for +=: 'dict' and 'dict'` at run time
+    (LangChain RunnableAgent tries to accumulate graph state dicts) or as
+    `contents are required` when a Gemini-backed flow is built on it (UI-016).
+    """
+
+    def test_should_return_lc_runnable_not_compiled_state_graph_when_creating_agent_runnable(self):
+        from unittest.mock import patch
+
+        from langgraph.graph.state import CompiledStateGraph
+        from lfx.components.altk.altk_agent import ALTKAgentComponent
+
+        agent = ALTKAgentComponent(
+            _type="Agent",
+            agent_llm=MockLanguageModel(),
+            input_value="hello",
+            tools=[],
+            enable_tool_validation=False,
+            enable_post_tool_reflection=False,
+            response_processing_size_threshold=50,
+            system_prompt="Test prompt",
+            model_name="gpt-4o",
+            api_key="sk-test",
+            handle_parsing_errors=True,
+            max_iterations=10,
+        )
+
+        with patch.object(ALTKAgentComponent, "_get_llm", return_value=MockLanguageModel()):
+            runnable = agent.create_agent_runnable()
+
+        assert not isinstance(runnable, CompiledStateGraph), (
+            "ALTK Agent must build the legacy LC tool-calling agent runnable; returning a "
+            "CompiledStateGraph (langgraph) breaks AgentExecutor wrapping and reproduces "
+            "the UI-016 build error ('contents are required' / 'dict += dict')."
+        )

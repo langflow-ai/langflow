@@ -23,11 +23,44 @@ INPUT_NAMES_TO_BE_OVERRIDDEN = ["agent_llm"]
 
 
 def get_parent_agent_inputs():
-    return [
-        input_field
+    """Inherit parent inputs, but restore the legacy AgentExecutor semantics.
+
+    ALTK Agent still runs on `AgentExecutor` (see `ALTKBaseAgentComponent.run_agent`),
+    so it needs the legacy `verbose` input and the original `handle_parsing_errors` /
+    `max_iterations` info text. The parent `AgentComponent` dropped `verbose` and
+    re-worded those two info strings to describe `create_agent` middleware, which
+    would be misleading here.
+    """
+    overrides = {
+        "handle_parsing_errors": BoolInput(
+            name="handle_parsing_errors",
+            display_name="Handle Parse Errors",
+            value=True,
+            advanced=True,
+            info="Should the Agent fix errors when reading user input for better processing?",
+        ),
+        "max_iterations": IntInput(
+            name="max_iterations",
+            display_name="Max Iterations",
+            value=15,
+            advanced=True,
+            info="The maximum number of attempts the agent can make to complete its task before it stops.",
+        ),
+    }
+    parent_inputs = [
+        overrides.get(input_field.name, input_field)
         for input_field in ALTKBaseAgentComponent.inputs
         if input_field.name not in INPUT_NAMES_TO_BE_OVERRIDDEN
     ]
+    # `verbose` was removed from `AgentComponent.inputs`. ALTK's `run_agent` still
+    # passes it through to `AgentExecutor.from_agent_and_tools(verbose=...)`, so
+    # re-add it after `handle_parsing_errors` to preserve the previous UI order.
+    rebuilt: list = []
+    for input_field in parent_inputs:
+        rebuilt.append(input_field)
+        if input_field.name == "handle_parsing_errors":
+            rebuilt.append(BoolInput(name="verbose", display_name="Verbose", value=True, advanced=True))
+    return rebuilt
 
 
 # === Combined ALTK Agent Component ===
