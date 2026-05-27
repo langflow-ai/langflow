@@ -304,6 +304,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy with multiple workers",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },

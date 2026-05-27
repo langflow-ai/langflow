@@ -469,6 +469,7 @@ For high-concurrency deployments, consider the following best practices:
 - **Use PostgreSQL instead of SQLite:**
   SQLite can experience database locks and deadlocks with concurrent, write-heavy usage. For production or multi-worker environments, configure Langflow to use PostgreSQL by setting the `LANGFLOW_DATABASE_URL` environment variable (see [Memory management options](/memory#configure-external-memory)). This is strongly recommended to avoid operational issues.
 
+For a full setup guide including Docker Compose and Kubernetes examples, see [Deploy Langflow with multiple workers](/deployment-multi-worker).
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
 ### Storage
