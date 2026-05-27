@@ -426,6 +426,10 @@ async def get_deployment_row_or_404(
     user_id: UUID,
     db: DbSession,
 ) -> Deployment:
+    # ``get_deployment_db`` is share-aware when an authorization plugin is
+    # registered and ``LANGFLOW_AUTHZ_ENABLED`` is on; otherwise it stays
+    # owner-scoped. Routes still call ``ensure_deployment_permission`` after
+    # this to authorize the actor against the resolved deployment.
     deployment_row = await get_deployment_db(db, user_id=user_id, deployment_id=deployment_id)
     if deployment_row is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Deployment not found.")
@@ -440,9 +444,13 @@ async def resolve_adapter_from_deployment(
 ) -> tuple[Deployment, DeploymentServiceProtocol, str, str | None]:
     """Returns ``(deployment_row, adapter, provider_key, provider_tenant_id)``."""
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
+    # The provider account lives in the deployment owner's namespace, not the
+    # actor's. For shared deployments the actor may have no provider account
+    # of their own — scope the lookup by ``deployment_row.user_id`` so a
+    # cross-user deployment share resolves correctly.
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment_row.deployment_provider_account_id,
-        user_id=user_id,
+        user_id=deployment_row.user_id,
         db=db,
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)
@@ -459,9 +467,11 @@ async def resolve_adapter_mapper_from_deployment(
     from langflow.api.v1.mappers.deployments.registry import get_deployment_mapper
 
     deployment_row = await get_deployment_row_or_404(deployment_id=deployment_id, user_id=user_id, db=db)
+    # Resolve the provider account against the deployment owner so cross-user
+    # share grants reach the right row; see ``resolve_adapter_from_deployment``.
     provider_account = await get_owned_provider_account_or_404(
         provider_id=deployment_row.deployment_provider_account_id,
-        user_id=user_id,
+        user_id=deployment_row.user_id,
         db=db,
     )
     deployment_adapter = resolve_deployment_adapter(provider_account.provider_key)

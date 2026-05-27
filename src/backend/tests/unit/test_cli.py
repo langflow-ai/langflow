@@ -13,6 +13,7 @@ from langflow.__main__ import (
     app,
     build_direct_uvicorn_kwargs,
     clamp_uvicorn_workers,
+    ensure_multi_worker_safe,
     get_number_of_workers,
     use_direct_uvicorn,
 )
@@ -331,3 +332,57 @@ def test_build_direct_uvicorn_kwargs_pins_full_shape():
         "ssl_keyfile",
     }
     assert result["reload"] is False
+
+
+# ---------------------------------------------------------------------------
+# ensure_multi_worker_safe: refuse to boot with the in-memory queue and N>1
+# workers. The bug is silent: ~45-66% of build polls return "Job not found"
+# because Gunicorn round-robins the POST and the follow-up GET across workers,
+# but the queue is worker-local.
+# ---------------------------------------------------------------------------
+
+
+def test_ensure_multi_worker_safe_allows_single_worker():
+    """Single worker means no cross-worker routing; must not raise."""
+    ensure_multi_worker_safe(num_workers=1)
+
+
+def _settings_service_with_queue(queue_type: str) -> SimpleNamespace:
+    return SimpleNamespace(settings=SimpleNamespace(job_queue_type=queue_type))
+
+
+def test_ensure_multi_worker_safe_refuses_multiple_workers():
+    """Default in-memory queue + workers > 1 must refuse to start."""
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        ensure_multi_worker_safe(num_workers=3)
+
+    msg = str(exc_info.value)
+    assert "3 workers" in msg
+    assert "in-memory job queue" in msg
+
+
+def test_ensure_multi_worker_safe_error_lists_workarounds():
+    """Error must point operators at concrete fixes, not just describe the bug."""
+    with (
+        patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("asyncio")),
+        pytest.raises(RuntimeError) as exc_info,
+    ):
+        ensure_multi_worker_safe(num_workers=3)
+
+    msg = str(exc_info.value)
+    # Shared queue is the proper fix for any event_delivery mode.
+    assert "LANGFLOW_JOB_QUEUE_TYPE=redis" in msg
+    # Single worker sidesteps cross-worker routing entirely.
+    assert "--workers 1" in msg
+    # event_delivery=direct works but cannot be enforced at startup, so it's a
+    # note, not a "pick one of" option — call that out explicitly.
+    assert "event_delivery=direct" in msg
+
+
+def test_ensure_multi_worker_safe_allows_redis_queue():
+    """Redis-backed job queue shares state across workers; multi-worker is safe."""
+    with patch("langflow.__main__.get_settings_service", return_value=_settings_service_with_queue("redis")):
+        ensure_multi_worker_safe(num_workers=4)
