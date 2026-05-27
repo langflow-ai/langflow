@@ -26,7 +26,7 @@ from copy import deepcopy
 from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, status
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Query, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.graph.graph.base import Graph
 from lfx.log.logger import logger
@@ -45,6 +45,7 @@ from lfx.services.deps import get_settings_service, injectable_session_scope_rea
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
+from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.schemas import RunResponse
 from langflow.api.v2.converters import (
     create_error_response,
@@ -99,6 +100,40 @@ def check_developer_api_enabled() -> None:
 router = APIRouter(prefix="/workflows", tags=["Workflow"], dependencies=[Depends(check_developer_api_enabled)])
 
 
+def _resolve_request_variables(
+    workflow_request: WorkflowExecutionRequest, http_request: Request | None
+) -> dict[str, str]:
+    """Resolve request-level global variables for a v2 workflow execution.
+
+    v2 workflows take globals from the JSON request body so arbitrary Unicode
+    values can be transported safely. The legacy ``X-LANGFLOW-GLOBAL-VAR-*``
+    headers are still honored for one release for backwards compatibility,
+    but a deprecation warning is logged and body globals always win on
+    conflict.
+    """
+    body_globals = dict(workflow_request.globals or {})
+    legacy_globals: dict[str, str] = {}
+    if http_request is not None:
+        legacy_globals = extract_global_variables_from_headers(http_request.headers)
+    if legacy_globals:
+        logger.warning(
+            "X-LANGFLOW-GLOBAL-VAR-* headers are deprecated on /api/v2/workflows; "
+            "send request-level globals in the JSON body instead. Header-based "
+            "globals will be removed in a future Langflow release."
+        )
+    # Body wins on conflict.
+    return {**legacy_globals, **body_globals}
+
+
+def _build_graph_context(request_variables: dict[str, str]) -> dict | None:
+    """Build the optional graph context for a v2 workflow execution.
+
+    Returns None when there are no request variables so the downstream graph
+    init can short-circuit on falsy context.
+    """
+    return {"request_variables": request_variables} if request_variables else None
+
+
 @router.post(
     "",
     response_model=None,
@@ -110,6 +145,7 @@ router = APIRouter(prefix="/workflows", tags=["Workflow"], dependencies=[Depends
 async def execute_workflow(
     workflow_request: WorkflowExecutionRequest,
     background_tasks: BackgroundTasks,
+    http_request: Request,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
 ) -> WorkflowExecutionResponse | WorkflowJobResponse | StreamingResponse:
     """Execute a workflow with support for multiple execution modes.
@@ -127,6 +163,7 @@ async def execute_workflow(
     Args:
         workflow_request: The workflow execution request containing flow_id, inputs, and mode flags
         background_tasks: FastAPI background tasks for async operations
+        http_request: The HTTP request, used to honor deprecated ``X-LANGFLOW-GLOBAL-VAR-*`` headers
         api_key_user: Authenticated user from API key
 
     Returns:
@@ -171,6 +208,7 @@ async def execute_workflow(
                 flow=flow,
                 job_id=job_id,
                 api_key_user=api_key_user,
+                http_request=http_request,
             )
 
         # Streaming mode (to be implemented)
@@ -191,6 +229,7 @@ async def execute_workflow(
             job_id=job_id,
             api_key_user=api_key_user,
             background_tasks=background_tasks,
+            http_request=http_request,
         )
 
     except HTTPException as e:
@@ -276,6 +315,7 @@ async def execute_sync_workflow_with_timeout(
     job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,
+    http_request: Request | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -285,6 +325,7 @@ async def execute_sync_workflow_with_timeout(
         job_id: Generated job ID for tracking
         api_key_user: Authenticated user
         background_tasks: FastAPI background tasks
+        http_request: The HTTP request, used to honor deprecated ``X-LANGFLOW-GLOBAL-VAR-*`` headers
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -301,6 +342,7 @@ async def execute_sync_workflow_with_timeout(
                 job_id=job_id,
                 api_key_user=api_key_user,
                 background_tasks=background_tasks,
+                http_request=http_request,
             ),
             timeout=EXECUTION_TIMEOUT,
         )
@@ -314,6 +356,7 @@ async def execute_sync_workflow(
     job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
+    http_request: Request | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -339,6 +382,7 @@ async def execute_sync_workflow(
         job_id: Generated job ID for tracking this execution
         api_key_user: Authenticated user for permission checks
         background_tasks: FastAPI background tasks (unused in sync mode)
+        http_request: The HTTP request, used to honor deprecated ``X-LANGFLOW-GLOBAL-VAR-*`` headers
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -354,12 +398,12 @@ async def execute_sync_workflow(
         msg = f"Flow {flow.id} has no data. The flow may be corrupted."
         raise WorkflowValidationError(msg)
 
-    # V2 workflows accept request-level variables in the JSON body so arbitrary
-    # Unicode strings are transported safely instead of using legacy headers.
-    request_variables = dict(workflow_request.globals or {})
-
-    # Build context from request variables (similar to V1's _run_flow_internal)
-    context = {"request_variables": request_variables} if request_variables else None
+    # V2 workflows take request-level variables from the JSON body so arbitrary
+    # Unicode strings transport safely. The legacy X-LANGFLOW-GLOBAL-VAR-*
+    # headers are still honored for one release with a deprecation warning;
+    # body globals win on conflict.
+    request_variables = _resolve_request_variables(workflow_request, http_request)
+    context = _build_graph_context(request_variables)
 
     # Build graph - system error if this fails
     try:
@@ -419,6 +463,7 @@ async def execute_sync_workflow(
             job_id=str(job_id),
             workflow_request=workflow_request,
             graph=graph,
+            effective_globals=request_variables,
         )
 
     except asyncio.CancelledError:
@@ -437,6 +482,7 @@ async def execute_sync_workflow(
             job_id=job_id,
             workflow_request=workflow_request,
             error=exc,
+            effective_globals=request_variables,
         )
 
 
@@ -445,6 +491,7 @@ async def execute_workflow_background(
     flow: FlowRead,
     job_id: JobId,
     api_key_user: UserRead,
+    http_request: Request | None = None,
 ) -> WorkflowJobResponse:
     """Execute workflow in the background and return job ID for the user to track the execution status."""
     try:
@@ -456,12 +503,12 @@ async def execute_workflow_background(
             msg = f"Flow {flow.id} has no data"
             raise ValueError(msg)
 
-        # V2 workflows accept request-level variables in the JSON body so arbitrary
-        # Unicode strings are transported safely instead of using legacy headers.
-        request_variables = dict(workflow_request.globals or {})
-
-        # Build context from request variables (similar to V1's _run_flow_internal)
-        context = {"request_variables": request_variables} if request_variables else None
+        # V2 workflows take request-level variables from the JSON body so arbitrary
+        # Unicode strings transport safely. The legacy X-LANGFLOW-GLOBAL-VAR-*
+        # headers are still honored for one release with a deprecation warning;
+        # body globals win on conflict.
+        request_variables = _resolve_request_variables(workflow_request, http_request)
+        context = _build_graph_context(request_variables)
 
         # Build the graph once
         flow_id_str = str(flow.id)
@@ -533,7 +580,7 @@ async def execute_workflow_background(
             job_id=str(job_id),
             flow_id=workflow_request.flow_id,
             status=status,
-            globals=workflow_request.globals or {},
+            globals=request_variables,
         )
 
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):

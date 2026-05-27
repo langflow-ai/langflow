@@ -938,14 +938,20 @@ class TestWorkflowSyncExecution:
                 if flow:
                     await session.delete(flow)
 
-    async def test_sync_execution_ignores_legacy_global_variable_headers(
+    async def test_sync_execution_honors_legacy_global_variable_headers_with_deprecation(
         self,
         client: AsyncClient,
         created_api_key,
         mock_settings_dev_api_enabled,  # noqa: ARG002
     ):
-        """V2 workflows no longer read X-LANGFLOW-GLOBAL-VAR-* headers."""
+        """V2 workflows still read X-LANGFLOW-GLOBAL-VAR-* headers for one release.
+
+        Legacy headers are honored so existing callers don't silently lose their
+        global variables, but a deprecation warning is emitted. Body globals
+        win over header globals on key conflicts.
+        """
         flow_id = uuid4()
+        body_globals = {"FILENAME": "body-wins.pdf"}
 
         async with session_scope() as session:
             flow = Flow(
@@ -965,6 +971,7 @@ class TestWorkflowSyncExecution:
                 "background": False,
                 "stream": False,
                 "inputs": {"ChatInput-abc.input_value": "what is 2+2"},
+                "globals": body_globals,
             }
             graph = _mock_empty_graph()
             mock_job_service = MagicMock()
@@ -977,17 +984,62 @@ class TestWorkflowSyncExecution:
                 patch("langflow.api.v2.workflow.Graph.from_payload", return_value=graph) as mock_from_payload,
                 patch("langflow.api.v2.workflow.get_job_service", return_value=mock_job_service),
                 patch("langflow.api.v2.workflow.get_task_service", return_value=mock_task_service),
+                patch("langflow.api.v2.workflow.logger.warning") as mock_warning,
             ):
                 headers = {
                     "x-api-key": created_api_key.api_key,
-                    "X-LANGFLOW-GLOBAL-VAR-FILENAME": "legacy-header.pdf",
+                    "X-LANGFLOW-GLOBAL-VAR-FILENAME": "header-loses.pdf",
+                    "X-LANGFLOW-GLOBAL-VAR-OWNER_NAME": "header-only",
                 }
                 response = await client.post("api/v2/workflows", json=request_data, headers=headers)
 
             assert response.status_code == 200
             result = response.json()
-            assert result["globals"] == {}
-            assert mock_from_payload.call_args.kwargs["context"] is None
+            expected_globals = {"FILENAME": "body-wins.pdf", "OWNER_NAME": "header-only"}
+            assert result["globals"] == expected_globals
+            assert mock_from_payload.call_args.kwargs["context"] == {"request_variables": expected_globals}
+            mock_warning.assert_called_once()
+            assert "deprecated" in mock_warning.call_args.args[0].lower()
+
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, flow_id)
+                if flow:
+                    await session.delete(flow)
+
+    async def test_sync_execution_rejects_oversized_globals_value(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        mock_settings_dev_api_enabled,  # noqa: ARG002
+    ):
+        """Body globals values are bounded; oversized values are rejected at validation."""
+        from lfx.schema.workflow import GLOBAL_VALUE_MAX_LEN
+
+        flow_id = uuid4()
+
+        async with session_scope() as session:
+            flow = Flow(
+                id=flow_id,
+                name="Oversized Globals Flow",
+                description="Flow for oversized globals testing",
+                data={"nodes": [], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+            await session.refresh(flow)
+
+        try:
+            request_data = {
+                "flow_id": str(flow_id),
+                "background": False,
+                "stream": False,
+                "globals": {"BIG_VAR": "x" * (GLOBAL_VALUE_MAX_LEN + 1)},
+            }
+            headers = {"x-api-key": created_api_key.api_key}
+            response = await client.post("api/v2/workflows", json=request_data, headers=headers)
+            assert response.status_code == 422
 
         finally:
             async with session_scope() as session:

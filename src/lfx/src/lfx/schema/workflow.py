@@ -7,9 +7,20 @@ from enum import Enum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, model_validator
 
 from lfx.schema.validators import null_check_validator, uuid_validator
+
+# Bounds on body-transported global variables. Keys are intentionally liberal
+# (the Langflow UI accepts lowercase, digits, underscore, hyphen, and spaces);
+# we only constrain length so a single field can't push the request past a
+# reasonable size. Values are capped at 64 KB, which comfortably exceeds the
+# longest tokens/secrets stored as global variables in practice.
+GLOBAL_KEY_MAX_LEN = 256
+GLOBAL_VALUE_MAX_LEN = 64 * 1024
+
+GlobalVarKey = Annotated[str, StringConstraints(min_length=1, max_length=GLOBAL_KEY_MAX_LEN)]
+GlobalVarValue = Annotated[str, StringConstraints(max_length=GLOBAL_VALUE_MAX_LEN)]
 
 
 class JobStatus(str, Enum):
@@ -56,9 +67,15 @@ class WorkflowExecutionRequest(BaseModel):
     inputs: dict[str, Any] | None = Field(
         None, description="Component-specific inputs in flat format: 'component_id.param_name': value"
     )
-    globals: dict[str, str] | None = Field(
-        None,
-        description="Request-level global variables made available to workflow components.",
+    globals: dict[GlobalVarKey, GlobalVarValue] = Field(
+        default_factory=dict,
+        description=(
+            "Request-level global variables made available to workflow components. "
+            "Keys may use any printable string up to "
+            f"{GLOBAL_KEY_MAX_LEN} chars; values are capped at "
+            f"{GLOBAL_VALUE_MAX_LEN} chars. Body globals always win over the "
+            "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers."
+        ),
     )
 
     @model_validator(mode="after")
@@ -119,7 +136,7 @@ class WorkflowExecutionResponse(BaseModel):
     status: JobStatus
     errors: list[ErrorDetail] = []
     inputs: dict[str, Any] = {}
-    globals: dict[str, str] = Field(default_factory=dict)
+    globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)
     outputs: dict[str, ComponentOutput] = {}
 
 
@@ -133,7 +150,7 @@ class WorkflowJobResponse(BaseModel):
     status: JobStatus
     links: dict[str, str] = Field(default_factory=dict)
     errors: list[ErrorDetail] = []
-    globals: dict[str, str] = Field(default_factory=dict)
+    globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)
 
     @model_validator(mode="after")
     def build_links(self) -> WorkflowJobResponse:
