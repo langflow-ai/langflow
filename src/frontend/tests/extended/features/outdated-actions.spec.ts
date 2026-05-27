@@ -29,15 +29,15 @@ test("user must be able to update outdated components by update all button", asy
     dataTransfer,
   });
 
-  // Wait for the dropped flow ("Memory Chatbot") to appear in the list.
-  // Bootstrap pre-seeds a "Basic Prompting" flow, so waiting on the generic
-  // list-card selector races with the upload and can pick the wrong card.
-  const droppedFlowCard = page
-    .getByTestId("list-card")
-    .filter({ hasText: "Memory Chatbot" })
-    .first();
-  await droppedFlowCard.waitFor({ state: "visible", timeout: 30000 });
-  await droppedFlowCard.click();
+  // Wait for the upload-complete toast before clicking — bootstrap pre-seeds a
+  // "Basic Prompting" flow, so racing the generic list-card selector picks the
+  // wrong card before the dropped flow appears in the refetched list.
+  await expect(page.getByText("All files uploaded successfully")).toBeVisible({
+    timeout: 30000,
+  });
+
+  // List is sorted by updated_at DESC, so the newest (just-dropped) card is first.
+  await page.getByTestId("list-card").first().click();
 
   await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
@@ -114,15 +114,15 @@ test("user must be able to update outdated components by each outdated component
     dataTransfer,
   });
 
-  // Wait for the dropped flow ("Memory Chatbot") to appear in the list.
-  // Bootstrap pre-seeds a "Basic Prompting" flow, so waiting on the generic
-  // list-card selector races with the upload and can pick the wrong card.
-  const droppedFlowCard2 = page
-    .getByTestId("list-card")
-    .filter({ hasText: "Memory Chatbot" })
-    .first();
-  await droppedFlowCard2.waitFor({ state: "visible", timeout: 30000 });
-  await droppedFlowCard2.click();
+  // Wait for the upload-complete toast before clicking — bootstrap pre-seeds a
+  // "Basic Prompting" flow, so racing the generic list-card selector picks the
+  // wrong card before the dropped flow appears in the refetched list.
+  await expect(page.getByText("All files uploaded successfully")).toBeVisible({
+    timeout: 30000,
+  });
+
+  // List is sorted by updated_at DESC, so the newest (just-dropped) card is first.
+  await page.getByTestId("list-card").first().click();
 
   await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
