@@ -508,3 +508,92 @@ async def test_me_permissions_empty_request_returns_empty(stub_authz):
     body = EffectivePermissionsRequest(resource_type="flow", resource_ids=[])
     result = await authz_me.get_effective_permissions(body=body, current_user=user)
     assert result.permissions == {}
+
+
+# --- actions validation: normalize, dedupe, cap ---------------------- #
+
+
+def test_me_permissions_actions_normalized_and_deduped():
+    """`["READ", "read", " Write "]` -> `["read", "write"]`."""
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    body = EffectivePermissionsRequest(
+        resource_type="flow",
+        resource_ids=[uuid4()],
+        actions=["READ", "read", " Write ", "WRITE"],
+    )
+    assert body.actions == ["read", "write"]
+
+
+def test_me_permissions_actions_empty_after_normalization_becomes_none():
+    """All-whitespace input collapses to None so the handler falls back to defaults."""
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    body = EffectivePermissionsRequest(
+        resource_type="flow",
+        resource_ids=[uuid4()],
+        actions=["", "   ", ""],
+    )
+    assert body.actions is None
+
+
+def test_me_permissions_actions_over_cap_rejected():
+    """More than 10 unique actions -> ValidationError (HTTP 422 at request boundary)."""
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+    from pydantic import ValidationError
+
+    with pytest.raises(ValidationError) as excinfo:
+        EffectivePermissionsRequest(
+            resource_type="flow",
+            resource_ids=[uuid4()],
+            actions=[f"action{i}" for i in range(11)],
+        )
+    assert "capped at 10" in str(excinfo.value)
+
+
+def test_me_permissions_actions_dedupe_keeps_under_cap():
+    """A 50-entry input with only 3 distinct values normalizes successfully."""
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    body = EffectivePermissionsRequest(
+        resource_type="flow",
+        resource_ids=[uuid4()],
+        actions=["read", "write", "execute"] * 50,
+    )
+    assert body.actions == ["read", "write", "execute"]
+
+
+def test_me_permissions_actions_none_stays_none():
+    """Omitting actions stays None so the handler substitutes _DEFAULT_ACTIONS."""
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    body = EffectivePermissionsRequest(resource_type="flow", resource_ids=[uuid4()])
+    assert body.actions is None
+
+
+@pytest.mark.asyncio
+async def test_me_permissions_handler_uses_normalized_actions(stub_authz):
+    """The handler passes the normalized list (not the raw input) to the service."""
+    from langflow.api.v1 import authz_me
+    from langflow.api.v1.authz_me import EffectivePermissionsRequest
+
+    authz = stub_authz()
+    # Capture what the handler forwards to get_effective_permissions.
+    captured: dict = {}
+
+    async def _capture(**kwargs):
+        captured.update(kwargs)
+        return {rid: [] for rid in kwargs["resource_ids"]}
+
+    authz.get_effective_permissions = _capture
+
+    user = _make_user()
+    rid = uuid4()
+    body = EffectivePermissionsRequest(
+        resource_type="flow",
+        resource_ids=[rid],
+        actions=["READ", "read", " Write "],
+    )
+    await authz_me.get_effective_permissions(body=body, current_user=user)
+    # Normalization happened at the model layer; handler sees the bounded set.
+    assert tuple(captured["actions"]) == ("read", "write")

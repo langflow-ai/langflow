@@ -14,7 +14,7 @@ from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, HTTPException, status
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser
 from langflow.services.deps import get_authorization_service
@@ -35,6 +35,11 @@ ResourceTypeLiteral = Literal[
 # Default action vocabulary — matches Casbin's KNOWN_ACTIONS in EE roles.py.
 _DEFAULT_ACTIONS: tuple[str, ...] = ("read", "write", "execute", "delete", "create")
 _MAX_RESOURCE_IDS = 500
+# Cap actions per request to bound the batch_enforce cartesian product
+# (resource_ids x actions). Headroom over the 6 known actions
+# (read/write/execute/delete/create/manage) covers future additions without
+# letting a client request `["read"] * 100000` to flood the enforcer.
+_MAX_ACTIONS = 10
 
 
 class EffectivePermissionsRequest(BaseModel):
@@ -47,12 +52,45 @@ class EffectivePermissionsRequest(BaseModel):
     )
     actions: list[str] | None = Field(
         default=None,
-        description="Actions to check. Defaults to read/write/execute/delete/create.",
+        description=(
+            "Actions to check. Each entry is lowercased and de-duplicated; the list is "
+            f"capped at {_MAX_ACTIONS}. Defaults to read/write/execute/delete/create."
+        ),
     )
     domain: str = Field(
         default="*",
         description="Casbin domain — typically ``project:{folder_id}`` or ``*``.",
     )
+
+    @field_validator("actions")
+    @classmethod
+    def _normalize_actions(cls, value: list[str] | None) -> list[str] | None:
+        """Lowercase, strip, de-duplicate (order-preserving), and cap the actions list.
+
+        Returns ``None`` when the caller omitted the field (handler substitutes
+        ``_DEFAULT_ACTIONS``). An empty list after normalization also returns
+        ``None`` so the default kicks in rather than producing an empty cartesian
+        product downstream.
+        """
+        if value is None:
+            return None
+        seen: set[str] = set()
+        normalized: list[str] = []
+        for raw in value:
+            if not isinstance(raw, str):
+                # Pydantic field_validators must raise ValueError (not TypeError)
+                # to be wrapped into a ValidationError -> HTTP 422 response.
+                msg = "actions must be strings"
+                raise ValueError(msg)  # noqa: TRY004
+            cleaned = raw.strip().lower()
+            if not cleaned or cleaned in seen:
+                continue
+            seen.add(cleaned)
+            normalized.append(cleaned)
+        if len(normalized) > _MAX_ACTIONS:
+            msg = f"actions capped at {_MAX_ACTIONS} unique entries"
+            raise ValueError(msg)
+        return normalized or None
 
 
 class EffectivePermissionsResponse(BaseModel):
