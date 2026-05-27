@@ -18,6 +18,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
@@ -84,12 +85,12 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
-import { useShiftDragSelectFix } from "./hooks/useShiftDragSelectFix";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -740,7 +741,7 @@ export default function Page({
     setSelectionEnded(false);
   }, []);
 
-  useShiftDragSelectFix(reactFlowWrapper);
+  useCanvasDragSelectFix(reactFlowWrapper);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
