@@ -33,6 +33,7 @@ members = [
     "lfx",
     "lfx-arxiv",
     "lfx-duckduckgo",
+    "lfx-ibm",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7404,6 +7405,7 @@ dependencies = [
     { name = "langflow-base", extra = ["complete"] },
     { name = "lfx-arxiv" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-ibm" },
 ]
 
 [package.optional-dependencies]
@@ -7494,6 +7496,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
@@ -8871,7 +8874,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "filelock" },
     { name = "httpx", extra = ["http2"] },
-    { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "json-repair" },
     { name = "langchain" },
     { name = "langchain-classic" },
@@ -8938,7 +8940,6 @@ requires-dist = [
     { name = "fastapi", specifier = ">=0.135.0,<1.0.0" },
     { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
     { name = "httpx", extras = ["http2"], specifier = ">=0.24.0,<1.0.0" },
-    { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=3.2.9,<4.0.0" },
     { name = "json-repair", specifier = ">=0.30.3,<1.0.0" },
     { name = "langchain", specifier = "~=1.2.0" },
     { name = "langchain-classic", specifier = "~=1.0.7" },
@@ -9018,6 +9019,28 @@ dependencies = [
 requires-dist = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-ibm"
+version = "0.1.0"
+source = { editable = "src/bundles/ibm" }
+dependencies = [
+    { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ibm-watsonx-ai", version = "1.5.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "langchain-community" },
+    { name = "langchain-ibm", marker = "python_full_version < '3.14'" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=3.2.9,<4.0.0" },
+    { name = "ibm-watsonx-ai", marker = "python_full_version < '3.14'", specifier = ">=1.3.1,<2.0.0" },
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-ibm", marker = "python_full_version < '3.14'", specifier = "~=1.0.2" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
