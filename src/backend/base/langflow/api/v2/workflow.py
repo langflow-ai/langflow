@@ -63,6 +63,7 @@ from langflow.exceptions.api import (
 from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import api_key_security
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
@@ -99,6 +100,40 @@ def check_developer_api_enabled() -> None:
 router = APIRouter(prefix="/workflows", tags=["Workflow"], dependencies=[Depends(check_developer_api_enabled)])
 
 
+def _resolve_request_variables(
+    workflow_request: WorkflowExecutionRequest, http_request: Request | None
+) -> dict[str, str]:
+    """Resolve request-level global variables for a v2 workflow execution.
+
+    v2 workflows take globals from the JSON request body so arbitrary Unicode
+    values can be transported safely. The legacy ``X-LANGFLOW-GLOBAL-VAR-*``
+    headers are still honored for one release for backwards compatibility,
+    but a deprecation warning is logged and body globals always win on
+    conflict.
+    """
+    body_globals = dict(workflow_request.globals or {})
+    legacy_globals: dict[str, str] = {}
+    if http_request is not None:
+        legacy_globals = extract_global_variables_from_headers(http_request.headers)
+    if legacy_globals:
+        logger.warning(
+            "X-LANGFLOW-GLOBAL-VAR-* headers are deprecated on /api/v2/workflows; "
+            "send request-level globals in the JSON body instead. Header-based "
+            "globals will be removed in a future Langflow release."
+        )
+    # Body wins on conflict.
+    return {**legacy_globals, **body_globals}
+
+
+def _build_graph_context(request_variables: dict[str, str]) -> dict | None:
+    """Build the optional graph context for a v2 workflow execution.
+
+    Returns None when there are no request variables so the downstream graph
+    init can short-circuit on falsy context.
+    """
+    return {"request_variables": request_variables} if request_variables else None
+
+
 @router.post(
     "",
     response_model=None,
@@ -128,7 +163,7 @@ async def execute_workflow(
     Args:
         workflow_request: The workflow execution request containing flow_id, inputs, and mode flags
         background_tasks: FastAPI background tasks for async operations
-        http_request: The HTTP request object for extracting headers
+        http_request: The HTTP request, used to honor deprecated ``X-LANGFLOW-GLOBAL-VAR-*`` headers
         api_key_user: Authenticated user from API key
 
     Returns:
@@ -148,8 +183,23 @@ async def execute_workflow(
     job_id = uuid4()
 
     try:
-        # Validate flow exists and user has permission
-        flow = await get_flow_by_id_or_endpoint_name(workflow_request.flow_id, api_key_user.id)
+        # Validate flow exists and user has permission. The lookup becomes
+        # share-aware when an authorization plugin is registered, so we must
+        # also enforce ``flow:execute`` explicitly — otherwise an API key
+        # with cross-user fetch enabled would bypass policy here.
+        flow = await get_flow_by_id_or_endpoint_name(
+            workflow_request.flow_id,
+            api_key_user.id,
+            widen_for_shares=True,
+        )
+        await ensure_flow_permission(
+            api_key_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=getattr(flow, "workspace_id", None),
+            folder_id=getattr(flow, "folder_id", None),
+        )
 
         # Background mode execution
         if workflow_request.background:
@@ -265,7 +315,7 @@ async def execute_sync_workflow_with_timeout(
     job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,
-    http_request: Request,
+    http_request: Request | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow with timeout protection.
 
@@ -275,7 +325,7 @@ async def execute_sync_workflow_with_timeout(
         job_id: Generated job ID for tracking
         api_key_user: Authenticated user
         background_tasks: FastAPI background tasks
-        http_request: The HTTP request object for extracting headers
+        http_request: The HTTP request, used to honor deprecated ``X-LANGFLOW-GLOBAL-VAR-*`` headers
 
     Returns:
         WorkflowExecutionResponse with complete results
@@ -306,7 +356,7 @@ async def execute_sync_workflow(
     job_id: UUID,
     api_key_user: UserRead,
     background_tasks: BackgroundTasks,  # noqa: ARG001
-    http_request: Request,
+    http_request: Request | None = None,
 ) -> WorkflowExecutionResponse:
     """Execute workflow synchronously and return complete results.
 
@@ -320,7 +370,7 @@ async def execute_sync_workflow(
     Execution Flow:
         1. Parse flat inputs into tweaks and session_id
         2. Validate flow data exists
-        3. Extract context from HTTP headers
+        3. Extract context from request globals
         4. Build graph from flow data with tweaks applied
         5. Identify terminal nodes for execution
         6. Execute graph and collect results
@@ -332,7 +382,7 @@ async def execute_sync_workflow(
         job_id: Generated job ID for tracking this execution
         api_key_user: Authenticated user for permission checks
         background_tasks: FastAPI background tasks (unused in sync mode)
-        http_request: The HTTP request object for extracting headers
+        http_request: The HTTP request, used to honor deprecated ``X-LANGFLOW-GLOBAL-VAR-*`` headers
 
     Returns:
         WorkflowExecutionResponse: Complete execution results with outputs and metadata
@@ -348,12 +398,12 @@ async def execute_sync_workflow(
         msg = f"Flow {flow.id} has no data. The flow may be corrupted."
         raise WorkflowValidationError(msg)
 
-    # Extract request-level variables from headers (similar to V1)
-    # Headers with prefix X-LANGFLOW-GLOBAL-VAR-* are extracted and made available to components
-    request_variables = extract_global_variables_from_headers(http_request.headers)
-
-    # Build context from request variables (similar to V1's _run_flow_internal)
-    context = {"request_variables": request_variables} if request_variables else None
+    # V2 workflows take request-level variables from the JSON body so arbitrary
+    # Unicode strings transport safely. The legacy X-LANGFLOW-GLOBAL-VAR-*
+    # headers are still honored for one release with a deprecation warning;
+    # body globals win on conflict.
+    request_variables = _resolve_request_variables(workflow_request, http_request)
+    context = _build_graph_context(request_variables)
 
     # Build graph - system error if this fails
     try:
@@ -413,6 +463,7 @@ async def execute_sync_workflow(
             job_id=str(job_id),
             workflow_request=workflow_request,
             graph=graph,
+            effective_globals=request_variables,
         )
 
     except asyncio.CancelledError:
@@ -431,6 +482,7 @@ async def execute_sync_workflow(
             job_id=job_id,
             workflow_request=workflow_request,
             error=exc,
+            effective_globals=request_variables,
         )
 
 
@@ -439,7 +491,7 @@ async def execute_workflow_background(
     flow: FlowRead,
     job_id: JobId,
     api_key_user: UserRead,
-    http_request: Request,
+    http_request: Request | None = None,
 ) -> WorkflowJobResponse:
     """Execute workflow in the background and return job ID for the user to track the execution status."""
     try:
@@ -451,12 +503,12 @@ async def execute_workflow_background(
             msg = f"Flow {flow.id} has no data"
             raise ValueError(msg)
 
-        # Extract request-level variables from headers (similar to V1)
-        # Headers with prefix X-LANGFLOW-GLOBAL-VAR-* are extracted and made available to components
-        request_variables = extract_global_variables_from_headers(http_request.headers)
-
-        # Build context from request variables (similar to V1's _run_flow_internal)
-        context = {"request_variables": request_variables} if request_variables else None
+        # V2 workflows take request-level variables from the JSON body so arbitrary
+        # Unicode strings transport safely. The legacy X-LANGFLOW-GLOBAL-VAR-*
+        # headers are still honored for one release with a deprecation warning;
+        # body globals win on conflict.
+        request_variables = _resolve_request_variables(workflow_request, http_request)
+        context = _build_graph_context(request_variables)
 
         # Build the graph once
         flow_id_str = str(flow.id)
@@ -524,7 +576,12 @@ async def execute_workflow_background(
             stream=False,
         )
         status = JobStatus.QUEUED
-        return WorkflowJobResponse(job_id=str(job_id), flow_id=workflow_request.flow_id, status=status)
+        return WorkflowJobResponse(
+            job_id=str(job_id),
+            flow_id=workflow_request.flow_id,
+            status=status,
+            globals=request_variables,
+        )
 
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         # Re-raise infrastructure/resource errors to be handled by the endpoint
@@ -618,8 +675,21 @@ async def get_workflow_status(
     try:
         # If job is completed, reconstruct full workflow response from vertex_builds
         if job.status == JobStatus.COMPLETED:
-            # Get the flow
-            flow = await get_flow_by_id_or_endpoint_name(flow_id_str, api_key_user.id)
+            # Get the flow (share-aware fetch — also enforce flow:read so an
+            # API key with cross-user fetch cannot read foreign job output).
+            flow = await get_flow_by_id_or_endpoint_name(
+                flow_id_str,
+                api_key_user.id,
+                widen_for_shares=True,
+            )
+            await ensure_flow_permission(
+                api_key_user,
+                FlowAction.READ,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=getattr(flow, "workspace_id", None),
+                folder_id=getattr(flow, "folder_id", None),
+            )
 
             # Reconstruct response from vertex_build table
             return await reconstruct_workflow_response_from_job_id(
