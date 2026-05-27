@@ -131,7 +131,7 @@ export function MemoryDetailsHeader({
                 {isFetchingNextSessionsPage && (
                   <div className="py-1 text-center">
                     <span className="text-xs text-muted-foreground">
-                      Loading…
+                      {t("memory.loadingSessions")}
                     </span>
                   </div>
                 )}
@@ -173,7 +173,7 @@ export function MemoryDetailsHeader({
         </Button>
 
         <DeleteConfirmationModal
-          description={`memory "${memory.name}"`}
+          description={t("memory.deleteDescription", { name: memory.name })}
           onConfirm={(e) => {
             e.stopPropagation();
             deleteMutation.mutate({ memoryId: memory.id });

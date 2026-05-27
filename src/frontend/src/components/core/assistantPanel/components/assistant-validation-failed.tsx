@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { AlertTriangle, ChevronDown, ChevronUp, Code2 } from "lucide-react";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Button } from "@/components/ui/button";
@@ -13,6 +14,7 @@ export function AssistantValidationFailed({
   result,
   onRetry,
 }: AssistantValidationFailedProps) {
+  const { t } = useTranslation();
   const [showCode, setShowCode] = useState(false);
   const [showErrorDetails, setShowErrorDetails] = useState(false);
 
@@ -71,7 +73,7 @@ export function AssistantValidationFailed({
               className="h-8 gap-2 text-muted-foreground"
             >
               <Code2 className="h-3.5 w-3.5" />
-              {showCode ? "Hide code" : "View code"}
+              {showCode ? t("assistant.hideCode") : t("assistant.viewCode")}
               {showCode ? (
                 <ChevronUp className="h-3.5 w-3.5" />
               ) : (

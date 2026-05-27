@@ -85,9 +85,7 @@ export function MetadataEditor({
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-[280px]">
-              Optional key/value tags applied to every chunk produced by this
-              ingestion. Use lowercase letters, digits, or underscores for keys
-              (max 32 characters). Values are stored as strings.
+              {t("knowledge.metadataTooltip")}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -115,7 +113,7 @@ export function MetadataEditor({
             <div key={index} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <Input
-                  placeholder="key"
+                  placeholder={t("knowledge.metadataKeyPlaceholder")}
                   value={pair.key}
                   onChange={(e) => updatePair(index, { key: e.target.value })}
                   className={cn("h-8 flex-1", rowError && "border-destructive")}
@@ -123,7 +121,7 @@ export function MetadataEditor({
                   disabled={disabled}
                 />
                 <Input
-                  placeholder="value"
+                  placeholder={t("knowledge.metadataValuePlaceholder")}
                   value={pair.value}
                   onChange={(e) => updatePair(index, { value: e.target.value })}
                   maxLength={MAX_VALUE_LENGTH}
@@ -136,7 +134,7 @@ export function MetadataEditor({
                   variant="ghost"
                   size="iconSm"
                   onClick={() => removePair(index)}
-                  aria-label={`Remove metadata field ${index + 1}`}
+                  aria-label={t("knowledge.metadataRemoveField", { index: index + 1 })}
                   data-testid={`${testIdScope}-metadata-remove-${index}`}
                   disabled={disabled}
                 >

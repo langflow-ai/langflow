@@ -171,7 +171,7 @@ export function DBProviderInput({
                     size="sq"
                     className="text-xs"
                   >
-                    Needs setup
+                    {t("settings.dbProviders.needsSetup")}
                   </Badge>
                 )}
               </div>
@@ -237,6 +237,7 @@ function DBProviderOptionItem({
   selected: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   const isComingSoon = provider.status === "coming_soon";
   const isDisabled = isComingSoon || !configured;
 
@@ -261,12 +262,12 @@ function DBProviderOptionItem({
             <span className="truncate text-[13px]">{provider.label}</span>
             {isComingSoon && (
               <Badge variant="secondaryStatic" size="sq" className="text-xs">
-                Coming soon
+                {t("settings.dbProviders.comingSoon")}
               </Badge>
             )}
             {!isComingSoon && !configured && (
               <Badge variant="secondaryStatic" size="sq" className="text-xs">
-                Needs setup
+                {t("settings.dbProviders.needsSetup")}
               </Badge>
             )}
           </div>

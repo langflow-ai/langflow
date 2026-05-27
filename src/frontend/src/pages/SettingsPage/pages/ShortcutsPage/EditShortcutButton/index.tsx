@@ -100,7 +100,7 @@ export default function EditShortcutButton({
     }
     applyShortcutUpdate(
       normalizedCombination,
-      `${shortcut[0]} shortcut successfully changed`,
+      t("shortcuts.changedSuccess", { name: shortcut[0] }),
     );
   }
 
@@ -132,7 +132,7 @@ export default function EditShortcutButton({
     }
     applyShortcutUpdate(
       defaultShortcut,
-      `${shortcut[0]} shortcut reset to default`,
+      t("shortcuts.resetSuccess", { name: shortcut[0] }),
     );
   }
 
@@ -184,14 +184,14 @@ export default function EditShortcutButton({
       </BaseModal.Content>
       <BaseModal.Footer>
         <Button variant={"default"} onClick={editCombination}>
-          Apply
+          {t("shortcuts.applyButton")}
         </Button>
         <Button
           className="mr-5"
           variant={"destructive"}
           onClick={handleResetToDefault}
         >
-          Reset
+          {t("shortcuts.resetButton")}
         </Button>
       </BaseModal.Footer>
     </BaseModal>

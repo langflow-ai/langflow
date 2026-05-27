@@ -93,7 +93,7 @@ export default function DictAreaModal({
   const renderHeader = () => (
     <BaseModal.Header description={onChange ? IteractiveReader() : null}>
       <span className="pr-2">
-        {onChange ? "Edit Dictionary" : "View Dictionary"}
+        {onChange ? t("dictAreaModal.editTitle") : t("dictAreaModal.viewTitle")}
       </span>
       <IconComponent
         name="BookMarked"
@@ -132,7 +132,7 @@ export default function DictAreaModal({
       </BaseModal.Trigger>
       {renderHeader()}
       {renderContent()}
-      <BaseModal.Footer submit={onChange ? { label: "Save" } : undefined} />
+      <BaseModal.Footer submit={onChange ? { label: t("dictAreaModal.saveButton") } : undefined} />
     </BaseModal>
   );
 }

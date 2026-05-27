@@ -1,4 +1,5 @@
 import { useCallback, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShortUniqueId from "short-unique-id";
 import {
   type AgenticStepType,
@@ -30,6 +31,7 @@ interface UseAssistantChatReturn {
 }
 
 export function useAssistantChat(): UseAssistantChatReturn {
+  const { t } = useTranslation();
   const [messages, setMessages] = useState<AssistantMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentStep, setCurrentStep] = useState<AgenticStepType | null>(null);
@@ -171,7 +173,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
         if ((error as Error).name !== "AbortError") {
           updateMessage(assistantMessageId, () => ({
             status: "error" as const,
-            error: "Failed to connect to assistant",
+            error: t("assistant.failedToConnect"),
           }));
         }
         setCurrentStep(null);

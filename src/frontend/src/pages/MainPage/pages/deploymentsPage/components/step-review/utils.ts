@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import {
   getFlowVersionCount,
   getScopedValueForUniqueFlowVersion,
@@ -210,12 +211,12 @@ export function buildToolNameErrors({
     if (firstAttachmentKey) {
       errors.set(
         item.attachmentKey,
-        "Duplicate tool name within this deployment",
+        i18n.t("deployments.duplicateToolName"),
       );
       if (!errors.has(firstAttachmentKey)) {
         errors.set(
           firstAttachmentKey,
-          "Duplicate tool name within this deployment",
+          i18n.t("deployments.duplicateToolName"),
         );
       }
     } else {

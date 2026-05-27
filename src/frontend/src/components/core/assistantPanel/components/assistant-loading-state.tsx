@@ -52,7 +52,7 @@ function AssistantLoadingStateComponent({
             isReady ? "text-accent-emerald-foreground" : "text-foreground"
           }
         >
-          {isReady ? "Component ready" : progress.message || "Working..."}
+          {isReady ? t("assistant.componentReady") : progress.message || t("assistant.working")}
         </span>
         {progress.className && (
           <span className="ml-auto rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
@@ -92,7 +92,7 @@ function AssistantLoadingStateComponent({
         {/* Retry counter */}
         {progress.attempt > 1 && (
           <div className="mt-3 text-xs text-muted-foreground">
-            Attempt {progress.attempt} of {progress.maxAttempts}
+            {t("assistant.attempt", { attempt: progress.attempt, max: progress.maxAttempts })}
           </div>
         )}
 

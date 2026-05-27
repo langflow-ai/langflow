@@ -258,15 +258,24 @@ export default function UpdateAllComponents() {
   const showDismissedWarning = !allowCustomComponents && allDismissed;
   const summaryMessage = showDismissedWarning
     ? blockedComponents.length > 0
-      ? "Custom components are disabled"
-      : "Upgrade is required to execute flow"
+      ? t("updateAllComponents.customComponentsDisabled")
+      : t("updateAllComponents.upgradeRequired")
     : !allowCustomComponents
       ? blockedComponents.length > 0 && updatableComponents.length > 0
-        ? `${blockedComponents.length} custom component${blockedComponents.length > 1 ? "s cannot" : " cannot"} run and ${updatableComponents.length} component${updatableComponents.length > 1 ? "s must" : " must"} be updated before this flow can run`
+        ? t("updateAllComponents.blockedAndUpdatable", {
+            count: blockedComponents.length,
+            updatable: updatableComponents.length,
+          })
         : blockedComponents.length > 0
-          ? `${blockedComponents.length} custom component${blockedComponents.length > 1 ? "s cannot" : " cannot"} run while custom components are disabled`
-          : `${updatableComponents.length} component${updatableComponents.length > 1 ? "s must" : " must"} be updated before this flow can run`
-      : `Update${updatableComponents.length > 1 ? "s are" : " is"} available for ${updatableComponents.length} component${updatableComponents.length > 1 ? "s" : ""}`;
+          ? t("updateAllComponents.blockedOnly", {
+              count: blockedComponents.length,
+            })
+          : t("updateAllComponents.updatableOnly", {
+              count: updatableComponents.length,
+            })
+      : t("updateAllComponents.updatesAvailable", {
+          count: updatableComponents.length,
+        });
 
   return (
     <AnimatePresence mode="wait">
@@ -299,7 +308,9 @@ export default function UpdateAllComponents() {
                   className="shrink-0 text-sm"
                   onClick={handleDismissAllComponents}
                 >
-                  Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
+                  {componentsToUpdateFiltered.length > 1
+                    ? t("updateAllComponents.dismissAll")
+                    : t("updateAllComponents.dismiss")}
                 </Button>
               )}
               {updatableComponents.length > 0 && (
@@ -310,7 +321,9 @@ export default function UpdateAllComponents() {
                   loading={loadingUpdate}
                   data-testid="update-all-button"
                 >
-                  {breakingChanges.length > 0 ? "Review All" : "Update All"}
+                  {breakingChanges.length > 0
+                    ? t("updateAllComponents.reviewAll")
+                    : t("updateAllComponents.updateAll")}
                 </Button>
               )}
             </div>

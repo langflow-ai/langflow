@@ -140,7 +140,7 @@ export const MenuBar = memo((): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
-                {currentFlowName || "Untitled Flow"}
+                {currentFlowName || t("flow.untitledFlow")}
               </span>
               <IconComponent
                 name="pencil"
@@ -158,15 +158,15 @@ export const MenuBar = memo((): JSX.Element => {
                 content={
                   changesNotSaved
                     ? saveLoading
-                      ? "Saving..."
-                      : "Save Changes"
+                      ? t("flow.saving")
+                      : t("flow.saveChanges")
                     : t("flow.savedHover") +
                       (updatedAt
                         ? new Date(updatedAt).toLocaleString("en-US", {
                             hour: "numeric",
                             minute: "numeric",
                           })
-                        : "Never")
+                        : t("flow.never"))
                 }
                 side="bottom"
                 styleClasses="cursor-default z-10"
