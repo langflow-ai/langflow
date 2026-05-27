@@ -286,6 +286,18 @@ async def validate_component_runtime(code: str, user_id: str | None = None) -> s
     return await _execute_output_methods_for_validation(cc_instance)
 
 
+# The synthetic-tool sentinel name + method are reserved by the
+# Component base for the wiring layer's auto-generated tool output.
+# A user-declared Output that uses either of these collides with the
+# synthetic and (pre-fix) caused ComponentToolkit to drop the user's
+# tool — the agent then receives an empty tool list and silently does
+# nothing. Defense-in-depth: the runtime filter in component_tool.py is
+# now precise, but rejecting the bad code at generation time lets the
+# retry loop produce a correctly-named output instead.
+_RESERVED_OUTPUT_NAME = "component_as_tool"
+_RESERVED_OUTPUT_METHOD = "to_toolkit"
+
+
 def validate_component_code(code: str) -> ValidationResult:
     """Validate component code using static analysis only.
 
@@ -298,6 +310,8 @@ def validate_component_code(code: str) -> ValidationResult:
     2. Class name extraction
     3. Overlapping input/output names
     4. Output methods have return statements with values
+    5. No reserved output names/methods that would collide with the
+       synthetic Tool sentinel (``component_as_tool`` / ``to_toolkit``).
     """
     class_name = _safe_extract_class_name(code)
 
@@ -315,7 +329,34 @@ def validate_component_code(code: str) -> ValidationResult:
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
 
+        if _RESERVED_OUTPUT_NAME in output_names:
+            return ValidationResult(
+                is_valid=False,
+                code=code,
+                error=(
+                    f"Output name {_RESERVED_OUTPUT_NAME!r} is reserved by Langflow for the "
+                    "synthetic Tool sentinel that the wiring layer auto-generates when a "
+                    "component is flipped to Tool Mode. Declaring it on your own Output "
+                    "collides with that sentinel and the runtime will drop your tool. "
+                    "Pick a name describing the produced value (e.g. 'item', 'price', 'result')."
+                ),
+                class_name=class_name,
+            )
+
         output_methods = _extract_output_methods(tree, class_name)
+        if _RESERVED_OUTPUT_METHOD in output_methods:
+            return ValidationResult(
+                is_valid=False,
+                code=code,
+                error=(
+                    f"Output method {_RESERVED_OUTPUT_METHOD!r} is reserved by Langflow for "
+                    "the synthetic Tool sentinel. Defining your own method with that name "
+                    "shadows the Component base implementation and breaks tool exposure. "
+                    "Rename the method to describe its action (e.g. 'get_item', 'fetch_price')."
+                ),
+                class_name=class_name,
+            )
+
         if output_methods:
             checker = _ReturnChecker()
             checker.visit(tree)
