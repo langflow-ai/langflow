@@ -27,11 +27,15 @@ test("user must be able outdated message on error", async ({ page }) => {
     dataTransfer,
   });
 
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
+  // Wait for the dropped flow ("Memory Chatbot") to appear in the list.
+  // Bootstrap pre-seeds a "Basic Prompting" flow, so waiting on the generic
+  // list-card selector races with the upload and can pick the wrong card.
+  const droppedFlowCard = page
+    .getByTestId("list-card")
+    .filter({ hasText: "Memory Chatbot" })
+    .first();
+  await droppedFlowCard.waitFor({ state: "visible", timeout: 30000 });
+  await droppedFlowCard.click();
 
   // Verify the outdated components banner appears on the canvas
   await expect(page.getByText("Updates are available for 5")).toBeVisible({

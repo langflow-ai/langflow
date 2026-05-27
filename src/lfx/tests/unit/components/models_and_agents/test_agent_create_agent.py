@@ -1423,8 +1423,10 @@ async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_z
 
 @pytest.mark.asyncio
 async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_false() -> None:
-    """Streaming is mandatory for AgentComponent — the LLM must always be instantiated
-    with ``stream=True`` so ``astream_events(v2)`` emits ``on_chat_model_stream`` chunks.
+    """Streaming is mandatory for AgentComponent.
+
+    The LLM must always be instantiated with ``stream=True`` so ``astream_events(v2)``
+    emits ``on_chat_model_stream`` chunks.
 
     Bug: when ``self.stream`` (the legacy BoolInput toggle introduced in PR #13155) is
     False, ``_get_llm`` forwards ``stream=False`` to ``get_llm`` and ChatOpenAI is built
@@ -1458,9 +1460,11 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_fal
 
 @pytest.mark.asyncio
 async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_true() -> None:
-    """Sanity check: when the user explicitly toggles stream=True, get_llm must still
-    receive stream=True. This guards against a regression where the toggle inverts the
-    flag or is consumed elsewhere before reaching get_llm.
+    """Sanity check that an explicit stream=True toggle still reaches get_llm.
+
+    When the user explicitly toggles stream=True, get_llm must still receive stream=True.
+    This guards against a regression where the toggle inverts the flag or is consumed
+    elsewhere before reaching get_llm.
     """
     captured: dict[str, Any] = {}
 

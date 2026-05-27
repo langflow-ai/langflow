@@ -29,13 +29,15 @@ test("user must be able to update outdated components by update all button", asy
     dataTransfer,
   });
 
-  await page.waitForTimeout(1000);
-
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
+  // Wait for the dropped flow ("Memory Chatbot") to appear in the list.
+  // Bootstrap pre-seeds a "Basic Prompting" flow, so waiting on the generic
+  // list-card selector races with the upload and can pick the wrong card.
+  const droppedFlowCard = page
+    .getByTestId("list-card")
+    .filter({ hasText: "Memory Chatbot" })
+    .first();
+  await droppedFlowCard.waitFor({ state: "visible", timeout: 30000 });
+  await droppedFlowCard.click();
 
   await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
@@ -112,13 +114,15 @@ test("user must be able to update outdated components by each outdated component
     dataTransfer,
   });
 
-  await page.waitForTimeout(1000);
-
-  await page.waitForSelector("data-testid=list-card", {
-    timeout: 3000,
-  });
-
-  await page.getByTestId("list-card").first().click();
+  // Wait for the dropped flow ("Memory Chatbot") to appear in the list.
+  // Bootstrap pre-seeds a "Basic Prompting" flow, so waiting on the generic
+  // list-card selector races with the upload and can pick the wrong card.
+  const droppedFlowCard2 = page
+    .getByTestId("list-card")
+    .filter({ hasText: "Memory Chatbot" })
+    .first();
+  await droppedFlowCard2.waitFor({ state: "visible", timeout: 30000 });
+  await droppedFlowCard2.click();
 
   await expect(page.getByText("Updates are available for 5")).toBeVisible({
     timeout: 30000,
