@@ -20,10 +20,23 @@ from langflow.api.v1.mappers.deployments.contracts import (
     FlowVersionPatch,
     UpdateSnapshotBindings,
 )
+from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
+from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
+    WatsonxApiDeploymentCreatePayload,
+    WatsonxApiDeploymentListItemProviderData,
+    WatsonxApiDeploymentUpdatePayload,
+    WatsonxApiDeploymentUpdateResultData,
+)
 from langflow.api.v1.schemas.deployments import (
     DeploymentCreateRequest,
     DeploymentProviderAccountUpdateRequest,
     DeploymentUpdateRequest,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
+    WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
+)
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxDeploymentUpdateResultData,
 )
 from lfx.services.adapters.deployment.schema import (
     ConfigListItem,
@@ -41,27 +54,6 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.payload import AdapterPayloadValidationError, PayloadSlot
 from lfx.services.adapters.schema import AdapterType
 from pydantic import BaseModel, ValidationError
-
-try:
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
-        WatsonxApiDeploymentCreatePayload,
-        WatsonxApiDeploymentListItemProviderData,
-        WatsonxApiDeploymentUpdatePayload,
-        WatsonxApiDeploymentUpdateResultData,
-    )
-    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-        WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-    )
-    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
-        WatsonxDeploymentUpdateResultData,
-    )
-except ModuleNotFoundError:
-    pytest.skip(
-        "Skipping Watsonx mapper tests: optional IBM SDK dependencies not available.",
-        allow_module_level=True,
-    )
-
 
 TEST_WXO_LLM = "ibm/granite-3.3-8b"
 

@@ -44,7 +44,7 @@ from lfx.services.adapters.deployment.schema import (
 from pydantic import ValidationError
 
 try:
-    import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
+    from langflow.services.adapters.deployment.watsonx_orchestrate import WatsonxOrchestrateDeploymentService
 except ModuleNotFoundError:
     pytest.skip(
         "Skipping Watsonx deployment tests: optional IBM SDK dependencies not available.",
@@ -61,9 +61,6 @@ client_module = importlib.import_module("langflow.services.adapters.deployment.w
 types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
 deployment_context_module = importlib.import_module("langflow.services.adapters.deployment.context")
 utils_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.utils")
-WatsonxOrchestrateDeploymentService = importlib.import_module(
-    "langflow.services.adapters.deployment.watsonx_orchestrate"
-).WatsonxOrchestrateDeploymentService
 WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials

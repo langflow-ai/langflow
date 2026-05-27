@@ -5,17 +5,8 @@ from __future__ import annotations
 from uuid import UUID
 
 import pytest
-
-try:
-    import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
-except ModuleNotFoundError:
-    pytest.skip(
-        "Skipping Watsonx deployment tests: optional IBM SDK dependencies not available.",
-        allow_module_level=True,
-    )
-
-
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    PAYLOAD_SCHEMAS,
     WatsonxAgentExecutionResultData,
     WatsonxDeploymentCreatePayload,
     WatsonxDeploymentCreateResultData,
@@ -23,8 +14,9 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxDeploymentUpdateResultData,
     WatsonxFlowArtifactProviderData,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.service import WatsonxOrchestrateDeploymentService
 from lfx.services.adapters.payload import AdapterPayloadValidationError
+
+payload_schemas = PAYLOAD_SCHEMAS
 
 
 def _raw_tool(name: str, suffix: int) -> dict:
@@ -54,7 +46,7 @@ def _raw_connection(app_id: str) -> dict:
 
 
 def test_payload_schema_slot_registered_for_deployment_update() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_create is not None
     assert slot.deployment_create.adapter_model is WatsonxDeploymentCreatePayload
@@ -73,7 +65,7 @@ def test_payload_schema_slot_registered_for_deployment_update() -> None:
 
 
 def test_update_result_schema_dedupes_id_lists() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update_result is not None
 
@@ -93,7 +85,7 @@ def test_update_result_schema_dedupes_id_lists() -> None:
 
 
 def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_create is not None
 
@@ -125,7 +117,7 @@ def test_create_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
 
 
 def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_create is not None
 
@@ -157,7 +149,7 @@ def test_create_schema_dedupes_duplicate_raw_tool_names() -> None:
 
 
 def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -189,7 +181,7 @@ def test_update_schema_accepts_raw_tool_pool_and_shared_connection_refs() -> Non
 
 
 def test_update_schema_allows_bind_app_ids_that_overlap_raw_connection_ids() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -211,7 +203,7 @@ def test_update_schema_allows_bind_app_ids_that_overlap_raw_connection_ids() -> 
 
 def test_update_schema_rejects_missing_raw_tool_reference() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
                 "connections": {
@@ -231,7 +223,7 @@ def test_update_schema_rejects_missing_raw_tool_reference() -> None:
 
 def test_update_schema_rejects_tool_reference_with_both_selectors() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
                 "tools": {"raw_payloads": [_raw_tool("tool-new-1", 1)]},
@@ -253,7 +245,7 @@ def test_update_schema_rejects_tool_reference_with_both_selectors() -> None:
 
 def test_update_schema_rejects_conflicting_source_ref_for_same_tool_id() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
                 "connections": {},
@@ -275,7 +267,7 @@ def test_update_schema_rejects_conflicting_source_ref_for_same_tool_id() -> None
 
 
 def test_update_schema_accepts_bind_app_id_not_in_raw_pool_as_existing() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -299,7 +291,7 @@ def test_update_schema_accepts_bind_app_id_not_in_raw_pool_as_existing() -> None
 
 
 def test_update_schema_accepts_implicit_existing_connections() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -321,7 +313,7 @@ def test_update_schema_accepts_implicit_existing_connections() -> None:
 
 def test_update_schema_rejects_unused_raw_connection_app_ids() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
                 "tools": {"raw_payloads": [_raw_tool("tool-new-1", 3)]},
@@ -339,7 +331,7 @@ def test_update_schema_rejects_unused_raw_connection_app_ids() -> None:
 
 
 def test_update_schema_dedupes_bind_app_ids() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -361,7 +353,7 @@ def test_update_schema_dedupes_bind_app_ids() -> None:
 
 def test_update_schema_requires_unbind_app_ids() -> None:
     with pytest.raises(AdapterPayloadValidationError):
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
                 "operations": [
@@ -376,7 +368,7 @@ def test_update_schema_requires_unbind_app_ids() -> None:
 
 def test_update_schema_rejects_unbind_raw_app_ids() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "llm": "granite-3-8b-instruct",
                 "connections": {"raw_payloads": [_raw_connection("app-new-1")]},
@@ -399,7 +391,7 @@ def test_update_schema_rejects_unbind_raw_app_ids() -> None:
 
 def test_update_schema_accepts_empty_payload_without_llm() -> None:
     """Empty update payload is allowed; service layer decides if the request has actionable work."""
-    applied = WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+    applied = payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
         {}
     )
     assert applied["llm"] is None
@@ -407,7 +399,7 @@ def test_update_schema_accepts_empty_payload_without_llm() -> None:
 
 
 def test_update_schema_accepts_put_tools_alone() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -417,7 +409,7 @@ def test_update_schema_accepts_put_tools_alone() -> None:
 
 
 def test_update_schema_put_tools_deduplicates() -> None:
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 
@@ -427,7 +419,7 @@ def test_update_schema_put_tools_deduplicates() -> None:
 
 def test_update_schema_rejects_put_tools_with_operations() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "put_tools": ["tool-id-1"],
                 "connections": {},
@@ -445,7 +437,7 @@ def test_update_schema_rejects_put_tools_with_operations() -> None:
 
 def test_update_schema_rejects_put_tools_with_raw_tool_payloads() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "put_tools": ["tool-id-1"],
                 "tools": {"raw_payloads": [_raw_tool("tool-new", 1)]},
@@ -456,7 +448,7 @@ def test_update_schema_rejects_put_tools_with_raw_tool_payloads() -> None:
 
 def test_update_schema_rejects_put_tools_with_connection_raw_payloads() -> None:
     with pytest.raises(AdapterPayloadValidationError) as exc:
-        WatsonxOrchestrateDeploymentService.payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
+        payload_schemas.deployment_update.apply(  # type: ignore[union-attr]
             {
                 "put_tools": ["tool-id-1"],
                 "connections": {"raw_payloads": [_raw_connection("app-1")]},
@@ -467,7 +459,7 @@ def test_update_schema_rejects_put_tools_with_connection_raw_payloads() -> None:
 
 def test_update_schema_accepts_operations_without_put_tools() -> None:
     """Existing happy-path: operations alone is valid (pre-existing behavior)."""
-    slot = WatsonxOrchestrateDeploymentService.payload_schemas
+    slot = payload_schemas
     assert slot is not None
     assert slot.deployment_update is not None
 

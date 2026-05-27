@@ -21,6 +21,7 @@ from langflow.api.v1.mappers.deployments.contracts import (
     UpdateSnapshotBinding,
     UpdateSnapshotBindings,
 )
+from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
 from langflow.api.v1.schemas.deployments import DeploymentUpdateRequest
 from lfx.services.adapters.deployment.exceptions import ServiceUnavailableError
 from lfx.services.adapters.deployment.schema import (
@@ -31,14 +32,6 @@ from lfx.services.adapters.deployment.schema import (
     SnapshotItem,
     SnapshotListResult,
 )
-
-try:
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate import WatsonxOrchestrateDeploymentMapper
-except ModuleNotFoundError:
-    pytest.skip(
-        "Skipping Watsonx deployment sync tests: optional IBM SDK dependencies not available.",
-        allow_module_level=True,
-    )
 
 MODULE = "langflow.api.v1.mappers.deployments.helpers"
 SYNC_MODULE = "langflow.api.v1.mappers.deployments.sync"
