@@ -294,7 +294,7 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
 
 
 async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
-    """Embedded mode should force all embedded hide flags to true in full config."""
+    """Embedded mode should only force UI hide flags, not security lock flags."""
     from langflow.services.deps import get_settings_service
 
     settings_service = get_settings_service()
@@ -304,6 +304,8 @@ async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient,
     monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", False)
     monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
     monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", False)
+    monkeypatch.setattr(settings_service.settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings_service.settings, "custom_component_admin_only", False)
 
     response = await client.get("api/v1/config", headers=logged_in_headers)
     result = response.json()
@@ -316,6 +318,9 @@ async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient,
     assert result["hide_starter_projects"] is True
     # This flag is currently a direct passthrough (not part of embedded_mode cascade).
     assert result["hide_getting_started_progress"] is False
+    # Security lock flags are explicit opt-ins and do not cascade from embedded_mode.
+    assert result["mcp_servers_locked"] is False
+    assert result["custom_component_admin_only"] is False
 
 
 async def test_get_config_embedded_mode_false_keeps_individual_hide_flags(
