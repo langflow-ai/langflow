@@ -1,27 +1,51 @@
 import { act, renderHook } from "@testing-library/react";
+import type { MemorySessionInfo } from "@/controllers/API/queries/memories/types";
 import {
   ALL_SESSIONS_VALUE,
   useMemorySessionResolver,
 } from "../useMemorySessionResolver";
 
+type SessionPage = {
+  items: MemorySessionInfo[];
+  total: number;
+  page: number;
+  size: number;
+  pages: number;
+};
+
+function makeSession(
+  overrides: Pick<MemorySessionInfo, "session_id"> &
+    Partial<Omit<MemorySessionInfo, "session_id">>,
+): MemorySessionInfo {
+  return {
+    id: overrides.session_id,
+    cursor_id: null,
+    memory_base_id: "m1",
+    last_sync_at: null,
+    total_processed: 0,
+    pending_count: 0,
+    ...overrides,
+  };
+}
+
 const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
 
-let mockSessionPages: any[] = [
+let mockSessionPages: SessionPage[] = [
   {
     items: [
-      {
+      makeSession({
         session_id: "s1",
         last_sync_at: "2026-04-02T00:00:00.000Z",
         total_processed: 5,
         pending_count: 0,
-      },
-      {
+      }),
+      makeSession({
         session_id: "s2",
         last_sync_at: "2026-03-01T00:00:00.000Z",
         total_processed: 2,
         pending_count: 1,
-      },
+      }),
     ],
     total: 2,
     page: 1,
@@ -50,18 +74,18 @@ describe("useMemorySessionResolver", () => {
     mockSessionPages = [
       {
         items: [
-          {
+          makeSession({
             session_id: "s1",
             last_sync_at: "2026-04-02T00:00:00.000Z",
             total_processed: 5,
             pending_count: 0,
-          },
-          {
+          }),
+          makeSession({
             session_id: "s2",
             last_sync_at: "2026-03-01T00:00:00.000Z",
             total_processed: 2,
             pending_count: 1,
-          },
+          }),
         ],
         total: 2,
         page: 1,
@@ -74,26 +98,12 @@ describe("useMemorySessionResolver", () => {
   it("flattens all pages into a single memorySessions array", () => {
     mockSessionPages = [
       {
-        items: [
-          {
-            session_id: "s1",
-            last_sync_at: "2026-04-02",
-            total_processed: 0,
-            pending_count: 0,
-          },
-        ],
+        items: [makeSession({ session_id: "s1", last_sync_at: "2026-04-02" })],
       },
       {
-        items: [
-          {
-            session_id: "s2",
-            last_sync_at: "2026-03-01",
-            total_processed: 0,
-            pending_count: 0,
-          },
-        ],
+        items: [makeSession({ session_id: "s2", last_sync_at: "2026-03-01" })],
       },
-    ];
+    ] as SessionPage[];
 
     const { result } = renderHook(() =>
       useMemorySessionResolver({ memoryId: "m1" }),
@@ -233,18 +243,16 @@ describe("useMemorySessionResolver", () => {
       mockSessionPages = [
         {
           items: [
-            {
+            makeSession({
               session_id: "s1",
               last_sync_at: "2026-04-02T00:00:00.000Z",
               total_processed: 5,
-              pending_count: 0,
-            },
-            {
+            }),
+            makeSession({
               session_id: "s3",
               last_sync_at: "2026-05-01T00:00:00.000Z",
               total_processed: 1,
-              pending_count: 0,
-            },
+            }),
           ],
           total: 2,
           page: 1,
@@ -262,12 +270,11 @@ describe("useMemorySessionResolver", () => {
       mockSessionPages = [
         {
           items: [
-            {
+            makeSession({
               session_id: ALL_SESSIONS_VALUE,
               last_sync_at: "2026-04-02T00:00:00.000Z",
               total_processed: 5,
-              pending_count: 0,
-            },
+            }),
           ],
           total: 1,
           page: 1,
