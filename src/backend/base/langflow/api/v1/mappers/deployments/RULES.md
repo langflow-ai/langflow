@@ -498,17 +498,15 @@ Following this process keeps layering explicit, reduces leakage during migration
 Both create and update follow a **provider-first** strategy: the provider is called first, then the Langflow DB is updated and committed. If the DB commit fails, the route issues a best-effort compensating call to the provider.
 
 - **Create rollback:** the route issues a compensating `adapter.delete()` to remove the provider resource. Secondary resources (snapshots, configs) are intentionally not cascade-deleted because they may be shared across deployments; they remain as orphaned provider-side resources.
-- **Update rollback:** the route asks the mapper to build a compensating update payload via `resolve_rollback_update()`, then issues `adapter.update()`. If the mapper returns `None` (no rollback possible for this provider), provider state may diverge until it is independently detected (e.g., lazily synced in a read path).
+- **Update rollback:** the route passes the forward `DeploymentUpdateResult` to the helper, which reads `update_result.rollback_data` and issues `adapter.rollback_update_result()`. The adapter captures the pre-update journal during the forward update (before provider mutations). Rollback metadata is adapter-internal and is not surfaced in shaped API responses.
 
-Provider-first write is used uniformly. For create, the provider assigns the resource ID and snapshot IDs that the DB needs to store, so calling the provider first is the natural fit. For update, provider-first could be replaced with DB-first since the `resource_key` already exists, but provider-first was chosen for simplicity: both strategies need the pre-update state for rollback, but with provider-first that state already lives in the DB — the mapper can query `flow_version_deployment_attachment` rows at rollback time — whereas DB-first would require explicitly capturing name, description, and every removed attachment's `provider_snapshot_id` into memory before mutating. Provider-first also avoids the two-commit flow that DB-first requires (one commit before the provider call, a second to fill in `provider_snapshot_id` values from the response), and eliminates the consistency window where other readers could observe DB state the provider hasn't processed yet. Since both compensating actions are best-effort either way, the simpler single-commit flow is preferred.
+Provider-first write is used uniformly. For create, the provider assigns the resource ID and snapshot IDs that the DB needs to store, so calling the provider first is the natural fit. For update, provider-first avoids a two-commit flow (one commit before the provider call, a second to fill in `provider_snapshot_id` values from the response) and the consistency window where other readers could observe DB state the provider has not processed yet. Pre-update rollback state is captured in a provider journal during the forward update rather than reconstructed from DB rows at compensation time. Since compensating actions are best-effort either way, the single-commit flow is preferred.
 
 Rollback calls are always best-effort and wrapped in their own exception handling. A failed rollback must never mask the original commit error.
 
-### 13.2 Rollback payload construction belongs in the mapper
+### 13.2 Rollback payload construction belongs in the adapter
 
-The mapper is responsible for constructing provider-specific rollback payloads from current DB state. The mapper reads the `flow_version_deployment_attachment` table to determine the pre-update attachment state and builds an adapter update payload that would restore the provider to that state.
-
-The base mapper returns `None` (no generic rollback). Provider mappers override `resolve_rollback_update` when they can construct meaningful reverse operations.
+The deployment adapter sets `DeploymentUpdateResult.rollback_data` when returning from a successful forward update. The journal is validated through the provider `update_rollback` payload slot when replaying compensation. Mappers do not extract or reshape rollback data for compensation.
 
 ### 13.3 Read-path synchronization layers
 

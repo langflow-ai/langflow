@@ -201,7 +201,11 @@ class TestMapperUpdateResult:
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentUpdateResult(id="prov-1", provider_result={"ok": True})
+        result = DeploymentUpdateResult(
+            id="prov-1",
+            provider_result={"ok": True},
+            rollback_data={},
+        )
         shaped = mapper.shape_deployment_update_result(result, row, provider_key="test-provider")
         assert shaped.description == "persisted desc"
         assert shaped.type == DeploymentType.AGENT
@@ -222,7 +226,10 @@ class TestMapperUpdateResult:
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentUpdateResult(id="prov-1")
+        result = DeploymentUpdateResult(
+            id="prov-1",
+            rollback_data={},
+        )
         shaped = mapper.shape_deployment_update_result(result, row, provider_key="test-provider")
         assert shaped.description is None
         assert shaped.provider_id == provider_account_id

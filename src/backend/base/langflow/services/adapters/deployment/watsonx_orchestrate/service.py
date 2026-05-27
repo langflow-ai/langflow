@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException, status
 from ibm_cloud_sdk_core import ApiException
@@ -46,6 +46,7 @@ from lfx.services.adapters.deployment.schema import (
     DeploymentType,
     DeploymentUpdate,
     DeploymentUpdateResult,
+    DeploymentUpdateRollback,
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
@@ -59,7 +60,13 @@ from lfx.services.adapters.deployment.schema import (
     VerifyCredentialsResult,
     _normalize_and_validate_id,
 )
-from lfx.services.adapters.payload import AdapterPayloadMissingError, AdapterPayloadValidationError
+from lfx.services.adapters.payload import (
+    AdapterPayload,
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+)
+from pydantic import BaseModel  # noqa: TC002
 
 from langflow.services.adapters.deployment.watsonx_orchestrate.client import get_authenticator, get_provider_clients
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
@@ -100,6 +107,8 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.update impor
     apply_provider_update_plan_with_rollback,
     build_provider_update_plan,
     build_update_payload_from_spec,
+    build_update_rollback_journal,
+    rollback_update_from_journal,
     validate_provider_update_request_sections,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
@@ -125,7 +134,6 @@ logger = logging.getLogger(__name__)
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
-    from typing import Any
 
     from lfx.services.settings.service import SettingsService
     from sqlalchemy.ext.asyncio import AsyncSession
@@ -158,11 +166,11 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
     def _parse_provider_payload(
         self,
         *,
-        slot,
+        slot: PayloadSlot | None,
         slot_name: str,
-        provider_data: object,
+        provider_data: AdapterPayload | BaseModel | None,
         error_prefix: ErrorPrefix,
-    ):
+    ) -> BaseModel:
         if slot is None:
             msg = f"{error_prefix.value} Required slot '{slot_name}' is not configured."
             raise DeploymentError(message=msg, error_code="deployment_error")
@@ -281,6 +289,31 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
             tool_ids=tool_ids,
             app_ids=result_data.app_ids,
         )
+
+    async def rollback_update_result(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        payload: DeploymentUpdateRollback,
+        db: AsyncSession,
+    ) -> None:
+        """Best-effort rollback of provider-side update mutations from a pre-update journal."""
+        try:
+            agent_id = _normalize_and_validate_id(str(deployment_id), field_name="deployment_id")
+            journal = self._parse_provider_payload(
+                slot=self.payload_schemas.update_rollback,
+                slot_name="update_rollback",
+                provider_data=payload,
+                error_prefix=ErrorPrefix.UPDATE,
+            )
+            clients = await self._get_provider_clients(user_id=user_id, db=db)
+            await rollback_update_from_journal(clients=clients, agent_id=agent_id, journal=journal)
+        except Exception:
+            logger.exception(
+                "Best-effort update rollback failed for deployment_id=%s",
+                deployment_id,
+            )
 
     async def list_types(
         self,
@@ -477,6 +510,13 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                 if not update_payload:
                     msg = "provider_data is required when update operations do not include spec changes."
                     raise InvalidContentError(message=msg)
+                journal = build_update_rollback_journal(
+                    agent=agent,
+                    final_update_payload=update_payload,
+                    original_tools={},
+                    created_tool_ids=[],
+                    created_app_ids=[],
+                )
                 await retry_create(
                     asyncio.to_thread,
                     clients.agent.update,
@@ -484,7 +524,9 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                     update_payload,
                 )
                 return DeploymentUpdateResult[WatsonxDeploymentUpdateResultData](
-                    id=deployment_id, provider_result=WatsonxDeploymentUpdateResultData()
+                    id=deployment_id,
+                    provider_result=WatsonxDeploymentUpdateResultData(),
+                    rollback_data=journal.model_dump(),
                 )
 
             provider_plan = build_provider_update_plan(
@@ -515,6 +557,7 @@ class WatsonxOrchestrateDeploymentService(BaseDeploymentService):
                         referenced_snapshot_bindings=apply_result.referenced_snapshot_bindings,
                     )
                 ),
+                rollback_data=apply_result.rollback_data.model_dump(),
             )
 
         except (ClientAPIException, HTTPException) as exc:

@@ -287,7 +287,11 @@ class TestCreateDeploymentRollback:
         pa = _fake_provider_account()
         mock_get_pa.return_value = pa
         adapter = AsyncMock()
-        adapter.update.return_value = DeploymentUpdateResult(id="existing-agent-1", provider_result={"ok": True})
+        adapter.update.return_value = DeploymentUpdateResult(
+            id="existing-agent-1",
+            provider_result={"ok": True},
+            rollback_data={},
+        )
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
@@ -414,7 +418,11 @@ class TestCreateDeploymentExistingAgent:
         pa = _fake_provider_account()
         mock_get_pa.return_value = pa
         adapter = AsyncMock()
-        adapter.update.return_value = DeploymentUpdateResult(id="existing-agent-1", provider_result={"ok": True})
+        adapter.update.return_value = DeploymentUpdateResult(
+            id="existing-agent-1",
+            provider_result={"ok": True},
+            rollback_data={},
+        )
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
         mapper.util_existing_deployment_resource_key_for_create.return_value = "existing-agent-1"
@@ -478,6 +486,7 @@ class TestCreateDeploymentExistingAgent:
         adapter.update.return_value = DeploymentUpdateResult(
             id="existing-agent-1",
             provider_result={"ok": True},
+            rollback_data={},
         )
         mock_resolve_adapter.return_value = adapter
         mapper = MagicMock()
@@ -1892,7 +1901,7 @@ class TestUpdateDeploymentRollback:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mapper = MagicMock()
-        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={})
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
@@ -1920,6 +1929,105 @@ class TestUpdateDeploymentRollback:
         assert (
             mock_rollback.call_args.kwargs["deployment_provider_account_id"] == dep_row.deployment_provider_account_id
         )
+        assert mock_rollback.call_args.kwargs["update_result"] is update_result
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update", return_value=[])
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_attachment_conflict_maps_to_409_and_still_rolls_back(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,  # noqa: ARG002
+        mock_validate_fv,  # noqa: ARG002
+        mock_resolve_snap,  # noqa: ARG002
+        mock_apply_patch,
+        mock_update_db,  # noqa: ARG002
+        mock_rollback,
+    ):
+        """Attachment conflicts map to HTTP 409 after compensating provider rollback."""
+        from langflow.api.v1.deployments import update_deployment
+        from langflow.services.database.models.flow_version_deployment_attachment.crud import AttachmentConflictError
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={"created_tool_ids": ["tool-1"]})
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
+        mock_apply_patch.side_effect = AttachmentConflictError("snapshot conflict")
+
+        session = AsyncMock()
+        payload = MagicMock()
+        payload.name = None
+        payload.description = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_deployment(
+                deployment_id=dep_row.id,
+                session=session,
+                payload=payload,
+                current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
+            )
+
+        assert exc_info.value.status_code == 409
+        mock_rollback.assert_awaited_once()
+        session.rollback.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.update_deployment_db", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.apply_flow_version_patch_attachments", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_added_snapshot_bindings_for_update")
+    @patch(f"{ROUTES_MODULE}.validate_project_scoped_flow_version_ids", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_flow_version_patch_for_update", return_value=([], []))
+    @patch(f"{ROUTES_MODULE}.resolve_adapter_mapper_from_deployment", new_callable=AsyncMock)
+    async def test_non_attachment_failure_propagates_after_rollback(
+        self,
+        mock_resolve_amm,
+        mock_resolve_fvp,  # noqa: ARG002
+        mock_validate_fv,  # noqa: ARG002
+        mock_resolve_snap,
+        mock_apply_patch,  # noqa: ARG002
+        mock_update_db,  # noqa: ARG002
+        mock_rollback,
+    ):
+        """Unexpected update errors still trigger provider rollback before re-raising."""
+        from langflow.api.v1.deployments import update_deployment
+
+        dep_row = _fake_deployment_row()
+        adapter = AsyncMock()
+        mapper = MagicMock()
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={"created_app_ids": ["app-1"]})
+        adapter.update.return_value = update_result
+        mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
+        mapper.shape_deployment_update_result.return_value = MagicMock()
+        mock_resolve_amm.return_value = (dep_row, adapter, mapper, "watsonx-orchestrate", "tenant-1")
+        mock_resolve_snap.side_effect = RuntimeError("snapshot binding mapping failed")
+
+        session = AsyncMock()
+        payload = MagicMock()
+        payload.name = None
+        payload.description = None
+
+        with pytest.raises(RuntimeError, match="snapshot binding mapping failed"):
+            await update_deployment(
+                deployment_id=dep_row.id,
+                session=session,
+                payload=payload,
+                current_user=_fake_user(),
+                telemetry=_fake_telemetry(),
+            )
+
+        mock_rollback.assert_awaited_once()
+        session.rollback.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{ROUTES_MODULE}.rollback_provider_update", new_callable=AsyncMock)
@@ -1945,7 +2053,7 @@ class TestUpdateDeploymentRollback:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mapper = MagicMock()
-        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={})
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
@@ -2002,7 +2110,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mapper = MagicMock()
-        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={})
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
@@ -2061,7 +2169,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mapper = MagicMock()
-        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={})
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
@@ -2116,7 +2224,7 @@ class TestUpdateDeploymentAlreadyAttachedFiltering:
         dep_row = _fake_deployment_row()
         adapter = AsyncMock()
         mapper = MagicMock()
-        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={})
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()
@@ -2178,7 +2286,7 @@ class TestUpdateDeploymentMetadataPersistence:
         )
         adapter = AsyncMock()
         mapper = MagicMock()
-        update_result = DeploymentUpdateResult(id="provider-dep-1")
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={})
         adapter.update.return_value = update_result
         mapper.resolve_deployment_update = AsyncMock(return_value=MagicMock())
         mapper.shape_deployment_update_result.return_value = MagicMock()

@@ -22,6 +22,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.constants import 
     RETRY_INITIAL_DELAY_SECONDS,
     ROLLBACK_MAX_RETRIES,
     UPDATE_MAX_RETRIES,
+    RollbackErrorLabel,
+    RollbackSourceOperation,
+    rollback_batch_failure_log_label,
+    rollback_log_prefix,
 )
 
 if TYPE_CHECKING:
@@ -144,45 +148,69 @@ async def rollback_created_resources(
             logger.exception("Rollback failed for app_id=%s — resource may be orphaned", created_app_id)
 
 
-async def rollback_update_resources(
+async def _run_rollback_batch(
+    *,
+    source_operation: RollbackSourceOperation,
+    error_label: RollbackErrorLabel,
+    resource_ids: list[str],
+    coroutines: list[Awaitable[None]],
+) -> None:
+    if not coroutines:
+        return
+    log_label = rollback_batch_failure_log_label(source_operation=source_operation, error_label=error_label)
+    results = await asyncio.gather(*coroutines, return_exceptions=True)
+    total = len(resource_ids)
+    for index, (resource_id, result) in enumerate(zip(resource_ids, results, strict=True), start=1):
+        if not isinstance(result, BaseException):
+            continue
+        logger.error(
+            "%s [%d/%d] for %s: %s",
+            log_label,
+            index,
+            total,
+            resource_id,
+            result,
+            exc_info=(type(result), result, result.__traceback__),
+        )
+
+
+async def rollback_tools(
     *,
     clients: WxOClient,
+    source_operation: RollbackSourceOperation,
     created_tool_ids: list[str],
-    created_app_id: str | None,
     original_tools: dict[str, dict],
 ) -> None:
-    """Best-effort rollback for update operations.
+    """Best-effort rollback for tool mutations during create/update.
 
-    Restores mutated tools first, then deletes newly created tools, then deletes
-    newly created config. Unlike ``rollback_created_resources`` this never
-    deletes the deployment/agent itself.
+    Restores mutated tools first, then deletes newly created tools. Unlike
+    ``rollback_created_resources`` this never deletes the deployment/agent
+    itself. Created connection cleanup is handled separately via
+    ``rollback_created_app_ids``.
     """
     logger.warning(
-        "Rolling back update resources: created_tool_ids=%s, created_app_id=%s, mutated_tools=%s",
+        "%s rolling back tool resources: created_tool_ids=%s, mutated_tools=%s",
+        rollback_log_prefix(source_operation),
         created_tool_ids,
-        created_app_id,
         list(original_tools.keys()),
     )
-    for tool_id, original_tool in reversed(list(original_tools.items())):
-        try:
-            await retry_rollback(asyncio.to_thread, clients.tool.update, tool_id, original_tool)
-        except Exception:  # noqa: BLE001
-            logger.exception(
-                "Rollback failed: could not restore tool payload for tool_id=%s — resource may be orphaned",
-                tool_id,
-            )
+    restore_items = list(original_tools.items())
+    await _run_rollback_batch(
+        source_operation=source_operation,
+        error_label=RollbackErrorLabel.UPDATE_TOOL,
+        resource_ids=[tool_id for tool_id, _ in restore_items],
+        coroutines=[
+            retry_rollback(asyncio.to_thread, clients.tool.update, tool_id, original_tool)
+            for tool_id, original_tool in restore_items
+        ],
+    )
 
-    for tool_id in reversed(created_tool_ids):
-        try:
-            await retry_rollback(delete_tool_if_exists, clients, tool_id=tool_id)
-        except Exception:  # noqa: BLE001
-            logger.exception("Rollback failed for created tool_id=%s — resource may be orphaned", tool_id)
-
-    if created_app_id:
-        try:
-            await retry_rollback(delete_config_if_exists, clients, app_id=created_app_id)
-        except Exception:  # noqa: BLE001
-            logger.exception("Rollback failed for created app_id=%s — resource may be orphaned", created_app_id)
+    await _run_rollback_batch(
+        source_operation=source_operation,
+        error_label=RollbackErrorLabel.CREATE_TOOL,
+        resource_ids=created_tool_ids,
+        coroutines=[retry_rollback(delete_tool_if_exists, clients, tool_id=tool_id) for tool_id in created_tool_ids],
+    )
 
 
 async def delete_agent_if_exists(clients: WxOClient, *, agent_id: str) -> None:

@@ -3,15 +3,36 @@
 from __future__ import annotations
 
 from collections import Counter
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, TypedDict
 
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadSchemas
 from lfx.services.adapters.deployment.schema import BaseFlowArtifact, EnvVarKey, EnvVarValueSpec, NormalizedId
 from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
-from pydantic import BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, StringConstraints, field_validator, model_validator
 
 RawToolName = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
+
+
+def _validate_nonempty_str(value: str) -> str:
+    """Reject empty or whitespace-only strings without mutating the value."""
+    if not value or not value.strip():
+        msg = "Value must not be empty or whitespace-only."
+        raise ValueError(msg)
+    return value
+
+
+NonEmptyStr = Annotated[str, AfterValidator(_validate_nonempty_str)]
+
+
+class WatsonxAgentRollbackUpdatePayload(TypedDict, total=False):
+    """Partial wxO agent update payload used by update/rollback helpers."""
+
+    tools: list[NonEmptyStr]
+    name: NonEmptyStr
+    display_name: NonEmptyStr
+    description: NonEmptyStr
+    llm: NonEmptyStr
 
 
 class WatsonxFlowArtifactProviderData(BaseModel):
@@ -487,6 +508,29 @@ class WatsonxToolAppBinding(BaseModel):
         return [str(app_id).strip() for app_id in value if str(app_id).strip()]
 
 
+class WatsonxDeploymentUpdateRollback(BaseModel):
+    """Pre-update rollback snapshot captured during a forward deployment update."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    rollback_agent_payload: WatsonxAgentRollbackUpdatePayload = Field(
+        default_factory=dict,
+        description="Pre-update agent restore payload (tools, name, display_name, description, llm).",
+    )
+    original_tools: dict[NonEmptyStr, dict] = Field(
+        default_factory=dict,
+        description="Writable pre-update payloads for mutated existing tools, keyed by tool id.",
+    )
+    created_tool_ids: list[NonEmptyStr] = Field(
+        default_factory=list,
+        description="Tool ids created during the forward update.",
+    )
+    created_app_ids: list[NonEmptyStr] = Field(
+        default_factory=list,
+        description="App/config ids created during the forward update.",
+    )
+
+
 class WatsonxDeploymentUpdateResultData(BaseModel):
     """Normalized provider result payload for deployment update.
 
@@ -638,6 +682,9 @@ class WatsonxProviderUpdateApplyResult(BaseModel):
     removed_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
     # Full operation correlation set (created + existing refs).
     referenced_snapshot_bindings: list[WatsonxResultToolRefBinding] = Field(default_factory=list)
+    rollback_data: WatsonxDeploymentUpdateRollback = Field(
+        description="Pre-update rollback snapshot for DB-commit-failure compensation (adapter-only).",
+    )
 
 
 class WatsonxProviderCreateApplyResult(BaseModel):
@@ -671,6 +718,7 @@ PAYLOAD_SCHEMAS = DeploymentPayloadSchemas(
     deployment_create_result=PayloadSlot(WatsonxDeploymentCreateResultData),
     deployment_update=PayloadSlot(WatsonxDeploymentUpdatePayload),
     deployment_update_result=PayloadSlot(WatsonxDeploymentUpdateResultData),
+    update_rollback=PayloadSlot(WatsonxDeploymentUpdateRollback),
     execution_create_result=PayloadSlot(WatsonxAgentExecutionResultData),
     execution_status_result=PayloadSlot(WatsonxAgentExecutionResultData),
     deployment_llm_list_result=PayloadSlot(WatsonxDeploymentLlmListResultData),

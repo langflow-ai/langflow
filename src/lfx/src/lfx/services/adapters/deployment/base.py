@@ -27,6 +27,7 @@ if TYPE_CHECKING:
         DeploymentType,
         DeploymentUpdate,
         DeploymentUpdateResult,
+        DeploymentUpdateRollback,
         ExecutionCreate,
         ExecutionCreateResult,
         ExecutionStatusResult,
@@ -113,6 +114,17 @@ class BaseDeploymentService(Service, ABC):
         db: AsyncSession,
     ) -> DeploymentUpdateResult:
         """Update deployment inputs and apply changes in the provider."""
+
+    @abstractmethod
+    async def rollback_update_result(
+        self,
+        *,
+        user_id: IdLike,
+        deployment_id: IdLike,
+        payload: DeploymentUpdateRollback,
+        db: AsyncSession,
+    ) -> None:
+        """Rollback provider-side update mutations using a pre-update journal."""
 
     @abstractmethod
     async def redeploy(

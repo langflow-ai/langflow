@@ -56,6 +56,10 @@ def _mock_provider_view(items: list) -> SimpleNamespace:
     return SimpleNamespace(deployments=items)
 
 
+def _minimal_rollback_data() -> dict:
+    return {}
+
+
 def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
@@ -788,6 +792,7 @@ class TestUpdateSnapshotMapping:
                         {"source_ref": str(flow_version_ids[1]), "snapshot_id": "snap-2"},
                     ]
                 },
+                rollback_data=_minimal_rollback_data(),
             ),
         )
 
@@ -810,6 +815,7 @@ class TestUpdateSnapshotMapping:
                             {"source_ref": "other", "snapshot_id": "snap-extra"},
                         ]
                     },
+                    rollback_data=_minimal_rollback_data(),
                 ),
             )
 
@@ -825,6 +831,7 @@ class TestUpdateSnapshotMapping:
                     provider_result={
                         "added_snapshot_bindings": [],
                     },
+                    rollback_data=_minimal_rollback_data(),
                 ),
             )
 
@@ -846,7 +853,10 @@ def test_watsonx_mapper_util_created_snapshot_ids_uses_adapter_slot():
     created = WatsonxOrchestrateDeploymentMapper().util_created_snapshot_ids(
         result=DeploymentUpdateResult(
             id="provider-id",
-            provider_result={"created_snapshot_ids": ["snap-1", "snap-2"]},
+            provider_result={
+                "created_snapshot_ids": ["snap-1", "snap-2"],
+            },
+            rollback_data=_minimal_rollback_data(),
         ),
     )
 
@@ -1789,191 +1799,88 @@ class TestRollbackProviderCreate:
 
 class TestRollbackProviderUpdate:
     @pytest.mark.asyncio
-    async def test_returns_early_when_mapper_returns_none(self):
-        """When the mapper cannot build a rollback payload, no adapter call is made."""
+    async def test_calls_adapter_rollback_update_result_with_payload(self):
+        """Rollback uses update_result.rollback_data directly."""
         adapter = AsyncMock()
-        mapper = AsyncMock(spec=BaseDeploymentMapper)
-        mapper.resolve_rollback_update = AsyncMock(return_value=None)
+        rollback_payload = {"created_tool_ids": ["tool-1"]}
         dep_row = _mock_deployment_row("rk-1")
+        dep_row.deployment_provider_account_id = uuid4()
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data=rollback_payload)
 
         from langflow.api.v1.mappers.deployments.helpers import rollback_provider_update
 
         await rollback_provider_update(
             deployment_adapter=adapter,
-            deployment_mapper=mapper,
             deployment_db_id=dep_row.id,
             deployment_resource_key=dep_row.resource_key,
             deployment_provider_account_id=dep_row.deployment_provider_account_id,
+            update_result=update_result,
             user_id=uuid4(),
             db=AsyncMock(),
         )
 
-        adapter.update.assert_not_awaited()
+        adapter.rollback_update_result.assert_awaited_once()
+        assert adapter.rollback_update_result.call_args.kwargs["payload"] == rollback_payload
+        assert adapter.rollback_update_result.call_args.kwargs["deployment_id"] == dep_row.resource_key
 
     @pytest.mark.asyncio
-    async def test_calls_adapter_update_with_rollback_payload(self):
-        """When mapper returns a payload, compensating update is issued."""
+    async def test_swallows_adapter_rollback_failure(self):
+        """If the compensating rollback fails, exception is swallowed."""
         adapter = AsyncMock()
-        rollback_payload = MagicMock()
-        mapper = AsyncMock(spec=BaseDeploymentMapper)
-        mapper.resolve_rollback_update = AsyncMock(return_value=rollback_payload)
+        adapter.rollback_update_result.side_effect = RuntimeError("provider error")
         dep_row = _mock_deployment_row("rk-1")
         dep_row.deployment_provider_account_id = uuid4()
-
-        from langflow.api.v1.mappers.deployments.helpers import rollback_provider_update
-
-        await rollback_provider_update(
-            deployment_adapter=adapter,
-            deployment_mapper=mapper,
-            deployment_db_id=dep_row.id,
-            deployment_resource_key=dep_row.resource_key,
-            deployment_provider_account_id=dep_row.deployment_provider_account_id,
-            user_id=uuid4(),
-            db=AsyncMock(),
+        update_result = DeploymentUpdateResult(
+            id="provider-dep-1",
+            rollback_data={},
         )
-
-        adapter.update.assert_awaited_once()
-        assert adapter.update.call_args.kwargs["payload"] is rollback_payload
-
-    @pytest.mark.asyncio
-    async def test_swallows_adapter_update_failure(self):
-        """If the compensating update fails, exception is swallowed."""
-        adapter = AsyncMock()
-        adapter.update.side_effect = RuntimeError("provider error")
-        mapper = AsyncMock(spec=BaseDeploymentMapper)
-        mapper.resolve_rollback_update = AsyncMock(return_value=MagicMock())
-        dep_row = _mock_deployment_row("rk-1")
-        dep_row.deployment_provider_account_id = uuid4()
 
         from langflow.api.v1.mappers.deployments.helpers import rollback_provider_update
 
         # Should not raise
         await rollback_provider_update(
             deployment_adapter=adapter,
-            deployment_mapper=mapper,
             deployment_db_id=dep_row.id,
             deployment_resource_key=dep_row.resource_key,
             deployment_provider_account_id=dep_row.deployment_provider_account_id,
+            update_result=update_result,
             user_id=uuid4(),
             db=AsyncMock(),
         )
 
     @pytest.mark.asyncio
-    async def test_swallows_mapper_failure(self):
-        """If mapper.resolve_rollback_update raises, exception is swallowed."""
+    @patch(f"{MODULE}.deployment_provider_scope")
+    async def test_swallows_provider_scope_failure(self, mock_provider_scope):
+        """Provider-scope entry failures are swallowed as best-effort rollback failures."""
         adapter = AsyncMock()
-        mapper = AsyncMock(spec=BaseDeploymentMapper)
-        mapper.resolve_rollback_update = AsyncMock(side_effect=RuntimeError("mapper error"))
         dep_row = _mock_deployment_row("rk-1")
+        dep_row.deployment_provider_account_id = uuid4()
+        update_result = DeploymentUpdateResult(id="provider-dep-1", rollback_data={"created_tool_ids": ["tool-1"]})
+
+        class _FailingScope:
+            def __enter__(self):
+                msg = "scope unavailable"
+                raise RuntimeError(msg)
+
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                return False
+
+        mock_provider_scope.return_value = _FailingScope()
 
         from langflow.api.v1.mappers.deployments.helpers import rollback_provider_update
 
         # Should not raise
         await rollback_provider_update(
             deployment_adapter=adapter,
-            deployment_mapper=mapper,
             deployment_db_id=dep_row.id,
             deployment_resource_key=dep_row.resource_key,
             deployment_provider_account_id=dep_row.deployment_provider_account_id,
+            update_result=update_result,
             user_id=uuid4(),
             db=AsyncMock(),
         )
 
-        adapter.update.assert_not_awaited()
-
-
-# ---------------------------------------------------------------------------
-# WatsonxOrchestrateDeploymentMapper.resolve_rollback_update
-# ---------------------------------------------------------------------------
-
-
-DEP_CRUD_MODULE = "langflow.services.database.models.deployment.crud"
-ATT_CRUD_MODULE = "langflow.services.database.models.flow_version_deployment_attachment.crud"
-
-
-class TestWxoResolveRollbackUpdate:
-    @pytest.mark.asyncio
-    @patch(f"{ATT_CRUD_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
-    @patch(f"{DEP_CRUD_MODULE}.get_deployment", new_callable=AsyncMock)
-    async def test_returns_none_when_deployment_not_found(self, mock_get_dep, mock_list_att):
-        """If the deployment row no longer exists, returns None."""
-        mock_get_dep.return_value = None
-        mapper = WatsonxOrchestrateDeploymentMapper()
-
-        result = await mapper.resolve_rollback_update(
-            user_id=uuid4(),
-            deployment_db_id=uuid4(),
-            deployment_resource_key="rk-1",
-            db=AsyncMock(),
-        )
-
-        assert result is None
-        mock_list_att.assert_not_awaited()
-
-    @pytest.mark.asyncio
-    @patch(f"{ATT_CRUD_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
-    @patch(f"{DEP_CRUD_MODULE}.get_deployment", new_callable=AsyncMock)
-    async def test_builds_put_tools_from_attachment_snapshot_ids(self, mock_get_dep, mock_list_att):
-        """Rollback payload contains put_tools with provider_snapshot_ids from DB attachments.
-
-        att3/att4 simulate legacy rows that may still have NULL/blank snapshot IDs
-        in the DB from before the non-empty invariant was enforced at the app level.
-        """
-        dep = MagicMock()
-        dep.name = "test-dep"
-        dep.description = "desc"
-        mock_get_dep.return_value = dep
-
-        att1 = MagicMock()
-        att1.provider_snapshot_id = "tool-1"
-        att2 = MagicMock()
-        att2.provider_snapshot_id = "tool-2"
-        att3 = MagicMock()
-        att3.provider_snapshot_id = None
-        att4 = MagicMock()
-        att4.provider_snapshot_id = "  "
-        mock_list_att.return_value = [att1, att2, att3, att4]
-
-        mapper = WatsonxOrchestrateDeploymentMapper()
-
-        result = await mapper.resolve_rollback_update(
-            user_id=uuid4(),
-            deployment_db_id=uuid4(),
-            deployment_resource_key="rk-1",
-            db=AsyncMock(),
-        )
-
-        assert result is not None
-        assert result.spec is not None
-        assert result.spec.name == "test-dep"
-        assert result.spec.description == "desc"
-        provider_data = result.provider_data
-        assert provider_data["put_tools"] == ["tool-1", "tool-2"]
-
-    @pytest.mark.asyncio
-    @patch(f"{ATT_CRUD_MODULE}.list_deployment_attachments", new_callable=AsyncMock)
-    @patch(f"{DEP_CRUD_MODULE}.get_deployment", new_callable=AsyncMock)
-    async def test_empty_attachments_produces_empty_put_tools(self, mock_get_dep, mock_list_att):
-        """When no attachments exist, put_tools is an empty list (clears all tools)."""
-        dep = MagicMock()
-        dep.name = "test-dep"
-        dep.description = None
-        mock_get_dep.return_value = dep
-        mock_list_att.return_value = []
-
-        mapper = WatsonxOrchestrateDeploymentMapper()
-
-        result = await mapper.resolve_rollback_update(
-            user_id=uuid4(),
-            deployment_db_id=uuid4(),
-            deployment_resource_key="rk-1",
-            db=AsyncMock(),
-        )
-
-        assert result is not None
-        assert result.provider_data["put_tools"] == []
-        assert result.spec is not None
-        assert result.spec.description == ""
+        adapter.rollback_update_result.assert_not_awaited()
 
 
 # ---------------------------------------------------------------------------

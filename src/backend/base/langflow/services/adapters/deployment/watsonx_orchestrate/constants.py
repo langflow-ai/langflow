@@ -60,6 +60,35 @@ class WxOAuthURL(str, Enum):
     IBM_IAM = os.getenv("IBM_IAM_DEV_URL_OVERRIDE", "").strip() or IBM_IAM_PRODUCTION_URL
 
 
+class RollbackSourceOperation(str, Enum):
+    """Source operation whose forward path is being rolled back."""
+
+    CREATE = "CREATE"
+    UPDATE = "UPDATE"
+
+
+class RollbackErrorLabel(str, Enum):
+    """Log labels for per-item rollback failures."""
+
+    UPDATE_TOOL = '{"resource": "tool", "original_op": "update", "compensating_op": "update"}'
+    CREATE_TOOL = '{"resource": "tool", "original_op": "create", "compensating_op": "delete"}'
+    CREATE_CONNECTION = '{"resource": "connection", "original_op": "create", "compensating_op": "delete"}'
+
+
+def rollback_log_prefix(source_operation: RollbackSourceOperation) -> str:
+    """Shared ``[ROLLBACK (SOURCE=...)]`` prefix for rollback log lines."""
+    return f"[ROLLBACK (SOURCE={source_operation.name})]"
+
+
+def rollback_batch_failure_log_label(
+    *,
+    source_operation: RollbackSourceOperation,
+    error_label: RollbackErrorLabel,
+) -> str:
+    """Full label for a per-item rollback batch failure (prefix + resource metadata JSON)."""
+    return f"{rollback_log_prefix(source_operation)} {error_label.value}"
+
+
 class ErrorPrefix(str, Enum):
     CREATE = f"{ERROR_PREFIX} creating a deployment {ERROR_SUFFIX_IN}"
     LIST = f"{ERROR_PREFIX} listing deployments {ERROR_SUFFIX_IN}"

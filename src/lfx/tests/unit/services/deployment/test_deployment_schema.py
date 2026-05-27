@@ -455,16 +455,26 @@ def test_execution_create_and_status_results_have_same_shape() -> None:
 
 
 def test_deployment_update_result_uses_base_operation_shape() -> None:
-    result = DeploymentUpdateResult(id="dep_1")
+    result = DeploymentUpdateResult(id="dep_1", rollback_data={})
     assert result.id == "dep_1"
     assert result.provider_result is None
+    assert result.rollback_data == {}
+
+
+def test_deployment_update_result_requires_rollback_data() -> None:
+    with pytest.raises(ValidationError, match="rollback_data"):
+        DeploymentUpdateResult(id="dep_1")
 
 
 def test_operation_results_share_provider_result_contract() -> None:
     provider_result = {"accepted": True}
 
     deleted = DeploymentDeleteResult(id="dep_1", provider_result=provider_result)
-    updated = DeploymentUpdateResult(id="dep_1", provider_result=provider_result)
+    updated = DeploymentUpdateResult(
+        id="dep_1",
+        provider_result=provider_result,
+        rollback_data={},
+    )
     redeployed = RedeployResult(id="dep_1", provider_result=provider_result)
 
     assert deleted.provider_result == provider_result

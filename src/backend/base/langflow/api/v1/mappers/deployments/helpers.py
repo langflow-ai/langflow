@@ -621,58 +621,28 @@ async def rollback_provider_create(
 async def rollback_provider_update(
     *,
     deployment_adapter: DeploymentServiceProtocol,
-    deployment_mapper: BaseDeploymentMapper,
     deployment_db_id: UUID,
     deployment_resource_key: str,
     deployment_provider_account_id: UUID,
+    update_result: DeploymentUpdateResult,
     user_id: UUID,
     db: DbSession,
 ) -> None:
-    """Best-effort compensating update after a DB commit failure.
+    """Best-effort compensating rollback after a DB commit failure.
 
     The update handler uses a provider-first strategy — the provider
     has already been mutated by the time we attempt ``session.commit()``.  If
     that commit fails, the provider's state no longer matches the DB.  This
-    function attempts to restore the provider to its pre-update state by
-    reading the (unchanged) DB attachment rows and asking the mapper to build
-    a compensating update payload.
+    function replays the pre-update rollback journal on ``update_result``.
 
-    The caller must reset the session (``await db.rollback()``) before calling
-    this function so that it is queryable.
-
-    If the mapper returns ``None`` (rollback not supported for this provider),
-    or any step fails, provider state may diverge until lazy read-path
+    If any step fails, provider state may diverge until lazy read-path
     synchronization detects the inconsistency.
     """
-    try:
-        rollback_payload = await deployment_mapper.resolve_rollback_update(
-            user_id=user_id,
-            deployment_db_id=deployment_db_id,
-            deployment_resource_key=deployment_resource_key,
-            db=db,
-        )
-    except Exception:  # noqa: BLE001
-        logger.warning(
-            "Failed to build rollback update payload for deployment %s (resource_key=%s). "
-            "Provider state may diverge from DB.",
-            deployment_db_id,
-            deployment_resource_key,
-            exc_info=True,
-        )
-        return
-
-    if rollback_payload is None:
-        logger.warning(
-            "No rollback update payload available for deployment %s (resource_key=%s). "
-            "Provider state may diverge from DB.",
-            deployment_db_id,
-            deployment_resource_key,
-        )
-        return
+    rollback_payload = update_result.rollback_data
 
     try:
         with deployment_provider_scope(deployment_provider_account_id):
-            await deployment_adapter.update(
+            await deployment_adapter.rollback_update_result(
                 deployment_id=deployment_resource_key,
                 payload=rollback_payload,
                 user_id=user_id,
@@ -685,7 +655,8 @@ async def rollback_provider_update(
         )
     except Exception:  # noqa: BLE001
         logger.warning(
-            "Compensating update failed for deployment %s (resource_key=%s). Provider state may diverge from DB.",
+            "Compensating update rollback failed for deployment %s (resource_key=%s). "
+            "Provider state may diverge from DB.",
             deployment_db_id,
             deployment_resource_key,
             exc_info=True,

@@ -146,6 +146,10 @@ def test_deployment_service_is_base_deployment_service() -> None:
         ("list_snapshots", {"user_id": "u1", "db": None}),
         ("get", {"user_id": "u1", "deployment_id": "d1", "db": None}),
         ("update", {"user_id": "u1", "deployment_id": "d1", "payload": None, "db": None}),
+        (
+            "rollback_update_result",
+            {"user_id": "u1", "deployment_id": "d1", "payload": None, "db": None},
+        ),
         ("redeploy", {"user_id": "u1", "deployment_id": "d1", "db": None}),
         ("duplicate", {"user_id": "u1", "deployment_id": "d1", "db": None}),
         ("delete", {"user_id": "u1", "deployment_id": "d1", "db": None}),

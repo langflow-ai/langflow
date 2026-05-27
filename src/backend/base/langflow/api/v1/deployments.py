@@ -84,6 +84,7 @@ from langflow.services.database.models.deployment.crud import (
 from langflow.services.database.models.deployment.crud import (
     update_deployment as update_deployment_db,
 )
+from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.crud import (
     count_provider_accounts as count_provider_account_rows,
 )
@@ -218,6 +219,23 @@ def _field_was_explicitly_set(model: object, field_name: str) -> bool:
     """
     fields_set = getattr(model, "model_fields_set", None)
     return isinstance(fields_set, set) and field_name in fields_set
+
+
+def _resolve_deployment_db_update_kwargs(
+    *,
+    payload: DeploymentUpdateRequest,
+    deployment_row: Deployment,
+) -> dict[str, str | None]:
+    """Build kwargs for ``update_deployment`` when deployment metadata changed."""
+    update_kwargs: dict[str, str | None] = {}
+    if payload.name is not None and payload.name != deployment_row.name:
+        update_kwargs["name"] = payload.name
+    if _field_was_explicitly_set(payload, "description"):
+        if payload.description != deployment_row.description:
+            update_kwargs["description"] = payload.description
+    elif payload.description is not None and payload.description != deployment_row.description:
+        update_kwargs["description"] = payload.description
+    return update_kwargs
 
 
 def _raise_http_for_provider_account_value_error(exc: ValueError) -> None:
@@ -1401,14 +1419,10 @@ async def update_deployment(
             db=session,
         )
 
-        update_kwargs: dict = {}
-        if payload.name is not None and payload.name != deployment_row.name:
-            update_kwargs["name"] = payload.name
-        if _field_was_explicitly_set(payload, "description"):
-            if payload.description != deployment_row.description:
-                update_kwargs["description"] = payload.description
-        elif payload.description is not None and payload.description != deployment_row.description:
-            update_kwargs["description"] = payload.description
+        update_kwargs = _resolve_deployment_db_update_kwargs(
+            payload=payload,
+            deployment_row=deployment_row,
+        )
         if update_kwargs:
             deployment_row = await update_deployment_db(
                 session,
@@ -1420,16 +1434,14 @@ async def update_deployment(
     except Exception as exc:
         # Provider was already mutated by deployment_adapter.update above.
         # Roll back the session to discard any pending DB changes (or reset
-        # it from the "inactive" state after a failed commit) so the mapper
-        # can query the original attachment rows and build a compensating
-        # payload.
+        # it from the "inactive" state after a failed commit).
         await session.rollback()
         await rollback_provider_update(
             deployment_adapter=deployment_adapter,
-            deployment_mapper=deployment_mapper,
             deployment_db_id=deployment_row_id,
             deployment_resource_key=deployment_resource_key,
             deployment_provider_account_id=deployment_provider_account_id,
+            update_result=update_result,
             user_id=current_user.id,
             db=session,
         )
