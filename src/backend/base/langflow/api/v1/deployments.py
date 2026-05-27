@@ -102,10 +102,7 @@ from langflow.services.database.models.deployment_provider_account.crud import (
 from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.flow_version_deployment_attachment.crud import (
     AttachmentConflictError,
-    delete_unbound_attachments,
     list_attachments_by_provider_snapshot_id,
-    list_deployment_attachments,
-    get_attachment_by_provider_snapshot_id,
     list_deployment_attachments_for_flow_version_ids,
     update_flow_version_by_provider_snapshot_id,
 )
