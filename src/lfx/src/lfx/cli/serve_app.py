@@ -22,7 +22,10 @@ import time
 from copy import deepcopy
 from typing import TYPE_CHECKING, Annotated, Any
 
-from fastapi import APIRouter, Depends, FastAPI, HTTPException, Security
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request, Security
+from slowapi import Limiter, _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.util import get_remote_address
 from fastapi.responses import StreamingResponse
 from fastapi.security import APIKeyHeader, APIKeyQuery
 from pydantic import BaseModel, Field
@@ -384,17 +387,23 @@ def create_multi_serve_app(
         version="1.0.0",
     )
 
+    limiter = Limiter(key_func=get_remote_address)
+    app.state.limiter = limiter
+    app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+
     # ------------------------------------------------------------------
     # Global endpoints
     # ------------------------------------------------------------------
 
     @app.get("/flows", response_model=list[FlowMeta], tags=["info"], summary="List available flows")
-    async def list_flows():
+    @limiter.limit("60/minute")
+    async def list_flows(request: Request):
         """Return metadata for all flows hosted in this server."""
         return list(metas.values())
 
     @app.get("/health", tags=["info"], summary="Global health check")
-    async def global_health():
+    @limiter.limit("60/minute")
+    async def global_health(request: Request):
         return {"status": "healthy", "flow_count": len(graphs)}
 
     # ------------------------------------------------------------------
