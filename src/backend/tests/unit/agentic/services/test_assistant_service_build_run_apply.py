@@ -102,10 +102,12 @@ class TestBuildAndRunAlwaysApplies:
     async def test_set_flow_then_run_in_later_batch_reapplies(self):
         # Tokens stream BETWEEN build_flow and run_flow → set_flow is drained
         # (and proposed) before flow_ran is known. Must still end applied.
+        # 4 drain batches: one per token (2), one post-stream, one in the
+        # post-verification fix-turn drain.
         events = await _run_generator(
             input_value="crie um flow e rode ele",
             intent="build_flow",
-            drain_batches=[[dict(SET_FLOW)], [dict(FLOW_RAN)], []],
+            drain_batches=[[dict(SET_FLOW)], [dict(FLOW_RAN)], [], []],
             stream=_two_token_stream,
         )
         assert _has_auto_applied_set_flow(events), f"late run must re-apply the proposed flow to the canvas. {events}"
