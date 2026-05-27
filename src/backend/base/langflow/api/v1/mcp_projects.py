@@ -81,16 +81,6 @@ ALL_INTERFACES_HOST = "0.0.0.0"  # noqa: S104
 router = APIRouter(prefix="/mcp/project", tags=["mcp_projects"])
 
 
-def is_mcp_servers_locked(settings: Any) -> bool:
-    """Return True only when MCP lock is explicitly enabled.
-
-    Some tests patch ``settings`` with ``MagicMock`` objects where unknown
-    attributes resolve to truthy placeholders. Using ``is True`` ensures the
-    lock is enforced only when the flag is explicitly set to ``True``.
-    """
-    return getattr(settings, "mcp_servers_locked", False) is True
-
-
 async def verify_project_auth(
     db: AsyncSession,
     project_id: UUID,

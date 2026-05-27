@@ -15,10 +15,10 @@ from langflow.api.v1.mcp_projects import (
     get_project_sse,
     get_project_streamable_http_url,
     init_mcp_servers,
-    is_mcp_servers_locked,
     project_mcp_servers,
     project_sse_transports,
 )
+from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
@@ -1635,6 +1635,7 @@ async def test_should_report_available_true_when_config_file_has_corrupt_json(
 
     for entry in results:
         assert entry["available"] is True, f"{entry['name']} should be available (directory exists)"
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (JSON is corrupt)"
 
 
 async def test_handle_list_tools_filters_by_user_id_for_defense_in_depth(
@@ -1746,3 +1747,32 @@ async def test_handle_list_tools_filters_by_user_id_for_defense_in_depth(
             if other_user_flow:
                 await session.delete(other_user_flow)
             await session.commit()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_v2_mcp_servers_unlocked_allows_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """When is_mcp_servers_locked returns False the gate must not block normal users."""
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: False)
+
+    server_name = f"lf-unlock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
