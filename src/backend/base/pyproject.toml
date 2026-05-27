@@ -1,6 +1,6 @@
 [project]
 name = "langflow-base"
-version = "0.9.3"
+version = "0.9.4"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 
 dependencies = [
-    "lfx~=0.4.3",
+    "lfx~=0.4.4",
     "fastapi>=0.135.0,<1.0.0",
     "httpx[http2]>=0.27,<1.0.0",
     "aiofile>=3.9.0,<4.0.0",
@@ -25,6 +25,10 @@ dependencies = [
     "gunicorn>=25.3.0,<27.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
+    "langchain-mongodb>=0.11.0",
+    "langchain-perplexity>=1.0.0,<2.0.0",
+    "langchain-qdrant>=1.0.0,<2.0.0",
+    "langchain-weaviate>=0.0.6",
     "langchain-core>=1.3.3,<2.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
@@ -46,7 +50,7 @@ dependencies = [
     "pillow>=12.1.1,<13.0.0",
     "docstring-parser>=0.16,<1.0.0",
     "PyJWT>=2.12.1",
-    "pandas==2.2.3",
+    "pandas>=2.2.3",
     "multiprocess>=0.70.14,<1.0.0",
     "duckdb>=1.0.0,<2.0.0",
     "python-docx>=1.1.0,<2.0.0",
@@ -73,7 +77,6 @@ dependencies = [
     "filelock>=3.20.1,<4.0.0",
     "grandalf>=0.8.0,<1.0.0",
     "spider-client>=0.0.27,<1.0.0",
-    "diskcache>=5.6.3,<6.0.0",
     "clickhouse-connect==0.7.19",
     "assemblyai>=0.33.0,<1.0.0",
     "fastapi-pagination>=0.13.1,<1.0.0",
@@ -178,7 +181,6 @@ postgresql = [
 ]
 
 local = [
-    "llama-cpp-python>=0.2.0",
     "sentence-transformers>=2.0.0",
     "ctransformers>=0.2"
 ]
@@ -189,7 +191,7 @@ cassandra = ["cassio>=0.1.7"]
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
-mongodb = ["pymongo==4.10.1"]
+mongodb = ["pymongo>=4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
@@ -199,7 +201,8 @@ faiss = [
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
-qdrant = ["qdrant-client==1.9.2"]
+qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
+qdrant-vectors = ["langchain-qdrant>=1.0.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -208,7 +211,7 @@ chroma = [
 upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 milvus = ["langchain-milvus~=0.3.2"]
-mongodb-vectors = ["langchain-mongodb==0.7.0"]
+mongodb-vectors = ["langchain-mongodb>=0.11.0"]
 astradb = ["langchain-astradb~=1.0.0"]
 
 # Individual LLM providers
@@ -229,7 +232,6 @@ sambanova = ["langchain-sambanova~=1.0.0"]
 groq = ["langchain-groq~=1.1.1"]
 
 # Individual local LLM providers
-llama-cpp = ["llama-cpp-python~=0.2.0"]
 sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
@@ -247,7 +249,6 @@ pytube = ["pytube==15.0.0"]
 # Individual agent frameworks
 # crewai is commented out due to httpx version conflict
 # crewai = ["crewai>=0.126.0"]
-dspy = ["dspy-ai==2.5.41"]
 smolagents = ["smolagents>=1.8.0"]
 
 # Individual tools
@@ -276,7 +277,7 @@ metaphor = ["metaphor-python==0.1.23"]
 metal = ["metal_sdk==2.5.1"]
 markup = ["MarkupSafe==3.0.2"]
 aws = ["boto3>=1.34.162,<2.0.0", "langchain-aws~=1.1.0"]
-numexpr = ["numexpr==2.10.2"]
+numexpr = ["numexpr>=2.10.4"]
 qianfan = ["qianfan==0.3.5"]
 pgvector = ["pgvector>=0.4.2"]
 litellm = ["litellm>=1.83.0"]
@@ -292,7 +293,7 @@ composio = [
 ragstack = ["ragstack-ai-knowledge-store==0.2.1; python_version < '3.13'"]
 opensearch = ["opensearch-py==2.8.0"]
 atlassian = ["atlassian-python-api==3.41.16"]
-mem0 = ["mem0ai>=0.1.34"]
+mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 needle = ["needle-python>=0.4.0"]
 sseclient = ["sseclient-py==1.8.0"]
 openinference = ["openinference-instrumentation-langchain>=0.1.29"]
@@ -319,13 +320,13 @@ graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-opik = ["opik>=1.6.3,<2.0.0"]
+opik = ["opik>=2.0.0,<3.0.0"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 openlayer = ["openlayer>=0.9.0,<1.0.0"]
 
 # Document processing / OCR
 docling = [
-    "docling-core>=2.36.1,<3.0.0",
+    "docling-core>=2.77.0,<3.0.0",
     "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
 easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
@@ -380,6 +381,7 @@ complete = [
     "langflow-base[elasticsearch]",
     "langflow-base[faiss]",
     "langflow-base[qdrant]",
+    "langflow-base[qdrant-vectors]",
     "langflow-base[weaviate]",
     "langflow-base[chroma]",
     "langflow-base[upstash]",
@@ -404,7 +406,6 @@ complete = [
     "langflow-base[docx]",
     "langflow-base[pytube]",
     # "langflow-base[crewai]",  # commented out due to httpx version conflict
-    "langflow-base[dspy]",
     "langflow-base[smolagents]",
     "langflow-base[beautifulsoup]",
     "langflow-base[serpapi]",
