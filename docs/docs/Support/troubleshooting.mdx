@@ -631,6 +631,41 @@ If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and componen
 
 If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
 
+## Intel Mac issues {#intel-mac-issues}
+
+The following issues can occur when running Langflow on Intel-based Macs.
+
+### "No matching distribution found" errors on Intel Mac
+
+If you see errors about missing packages after installing Langflow on an Intel Mac, such as:
+
+```text
+ERROR: Could not find a version that satisfies the requirement torch
+ERROR: No matching distribution found for torch
+```
+
+This is expected behavior. ML packages such as PyTorch are intentionally excluded on Intel Macs because PyTorch dropped support for macOS x86_64 starting with version 2.3.0.
+
+To verify your architecture and understand which features are available, run:
+
+```bash
+python -c "import platform; print(platform.machine())"
+# x86_64 = Intel, arm64 = Apple Silicon
+```
+
+Use core Langflow features or API-based alternatives instead of local ML models.
+For details on which features are available and workarounds, see [macOS support](/macos-support).
+
+### Performance issues on Intel Mac
+
+If Langflow feels slow on an Intel Mac:
+
+1. Ensure you are not trying to run ML workloads locally, as these are not supported on Intel Macs.
+2. Use API-based providers for embeddings and completions instead of local models.
+3. Consider upgrading to Apple Silicon for better performance with ML features.
+
+For more information, see [Workarounds for Intel Mac users](/macos-support#workarounds-for-intel-mac-users).
+
 ## See also
 
 - [Langflow GitHub Issues and Discussions](/contributing-github-issues)
