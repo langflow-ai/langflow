@@ -802,9 +802,7 @@ async def test_should_call_tool_and_populate_token_usage_when_running_against_re
 
 @pytest.mark.asyncio
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
-async def test_should_stream_multiple_token_chunks_to_event_manager_when_running_against_real_openai_model() -> (
-    None
-):
+async def test_should_stream_multiple_token_chunks_to_event_manager_when_running_against_real_openai_model() -> None:
     """E2E proof that the streaming pipeline works against a real OpenAI model.
 
     Hard-coding ``stream=True`` in ``_get_llm`` is only useful if the pipeline that
@@ -1462,7 +1460,8 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_fal
 async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_true() -> None:
     """Sanity check: when the user explicitly toggles stream=True, get_llm must still
     receive stream=True. This guards against a regression where the toggle inverts the
-    flag or is consumed elsewhere before reaching get_llm."""
+    flag or is consumed elsewhere before reaching get_llm.
+    """
     captured: dict[str, Any] = {}
 
     def _capture_get_llm(**kwargs):
@@ -1476,5 +1475,3 @@ async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_tru
         component._get_llm()
 
     assert captured.get("stream") is True
-
-
