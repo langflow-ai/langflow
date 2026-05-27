@@ -101,7 +101,12 @@ class SemanticScholarSearchComponent(Component):
 
                     if response.status_code == httpx.codes.TOO_MANY_REQUESTS:
                         await asyncio.sleep(2)
-                        break
+                        if all_papers:
+                            break
+                        error_msg = "Rate limit reached. Try again later or use an API key."
+                        error_data = Data(data={"error": error_msg})
+                        self.status = [error_data]
+                        return self.status
 
                     response.raise_for_status()
                     response_data = response.json()

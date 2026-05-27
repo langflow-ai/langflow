@@ -42,7 +42,6 @@ class TestAuthorPortfolioFetcher:
 
     # --- Validation and Setup ---
 
-    @pytest.mark.asyncio
     async def test_author_portfolio_empty_id(self):
         """Tests validation when author_id is empty."""
         component = AuthorPortfolioComponent()
@@ -52,7 +51,6 @@ class TestAuthorPortfolioFetcher:
         assert "error" in results[0].data
         assert "could not be extracted" in results[0].data["error"]
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_id_stripping(self):
         """Tests if author_id is stripped correctly before API call."""
@@ -65,7 +63,6 @@ class TestAuthorPortfolioFetcher:
 
     # --- Parsing, Sorting and Logic ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_parsing_and_fallbacks(self):
         """Tests general parsing and missing fields fallback."""
@@ -92,7 +89,6 @@ class TestAuthorPortfolioFetcher:
         assert by_id["a222"]["abstract"] == "No abstract available."
         assert by_id["a222"]["authors"] == "Unknown"
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_sorting(self):
         """Tests if the author's papers are sorted by citation count."""
@@ -108,7 +104,6 @@ class TestAuthorPortfolioFetcher:
         assert results[0].data["citation_count"] == 20000
         assert results[1].data["citation_count"] == 5
 
-    @pytest.mark.asyncio
     @respx.mock
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_author_portfolio_pagination(self, mock_sleep):
@@ -134,7 +129,6 @@ class TestAuthorPortfolioFetcher:
 
     # --- Error Handling and Resilience ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_404_not_found(self):
         """Tests graceful handling when author does not exist."""
@@ -146,7 +140,6 @@ class TestAuthorPortfolioFetcher:
         results = await component.fetch_portfolio()
         assert "not found" in results[0].data["error"].lower()
 
-    @pytest.mark.asyncio
     @respx.mock
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_author_portfolio_429_rate_limit(self, mock_sleep):
@@ -167,7 +160,6 @@ class TestAuthorPortfolioFetcher:
         # Ensures the 429 defense delay was activated
         mock_sleep.assert_any_call(2)
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_http_error(self):
         """Tests handling of generic server errors."""
@@ -181,7 +173,6 @@ class TestAuthorPortfolioFetcher:
 
     # --- DataFrame Output ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_dataframe_output(self):
         """Tests if the method returns a valid DataFrame object."""
@@ -193,7 +184,6 @@ class TestAuthorPortfolioFetcher:
         df = await component.fetch_portfolio_dataframe()
         assert isinstance(df, DataFrame)
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_author_portfolio_smart_funnel_input(self):
         """Tests if the component correctly extracts author_id from a Data list."""
@@ -215,7 +205,6 @@ class TestAuthorPortfolioFetcher:
         assert len(respx.calls) == 1
         assert "smart_id_777" in str(respx.calls.last.request.url)
 
-    @pytest.mark.asyncio
     async def test_author_portfolio_empty_list_input(self):
         """Tests validation when input is an empty list."""
         component = AuthorPortfolioComponent()

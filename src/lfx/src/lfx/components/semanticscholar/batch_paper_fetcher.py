@@ -1,3 +1,6 @@
+import asyncio
+import random
+
 import httpx
 
 from lfx.custom.custom_component.component import Component
@@ -85,49 +88,61 @@ class BatchPaperFetcherComponent(Component):
             headers["x-api-key"] = api_key.strip()
 
         async with httpx.AsyncClient(timeout=20.0) as client:
-            try:
-                # Batch requests use POST instead of GET
-                response = await client.post(base_url, json=payload, params=params, headers=headers)
+            max_attempts = 3
+            for attempt in range(max_attempts):
+                try:
+                    # Batch requests use POST instead of GET
+                    response = await client.post(base_url, json=payload, params=params, headers=headers)
 
-                if response.status_code == httpx.codes.TOO_MANY_REQUESTS:
-                    error_msg = "Rate limit reached. Please wait or use an API Key."
+                    if response.status_code == httpx.codes.TOO_MANY_REQUESTS:
+                        if attempt < max_attempts - 1:
+                            retry_after = response.headers.get("Retry-After")
+                            if retry_after and retry_after.isdigit():
+                                delay = int(retry_after)
+                            else:
+                                delay = 2**attempt + random.uniform(0, 1)  # noqa: S311
+                            await asyncio.sleep(delay)
+                            continue
+
+                        error_msg = "Rate limit reached. Please wait or use an API Key."
+                        self.status = [Data(data={"error": error_msg})]
+                        return self.status
+
+                    response.raise_for_status()
+                    batch_data = response.json()
+                    break
+                except httpx.HTTPStatusError as e:
+                    error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
+                    self.status = [Data(data={"error": error_msg})]
+                    return self.status
+                except Exception as e:  # noqa: BLE001
+                    error_msg = f"Unexpected error: {e!s}"
                     self.status = [Data(data={"error": error_msg})]
                     return self.status
 
-                response.raise_for_status()
-                batch_data = response.json()
-            except httpx.HTTPStatusError as e:
-                error_msg = f"HTTP Error {e.response.status_code}: {e.response.text}"
-                self.status = [Data(data={"error": error_msg})]
-                return self.status
-            except Exception as e:  # noqa: BLE001
-                error_msg = f"Unexpected error: {e!s}"
-                self.status = [Data(data={"error": error_msg})]
-                return self.status
-            else:
-                all_papers = []
-                for paper in batch_data:
-                    # The API might return 'None' for IDs it couldn't find
-                    if not paper:
-                        continue
+            all_papers = []
+            for paper in batch_data:
+                # The API might return 'None' for IDs it couldn't find
+                if not paper:
+                    continue
 
-                    author_names = [author.get("name") for author in paper.get("authors", [])]
+                author_names = [author.get("name") for author in paper.get("authors", []) if author.get("name")]
 
-                    clean_paper = {
-                        "paper_id": paper.get("paperId"),
-                        "title": paper.get("title"),
-                        "abstract": paper.get("abstract") or "No abstract available.",
-                        "year": paper.get("year"),
-                        "citation_count": paper.get("citationCount", 0),
-                        "authors": ", ".join(author_names) if author_names else "Unknown",
-                        "url": paper.get("url"),
-                        "is_open_access": paper.get("isOpenAccess", False),
-                    }
-                    all_papers.append(clean_paper)
+                clean_paper = {
+                    "paper_id": paper.get("paperId"),
+                    "title": paper.get("title"),
+                    "abstract": paper.get("abstract") or "No abstract available.",
+                    "year": paper.get("year"),
+                    "citation_count": paper.get("citationCount", 0),
+                    "authors": ", ".join(author_names) if author_names else "Unknown",
+                    "url": paper.get("url"),
+                    "is_open_access": paper.get("isOpenAccess", False),
+                }
+                all_papers.append(clean_paper)
 
-                results = [Data(data=paper) for paper in all_papers]
-                self.status = results
-                return results
+            results = [Data(data=paper) for paper in all_papers]
+            self.status = results
+            return results
 
     async def fetch_batch_dataframe(self) -> DataFrame:
         """Converts results to a DataFrame."""

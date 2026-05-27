@@ -103,7 +103,7 @@ class AuthorPortfolioComponent(Component):
                         return [error_data]
 
                     if response.status_code == httpx.codes.NOT_FOUND:
-                        error_data = Data(data={"error": f"Author ID '{self.author_id}' not found."})
+                        error_data = Data(data={"error": f"Author ID '{clean_id}' not found."})
                         self.status = error_data
                         return [error_data]
 
@@ -115,7 +115,7 @@ class AuthorPortfolioComponent(Component):
                         break
 
                     for paper in batch_data:
-                        author_names = [author.get("name") for author in paper.get("authors", [])]
+                        author_names = [author.get("name") for author in paper.get("authors", []) if author.get("name")]
 
                         clean_paper = {
                             "author_id": clean_id,

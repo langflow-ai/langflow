@@ -1,4 +1,5 @@
 import asyncio
+import urllib.parse
 
 import httpx
 
@@ -70,7 +71,8 @@ class PaperDetailsComponent(Component):
             self.status = error_data
             return [error_data]
 
-        base_url = f"https://api.semanticscholar.org/graph/v1/paper/{clean_id}"
+        encoded_id = urllib.parse.quote(clean_id, safe="")
+        base_url = f"https://api.semanticscholar.org/graph/v1/paper/{encoded_id}"
 
         # Requesting deep fields like tldr and openAccessPdf
         fields = "title,abstract,year,authors,citationCount,url,isOpenAccess,openAccessPdf,tldr,venue,publicationDate"

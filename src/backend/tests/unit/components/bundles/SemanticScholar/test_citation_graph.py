@@ -108,7 +108,7 @@ class TestCitationGraphFetcher:
         results = await component.fetch_citations()
 
         assert "error" in results[0].data
-        assert "" in results[0].data["error"]
+        assert "Paper ID empty" in results[0].data["error"]
 
     @pytest.mark.asyncio
     @respx.mock

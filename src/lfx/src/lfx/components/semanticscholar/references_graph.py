@@ -1,4 +1,5 @@
 import asyncio
+import urllib.parse
 
 import httpx
 
@@ -76,7 +77,8 @@ class ReferenceGraphComponent(Component):
             self.status = error_data
             return [error_data]
 
-        base_url = f"https://api.semanticscholar.org/graph/v1/paper/{clean_id}/references"
+        encoded_id = urllib.parse.quote(clean_id, safe="")
+        base_url = f"https://api.semanticscholar.org/graph/v1/paper/{encoded_id}/references"
         fields = "title,abstract,year,authors,citationCount,url,isOpenAccess"
 
         all_references = []
@@ -109,7 +111,7 @@ class ReferenceGraphComponent(Component):
                         return [error_data]
 
                     if response.status_code == httpx.codes.NOT_FOUND:
-                        error_data = Data(data={"error": f"Paper ID '{self.paper_id}' not found."})
+                        error_data = Data(data={"error": f"Paper ID '{clean_id}' not found."})
                         self.status = error_data
                         return [error_data]
 
@@ -128,7 +130,7 @@ class ReferenceGraphComponent(Component):
                             author_names = [author.get("name") for author in paper_info.get("authors", [])]
 
                             clean_paper = {
-                                "source_paper_id": self.paper_id,
+                                "source_paper_id": clean_id,
                                 "referenced_paper_id": paper_info.get("paperId"),
                                 "title": paper_info.get("title"),
                                 "abstract": paper_info.get("abstract") or "No abstract available.",
@@ -142,7 +144,7 @@ class ReferenceGraphComponent(Component):
 
                         if len(all_references) >= self.max_results:
                             break
-                    
+
                     offset = response_data.get("next")
                     if offset is None:
                         break

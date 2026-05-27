@@ -49,7 +49,6 @@ class TestSemanticScholarSearch:
 
     # --- Input Validation ---
 
-    @pytest.mark.asyncio
     async def test_search_papers_empty_query(self):
         """Tests validation when the search query is empty."""
         component = SemanticScholarSearchComponent()
@@ -58,7 +57,6 @@ class TestSemanticScholarSearch:
         assert len(results) == 1
         assert "error" in results[0].data
 
-    @pytest.mark.asyncio
     async def test_search_papers_invalid_year_format(self):
         """Tests validation when the year format is incorrect."""
         component = SemanticScholarSearchComponent()
@@ -69,7 +67,6 @@ class TestSemanticScholarSearch:
 
     # --- Business Logic & Filters ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_edge_cases_handling(self):
         """Tests missing abstracts, empty authors, and None years fallback mapping."""
@@ -88,7 +85,6 @@ class TestSemanticScholarSearch:
         assert by_id["222"]["authors"] == "Unknown"
         assert by_id["333"]["year"] is None
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_open_access_filter(self):
         """Tests if the Open Access filter strictly removes non-OA papers."""
@@ -105,7 +101,6 @@ class TestSemanticScholarSearch:
         assert len(results) == 2
         assert "222" not in [r.data["paper_id"] for r in results]
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_min_citations_filter(self):
         """Tests if papers with citations below the threshold are discarded."""
@@ -122,7 +117,6 @@ class TestSemanticScholarSearch:
         assert len(results) == 2
         assert "222" not in [r.data["paper_id"] for r in results]
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_combined_filters(self):
         """Tests Open Access and Min Citations simultaneously."""
@@ -139,7 +133,6 @@ class TestSemanticScholarSearch:
         # Papers 111 (OA, 100000 cit.) and 333 (OA, 50 cit.) meet both criteria
         assert len(results) == 2
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_max_results_limit(self):
         """Tests if the component halts and slices the list exactly at max_results."""
@@ -155,7 +148,6 @@ class TestSemanticScholarSearch:
 
     # --- Sorting ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_sorting_by_citations(self):
         """Tests Highest Citations sorting."""
@@ -172,7 +164,6 @@ class TestSemanticScholarSearch:
         assert results[1].data["citation_count"] == 50
         assert results[2].data["citation_count"] == 2
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_sorting_newest(self):
         """Tests Newest First sorting, ensuring None years are handled gracefully."""
@@ -192,7 +183,6 @@ class TestSemanticScholarSearch:
 
     # --- Network, Pagination & Resilience ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_empty_api_response(self):
         """Tests component behavior when API finds no papers."""
@@ -206,7 +196,6 @@ class TestSemanticScholarSearch:
 
         assert len(results) == 0
 
-    @pytest.mark.asyncio
     @respx.mock
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_search_papers_pagination_offset(self, mock_sleep):
@@ -228,7 +217,6 @@ class TestSemanticScholarSearch:
 
         mock_sleep.assert_any_call(1)
 
-    @pytest.mark.asyncio
     @respx.mock
     @patch("asyncio.sleep", new_callable=AsyncMock)
     async def test_search_papers_rate_limit_429(self, mock_sleep):
@@ -241,10 +229,11 @@ class TestSemanticScholarSearch:
 
         results = await component.search_papers()
 
-        assert len(results) == 0
+        assert len(results) == 1
+        assert "error" in results[0].data
+        assert "Rate limit reached" in results[0].data["error"]
         mock_sleep.assert_called_once_with(2)
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_api_error_handling(self):
         """Tests generic API or network failure handling."""
@@ -261,7 +250,6 @@ class TestSemanticScholarSearch:
 
     # --- DataFrame Output ---
 
-    @pytest.mark.asyncio
     @respx.mock
     async def test_search_papers_dataframe_output(self):
         """Tests if the secondary method returns a valid DataFrame."""

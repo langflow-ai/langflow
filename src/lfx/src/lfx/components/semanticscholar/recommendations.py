@@ -1,4 +1,5 @@
 import asyncio
+import urllib.parse
 
 import httpx
 
@@ -76,7 +77,8 @@ class AIRecommendationsComponent(Component):
             self.status = error_data
             return [error_data]
 
-        base_url = f"https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{clean_id}"
+        encoded_id = urllib.parse.quote(clean_id, safe="")
+        base_url = f"https://api.semanticscholar.org/recommendations/v1/papers/forpaper/{encoded_id}"
         fields = "title,abstract,year,authors,citationCount,url,isOpenAccess"
 
         max_res = getattr(self, "max_results", 10)
