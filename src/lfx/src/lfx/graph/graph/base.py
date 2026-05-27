@@ -1014,20 +1014,43 @@ class Graph:
         # Reactivate common downstream vertices that have at least one active predecessor
         # outside the stopped branch. Without this, merge/combine nodes that receive input
         # from both active and inactive branches would be blocked forever.
+        # The loop repeats until no more vertices are reactivated, so reactivating a merge
+        # node re-opens its descendants for re-evaluation.
+        # Note: reactivated vertices are discarded from `visited` and therefore omitted from
+        # `new_predecessor_map` below. Their `run_predecessors` entries are left as-is by
+        # `update_run_state`. This is correct when coupled with `exclude_branch_conditionally`
+        # (called right after this method), which removes excluded branch vertices from all
+        # successor predecessor lists via `remove_from_predecessors`.
         if state == VertexStates.INACTIVE:
-            for v_id in list(visited):
-                vertex = self.get_vertex(v_id)
-                active_predecessors = [
-                    p_id
-                    for p_id in self.predecessor_map.get(v_id, [])
-                    if p_id not in visited and self.get_vertex(p_id).is_active()
-                ]
-                if active_predecessors:
-                    self.mark_vertex(v_id, VertexStates.ACTIVE)
-                    visited.discard(v_id)
+            changed = True
+            while changed:
+                changed = False
+                for v_id in list(visited):
+                    active_predecessors = [
+                        p_id
+                        for p_id in self.predecessor_map.get(v_id, [])
+                        if p_id not in visited and self.get_vertex(p_id).is_active()
+                    ]
+                    if active_predecessors:
+                        self.mark_vertex(v_id, VertexStates.ACTIVE)
+                        visited.discard(v_id)
+                        changed = True
 
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
-        new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
+
+        if state == VertexStates.ACTIVE:
+            # Rebuild predecessor entries for successors of activated vertices.
+            # A previous INACTIVE+exclude pass may have pruned entries from these
+            # successors via remove_from_predecessors.
+            affected = set(visited)
+            for v_id in visited:
+                affected.update(self.parent_child_map.get(v_id, []))
+            new_predecessor_map = {
+                k: v for k, v in new_predecessor_map.items() if k in affected
+            }
+        else:
+            new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
+
         if vertex_id in self.cycle_vertices:
             # Remove dependencies that are not in the cycle and have run at least once
             new_predecessor_map = {
@@ -1058,6 +1081,22 @@ class Graph:
         if vertex_id in self.conditional_exclusion_sources:
             previous_exclusions = self.conditional_exclusion_sources[vertex_id]
             self.conditionally_excluded_vertices -= previous_exclusions
+
+            # Restore predecessor entries for successors of previously excluded
+            # vertices from the full graph adjacency. Without this, run_predecessors
+            # monotonically shrinks across cycle iterations.
+            full_predecessor_map, _ = self.build_adjacency_maps(self.edges)
+            restore_map = {}
+            for excluded_id in previous_exclusions:
+                for successor_id in self.parent_child_map.get(excluded_id, []):
+                    if successor_id in full_predecessor_map:
+                        restore_map[successor_id] = full_predecessor_map[successor_id]
+            if restore_map:
+                self.run_manager.update_run_state(
+                    run_predecessors=restore_map,
+                    vertices_to_run=self.vertices_to_run,
+                )
+
             del self.conditional_exclusion_sources[vertex_id]
 
         # Now exclude the new branch
