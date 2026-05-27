@@ -63,6 +63,9 @@ def test_api_headers_uses_table_input_contract() -> None:
 
     assert isinstance(api_headers, TableInput)
     assert api_headers.input_types == ["Data", "JSON"]
+    columns = {column["name"]: column for column in api_headers.table_schema}
+    assert columns["key"].get("load_from_db") is not True
+    assert columns["value"].get("load_from_db") is not True
 
 
 def test_process_headers_skips_blank_and_none_keys_across_input_shapes() -> None:
