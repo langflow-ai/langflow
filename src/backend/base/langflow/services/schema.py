@@ -5,6 +5,7 @@ class ServiceType(str, Enum):
     """Enum for the different types of services that can be registered with the service manager."""
 
     AUTH_SERVICE = "auth_service"
+    AUTHORIZATION_SERVICE = "authorization_service"
     CACHE_SERVICE = "cache_service"
     SHARED_COMPONENT_CACHE_SERVICE = "shared_component_cache_service"
     SETTINGS_SERVICE = "settings_service"

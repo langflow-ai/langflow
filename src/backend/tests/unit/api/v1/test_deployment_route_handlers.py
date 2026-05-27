@@ -60,9 +60,14 @@ def _fake_provider_account(
     provider_url: str = "https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
     api_key: str = "encrypted-key",
     provider_tenant_id: str | None = "tenant-1",
+    user_id=None,
 ) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
+        # ``user_id`` is read by ``list_deployment_configs`` to pick the
+        # provider namespace for adapter calls; default to a random UUID
+        # so tests that don't care about the owner still pass.
+        user_id=user_id if user_id is not None else uuid4(),
         provider_key=provider_key,
         provider_url=provider_url,
         api_key=api_key,
@@ -73,6 +78,13 @@ def _fake_provider_account(
 def _fake_deployment_row(**overrides) -> SimpleNamespace:
     return SimpleNamespace(
         id=overrides.get("id", uuid4()),
+        # ``user_id`` and ``workspace_id`` are read by ensure_deployment_permission
+        # on every guarded deployment handler — keep the fixture in sync with the
+        # real Deployment model so tests don't trip the authz layer with
+        # AttributeError. None values are valid (owner override skipped,
+        # workspace domain falls back to "*").
+        user_id=overrides.get("user_id", uuid4()),
+        workspace_id=overrides.get("workspace_id"),
         resource_key=overrides.get("resource_key", "rk-1"),
         name=overrides.get("name", "test-deployment"),
         description=overrides.get("description"),
@@ -1190,10 +1202,10 @@ class TestUpdateSnapshotRoute:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.get_attachment_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
     async def test_updates_all_attachment_rows_for_snapshot(
         self,
-        mock_get_attachment,
+        mock_list_attachments,
         mock_get_pa,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -1206,19 +1218,23 @@ class TestUpdateSnapshotRoute:
         user = _fake_user()
         flow_id = uuid4()
         target_flow_version_id = uuid4()
+        # ``update_snapshot`` filters the candidate set to attachments owned
+        # by the actor when share-aware fetch is off. Pin the owner to the
+        # actor's id so the OSS pass-through path keeps the row.
+        deployment = _fake_deployment_row(
+            user_id=user.id,
+            deployment_provider_account_id=uuid4(),
+        )
         attachment = SimpleNamespace(
             flow_version_id=uuid4(),
-            deployment_id=uuid4(),
+            deployment_id=deployment.id,
             provider_snapshot_id="tool-1",
-        )
-        deployment = _fake_deployment_row(
-            id=attachment.deployment_id,
-            deployment_provider_account_id=uuid4(),
+            user_id=user.id,
         )
         provider_account = _fake_provider_account()
         provider_account.id = deployment.deployment_provider_account_id
 
-        mock_get_attachment.return_value = attachment
+        mock_list_attachments.return_value = [attachment]
         mock_get_deployment_row.return_value = deployment
         mock_get_flow_version.return_value = SimpleNamespace(id=target_flow_version_id, flow_id=flow_id, data={})
         mock_get_pa.return_value = provider_account
@@ -1242,9 +1258,8 @@ class TestUpdateSnapshotRoute:
 
         assert response.flow_version_id == target_flow_version_id
         assert response.provider_snapshot_id == "tool-1"
-        mock_get_attachment.assert_awaited_once_with(
+        mock_list_attachments.assert_awaited_once_with(
             session,
-            user_id=user.id,
             provider_snapshot_id="tool-1",
         )
         mock_update_rows.assert_awaited_once_with(
@@ -1263,10 +1278,10 @@ class TestUpdateSnapshotRoute:
     @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
     @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
     @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
-    @patch(f"{ROUTES_MODULE}.get_attachment_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
     async def test_commit_failure_attempts_provider_compensation(
         self,
-        mock_get_attachment,
+        mock_list_attachments,
         mock_get_pa,
         mock_get_mapper,
         mock_resolve_adapter,
@@ -1280,14 +1295,15 @@ class TestUpdateSnapshotRoute:
         flow_id = uuid4()
         previous_flow_version_id = uuid4()
         target_flow_version_id = uuid4()
+        deployment = _fake_deployment_row(
+            user_id=user.id,
+            deployment_provider_account_id=uuid4(),
+        )
         attachment = SimpleNamespace(
             flow_version_id=previous_flow_version_id,
-            deployment_id=uuid4(),
+            deployment_id=deployment.id,
             provider_snapshot_id="tool-1",
-        )
-        deployment = _fake_deployment_row(
-            id=attachment.deployment_id,
-            deployment_provider_account_id=uuid4(),
+            user_id=user.id,
         )
         provider_account = _fake_provider_account()
         provider_account.id = deployment.deployment_provider_account_id
@@ -1295,7 +1311,7 @@ class TestUpdateSnapshotRoute:
         target_version = SimpleNamespace(id=target_flow_version_id, flow_id=flow_id, data={"nodes": []})
         previous_version = SimpleNamespace(id=previous_flow_version_id, flow_id=flow_id, data={"nodes": []})
         mock_get_flow_version.side_effect = [target_version, previous_version]
-        mock_get_attachment.return_value = attachment
+        mock_list_attachments.return_value = [attachment]
         mock_get_deployment_row.return_value = deployment
         mock_get_pa.return_value = provider_account
         adapter = AsyncMock()
@@ -1322,6 +1338,288 @@ class TestUpdateSnapshotRoute:
         session.commit.assert_awaited_once()
         session.rollback.assert_awaited_once()
         assert adapter.update_snapshot.await_count == 2
+
+    # ----- Share-aware / owner-group branches ----- #
+    #
+    # ``update_snapshot`` now groups candidate attachments by owner,
+    # authorizes each owner's full set, and decides between 404 / success /
+    # 409 based on how many owner groups authorize. These tests pin each
+    # branch so a regression in the authorization walk surfaces here.
+
+    @staticmethod
+    def _share_aware_authz() -> MagicMock:
+        """Stub authorization service that opts into cross-user fetch."""
+        stub = MagicMock()
+        stub.supports_cross_user_fetch = AsyncMock(return_value=True)
+        stub.is_enabled = AsyncMock(return_value=True)
+        return stub
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_authorization_service")
+    @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
+    async def test_share_aware_zero_authorized_groups_returns_404(
+        self,
+        mock_list_attachments,
+        mock_get_deployment_row,
+        mock_get_authz,
+        mock_ensure_perm,
+    ):
+        """Share-aware: candidates from two owners; neither authorizes → 404 (no info leak)."""
+        from langflow.api.v1.deployments import update_snapshot
+
+        user = _fake_user()
+        alice_id = uuid4()
+        bob_id = uuid4()
+        alice_dep = _fake_deployment_row(user_id=alice_id)
+        bob_dep = _fake_deployment_row(user_id=bob_id)
+        mock_list_attachments.return_value = [
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=alice_dep.id,
+                provider_snapshot_id="tool-1",
+                user_id=alice_id,
+            ),
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=bob_dep.id,
+                provider_snapshot_id="tool-1",
+                user_id=bob_id,
+            ),
+        ]
+        deps_by_id = {alice_dep.id: alice_dep, bob_dep.id: bob_dep}
+
+        async def _resolve(_session, *, user_id, deployment_id):  # noqa: ARG001
+            return deps_by_id.get(deployment_id)
+
+        mock_get_deployment_row.side_effect = _resolve
+        mock_get_authz.return_value = self._share_aware_authz()
+        # Every authorization attempt denies — every owner group fails.
+        mock_ensure_perm.side_effect = HTTPException(status_code=403, detail="denied")
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_snapshot(
+                provider_snapshot_id="tool-1",
+                body=SnapshotUpdateRequest(flow_version_id=uuid4()),
+                session=AsyncMock(),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert exc_info.value.status_code == 404
+        # UUID-privacy: the response must NOT distinguish "no such snapshot"
+        # from "snapshot exists but owners other than you have it".
+        assert "tool-1" in exc_info.value.detail
+        assert "owner" not in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    @patch("langflow.services.database.models.flow_version.crud.get_flow_version_entry", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.update_flow_version_by_provider_snapshot_id", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.resolve_deployment_adapter")
+    @patch(f"{ROUTES_MODULE}.get_deployment_mapper")
+    @patch(f"{ROUTES_MODULE}.get_owned_provider_account_or_404", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_authorization_service")
+    @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
+    async def test_share_aware_one_authorized_group_ignores_unauthorized_collision(
+        self,
+        mock_list_attachments,
+        mock_get_deployment_row,
+        mock_get_authz,
+        mock_ensure_perm,
+        mock_get_pa,
+        mock_get_mapper,
+        mock_resolve_adapter,
+        mock_update_rows,
+        mock_get_flow_version,
+    ):
+        """An unrelated owner with the same snapshot id must NOT block a legitimate share-holder."""
+        from langflow.api.v1.deployments import update_snapshot
+
+        user = _fake_user()
+        target_flow_version_id = uuid4()
+        # Alice — the actor has WRITE on her deployment via a share grant.
+        alice_id = uuid4()
+        alice_dep = _fake_deployment_row(user_id=alice_id)
+        # Bob — also has snapshot id "tool-1", but actor has no access.
+        bob_id = uuid4()
+        bob_dep = _fake_deployment_row(user_id=bob_id)
+
+        mock_list_attachments.return_value = [
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=alice_dep.id,
+                provider_snapshot_id="tool-1",
+                user_id=alice_id,
+            ),
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=bob_dep.id,
+                provider_snapshot_id="tool-1",
+                user_id=bob_id,
+            ),
+        ]
+        deps_by_id = {alice_dep.id: alice_dep, bob_dep.id: bob_dep}
+
+        async def _resolve(_session, *, user_id, deployment_id):  # noqa: ARG001
+            return deps_by_id.get(deployment_id)
+
+        mock_get_deployment_row.side_effect = _resolve
+        mock_get_authz.return_value = self._share_aware_authz()
+
+        # Allow only Alice's deployment; deny Bob's.
+        async def _maybe_authorize(*_args, **kwargs):
+            if kwargs["deployment_user_id"] == alice_id:
+                return
+            raise HTTPException(status_code=403, detail="denied")
+
+        mock_ensure_perm.side_effect = _maybe_authorize
+
+        provider_account = _fake_provider_account(user_id=alice_id)
+        provider_account.id = alice_dep.deployment_provider_account_id
+        mock_get_pa.return_value = provider_account
+        adapter = AsyncMock()
+        mock_resolve_adapter.return_value = adapter
+        mapper = MagicMock()
+        mapper.resolve_snapshot_update_artifact.return_value = {"artifact": "payload"}
+        mock_get_mapper.return_value = mapper
+        mock_update_rows.return_value = 1
+        mock_get_flow_version.return_value = SimpleNamespace(id=target_flow_version_id, flow_id=uuid4(), data={})
+        session = AsyncMock()
+        session.get.return_value = SimpleNamespace(id=uuid4())
+
+        response = await update_snapshot(
+            provider_snapshot_id="tool-1",
+            body=SnapshotUpdateRequest(flow_version_id=target_flow_version_id),
+            session=session,
+            current_user=user,
+            telemetry=_fake_telemetry(),
+        )
+        assert response.provider_snapshot_id == "tool-1"
+        # Mutation must run inside the OWNER's namespace (Alice's), not the actor's.
+        mock_update_rows.assert_awaited_once_with(
+            session,
+            user_id=alice_id,
+            provider_snapshot_id="tool-1",
+            flow_version_id=target_flow_version_id,
+        )
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_authorization_service")
+    @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
+    async def test_share_aware_multiple_authorized_groups_returns_409(
+        self,
+        mock_list_attachments,
+        mock_get_deployment_row,
+        mock_get_authz,
+        mock_ensure_perm,
+    ):
+        """Actor has WRITE on two unrelated owners' snapshots — route must refuse with 409."""
+        from langflow.api.v1.deployments import update_snapshot
+
+        user = _fake_user()
+        alice_id = uuid4()
+        carol_id = uuid4()
+        alice_dep = _fake_deployment_row(user_id=alice_id)
+        carol_dep = _fake_deployment_row(user_id=carol_id)
+        mock_list_attachments.return_value = [
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=alice_dep.id,
+                provider_snapshot_id="tool-1",
+                user_id=alice_id,
+            ),
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=carol_dep.id,
+                provider_snapshot_id="tool-1",
+                user_id=carol_id,
+            ),
+        ]
+        deps_by_id = {alice_dep.id: alice_dep, carol_dep.id: carol_dep}
+
+        async def _resolve(_session, *, user_id, deployment_id):  # noqa: ARG001
+            return deps_by_id.get(deployment_id)
+
+        mock_get_deployment_row.side_effect = _resolve
+        mock_get_authz.return_value = self._share_aware_authz()
+        # Allow both groups.
+        mock_ensure_perm.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_snapshot(
+                provider_snapshot_id="tool-1",
+                body=SnapshotUpdateRequest(flow_version_id=uuid4()),
+                session=AsyncMock(),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert exc_info.value.status_code == 409
+        assert "multiple owners" in exc_info.value.detail.lower()
+
+    @pytest.mark.asyncio
+    @patch(f"{ROUTES_MODULE}.ensure_deployment_permission", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.get_authorization_service")
+    @patch("langflow.services.database.models.deployment.crud.get_deployment", new_callable=AsyncMock)
+    @patch(f"{ROUTES_MODULE}.list_attachments_by_provider_snapshot_id", new_callable=AsyncMock)
+    async def test_one_owner_spanning_multiple_provider_accounts_returns_409(
+        self,
+        mock_list_attachments,
+        mock_get_deployment_row,
+        mock_get_authz,
+        mock_ensure_perm,
+    ):
+        """Single owner across two provider accounts must 409.
+
+        The external snapshot update can only run against one adapter, but the DB
+        rewrite would otherwise corrupt rows tied to the second provider account.
+        """
+        from langflow.api.v1.deployments import update_snapshot
+
+        user = _fake_user()
+        owner_id = user.id  # actor is the owner (OSS-path-compatible)
+        provider_a = uuid4()
+        provider_b = uuid4()
+        dep_a = _fake_deployment_row(user_id=owner_id, deployment_provider_account_id=provider_a)
+        dep_b = _fake_deployment_row(user_id=owner_id, deployment_provider_account_id=provider_b)
+        mock_list_attachments.return_value = [
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=dep_a.id,
+                provider_snapshot_id="tool-1",
+                user_id=owner_id,
+            ),
+            SimpleNamespace(
+                flow_version_id=uuid4(),
+                deployment_id=dep_b.id,
+                provider_snapshot_id="tool-1",
+                user_id=owner_id,
+            ),
+        ]
+        deps_by_id = {dep_a.id: dep_a, dep_b.id: dep_b}
+
+        async def _resolve(_session, *, user_id, deployment_id):  # noqa: ARG001
+            return deps_by_id.get(deployment_id)
+
+        mock_get_deployment_row.side_effect = _resolve
+        # Either share-aware or OSS works; the multi-provider check fires
+        # after the owner group is selected so the result is the same.
+        mock_get_authz.return_value = self._share_aware_authz()
+        mock_ensure_perm.return_value = None
+
+        with pytest.raises(HTTPException) as exc_info:
+            await update_snapshot(
+                provider_snapshot_id="tool-1",
+                body=SnapshotUpdateRequest(flow_version_id=uuid4()),
+                session=AsyncMock(),
+                current_user=user,
+                telemetry=_fake_telemetry(),
+            )
+        assert exc_info.value.status_code == 409
+        assert "provider accounts" in exc_info.value.detail.lower()
 
 
 # ---------------------------------------------------------------------------
@@ -2242,7 +2540,10 @@ class TestGetDeploymentSync:
             await get_deployment(deployment_id=dep_row.id, session=session, current_user=user)
 
         assert exc_info.value.status_code == 404
-        mock_delete_row.assert_awaited_once_with(session, user_id=user.id, deployment_id=dep_row.id)
+        # Stale-row delete now runs in the deployment owner's namespace so
+        # a non-owner with a share grant can still prune the owner's stale
+        # row. ``current_user`` is only the actor for audit.
+        mock_delete_row.assert_awaited_once_with(session, user_id=dep_row.user_id, deployment_id=dep_row.id)
         session.commit.assert_awaited_once()
 
     @pytest.mark.asyncio

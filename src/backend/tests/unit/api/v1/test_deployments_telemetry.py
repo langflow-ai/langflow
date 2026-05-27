@@ -109,7 +109,9 @@ def mock_db_crud(mock_mapper):
         _mock_del_dep = stack.enter_context(
             patch("langflow.api.v1.deployments._delete_local_deployment_row_with_commit_retry")
         )
-        mock_get_att = stack.enter_context(patch("langflow.api.v1.deployments.get_attachment_by_provider_snapshot_id"))
+        mock_list_att_by_snapshot = stack.enter_context(
+            patch("langflow.api.v1.deployments.list_attachments_by_provider_snapshot_id")
+        )
         mock_get_dep_row = stack.enter_context(
             patch("langflow.services.database.models.deployment.crud.get_deployment")
         )
@@ -149,8 +151,25 @@ def mock_db_crud(mock_mapper):
             "watsonx-orchestrate",
             "tenant-test",
         )
-        mock_get_att.return_value = AsyncMock(deployment_id=uuid4(), flow_version_id=uuid4())
-        mock_get_dep_row.return_value = AsyncMock(deployment_provider_account_id=uuid4())
+        # ``update_snapshot`` now enumerates every attachment with the
+        # given provider_snapshot_id and authorizes each one's deployment.
+        # The fake deployment row carries a stable user_id so the candidate
+        # filter keeps it under the OSS pass-through path.
+        snapshot_deployment_id = uuid4()
+        snapshot_owner_id = uuid4()
+        mock_list_att_by_snapshot.return_value = [
+            AsyncMock(
+                deployment_id=snapshot_deployment_id,
+                flow_version_id=uuid4(),
+                user_id=snapshot_owner_id,
+                provider_snapshot_id="tool-1",
+            )
+        ]
+        mock_get_dep_row.return_value = AsyncMock(
+            id=snapshot_deployment_id,
+            user_id=snapshot_owner_id,
+            deployment_provider_account_id=uuid4(),
+        )
         mock_get_fv.return_value = AsyncMock(flow_id=uuid4(), data={})
         mock_upd_fv.return_value = 1
         mock_count_deps.return_value = 0

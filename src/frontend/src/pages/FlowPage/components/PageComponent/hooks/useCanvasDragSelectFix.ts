@@ -1,22 +1,24 @@
 import { useEffect } from "react";
 
 /**
- * Suppresses text selection during shift-drag in WKWebView.
+ * Suppresses text selection during any canvas drag in WKWebView.
  *
  * WKWebView does not suppress selection on pointer-drag the way Chromium does,
  * so ace editors, labels, and inputs highlight as the pointer moves over them.
  * We set user-select:none on the root element for the lifetime of the drag and
  * restore it on mouseup — so normal text editing is completely unaffected.
+ *
+ * Applies to all mousedown events on the canvas (shift-drag box-select,
+ * edge dragging, node dragging) not just shift-drag.
  */
-export function useShiftDragSelectFix(
+export function useCanvasDragSelectFix(
   ref: React.RefObject<HTMLElement | null>,
 ) {
   useEffect(() => {
     const el = ref.current;
     if (!el) return;
 
-    const onMouseDown = (e: MouseEvent) => {
-      if (!e.shiftKey) return;
+    const onMouseDown = () => {
       document.documentElement.style.setProperty("-webkit-user-select", "none");
       document.documentElement.style.setProperty("user-select", "none");
       const restore = () => {

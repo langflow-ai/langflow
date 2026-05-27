@@ -112,12 +112,25 @@ async def get_deployment(
     user_id: UUID,
     deployment_id: UUID | str,
 ) -> Deployment | None:
+    """Load a deployment by id, with share-aware fetch when supported.
+
+    When the registered authorization service supports cross-user fetch
+    (authorization plugin), the deployment is loaded by id alone and the route's
+    ``ensure_deployment_permission`` decides whether the caller may see it.
+    Otherwise the query stays owner-scoped so the OSS pass-through default
+    cannot widen visibility.
+    """
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+
     deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
-    stmt = select(Deployment).where(
-        Deployment.user_id == user_id,
-        Deployment.id == deployment_uuid,
+    return await authorized_or_owner_scoped(
+        db,
+        Deployment,
+        id_column=Deployment.id,
+        resource_id=deployment_uuid,
+        owner_column=Deployment.user_id,
+        owner_id=user_id,
     )
-    return (await db.exec(stmt)).first()
 
 
 _UNSET = object()
