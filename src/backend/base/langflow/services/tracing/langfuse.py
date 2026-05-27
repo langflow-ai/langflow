@@ -46,13 +46,23 @@ def _get_or_create_shared_client(config: dict) -> Langfuse:
 
     Keyed by (secret_key, public_key, host) so credential rotation produces a
     fresh client rather than reusing a stale one.
+
+    An isolated OpenTelemetry ``TracerProvider`` is passed to ``Langfuse(...)``
+    so the SDK does not register itself as the global tracer provider. Without
+    this, any library that uses the global provider (notably
+    ``FastAPIInstrumentor`` in ``langflow.main``) would emit every HTTP request
+    as a span into Langfuse, polluting traces with unrelated routes like health
+    checks and flow list calls. See
+    https://github.com/langflow-ai/langflow/issues/13319.
     """
     from langfuse import Langfuse
+    from opentelemetry.sdk.trace import TracerProvider
 
     key = (config["secret_key"], config["public_key"], config["host"])
     with _SharedClient.lock:
         if _SharedClient.client is None or _SharedClient.key != key:
-            _SharedClient.client = Langfuse(**config)
+            isolated_tracer_provider = TracerProvider()
+            _SharedClient.client = Langfuse(**config, tracer_provider=isolated_tracer_provider)
             _SharedClient.key = key
         return _SharedClient.client
 
@@ -201,6 +211,15 @@ class LangFuseTracer(BaseTracer):
 
         Uses langfuse v3 API which requires creating spans with trace_context
         instead of using the removed trace() method.
+
+        Setup failures are logged at WARNING level so users see why traces
+        are missing rather than silently getting a no-op tracer. The Langfuse
+        v3 SDK uses ``pydantic.v1.BaseModel`` internally, which only supports
+        Python 3.14 starting with ``pydantic>=2.13``; on older pydantic
+        versions, importing langfuse raises ``pydantic.v1.errors.ConfigError``
+        on Python 3.14, which the broad exception handler below previously
+        swallowed at debug level. See
+        https://github.com/langflow-ai/langflow/issues/13317.
         """
         try:
             from langfuse import Langfuse
@@ -211,10 +230,10 @@ class LangFuseTracer(BaseTracer):
             # Health check using public API
             try:
                 if not self._client.auth_check():
-                    logger.debug("Langfuse authentication failed")
+                    logger.warning("Langfuse authentication failed; check LANGFUSE_SECRET_KEY and LANGFUSE_PUBLIC_KEY.")
                     return False
             except Exception as e:  # noqa: BLE001
-                logger.debug(f"Cannot connect to Langfuse: {e}")
+                logger.warning(f"Cannot connect to Langfuse at {config.get('host')!r}: {e}")
                 return False
 
             # Create a deterministic trace ID from the UUID (v3 requires 32-char hex)
@@ -248,8 +267,11 @@ class LangFuseTracer(BaseTracer):
             logger.exception("Could not import langfuse. Please install it with `pip install langfuse`.")
             return False
 
-        except Exception as e:  # noqa: BLE001
-            logger.debug(f"Error setting up LangFuse tracer: {e}")
+        except Exception:  # noqa: BLE001
+            # logger.exception emits at ERROR level with full traceback so users
+            # see the real cause (e.g. pydantic.v1 incompatibility on Python
+            # 3.14 with pydantic<2.13) instead of silently getting no traces.
+            logger.exception("Error setting up LangFuse tracer")
             return False
 
         return True
