@@ -308,7 +308,6 @@ def test_vertex_serialization_drops_runtime_custom_component():
     vertex.built_object = None
     vertex.built_result = None
 
-    # noqa: S301 - trusted test-only pickle roundtrip for serialization behavior.
     restored = pickle.loads(pickle.dumps(vertex))
 
     assert restored.custom_component is None
