@@ -76,12 +76,13 @@ describe("Row rendering", () => {
     expect(screen.getByText("watsonx Prod")).toBeInTheDocument();
   });
 
-  it("falls back to resource key when provider data is missing", () => {
+  it("renders empty name when display_name is missing", () => {
     renderTable([
       makeDeployment({ provider_data: null, resource_key: "dep-rk" }),
     ]);
 
-    expect(screen.getByText("dep-rk")).toBeInTheDocument();
+    expect(screen.queryByText("dep-rk")).not.toBeInTheDocument();
+    expect(screen.getByTestId("deployment-row-dep-1")).toBeInTheDocument();
   });
 
   it("renders description under the deployment name", () => {

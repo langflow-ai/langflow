@@ -119,10 +119,14 @@ export const FLOW_VERSIONS_MOCK = {
 export const DEPLOY_RESPONSE = {
   id: "dep-new",
   provider_id: "prov-1",
-  name: "My Deployment",
+  resource_key: "dep-new-rk",
   type: "agent",
   provider_account_id: "prov-1",
   status: "deploying",
+  provider_data: {
+    display_name: "My Deployment",
+    name: "langflow_my_deployment_abc12345",
+  },
 };
 
 // Attachments with provider_data for edit-mode connection tests.

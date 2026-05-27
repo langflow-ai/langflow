@@ -215,9 +215,7 @@ export function buildDeploymentUpdatePayload({
     deployment_id: editingDeployment.id,
   };
 
-  const descriptionChanged =
-    deploymentDescription !== (editingDeployment.description ?? "");
-  if (descriptionChanged) {
+  if (deploymentDescription !== (editingDeployment.description ?? "")) {
     result.description = deploymentDescription;
   }
   const displayNameChanged =
@@ -340,10 +338,6 @@ export function buildDeploymentUpdatePayload({
       }),
     };
     result.provider_data = providerData;
-  }
-
-  if (result.description === undefined && !result.provider_data) {
-    result.description = deploymentDescription;
   }
 
   return result;

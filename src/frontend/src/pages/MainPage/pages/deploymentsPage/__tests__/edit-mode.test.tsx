@@ -245,11 +245,11 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(removeFlows).toHaveLength(0);
   });
 
-  it("sends fallback description when nothing changed", () => {
+  it("omits description when description is unchanged", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
     expect(payload.provider_data).toBeUndefined();
-    expect(payload.description).toBe("A test agent");
+    expect(payload.description).toBeUndefined();
   });
 
   it("includes tool_display_name on newly attached flow upsert", () => {
@@ -320,12 +320,10 @@ describe("Edit mode — throws outside edit mode", () => {
 });
 
 describe("Edit mode — no-op and partial update payloads", () => {
-  it("sends fallback spec when nothing changed at all", () => {
+  it("sends only deployment_id when nothing changed", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.deployment_id).toBe("deploy-1");
-    expect(payload.provider_data).toBeUndefined();
-    expect(payload.description).toBe("A test agent");
+    expect(payload).toEqual({ deployment_id: "deploy-1" });
   });
 
   it("sends only description in spec when only description changed", () => {

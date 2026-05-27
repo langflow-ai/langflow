@@ -86,12 +86,7 @@ export interface DeploymentProviderData extends Record<string, unknown> {
 
 export function getDeploymentDisplayName(deployment: Deployment | null) {
   if (!deployment) return "";
-  return (
-    deployment.provider_data?.display_name ??
-    deployment.provider_data?.name ??
-    deployment.resource_key ??
-    ""
-  );
+  return deployment.provider_data?.display_name ?? "";
 }
 
 export interface SnapshotUpdateResponse {

@@ -271,7 +271,9 @@ function DeploymentStepperModalContent({
 
       if (isEditMode) {
         const payload = buildDeploymentUpdatePayload();
-        await updateDeployment(payload);
+        if (payload.description !== undefined || payload.provider_data) {
+          await updateDeployment(payload);
+        }
         onDeployingChange(false);
         setOpen(false);
         return;

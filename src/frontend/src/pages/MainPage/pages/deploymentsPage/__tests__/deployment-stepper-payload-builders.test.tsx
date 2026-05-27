@@ -438,19 +438,10 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(flowB!.tool_display_name).toBe("Flow");
   });
 
-  it("sends fallback description when no changes detected", () => {
-    // When absolutely nothing changes, the backend still needs at least one field.
-    // With LLM pre-filled, provider_data is always present, so fallback goes to description.
+  it("omits description when no changes detected", () => {
     const { result } = renderEditHook({ initialLlm: "" });
-
-    // LLM is empty string, no flows changed, no description changed
     const payload = result.current.buildDeploymentUpdatePayload();
-    // The fallback logic ensures at least description is sent
-    expect(payload.deployment_id).toBe("deploy-1");
-    // Either description or provider_data must be present
-    const hasAtLeastOneField =
-      payload.description !== undefined || payload.provider_data !== undefined;
-    expect(hasAtLeastOneField).toBe(true);
+    expect(payload).toEqual({ deployment_id: "deploy-1" });
   });
 
   it("includes description change when description differs from initial", () => {
@@ -462,12 +453,12 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(payload.description).toBe("Brand new description");
   });
 
-  it("uses description fallback when no provider_data changes are present", () => {
+  it("omits description when description is unchanged", () => {
     const { result } = renderEditHook();
 
     const payload = result.current.buildDeploymentUpdatePayload();
     expect(payload.provider_data).toBeUndefined();
-    expect(payload.description).toBe("A test agent");
+    expect(payload.description).toBeUndefined();
   });
 });
 

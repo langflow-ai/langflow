@@ -67,12 +67,28 @@ describe("DeploymentInfoGrid", () => {
     expect(screen.queryByText("ID")).not.toBeInTheDocument();
   });
 
-  it("falls back to resource key when provider data is missing", () => {
+  it("shows placeholder when display_name is missing", () => {
     renderGrid(
       makeDeployment({ provider_data: null, resource_key: "agent-1" }),
     );
 
-    expect(screen.getByText("agent-1")).toBeInTheDocument();
+    expect(screen.queryByText("agent-1")).not.toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
+  });
+
+  it("does not use technical provider name as the display label", () => {
+    renderGrid(
+      makeDeployment({
+        provider_data: {
+          name: "my_agent_technical",
+        } as Deployment["provider_data"],
+        resource_key: "agent-1",
+      }),
+    );
+
+    expect(screen.queryByText("agent-1")).not.toBeInTheDocument();
+    expect(screen.queryByText("my_agent_technical")).not.toBeInTheDocument();
+    expect(screen.getByText("—")).toBeInTheDocument();
   });
 
   describe("date formatting", () => {
