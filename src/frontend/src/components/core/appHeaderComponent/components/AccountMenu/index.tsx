@@ -1,5 +1,5 @@
-import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   DATASTAX_DOCS_URL,

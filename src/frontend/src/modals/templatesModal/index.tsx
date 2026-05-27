@@ -31,7 +31,10 @@ export default function TemplatesModal({
   );
 
   // If starter projects are hidden and we're on the get-started tab, switch to all-templates
-  const effectiveTab = hideStarterProjects && currentTab === "get-started" ? "all-templates" : currentTab;
+  const effectiveTab =
+    hideStarterProjects && currentTab === "get-started"
+      ? "all-templates"
+      : currentTab;
 
   const handleFlowCreating = (isCreating: boolean) => {
     setLoading(isCreating);
