@@ -117,7 +117,10 @@ async def update_team(
         team.team_name = payload.team_name
     if payload.adom_name is not None:
         team.adom_name = payload.adom_name
-    if payload.description is not None:
+    # description is nullable on the DB side, so use a presence check
+    # (model_fields_set) instead of ``is not None`` — an explicit "description":
+    # null in the body clears the field, while omitting it leaves the row alone.
+    if "description" in payload.model_fields_set:
         team.description = payload.description
     if payload.is_active is not None:
         team.is_active = payload.is_active

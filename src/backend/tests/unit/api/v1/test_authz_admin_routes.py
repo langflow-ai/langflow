@@ -615,6 +615,78 @@ async def test_create_assignment_invokes_invalidate_user(stub_authz):
 # =====================================================================
 
 
+def _make_team_row(
+    *,
+    id: UUID,  # noqa: A002
+    team_name: str = "Eng",
+    adom_name: str = "eng",
+    description: str | None = "desc",
+    is_active: bool = True,
+) -> SimpleNamespace:
+    """Build a fake AuthzTeam row carrying every field TeamRead serializes."""
+    from datetime import datetime, timezone
+
+    now = datetime.now(timezone.utc)
+    return SimpleNamespace(
+        id=id,
+        team_name=team_name,
+        adom_name=adom_name,
+        description=description,
+        is_active=is_active,
+        created_at=now,
+        updated_at=now,
+    )
+
+
+@pytest.mark.asyncio
+async def test_update_team_clears_description_via_explicit_null(stub_authz):
+    """PATCH with description=null clears the field via presence check."""
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamUpdate
+    from langflow.services.database.models.auth import AuthzTeam
+
+    stub_authz()
+    team_id = uuid4()
+    team = _make_team_row(id=team_id, description="old description")
+    session = _FakeAsyncSession({(AuthzTeam, team_id): team})
+    user = _make_user(is_superuser=True)
+    payload = TeamUpdate(description=None)
+    assert "description" in payload.model_fields_set
+
+    await authz_teams.update_team(
+        team_id=team_id,
+        payload=payload,
+        current_user=user,
+        session=session,
+    )
+    assert team.description is None
+
+
+@pytest.mark.asyncio
+async def test_update_team_omitted_description_untouched(stub_authz):
+    """Omitting description leaves the existing value alone."""
+    from langflow.api.v1 import authz_teams
+    from langflow.api.v1.schemas.authz_teams import TeamUpdate
+    from langflow.services.database.models.auth import AuthzTeam
+
+    stub_authz()
+    team_id = uuid4()
+    team = _make_team_row(id=team_id, description="keep me")
+    session = _FakeAsyncSession({(AuthzTeam, team_id): team})
+    user = _make_user(is_superuser=True)
+    # Only update team_name — description must stay "keep me".
+    payload = TeamUpdate(team_name="Renamed")
+
+    await authz_teams.update_team(
+        team_id=team_id,
+        payload=payload,
+        current_user=user,
+        session=session,
+    )
+    assert team.team_name == "Renamed"
+    assert team.description == "keep me"
+
+
 @pytest.mark.asyncio
 async def test_create_team_requires_superuser(stub_authz):
     from langflow.api.v1 import authz_teams
