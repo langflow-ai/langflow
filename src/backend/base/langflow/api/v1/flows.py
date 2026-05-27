@@ -27,6 +27,7 @@ from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
     AuthorizedReadFlow,
     AuthorizedWriteFlow,
+    RequireFlowCreate,
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
 from langflow.api.v1.flows_helpers import (
@@ -101,12 +102,10 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    _create: RequireFlowCreate,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
-        await ensure_flow_permission(
-            current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
-        )
         return await _new_flow(session=session, flow=flow, user_id=current_user.id, storage_service=storage_service)
     except HTTPException:
         raise

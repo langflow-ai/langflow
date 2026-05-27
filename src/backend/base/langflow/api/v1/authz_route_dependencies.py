@@ -11,7 +11,7 @@ from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.flows_helpers import _read_flow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.database.models.flow.model import Flow
+from langflow.services.database.models.flow.model import Flow, FlowCreate
 
 
 async def _get_authorized_flow(
@@ -66,6 +66,20 @@ async def get_authorized_flow_for_delete(
     return await _get_authorized_flow(FlowAction.DELETE, flow_id=flow_id, current_user=current_user, session=session)
 
 
+async def require_flow_create_permission(
+    current_user: CurrentActiveUser,
+    flow: FlowCreate,
+) -> None:
+    """Authorize CREATE at the destination workspace/folder before inserting a flow."""
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.CREATE,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
+
 AuthorizedReadFlow = Annotated[Flow, Depends(get_authorized_flow_for_read)]
 AuthorizedWriteFlow = Annotated[Flow, Depends(get_authorized_flow_for_write)]
 AuthorizedDeleteFlow = Annotated[Flow, Depends(get_authorized_flow_for_delete)]
+RequireFlowCreate = Annotated[None, Depends(require_flow_create_permission)]

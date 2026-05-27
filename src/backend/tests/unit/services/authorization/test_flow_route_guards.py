@@ -93,6 +93,7 @@ def test_single_guard_route_uses_enum_action(routes, func_name, expected_action)
 
     # Routes migrated to FastAPI dependencies declare protection in the signature.
     alias_by_action = {
+        "FlowAction.CREATE": "RequireFlowCreate",
         "FlowAction.READ": "AuthorizedReadFlow",
         "FlowAction.WRITE": "AuthorizedWriteFlow",
         "FlowAction.DELETE": "AuthorizedDeleteFlow",
