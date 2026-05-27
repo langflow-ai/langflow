@@ -713,3 +713,63 @@ def test_content_block_serialization_round_trip_with_new_types():
     assert restored.contents[4].text == "thinking"
     assert isinstance(restored.contents[6], CitationContent)
     assert restored.contents[6].title == "Ref"
+
+
+# ---------------------------------------------------------------------------
+# BaseContent.id (stable identity across re-emissions)
+# ---------------------------------------------------------------------------
+#
+# Streaming emitters can re-fire the same logical content block as it grows
+# (e.g. a ToolContent first without output, then with output). Consumers
+# dedup these re-emissions; a stable id is the only safe key for that, since
+# position changes on insert and a content hash collides on legitimate
+# duplicates (two identical "ok" reasoning steps).
+#
+# The id is optional: producers that have a natural id (LangChain
+# tool_call_id, external API id, a UUID the component stamped before the
+# first emission) set it. Consumers that don't see one fall back to
+# position-derived dedup. The id flows through the wire as just another
+# field; nothing on the server mutates it.
+
+
+class TestBaseContentId:
+    def test_default_id_is_none(self):
+        """An id is optional; producers opt in by setting it."""
+        assert BaseContent(type="anything").id is None
+
+    def test_id_is_settable_on_construction(self):
+        assert BaseContent(type="anything", id="abc-123").id == "abc-123"
+
+    def test_id_round_trips_through_model_dump(self):
+        c = TextContent(text="hello", id="msg-7")
+        restored = TextContent.model_validate(c.model_dump())
+        assert restored.id == "msg-7"
+
+    def test_id_round_trips_through_json(self):
+        c = ToolContent(name="search", id="call_abc")
+        restored = ToolContent.model_validate_json(c.model_dump_json())
+        assert restored.id == "call_abc"
+
+    @pytest.mark.parametrize(
+        ("content_cls", "kwargs"),
+        [
+            (TextContent, {"text": "hi"}),
+            (CodeContent, {"code": "x=1", "language": "python"}),
+            (JSONContent, {"data": {"k": "v"}}),
+            (MediaContent, {"urls": ["http://example.com/a.png"]}),
+            (ToolContent, {"name": "tool"}),
+            (ErrorContent, {"reason": "boom"}),
+            (ImageContent, {"urls": ["http://example.com/a.png"]}),
+            (AudioContent, {"urls": ["http://example.com/a.mp3"]}),
+            (VideoContent, {"urls": ["http://example.com/a.mp4"]}),
+            (FileContent, {"urls": ["http://example.com/a.pdf"]}),
+            (ReasoningContent, {"text": "thinking"}),
+            (UsageContent, {"input_tokens": 10}),
+            (CitationContent, {"url": "http://example.com"}),
+        ],
+    )
+    def test_id_inherited_by_every_subclass(self, content_cls, kwargs):
+        """Every concrete content type carries the optional id."""
+        c = content_cls(id="stable-id", **kwargs)
+        assert c.id == "stable-id"
+        assert content_cls.model_validate(c.model_dump()).id == "stable-id"
