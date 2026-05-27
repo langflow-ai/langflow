@@ -31,6 +31,7 @@ class RunFlowBaseComponent(Component):
     def __init__(self, *args, **kwargs):
         self._flow_output_methods: set[str] = set()
         super().__init__(*args, **kwargs)
+        self.flow_tweak_data = self._attributes.get("flow_tweak_data")
         self.add_tool_output = True
         ################################################################
         # cache the selected flow's graph in the shared component cache
@@ -95,8 +96,15 @@ class RunFlowBaseComponent(Component):
     _base_outputs: list[Output] = []
     default_keys = ["code", "_type", "flow_name_selected", "flow_id_selected", "session_id", "cache_flow"]
     FLOW_INPUTS: list[dotdict] = []
-    flow_tweak_data: dict = {}
     IOPUT_SEP = "~"  # separator for joining a vertex id and input/output name to form a unique input/output name
+
+    @property
+    def flow_tweak_data(self) -> dict[str, Any]:
+        return self._attributes.setdefault("flow_tweak_data", {})
+
+    @flow_tweak_data.setter
+    def flow_tweak_data(self, value: dict[str, Any] | None) -> None:
+        self._attributes["flow_tweak_data"] = value if value is not None else {}
 
     ################################################################
     # set and register the selected flow's output methods
