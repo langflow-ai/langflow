@@ -505,16 +505,42 @@ async def get_attachment_by_provider_snapshot_id(
     user_id: UUID,
     provider_snapshot_id: str,
 ) -> FlowVersionDeploymentAttachment | None:
-    """Look up an attachment by its provider_snapshot_id.
+    """Look up an attachment by its provider_snapshot_id (owner-scoped).
 
-    Used by the PATCH /snapshots/{provider_snapshot_id} endpoint to
-    resolve the deployment context for a provider-owned snapshot.
+    Returns at most one row matching ``(user_id, provider_snapshot_id)``.
+    Callers that need cross-user resolution (a non-owner reaching a shared
+    deployment's snapshot) must use :func:`list_attachments_by_provider_snapshot_id`
+    instead: ``provider_snapshot_id`` is only indexed, not unique, so a
+    bare share-aware lookup that calls ``.first()`` can pick the wrong row
+    when the same snapshot is attached to multiple deployments.
     """
     stmt = select(FlowVersionDeploymentAttachment).where(
         FlowVersionDeploymentAttachment.user_id == user_id,
         FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
     )
     return (await db.exec(stmt)).first()
+
+
+async def list_attachments_by_provider_snapshot_id(
+    db: AsyncSession,
+    *,
+    provider_snapshot_id: str,
+) -> list[FlowVersionDeploymentAttachment]:
+    """Return every attachment row sharing ``provider_snapshot_id``.
+
+    The DB only enforces ``UNIQUE(flow_version_id, deployment_id)``;
+    ``provider_snapshot_id`` is indexed but not unique because a single
+    provider snapshot can be attached to multiple deployments (see
+    :func:`update_flow_version_by_provider_snapshot_id`). Share-aware
+    callers (cross-user deployment access) iterate this list, authorize
+    each candidate's deployment, and proceed only when exactly one
+    authorized match remains — that way a duplicate `provider_snapshot_id`
+    does not yield a false 404 or silently pick the wrong row.
+    """
+    stmt = select(FlowVersionDeploymentAttachment).where(
+        FlowVersionDeploymentAttachment.provider_snapshot_id == provider_snapshot_id,
+    )
+    return list(await db.exec(stmt))
 
 
 async def update_flow_version_by_provider_snapshot_id(

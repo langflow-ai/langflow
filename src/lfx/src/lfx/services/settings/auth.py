@@ -133,6 +133,37 @@ class AuthSettings(BaseSettings):
     )
     """Path to YAML configuration file for SSO settings. Contains provider-specific configuration."""
 
+    # Authorization (RBAC) feature flags — enforcement via authorization_service plugin
+    AUTHZ_ENABLED: bool = Field(
+        default=False,
+        description="Enable authorization enforcement. Requires an authorization_service plugin.",
+    )
+    AUTHZ_SUPERUSER_BYPASS: bool = Field(
+        default=True,
+        description="When True, active superusers bypass authorization checks (audited by the plugin).",
+    )
+    AUTHZ_AUDIT_ENABLED: bool = Field(
+        default=False,
+        description=(
+            "Write an AuthzAuditLog row for every authorization decision and share-administration "
+            "action. Independent of AUTHZ_ENABLED — set this to True while enforcement is off to "
+            "observe traffic before flipping the AUTHZ_ENABLED flag. Defaults to False because the "
+            "fire-and-forget audit task opens its own DB session per row; on SQLite this can "
+            "contend with concurrent write transactions ('database is locked')."
+        ),
+    )
+    AUTHZ_AUDIT_RETENTION_DAYS: int = Field(
+        default=90,
+        ge=0,
+        description=(
+            "Number of days to retain rows in ``authz_audit_log``. Older rows are deleted on "
+            "startup and by the periodic cleanup task. Set to 0 to disable retention pruning "
+            "(append-only — the table will grow without bound; pair with an external archival "
+            "or partitioning job). The default of 90 days bounds steady-state size for typical "
+            "enterprise deployments."
+        ),
+    )
+
     pwd_context: CryptContext = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
