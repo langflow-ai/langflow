@@ -1,3 +1,5 @@
+import contextlib
+
 from langchain_classic.agents import create_tool_calling_agent
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -114,10 +116,8 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         # on_chat_model_stream chunks regardless of the embedded code version.
         # Agent streaming is mandatory and has no opt-out.
         if getattr(llm, "streaming", True) is False:
-            try:
+            with contextlib.suppress(AttributeError, TypeError, ValueError):
                 llm.streaming = True
-            except (AttributeError, TypeError, ValueError):
-                pass
 
         # Enhance prompt for IBM Granite models (they need explicit tool usage instructions)
         if is_granite_model(llm) and self.tools:
