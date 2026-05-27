@@ -644,11 +644,15 @@ class Vertex:
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
-        result = await vertex.get_result(self, target_handle_name=key)
+        try:
+            result = await vertex.get_result(self, target_handle_name=key)
+        except ValueError:
+            result = None
         self._handle_func(key, result)
         if isinstance(result, list):
             self._extend_params_list_with_result(key, result)
-        self.params[key] = result
+        if result is not None:
+            self.params[key] = result
 
     async def _build_list_of_vertices_and_update_params(
         self,
