@@ -59,11 +59,12 @@ class BochaSearchComponent(Component):
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+        count = max(1, min(int(self.count), 50))
         payload = {
             "query": self.query,
             "summary": self.summary,
             "freshness": self.freshness or "noLimit",
-            "count": min(int(self.count), 50),
+            "count": count,
         }
 
         try:
@@ -71,7 +72,13 @@ class BochaSearchComponent(Component):
                 response = client.post(url, json=payload, headers=headers)
                 response.raise_for_status()
 
-            result = response.json()
+            try:
+                result = response.json()
+            except (TypeError, ValueError) as exc:
+                msg = f"Bocha response parse error: {exc}"
+                logger.error(msg)
+                return [Data(text=msg, data={"error": msg})]
+
             web_pages = result.get("data", {}).get("webPages", {}).get("value", [])
 
             data_results = []
