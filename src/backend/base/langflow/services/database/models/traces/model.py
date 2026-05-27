@@ -30,11 +30,19 @@ class _LegacyCaseEnum(sa_types.TypeDecorator):
     Before ``values_callable=_enum_values`` was added, SQLAlchemy stored enum
     *names* (e.g. ``'OK'``) rather than enum *values* (e.g. ``'ok'``).
     The result_processor introduced by that fix validates the raw DB string
-    against the values list, so old rows with uppercase names raise LookupError.
+    against the values list, so old rows with uppercase names raise
+    ``LookupError``.
 
     This decorator intercepts the raw DB string and tries a case-insensitive
     match against both enum values and enum names so old and new rows both
     round-trip cleanly.
+
+    ``result_processor`` is overridden so the impl (``SQLEnum``) processor
+    does not run first. A plain :class:`TypeDecorator` runs the impl's
+    ``result_processor`` *before* ``process_result_value``, and the
+    impl's processor raises ``LookupError`` on legacy uppercase strings
+    before our normalisation gets a chance to run. See
+    https://github.com/langflow-ai/langflow/issues/13318.
     """
 
     impl = SQLEnum
@@ -45,6 +53,23 @@ class _LegacyCaseEnum(sa_types.TypeDecorator):
         self._by_value: dict[str, Enum] = {m.value: m for m in enum_cls}
         self._by_name: dict[str, Enum] = {m.name: m for m in enum_cls}
         super().__init__(enum_cls, name=name, values_callable=_enum_values)
+
+    def result_processor(self, dialect, _coltype):
+        """Skip the impl's strict ``result_processor`` so legacy rows can be normalised.
+
+        The default ``TypeDecorator.result_processor`` chains
+        ``impl.result_processor`` → ``process_result_value``. The impl is
+        ``SQLEnum`` whose processor calls ``_object_value_for_elem`` and raises
+        ``LookupError`` on any string not in the lowercase values list. Pre-v1.9.2
+        rows persist the enum *names* (e.g. ``'OK'``) which fail that check
+        before ``process_result_value`` can normalise them. We bypass the impl
+        here and run only our own normalisation against the raw DB value.
+        """
+
+        def process(value):
+            return self.process_result_value(value, dialect)
+
+        return process
 
     def process_result_value(self, value: str | None, _dialect) -> Enum | None:
         if value is None:

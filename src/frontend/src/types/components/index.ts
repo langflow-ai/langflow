@@ -44,6 +44,7 @@ export type InputComponentType = {
   setSelectedOptions?: (value: string[]) => void;
   objectOptions?: Array<{ name: string; id: string }>;
   isObjectOption?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose event handler type
   onChangeFolderName?: (e: any) => void;
   nodeStyle?: boolean;
   isToolMode?: boolean;
@@ -60,13 +61,16 @@ export type DropDownComponent = {
   combobox?: boolean;
   nodeId: string;
   nodeClass: APIClassType;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose handler type
   handleNodeClass: (value: any, code?: string, type?: string) => void;
   options: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped metadata array
   optionsMetaData?: any[];
   onSelect: (
     value: string,
     dbValue?: boolean,
     snapshot?: boolean,
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped metadata
     selectedMetadata?: any,
   ) => void;
   editNode?: boolean;
@@ -77,6 +81,7 @@ export type DropDownComponent = {
     fields: { data: { node: APIClassType } };
     functionality: string;
   };
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped external options
   externalOptions?: any;
   toggle?: boolean;
 };
@@ -121,7 +126,9 @@ export type NodeOutputFieldComponentType = {
   isToolMode?: boolean;
   showHiddenOutputs?: boolean;
   hidden?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped outputs
   outputs?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped output handler
   handleSelectOutput?: (output: any) => void;
 };
 
@@ -146,6 +153,7 @@ export type NodeInputFieldComponentType = {
 };
 
 export type IOJSONInputComponentType = {
+  // biome-ignore lint/suspicious/noExplicitAny: JSON values are inherently untyped
   value: any;
   onChange: (value) => void;
   left?: boolean;
@@ -160,7 +168,9 @@ export type outputComponentType = {
   name: string;
   proxy?: OutputFieldProxyType;
   isToolMode?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped outputs
   outputs?: any;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing untyped output handler
   handleSelectOutput?: (output: any) => void;
   outputName?: string;
 };
@@ -396,6 +406,7 @@ export type ConfirmationModalType = {
     | [React.ReactElement<ContentProps>, React.ReactElement<TriggerProps>]
     | React.ReactElement<ContentProps>;
   icon?: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   index?: number;
   onConfirm?: (index, data) => void;
@@ -421,6 +432,7 @@ export type UserManagementType = {
   confirmationText: string;
   children: ReactElement;
   icon: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   index?: number;
   asChild?: boolean;
@@ -437,6 +449,7 @@ export type patchUserInputStateType = {
   cnfPassword: string;
   profilePicture: string;
   apikey: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing gradient value (string or object)
   gradient?: any;
 };
 
@@ -452,6 +465,7 @@ export type UserInputType = {
 
 export type ApiKeyType = {
   children: ReactElement;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing generic modal data prop
   data?: any;
   onCloseModal?: () => void;
   modalProps?: {
@@ -553,6 +567,7 @@ export type ChatInputType = {
     files: FilePreviewType[] | ((prev: FilePreviewType[]) => FilePreviewType[]),
   ) => void;
   inputRef: {
+    // biome-ignore lint/suspicious/noExplicitAny: pre-existing ref type for various input elements
     current: any;
   };
   noInput: boolean;
@@ -594,7 +609,7 @@ export type fileCardPropsType = {
 export type nodeToolbarPropsType = {
   data: NodeDataType;
   deleteNode: (idx: string) => void;
-  setShowNode: (boolean: any) => void;
+  setShowNode: (show: boolean) => void;
   numberOfOutputHandles: number;
   showNode: boolean;
   name?: string;
@@ -805,6 +820,7 @@ export type Log = {
 
 export type validationStatusType = {
   id: string;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing validation data shape
   data: object | any;
   outputs: Log[];
   progress?: number;
@@ -819,6 +835,7 @@ export type ApiKey = {
   created_at: string;
   last_used_at: string;
   total_uses: number;
+  expires_at?: string | null;
 };
 export type fetchErrorComponentType = {
   message: string;
@@ -863,6 +880,7 @@ export type chatViewProps = {
 
 export type IOFileInputProps = {
   field: InputFieldType;
+  // biome-ignore lint/suspicious/noExplicitAny: pre-existing loose event handler type
   updateValue: (e: any, type: string) => void;
 };
 

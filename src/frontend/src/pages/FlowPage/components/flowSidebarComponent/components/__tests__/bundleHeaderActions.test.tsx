@@ -123,6 +123,7 @@ interface PassthroughProps {
 interface DropdownMenuItemMockProps extends PassthroughProps {
   onSelect?: () => void;
   disabled?: boolean;
+  onClick?: (e: React.MouseEvent) => void;
 }
 jest.mock("@/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: PassthroughProps) => (
@@ -142,11 +143,13 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
     children,
     onSelect,
     disabled,
+    onClick,
     ...rest
   }: DropdownMenuItemMockProps) => (
     <button
       type="button"
-      onClick={() => {
+      onClick={(e) => {
+        onClick?.(e);
         if (!disabled) onSelect?.();
       }}
       disabled={disabled}
