@@ -25,6 +25,7 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.exceptions import (
     InvalidTokenError as AuthInvalidTokenError,
 )
+from langflow.services.auth.external import get_or_create_external_user
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
@@ -197,10 +198,16 @@ class AuthService(BaseAuthService):
             msg = "Token has expired"
             raise TokenExpiredError(msg) from e
         except InvalidTokenError as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.debug("JWT validation failed: Invalid token format or signature")
             msg = "Invalid token"
             raise AuthInvalidTokenError(msg) from e
         except Exception as e:
+            external_user = await self._authenticate_with_external_token(token, db)
+            if external_user is not None:
+                return external_user
             logger.error(f"Unexpected error decoding token: {e}")
             msg = "Token validation failed"
             raise AuthInvalidTokenError(msg) from e
@@ -218,6 +225,18 @@ class AuthService(BaseAuthService):
             raise InactiveUserError(msg)
 
         return user
+
+    async def _authenticate_with_external_token(self, token: str, db: AsyncSession) -> User | None:
+        settings_service = self.settings
+        if not settings_service.auth_settings.EXTERNAL_AUTH_ENABLED:
+            return None
+
+        return await get_or_create_external_user(
+            token=token,
+            db=db,
+            auth_settings=settings_service.auth_settings,
+            password_hasher=self.get_password_hash,
+        )
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
@@ -451,6 +470,39 @@ class AuthService(BaseAuthService):
                 raise
             except Exception as exc:
                 raise HTTPException(status_code=404, detail="Flow not found") from exc
+
+        if settings_service.auth_settings.FLOW_RBAC_ENABLED:
+            from langflow.services.auth.external import extract_external_token
+            from langflow.services.auth.flow_rbac import (
+                get_flow_by_id_or_name,
+                get_flow_principal,
+                require_flow_permission,
+            )
+            from langflow.services.database.models.flow.model import FlowPermission
+
+            api_key = request.headers.get("x-api-key") or request.query_params.get("x-api-key")
+            token = extract_external_token(request.headers, request.cookies, settings_service.auth_settings)
+            if not api_key and not token:
+                raise HTTPException(status_code=403, detail="API key or external credential required")
+
+            try:
+                async with session_scope() as db:
+                    authenticated_user = await self.authenticate_with_credentials(token, api_key, db)
+                    user_read = UserRead.model_validate(authenticated_user, from_attributes=True)
+                    principal = await get_flow_principal(request, user_read)
+                    await require_flow_permission(
+                        db,
+                        await get_flow_by_id_or_name(db, flow_id),
+                        principal,
+                        FlowPermission.RUN,
+                        not_found_detail="Flow not found",
+                    )
+                    return user_read
+            except HTTPException:
+                raise
+            except Exception as exc:
+                logger.error(f"Webhook authentication error: {exc}")
+                raise HTTPException(status_code=403, detail="Webhook authentication failed") from exc
 
         api_key_header_val = request.headers.get("x-api-key")
         api_key_query_val = request.query_params.get("x-api-key")

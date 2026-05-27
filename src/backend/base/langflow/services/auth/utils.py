@@ -44,6 +44,9 @@ class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
         if scheme.lower() == "bearer" and param:
             return param
 
+        if token := _get_external_token(request.headers, request.cookies):
+            return token
+
         # Fall back to cookie (for HttpOnly cookie support in browser-based clients)
         token = request.cookies.get("access_token_lf")
         if token:
@@ -70,6 +73,17 @@ def _auth_service():
     using this helper or adding new thin wrapper functions here.
     """
     return get_auth_service()
+
+
+def _get_external_token(headers, cookies) -> str | None:
+    try:
+        from langflow.services.auth.external import extract_external_token
+        from langflow.services.deps import get_settings_service
+
+        auth_settings = get_settings_service().auth_settings
+        return extract_external_token(headers, cookies, auth_settings)
+    except Exception:  # noqa: BLE001
+        return None
 
 
 REFRESH_TOKEN_TYPE: Final[str] = "refresh"  # noqa: S105
@@ -131,9 +145,19 @@ def get_jwt_signing_key(settings_service: SettingsService) -> str:
 
 
 async def api_key_security(
+    request: Request,
     query_param: Annotated[str | None, Security(api_key_query)],
     header_param: Annotated[str | None, Security(api_key_header)],
+    db: AsyncSession = Depends(injectable_session_scope),
 ) -> UserRead | None:
+    if token := _get_external_token(request.headers, request.cookies):
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        from langflow.services.database.models.user.model import UserRead
+
+        return UserRead.model_validate(user, from_attributes=True)
     return await _auth_service().api_key_security(query_param, header_param)
 
 
@@ -193,7 +217,11 @@ async def get_current_user_for_websocket(
     db: AsyncSession,
 ) -> User | UserRead:
     """Extracts credentials from WebSocket and delegates to auth service."""
-    token = websocket.cookies.get("access_token_lf") or websocket.query_params.get("token")
+    token = (
+        _get_external_token(websocket.headers, websocket.cookies)
+        or websocket.cookies.get("access_token_lf")
+        or websocket.query_params.get("token")
+    )
     api_key = (
         websocket.query_params.get("x-api-key")
         or websocket.query_params.get("api_key")
@@ -215,7 +243,7 @@ async def get_current_user_for_sse(
 
     Accepts cookie (access_token_lf) or API key (x-api-key query param).
     """
-    token = request.cookies.get("access_token_lf")
+    token = _get_external_token(request.headers, request.cookies) or request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
 
     try:
@@ -279,7 +307,7 @@ async def get_current_user_optional(
     Checks HttpOnly cookie (access_token_lf), Authorization header, and API key.
     Used by endpoints that support both authenticated and unauthenticated access.
     """
-    token = request.cookies.get("access_token_lf")
+    token = _get_external_token(request.headers, request.cookies) or request.cookies.get("access_token_lf")
     api_key = request.query_params.get("x-api-key") or request.headers.get("x-api-key")
     auth_header = request.headers.get("Authorization")
     if auth_header and auth_header.startswith("Bearer "):

@@ -3,7 +3,7 @@
 import re
 from datetime import datetime, timezone
 from enum import Enum
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, ClassVar, Optional
 from uuid import UUID, uuid4
 
 import emoji
@@ -11,7 +11,7 @@ from emoji import purely_emoji
 from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import Text, UniqueConstraint, text
+from sqlalchemy import String, Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
@@ -44,6 +44,19 @@ def _validate_endpoint_name_value(v: str | None) -> str | None:
 class AccessTypeEnum(str, Enum):
     PRIVATE = "PRIVATE"
     PUBLIC = "PUBLIC"
+
+
+class FlowAclSubjectType(str, Enum):
+    USER = "user"
+    GROUP = "group"
+    ROLE = "role"
+
+
+class FlowPermission(str, Enum):
+    VIEW = "view"
+    RUN = "run"
+    EDIT = "edit"
+    MANAGE = "manage"
 
 
 class FlowBase(SQLModel):
@@ -281,3 +294,48 @@ class FlowUpdate(SQLModel):
     @classmethod
     def validate_endpoint_name(cls, v):
         return _validate_endpoint_name_value(v)
+
+
+class FlowAccessControlBase(SQLModel):
+    subject_type: FlowAclSubjectType = Field(sa_column=Column(String(16), nullable=False, index=True))
+    subject_id: str = Field(max_length=255, index=True)
+    permission: FlowPermission = Field(sa_column=Column(String(16), nullable=False, index=True))
+
+    @field_validator("subject_id")
+    @classmethod
+    def validate_subject_id(cls, value: str) -> str:
+        stripped = value.strip()
+        if not stripped:
+            msg = "ACL subject_id cannot be empty"
+            raise ValueError(msg)
+        return stripped
+
+
+class FlowAccessControl(FlowAccessControlBase, table=True):  # type: ignore[call-arg]
+    __tablename__: ClassVar[str] = "flow_access_control"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    flow_id: UUID = Field(foreign_key="flow.id", nullable=False, index=True)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc), nullable=False)
+
+    __table_args__ = (
+        UniqueConstraint(
+            "flow_id",
+            "subject_type",
+            "subject_id",
+            "permission",
+            name="unique_flow_access_control_entry",
+        ),
+    )
+
+
+class FlowAccessControlCreate(FlowAccessControlBase):
+    pass
+
+
+class FlowAccessControlRead(FlowAccessControlBase):
+    id: UUID
+    flow_id: UUID
+    created_at: datetime
+    updated_at: datetime
