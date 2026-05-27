@@ -11,7 +11,7 @@ from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
-from langflow.schema.content_block import ContentBlock
+from langflow.schema.content_block import ContentType
 from langflow.schema.properties import Properties
 from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
@@ -34,7 +34,7 @@ class MessageBase(SQLModel):
 
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
-    content_blocks: list[ContentBlock] = Field(default_factory=list)
+    content_blocks: list[ContentType] = Field(default_factory=list)
     session_metadata: dict | None = Field(default=None)
 
     @field_serializer("timestamp")
@@ -64,7 +64,14 @@ class MessageBase(SQLModel):
 
     @classmethod
     def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
-        if message.text is None or not message.sender or not message.sender_name:
+        # ``message.text`` is now a computed_field over content_blocks. The
+        # "content present" signal is: ``data["text"]`` explicitly set
+        # (covers ``text=""`` from ChatInput), a pending text stream
+        # (iterator), or any ``content_blocks`` entries (covers tool-call /
+        # media-only agent messages whose ``content_blocks`` carry the
+        # whole payload).
+        no_content = message.data.get("text") is None and message.text_stream is None and not message.content_blocks
+        if no_content or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
 
@@ -177,7 +184,7 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         sa_column=Column(JSON),
     )
     category: str = Field(sa_column=Column(Text))
-    content_blocks: list[dict | ContentBlock] = Field(  # type: ignore[assignment]
+    content_blocks: list[dict | ContentType] = Field(  # type: ignore[assignment]
         default_factory=list,
         sa_column=Column(JSON),
     )
@@ -298,4 +305,4 @@ class MessageUpdate(SQLModel):
     properties: Properties | None = None
     session_metadata: dict | None = None
     category: str | None = None
-    content_blocks: list[ContentBlock] | None = None
+    content_blocks: list[ContentType] | None = None
