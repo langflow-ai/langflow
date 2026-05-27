@@ -399,8 +399,12 @@ class Message(Data):
         if hasattr(lc_message, "tool_calls") and lc_message.tool_calls:
             from lfx.schema.content_types import ToolContent
 
+            # ``tc["id"]`` is LangChain's stable ``tool_call_id``: same value
+            # at start, during args streaming, and on the result, so the same
+            # logical tool call dedups to one ``ToolContent`` across re-fires.
             blocks.extend(
-                ToolContent(name=tc.get("name", ""), tool_input=tc.get("args", {})) for tc in lc_message.tool_calls
+                ToolContent(name=tc.get("name", ""), tool_input=tc.get("args", {}), id=tc.get("id"))
+                for tc in lc_message.tool_calls
             )
 
         if hasattr(lc_message, "usage_metadata") and lc_message.usage_metadata:

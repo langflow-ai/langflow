@@ -417,3 +417,75 @@ class TestBackwardsCompatibility:
         data = Data(text="data text")
         msg = Message.from_data(data)
         assert msg.text == "data text"
+
+
+class TestFromLcMessageToolCallId:
+    """LangChain plumbs ``tool_call_id`` into ToolContent.id.
+
+    LangChain stamps a stable ``tool_call_id`` on every AIMessage.tool_calls
+    entry. That id is the gold standard for cross-frame correlation: it is
+    stable across the whole tool lifecycle (start, args streaming, result),
+    so a ``ToolContent`` re-emitted with output populated keeps the same id
+    as when it was first emitted without output.
+
+    ``id`` is required on the LangChain ``ToolCall`` TypedDict, so there is
+    no "missing id" path to test from real LangChain usage; ``tc.get("id")``
+    is defensive only.
+    """
+
+    def test_tool_call_id_lands_on_tool_content(self):
+        lc_msg = AIMessage(
+            content="",
+            tool_calls=[{"name": "search", "args": {"q": "x"}, "id": "call_abc", "type": "tool_call"}],
+        )
+        msg = Message.from_lc_message(lc_msg)
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        assert tool_blocks[0].id == "call_abc"
+        assert tool_blocks[0].name == "search"
+        assert tool_blocks[0].tool_input == {"q": "x"}
+
+    def test_id_is_stable_across_repeated_conversion(self):
+        """Replaying from_lc_message produces matching ids.
+
+        This is what makes the id useful for dedup: a re-fired add_message
+        that carries the same logical tool call lands at the same id, not a
+        new one.
+        """
+        lc_msg = AIMessage(
+            content="",
+            tool_calls=[{"name": "search", "args": {"q": "x"}, "id": "call_abc", "type": "tool_call"}],
+        )
+        first = Message.from_lc_message(lc_msg)
+        second = Message.from_lc_message(lc_msg)
+        first_tool = next(b for b in first.content_blocks if isinstance(b, ToolContent))
+        second_tool = next(b for b in second.content_blocks if isinstance(b, ToolContent))
+        assert first_tool.id == second_tool.id == "call_abc"
+
+    def test_multiple_tool_calls_each_get_their_own_id(self):
+        lc_msg = AIMessage(
+            content="",
+            tool_calls=[
+                {"name": "search", "args": {}, "id": "call_a", "type": "tool_call"},
+                {"name": "calc", "args": {}, "id": "call_b", "type": "tool_call"},
+            ],
+        )
+        msg = Message.from_lc_message(lc_msg)
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert [b.id for b in tool_blocks] == ["call_a", "call_b"]
+
+    def test_tool_calls_alongside_string_content(self):
+        """An AIMessage with both text content and tool_calls keeps both.
+
+        Tool-calling agents commonly emit ``content="thinking..."`` plus a
+        ``tool_calls`` list. Both should land on ``content_blocks``.
+        """
+        lc_msg = AIMessage(
+            content="I'll search for that.",
+            tool_calls=[{"name": "search", "args": {"q": "x"}, "id": "call_abc", "type": "tool_call"}],
+        )
+        msg = Message.from_lc_message(lc_msg)
+        text_blocks = [b for b in msg.content_blocks if isinstance(b, TextContent)]
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert [b.text for b in text_blocks] == ["I'll search for that."]
+        assert [b.id for b in tool_blocks] == ["call_abc"]

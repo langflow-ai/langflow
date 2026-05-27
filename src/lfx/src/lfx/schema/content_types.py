@@ -42,6 +42,13 @@ class HeaderDict(TypedDict, total=False):
 class BaseContent(BaseModel):
     """Base class for all content types.
 
+    The optional ``id`` field carries stable identity across re-emissions of
+    the same logical block. Producers that have a natural id (LangChain
+    ``tool_call_id``, an external API id, a UUID stamped before the first
+    emission) set it; consumers use it for dedup and cross-frame correlation.
+    Without an id, consumers fall back to position-derived dedup, which
+    assumes ``content_blocks`` is append-only within a message lifetime.
+
     The optional ``contents`` field lets any content type nest more content
     underneath. Leaf types (``TextContent``, ``ErrorContent``, ``UsageContent``)
     leave it empty; container-shaped types (``ContentBlock``, multimodal
@@ -49,6 +56,14 @@ class BaseContent(BaseModel):
     """
 
     type: str = Field(..., description="Type of the content")
+    id: str | None = Field(
+        default=None,
+        description=(
+            "Optional stable identity for this content block across "
+            "re-emissions. Set by producers that have a natural id "
+            "(e.g. LangChain tool_call_id)."
+        ),
+    )
     duration: int | None = None
     header: HeaderDict | None = Field(default_factory=dict)
     contents: list[ContentType] = Field(
