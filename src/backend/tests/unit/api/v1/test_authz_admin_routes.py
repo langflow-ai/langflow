@@ -332,6 +332,24 @@ async def test_list_assignments_self_allowed_for_non_superuser(stub_authz):
 
 
 @pytest.mark.asyncio
+async def test_list_assignments_no_user_id_defaults_to_self(stub_authz):
+    """Omitting ``user_id`` scopes to the caller — no superuser required."""
+    from langflow.api.v1 import authz_role_assignments
+
+    stub_authz()
+    session = _FakeAsyncSession(exec_results=[[]])
+    user = _make_user(is_superuser=False)
+
+    # No user_id passed — should NOT raise 403 (was the bug) and should return
+    # the caller's own assignments (empty in this fake-session fixture).
+    result = await authz_role_assignments.list_assignments(
+        session=session,
+        current_user=user,
+    )
+    assert result == []
+
+
+@pytest.mark.asyncio
 async def test_create_assignment_invalid_user_404(stub_authz):
     from langflow.api.v1 import authz_role_assignments
     from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate

@@ -47,15 +47,20 @@ async def list_assignments(
     domain_type: Annotated[str | None, Query()] = None,
     domain_id: Annotated[UUID | None, Query()] = None,
 ) -> list[RoleAssignmentRead]:
-    """List role assignments. Users may query their own assignments; superusers see all.
+    """List role assignments scoped to one user.
 
-    A user querying with ``user_id != self.id`` and lacking superuser triggers 403.
+    * Omitting ``user_id`` defaults to the caller — no superuser needed.
+    * Passing ``user_id == self.id`` is the same as omitting it.
+    * Passing a different ``user_id`` requires superuser; otherwise 403.
+
+    Results are always filtered by the resolved ``user_id``. Admins who need
+    cross-user lookups make one call per user.
     """
-    if user_id is None or user_id != current_user.id:
+    if user_id is None:
+        user_id = current_user.id
+    elif user_id != current_user.id:
         _require_superuser(current_user)
-    stmt = select(AuthzRoleAssignment)
-    if user_id is not None:
-        stmt = stmt.where(AuthzRoleAssignment.user_id == user_id)
+    stmt = select(AuthzRoleAssignment).where(AuthzRoleAssignment.user_id == user_id)
     if role_id is not None:
         stmt = stmt.where(AuthzRoleAssignment.role_id == role_id)
     if domain_type is not None:
