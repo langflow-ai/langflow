@@ -240,7 +240,7 @@ jobs:
           echo "✅ Authentication token obtained"
 
           # Verify witness flow persisted
-          curl -fsSL http://127.0.0.1:7860/api/v1/flows/ \
+          curl -fsSL --compressed http://127.0.0.1:7860/api/v1/flows/ \
             -H "Authorization: Bearer $TOKEN" > flows_after_migration.json
 
           if grep -q "Migration Witness Flow" flows_after_migration.json; then
@@ -253,7 +253,7 @@ jobs:
           fi
 
           # Verify witness credential persisted (confirms encrypted-column migration ran without data loss)
-          curl -fsSL http://127.0.0.1:7860/api/v1/variables/ \
+          curl -fsSL --compressed http://127.0.0.1:7860/api/v1/variables/ \
             -H "Authorization: Bearer $TOKEN" > variables_after_migration.json
 
           if grep -q "migration_witness_secret" variables_after_migration.json; then
@@ -436,7 +436,7 @@ jobs:
           echo "✅ Authentication token obtained"
 
           echo "Verifying witness flow persisted..."
-          curl -fsSL http://localhost:7860/api/v1/flows/ \
+          curl -fsSL --compressed http://localhost:7860/api/v1/flows/ \
             -H "Authorization: Bearer $TOKEN" > flows_after_migration.json
 
           if grep -q "Docker Migration Witness Flow" flows_after_migration.json; then
@@ -448,7 +448,7 @@ jobs:
           fi
 
           echo "Verifying witness credential persisted (confirms encrypted-column migration ran without data loss)..."
-          curl -fsSL http://localhost:7860/api/v1/variables/ \
+          curl -fsSL --compressed http://localhost:7860/api/v1/variables/ \
             -H "Authorization: Bearer $TOKEN" > variables_after_migration.json
 
           if grep -q "migration_witness_secret" variables_after_migration.json; then
