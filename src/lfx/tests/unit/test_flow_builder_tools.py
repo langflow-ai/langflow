@@ -1112,7 +1112,9 @@ class TestConfigureProposeConversion:
 
 
 class TestConnectToolModeFlipPropagation:
-    """Wiring `X.component_as_tool -> Agent.tools` flips X to tool mode in the
+    """Connecting via component_as_tool must surface the source's tool-mode flip.
+
+    Wiring `X.component_as_tool -> Agent.tools` flips X to tool mode in the
     working flow; the canvas must be told (an `enable_tool_mode` event with the
     flipped outputs) so the source node re-renders with its Toolset handle and
     the edge actually attaches — otherwise it's the "said it connected but
