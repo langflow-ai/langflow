@@ -48,7 +48,9 @@ export function SpanDetail({ span }: SpanDetailProps) {
       {/* Header */}
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <h3 className="min-w-0 flex-1 truncate text-lg font-semibold">{span.name}</h3>
+          <h3 className="min-w-0 flex-1 truncate text-lg font-semibold">
+            {span.name}
+          </h3>
           <Badge
             variant={getStatusVariant(span.status)}
             size="sm"
