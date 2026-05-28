@@ -324,6 +324,50 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             assert result.text == "passthrough text"
             mock_iterate.assert_called_once_with("true_result")
 
+    async def test_true_response_preserves_override_with_files(self, component_class, default_kwargs):
+        """An override Message with empty text but files must be preserved, not dropped."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "passthrough text"
+        component.operator = "equals"
+        component.case_sensitive = True
+        # Empty text but a meaningful file payload
+        override = Message(text="", files=["x.png"])
+        component.true_case_message = override
+
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
+            result = component.true_response()
+
+            assert result is override
+            assert result.files == ["x.png"]
+            assert result.text != "passthrough text"
+            mock_iterate.assert_called_once_with("false_result")
+
+    async def test_false_response_preserves_override_with_content_blocks(self, component_class, default_kwargs):
+        """An override Message with empty text but content blocks must be preserved, not dropped."""
+        from lfx.schema.content_block import ContentBlock
+
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "no match"
+        component.operator = "equals"
+        component.case_sensitive = True
+        # Empty text but a meaningful content-block payload
+        override = Message(text="", content_blocks=[ContentBlock(title="block", contents=[])])
+        component.false_case_message = override
+
+        with patch.object(component, "iterate_and_stop_once") as mock_iterate:
+            result = component.false_response()
+
+            assert result is override
+            assert len(result.content_blocks) == 1
+            assert result.text != "passthrough text"
+            mock_iterate.assert_called_once_with("true_result")
+
     async def test_update_build_config_regex_operator(self, component_class, default_kwargs):
         """Test update_build_config when operator is regex."""
         component = await self.component_setup(component_class, default_kwargs)

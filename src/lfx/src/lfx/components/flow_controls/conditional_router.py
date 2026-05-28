@@ -171,9 +171,15 @@ class ConditionalRouterComponent(Component):
         ``Case True`` and ``Case False`` are optional overrides. When left blank the
         ``MessageInput`` resolves to an empty ``Message``, so the original ``Text Input``
         is routed through instead of an empty message.
+
+        A ``Message`` is only treated as blank when it carries no payload at all. An
+        override with empty text but meaningful content (files or content blocks) is
+        preserved as-is so that payload is not dropped.
         """
-        if isinstance(case_message, Message) and case_message.text:
-            return case_message
+        if isinstance(case_message, Message):
+            if case_message.text or case_message.files or case_message.content_blocks:
+                return case_message
+            return Message(text=self.input_text)
         if isinstance(case_message, str) and case_message:
             return Message(text=case_message)
         return Message(text=self.input_text)
