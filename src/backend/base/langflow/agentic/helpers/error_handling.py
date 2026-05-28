@@ -101,9 +101,12 @@ def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
         2. If the message is wrapped with one of the known prefixes
            (``Error building Component X: …``, ``Error running graph: …``)
            — return the part after the first colon (the underlying error
-           the wrapper was trying to report). Without this, the default
-           colon-split truncation returns just the wrapper and the user
-           sees something useless like ``"Error running graph"``.
+           the wrapper was trying to report). Recurse until no more
+           wrappers match so nested wrappers (``Error running graph:
+           Error building Component X: <real cause>``) fully unwrap to
+           the root cause. Without this, the default colon-split
+           truncation returns just the outer wrapper and the user sees
+           something useless like ``"Error running graph"``.
 
     Returns None when neither pattern applies so callers fall back to the
     existing truncation behavior (zero behavior change for unwrapped errors).
@@ -112,16 +115,26 @@ def _extract_deepest_meaningful_cause(error_msg: str) -> str | None:
     if match:
         return match.group(1).strip()
 
-    stripped_msg = error_msg.lstrip()
-    if ":" in error_msg and any(stripped_msg.startswith(prefix) for prefix in _WRAPPER_PREFIXES):
-        # ``partition(":", )`` keeps any embedded colons inside the cause (so
+    current = error_msg
+    unwrapped: str | None = None
+    # Bounded loop: each iteration must strip at least one wrapper prefix
+    # AND the remaining cause must be >= MIN_MEANINGFUL_PART_LENGTH. The
+    # bound (5) is paranoia — real-world stacks rarely wrap more than 2
+    # deep — but it guarantees this never loops on a pathological input.
+    for _ in range(5):
+        stripped_msg = current.lstrip()
+        if ":" not in current or not any(stripped_msg.startswith(prefix) for prefix in _WRAPPER_PREFIXES):
+            break
+        # ``partition(":")`` keeps any embedded colons inside the cause (so
         # ``Error code: 403`` stays readable).
-        _wrapper, _, cause = error_msg.partition(":")
+        _wrapper, _, cause = current.partition(":")
         cause = cause.strip()
-        if len(cause) >= MIN_MEANINGFUL_PART_LENGTH:
-            return cause
+        if len(cause) < MIN_MEANINGFUL_PART_LENGTH:
+            break
+        unwrapped = cause
+        current = cause
 
-    return None
+    return unwrapped
 
 
 def _truncate_error_message(error_msg: str) -> str:

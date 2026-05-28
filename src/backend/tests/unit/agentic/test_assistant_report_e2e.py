@@ -393,6 +393,18 @@ class TestRealEngineRunReturnsResult:
             "  A.message -> B.input_value\n"
             "config:\n"
             "  A.input_value: hello-run-42\n"
+            # Disable DB persistence so the test is independent of
+            # session_scope availability. The build path on ChatInput /
+            # ChatOutput calls ``self.send_message`` which writes to the
+            # message store when ``should_store_message=true`` (default);
+            # in batched suites that DB context may be torn down by a
+            # prior test, surfacing as
+            # ``"Error building Component Chat Input"``. The intent of
+            # this test is to verify ``run_working_flow`` actually runs
+            # and returns the flow's output — message persistence is
+            # unrelated to that contract.
+            "  A.should_store_message: false\n"
+            "  B.should_store_message: false\n"
         )
         built = build_flow_from_spec(spec, load_local_registry())
         assert "error" not in built, f"failed to build the test flow: {built}"
