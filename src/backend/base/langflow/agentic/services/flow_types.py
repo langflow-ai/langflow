@@ -127,6 +127,13 @@ class IntentResult:
     # The upstream assistant service sums it into the per-turn ``usage`` field
     # rendered by the chat ``MessageMetadata`` badge.
     tokens: dict[str, int] | None = None
+    # The model the user EXPLICITLY named in their request (e.g. "use the OpenAI
+    # gpt-5.4 model"), extracted by the TranslationFlow. ``None`` when the user
+    # named no model. Downstream this is ENFORCED onto Agent nodes so the canvas
+    # reflects exactly what the user asked for — never the assistant's own
+    # runtime model. ``requested_provider`` is its provider (e.g. "OpenAI").
+    requested_model: str | None = None
+    requested_provider: str | None = None
 
 
 @dataclass

@@ -44,7 +44,9 @@ from langflow.agentic.helpers.streaming_retry import emit_execution_retry_events
 from langflow.agentic.helpers.validation import validate_component_code, validate_component_runtime
 from langflow.agentic.services.agent_run_context import (
     reset_agent_run_model,
+    reset_requested_agent_model,
     set_agent_run_model,
+    set_requested_agent_model,
 )
 from langflow.agentic.services.component_events import drain_component_events, reset_component_events
 from langflow.agentic.services.conversation_buffer import (
@@ -772,6 +774,14 @@ async def execute_flow_with_validation_streaming(
         # The generate_component tool re-runs the component-gen LLM flow
         # mid-loop and needs the same provider/model the request used.
         set_agent_run_model(provider, model_name, api_key_var)
+        # If the user EXPLICITLY named a model (e.g. "use the OpenAI gpt-5.4
+        # model"), bind it so the run-time injector ENFORCES it on the Agent —
+        # the canvas must show exactly what the user asked for, never the
+        # assistant's own runtime model. Same-provider runs reuse the verified
+        # api_key_var; a different provider falls back to its default var.
+        _req_provider = intent_result.requested_provider
+        _req_api_key_var = api_key_var if (_req_provider and provider and _req_provider == provider) else None
+        set_requested_agent_model(_req_provider, intent_result.requested_model, _req_api_key_var)
 
         # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
         total_attempts = max_retries + 1
@@ -1363,6 +1373,7 @@ async def execute_flow_with_validation_streaming(
         # inherits this context doesn't see a stale id.
         reset_current_user_id()
         reset_agent_run_model()
+        reset_requested_agent_model()
         # Persist the completed turn to the session buffer so the next
         # request can inject it as context. Skips cancelled/errored runs
         # (final_response_text stays empty) and anonymous sessions.

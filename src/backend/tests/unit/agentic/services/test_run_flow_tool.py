@@ -205,3 +205,100 @@ class TestRunFlowInjectsVerifiedModel:
 
         m.assert_awaited_once()
         assert data.data["result"] == "ok"
+
+
+class TestRunFlowEnforcesRequestedModel:
+    """A model the USER explicitly named must win on the canvas.
+
+    Bug (real user): asked for the OpenAI gpt-5.4 model; the assistant's prose
+    said gpt-5.4 but the canvas Agent showed gpt-5.5 (the assistant's OWN
+    runtime model). Root cause: the agent left the Agent's model empty/wrong,
+    and the run-time fill used the assistant's verified runtime model instead
+    of the model the user asked for. When the request named a model, it must be
+    ENFORCED on every Agent (overwrite), never the runtime model.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def teardown_method(self):
+        from langflow.agentic.services.agent_run_context import (
+            reset_agent_run_model,
+            reset_requested_agent_model,
+        )
+
+        reset_working_flow()
+        reset_agent_run_model()
+        reset_requested_agent_model()
+
+    def _agent_flow(self, existing_model_name: str):
+        # Simulate what the build produced: an Agent already carrying the
+        # assistant's runtime model (the wrong one) — enforcement must replace it.
+        model_value = [{"provider": "OpenAI", "name": existing_model_name}] if existing_model_name else ""
+        return {
+            "name": "F",
+            "data": {
+                "nodes": [
+                    {
+                        "id": "Agent-1",
+                        "data": {"type": "Agent", "node": {"template": {"model": {"value": model_value}}}},
+                    }
+                ],
+                "edges": [],
+            },
+        }
+
+    def test_enforces_the_user_named_model_over_the_runtime_model(self):
+        from langflow.agentic.services.agent_run_context import (
+            set_agent_run_model,
+            set_requested_agent_model,
+        )
+
+        # Assistant's own runtime model (the one that would be wrongly injected).
+        set_agent_run_model("OpenAI", "gpt-5.5", "OPENAI_API_KEY")
+        # The model the user explicitly asked for.
+        set_requested_agent_model("OpenAI", "gpt-5.4", "OPENAI_API_KEY")
+        # Build left the Agent on the assistant's runtime model (the bug).
+        init_working_flow(self._agent_flow("gpt-5.5"), "flow-1")
+
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "good morning!"}) as m:
+            _run(RunFlow())
+
+        flow_data = m.await_args.kwargs["flow_data"]
+        model_value = flow_data["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
+        assert isinstance(model_value, list)
+        assert model_value
+        assert model_value[0]["name"] == "gpt-5.4"
+        assert model_value[0]["provider"] == "OpenAI"
+
+    def test_enforces_user_model_even_when_agent_left_it_empty(self):
+        from langflow.agentic.services.agent_run_context import (
+            set_agent_run_model,
+            set_requested_agent_model,
+        )
+
+        set_agent_run_model("OpenAI", "gpt-5.5", "OPENAI_API_KEY")
+        set_requested_agent_model("OpenAI", "gpt-5.4", "OPENAI_API_KEY")
+        init_working_flow(self._agent_flow(""), "flow-1")  # empty model
+
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "ok"}) as m:
+            _run(RunFlow())
+
+        flow_data = m.await_args.kwargs["flow_data"]
+        model_value = flow_data["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
+        assert model_value[0]["name"] == "gpt-5.4"
+
+    def test_falls_back_to_runtime_model_when_no_model_was_requested(self):
+        # Regression guard: with no explicit request, the existing behavior
+        # (fill an empty model with the verified runtime model) is preserved.
+        from langflow.agentic.services.agent_run_context import set_agent_run_model
+
+        set_agent_run_model("OpenAI", "gpt-5.5", "OPENAI_API_KEY")
+        init_working_flow(self._agent_flow(""), "flow-1")
+
+        with patch(RWF, new_callable=AsyncMock, return_value={"result": "ok"}) as m:
+            _run(RunFlow())
+
+        flow_data = m.await_args.kwargs["flow_data"]
+        model_value = flow_data["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
+        assert model_value[0]["name"] == "gpt-5.5"

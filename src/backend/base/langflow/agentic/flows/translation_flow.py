@@ -128,9 +128,23 @@ IMPORTANT disambiguation rules for manage_files:
 - A request that mentions both a file AND building a flow → prefer build_flow unless the user
   explicitly says "save the documentation as ..." or "create a file with ..."
 
+Explicit model extraction (CRITICAL for "use model X" requests):
+- If the user EXPLICITLY names a language model for the flow/agent (e.g. "use
+  the OpenAI gpt-5.4 model", "with claude sonnet", "set the model to gpt-4o",
+  "usando o modelo gpt-5.4 da OpenAI"), put the model name VERBATIM in
+  ``requested_model`` and its provider in ``requested_provider``.
+- Normalize the provider to its canonical name: "OpenAI", "Anthropic",
+  "Google Generative AI", "Groq", "Ollama". Infer it from the model name when
+  the user named the model but not the provider (e.g. "gpt-*" → OpenAI,
+  "claude*" → Anthropic, "gemini*" → Google Generative AI).
+- If the user did NOT name a specific model, set BOTH fields to "" (empty).
+  NEVER invent a model the user did not ask for.
+
 Output format (a single line of JSON only, no markdown):
 {{"translation": "<en>",
-"intent": "<generate_component|build_flow|run_flow|component_then_flow|manage_files|question|off_topic>"}}
+"intent": "<generate_component|build_flow|run_flow|component_then_flow|manage_files|question|off_topic>",
+"requested_model": "<exact model name the user named, or empty>",
+"requested_provider": "<canonical provider of that model, or empty>"}}
 
 Examples:
 Input: "como criar um componente no langflow"
@@ -158,7 +172,24 @@ Input: "simple chat flow"
 Output: {{"translation": "simple chat flow", "intent": "build_flow"}}
 
 Input: "change the model to gpt-4o-mini"
-Output: {{"translation": "change the model to gpt-4o-mini", "intent": "build_flow"}}
+Output: {{"translation": "change the model to gpt-4o-mini", "intent": "build_flow", \
+"requested_model": "gpt-4o-mini", "requested_provider": "OpenAI"}}
+
+Input: "create a flow with an agent using the OpenAI gpt-5.4 model"
+Output: {{"translation": "create a flow with an agent using the OpenAI gpt-5.4 model", \
+"intent": "build_flow", "requested_model": "gpt-5.4", "requested_provider": "OpenAI"}}
+
+Input: "build a chatbot with claude sonnet and run it"
+Output: {{"translation": "build a chatbot with claude sonnet and run it", "intent": "build_flow", \
+"requested_model": "claude sonnet", "requested_provider": "Anthropic"}}
+
+Input: "crie um agente usando o modelo gpt-4o da OpenAI e rode"
+Output: {{"translation": "create an agent using the OpenAI gpt-4o model and run it", "intent": "build_flow", \
+"requested_model": "gpt-4o", "requested_provider": "OpenAI"}}
+
+Input: "build me a chatbot flow"
+Output: {{"translation": "build me a chatbot flow", "intent": "build_flow", \
+"requested_model": "", "requested_provider": ""}}
 
 Input: "set the temperature to 0.5"
 Output: {{"translation": "set the temperature to 0.5", "intent": "build_flow"}}

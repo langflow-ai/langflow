@@ -288,13 +288,33 @@ class RunFlow(Component):
         # tops up the credential when the provider matches (see
         # inject_model_into_flow). Deterministic and LLM-agnostic.
         try:
-            from langflow.agentic.services.agent_run_context import current_agent_run_model
+            from langflow.agentic.services.agent_run_context import (
+                current_agent_run_model,
+                current_requested_agent_model,
+            )
             from langflow.agentic.services.flow_preparation import inject_model_into_flow
 
+            requested = current_requested_agent_model() or {}
+            req_provider = requested.get("provider")
+            req_model_name = requested.get("model_name")
             run_model = current_agent_run_model() or {}
             run_provider = run_model.get("provider")
             run_model_name = run_model.get("model_name")
-            if run_provider and run_model_name:
+            if req_provider and req_model_name:
+                # The user EXPLICITLY named a model — enforce it on every Agent
+                # (overwrite), so the canvas reflects exactly what they asked for
+                # and never the assistant's own runtime model. This is the fix for
+                # "says gpt-5.4 but the canvas shows gpt-5.5".
+                inject_model_into_flow(
+                    flow,
+                    req_provider,
+                    req_model_name,
+                    requested.get("api_key_var"),
+                    overwrite_existing_model=True,
+                )
+            elif run_provider and run_model_name:
+                # No explicit request: only FILL an Agent that has no model with
+                # the assistant's verified runtime model (preserve a set one).
                 inject_model_into_flow(
                     flow,
                     run_provider,

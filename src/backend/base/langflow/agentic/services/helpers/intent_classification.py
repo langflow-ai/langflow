@@ -65,7 +65,14 @@ def _with_tokens(result: IntentResult, tokens: dict[str, int] | None) -> IntentR
     return result
 
 
-def _finalize(translation: str, intent: str, text: str) -> IntentResult:
+def _finalize(
+    translation: str,
+    intent: str,
+    text: str,
+    *,
+    requested_model: str | None = None,
+    requested_provider: str | None = None,
+) -> IntentResult:
     """Apply the run-request safety net WITHOUT overriding the classifier.
 
     The language-agnostic TranslationFlow is the source of truth. The
@@ -80,11 +87,17 @@ def _finalize(translation: str, intent: str, text: str) -> IntentResult:
     already produced it) so the English-only regex rescues run requests
     written in ANY language; it falls back to the raw ``text`` only on
     degraded paths where no real translation is available.
+
+    ``requested_model`` / ``requested_provider`` are the model the user
+    explicitly named (empty strings normalized to ``None``); they ride on the
+    result so a downstream step can enforce it on the Agent.
     """
+    rm = (requested_model or "").strip() or None
+    rp = (requested_provider or "").strip() or None
     if intent == "question" and _looks_like_run_request(translation or text):
         logger.info("intent.run_flow: classifier returned question; rescued explicit run request")
-        return IntentResult(translation=translation, intent="run_flow")
-    return IntentResult(translation=translation, intent=intent)
+        return IntentResult(translation=translation, intent="run_flow", requested_model=rm, requested_provider=rp)
+    return IntentResult(translation=translation, intent=intent, requested_model=rm, requested_provider=rp)
 
 
 async def classify_intent(
@@ -169,7 +182,16 @@ async def classify_intent(
                 translation = parsed.get("translation", text)
                 intent = parsed.get("intent", "question")
                 logger.debug(f"Intent: {intent}, Translation: '{translation[:50]}'")
-                return _with_tokens(_finalize(translation, intent, text), translation_tokens)
+                return _with_tokens(
+                    _finalize(
+                        translation,
+                        intent,
+                        text,
+                        requested_model=parsed.get("requested_model"),
+                        requested_provider=parsed.get("requested_provider"),
+                    ),
+                    translation_tokens,
+                )
             except json.JSONDecodeError:
                 # Fallback 1: JSON wrapped in markdown code block (```json ... ```)
                 md_match = _MARKDOWN_JSON_RE.search(response_text)
@@ -177,7 +199,13 @@ async def classify_intent(
                     try:
                         parsed = json.loads(md_match.group(1).strip())
                         return _with_tokens(
-                            _finalize(parsed.get("translation", text), parsed.get("intent", "question"), text),
+                            _finalize(
+                                parsed.get("translation", text),
+                                parsed.get("intent", "question"),
+                                text,
+                                requested_model=parsed.get("requested_model"),
+                                requested_provider=parsed.get("requested_provider"),
+                            ),
                             translation_tokens,
                         )
                     except json.JSONDecodeError:

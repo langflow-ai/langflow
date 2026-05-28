@@ -22,6 +22,15 @@ class AgentRunModel(TypedDict):
 
 _model_var: contextvars.ContextVar[AgentRunModel | None] = contextvars.ContextVar("agentic_run_model", default=None)
 
+# Separate from the run model above: this is the model the USER explicitly
+# named in their request (e.g. "use the OpenAI gpt-5.4 model"), extracted by
+# the TranslationFlow. When set it must WIN over both the LLM's choice and the
+# assistant's own runtime model — the canvas Agent has to reflect exactly what
+# the user asked for, never be silently swapped for the verified runtime model.
+_requested_model_var: contextvars.ContextVar[AgentRunModel | None] = contextvars.ContextVar(
+    "agentic_requested_model", default=None
+)
+
 
 def set_agent_run_model(provider: str | None, model_name: str | None, api_key_var: str | None) -> None:
     """Bind the request's provider/model/api-key to the current context."""
@@ -36,3 +45,25 @@ def current_agent_run_model() -> AgentRunModel | None:
 def reset_agent_run_model() -> None:
     """Clear the binding. Idempotent; safe without a prior set."""
     _model_var.set(None)
+
+
+def set_requested_agent_model(provider: str | None, model_name: str | None, api_key_var: str | None) -> None:
+    """Bind the model the user EXPLICITLY named (or clear it when none was named).
+
+    Pass ``model_name=None`` to clear — the request named no model, so the
+    normal fill-with-runtime-model behavior applies.
+    """
+    if provider and model_name:
+        _requested_model_var.set({"provider": provider, "model_name": model_name, "api_key_var": api_key_var})
+    else:
+        _requested_model_var.set(None)
+
+
+def current_requested_agent_model() -> AgentRunModel | None:
+    """Return the user's explicitly-requested model (or ``None`` when unset)."""
+    return _requested_model_var.get()
+
+
+def reset_requested_agent_model() -> None:
+    """Clear the requested-model binding. Idempotent; safe without a prior set."""
+    _requested_model_var.set(None)
