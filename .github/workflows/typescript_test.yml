@@ -227,8 +227,22 @@ jobs:
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: ./src/frontend/package-lock.json
+
+      # npm caching is decoupled from setup-node so a transient cache-service
+      # hiccup (frequent on Windows runners) never fails the job. See #25 / #1.
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-
 
       - name: Install Frontend Dependencies
         run: npm ci
@@ -298,8 +312,23 @@ jobs:
         id: setup-node
         with:
           node-version: ${{ env.NODE_VERSION }}
-          cache: "npm"
-          cache-dependency-path: ./src/frontend/package-lock.json
+
+      # npm caching is decoupled from setup-node so a transient cache-service
+      # hiccup (frequent on Windows runners) never fails the job. See #25 / #1.
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-
+
       - name: Install Frontend Dependencies
         run: npm ci
         working-directory: ./src/frontend
@@ -308,6 +337,7 @@ jobs:
       - name: Cache Playwright Browsers
         id: cache-playwright
         uses: actions/cache@v5
+        continue-on-error: true
         with:
           path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
           key: playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
@@ -348,7 +378,12 @@ jobs:
       - name: Execute Playwright Tests
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 12
+          # Bumped from 12 → 18 minutes. Shard 38 carries all four
+          # starter-projects-shardN tests + the sentiment streaming test;
+          # iterating 8 templates per test under Linux nightly load
+          # consistently runs past 12 minutes once a single iteration
+          # triggers a per-test Playwright retry.
+          timeout_minutes: 18
           max_attempts: 2
           command: |
             cd src/frontend
@@ -361,6 +396,7 @@ jobs:
 
       - name: Upload Test Results
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: blob-report-${{ runner.os }}-${{ matrix.shardIndex }}
@@ -370,6 +406,7 @@ jobs:
 
       - name: Upload Playwright Coverage Artifact
         if: always() && hashFiles('src/frontend/coverage/playwright/**') != ''
+        continue-on-error: true
         uses: actions/upload-artifact@v6
         with:
           name: playwright-coverage-${{ matrix.shardIndex }}
