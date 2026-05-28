@@ -1,5 +1,4 @@
-import "./i18n";
-import { loadLanguage } from "./i18n";
+import i18n, { loadLanguage, normalizeLanguage } from "./i18n";
 import ReactDOM from "react-dom/client";
 import reportWebVitals from "./reportWebVitals";
 
@@ -18,7 +17,10 @@ const detectedLang =
   navigator.language.split("-")[0] ||
   "en";
 
-loadLanguage(detectedLang).then(() => {
+const startupLanguage = normalizeLanguage(detectedLang);
+
+loadLanguage(startupLanguage).then(async () => {
+  await i18n.changeLanguage(startupLanguage);
   const root = ReactDOM.createRoot(
     document.getElementById("root") as HTMLElement,
   );
