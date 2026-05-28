@@ -10,7 +10,6 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { customCodeTabsClass } from "@/customization/constants";
-import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
@@ -69,6 +68,7 @@ export default function APITabsComponent() {
   );
 
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const processedPayload: any = {
     output_type: hasChatOutput ? "chat" : "text",
     input_type: hasChatInput ? "chat" : "text",
