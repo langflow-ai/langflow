@@ -71,6 +71,18 @@ _EXTERNAL_MARKERS: tuple[str, ...] = (
     "rate limit",
     "429",
     "too many requests",
+    # The selected model isn't callable for this account (the friendly
+    # mapping of an OpenAI/Anthropic ``model_not_found`` / "does not have
+    # access to model" → "Model not available. Please select a different
+    # model."). The agent CANNOT fix this by rebuilding — re-prompting it
+    # only burns 3 expensive fix turns (the "stuck on 'Crafting...'" hang)
+    # and would either fail again or silently swap the user's chosen model.
+    # Treat it as external: caveat once, keep the user's model, no retries.
+    "model not available",
+    "model_not_found",
+    "model is not available",
+    "does not have access to model",
+    "no access to model",
 )
 
 

@@ -18,6 +18,7 @@ from lfx.mcp.flow_builder_tools import (
     get_working_flow,
     init_working_flow,
     reset_working_flow,
+    set_propose_existing_edits,
 )
 from lfx.mcp.tool_cache import reset_tool_cache
 
@@ -659,8 +660,10 @@ async def execute_flow_with_validation_streaming(
         _model_parts.append("providers with credentials configured: " + ", ".join(_avail))
     if _model_parts:
         current_input = (
-            f"[Available language models — configure any Agent's `model` field with one of "
-            f"these (prefer the one marked `preferred`) so the flow can run: "
+            f"[Available language models — these are a DEFAULT only. If the user explicitly named a "
+            f"model, set EXACTLY that model (verbatim) and IGNORE this block. ONLY when the user did "
+            f"NOT name a model, configure an Agent's `model` field with the one marked `preferred` "
+            f"(else any listed provider) so the flow can run: "
             f"{'; '.join(_model_parts)}]\n\n{current_input}"
         )
 
@@ -688,6 +691,25 @@ async def execute_flow_with_validation_streaming(
     # — never the LLM's wording.
     is_build_and_run = is_flow_request and not is_compound and continuation_expected
     auto_apply_flow = is_compound or is_build_and_run
+
+    # Bug B (deterministic review card): on a PURE-edit turn — a flow edit with
+    # NO run requested this turn — force `configure_component` on a pre-existing
+    # component to surface text-field changes as reviewable `edit_field`
+    # proposals (see ConfigureComponent). Off for: fresh builds (no pre-existing
+    # target), build+run / run / continuation turns (the run needs the edit live
+    # immediately), compound builds, and every non-flow intent. Default-off
+    # contract: if a path is missed, behavior is unchanged (no broken run).
+    is_continuation_signal = original_user_input.strip() in (PLAN_APPROVAL_INPUT, EDIT_CONTINUATION_INPUT)
+    set_propose_existing_edits(
+        enabled=(
+            is_flow_request
+            and not is_compound
+            and not is_run_request
+            and not is_build_and_run
+            and not is_continuation_signal
+        )
+    )
+
     current_input = inject_conversation_history(user_id=user_id, session_id=session_id, input_value=current_input)
 
     # Build-flow and manage_files both route to the FlowBuilderAssistant —

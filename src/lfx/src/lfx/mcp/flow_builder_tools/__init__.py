@@ -36,7 +36,10 @@ from ._state import (
     get_working_flow,
     init_working_flow,
     isolate_flow_run_context,
+    node_existed_at_start,
     reset_working_flow,
+    set_propose_existing_edits,
+    should_propose_existing_edits,
 )
 from .edit_tools import ProposeFieldEdit
 from .mutate_tools import (
@@ -76,5 +79,8 @@ __all__ = [
     "get_working_flow",
     "init_working_flow",
     "isolate_flow_run_context",
+    "node_existed_at_start",
     "reset_working_flow",
+    "set_propose_existing_edits",
+    "should_propose_existing_edits",
 ]

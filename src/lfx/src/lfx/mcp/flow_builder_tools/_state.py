@@ -55,6 +55,45 @@ def _load_registry_user_aware() -> dict[str, dict]:
 _flow_events_var: ContextVar[deque[dict[str, Any]]] = ContextVar("_flow_events_var")
 _working_flow_var: ContextVar[dict | None] = ContextVar("_working_flow_var", default=None)
 _current_flow_id_var: ContextVar[str | None] = ContextVar("_current_flow_id_var", default=None)
+# Snapshot of the component IDs present on the canvas at the START of the turn
+# (captured by init_working_flow). Used to tell a pre-existing component (an
+# EDIT target) apart from one added during this turn (part of a BUILD).
+_initial_node_ids_var: ContextVar[frozenset[str]] = ContextVar("_initial_node_ids_var", default=frozenset())
+# When True, a ``configure_component`` on a PRE-EXISTING component is converted
+# into a reviewable ``edit_field`` proposal for its text-content fields instead
+# of being auto-applied. The assistant service sets this for PURE-edit turns
+# (no run requested), guaranteeing "improve the prompt"-style edits ALWAYS show
+# the diff card regardless of which tool the LLM chose. Default False so every
+# other path (fresh build, build+run, run, continuation) keeps applying live.
+_propose_existing_edits_var: ContextVar[bool] = ContextVar("_propose_existing_edits_var", default=False)
+
+
+def _collect_node_ids(flow_data: dict | None) -> frozenset[str]:
+    """Return the set of component IDs in a flow dict (data.id or top-level id)."""
+    nodes = ((flow_data or {}).get("data") or {}).get("nodes") or []
+    ids: set[str] = set()
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        nid = (node.get("data") or {}).get("id") or node.get("id")
+        if isinstance(nid, str) and nid:
+            ids.add(nid)
+    return frozenset(ids)
+
+
+def node_existed_at_start(component_id: str) -> bool:
+    """True if the component was already on the canvas when the turn began."""
+    return component_id in _initial_node_ids_var.get(frozenset())
+
+
+def set_propose_existing_edits(*, enabled: bool) -> None:
+    """Enable/disable converting configure→propose for pre-existing components."""
+    _propose_existing_edits_var.set(enabled)
+
+
+def should_propose_existing_edits() -> bool:
+    """Whether edits to pre-existing components should surface as review cards."""
+    return _propose_existing_edits_var.get(False)
 
 
 def _get_flow_events() -> deque[dict[str, Any]]:
@@ -84,6 +123,9 @@ def init_working_flow(flow_data: dict, flow_id: str | None = None) -> None:
     """Initialize working flow from actual canvas data."""
     _working_flow_var.set(flow_data)
     _current_flow_id_var.set(flow_id)
+    # Snapshot which components already existed so edits to them can later be
+    # told apart from components added during this turn.
+    _initial_node_ids_var.set(_collect_node_ids(flow_data))
     _get_flow_events().clear()
 
 
@@ -91,6 +133,8 @@ def reset_working_flow() -> None:
     """Reset the working flow state between requests."""
     _working_flow_var.set(None)
     _current_flow_id_var.set(None)
+    _initial_node_ids_var.set(frozenset())
+    _propose_existing_edits_var.set(False)
     _get_flow_events().clear()
 
 
@@ -108,6 +152,10 @@ def isolate_flow_run_context() -> None:
     _flow_events_var.set(deque())
     _working_flow_var.set(None)
     _current_flow_id_var.set(None)
+    # A nested pipeline run must not inherit the parent turn's edit-review mode
+    # nor its initial-node snapshot — those belong to the parent canvas only.
+    _initial_node_ids_var.set(frozenset())
+    _propose_existing_edits_var.set(False)
 
 
 def _emit(action: str, **data: Any) -> None:

@@ -211,6 +211,97 @@ class TestInjectModelIntoFlow:
         assert "agent_missing_model_field" not in caplog.text
 
 
+def _agent_flow_with_model(provider: str, name: str) -> dict:
+    """A flow whose Agent already has an explicit model + api_key field set."""
+    return {
+        "data": {
+            "nodes": [
+                {
+                    "id": "Agent-x",
+                    "data": {
+                        "type": "Agent",
+                        "node": {
+                            "template": {
+                                "model": {"value": [{"provider": provider, "name": name}]},
+                                "api_key": {"value": ""},
+                            }
+                        },
+                    },
+                }
+            ]
+        }
+    }
+
+
+class TestInjectModelPreservesExplicitModel:
+    """``overwrite_existing_model=False`` must never silently swap a user-set model.
+
+    Reproduces the production bug: the user asked for OpenAI gpt-5.4, but the
+    end-of-turn RunFlow injection overwrote the Agent with the assistant's own
+    verified model (gpt-5.5) and PERSISTED it on the canvas.
+    """
+
+    def test_keeps_existing_same_provider_model_and_injects_only_the_key(self):
+        flow_data = _agent_flow_with_model("OpenAI", "gpt-5.4")
+
+        with patch(f"{MODULE}.get_provider_config", return_value=OPENAI_CONFIG):
+            inject_model_into_flow(
+                flow_data, "OpenAI", "gpt-5.5", api_key_var="OPENAI_API_KEY", overwrite_existing_model=False
+            )
+
+        template = flow_data["data"]["nodes"][0]["data"]["node"]["template"]
+        entry = template["model"]["value"][0]
+        # The user's model NAME is preserved — NOT swapped to gpt-5.5.
+        assert entry["name"] == "gpt-5.4"
+        assert entry["provider"] == "OpenAI"
+        # ...and it is rebuilt as a COMPLETE value (metadata/icon) so the run
+        # resolves it exactly like a normal selection — a bare {provider,name}
+        # the agent set would otherwise lack these and fail to run.
+        assert "metadata" in entry
+        assert entry["metadata"].get("model_class") == "ChatOpenAI"
+        assert entry.get("icon") == "OpenAI"
+        # ...and the credential was topped up so the same-provider run authenticates.
+        assert template["api_key"]["value"] == "OPENAI_API_KEY"
+
+    def test_does_not_touch_a_cross_provider_model(self):
+        flow_data = _agent_flow_with_model("Anthropic", "claude-sonnet-4-5")
+
+        with patch(f"{MODULE}.get_provider_config", return_value=OPENAI_CONFIG):
+            inject_model_into_flow(
+                flow_data, "OpenAI", "gpt-5.5", api_key_var="OPENAI_API_KEY", overwrite_existing_model=False
+            )
+
+        template = flow_data["data"]["nodes"][0]["data"]["node"]["template"]
+        # Cross-provider model is left fully untouched (we don't hold its key).
+        assert template["model"]["value"][0]["name"] == "claude-sonnet-4-5"
+        assert template["model"]["value"][0]["provider"] == "Anthropic"
+        # The OpenAI key must NOT be injected onto an Anthropic agent.
+        assert template["api_key"]["value"] == ""
+
+    def test_fills_in_an_empty_model_even_when_not_overwriting(self):
+        flow_data = _make_flow_data(["Agent"])  # model value: []
+
+        with patch(f"{MODULE}.get_provider_config", return_value=OPENAI_CONFIG):
+            inject_model_into_flow(
+                flow_data, "OpenAI", "gpt-5.5", api_key_var="OPENAI_API_KEY", overwrite_existing_model=False
+            )
+
+        # An Agent with NO model still gets one (run would otherwise break).
+        model_val = flow_data["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
+        assert model_val[0]["name"] == "gpt-5.5"
+
+    def test_overwrite_default_still_swaps_the_model(self):
+        # Back-compat: the default (template prep / missing-model fill) still
+        # overwrites, so other callers are unaffected.
+        flow_data = _agent_flow_with_model("OpenAI", "gpt-5.4")
+
+        with patch(f"{MODULE}.get_provider_config", return_value=OPENAI_CONFIG):
+            inject_model_into_flow(flow_data, "OpenAI", "gpt-5.5")
+
+        model_val = flow_data["data"]["nodes"][0]["data"]["node"]["template"]["model"]["value"]
+        assert model_val[0]["name"] == "gpt-5.5"
+
+
 class TestLoadAndPrepareFlow:
     """Tests for load_and_prepare_flow."""
 

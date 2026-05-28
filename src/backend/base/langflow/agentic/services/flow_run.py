@@ -243,7 +243,13 @@ async def run_working_flow(*, flow_data: dict, flow_id: str, user_id: str | None
             run_graph_internal(graph, flow_id, inputs=[], outputs=[]),
             timeout=RUN_TIMEOUT_SECONDS,
         )
-    except TimeoutError:
+    except (TimeoutError, asyncio.TimeoutError):
+        # On Python 3.10 ``asyncio.wait_for`` raises ``asyncio.TimeoutError``,
+        # a class DISTINCT from the builtin ``TimeoutError`` (they were unified
+        # in 3.11). Catching only the builtin let 3.10 fall through to the
+        # generic handler below, where ``str(asyncio.TimeoutError())`` is ""
+        # → an empty error envelope. Catch both so the timeout message is
+        # consistent across every supported Python version.
         msg = f"The flow run timed out after {RUN_TIMEOUT_SECONDS}s."
         # Still surface elapsed time + any tokens already billed before the
         # timeout so the agent can report cost/duration, not just "failed".
@@ -259,8 +265,15 @@ async def run_working_flow(*, flow_data: dict, flow_id: str, user_id: str | None
         )
         return {"error": msg, "metrics": timeout_metrics}
     except Exception as exc:  # noqa: BLE001 — clean message to the agent, never a stack trace
-        friendly = extract_friendly_error(str(exc))
-        logger.warning("assistant.run_flow.failed flow_id=%s: %s", flow_id, friendly)
+        raw = str(exc)
+        friendly = extract_friendly_error(raw)
+        # Log the RAW cause too — the friendly mapping collapses provider
+        # errors (e.g. an OpenAI ``The model 'GPT-5.4' does not exist`` vs
+        # ``you do not have access to model gpt-5.4``) into one generic
+        # "Model not available" string, which hides WHY a run failed. The
+        # raw text (truncated; no api keys appear in model errors) is what
+        # tells a model-name/casing bug apart from a real access problem.
+        logger.warning("assistant.run_flow.failed flow_id=%s friendly=%r raw=%r", flow_id, friendly, raw[:500])
         return {"error": friendly}
 
     # Wall time measured around the actual run — the only reliable source

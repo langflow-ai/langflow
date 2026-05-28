@@ -1,6 +1,7 @@
 """Tests for flow_builder_tools components."""
 
 import asyncio
+import json
 
 from lfx.mcp.flow_builder_tools import (
     AddComponent,
@@ -982,3 +983,192 @@ class TestContextVarIsolation:
         assert results["a_events_before"] == 0
         assert results["b_events_before"] == 0
         assert results["a_events_after"] == 1  # only task_a's AddComponent event
+
+
+class TestConfigureProposeConversion:
+    """Bug B: a pure-edit turn surfaces text edits as a review card, deterministically.
+
+    A ``configure_component`` on a PRE-EXISTING component's text field must
+    become a reviewable ``edit_field`` proposal — never a silent auto-apply —
+    regardless of which tool the LLM picked. Default-off so builds/runs are
+    untouched.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def teardown_method(self):
+        reset_working_flow()
+
+    @staticmethod
+    def _flow():
+        return {
+            "name": "Restaurant",
+            "data": {
+                "nodes": [
+                    _node("ChatInput-1", "ChatInput", {"input_value": {"value": "hi"}}),
+                    _node(
+                        "Agent-odhHB",
+                        "Agent",
+                        {
+                            "system_prompt": {"value": "You are a restaurant attendant agent.", "type": "str"},
+                            "model": {"value": [{"provider": "OpenAI", "name": "gpt-4o"}], "type": "model"},
+                        },
+                    ),
+                    _node("ChatOutput-1", "ChatOutput", {}),
+                ],
+                "edges": [
+                    _edge("ChatInput-1", "message", "Agent-odhHB", "input_value"),
+                    _edge("Agent-odhHB", "response", "ChatOutput-1", "input_value"),
+                ],
+            },
+        }
+
+    def _configure(self, component_id, params):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent
+
+        comp = ConfigureComponent()
+        comp.set(component_id=component_id, params=json.dumps(params))
+        return comp.configure_component()
+
+    def test_text_field_edit_on_existing_component_becomes_edit_field_proposal(self):
+        from lfx.mcp.flow_builder_tools import set_propose_existing_edits
+
+        init_working_flow(self._flow(), "flow-1")
+        set_propose_existing_edits(enabled=True)
+
+        result = self._configure("Agent-odhHB", {"system_prompt": "You are a CHEERFUL restaurant agent."})
+
+        events = drain_flow_events()
+        actions = [e["action"] for e in events]
+        assert "edit_field" in actions, f"expected a review proposal, got {actions}"
+        assert "configure" not in actions, "text edit on an existing component must NOT auto-apply"
+        edit = next(e for e in events if e["action"] == "edit_field")
+        assert edit["component_id"] == "Agent-odhHB"
+        assert edit["field"] == "system_prompt"
+        assert edit["new_value"] == "You are a CHEERFUL restaurant agent."
+        assert edit["old_value"] == "You are a restaurant attendant agent."
+        assert "patch" in edit
+        assert "proposed" in result.data
+
+    def test_same_edit_is_direct_when_propose_mode_off(self):
+        # propose flag defaults off → build/run/continuation behavior unchanged.
+        init_working_flow(self._flow(), "flow-1")
+
+        self._configure("Agent-odhHB", {"system_prompt": "Changed directly."})
+
+        actions = [e["action"] for e in drain_flow_events()]
+        assert "configure" in actions
+        assert "edit_field" not in actions
+
+    def test_edit_on_freshly_added_component_is_direct_even_in_propose_mode(self):
+        from lfx.mcp.flow_builder_tools import set_propose_existing_edits
+
+        # The component is NOT in the initial snapshot (added this turn).
+        init_working_flow({"name": "e", "data": {"nodes": [], "edges": []}}, "flow-1")
+        set_propose_existing_edits(enabled=True)
+        # Seed a node directly into the working flow as if AddComponent ran.
+        get_working_flow()["data"]["nodes"].append(
+            _node("Agent-new", "Agent", {"system_prompt": {"value": "old", "type": "str"}})
+        )
+
+        self._configure("Agent-new", {"system_prompt": "fresh build value"})
+
+        actions = [e["action"] for e in drain_flow_events()]
+        assert "configure" in actions, "configuring a just-added component must apply live"
+        assert "edit_field" not in actions
+
+    def test_model_swap_on_existing_component_stays_direct_in_propose_mode(self):
+        from lfx.mcp.flow_builder_tools import set_propose_existing_edits
+
+        init_working_flow(self._flow(), "flow-1")
+        set_propose_existing_edits(enabled=True)
+
+        self._configure("Agent-odhHB", {"model": [{"provider": "OpenAI", "name": "gpt-4o-mini"}]})
+
+        actions = [e["action"] for e in drain_flow_events()]
+        assert "configure" in actions, "structured model swap is not a reviewable text edit"
+        assert "edit_field" not in actions
+
+    def test_mixed_params_propose_text_and_apply_nontext(self):
+        from lfx.mcp.flow_builder_tools import set_propose_existing_edits
+
+        init_working_flow(self._flow(), "flow-1")
+        set_propose_existing_edits(enabled=True)
+
+        self._configure(
+            "Agent-odhHB",
+            {"system_prompt": "new persona", "model": [{"provider": "OpenAI", "name": "gpt-4o-mini"}]},
+        )
+
+        events = drain_flow_events()
+        actions = [e["action"] for e in events]
+        # Text field → proposal; model swap → direct apply, in the same call.
+        assert "edit_field" in actions
+        assert "configure" in actions
+        configure_ev = next(e for e in events if e["action"] == "configure")
+        assert "model" in configure_ev["params"]
+        assert "system_prompt" not in configure_ev["params"]
+
+
+class TestConnectToolModeFlipPropagation:
+    """Wiring `X.component_as_tool -> Agent.tools` flips X to tool mode in the
+    working flow; the canvas must be told (an `enable_tool_mode` event with the
+    flipped outputs) so the source node re-renders with its Toolset handle and
+    the edge actually attaches — otherwise it's the "said it connected but
+    didn't" bug.
+    """
+
+    def setup_method(self):
+        reset_working_flow()
+
+    def teardown_method(self):
+        reset_working_flow()
+
+    @staticmethod
+    def _flipped_source_flow():
+        # Simulate the post-`_enable_tool_mode` state: tool_mode on + the
+        # synthesized component_as_tool (Toolset) output.
+        node = _node("MenuTool-1", "MenuTool", {"query": {"value": "", "tool_mode": True}})
+        node["data"]["node"]["tool_mode"] = True
+        node["data"]["node"]["outputs"] = [
+            {"name": "component_as_tool", "display_name": "Toolset", "types": ["Tool"], "method": "to_toolkit"}
+        ]
+        return {"name": "T", "data": {"nodes": [node], "edges": []}}
+
+    def test_emits_enable_tool_mode_with_flipped_outputs(self):
+        from lfx.mcp.flow_builder_tools.mutate_tools import _emit_source_tool_mode_if_flipped
+
+        flow = self._flipped_source_flow()
+        drain_flow_events()
+
+        _emit_source_tool_mode_if_flipped(flow, "MenuTool-1", "component_as_tool")
+
+        events = drain_flow_events()
+        assert len(events) == 1
+        ev = events[0]
+        assert ev["action"] == "enable_tool_mode"
+        assert ev["component_id"] == "MenuTool-1"
+        assert any(o.get("name") == "component_as_tool" for o in ev["outputs"]), ev["outputs"]
+
+    def test_skips_when_source_output_is_not_the_tool_handle(self):
+        from lfx.mcp.flow_builder_tools.mutate_tools import _emit_source_tool_mode_if_flipped
+
+        flow = self._flipped_source_flow()
+        drain_flow_events()
+
+        # A normal output (e.g. "message") is not a tool-mode flip — emit nothing.
+        _emit_source_tool_mode_if_flipped(flow, "MenuTool-1", "message")
+
+        assert drain_flow_events() == []
+
+    def test_skips_when_node_not_in_tool_mode(self):
+        from lfx.mcp.flow_builder_tools.mutate_tools import _emit_source_tool_mode_if_flipped
+
+        node = _node("Plain-1", "Plain", {})  # no tool_mode, default outputs
+        flow = {"name": "T", "data": {"nodes": [node], "edges": []}}
+        drain_flow_events()
+
+        _emit_source_tool_mode_if_flipped(flow, "Plain-1", "component_as_tool")
+
+        assert drain_flow_events() == []

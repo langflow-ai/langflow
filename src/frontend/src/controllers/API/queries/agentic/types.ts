@@ -80,6 +80,7 @@ export interface AgenticFlowUpdateEvent {
     | "edit_field"
     | "select_output"
     | "set_connection_mode"
+    | "enable_tool_mode"
     | "propose_plan";
   /** Backend sets this on a compound-pipeline set_flow so the canvas is
    * replaced directly (the user already asked to clear+replace it) —

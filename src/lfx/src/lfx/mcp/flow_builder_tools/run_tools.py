@@ -278,13 +278,15 @@ class RunFlow(Component):
         # canvas has no persisted id yet.
         flow_id = _current_flow_id_var.get() or str(uuid4())
 
-        # The assistant runs with a verified provider/model/api_key. The
-        # LLM-chosen (or empty) model on a built Agent often has no
-        # configured key -> "Authentication failed". Propagate the
-        # assistant's working credential into the Agent node(s) so this
-        # assistant-triggered run actually authenticates and returns a
-        # result. Deterministic and LLM-agnostic; the canvas still shows
-        # the Agent, so the user can change the model afterwards.
+        # The assistant runs with a verified provider/model/api_key. An Agent
+        # that has NO model (LLM forgot to set one) would fail the run with
+        # "No model selected"/"Authentication failed", so fill those in with
+        # the assistant's working credential. But an Agent the user/agent
+        # EXPLICITLY gave a model (e.g. "use gpt-5.4") must KEEP that model on
+        # the canvas — never silently swapped for the assistant's own model.
+        # ``overwrite_existing_model=False`` preserves a set model and only
+        # tops up the credential when the provider matches (see
+        # inject_model_into_flow). Deterministic and LLM-agnostic.
         try:
             from langflow.agentic.services.agent_run_context import current_agent_run_model
             from langflow.agentic.services.flow_preparation import inject_model_into_flow
@@ -293,7 +295,13 @@ class RunFlow(Component):
             run_provider = run_model.get("provider")
             run_model_name = run_model.get("model_name")
             if run_provider and run_model_name:
-                inject_model_into_flow(flow, run_provider, run_model_name, run_model.get("api_key_var"))
+                inject_model_into_flow(
+                    flow,
+                    run_provider,
+                    run_model_name,
+                    run_model.get("api_key_var"),
+                    overwrite_existing_model=False,
+                )
         except (ImportError, ValueError) as exc:
             logger.warning("run_flow.verified_model_inject_skipped: %s", exc)
 

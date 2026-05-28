@@ -20,6 +20,49 @@ from lfx.schema import Data
 from ._state import _emit, _find_node, _readable_preview, get_working_flow
 
 
+def emit_field_edit_proposal(flow: dict, component_id: str, field_name: str, new_value: object) -> bool:
+    """Emit a reviewable ``edit_field`` event for one field — the configure→propose bridge.
+
+    Produces the SAME ``edit_field`` payload shape as ``ProposeFieldEdit`` (id,
+    component_id, component_type, field, old_value, new_value, description, JSON
+    Patch) so the frontend carousel renders it identically. Returns True when a
+    proposal was emitted; False when the node/field could not be resolved, so
+    the caller can fall back to a direct apply.
+    """
+    node = _find_node(flow, component_id)
+    if node is None:
+        return False
+    template = node.get("data", {}).get("node", {}).get("template", {})
+    if field_name not in template or not isinstance(template.get(field_name), dict):
+        return False
+    old_value = template[field_name].get("value")
+
+    node_idx = None
+    for i, n in enumerate(flow.get("data", {}).get("nodes", [])):
+        nid = n.get("data", {}).get("id", n.get("id", ""))
+        if nid == component_id:
+            node_idx = i
+            break
+    if node_idx is None:
+        return False
+
+    path = f"/data/nodes/{node_idx}/data/node/template/{field_name}/value"
+    patch_ops = [{"op": "replace", "path": path, "value": new_value}]
+    component_type = node.get("data", {}).get("type", "?")
+    _emit(
+        "edit_field",
+        id=str(uuid.uuid4())[:8],
+        component_id=component_id,
+        component_type=component_type,
+        field=field_name,
+        old_value=old_value,
+        new_value=new_value,
+        description=f'Set {field_name} to "{_readable_preview(new_value)}" on {component_type}',
+        patch=patch_ops,
+    )
+    return True
+
+
 class ProposeFieldEdit(Component):
     display_name = "Propose Field Edit"
     description = "Propose a field value change on a component. Validates and generates a reviewable patch."

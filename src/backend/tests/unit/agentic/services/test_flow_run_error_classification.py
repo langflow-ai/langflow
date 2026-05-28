@@ -32,6 +32,12 @@ class TestExternalResourceErrors:
             "could not connect to database: connection timed out",
             "Rate limit reached for gpt-4o",
             "429 Too Many Requests",
+            # A model the account can't call — the agent can't fix this by
+            # rebuilding, so it must NOT trigger the 3x fix-retry loop (which
+            # hangs the chat on "Crafting your component...").
+            "Model not available. Please select a different model.",
+            "The model `gpt-5.4` model_not_found",
+            "Project does not have access to model gpt-5.4",
         ],
     )
     def test_should_classify_as_external_resource_when_error_needs_user_supplied_resource(self, message):

@@ -65,14 +65,18 @@ Intent Classification:
   Examples: "create a markdown file with the docs of my flow", "save this as report.md",
   "write the flow documentation to FLOW_DOCS.md", "read the contents of NOTES.md",
   "edit README.md and add a usage section", "save the summary as summary.txt".
-- "question": User is ASKING A QUESTION about Langflow, seeking help with Langflow, or wants \
-information about Langflow features, components, flows, or how to use Langflow.
+- "question": User is ASKING A QUESTION about Langflow, seeking help with Langflow, wants \
+information about Langflow features/components/flows, OR is just being conversational \
+(a greeting, a thank-you, an acknowledgement, a goodbye — in ANY language).
   Examples: "How do I create a component?", "What is a component?", "Can you explain flows?", \
-"How to connect two components?"
-- "off_topic": The question is NOT about Langflow. It is about other tools, platforms, general \
-knowledge, or anything unrelated to Langflow.
+"How to connect two components?", "thanks!", "thank you so much", "obrigado", "merci", \
+"gracias", "danke", "ありがとう", "谢谢", "hi", "hello", "oi", "bom dia", "ok", "got it", "bye"
+- "off_topic": The request is NOT about Langflow AND is not a social pleasantry. It is a \
+SUBSTANTIVE question/task about other tools, platforms, or general knowledge unrelated to Langflow.
   Examples: "How does n8n work?", "What is Python?", "Tell me about React", "How to cook pasta", \
 "Explain Docker", "What is AutoGen?", "How does Make.com work?", "Write me a poem"
+  NOTE: A bare greeting, thanks, acknowledgement, or goodbye is NEVER off_topic — it is \
+"question" (answer it briefly and warmly). off_topic is ONLY for substantive non-Langflow topics.
 
 IMPORTANT rules:
 - "How to create a component" = question (asking for Langflow guidance)
@@ -97,6 +101,9 @@ IMPORTANT rules:
   (e.g., "use X instead", "add Y", "change Z", "make it do W", "can you also...", "what about using...")
 - Questions about OTHER tools or platforms (n8n, Make, Zapier, AutoGen, CrewAI, etc.) = off_topic
 - General knowledge questions NOT related to Langflow = off_topic
+- Greetings / thanks / acknowledgements / goodbyes in ANY language = question (NEVER off_topic):
+  "thanks", "obrigado", "merci", "gracias", "danke", "ありがとう", "谢谢", "hi", "oi", "bom dia",
+  "ok", "got it", "bye" → question. The assistant answers these briefly in the user's language.
 - If unsure whether it's about Langflow, classify as "question" (not off_topic)
 
 Session context (CRITICAL for multi-turn correctness):
@@ -245,6 +252,15 @@ Output: {{"translation": "explain how kubernetes works", "intent": "off_topic"}}
 
 Input: "write me a poem about cats"
 Output: {{"translation": "write me a poem about cats", "intent": "off_topic"}}
+
+Input: "thanks!"
+Output: {{"translation": "thanks!", "intent": "question"}}
+
+Input: "muito obrigado pela ajuda"
+Output: {{"translation": "thank you very much for the help", "intent": "question"}}
+
+Input: "merci beaucoup"
+Output: {{"translation": "thank you very much", "intent": "question"}}
 """
 
 
@@ -305,17 +321,21 @@ def get_graph(
     llm.set_input_value("model", _build_model_config(provider, model_name))
 
     # Configure LLM.
-    # ``max_tokens=300`` is a hard ceiling for the classifier output, which is
-    # always a small JSON object ({"translation": "...", "intent": "..."}).
-    # Typical output is 60-120 tokens; 300 leaves 2x headroom for
-    # very long translations of non-Latin scripts. Without this cap the model
-    # can over-generate (long explanations the parser strips anyway), so this
-    # is pure cost containment with no observable UX impact.
+    # NOTE: do NOT cap ``max_tokens`` here. A previous "cost containment"
+    # cap of 300 silently broke intent classification on REASONING models
+    # (gpt-5.x / o-series): ``max_tokens`` maps to ``max_completion_tokens``
+    # for those providers, and reasoning tokens are billed against that same
+    # budget. With only 300 tokens the model spent them on internal reasoning
+    # and the visible JSON ({"translation": ..., "intent": ...}) came back
+    # truncated/empty → ``json.loads`` failed → ``classify_intent`` fell back
+    # to "question" → component/flow requests were rendered as raw Python in
+    # chat instead of going through the generation pipeline. The classifier
+    # output is naturally tiny (the prompt constrains it to one JSON object),
+    # so the cost of leaving it uncapped is negligible — correctness wins.
     llm_config = {
         "input_value": chat_input.message_response,
         "system_message": TRANSLATION_PROMPT,
-        "temperature": 0.1,  # Low temperature for consistent JSON output
-        "max_tokens": 300,
+        "temperature": 0.1,  # Low temperature for consistent JSON output (dropped automatically for reasoning models)
     }
 
     if api_key_var:

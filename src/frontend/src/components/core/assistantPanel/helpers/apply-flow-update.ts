@@ -225,6 +225,43 @@ export function applyFlowUpdate(
       }
       break;
     }
+    case "enable_tool_mode": {
+      // The backend flipped the source component into Tool Mode when wiring
+      // `X.component_as_tool -> Agent.tools` (its outputs collapsed to the
+      // single synthesized `component_as_tool`/Toolset output). Mirror that on
+      // the canvas BEFORE the `connect` edge is applied — otherwise the node
+      // still renders its old output handle, the edge's `component_as_tool`
+      // source handle has no match, and the edge silently never renders.
+      const compId = event.component_id as string;
+      const outputs = event.outputs;
+      if (compId && Array.isArray(outputs)) {
+        const setNodes = useFlowStore.getState().setNodes;
+        setNodes((prev) =>
+          prev.map((n) => {
+            const node = n as Record<string, unknown>;
+            if (node.id !== compId) return n;
+            const data = (node.data ?? {}) as Record<string, unknown>;
+            const innerNode = (data?.node ?? {}) as Record<string, unknown>;
+            return {
+              ...node,
+              data: {
+                ...data,
+                node: {
+                  ...innerNode,
+                  tool_mode: true,
+                  outputs,
+                },
+              },
+            } as never;
+          }),
+        );
+        // The node's output handles changed (collapsed to one Toolset handle),
+        // so ReactFlow must recompute handle positions or the edge to
+        // component_as_tool can't find its source.
+        updateNodeInternals(compId);
+      }
+      break;
+    }
     default:
       break;
   }

@@ -24,7 +24,10 @@ from ._state import (
     _ensure_working_flow,
     _find_node,
     _load_registry_user_aware,
+    node_existed_at_start,
+    should_propose_existing_edits,
 )
+from .edit_tools import emit_field_edit_proposal
 
 
 class AddComponent(Component):
@@ -113,6 +116,30 @@ def _sync_model_input_connection_mode(flow: dict, target_id: str, target_input: 
     _emit("set_connection_mode", component_id=target_id, enabled=True)
 
 
+def _emit_source_tool_mode_if_flipped(flow: dict, source_id: str, source_output: str) -> None:
+    """Tell the canvas the source node was flipped to tool mode on connect.
+
+    When connecting ``X.component_as_tool -> Agent.tools``, ``add_connection``
+    flips X into tool mode IN THE WORKING FLOW: its outputs collapse to the
+    single synthesized ``component_as_tool`` (Toolset) output. The ``connect``
+    event only carries the EDGE — it never surfaces X's new outputs. Without
+    this, the canvas keeps rendering X's OLD output, the edge's
+    ``component_as_tool`` source handle has no matching handle on the node, and
+    the edge silently fails to render — the "says it connected but didn't" bug.
+    Emit the flipped node's outputs so the frontend re-renders X in tool mode
+    and the edge can attach.
+    """
+    if source_output != "component_as_tool":
+        return
+    node = _find_node(flow, source_id)
+    if node is None:
+        return
+    inner = node.get("data", {}).get("node", {})
+    if not inner.get("tool_mode"):
+        return
+    _emit("enable_tool_mode", component_id=source_id, outputs=inner.get("outputs", []))
+
+
 def _reconcile_source_selected_output(flow: dict, source_id: str, source_output: str) -> None:
     """Mirror the connected output as the source node's ``selected_output``.
 
@@ -168,6 +195,10 @@ class ConnectComponents(Component):
             fb_add_connection(flow, self.source_id, self.source_output, self.target_id, self.target_input)
             layout_flow(flow)
             _sync_model_input_connection_mode(flow, self.target_id, self.target_input)
+            # Surface a tool-mode flip BEFORE the edge so the canvas re-renders
+            # the source node with its `component_as_tool` handle first —
+            # otherwise the edge has nowhere to attach and never shows.
+            _emit_source_tool_mode_if_flipped(flow, self.source_id, self.source_output)
             edge = flow["data"]["edges"][-1]
             _emit("connect", edge=edge)
             _reconcile_source_selected_output(flow, self.source_id, self.source_output)
@@ -217,6 +248,40 @@ class ConfigureComponent(Component):
                     return Data(data={"error": f"params must be a JSON object, got {type(params).__name__}"})
             except json.JSONDecodeError:
                 return Data(data={"error": f'Invalid JSON in params: {raw!r}. Use format: {{"key": "value"}}'})
+
+        # Deterministic review gate (Bug B): on a PURE-edit turn (no run),
+        # changing a TEXT-content field on a component that ALREADY existed at
+        # the start of the turn is surfaced as a reviewable ``edit_field``
+        # proposal instead of being auto-applied — regardless of whether the
+        # LLM chose configure_component or propose_field_edit. This makes
+        # "improve the prompt" / "update the system prompt" ALWAYS show a diff
+        # card. Non-string params (model list, numbers, bools) and the model
+        # selector still apply live; freshly-added components (not pre-existing)
+        # and run-bearing turns are untouched (the flag is off for those).
+        if should_propose_existing_edits() and node_existed_at_start(self.component_id):
+            text_params = {k: v for k, v in params.items() if isinstance(v, str) and k != "model"}
+            if text_params:
+                proposed: list[str] = [
+                    k for k, v in text_params.items() if emit_field_edit_proposal(flow, self.component_id, k, v)
+                ]
+                remaining = {k: v for k, v in params.items() if k not in proposed}
+                if remaining:
+                    # Apply the non-text remainder (model/number/bool) live.
+                    try:
+                        fb_configure(flow, self.component_id, remaining)
+                        _mirror_model_value_into_options(flow, self.component_id, remaining)
+                        _emit("configure", component_id=self.component_id, params=remaining)
+                    except (ValueError, KeyError) as e:
+                        logger.warning("configure_component (non-text remainder) failed: %s", e)
+                        return Data(data={"error": str(e)})
+                if proposed:
+                    fields = ", ".join(proposed)
+                    return Data(
+                        data={
+                            "text": f"Proposed changes to {fields} on {self.component_id} (pending user approval)",
+                            "proposed": proposed,
+                        }
+                    )
 
         try:
             # Model-spec normalization (JSON / YAML / dict / list) is handled
