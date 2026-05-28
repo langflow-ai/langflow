@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
@@ -13,6 +12,7 @@ const mockUseGetKbMetadataKeys = jest.fn();
 jest.mock(
   "@/controllers/API/queries/knowledge-bases/use-get-kb-metadata-keys",
   () => ({
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     useGetKbMetadataKeys: (params: any, options?: any) =>
       mockUseGetKbMetadataKeys(params, options),
   }),
@@ -21,6 +21,7 @@ jest.mock(
 import { ChunksMetadataFilter } from "../ChunksMetadataFilter";
 
 const mockRefetch = jest.fn();
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 const setHookData = (data: any, isLoading = false) => {
   mockUseGetKbMetadataKeys.mockReturnValue({
     data,

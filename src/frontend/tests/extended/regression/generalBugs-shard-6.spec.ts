@@ -1,7 +1,7 @@
 import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "should be able to see error when something goes wrong on Code Modal",
   { tag: ["@release"] },

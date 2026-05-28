@@ -1,9 +1,8 @@
 import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to interact with composio component",
   { tag: ["@release", "@workspace", "@api", "@components"] },

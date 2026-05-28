@@ -271,6 +271,11 @@ def get_embeddings(
     model_name = model_dict.get("name")
     provider = model_dict.get("provider")
     metadata = model_dict.get("metadata", {})
+    api_base_value = _to_str(api_base)
+    if provider == "OpenAI" and not api_base_value:
+        api_base_value = _to_str(os.environ.get("OPENAI_EMBEDDINGS_API_BASE")) or _to_str(
+            os.environ.get("OPENAI_API_BASE")
+        )
 
     # --- resolve API key -----------------------------------------------------
     api_key = unified_models_module.get_api_key_for_provider(user_id, provider, api_key)
@@ -326,7 +331,7 @@ def get_embeddings(
     # Optional parameters - only add when both a value is supplied *and* the
     # provider's param_mapping declares the corresponding key.
     optional_params: dict[str, Any] = {
-        "api_base": _to_str(api_base) or None,
+        "api_base": api_base_value or None,
         "dimensions": int(dimensions) if dimensions else None,
         "chunk_size": int(chunk_size) if chunk_size else None,
         "request_timeout": float(request_timeout) if request_timeout else None,

@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -8,7 +9,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "InputListComponent",
   { tag: ["@release", "@workspace"] },

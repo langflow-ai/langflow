@@ -69,7 +69,10 @@ _ADMIN_EXTRA: tuple[str, ...] = (
     "flow:delete",
     "flow:deploy",
     "deployment:delete",
-    "deployment:deploy",
+    # ``deploy`` is a flow-only action (FlowAction.DEPLOY). DeploymentAction
+    # has only read/write/create/delete/execute, so a ``deployment:deploy``
+    # row would never match an enforce() call — exclude it from the seed
+    # rather than ship a canonical slug nothing can use.
     "project:delete",
     "knowledge_base:delete",
     "variable:delete",

@@ -2,9 +2,9 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "should filter by tag",
   { tag: ["@release", "@api"] },

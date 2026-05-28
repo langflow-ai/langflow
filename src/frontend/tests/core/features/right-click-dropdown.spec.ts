@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user can open component dropdown menu by right-clicking on nodes",
   { tag: ["@release", "@components", "@dropdown", "@right-click"] },
