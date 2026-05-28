@@ -925,7 +925,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.1"
+                    "version": "2.34.2"
                   },
                   {
                     "name": "bs4",
@@ -933,7 +933,7 @@
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.4.1"
+                    "version": "0.4.2"
                   },
                   {
                     "name": "markitdown",
@@ -1322,7 +1322,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.1"
+                    "version": "2.34.2"
                   },
                   {
                     "name": "bs4",
@@ -1330,7 +1330,7 @@
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.4.1"
+                    "version": "0.4.2"
                   },
                   {
                     "name": "markitdown",
@@ -1725,7 +1725,7 @@
                 "dependencies": [
                   {
                     "name": "requests",
-                    "version": "2.33.1"
+                    "version": "2.34.2"
                   },
                   {
                     "name": "bs4",
@@ -1733,7 +1733,7 @@
                   },
                   {
                     "name": "langchain_community",
-                    "version": "0.4.1"
+                    "version": "0.4.2"
                   },
                   {
                     "name": "markitdown",
@@ -2396,11 +2396,11 @@
                 "dependencies": [
                   {
                     "name": "orjson",
-                    "version": "3.11.8"
+                    "version": "3.11.9"
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",

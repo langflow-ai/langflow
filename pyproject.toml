@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.9.3"
+version = "1.9.4"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.9.3",
+    "langflow-base[complete]>=0.9.4",
 ]
 
 
@@ -115,7 +115,6 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]

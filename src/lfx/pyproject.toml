@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "0.4.3"
+version = "0.4.4"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -97,6 +97,10 @@ integration = [
     # Dependencies for running Simple Agent and other integration tests
     "langchain-openai>=1.1.12,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
+    "langchain-mongodb>=0.11.0",
+    "langchain-perplexity>=1.0.0,<2.0.0",
+    "langchain-qdrant>=1.1.0",
+    "langchain-weaviate>=0.0.6",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
 ]

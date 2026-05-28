@@ -17,6 +17,7 @@ from lfx.base.models.unified_models import (
     get_model_provider_variable_mapping,
     get_provider_all_variables,
 )
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output, SecretStrInput
 from lfx.log.logger import logger
@@ -356,6 +357,7 @@ class KnowledgeBaseComponent(Component):
             persist_directory=str(kb_path),
             embedding_function=embedding_function,
             collection_name=self.knowledge_base,
+            **chroma_langchain_collection_kwargs(),
         )
 
         # If a search query is provided, perform a similarity search
