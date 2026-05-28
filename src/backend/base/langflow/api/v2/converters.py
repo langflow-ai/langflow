@@ -386,6 +386,7 @@ def run_response_to_workflow_response(
     job_id: str,
     workflow_request: WorkflowExecutionRequest,
     graph: Graph,
+    effective_globals: dict[str, str] | None = None,
 ) -> WorkflowExecutionResponse:
     """Convert V1 RunResponse to V2 WorkflowExecutionResponse.
 
@@ -410,6 +411,10 @@ def run_response_to_workflow_response(
         job_id: The generated job ID for tracking this execution
         workflow_request: Original workflow request (inputs are echoed back in response)
         graph: The Graph instance used for terminal node detection and vertex metadata
+        effective_globals: Optional override for the ``globals`` echoed in the response.
+            When provided, the response reports the effective merged set (body globals plus
+            any legacy header-supplied globals). When omitted, ``workflow_request.globals``
+            is echoed verbatim.
 
     Returns:
         WorkflowExecutionResponse: V2 schema response with structured outputs
@@ -450,6 +455,8 @@ def run_response_to_workflow_response(
         output_key, component_output = _process_terminal_vertex(vertex, output_data_map)
         outputs[output_key] = component_output
 
+    response_globals = effective_globals if effective_globals is not None else dict(workflow_request.globals or {})
+
     return WorkflowExecutionResponse(
         flow_id=flow_id,
         job_id=job_id,
@@ -457,6 +464,7 @@ def run_response_to_workflow_response(
         status=JobStatus.COMPLETED,
         errors=[],
         inputs=workflow_request.inputs or {},
+        globals=response_globals,
         outputs=outputs,
         metadata={},
     )
@@ -486,6 +494,7 @@ def create_error_response(
     job_id: JobId,
     workflow_request: WorkflowExecutionRequest,
     error: Exception,
+    effective_globals: dict[str, str] | None = None,
 ) -> WorkflowExecutionResponse:
     """Create an error response in workflow format.
 
@@ -494,6 +503,8 @@ def create_error_response(
         job_id: The job ID
         workflow_request: Original request
         error: The exception that occurred
+        effective_globals: Optional override for the ``globals`` echoed in the response.
+            See :func:`run_response_to_workflow_response` for details.
 
     Returns:
         WorkflowExecutionResponse with error details
@@ -502,6 +513,8 @@ def create_error_response(
         error=str(error), code="EXECUTION_ERROR", details={"flow_id": flow_id, "error_type": type(error).__name__}
     )
 
+    response_globals = effective_globals if effective_globals is not None else dict(workflow_request.globals or {})
+
     return WorkflowExecutionResponse(
         flow_id=flow_id,
         job_id=job_id,
@@ -509,6 +522,7 @@ def create_error_response(
         status=JobStatus.FAILED,
         errors=[error_detail],
         inputs=workflow_request.inputs or {},
+        globals=response_globals,
         outputs={},
         metadata={},
     )

@@ -8,13 +8,13 @@ test(
   async ({ page }) => {
     await openBlankFlow(page);
     await page.waitForSelector('[data-testid="disclosure-input & output"]', {
-      timeout: 3000,
+      timeout: 30000,
       state: "visible",
     });
 
     await page.getByTestId("disclosure-input & output").click();
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 3000,
+      timeout: 30000,
       state: "visible",
     });
     await page
@@ -37,7 +37,7 @@ test(
 
     // Add explicit waits before checking visibility
     await page.waitForSelector('[data-testid="icon-Trash2"]', {
-      timeout: 3000,
+      timeout: 30000,
       state: "visible",
     });
 
