@@ -6,12 +6,12 @@ import {
 } from "@tanstack/react-query";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
-import type { MemorySessionInfo } from "./types";
 import {
   MEMORIES_PAGE_SIZE,
   MEMORIES_RETRY_MAX_ATTEMPTS,
   memoriesRetryDelay,
 } from "./memoriesQueryConfig";
+import type { MemorySessionInfo } from "./types";
 
 export interface GetMemorySessionsParams {
   memoryId: string;

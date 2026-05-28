@@ -867,6 +867,7 @@ describe("useFlowStore", () => {
     const createEdge = (
       id: string,
       sourceHandleId: string,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       overrides: Partial<any> = {},
     ) =>
       ({
@@ -877,6 +878,7 @@ describe("useFlowStore", () => {
         className: "",
         data: { sourceHandle: { id: sourceHandleId } },
         ...overrides,
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       }) as any;
 
     it("should clear all edge animations when no nextIds provided", () => {
@@ -986,12 +988,14 @@ describe("useFlowStore", () => {
       id: "node-1",
       data: { results: {} },
       valid: true,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } as any;
 
     const mockVertexData2 = {
       id: "node-1",
       data: { results: { other: true } },
       valid: true,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } as any;
 
     it("should add data to new nodeId entry", () => {
@@ -1039,11 +1043,13 @@ describe("useFlowStore", () => {
   });
 
   describe("appendLogToFlowPool", () => {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     const mockLog = { name: "Test Log", message: "hello", type: "info" } as any;
     const mockLog2 = {
       name: "Second Log",
       message: "world",
       type: "info",
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } as any;
 
     it("creates a new pool entry with the log when no entry exists for nodeId", () => {

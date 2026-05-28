@@ -1,8 +1,7 @@
 import type { Page } from "@playwright/test";
+import { TEXTS } from "../../utils/constants/texts";
 import { TID } from "../constants/testIds";
 import { TIMEOUTS } from "../constants/timeouts";
-
-import { TEXTS } from "../../utils/constants/texts";
 /**
  * Click the Run button on the Chat Output and wait for "built successfully".
  *

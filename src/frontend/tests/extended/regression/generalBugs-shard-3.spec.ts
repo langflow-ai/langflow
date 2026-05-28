@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+
 test(
   "should copy code from playground modal",
   {

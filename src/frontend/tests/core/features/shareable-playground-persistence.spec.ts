@@ -8,6 +8,7 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { mockAutoLoginDisabled } from "../../utils/auth/mock-auto-login-disabled";
 import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
@@ -15,7 +16,6 @@ import { publishBasicPromptingAndOpenShareablePlayground } from "../../utils/pla
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 import { sessionMoreMenu } from "../../utils/playground/sessions";
 
-import { TEXTS } from "../../utils/constants/texts";
 /**
  * Stub auto-login, navigate to the sign-in page, log in manually.
  */

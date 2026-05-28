@@ -1,9 +1,7 @@
-import { expect, test } from "../../fixtures";
-import { addCustomComponent } from "../../utils/add-custom-component";
-import { zoomOut } from "../../utils/zoom-out";
+import { test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to copy JSON from output",
   { tag: ["@release", "@workspace"] },

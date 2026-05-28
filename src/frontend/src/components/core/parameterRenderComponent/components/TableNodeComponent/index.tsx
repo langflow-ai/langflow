@@ -28,10 +28,12 @@ export default function TableNodeComponent({
   trigger_text,
   table_icon,
   showParameter = true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[], TableComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const effectiveTriggerText = trigger_text ?? t("component.openTable");
   const dataTypeDefinitions: {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     [cellDataType: string]: DataTypeDefinition<any>;
   } = useMemo(() => {
     return {
@@ -72,7 +74,9 @@ export default function TableNodeComponent({
       },
     };
   }, []);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedNodes, setSelectedNodes] = useState<Array<any>>([]);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [tempValue, setTempValue] = useState<any[]>(cloneDeep(value));
   const [isModalOpen, setIsModalOpen] = useState(false);
   const agGrid = useRef<AgGridReact>(null);
@@ -106,6 +110,7 @@ export default function TableNodeComponent({
   });
   function setAllRows() {
     if (agGrid.current && !agGrid.current.api.isDestroyed()) {
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const rows: any = [];
       agGrid.current.api.forEachNode((node) => rows.push(node.data));
       setTempValue(rows);
@@ -166,6 +171,7 @@ export default function TableNodeComponent({
         columns?.find((c) => c.name === col.field)?.disable_edit !== true,
     );
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   function parseTSVorMarkdownTable(clipboard: string, columns: any[]) {
     if (!clipboard.trim()) return [];
 

@@ -8,8 +8,8 @@ import {
   MEMORIES_RETRY_MAX_ATTEMPTS,
   memoriesRetryDelay,
 } from "./memoriesQueryConfig";
-import { ensureRequiredParam } from "./validation";
 import type { GetMemoryParams, MemoryApiDTO, MemoryInfo } from "./types";
+import { ensureRequiredParam } from "./validation";
 
 export const useGetMemory: useQueryFunctionType<GetMemoryParams, MemoryInfo> = (
   params,

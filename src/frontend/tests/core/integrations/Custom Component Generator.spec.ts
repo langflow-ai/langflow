@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { selectAnthropicModel } from "../../utils/select-anthropic-model";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
-import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Custom Component Generator",
   { tag: ["@release", "@starter-projects"] },
