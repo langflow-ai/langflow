@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   COMPLETED_RUN_RESPONSE,
   DEPLOYMENTS_MOCK,
@@ -9,7 +10,6 @@ import {
   RUNNING_RUN_RESPONSE,
 } from "../../utils/deployment-mocks";
 
-import { TEXTS } from "../../utils/constants/texts";
 test.skip(
   process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
   "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",

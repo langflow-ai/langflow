@@ -4,16 +4,15 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
   disableInspectPanel,
   enableInspectPanel,
 } from "../../utils/open-advanced-options";
 
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
-import { TEXTS } from "../../utils/constants/texts";
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
 

@@ -4,6 +4,7 @@ import { useMemorySessionResolver } from "../useMemorySessionResolver";
 const mockFetchNextPage = jest.fn();
 const mockRefetch = jest.fn();
 
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 let mockSessionPages: any[] = [
   {
     items: [

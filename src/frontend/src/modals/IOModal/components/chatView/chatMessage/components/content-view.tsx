@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from "framer-motion";
-import Markdown from "react-markdown";
 import { useTranslation } from "react-i18next";
+import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { TextShimmer } from "@/components/ui/TextShimmer";
@@ -17,11 +17,13 @@ export const ErrorView = ({
   lastMessage,
   blocks,
 }: {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   blocks: any;
   showError: boolean;
   lastMessage: boolean;
   closeChat?: () => void;
   fitViewNode: (id: string) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   chat: any;
 }) => {
   const { t } = useTranslation();
