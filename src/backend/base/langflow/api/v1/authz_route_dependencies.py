@@ -48,29 +48,6 @@ async def get_authorized_flow_for_read(
     return await _get_authorized_flow(FlowAction.READ, flow_id=flow_id, current_user=current_user, session=session)
 
 
-async def get_optional_authorized_flow_for_read(
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
-    session: DbSession,
-) -> Flow | None:
-    """Return a readable flow, or None when the row is missing."""
-    flow = await _read_flow(session, flow_id, current_user.id)
-    if flow is None:
-        return None
-    try:
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.READ,
-            flow_id=flow_id,
-            flow_user_id=flow.user_id,
-            workspace_id=flow.workspace_id,
-            folder_id=flow.folder_id,
-        )
-    except HTTPException as exc:
-        raise deny_to_404(exc, detail="Flow not found") from exc
-    return flow
-
-
 async def get_authorized_flow_for_write(
     flow_id: UUID,
     current_user: CurrentActiveUser,
@@ -103,7 +80,6 @@ async def require_flow_create_permission(
 
 
 AuthorizedReadFlow = Annotated[Flow, Depends(get_authorized_flow_for_read)]
-OptionalAuthorizedReadFlow = Annotated[Flow | None, Depends(get_optional_authorized_flow_for_read)]
 AuthorizedWriteFlow = Annotated[Flow, Depends(get_authorized_flow_for_write)]
 AuthorizedDeleteFlow = Annotated[Flow, Depends(get_authorized_flow_for_delete)]
 RequireFlowCreate = Annotated[None, Depends(require_flow_create_permission)]

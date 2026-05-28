@@ -28,7 +28,6 @@ from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
     AuthorizedReadFlow,
     AuthorizedWriteFlow,
-    OptionalAuthorizedReadFlow,
     RequireFlowCreate,
 )
 from langflow.api.v1.flows_helpers import (
@@ -225,7 +224,7 @@ async def read_flow(
 async def get_note_translations(
     *,
     flow_id: UUID,  # noqa: ARG001
-    flow: OptionalAuthorizedReadFlow,
+    flow: AuthorizedReadFlow,
     request: Request,
 ) -> dict[str, str]:
     """Return translated note node descriptions for the current locale.
@@ -233,10 +232,14 @@ async def get_note_translations(
     Returns a mapping of node_id → translated markdown text.  Only nodes
     with a matching translation key are included; nodes without translations
     are omitted so the caller can leave them unchanged.
+
+    A missing or inaccessible flow yields 404 (via ``AuthorizedReadFlow``),
+    consistent with ``GET /flows/{id}``; the sole frontend caller (NoteNode)
+    treats that as "no translations" and renders the original text.
     """
     from langflow.utils.i18n import translate
 
-    if not flow or not flow.data:
+    if not flow.data:
         return {}
 
     locale = getattr(request.state, "locale", "en")
