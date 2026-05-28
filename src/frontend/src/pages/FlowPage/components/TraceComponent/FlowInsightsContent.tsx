@@ -295,16 +295,13 @@ export function FlowInsightsContent({
           </div>
 
           <div className="flex min-w-0 flex-nowrap items-center gap-2">
-            <div className="relative w-[220px] min-w-[180px]">
-              <IconComponent
-                name="Search"
-                className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
+            <div className="w-[220px] min-w-[180px]">
               <Input
+                icon="Search"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder={t("trace.searchRuns")}
-                className="h-8 pl-8 text-sm"
+                inputClassName="h-8 text-sm"
               />
             </div>
 
