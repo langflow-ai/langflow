@@ -68,7 +68,7 @@ jobs:
           uv pip install "langflow[postgresql]"
 
           # Verify installation
-          python -c "import langflow; print(f'Installed Langflow version: {langflow.__version__}')"
+          python -c 'from importlib.metadata import version; print("Installed Langflow version:", version("langflow"))'
 
       - name: Initialize database with stable version
         working-directory: migration-test
@@ -163,7 +163,7 @@ jobs:
           fi
 
           # Verify upgrade
-          python -c "import langflow; print(f'Upgraded to Langflow version: {langflow.__version__}')"
+          python -c 'from importlib.metadata import version; print("Upgraded to Langflow Nightly version:", version("langflow-nightly"))'
 
       - name: Run migration and verify startup
         working-directory: migration-test
@@ -251,7 +251,7 @@ jobs:
 
       - name: Create Docker Compose file for stable
         working-directory: docker-migration-test
-        run: |
+        run: |  # pragma: allowlist secret
           cat > docker-compose.yml <<'EOF'
           version: "3.8"
 
