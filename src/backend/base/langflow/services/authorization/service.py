@@ -27,11 +27,11 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         self.set_ready()
         logger.debug("Langflow authorization service initialized")
         # Loud, operator-visible warning when AUTHZ_ENABLED is on but the
-        # registered service is the OSS pass-through. Without the enterprise
-        # Casbin plugin registered via ``lfx.toml``, ``enforce()`` returns True
-        # for every request — so flipping the env var alone changes nothing
-        # except audit-log emission. The dry-run CLI helps verify policy
-        # decisions, but ops engineers can be misled by a "True" flag.
+        # registered service is the OSS pass-through. Without an enforcement
+        # plugin registered via ``lfx.toml``, ``enforce()`` returns True for
+        # every request — so flipping the env var alone changes nothing except
+        # audit-log emission. The dry-run CLI helps verify policy decisions,
+        # but ops engineers can be misled by a "True" flag.
         try:
             authz_enabled = bool(getattr(settings_service.auth_settings, "AUTHZ_ENABLED", False))
         except Exception:  # noqa: BLE001 — never break startup on a warning probe
@@ -39,10 +39,10 @@ class LangflowAuthorizationService(BaseAuthorizationService):
         if authz_enabled and not self.SUPPORTS_CROSS_USER_FETCH:
             logger.warning(
                 "LANGFLOW_AUTHZ_ENABLED=true but the OSS pass-through authorization service is "
-                "registered (no enterprise enforcement plugin found). Every enforce() call will "
-                "return True; route guards still run and audit rows still write, but no policy is "
-                "applied. Register the enterprise Casbin plugin via lfx.toml or set "
-                "LANGFLOW_AUTHZ_ENABLED=false to silence this warning."
+                "registered (no enforcement plugin found). Every enforce() call will return True; "
+                "route guards still run and audit rows still write, but no policy is applied. "
+                "Register an authorization plugin via lfx.toml or set LANGFLOW_AUTHZ_ENABLED=false "
+                "to silence this warning."
             )
 
     @property

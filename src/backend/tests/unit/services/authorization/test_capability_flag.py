@@ -43,8 +43,8 @@ async def test_langflow_pass_through_does_not_support_cross_user_fetch():
 async def test_subclass_can_opt_in():
     """Authorization plugins flip ``SUPPORTS_CROSS_USER_FETCH=True``; the base accepts it."""
 
-    class _Enterprise(LangflowAuthorizationService):
+    class _Plugin(LangflowAuthorizationService):
         SUPPORTS_CROSS_USER_FETCH = True
 
-    service = _Enterprise(_settings())
+    service = _Plugin(_settings())
     assert await service.supports_cross_user_fetch() is True
