@@ -7,7 +7,7 @@ import {
   AccordionTrigger,
 } from "@/components/ui/accordion";
 import { TextShimmer } from "@/components/ui/TextShimmer";
-import { ChatMessageType, ContentBlock } from "@/types/chat";
+import type { ChatMessageType, ContentBlock } from "@/types/chat";
 import { cn } from "@/utils/utils";
 import { extractErrorMessage } from "../utils/extract-error-message";
 
@@ -29,7 +29,7 @@ function ErrorLoadingState() {
       key="loading"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="flex w-full gap-4 rounded-md p-2"
+      className="flex w-full gap-4 rounded-xl border border-border/70 bg-primary-foreground p-3 shadow-sm"
     >
       <div className="relative hidden h-6 w-6 flex-shrink-0 items-center justify-center overflow-hidden rounded bg-white text-2xl @[45rem]/chat-panel:!flex border-0">
         <div className="flex h-5 w-5 items-center justify-center">
@@ -73,7 +73,7 @@ function ErrorAccordion({
   return (
     <Accordion type="single" collapsible className="w-full p-0">
       <AccordionItem value="error-details" className="border-0">
-        <AccordionTrigger className="hover:no-underline [&>svg]:hidden p-0">
+        <AccordionTrigger className="rounded-lg px-3 py-2.5 hover:bg-destructive/5 hover:no-underline [&>svg]:hidden">
           <div className="flex flex-col gap-2 w-full">
             <div className="flex items-center justify-between gap-2 w-full">
               <div className="flex items-center gap-2">
@@ -93,12 +93,18 @@ function ErrorAccordion({
           </div>
         </AccordionTrigger>
         <AccordionContent className="pt-2">
-          <div>
-            {content.field && <p className="text-xs">Field: {content.field}</p>}
+          <div className="space-y-2 px-3 pb-1">
+            {content.field && (
+              <p className="text-xs text-muted-foreground">
+                Field: {content.field}
+              </p>
+            )}
             {content.component && (
               <p
                 className={cn(
-                  closeChat ? "cursor-pointer underline text-xs" : "text-xs",
+                  closeChat
+                    ? "cursor-pointer text-sm underline underline-offset-2"
+                    : "text-sm",
                 )}
                 onClick={closeChat ? handleComponentClick : undefined}
               >
@@ -134,7 +140,7 @@ export const ErrorView = ({
           {blocks.map((block, blockIndex) => (
             <div
               key={blockIndex}
-              className="w-full rounded-md border border-border pt-[6px] pr-[6px] pb-[6px] pl-[8px] text-sm text-foreground"
+              className="w-full rounded-xl border border-border/70 bg-primary-foreground p-2 text-sm text-foreground shadow-sm ring-1 ring-inset ring-destructive/15"
               data-testid="error-card"
             >
               {block.contents.map((content, contentIndex) => {
