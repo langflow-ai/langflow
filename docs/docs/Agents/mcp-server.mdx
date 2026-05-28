@@ -128,6 +128,8 @@ Langflow times are evaluated in the following order:
 
 To support tool calls that take longer than 180 seconds, set `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` to a value greater than `180` to raise the global limit, or set the **Tool Execution Timeout (seconds)** field on a specific MCP Tools component to a value greater than `180` to raise the limit for that component only.
 
+If `LANGFLOW_MCP_SERVER_TIMEOUT` is set to a value greater than `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT`, the server timeout takes precedence and becomes the actual limit for tool calls.
+
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to your Langflow MCP server {#connect-clients-to-use-the-servers-actions}
 
