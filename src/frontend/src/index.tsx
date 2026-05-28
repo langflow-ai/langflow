@@ -1,6 +1,6 @@
 import "./i18n";
-import { detectedLang, loadLanguage } from "./i18n";
 import ReactDOM from "react-dom/client";
+import { detectedLang, loadLanguage } from "./i18n";
 import reportWebVitals from "./reportWebVitals";
 
 import "./style/classes.css";

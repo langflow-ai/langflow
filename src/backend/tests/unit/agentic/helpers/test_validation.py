@@ -439,3 +439,103 @@ class TestValidateComponentRuntimeExecution:
         error = await validate_component_runtime(good_code)
 
         assert error is None, f"Expected None for a valid component, got: {error!r}"
+
+    @pytest.mark.asyncio
+    async def test_should_reject_component_whose_output_returns_non_dict_built_from_input(self):
+        """WS-4 / RC-4 — screenshot 4 bug.
+
+        The component declares a REQUIRED input and its output method builds
+        ``Data(data=<str derived from that input>)``. With empty sandbox
+        attributes the method raised AttributeError (input missing) and the
+        broken Data construction was never reached, so runtime validation
+        returned None (false PASS) and the component blew up at flow-build
+        time with "JSON data input should be a valid dictionary". Validation
+        must exercise output methods with representative inputs and surface
+        the pydantic error.
+        """
+        buggy_code = dedent(
+            """
+            from lfx.custom import Component
+            from lfx.io import MessageTextInput, Output
+            from lfx.schema.data import Data
+
+
+            class AnimalOnomatopoeia(Component):
+                display_name = "Animal Onomatopoeia"
+                description = "Generates an animal sound"
+
+                inputs = [MessageTextInput(name="animal_name", display_name="Animal Name", required=True)]
+                outputs = [Output(display_name="Sound", name="sound", method="make")]
+
+                def make(self) -> Data:
+                    return Data(data=self.animal_name[:3])
+            """
+        ).strip()
+
+        error = await validate_component_runtime(buggy_code)
+
+        assert error is not None, (
+            "validate_component_runtime must reject a component whose output builds "
+            "Data(data=<str>) from a required input (screenshot 4 regression)"
+        )
+
+    @pytest.mark.asyncio
+    async def test_should_accept_valid_component_that_consumes_an_input(self):
+        """Regression: a component WITH an input that builds a valid Data dict must still pass.
+
+        Guards the WS-4 fix from becoming over-aggressive once output methods
+        are exercised with synthesized inputs.
+        """
+        good_code = dedent(
+            """
+            from lfx.custom import Component
+            from lfx.io import MessageTextInput, Output
+            from lfx.schema.data import Data
+
+
+            class AnimalEcho(Component):
+                display_name = "Animal Echo"
+                description = "Echoes the animal name in a Data dict"
+
+                inputs = [MessageTextInput(name="animal_name", display_name="Animal Name", required=True)]
+                outputs = [Output(display_name="Out", name="out", method="make")]
+
+                def make(self) -> Data:
+                    return Data(data={"animal": self.animal_name})
+            """
+        ).strip()
+
+        error = await validate_component_runtime(good_code)
+
+        assert error is None, f"Valid input-consuming component must pass, got: {error!r}"
+
+    @pytest.mark.asyncio
+    async def test_should_accept_valid_component_with_dict_input(self):
+        """Review regression guard: the probe must not falsely reject a valid dict-input component.
+
+        A component that forwards a ``DictInput`` straight into
+        ``Data(data=self.config)`` is valid; an over-eager probe that set
+        ``config="validation_probe"`` made pydantic reject it.
+        """
+        good_code = dedent(
+            """
+            from lfx.custom import Component
+            from lfx.io import DictInput, Output
+            from lfx.schema.data import Data
+
+
+            class ConfigEcho(Component):
+                display_name = "Config Echo"
+                description = "Echoes a dict input into Data"
+
+                inputs = [DictInput(name="config", display_name="Config")]
+                outputs = [Output(name="out", display_name="Out", method="run")]
+
+                def run(self) -> Data:
+                    return Data(data=self.config)
+            """
+        ).strip()
+
+        error = await validate_component_runtime(good_code)
+
+        assert error is None, f"Valid dict-input component must pass, got: {error!r}"

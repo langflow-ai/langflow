@@ -1,10 +1,10 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { selectAnthropicModel } from "../../utils/select-anthropic-model";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { selectAnthropicModel } from "../../utils/select-anthropic-model";
+
 test(
   "user must not experience message duplication in mathematical expressions with agent component",
   { tag: ["@release", "@components", "@workspace"] },

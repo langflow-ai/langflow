@@ -1,11 +1,5 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import {
-  STATUS_BUILD,
-  STATUS_BUILDING,
-  STATUS_INACTIVE,
-  STATUS_MISSING_FIELDS_ERROR,
-} from "@/constants/constants";
 import { BuildStatus } from "@/constants/enums";
 import type { UsageType } from "@/types/chat";
 import { formatTokenCount } from "@/utils/format-token-count";

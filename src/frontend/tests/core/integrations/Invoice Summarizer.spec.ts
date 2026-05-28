@@ -1,10 +1,10 @@
 import { expect, test } from "../../fixtures";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { unselectNodes } from "../../utils/unselect-nodes";
+import { TEXTS } from "../../utils/constants/texts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { unselectNodes } from "../../utils/unselect-nodes";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "Invoice Summarizer",
   { tag: ["@release", "@starter-projects"] },

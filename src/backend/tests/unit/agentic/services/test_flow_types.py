@@ -19,6 +19,40 @@ from langflow.agentic.services.flow_types import (
 )
 
 
+def test_should_expose_max_flow_verification_attempts_constant_when_importing_flow_types():
+    """flow_verification.py imports MAX_FLOW_VERIFICATION_ATTEMPTS from flow_types.
+
+    Without this constant, importing the agentic router at boot time raises
+    ImportError and the FastAPI server exits before binding the port (the
+    agentic router is mounted unconditionally at api/router.py:109).
+
+    Bug: PR-12575 round 6 — backend boot failure
+    """
+    # Importing flow_verification triggers the same import chain as boot.
+    from langflow.agentic.services import flow_types
+
+    assert hasattr(flow_types, "MAX_FLOW_VERIFICATION_ATTEMPTS"), (
+        "flow_verification.py imports MAX_FLOW_VERIFICATION_ATTEMPTS from "
+        "flow_types; the constant must be declared or the agentic router "
+        "fails to load at server boot."
+    )
+    assert isinstance(flow_types.MAX_FLOW_VERIFICATION_ATTEMPTS, int)
+    assert flow_types.MAX_FLOW_VERIFICATION_ATTEMPTS >= 1
+
+
+def test_should_load_flow_verification_module_when_constant_is_present():
+    """End-to-end import check: importing flow_verification must not raise.
+
+    This is the exact failure path observed at boot: the agentic router
+    transitively imports flow_verification, which imports the missing
+    constant. If this test passes, the boot path is clean.
+    """
+    # Must not raise ImportError.
+    from langflow.agentic.services import flow_verification
+
+    assert flow_verification.verify_built_flow is not None
+
+
 class TestFlowExecutionResult:
     """Tests for FlowExecutionResult dataclass."""
 

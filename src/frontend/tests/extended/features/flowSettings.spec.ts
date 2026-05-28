@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
-import { renameFlow } from "../../utils/rename-flow";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { renameFlow } from "../../utils/rename-flow";
 
 test(
   "flowSettings",

@@ -198,17 +198,46 @@ async def reload_extension_bundle(
 async def get_extension_events(
     current_user: CurrentActiveUser,
     since: Annotated[float, Query(description="UTC epoch timestamp; return events after this cursor")] = 0.0,
+    keyspace: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Reserved. Events are scoped server-side to the authenticated user; "
+                "passing this parameter is rejected with 422."
+            ),
+            include_in_schema=False,
+        ),
+    ] = None,
 ) -> ExtensionEventsResponse:
     """Poll for extension lifecycle events the current user has triggered.
 
     Events are scoped to the authenticated user via a server-derived keyspace
     (``user:{user_id}``); there is no client-controllable keyspace, so an
     authenticated user cannot read another user's flow-migration or
-    bundle-reload events.
+    bundle-reload events. A client-supplied ``keyspace`` query parameter is
+    rejected with 422 so the contract is explicit -- previously the value was
+    silently dropped, which masked client bugs that assumed it had effect.
 
     svc.since() uses blocking sqlite3; run in a thread pool so the asyncio
     event loop is not held while waiting on disk I/O.
     """
+    if keyspace is not None:
+        raise _typed_http_exception(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            error=ExtensionError(
+                code="extension-events-keyspace-forbidden",
+                message=(
+                    "The 'keyspace' query parameter is not accepted on /extensions/events; "
+                    "events are scoped to the authenticated user automatically."
+                ),
+                location="query.keyspace",
+                content=keyspace,
+                hint=(
+                    "Remove the 'keyspace' query parameter from the request; the server "
+                    "derives the keyspace from the authenticated user."
+                ),
+            ),
+        )
     svc = get_extension_events_service()
     if svc is None:
         return ExtensionEventsResponse(events=[], settled=True)

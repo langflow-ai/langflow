@@ -5,9 +5,13 @@ import { useFolderStore } from "@/stores/foldersStore";
 
 type EmptyFolderProps = {
   setOpenModal: (open: boolean) => void;
+  /** Preferred handler — bypasses the templates modal and starts a fresh
+   *  flow with the welcome overlay primed. Falls back to ``setOpenModal``
+   *  when omitted to keep legacy callers working. */
+  onNewFlow?: () => void;
 };
 
-export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
+export const EmptyFolder = ({ setOpenModal, onNewFlow }: EmptyFolderProps) => {
   const { t } = useTranslation();
   const folders = useFolderStore((state) => state.folders);
 
@@ -27,7 +31,7 @@ export const EmptyFolder = ({ setOpenModal }: EmptyFolderProps) => {
         </p>
         <Button
           variant="default"
-          onClick={() => setOpenModal(true)}
+          onClick={() => (onNewFlow ? onNewFlow() : setOpenModal(true))}
           id="new-project-btn"
           data-testid="new_project_btn_empty_page"
         >

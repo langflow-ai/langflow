@@ -26,6 +26,8 @@ export type AssistantManagerStoreType = {
   takeSnapshot: () => void;
   assistantSidebarOpen: boolean;
   setAssistantSidebarOpen: (AssistantSideBarOpen: boolean) => void;
+  isAssistantProcessing: boolean;
+  setAssistantProcessing: (processing: boolean) => void;
 
   // Chat state
   examples: Array<FlowType>;

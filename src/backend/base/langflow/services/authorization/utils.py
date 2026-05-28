@@ -41,7 +41,7 @@ from langflow.services.authorization.guards import (
     _auth_context,
     _coerce_action,
     _ensure_resource_permission,
-    _resolve_casbin_domain,
+    _resolve_authz_domain,
     _resolve_flow_domain,
     ensure_deployment_permission,
     ensure_file_permission,
@@ -57,6 +57,12 @@ from langflow.services.authorization.listing import (
     filter_visible_resources,
 )
 from langflow.services.deps import get_authorization_service, get_settings_service
+
+# Pre-rename name kept for plugins built against the casbin-specific
+# wording. Functionally identical to ``_resolve_authz_domain`` — same
+# (workspace_id, scope_id) → domain-string resolution. New code should
+# import ``_resolve_authz_domain`` directly.
+_resolve_casbin_domain = _resolve_authz_domain
 
 
 def permission_denied_to_http(exc):
@@ -80,6 +86,7 @@ __all__ = [
     "_ensure_audit_writer_started",
     "_ensure_resource_permission",
     "_flush_audit_batch",
+    "_resolve_authz_domain",
     "_resolve_casbin_domain",
     "_resolve_flow_domain",
     "_split_obj",

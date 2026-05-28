@@ -26,7 +26,7 @@ def _make_component(documents: list[Document]) -> QdrantVectorStoreComponent:
 
 
 def _captured_ids(documents: list[Document]) -> list[str]:
-    """Run build_vector_store with Qdrant.from_documents patched and return the ids passed in."""
+    """Run build_vector_store with QdrantVectorStore.from_documents patched and return the ids passed in."""
     component = _make_component(documents)
 
     captured: dict[str, list[str]] = {}
