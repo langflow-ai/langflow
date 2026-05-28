@@ -1,9 +1,9 @@
 import type { BrowserContext, Page } from "@playwright/test";
-import { initialGPTsetup } from "../initialGPTsetup";
-import { ANIMATIONS, TIMEOUTS } from "../constants/timeouts";
 import { TID } from "../constants/testIds";
+import { ANIMATIONS, TIMEOUTS } from "../constants/timeouts";
 import { buildFlowAndWait } from "../flow/build-flow-and-wait";
 import { openStarterProject } from "../flow/open-starter-project";
+import { initialGPTsetup } from "../initialGPTsetup";
 
 export type PublishedFlow = {
   /** The new tab where the shareable playground opens. */

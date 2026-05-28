@@ -409,6 +409,46 @@ If you are the administrator, sign in with a superuser account, or restart Langf
 
 For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
+### PermissionError on `/app/langflow/secret_key` at startup
+
+The Langflow container runs as a non-root user (`uid=1000`).
+The Langflow image pre-creates `/app/langflow` with that user as the owner, so a new `langflow-data` named volume inherits the correct ownership.
+If you ran an earlier image build that did not pre-create this directory, the named volume was initialized as `root:root` and the non-root container user cannot write `secret_key` into it, and the error `PermissionError: [Errno 13]` on `/app/langflow/secret_key` appears.
+
+This commonly affects rootful Docker daemons such as Docker Desktop.
+Podman with rootless user-namespace mapping does not reproduce the issue.
+
+To preserve the `langflow-postgres` data while resetting only the `langflow-data` volume, do the following:
+
+1. Stop the container and find the exact volume name for `langflow-data`.
+This command lists the volumes, and then searches for `langflow-data`.
+
+    ```sh
+    docker compose down
+    docker compose config --volumes
+    docker volume ls | grep langflow-data
+    ```
+
+2. Once you have confirmed the exact volume name, remove only that volume:
+
+    ```sh
+    docker volume rm LANGFLOW_DATA_VOLUME_NAME
+    docker compose pull
+    docker compose up -d
+    ```
+
+Alternatively, if you don't need to preserve the `langflow-postgres` data volume, you can pull the latest container image instead.
+
+:::danger
+This method removes all data, including the `langflow-postgres` data volume.
+:::
+
+```sh
+docker compose down -v
+docker compose pull
+docker compose up -d
+```
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
@@ -661,6 +701,41 @@ This happens when `LANGFLOW_WORKERS > 1` and `LANGFLOW_JOB_QUEUE_TYPE` is still 
 ### Builds are cancelled unexpectedly
 
 The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
+
+## Intel Mac issues {#intel-mac-issues}
+
+The following issues can occur when running Langflow on Intel-based Macs.
+
+### "No matching distribution found" errors on Intel Mac
+
+If you see errors about missing packages after installing Langflow on an Intel Mac, such as:
+
+```text
+ERROR: Could not find a version that satisfies the requirement torch
+ERROR: No matching distribution found for torch
+```
+
+This is expected behavior. ML packages such as PyTorch are intentionally excluded on Intel Macs because PyTorch dropped support for macOS x86_64 starting with version 2.3.0.
+
+To verify your architecture and understand which features are available, run:
+
+```bash
+python -c "import platform; print(platform.machine())"
+# x86_64 = Intel, arm64 = Apple Silicon
+```
+
+Use core Langflow features or API-based alternatives instead of local ML models.
+For details on which features are available and workarounds, see [macOS support](./macos-support-matrix.mdx).
+
+### Performance issues on Intel Mac
+
+If Langflow feels slow on an Intel Mac:
+
+1. Ensure you are not trying to run ML workloads locally, as these are not supported on Intel Macs.
+2. Use API-based providers for embeddings and completions instead of local models.
+3. Consider upgrading to Apple Silicon for better performance with ML features.
+
+For more information, see [Workarounds for Intel Mac users](./macos-support-matrix.mdx#workarounds-for-intel-mac-users).
 
 ## See also
 

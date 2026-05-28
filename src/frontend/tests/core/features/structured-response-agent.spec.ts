@@ -3,10 +3,10 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { openAdvancedOptions } from "../../utils/open-advanced-options";
 
-import { TEXTS } from "../../utils/constants/texts";
 /**
  * E2E coverage for the Native Structured Output feature on the Agent
  * component (CZL/MANUAL_TEST_NATIVE_STRUCTURED_OUTPUT.md). The tests

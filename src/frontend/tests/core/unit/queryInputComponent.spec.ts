@@ -1,7 +1,9 @@
-import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -9,9 +11,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
-
-import { TEXTS } from "../../utils/constants/texts";
 // TODO: This component doesn't have slider needs updating
 test(
   "user should be able to use query input",

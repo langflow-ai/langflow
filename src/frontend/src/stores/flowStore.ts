@@ -190,6 +190,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       title: (i18n as any).t("alerts.buildStopped"),
     });
   },

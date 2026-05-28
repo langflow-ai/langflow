@@ -1,5 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   closeAdvancedOptions,
@@ -8,10 +12,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must interact with chat with Input/Output",
   { tag: ["@release", "@components"] },

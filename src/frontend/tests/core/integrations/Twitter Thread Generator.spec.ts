@@ -1,14 +1,14 @@
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { waitForOpenModalWithoutChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 
-import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Twitter Thread Generator",
   { tag: ["@release", "@starter-projects"] },

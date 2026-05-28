@@ -39,6 +39,7 @@ const KeypairListComponent = ({
 
   Array.isArray(value) ? value : [value];
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const handleNewValue = (newValue: any) => {
     const valueToNumbers = convertValuesToNumbers(newValue);
     setDuplicateKey(hasDuplicateKeys(valueToNumbers));
