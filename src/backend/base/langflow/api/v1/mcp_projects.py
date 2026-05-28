@@ -158,7 +158,14 @@ async def verify_project_auth(
 
         return user
 
-    return await _superuser_fallback(db, settings_service)
+    # SECURITY (PVR0755110): validate that the project is actually owned by the superuser
+    # before granting access.  On AUTO_LOGIN deployments the fallback previously returned the
+    # superuser identity for *any* project, allowing unauthenticated cross-user access to
+    # resources and tools belonging to other users.
+    superuser = await _superuser_fallback(db, settings_service)
+    if not project.user_id or project.user_id != superuser.id:
+        raise HTTPException(status_code=404, detail="Project not found")
+    return superuser
 
 
 async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
@@ -478,6 +485,19 @@ async def _dispatch_project_streamable_http(
     current_user: User,
 ) -> Response:
     """Common handler for project-specific Streamable HTTP requests."""
+    # SECURITY (PVR0755110): mirror the ownership check that handle_project_sse already
+    # enforces.  Without this, the Streamable path skipped the check even when the auth
+    # dependency returned the superuser via the AUTO_LOGIN fallback, allowing unauthenticated
+    # requests to access projects owned by other users.
+    async with session_scope() as _ownership_session:
+        _project = (
+            await _ownership_session.exec(
+                select(Folder).where(Folder.id == project_id, Folder.user_id == current_user.id)
+            )
+        ).first()
+    if not _project:
+        raise HTTPException(status_code=404, detail="Project not found")
+
     # Lazily initialize the project's Streamable HTTP manager
     # to pick up new projects as they are created.
     project_server = get_project_mcp_server(project_id)

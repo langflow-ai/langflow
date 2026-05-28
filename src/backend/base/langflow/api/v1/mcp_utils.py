@@ -401,8 +401,21 @@ async def handle_list_tools(project_id=None, *, mcp_enabled_only=False):
         async with session_scope() as session:
             # Build query based on parameters
             if project_id:
-                # Filter flows by project and optionally by MCP enabled status
-                flows_query = select(Flow).where(Flow.folder_id == project_id, Flow.is_component == False)  # noqa: E712
+                # SECURITY (PVR0755110): scope to the authenticated caller so that a
+                # superuser-fallback identity cannot enumerate tools from projects owned by
+                # other users.  Without this filter, tools/list exposed all flows in the
+                # project folder regardless of their owner.
+                if current_user is None:
+                    await logger.awarning(
+                        "handle_list_tools called without a current user for project %s; returning empty list",
+                        project_id,
+                    )
+                    return tools
+                flows_query = select(Flow).where(
+                    Flow.folder_id == project_id,
+                    Flow.user_id == current_user.id,
+                    Flow.is_component == False,  # noqa: E712
+                )
                 if mcp_enabled_only:
                     flows_query = flows_query.where(Flow.mcp_enabled == True)  # noqa: E712
             elif current_user is not None:
