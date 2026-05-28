@@ -154,6 +154,20 @@ async def get_by_id(record_id: UUID) -> KnowledgeBaseRecord | None:
         return await session.get(KnowledgeBaseRecord, record_id)
 
 
+async def list_by_name(name: str) -> list[KnowledgeBaseRecord]:
+    """Return every KB record with the given ``name`` across all users.
+
+    Cross-user share resolution: ``(user_id, name)`` is the unique key per
+    user, but the name itself can collide across users. Callers that need
+    to find a non-owned KB referenced by a share grant scan name matches and
+    let the enforcer pick the one the actor can reach.
+    """
+    async with session_scope() as session:
+        stmt = select(KnowledgeBaseRecord).where(KnowledgeBaseRecord.name == name)
+        result = await session.exec(stmt)
+        return list(result.all())
+
+
 async def list_by_user(user_id: UUID) -> list[KnowledgeBaseRecord]:
     """Return all KBs for ``user_id`` (newest first)."""
     async with session_scope() as session:

@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { uploadFile } from "../../utils/upload-file";
 import { zoomOut } from "../../utils/zoom-out";
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "should process loop with update data correctly",
   { tag: ["@release", "@workspace", "@components"] },

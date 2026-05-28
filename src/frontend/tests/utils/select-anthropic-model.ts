@@ -1,9 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect } from "../fixtures";
+import { TEXTS } from "../utils/constants/texts";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
-
-import { TEXTS } from "../utils/constants/texts";
 export const selectAnthropicModel = async (page: Page) => {
   const nodes = page.locator(".react-flow__node", {
     has: page.getByTestId("title-language model"),

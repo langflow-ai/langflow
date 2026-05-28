@@ -68,6 +68,7 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               list: [(error as any)?.response?.data?.detail],
             });
           },
@@ -92,6 +93,7 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               list: [(error as any)?.response?.data?.detail],
             });
           },
@@ -113,6 +115,7 @@ export const GeneralPage = () => {
     onError: (error) => {
       setErrorData({
         title: t("errors.saveApiKey"),
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         list: [(error as any)?.response?.data?.detail],
       });
       setHasApiKey(false);
