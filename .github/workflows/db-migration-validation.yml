@@ -99,6 +99,8 @@ jobs:
         working-directory: migration-test
         env:
           LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+          # Since v1.5, AUTO_LOGIN no longer auto-authenticates API calls; this lets unauthenticated curl fall back to the superuser.
+          LANGFLOW_SKIP_AUTH_AUTO_LOGIN: "true"
         run: |
           source .venv/bin/activate
 
@@ -201,6 +203,8 @@ jobs:
         working-directory: migration-test
         env:
           LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}
+          # Since v1.5, AUTO_LOGIN no longer auto-authenticates API calls; this lets unauthenticated curl fall back to the superuser.
+          LANGFLOW_SKIP_AUTH_AUTO_LOGIN: "true"
         run: |
           source .venv/bin/activate
 
@@ -264,6 +268,8 @@ jobs:
                 - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow  # pragma: allowlist secret
                 - LANGFLOW_SUPERUSER=admin
                 - LANGFLOW_SUPERUSER_PASSWORD=admin123  # pragma: allowlist secret
+                # Since v1.5, AUTO_LOGIN no longer auto-authenticates API calls; this lets unauthenticated curl fall back to the superuser.
+                - LANGFLOW_SKIP_AUTH_AUTO_LOGIN=true
               depends_on:
                 postgres:
                   condition: service_healthy
