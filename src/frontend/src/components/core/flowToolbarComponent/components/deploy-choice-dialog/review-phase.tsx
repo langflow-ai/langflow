@@ -146,7 +146,7 @@ export default function ReviewPhaseContent({
                         <>
                           {t("deployments.currentDeploymentTarget")}{" "}
                           <span className="text-muted-foreground/70">•</span>{" "}
-                          <span className="font-medium text-warning">
+                          <span className="font-medium text-warning-text">
                             {t("deployments.willBeReplacedByVersion", {
                               next: newVersionTag,
                             })}
