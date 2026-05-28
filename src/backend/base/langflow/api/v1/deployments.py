@@ -997,15 +997,6 @@ async def list_deployment_snapshots(
     size: Annotated[int, Query(ge=1, le=50)] = 20,
 ):
     """List deployment snapshots/tools."""
-    # Resolve the deployment first when one is pinned so the provider lookup
-    # can use the deployment owner — for a shared deployment the provider
-    # account lives in the owner's namespace, not the actor's.
-    provider_account = await get_owned_provider_account_or_404(
-        provider_id=provider_id,
-        user_id=current_user.id,
-        db=session,
-    )
-
     deployment_row = None
     if deployment_id is not None:
         deployment_row = await get_deployment_row_or_404(
@@ -1241,7 +1232,7 @@ async def update_snapshot(
         )
     await validate_project_scoped_flow_version_ids(
         flow_version_ids=[body.flow_version_id],
-        user_id=current_user.id,
+        user_id=owner_id,
         project_id=deployment.project_id,
         db=session,
     )

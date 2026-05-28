@@ -899,16 +899,24 @@ class TestConfigAndSnapshotListRoutes:
         mapper.shape_snapshot_list_result.return_value = expected_response
         mock_get_mapper.return_value = mapper
 
+        owner_id = uuid4()
+        actor = _fake_user()
+        deployment.user_id = owner_id
         result = await list_deployment_snapshots(
             provider_id=pa.id,
             deployment_id=deployment.id,
             page=1,
             size=10,
             session=AsyncMock(),
-            current_user=_fake_user(),
+            current_user=actor,
         )
 
         assert result is expected_response
+        mock_get_pa.assert_awaited_once_with(
+            provider_id=pa.id,
+            user_id=owner_id,
+            db=ANY,
+        )
         mapper.resolve_snapshot_list_adapter_params.assert_awaited_once_with(
             deployment_resource_key="dep-key",
             provider_params=None,
@@ -1310,7 +1318,7 @@ class TestUpdateSnapshotRoute:
         )
         mock_validate_fv.assert_awaited_once_with(
             flow_version_ids=[target_flow_version_id],
-            user_id=user.id,
+            user_id=alice_id,
             project_id=alice_dep.project_id,
             db=session,
         )
