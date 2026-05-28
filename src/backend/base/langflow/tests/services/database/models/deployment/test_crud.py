@@ -569,7 +569,6 @@ async def test_update_deployment_metadata_batch_writes_changed_rows_only(
 
     await update_deployment_metadata_batch(
         db,
-        user_id=user.id,
         deployment_updates=[
             DeploymentMetadataUpdate(
                 langflow_db_row=changed_row,
@@ -589,6 +588,85 @@ async def test_update_deployment_metadata_batch_writes_changed_rows_only(
     assert changed_row.description == "new desc"
     assert unchanged_row.display_name == "unchanged"
     assert unchanged_row.description == "same desc"
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_rejects_actor_user_id(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-owner",
+        display_name="original",
+        description="old desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+
+    with pytest.raises(ValueError, match="deployment owner"):
+        await update_deployment_metadata(
+            db,
+            user_id=uuid4(),
+            deployment=row,
+            display_name="provider name",
+            description="provider desc",
+        )
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_batch_matches_owner_per_row(
+    db: AsyncSession,
+    user: User,
+    folder: Folder,
+    provider_account: DeploymentProviderAccount,
+):
+    other_user_id = uuid4()
+    owner_row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-owner-row",
+        display_name="owner",
+        description="owner desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    other_row = Deployment(
+        user_id=other_user_id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-other-row",
+        display_name="other",
+        description="other desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    db.add(other_row)
+    await db.commit()
+    await db.refresh(owner_row)
+    await db.refresh(other_row)
+
+    await update_deployment_metadata_batch(
+        db,
+        deployment_updates=[
+            DeploymentMetadataUpdate(
+                langflow_db_row=owner_row,
+                display_name="owner synced",
+                description="owner synced desc",
+            ),
+            DeploymentMetadataUpdate(
+                langflow_db_row=other_row,
+                display_name="other synced",
+                description="other synced desc",
+            ),
+        ],
+    )
+    await db.refresh(owner_row)
+    await db.refresh(other_row)
+    assert owner_row.display_name == "owner synced"
+    assert other_row.display_name == "other synced"
 
 
 @pytest.mark.asyncio

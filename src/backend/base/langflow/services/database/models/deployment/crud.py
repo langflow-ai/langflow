@@ -205,6 +205,14 @@ async def update_deployment_metadata(
     description: str | None,
 ) -> Deployment:
     """Update provider-owned metadata without changing local audit fields."""
+    owner_id = deployment.user_id
+    if user_id != owner_id:
+        msg = (
+            "user_id must match the deployment owner for provider metadata sync "
+            f"(expected {owner_id}, got {user_id})"
+        )
+        raise ValueError(msg)
+
     update_item = DeploymentMetadataUpdate(
         langflow_db_row=deployment,
         display_name=_raise_if_blank(display_name, "display_name"),
@@ -216,7 +224,7 @@ async def update_deployment_metadata(
     stmt = (
         update(Deployment)
         .where(
-            Deployment.user_id == user_id,
+            Deployment.user_id == owner_id,
             Deployment.id == deployment.id,
         )
         .values(
@@ -255,6 +263,7 @@ def _deployment_metadata_updates_cte(
     return (
         values(
             column("id", Deployment.__table__.c.id.type),
+            column("user_id", Deployment.__table__.c.user_id.type),
             column("display_name", Deployment.__table__.c.display_name.type),
             column("description", Deployment.__table__.c.description.type),
         )
@@ -262,6 +271,7 @@ def _deployment_metadata_updates_cte(
             [
                 (
                     item.langflow_db_row.id,
+                    item.langflow_db_row.user_id,
                     item.display_name,
                     item.description,
                 )
@@ -275,10 +285,13 @@ def _deployment_metadata_updates_cte(
 async def update_deployment_metadata_batch(
     db: AsyncSession,
     *,
-    user_id: UUID,
     deployment_updates: Sequence[DeploymentMetadataUpdate],
 ) -> None:
-    """Update provider-owned metadata for multiple deployment rows in one statement."""
+    """Update provider-owned metadata for multiple deployment rows in one statement.
+
+    Each update row is matched on ``(id, user_id)`` so shared-deployment list/get
+    sync writes in the deployment owner's namespace, not the actor's.
+    """
     updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
     if not updates:
         return
@@ -287,8 +300,8 @@ async def update_deployment_metadata_batch(
     stmt = (
         update(Deployment)
         .where(
-            Deployment.user_id == user_id,
             Deployment.id == metadata_updates.c.id,
+            Deployment.user_id == metadata_updates.c.user_id,
         )
         .values(
             display_name=metadata_updates.c.display_name,

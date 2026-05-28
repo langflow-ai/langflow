@@ -715,6 +715,8 @@ async def sync_deployment_display_metadata(
     user_id: UUID,
 ) -> Deployment:
     """Sync provider-owned display metadata into a local deployment row."""
+    # Provider metadata sync runs in the deployment owner's namespace (see RBAC
+    # actor/owner split on deployment routes). ``user_id`` must be that owner.
     return await update_deployment_metadata(
         db,
         user_id=user_id,
@@ -769,7 +771,8 @@ async def sync_deployment_attachment_count_for_get(
             deployment.id,
             exc_info=True,
         )
-        await db.rollback()  # rollback outer session to avoid partially synced state
+        # Only the nested savepoint above is rolled back; do not rollback the outer
+        # session or provider metadata synced earlier in get_deployment_synced.
         try:
             return await count_deployment_attachments(db, user_id=user_id, deployment_id=deployment.id)
         except Exception as exc:
@@ -906,7 +909,7 @@ async def list_deployments_synced(
                     row.resource_key,
                     provider_id,
                 )
-                await delete_deployment_by_id(db, user_id=user_id, deployment_id=row.id)
+                await delete_deployment_by_id(db, user_id=row.user_id, deployment_id=row.id)
                 continue
             accepted.append((row, attached_count, matched_flow_versions))
             accepted_deployment_ids.append(row.id)
@@ -916,37 +919,53 @@ async def list_deployments_synced(
     if accepted:
         metadata_updates: list[DeploymentMetadataUpdate] = []
         for row, _attached_count, _matched in accepted:
-            provider_metadata = provider_metadata_by_resource_key[row.resource_key]
+            provider_metadata = provider_metadata_by_resource_key.get(row.resource_key)
+            if provider_metadata is None:
+                logger.warning(
+                    "Skipping metadata sync for deployment %s (resource_key=%s): missing provider metadata",
+                    row.id,
+                    row.resource_key,
+                )
+                continue
             metadata_updates.append(
                 DeploymentMetadataUpdate(
                     langflow_db_row=row,
                     **provider_metadata,
                 )
             )
-        await update_deployment_metadata_batch(
-            db,
-            user_id=user_id,
-            deployment_updates=metadata_updates,
-        )
+        if metadata_updates:
+            await update_deployment_metadata_batch(
+                db,
+                deployment_updates=metadata_updates,
+            )
 
     # Remove stale local attachments based on provider bindings, then recount.
     # Best-effort - provider or DB failures should not block the list response.
     if accepted:
         try:
-            async with db.begin_nested():
-                await delete_unbound_attachments(
-                    db,
-                    user_id=user_id,
-                    provider_account_id=provider_id,
-                    deployment_ids=accepted_deployment_ids,
-                    bindings=provider_bindings,
-                )
+            deployment_ids_by_owner: dict[UUID, list[UUID]] = {}
+            for row, _attached_count, _matched in accepted:
+                deployment_ids_by_owner.setdefault(row.user_id, []).append(row.id)
 
-            corrected_counts = await count_attachments_by_deployment_ids(
-                db,
-                user_id=user_id,
-                deployment_ids=accepted_deployment_ids,
-            )
+            async with db.begin_nested():
+                for owner_id, owner_deployment_ids in deployment_ids_by_owner.items():
+                    await delete_unbound_attachments(
+                        db,
+                        user_id=owner_id,
+                        provider_account_id=provider_id,
+                        deployment_ids=owner_deployment_ids,
+                        bindings=provider_bindings,
+                    )
+
+            corrected_counts: dict[UUID, int] = {}
+            for owner_id, owner_deployment_ids in deployment_ids_by_owner.items():
+                corrected_counts.update(
+                    await count_attachments_by_deployment_ids(
+                        db,
+                        user_id=owner_id,
+                        deployment_ids=owner_deployment_ids,
+                    )
+                )
             accepted = [(row, corrected_counts[row.id], matched) for row, _attached_count, matched in accepted]
         except Exception:  # noqa: BLE001
             logger.warning(
