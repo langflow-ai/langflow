@@ -287,16 +287,16 @@ class TestAtomicWrite:
         first_text = first.read_text(encoding="utf-8")
         assert first_text == SAMPLE_CODE
 
-        # Force os.replace to raise so the second write fails mid-rename.
-        import os
-
-        original_replace = os.replace
-
-        def boom(src, dst):  # noqa: ARG001
+        # Force the atomic rename to fail mid-write. Patch the EXACT method the
+        # code calls — Path.replace — NOT the transitive os.replace it wraps.
+        # os.replace resolution proved order-sensitive under the full suite
+        # (this test passed alone but flaked in the batch); patching the real
+        # call site makes failure injection deterministic.
+        def boom(self, target):  # noqa: ARG001
             msg = "simulated rename failure"
             raise OSError(msg)
 
-        monkeypatch.setattr(os, "replace", boom)
+        monkeypatch.setattr("pathlib.Path.replace", boom)
 
         new_code = SAMPLE_CODE.replace("'sum'", "'total'")
         with pytest.raises(UserComponentError):
@@ -306,8 +306,8 @@ class TestAtomicWrite:
                 code=new_code,
             )
 
-        # Restore for cleanup.
-        monkeypatch.setattr(os, "replace", original_replace)
+        # monkeypatch reverts Path.replace at teardown; the assertions below
+        # only read files (read_text / iterdir / unlink), which never use it.
 
         # The on-disk file is still the first version. No partial second.
         assert first.read_text(encoding="utf-8") == first_text
