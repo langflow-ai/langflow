@@ -100,7 +100,11 @@ export default function EditShortcutButton({
     }
     applyShortcutUpdate(
       normalizedCombination,
-      t("shortcuts.changedSuccess", { name: shortcut[0] }),
+      t("shortcuts.successChanged", {
+        name: t(`shortcuts.name.${toCamelCase(shortcut[0])}`, {
+          defaultValue: shortcut[0],
+        }),
+      }),
     );
   }
 
@@ -132,7 +136,11 @@ export default function EditShortcutButton({
     }
     applyShortcutUpdate(
       defaultShortcut,
-      t("shortcuts.resetSuccess", { name: shortcut[0] }),
+      t("shortcuts.successReset", {
+        name: t(`shortcuts.name.${toCamelCase(shortcut[0])}`, {
+          defaultValue: shortcut[0],
+        }),
+      }),
     );
   }
 
