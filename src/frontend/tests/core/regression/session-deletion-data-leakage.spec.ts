@@ -1,10 +1,10 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+
 test.describe("Session Deletion Data Leakage Fix", () => {
   // Helper to send a message in the playground
   async function sendMessage(page: Page, message: string) {

@@ -1,9 +1,9 @@
 import type { Locator, Page } from "@playwright/test";
 import { expect } from "../fixtures";
+import { TEXTS } from "../utils/constants/texts";
 import { adjustScreenView } from "./adjust-screen-view";
 import { unselectNodes } from "./unselect-nodes";
 
-import { TEXTS } from "../utils/constants/texts";
 const PREFERRED_OPENAI_MODELS = [
   "gpt-4o-mini",
   "gpt-4.1-mini",

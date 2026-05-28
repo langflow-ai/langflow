@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "curl_api_generation",
   { tag: ["@release", "@workspace", "@api"] },
@@ -102,6 +103,7 @@ test("check if tweaks are updating when someothing on the flow changes", async (
     .getByTestId("popover-anchor-input-persist_directory")
     .fill("persist_directory_123123123!@#$&*(&%$@");
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const focusElementsOnBoard = async ({ page }: any) => {
     const focusElements = await page.getByTestId("publish-button").first();
     await focusElements.click();

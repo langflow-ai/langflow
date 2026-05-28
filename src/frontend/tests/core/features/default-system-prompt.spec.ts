@@ -15,10 +15,10 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 // Every section header the new default template must contain, in order.
 const SECTION_HEADERS = [
   "# Identity",

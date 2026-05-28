@@ -1,8 +1,8 @@
 import type { UseMutationResult } from "@tanstack/react-query";
 import { useTranslation } from "react-i18next";
+import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import { isAuthenticatedPlayground } from "@/modals/IOModal/helpers/playground-auth";
 import type {
   DeleteSessionError,
   DeleteSessionParams,

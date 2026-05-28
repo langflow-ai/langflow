@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import { convertTestName } from "@/components/common/storeCardComponent/utils/convert-test-name";
 import { Badge } from "@/components/ui/badge";
-import { useTranslation } from "react-i18next";
 import { nodeColorsName } from "@/utils/styleUtils";
 
 export default function HandleTooltipComponent({

@@ -1,9 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { openAddMcpServerModal } from "../../utils/open-add-mcp-server-modal";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to manage MCP server tools and configuration",
   { tag: ["@release", "@workspace", "@components"] },
