@@ -33,7 +33,13 @@ describe("loadLanguage", () => {
   it("loads and registers a new language bundle", async () => {
     const spy = jest.spyOn(i18n, "addResourceBundle");
     await loadLanguage("fr");
-    expect(spy).toHaveBeenCalledWith("fr", "translation", expect.any(Object), true, true);
+    expect(spy).toHaveBeenCalledWith(
+      "fr",
+      "translation",
+      expect.any(Object),
+      true,
+      true,
+    );
     spy.mockRestore();
   });
 
@@ -50,8 +56,20 @@ describe("loadLanguage", () => {
     await loadLanguage("fr");
     await loadLanguage("ja");
 
-    expect(spy).toHaveBeenCalledWith("fr", "translation", expect.any(Object), true, true);
-    expect(spy).toHaveBeenCalledWith("ja", "translation", expect.any(Object), true, true);
+    expect(spy).toHaveBeenCalledWith(
+      "fr",
+      "translation",
+      expect.any(Object),
+      true,
+      true,
+    );
+    expect(spy).toHaveBeenCalledWith(
+      "ja",
+      "translation",
+      expect.any(Object),
+      true,
+      true,
+    );
     spy.mockRestore();
   });
 

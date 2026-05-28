@@ -33,9 +33,9 @@ export function normalizeLanguage(lang: string): SupportedLanguage {
     return "zh-Hans";
   }
 
-  const supportedLanguage = (Object.keys(localeResources) as SupportedLanguage[]).find(
-    (language) => language.toLowerCase() === lower,
-  );
+  const supportedLanguage = (
+    Object.keys(localeResources) as SupportedLanguage[]
+  ).find((language) => language.toLowerCase() === lower);
 
   return supportedLanguage ?? "en";
 }
@@ -54,7 +54,10 @@ i18n.use(initReactI18next).init({
 export async function loadLanguage(lang: string): Promise<void> {
   const resolvedLanguage = normalizeLanguage(lang);
 
-  if (resolvedLanguage !== "en" && !i18n.hasResourceBundle(resolvedLanguage, "translation")) {
+  if (
+    resolvedLanguage !== "en" &&
+    !i18n.hasResourceBundle(resolvedLanguage, "translation")
+  ) {
     const messages = localeResources[resolvedLanguage];
     i18n.addResourceBundle(
       resolvedLanguage,
