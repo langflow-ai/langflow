@@ -141,26 +141,33 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
     return result
 
 
-def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, list[str]]]:
-    """Build the set of all known translations for display_name and description per component.
+def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """Build the set of all known translations for display_name and description per component,
+    plus all known translations for each input field's display_name.
 
     Iterates every loaded locale and looks up each component's display_name / description key
     directly in the locale dicts (one key lookup per locale, not a full translate_component_dict
     pass).  The English value is always included as the baseline.
 
     Returns a dict keyed by normalized component key (e.g. "textinput") where each value is:
-        {"display_name": [...all locale values...], "description": [...all locale values...]}
+        {
+            "display_name": [...all locale values...],
+            "description": [...all locale values...],
+            "fields": {
+                "field_name": {"display_name": [...all locale values...]}
+            }
+        }
     """
     if not _translations:
         _load_translations()
 
-    result: dict[str, dict[str, set[str]]] = {}
+    result: dict[str, dict[str, Any]] = {}
 
     for components in all_types_en.values():
         for name, data in components.items():
             norm = normalize_component_key(name)
             if norm not in result:
-                result[norm] = {"display_name": set(), "description": set()}
+                result[norm] = {"display_name": set(), "description": set(), "fields": {}}
 
             dn_en = data.get("display_name", "")
             desc_en = data.get("description", "")
@@ -181,8 +188,30 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
                     if val:
                         result[norm]["description"].add(val)
 
+            # Collect all known translations for each input field's display_name
+            template = data.get("template", {})
+            for field_name, field_data in template.items():
+                if not isinstance(field_data, dict):
+                    continue
+                field_dn_en = field_data.get("display_name", "")
+                if not field_dn_en:
+                    continue
+                if field_name not in result[norm]["fields"]:
+                    result[norm]["fields"][field_name] = {"display_name": set()}
+                field_key = component_field_key(norm, f"inputs.{field_name}.display_name", field_dn_en)
+                result[norm]["fields"][field_name]["display_name"].add(field_dn_en)
+                for locale_dict in _translations.values():
+                    val = locale_dict.get(field_key)
+                    if val:
+                        result[norm]["fields"][field_name]["display_name"].add(val)
+
     return {
-        k: {"display_name": list(v["display_name"]), "description": list(v["description"])} for k, v in result.items()
+        k: {
+            "display_name": list(v["display_name"]),
+            "description": list(v["description"]),
+            "fields": {fn: {"display_name": list(fd["display_name"])} for fn, fd in v["fields"].items()},
+        }
+        for k, v in result.items()
     }
 
 
