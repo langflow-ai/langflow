@@ -1,4 +1,3 @@
-import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
@@ -101,6 +100,7 @@ function updateComponentCode(
   code: string,
   updates: {
     imports?: string[];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     inputs?: Array<{ name: string; config: Record<string, any> }>;
   },
 ): string {

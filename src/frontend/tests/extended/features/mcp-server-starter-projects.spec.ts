@@ -1,10 +1,10 @@
 import { expect, test } from "@playwright/test";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
+import { TEXTS } from "../../utils/constants/texts";
 import { convertTestName } from "../../utils/convert-test-name";
 import { navigateSettingsPages } from "../../utils/go-to-settings";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to see starter projects for mcp servers",
   { tag: ["@release", "@workspace", "@components"] },

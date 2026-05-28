@@ -1,14 +1,14 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { openStarterProject } from "../../utils/flow/open-starter-project";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "Instagram Copywriter",
   { tag: ["@release", "@starter-projects"] },

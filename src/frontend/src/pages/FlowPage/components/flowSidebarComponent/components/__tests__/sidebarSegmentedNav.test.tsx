@@ -117,6 +117,7 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("@/stores/playgroundStore", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   usePlaygroundStore: (selector: (state: typeof mockPlaygroundStore) => any) =>
     selector(mockPlaygroundStore),
 }));

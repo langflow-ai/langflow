@@ -30,8 +30,11 @@ export default function ToolsTable({
   open,
   handleOnNewValue,
 }: {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   rows: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
@@ -40,9 +43,11 @@ export default function ToolsTable({
 }) {
   const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
   const agGrid = useRef<AgGridReact>(null);
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [focusedRow, setFocusedRow] = useState<any | null>(null);
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
@@ -56,6 +61,7 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     return (params: any) =>
       params.data._uniqueId ||
       `${params.data.name}_${params.data.display_name}`;
@@ -284,6 +290,7 @@ export default function ToolsTable({
 
   const actionArgs = useMemo(() => {
     return Object.entries(focusedRow?.args ?? {}).map(
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       ([key, value]: [string, any]) => ({
         display_name: value.title,
         name: key,

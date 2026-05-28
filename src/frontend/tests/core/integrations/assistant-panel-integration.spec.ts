@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
-import { selectAssistantOpenAiModel } from "../../utils/select-assistant-openai-model";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { selectAssistantOpenAiModel } from "../../utils/select-assistant-openai-model";
 
 test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
   test.beforeEach(async ({ page }) => {

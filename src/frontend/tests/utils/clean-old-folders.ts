@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
-import { convertTestName } from "./convert-test-name";
-
 import { TEXTS } from "../utils/constants/texts";
+import { convertTestName } from "./convert-test-name";
 export const cleanOldFolders = async (page: Page) => {
   let numberOfFolders = await page.getByText(TEXTS.labelNewProject).count();
 

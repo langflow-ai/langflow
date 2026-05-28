@@ -2,12 +2,12 @@ import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { lockFlow, unlockFlow } from "../../utils/lock-flow";
 import { unselectNodes } from "../../utils/unselect-nodes";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to lock a flow and it must be saved",
   { tag: ["@release", "@components"] },

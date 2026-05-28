@@ -1,6 +1,7 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { ChevronDown, Loader2 } from "lucide-react";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import {
@@ -13,7 +14,6 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { useCheckAgentNames } from "@/controllers/API/queries/deployments";
 import { useGetDeploymentLlms } from "@/controllers/API/queries/deployments/use-get-deployment-llms";
-import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
 import { useErrorAlert } from "../hooks/use-error-alert";
