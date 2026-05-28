@@ -15,7 +15,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
 # range that includes the BUNDLE_API_VERSION=1 contract; langchain-community
 # is the same range the lfx tree uses to keep co-installation lockstep.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx-nightly==0.5.0.dev51",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
 ]
