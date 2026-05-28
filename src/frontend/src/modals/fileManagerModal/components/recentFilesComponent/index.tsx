@@ -424,7 +424,7 @@ export default function RecentFilesComponent({
               {searchQuery !== ""
                 ? `${t("fileManager.noFilesFound")} `
                 : `${t("fileManager.uploadOrImport")}, `}
-              or visit{" "}
+              {t("fileManager.orVisit")}{" "}
               <CustomLink
                 className="text-accent-pink-foreground underline"
                 to="/files"

@@ -1772,6 +1772,8 @@
   "fileManager.deleteButton": "Delete",
   "fileManager.noFilesFound": "No files found, try again",
   "fileManager.uploadOrImport": "Upload or import files",
+  "fileManager.orVisit": "or visit",
+  "fileManager.moreTypes": "+{{count}} more",
   "knowledge.metadataTooltip": "Optional key/value tags applied to every chunk produced by this ingestion. Use lowercase letters, digits, or underscores for keys (max 32 characters). Values are stored as strings.",
   "knowledge.metadataKeyPlaceholder": "key",
   "knowledge.metadataValuePlaceholder": "value",
