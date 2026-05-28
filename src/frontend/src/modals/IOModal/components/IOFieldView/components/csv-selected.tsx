@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import {
   Select,
   SelectContent,
@@ -6,7 +7,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../../../../../components/ui/select";
-import { useTranslation } from "react-i18next";
 
 export default function CsvSelect({ node, handleChangeSelect }): JSX.Element {
   const { t } = useTranslation();

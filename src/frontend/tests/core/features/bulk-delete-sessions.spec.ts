@@ -1,9 +1,9 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import type { Page } from "@playwright/test";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+
 test.describe("Bulk Delete Sessions", () => {
   // Helper to send a message in the playground
   async function sendMessage(page: Page, message: string) {

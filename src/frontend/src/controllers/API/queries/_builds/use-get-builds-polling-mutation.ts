@@ -117,6 +117,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
       requestInProgressRef.current[payload.flowId] = true;
       const config = {};
       config["params"] = { flow_id: payload.flowId };
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const res = await api.get<any>(`${getURL("BUILDS")}`, config);
 
       if (currentFlow) {

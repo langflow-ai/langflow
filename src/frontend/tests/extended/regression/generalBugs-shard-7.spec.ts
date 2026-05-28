@@ -1,7 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 
-import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 // TODO: This test might not be needed anymore

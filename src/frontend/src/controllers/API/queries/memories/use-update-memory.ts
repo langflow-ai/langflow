@@ -7,11 +7,11 @@ import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
 import { mapMemoryApiToMemoryInfo } from "./mappers";
+import { updateMemoryInMemoriesCache } from "./memories-cache-helpers";
 import {
   MEMORIES_RETRY_MAX_ATTEMPTS,
   memoriesRetryDelay,
 } from "./memoriesQueryConfig";
-import { updateMemoryInMemoriesCache } from "./memories-cache-helpers";
 import type { MemoryApiDTO, MemoryInfo, UpdateMemoryParams } from "./types";
 
 export const useUpdateMemory: useMutationFunctionType<
