@@ -25,6 +25,16 @@ def hash_api_key(api_key: str) -> str:
     return hashlib.sha256(api_key.encode()).hexdigest()
 
 
+def _is_expired(expires_at: datetime.datetime | None) -> bool:
+    if expires_at is None:
+        return False
+    # Rows written before the expires_at column became tz-aware come back naive.
+    # All historical writes used datetime.now(timezone.utc), so interpret naive as UTC.
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=datetime.timezone.utc)
+    return datetime.datetime.now(datetime.timezone.utc) > expires_at
+
+
 async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]:
     """Get all API keys for a user with decrypted values."""
     query: SelectOfScalar = select(ApiKey).where(ApiKey.user_id == user_id)
@@ -124,7 +134,7 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
 
     if len(matches) == 1:
         api_key_obj = matches[0]
-        if api_key_obj.expires_at and datetime.datetime.now(datetime.timezone.utc) > api_key_obj.expires_at:
+        if _is_expired(api_key_obj.expires_at):
             return None
         if settings_service.settings.disable_track_apikey_usage is not True:
             api_key_obj.total_uses += 1
@@ -160,7 +170,7 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             matched = candidate == api_key
 
         if matched:
-            if api_key_obj.expires_at and datetime.datetime.now(datetime.timezone.utc) > api_key_obj.expires_at:
+            if _is_expired(api_key_obj.expires_at):
                 return None
             # Backfill hash for future O(1) lookups
             api_key_obj.api_key_hash = incoming_hash
