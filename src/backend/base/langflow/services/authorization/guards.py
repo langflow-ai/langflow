@@ -75,7 +75,7 @@ def _coerce_action(
     return act
 
 
-def _resolve_casbin_domain(workspace_id: UUID | None, scope_id: UUID | None) -> str:
+def _resolve_authz_domain(workspace_id: UUID | None, scope_id: UUID | None) -> str:
     """Resolve policy domain: project scope, then workspace, else ``*``."""
     if scope_id is not None:
         return f"project:{scope_id}"
@@ -85,7 +85,7 @@ def _resolve_casbin_domain(workspace_id: UUID | None, scope_id: UUID | None) -> 
 
 
 # Backward-compatible alias.
-_resolve_flow_domain = _resolve_casbin_domain
+_resolve_flow_domain = _resolve_authz_domain
 
 
 async def ensure_permission(
@@ -292,7 +292,7 @@ async def _ensure_typed(
         # Shares have no domain bucket.
         resolved_domain = "*"
     else:
-        resolved_domain = _resolve_casbin_domain(workspace_id, scope_id)
+        resolved_domain = _resolve_authz_domain(workspace_id, scope_id)
 
     # ``extra_context`` mirrors the legacy clone shape so audit rows and
     # plugin matchers continue to see the same key names. We forward every

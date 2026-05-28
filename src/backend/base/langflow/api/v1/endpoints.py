@@ -1421,7 +1421,10 @@ async def get_config(
         settings_service: SettingsService = get_settings_service()
 
         if user is None:
-            return PublicConfigResponse.from_settings(settings_service.settings)
+            return PublicConfigResponse.from_settings(
+                settings_service.settings,
+                settings_service.auth_settings,
+            )
 
         return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 
