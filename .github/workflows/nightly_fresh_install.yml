@@ -42,6 +42,9 @@ on:
         type: string
         default: ""
 
+permissions:
+  contents: read
+
 env:
   PYTHON_VERSION: "3.13"
   POSTGRES_DB: langflow_test
@@ -62,10 +65,31 @@ jobs:
     steps:
       - name: Resolve PyPI and image versions
         id: resolve
+        # Inputs are passed via env (not expanded directly into the script) and
+        # validated against strict regexes before any shell or docker command
+        # consumes them, so a workflow_dispatch caller can't inject shell
+        # metacharacters through `nightly_tag` or `pypi_version`.
+        env:
+          INPUT_NIGHTLY_TAG: ${{ inputs.nightly_tag }}
+          INPUT_PYPI_VERSION: ${{ inputs.pypi_version }}
         run: |
           set -euo pipefail
-          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
-          PYPI_VER="${{ inputs.pypi_version }}"
+
+          NIGHTLY_TAG="${INPUT_NIGHTLY_TAG:-langflowai/langflow-nightly:latest}"
+          PYPI_VER="${INPUT_PYPI_VERSION:-}"
+
+          # Docker image reference: lowercase alnum + . _ - / and exactly one ":" before the tag.
+          if ! printf '%s' "$NIGHTLY_TAG" | grep -Eq '^[a-z0-9][a-z0-9._/-]*:[a-z0-9._-]+$'; then
+            echo "::error::Invalid nightly_tag format: '$NIGHTLY_TAG' (expected '<image>:<tag>')"
+            exit 1
+          fi
+
+          # PEP 440-ish: blank, or M.m.p[.devN][.rcN]; deliberately conservative.
+          if [ -n "$PYPI_VER" ] && ! printf '%s' "$PYPI_VER" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+(\.(dev|rc|a|b)[0-9]+)?$'; then
+            echo "::error::Invalid pypi_version format: '$PYPI_VER'"
+            exit 1
+          fi
+
           if [ -z "$PYPI_VER" ]; then
             PYPI_VER=$(curl -fsSL https://pypi.org/pypi/langflow-nightly/json \
               | python3 -c "import json,sys;print(json.load(sys.stdin)['info']['version'])")
