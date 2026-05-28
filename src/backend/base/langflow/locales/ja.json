@@ -3553,6 +3553,7 @@
   "components.faiss.outputs.dataframe.display_name.16d1c905": "表",
   "components.faiss.outputs.search_results.display_name.39414102": "検索結果",
   "components.faiss.outputs.search_results.info.c3d7164d": "ベクトルストア内で意味的類似性検索を実行し、関連するドキュメントやファイルを検索します。 入力：自然言語の検索クエリ（文字列）。 戻り値：Dataオブジェクト（辞書）のリスト。 各結果には次のような構造があります： {'data': {'text': '...', ...}}。「text」フィールドには、常に一致したドキュメントの内容が含まれます。 その他のメタデータフィールドは、インデックス化された内容によって異なります（例：「file_path」、「source」、「page」など）。 重要：file_path などのメタデータを抽出するには、result['data'].get('file_path') または result.data.get ('file_path') を使用してください。 result['data'].keys() または最初の検索結果を確認して、利用可能なフィールドを確認してください。",
+  "components.file.description.1bbb6b83": "アップロードされたファイルの内容を読み込み、返します。",
   "components.file.display_name.fb9b615c": "ファイルを開く",
   "components.file.inputs.advanced_mode.display_name.ba4c746b": "高度なパーサー",
   "components.file.inputs.advanced_mode.info.b96917ee": "Doclingを活用して、PDF、画像、Office文書に対する高度な文書処理とエクスポート機能を実現しましょう。 高度なドキュメント処理には、かなりのリソースを消費する場合があることにご注意ください。",

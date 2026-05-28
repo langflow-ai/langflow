@@ -3553,6 +3553,7 @@
   "components.faiss.outputs.dataframe.display_name.16d1c905": "表",
   "components.faiss.outputs.search_results.display_name.39414102": "搜索结果",
   "components.faiss.outputs.search_results.info.c3d7164d": "在向量存储中执行语义相似度搜索，以查找相关文档/文件。 输入：一个自然语言搜索查询（字符串）。 返回值：一个 Data 对象（字典）的列表。 每个结果都有以下结构： {'data': {'text': '...', ...}}。其中“text”字段始终包含匹配到的文档内容。 其他元数据字段取决于索引的内容（可能包括：“file_path”、“source”、“page”等）。 重要提示：若要提取 file_path 等元数据，请使用：result['data'].get('file_path') 或 result.data.get ('file_path')。 通过查看 result['data'].keys() 或第一个搜索结果，确认有哪些字段可用。",
+  "components.file.description.1bbb6b83": "加载并返回上传文件的内容。",
   "components.file.display_name.fb9b615c": "读取文件",
   "components.file.inputs.advanced_mode.display_name.ba4c746b": "高级解析器",
   "components.file.inputs.advanced_mode.info.b96917ee": "使用 Docling 实现对 PDF、图片和办公文档的高级处理与导出功能。 请注意，高级文档处理可能会消耗大量资源。",

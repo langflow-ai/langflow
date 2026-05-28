@@ -3553,6 +3553,7 @@
   "components.faiss.outputs.dataframe.display_name.16d1c905": "Tabelle",
   "components.faiss.outputs.search_results.display_name.39414102": "Suchergebnisse",
   "components.faiss.outputs.search_results.info.c3d7164d": "Führt eine semantische Ähnlichkeitssuche im Vektorspeicher durch, um relevante Dokumente/Dateien zu finden. Eingabe: Eine Suchanfrage in natürlicher Sprache (Zeichenkette). Rückgabewert: Eine Liste von Datenobjekten (Wörterbücher). Jedes Ergebnis hat folgende Struktur: {'data': {'text': '...', ...}}. Das Feld „text“ enthält immer den Inhalt des gefundenen Dokuments. Weitere Metadatenfelder hängen davon ab, was indiziert wurde (können unter anderem folgende Felder umfassen: „file_path“, „source“, „page“ usw.). WICHTIG: Um Metadaten wie „file_path“ zu extrahieren, verwenden Sie: `result['data'].get('file_path')` oder ` result.data.get ('file_path')`. Überprüfen Sie, welche Felder verfügbar sind, indem Sie result['data'].keys() oder das erste Suchergebnis betrachten.",
+  "components.file.description.1bbb6b83": "Lädt den Inhalt hochgeladener Dateien und gibt ihn zurück.",
   "components.file.display_name.fb9b615c": "Datei lesen",
   "components.file.inputs.advanced_mode.display_name.ba4c746b": "Erweiterter Parser",
   "components.file.inputs.advanced_mode.info.b96917ee": "Nutzen Sie mit Docling erweiterte Funktionen zur Dokumentenbearbeitung und zum Export von PDF-Dateien, Bildern und Office-Dokumenten. Beachten Sie, dass die erweiterte Dokumentenverarbeitung erhebliche Ressourcen beanspruchen kann.",

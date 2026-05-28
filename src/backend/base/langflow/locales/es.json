@@ -3553,6 +3553,7 @@
   "components.faiss.outputs.dataframe.display_name.16d1c905": "Tabla",
   "components.faiss.outputs.search_results.display_name.39414102": "Resultados de la búsqueda",
   "components.faiss.outputs.search_results.info.c3d7164d": "Realiza búsquedas por similitud semántica en el almacén de vectores para encontrar documentos o archivos relevantes. Entrada: Una consulta de búsqueda en lenguaje natural (cadena). Devuelve: una lista de objetos Data (diccionarios). Cada resultado tiene la siguiente estructura: {'data': {'text': '...', ...}}. El campo «text» siempre contiene el contenido del documento encontrado. Otros campos de metadatos dependen de lo que se haya indexado (pueden incluir: «file_path», «source», «page», etc.). IMPORTANTE: Para extraer metadatos como «file_path», utiliza: `result['data'].get('file_path')` o ` result.data.get ('file_path')`. Comprueba qué campos están disponibles consultando result['data'].keys() o el primer resultado de la búsqueda.",
+  "components.file.description.1bbb6b83": "Carga y devuelve el contenido de los archivos subidos.",
   "components.file.display_name.fb9b615c": "Leer archivo",
   "components.file.inputs.advanced_mode.display_name.ba4c746b": "Analizador sintáctico avanzado",
   "components.file.inputs.advanced_mode.info.b96917ee": "Habilita el procesamiento y la exportación avanzados de documentos con Docling para archivos PDF, imágenes y documentos de Office. Tenga en cuenta que el procesamiento avanzado de documentos puede consumir una cantidad considerable de recursos.",

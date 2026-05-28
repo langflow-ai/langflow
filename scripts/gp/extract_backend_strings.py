@@ -88,7 +88,13 @@ def collect_strings() -> dict[str, str]:
 
             # Tier 1 — component-level
             flat[_component_field_key(norm_key, "display_name", display_name)] = display_name
-            description = getattr(cls, "description", "") or ""
+            # If description is a @property, getattr on the class returns the descriptor
+            # object (not a string).  Fall back to _base_description when that happens.
+            raw_desc = cls.__dict__.get("description")
+            if isinstance(raw_desc, property):
+                description = getattr(cls, "_base_description", "") or ""
+            else:
+                description = getattr(cls, "description", "") or ""
             if isinstance(description, str) and description:
                 flat[_component_field_key(norm_key, "description", description)] = description
 
