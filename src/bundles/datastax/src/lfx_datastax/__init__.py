@@ -2,7 +2,7 @@
 
 This package is the distribution unit ``lfx-datastax``.  At runtime
 Langflow's loader discovers ``extension.json`` shipped alongside this
-``__init__.py`` and registers the 10 datastax components under the
+``__init__.py`` and registers the 11 datastax components under the
 namespaced IDs ``ext:datastax:<Class>@official``.
 
 Ported from the in-tree ``lfx.components.datastax`` and

@@ -98,6 +98,18 @@ RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv pip install --no-deps /app/src/bundles/duckduckgo
 
+# Pilot Bundle re-attach (LE-1023): ``lfx-arxiv`` ships the ArXiv
+# component as a standalone distribution (its pyproject lives at
+# ``src/bundles/arxiv``).  The base image was the user-facing path for
+# that component before the move; install the extracted bundle so the
+# runtime image keeps the same component set.  ``--no-deps`` is
+# intentional: the bundle's runtime deps (lfx, defusedxml) are now all in
+# the langflow-base lockfile above, so installing them here would yank
+# duplicates that fight the locked versions.
+RUN --mount=type=cache,target=/root/.cache/uv \
+    RUSTFLAGS='--cfg reqwest_unstable' \
+    uv pip install --no-deps /app/src/bundles/arxiv
+
 # Pilot Bundle re-attach (LE-1023): ``lfx-datastax`` ships the 11
 # DataStax / AstraDB components plus the shared ``AstraDBBaseComponent``
 # mixin that used to live at ``lfx.base.datastax.astradb_base``.
