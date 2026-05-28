@@ -175,6 +175,18 @@ class ConditionalRouterComponent(Component):
         A ``Message`` is only treated as blank when it carries no payload at all. An
         override with empty text but meaningful content (files or content blocks) is
         preserved as-is so that payload is not dropped.
+
+        Blankness is judged by payload only (``text``, ``files``, ``content_blocks``).
+        A ``Message`` carrying just metadata (``sender``, ``properties``, ``error`` ...)
+        and no payload is intentionally treated as blank: every empty ``Message`` also
+        defaults ``timestamp`` / ``category`` / ``properties``, so keying on metadata
+        would defeat the blank-field fallback. With no payload there is nothing to
+        route, so the ``Text Input`` is used.
+
+        ``case_message`` is typed defensively as ``Message | str | None``. ``MessageInput``
+        wraps user input into a ``Message`` on the validated graph path, but a raw ``str``
+        can still arrive via direct/programmatic assignment (``.set(...)`` stores the raw
+        value), so the ``str`` branch is retained rather than dropping such an override.
         """
         if isinstance(case_message, Message):
             if case_message.text or case_message.files or case_message.content_blocks:

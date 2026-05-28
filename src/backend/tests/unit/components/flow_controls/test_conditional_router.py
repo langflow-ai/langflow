@@ -368,6 +368,53 @@ class TestConditionalRouterComponent(ComponentTestBaseWithoutClient):
             assert result.text != "passthrough text"
             mock_iterate.assert_called_once_with("true_result")
 
+    async def test_true_response_string_case_message_override(self, component_class, default_kwargs):
+        """A raw string override is wrapped and routed, not dropped.
+
+        ``MessageInput`` wraps user input into a ``Message`` on the validated graph path, but a raw
+        ``str`` can still reach ``_resolve_case_message`` via direct/programmatic assignment (e.g.
+        ``component.set(true_case_message="...")``). The ``str`` branch is intentionally retained
+        rather than dead, so it is exercised here.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+        component.match_text = "passthrough text"
+        component.operator = "equals"
+        component.case_sensitive = True
+        component.true_case_message = "literal string override"
+
+        with (
+            patch.object(component, "iterate_and_stop_once") as mock_iterate,
+            patch.object(type(component), "ctx", new_callable=dict),
+            patch.object(component, "_id", "test_id"),
+        ):
+            result = component.true_response()
+
+            assert isinstance(result, Message)
+            assert result.text == "literal string override"
+            assert result.text != "passthrough text"
+            mock_iterate.assert_called_once_with("false_result")
+
+    @pytest.mark.parametrize(
+        ("case_message", "expected_text"),
+        [
+            ("literal string override", "literal string override"),  # non-empty str -> wrapped as Message
+            ("", "passthrough text"),  # empty str -> falls back to input_text
+            (None, "passthrough text"),  # unset / None -> falls back to input_text
+        ],
+    )
+    async def test_resolve_case_message_str_and_none_fallback(
+        self, component_class, default_kwargs, case_message, expected_text
+    ):
+        """_resolve_case_message handles raw str and None defensively, falling back to input_text when blank."""
+        component = await self.component_setup(component_class, default_kwargs)
+        component.input_text = "passthrough text"
+
+        result = component._resolve_case_message(case_message)
+
+        assert isinstance(result, Message)
+        assert result.text == expected_text
+
     async def test_update_build_config_regex_operator(self, component_class, default_kwargs):
         """Test update_build_config when operator is regex."""
         component = await self.component_setup(component_class, default_kwargs)
