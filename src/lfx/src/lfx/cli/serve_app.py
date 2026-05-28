@@ -227,6 +227,20 @@ class FlowRegistry:
             if old_store_key is not None:
                 self._store.delete(old_store_key)
                 self._flows.pop(old_store_key, None)
+            elif getattr(self._store, "is_persistent", False):
+                # No alias recorded — the replace path skips the get() that would
+                # have learned it. A pre-placed file (e.g. my-flow.json) may still
+                # carry meta.id in its JSON "id" field under a differently-named key.
+                # Scan and delete it so the new {uuid}.json is the single source of
+                # truth. Mirrors remove()'s scan for the same stem-keyed-file case.
+                for stem_id in self._store.list_ids():
+                    if stem_id == meta.id:
+                        continue
+                    stem_raw = self._store.read(stem_id)
+                    if stem_raw and stem_raw.get("id") == meta.id:
+                        self._store.delete(stem_id)
+                        self._flows.pop(stem_id, None)
+                        self._store_meta_cache.pop(stem_id, None)
         if raw_json is not None:
             self._store.write(meta.id, raw_json)
             if getattr(self._store, "is_persistent", False):

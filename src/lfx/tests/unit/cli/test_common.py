@@ -13,7 +13,6 @@ from lfx.cli.common import (
     create_verbose_printer,
     execute_graph_with_capture,
     extract_result_data,
-    flow_id_from_content,
     flow_id_from_path,
     get_api_key,
     get_best_access_host,
@@ -554,25 +553,3 @@ class TestResultExtraction:
             "success": True,
             "logs": "logs",
         }
-
-
-class TestFlowIdFromContent:
-    def test_deterministic_same_input(self):
-        data = {"nodes": [{"id": "n1"}], "edges": []}
-        assert flow_id_from_content(data) == flow_id_from_content(data)
-
-    def test_different_content_different_id(self):
-        a = {"nodes": [{"id": "n1"}], "edges": []}
-        b = {"nodes": [{"id": "n2"}], "edges": []}
-        assert flow_id_from_content(a) != flow_id_from_content(b)
-
-    def test_key_order_independent(self):
-        a = {"edges": [], "nodes": []}
-        b = {"nodes": [], "edges": []}
-        assert flow_id_from_content(a) == flow_id_from_content(b)
-
-    def test_returns_uuid_string(self):
-        import uuid
-
-        result = flow_id_from_content({"nodes": [], "edges": []})
-        uuid.UUID(result)  # raises ValueError if not a valid UUID string

@@ -505,6 +505,54 @@ class TestFlowRegistry:
         assert result is not None
         assert result[1].title == "prompt_one v2", "new worker must serve the updated flow, not the old one"
 
+    def test_overwrite_unaliased_preplaced_flow_removes_old_store_file(self):
+        """add(overwrite=True) must delete a pre-placed file even when get() never ran.
+
+        The replace path in upload_flow skips registry.get(), so _store_keys never
+        records the stem alias and old_store_key is None. add() must still scan the
+        store for a file whose JSON "id" matches and delete it — otherwise both
+        prompt_one.json and {uuid}.json survive.
+        """
+        from unittest.mock import MagicMock
+
+        json_uuid = "b0529294-e297-41d1-9303-2c2128b7860a"
+        old_raw = {"name": "prompt_one", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+        deleted: list[str] = []
+        store_data: dict[str, dict] = {"prompt_one": old_raw}
+
+        class StubStore:
+            is_persistent = True
+
+            def write(self, fid, data):
+                store_data[fid] = data
+
+            def read(self, fid):
+                return store_data.get(fid)
+
+            def delete(self, fid):
+                existed = fid in store_data
+                store_data.pop(fid, None)
+                deleted.append(fid)
+                return existed
+
+            def list_ids(self):
+                return list(store_data)
+
+        registry = FlowRegistry(store=StubStore())
+
+        # No registry.get("prompt_one") here — the replace path skips it, so the
+        # stem alias is never recorded.
+        new_graph = MagicMock()
+        new_graph.context = {}
+        new_meta = FlowMeta(id=json_uuid, relative_path="<uploaded>", title="prompt_one v2", description=None)
+        new_raw = {"name": "prompt_one v2", "id": json_uuid, "data": {"nodes": [], "edges": []}}
+        registry.add(new_graph, new_meta, overwrite=True, raw_json=new_raw)
+
+        assert "prompt_one" in deleted, "stale stem file must be deleted on overwrite"
+        assert json_uuid in store_data, "new file must be written under the UUID"
+        assert "prompt_one" not in store_data, "old stem file must be gone — no duplicate"
+        assert list(store_data) == [json_uuid], "store must hold a single file"
+
     def test_registry_add_with_raw_json_writes_to_store(self):
         """add(raw_json=...) must write to store."""
         from unittest.mock import MagicMock

@@ -34,12 +34,58 @@ class TestFilesystemFlowStore:
     def test_read_missing_returns_none(self, tmp_path):
         assert FilesystemFlowStore(tmp_path).read("nonexistent") is None
 
-    def test_write_is_atomic(self, tmp_path):
-        """Write must use rename so readers never see partial JSON."""
+    def test_write_leaves_no_temp_files(self, tmp_path):
+        """Write must clean up its temp file after the rename."""
         store = FilesystemFlowStore(tmp_path)
         store.write("flow-1", {"name": "test"})
         assert list(tmp_path.glob("*.tmp")) == [], "no temp files should remain after write"
         assert (tmp_path / "flow-1.json").exists()
+
+    def test_write_is_atomic_under_concurrent_reads(self, tmp_path):
+        """Concurrent readers must only ever observe a complete old or new payload.
+
+        A reader looping read() while a writer overwrites must never see a partial
+        file. A non-atomic write (writing into the target in place) would let a
+        reader see truncated JSON, which read() does not guard against, so
+        json.loads would raise and surface in the reader thread.
+        """
+        import threading
+
+        store = FilesystemFlowStore(tmp_path)
+        # Large, distinct payloads so a torn write is detectable and a partial
+        # read would fail json.loads.
+        payload_a = {"name": "A", "data": {"nodes": [{"i": i} for i in range(2000)]}}
+        payload_b = {"name": "B", "data": {"edges": [{"j": j} for j in range(2000)]}}
+        valid = (payload_a, payload_b)
+
+        store.write("flow-1", payload_a)
+
+        errors: list[Exception] = []
+        observed: list[dict | None] = []
+        stop = threading.Event()
+
+        def reader() -> None:
+            try:
+                while not stop.is_set():
+                    observed.append(store.read("flow-1"))
+            except Exception as exc:
+                errors.append(exc)
+
+        readers = [threading.Thread(target=reader) for _ in range(4)]
+        for t in readers:
+            t.start()
+        try:
+            for _ in range(200):
+                store.write("flow-1", payload_b)
+                store.write("flow-1", payload_a)
+        finally:
+            stop.set()
+            for t in readers:
+                t.join()
+
+        assert not errors, f"reader saw a corrupt/partial file: {errors[:1]}"
+        assert observed, "reader never managed to read"
+        assert all(r in valid for r in observed), "reader observed a non-atomic intermediate state"
 
     def test_delete_existing_returns_true(self, tmp_path):
         store = FilesystemFlowStore(tmp_path)
