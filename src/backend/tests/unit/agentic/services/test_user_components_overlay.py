@@ -281,6 +281,16 @@ class TestRegistryOverlay:
             "  B.output -> C.input_value\n"
             "config:\n"
             '  A.input_value: "14"\n'
+            # Disable DB persistence so the test is independent of the
+            # SQLAlchemy message-store schema. ChatInput / ChatOutput call
+            # ``self.send_message`` on build when ``should_store_message=true``
+            # (default); in batched suites that DB may lack the ``message``
+            # table, surfacing as ``"(sqlite3.OperationalError) no such table"``.
+            # The intent of this test is to verify the user-registered
+            # ``PrimeChecker`` actually runs end-to-end — message persistence
+            # is unrelated to that contract.
+            "  A.should_store_message: false\n"
+            "  C.should_store_message: false\n"
         )
         built = build_flow_from_spec(spec, registry=registry)
         assert "error" not in built, built
@@ -345,6 +355,10 @@ class TestRegistryOverlay:
             "  A.output -> B.input_value\n"
             "config:\n"
             "  A.amount: 14\n"
+            # See sibling test above — ChatOutput's default
+            # ``should_store_message=true`` triggers a DB write that the
+            # batched suite environment may not have a schema for.
+            "  B.should_store_message: false\n"
         )
         built = build_flow_from_spec(spec, registry=registry)
         assert "error" not in built, built
