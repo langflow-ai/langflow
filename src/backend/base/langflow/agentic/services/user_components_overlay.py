@@ -110,6 +110,12 @@ def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
                 class_name,
             )
             continue
+        # Tag the entry so the flow-builder emits its canvas node as
+        # ``CustomComponent`` (see ``_make_node``). Without this, a node the
+        # assistant builds from a user component carries the class name as its
+        # type, which the frontend can't find in the global template list and
+        # paints with a bogus "Update available" badge.
+        entry["custom"] = True
         overlay[class_name] = entry
 
     if not overlay:

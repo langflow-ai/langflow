@@ -162,6 +162,29 @@ class TestRegistryOverlay:
         else:
             assert code_field == SAMPLE_CODE
 
+    def test_should_mark_user_overlay_entry_as_custom(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        # Bug #6 (PR-12575): a node the assistant builds from a user component
+        # must land on the canvas as CustomComponent, else the frontend can't
+        # resolve its type in the global template list and paints a spurious
+        # "Update available" badge. The flow-builder keys that decision off the
+        # ``custom`` flag the overlay stamps here.
+        register_user_component(
+            user_id="user-alice",
+            class_name="SumComponent",
+            code=SAMPLE_CODE,
+        )
+
+        registry = load_registry_with_user_overlay(user_id="user-alice")
+
+        assert registry["SumComponent"].get("custom") is True
+
+    def test_should_not_mark_base_builtin_entry_as_custom(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
+        # Built-ins have a real /all template, so they must stay un-marked
+        # (otherwise the flow-builder would relabel them as CustomComponent).
+        registry = load_registry_with_user_overlay(user_id="user-alice")
+
+        assert registry["ChatInput"].get("custom") is not True
+
     def test_overlay_outputs_match_the_user_classs_real_output(self, isolated_sandbox: Path) -> None:  # noqa: ARG002
         # Production bug: a generated component whose output method/name is
         # NOT the CustomComponent default (`output`/`build_output`) builds a
@@ -232,7 +255,9 @@ class TestRegistryOverlay:
         assert "error" not in result, result
 
         nodes = result["flow"]["data"]["nodes"]
-        prime = next(n for n in nodes if n["data"]["type"] == "PrimeChecker")
+        # User components ride the canvas as CustomComponent (so the frontend
+        # doesn't flag them "Update available"); find by display_name instead.
+        prime = next(n for n in nodes if n["data"]["node"].get("display_name") == "PrimeChecker")
         methods = {o["method"] for o in prime["data"]["node"]["outputs"]}
         assert "build_result" in methods, prime["data"]["node"]["outputs"]
         assert "build_output" not in methods, prime["data"]["node"]["outputs"]

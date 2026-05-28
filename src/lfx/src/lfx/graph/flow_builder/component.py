@@ -19,6 +19,13 @@ import yaml
 
 from lfx.graph.flow_builder._utils import node_id as _node_id
 
+# Canvas type for user-authored code components. The frontend resolves this in
+# its global template list and exempts it from the "Update available" check
+# (componentsToIgnoreUpdate). User overlay entries are keyed by class name in
+# the registry so the agent can reference them, but their canvas node must wear
+# this type or the frontend flags them as a missing/outdated component.
+_CUSTOM_COMPONENT_TYPE = "CustomComponent"
+
 
 def _generate_id(component_type: str) -> str:
     """Generate a component ID like 'ChatInput-a1B2c'."""
@@ -76,6 +83,13 @@ def _make_node(
     node_data = copy.deepcopy(registry[component_type])
     _normalize_outputs(node_data)
 
+    # User-overlay (assistant-generated) entries are tagged ``custom``. Strip
+    # the internal marker and label the canvas node as CustomComponent so the
+    # frontend treats it like any user-authored component (no spurious
+    # "Update available" badge). Built-ins keep their own type.
+    is_custom = bool(node_data.pop("custom", False))
+    node_type = _CUSTOM_COMPONENT_TYPE if is_custom else component_type
+
     return {
         "id": cid,
         "type": "genericNode",
@@ -83,7 +97,7 @@ def _make_node(
         "selected": False,
         "data": {
             "id": cid,
-            "type": component_type,
+            "type": node_type,
             "node": node_data,
             "showNode": True,
         },

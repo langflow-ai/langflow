@@ -46,6 +46,7 @@ from langflow.agentic.services.agent_run_context import (
     reset_agent_run_model,
     set_agent_run_model,
 )
+from langflow.agentic.services.component_events import drain_component_events, reset_component_events
 from langflow.agentic.services.conversation_buffer import (
     ConversationTurn,
     get_conversation_buffer,
@@ -403,6 +404,31 @@ async def execute_flow_with_validation(
     }
 
 
+def _append_component_failure_caveat(result: dict, failures: list[str]) -> dict:
+    """Append an honest caveat when a flow was delivered despite a failed component.
+
+    In a compound turn the agent can fail ``generate_component`` and still build
+    a flow with a substitute. The transient ``validation_failed`` progress event
+    is overwritten by later steps, so without this the user is told a flow is
+    ready and never learns the component they asked for was dropped. Mirrors the
+    flow-verification caveat: a ``⚠️`` line appended to the final message.
+
+    No-op when no component failed this turn (input unchanged).
+    """
+    reasons = [f for f in failures if f]
+    if not reasons:
+        return result
+    detail = reasons[-1]
+    caveat = f"I couldn't create the custom component you asked for, so it is not in this flow. Reason: {detail}"
+    base_text = (result.get("result") or "").rstrip()
+    return {
+        **result,
+        "result": f"{base_text}\n\n⚠️ {caveat}".strip(),
+        "component_generation_failed": True,
+        "component_failure_caveat": caveat,
+    }
+
+
 def _reconcile_flow_updates(
     updates: list[dict],
     *,
@@ -563,6 +589,7 @@ async def execute_flow_with_validation_streaming(
     # Reset per-request state before any tool can run or the canvas is read.
     reset_working_flow()
     reset_file_events()
+    reset_component_events()
     reset_tool_cache()
 
     # Load the user's current canvas ONCE (this also seeds the working flow
@@ -749,6 +776,15 @@ async def execute_flow_with_validation_streaming(
         # max_retries=0 means 1 attempt (no retries), matching non-streaming semantics
         total_attempts = max_retries + 1
 
+        # Bug 7 [P2] — every generate_component failure seen this turn. The
+        # transient validation_failed progress event is overwritten as soon as
+        # the agent moves on (the frontend keeps only the latest progress), so
+        # in a compound turn that substitutes a generic component the failure
+        # would vanish. Accumulate the reasons and append an honest caveat to
+        # the final message so the user is never told a flow is ready without
+        # learning the component they asked for could not be built.
+        component_failures: list[str] = []
+
         # Bug 1 [P1] — track every model attempted on this turn so the
         # fallback chain can't pick a model that already returned
         # `model_not_found`. Seeded with the resolver's default so the
@@ -873,6 +909,19 @@ async def execute_flow_with_validation_streaming(
                                         path=file_event["path"],
                                         size=file_event["size"],
                                         content=file_event.get("content"),
+                                    )
+                                # Drain component-generation failures: a swallowed
+                                # generate_component sub-task becomes an honest
+                                # validation_failed signal, never buried in prose.
+                                for comp_event in drain_component_events():
+                                    component_failures.append(comp_event.get("error", ""))
+                                    yield format_progress_event(
+                                        "validation_failed",
+                                        attempt + 1,
+                                        total_attempts,
+                                        error=comp_event.get("error"),
+                                        class_name=comp_event.get("class_name"),
+                                        component_code=comp_event.get("component_code"),
                                     )
                                 yield format_token_event(event_data)
                             elif event_type == "flow_preview":
@@ -1010,6 +1059,17 @@ async def execute_flow_with_validation_streaming(
                     size=file_event["size"],
                     content=file_event.get("content"),
                 )
+            # Same for a generate_component failure that landed in the trailing batch.
+            for comp_event in drain_component_events():
+                component_failures.append(comp_event.get("error", ""))
+                yield format_progress_event(
+                    "validation_failed",
+                    attempt + 1,
+                    total_attempts,
+                    error=comp_event.get("error"),
+                    class_name=comp_event.get("class_name"),
+                    component_code=comp_event.get("component_code"),
+                )
 
             # NOTE: no `document_ready` step is emitted. The manage_files
             # path renders its final card directly when ``complete`` arrives
@@ -1065,6 +1125,11 @@ async def execute_flow_with_validation_streaming(
                         total_attempts,
                         message="Flow ready — review and continue",
                     )
+                # Honest surfacing: if a generate_component sub-task failed this
+                # turn but we still delivered a flow (the agent substituted),
+                # the user must be told — never claim a flow is ready while
+                # silently dropping the component they asked for.
+                result = _append_component_failure_caveat(result, component_failures)
                 yield _complete({**result, "has_flow": True, "continuation_expected": continuation_expected})
                 reset_working_flow()
                 return

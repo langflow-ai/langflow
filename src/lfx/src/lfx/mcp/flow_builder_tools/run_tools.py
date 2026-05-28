@@ -425,4 +425,18 @@ class GenerateComponent(Component):
             return Data(data={"text": text, "class_name": class_name, "component_code": result.get("component_code")})
 
         err = result.get("validation_error") or result.get("result") or "Component generation failed."
+        # Surface the failure as a structured signal, not just an error string
+        # the agent can bury in prose or paper over by substituting a generic
+        # component. assistant_service drains this and emits a `validation_failed`
+        # progress event so the user is told honestly the component wasn't built.
+        try:
+            from langflow.agentic.services.component_events import emit_component_generation_failed
+
+            emit_component_generation_failed(
+                error=err,
+                class_name=result.get("class_name"),
+                component_code=result.get("component_code"),
+            )
+        except ImportError:
+            pass
         return Data(data={"error": err, "text": err})
