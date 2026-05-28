@@ -2,6 +2,7 @@
 
 import contextlib
 from pathlib import Path
+from typing import Any
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
@@ -104,6 +105,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Use SSL/TLS",
             value=False,
             advanced=True,
+            real_time_refresh=True,
             info="Enable SSL/TLS encryption for database connection. Recommended for production environments.",
         ),
         StrInput(
@@ -172,6 +174,14 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             method="perform_search",
         ),
     ]
+
+    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
+        """Update build configuration to show/hide SSL fields based on use_ssl toggle."""
+        if field_name == "use_ssl":
+            # Show/hide SSL certificate fields based on use_ssl value
+            build_config["ssl_certificate_path"]["show"] = field_value
+            build_config["ssl_certificate_password"]["show"] = field_value
+        return build_config
 
     def perform_search(self) -> DataFrame:
         """Return search results as a DataFrame."""
