@@ -10,7 +10,7 @@ from __future__ import annotations
 from types import SimpleNamespace
 from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import HTTPException
@@ -67,7 +67,12 @@ def _wxo_deployment_provider_data(
     }
 
 
-def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) -> SimpleNamespace:
+def _mock_deployment_row(
+    resource_key: str,
+    deployment_type: str | None = None,
+    *,
+    user_id: UUID | None = None,
+) -> SimpleNamespace:
     return SimpleNamespace(
         id=uuid4(),
         resource_key=resource_key,
@@ -75,6 +80,7 @@ def _mock_deployment_row(resource_key: str, deployment_type: str | None = None) 
         description=None,
         deployment_type=deployment_type,
         deployment_provider_account_id=uuid4(),
+        user_id=user_id or uuid4(),
     )
 
 
@@ -351,8 +357,9 @@ class TestListDeploymentsSynced:
         mock_count,
     ):
         """Rows whose resource_key is in the provider's known set are kept."""
-        row1 = _mock_deployment_row("rk-1")
-        row2 = _mock_deployment_row("rk-2")
+        owner_id = uuid4()
+        row1 = _mock_deployment_row("rk-1", user_id=owner_id)
+        row2 = _mock_deployment_row("rk-2", user_id=owner_id)
         fv_id = uuid4()
         mock_list.side_effect = [[(row1, 0, []), (row2, 1, [(fv_id, "snap-1")])], []]
         mock_fetch.return_value = (
@@ -400,9 +407,9 @@ class TestListDeploymentsSynced:
         mock_count,
     ):
         """Rows not recognised by the provider are deleted."""
-        stale_row = _mock_deployment_row("rk-stale")
-        good_row = _mock_deployment_row("rk-good")
         uid = uuid4()
+        stale_row = _mock_deployment_row("rk-stale", user_id=uid)
+        good_row = _mock_deployment_row("rk-good", user_id=uid)
         db = _mock_async_db()
 
         # First call returns stale + good; second call returns empty (all consumed)
@@ -462,9 +469,10 @@ class TestListDeploymentsSynced:
             def extract_list_item_provider_data(self, provider_view) -> dict[str, dict[str, Any]]:
                 return {str(item.id): item.provider_data for item in provider_view.deployments}
 
-        stale_row = _mock_deployment_row("rk-stale")
-        row1 = _mock_deployment_row("rk-1")
-        row2 = _mock_deployment_row("rk-2")
+        owner_id = uuid4()
+        stale_row = _mock_deployment_row("rk-stale", user_id=owner_id)
+        row1 = _mock_deployment_row("rk-1", user_id=owner_id)
+        row2 = _mock_deployment_row("rk-2", user_id=owner_id)
         mock_list.side_effect = [
             [(stale_row, 0, []), (row1, 0, [])],
             [(row2, 0, [])],
