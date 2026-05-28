@@ -37,7 +37,6 @@ class TestDB2VectorStoreComponent:
         comp.search_type = "Similarity"
         comp.number_of_results = 4
         comp.distance_strategy = "COSINE"
-        comp.allow_duplicates = True
         comp.should_cache_vector_store = False
         return comp
 
@@ -218,27 +217,40 @@ class TestDB2VectorStoreComponent:
             assert len(empty_results) == 0
 
     def test_duplicate_handling(self, component, mock_embedding):
-        """Test handling of duplicate documents."""
+        """Test handling of duplicate documents in the same batch."""
         component.embedding = mock_embedding
-        component.allow_duplicates = False
 
-        # Mock the build_vector_store to test duplicate logic
-        with patch.object(component, "build_vector_store") as mock_build:
+        # Set ingest data with duplicates (duplicates are always prevented)
+        component.ingest_data = [
+            Data(text="This is a test document"),
+            Data(text="This is a test document"),  # Duplicate
+            Data(text="This is another document"),
+        ]
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
             mock_vector_store = MagicMock()
-            mock_build.return_value = mock_vector_store
+            with (
+                patch.object(DB2VS, "__init__", return_value=None),
+                patch.object(DB2VS, "add_documents") as mock_add_docs,
+            ):
+                mock_vector_store.add_documents = mock_add_docs
+                component._add_documents_to_vector_store(mock_vector_store)
 
-            # Set ingest data with duplicates
-            component.ingest_data = [
-                Data(text="This is a test document"),
-                Data(text="This is a test document"),  # Duplicate
-                Data(text="This is another document"),
-            ]
-
-            # Call build to trigger duplicate handling
-            vector_store = component.build_vector_store()
-
-            # Verify vector store was created
-            assert vector_store is not None
+                # Verify only unique documents were added (2 out of 3)
+                if mock_add_docs.called:
+                    added_docs = mock_add_docs.call_args[0][0]
+                    assert len(added_docs) == 2, "Should only add 2 unique documents"
+                    # Verify the content of added documents
+                    contents = [doc.page_content for doc in added_docs]
+                    assert "This is a test document" in contents
+                    assert "This is another document" in contents
 
     def test_metadata_filtering_with_complex_data(self, component, mock_embedding):
         """Test that complex metadata is properly handled during ingestion."""
@@ -303,27 +315,34 @@ class TestDB2VectorStoreComponent:
             assert isinstance(result, DataFrame)
 
     def test_ssl_enabled_without_certificate(self, component, mock_embedding):
-        """Test SSL connection without custom certificate (system defaults)."""
+        """Test that SSL requires a certificate path."""
         component.embedding = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = None
 
-        with (
-            patch("ibm_db_dbi.connect") as mock_connect,
-            patch.object(component, "_add_documents_to_vector_store"),
-        ):
-            mock_connection = MagicMock()
-            mock_connect.return_value = mock_connection
+        # Should raise ValueError - certificate path is required when SSL is enabled
+        with pytest.raises(ValueError, match="SSL/TLS is enabled but no certificate path provided"):
+            component.build_vector_store()
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+    def test_ssl_enabled_with_empty_certificate(self, component, mock_embedding):
+        """Test that SSL requires a non-empty certificate path."""
+        component.embedding = mock_embedding
+        component.use_ssl = True
+        component.ssl_certificate_path = ""
 
-            with patch.object(DB2VS, "__init__", return_value=None):
-                component.build_vector_store()
+        # Should raise ValueError - certificate path is required
+        with pytest.raises(ValueError, match="SSL/TLS is enabled but no certificate path provided"):
+            component.build_vector_store()
 
-            # Verify SSL was enabled in connection string
-            call_args = mock_connect.call_args[0][0]
-            assert "SECURITY=SSL" in call_args
-            assert "SSLServerCertificate=" not in call_args  # No custom cert
+    def test_ssl_enabled_with_whitespace_certificate(self, component, mock_embedding):
+        """Test that SSL requires a non-whitespace certificate path."""
+        component.embedding = mock_embedding
+        component.use_ssl = True
+        component.ssl_certificate_path = "   "
+
+        # Should raise ValueError - certificate path is required
+        with pytest.raises(ValueError, match="SSL/TLS is enabled but no certificate path provided"):
+            component.build_vector_store()
 
     def test_ssl_enabled_with_local_certificate(self, component, mock_embedding):
         """Test SSL connection with local certificate file."""
@@ -526,33 +545,8 @@ class TestDB2VectorStoreComponent:
             call_args = mock_vector_store.similarity_search.call_args
             assert call_args[1]["query"] == "plain string query"
 
-    def test_similarity_score_threshold_search(self, component, mock_embedding):
-        """Test similarity search with score threshold."""
-        component.embedding = mock_embedding
-        component.search_type = "similarity_score_threshold"
-        component.score_threshold = 0.7
-        component.search_query = "test query"
-
-        with patch.object(component, "build_vector_store") as mock_build:
-            mock_vector_store = MagicMock()
-            # Mock documents with scores
-            mock_doc1 = MagicMock()
-            mock_doc1.page_content = "High relevance document"
-            mock_doc2 = MagicMock()
-            mock_doc2.page_content = "Low relevance document"
-
-            # Return docs with scores (above and below threshold)
-            mock_vector_store.similarity_search_with_relevance_scores.return_value = [
-                (mock_doc1, 0.9),  # Above threshold
-                (mock_doc2, 0.5),  # Below threshold
-            ]
-            mock_build.return_value = mock_vector_store
-
-            results = component.search_documents()
-
-            # Verify only high-scoring document is returned
-            assert len(results) == 1
-            assert "High relevance" in results[0].text
+            # Should not raise
+            component.search_documents()
 
     def test_metadata_cleared_during_ingestion(self, component, mock_embedding):
         """Test that metadata is cleared during document ingestion."""
@@ -661,19 +655,6 @@ class TestDB2VectorStoreComponent:
 
             mock_search.assert_called_once()
             assert result == [Data(text="result")]
-
-    def test_build_method_vector_store_mode(self, component, mock_embedding):
-        """Test build() method in Vector Store mode."""
-        component.embedding = mock_embedding
-        component.mode = "Vector Store"
-
-        with patch.object(component, "build_vector_store") as mock_build_vs:
-            mock_vector_store = MagicMock()
-            mock_build_vs.return_value = mock_vector_store
-            result = component.build()
-
-            mock_build_vs.assert_called_once()
-            assert result == mock_vector_store
 
     def test_build_method_ingest_mode(self, component, mock_embedding):
         """Test build() method in Ingest mode (default)."""

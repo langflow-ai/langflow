@@ -4,7 +4,7 @@ import contextlib
 from pathlib import Path
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, HandleInput, IntInput, SecretStrInput, StrInput
+from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.io import Output, QueryInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
@@ -49,9 +49,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         HandleInput(
             name="ingest_data",
             display_name="Ingest Data",
-            input_types=["Data", "DataFrame", "Table", "Message"],
+            input_types=["Data", "DataFrame", "Table"],
             is_list=True,
-            info="Data to ingest into the vector store. Supports Data, DataFrame, Table, and Message objects.",
+            info="Data to ingest into the vector store. Accepts Data objects, DataFrame, and Table.",
         ),
         QueryInput(
             name="search_query",
@@ -112,9 +112,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             required=False,
             advanced=True,
             info=(
-                "Optional: Path to SSL certificate file (.crt, .pem, .cer) or URL to download certificate. "
+                "Path to SSL certificate file (.crt, .pem, .cer) or URL to download certificate. "
                 "Supports local paths (relative/absolute) and URLs (https://...). "
-                "Leave empty to use system default CA certificates (recommended for IBM Cloud DB2)."
+                "Required when SSL/TLS is enabled."
             ),
         ),
         SecretStrInput(
@@ -135,17 +135,10 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             info="If True, the vector store will be cached for the current build of the component.",
         ),
-        BoolInput(
-            name="allow_duplicates",
-            display_name="Allow Duplicates",
-            advanced=True,
-            value=True,
-            info="If false, will not add documents that are already in the Vector Store.",
-        ),
         DropdownInput(
             name="search_type",
             display_name="Search Type",
-            options=["Similarity", "MMR", "similarity_score_threshold"],
+            options=["Similarity", "MMR"],
             value="Similarity",
             advanced=True,
             info="Type of search to perform",
@@ -156,13 +149,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             value=4,
             advanced=True,
             info="Number of results to return from search",
-        ),
-        FloatInput(
-            name="score_threshold",
-            display_name="Score Threshold",
-            value=0.5,
-            advanced=True,
-            info="Minimum relevance score (0-1) for similarity_score_threshold mode",
         ),
         DropdownInput(
             name="distance_strategy",
@@ -179,11 +165,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             display_name="Search Results",
             name="search_results",
             method="search_documents",
-        ),
-        Output(
-            display_name="Vector Store",
-            name="vector_store",
-            method="build_vector_store",
         ),
         Output(
             display_name="Table",
@@ -204,9 +185,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         return DataFrame(results)
 
     def _add_documents_to_vector_store(self, vector_store) -> None:
-        """Adds documents to the Vector Store - SIMPLIFIED like Chroma."""
-        from copy import deepcopy
-
+        """Adds documents to the Vector Store."""
         if not self.ingest_data:
             self.status = ""
             return
@@ -214,34 +193,32 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         # Convert DataFrame to Data if needed using parent's method
         ingest_data = self._prepare_ingest_data()
 
-        # Get existing documents for duplicate checking (simplified)
-        stored_documents_without_id = []
-        if not self.allow_duplicates:
-            # TODO: Implement db2_collection_to_data utility
-            # For now, skip duplicate checking to match Chroma's approach
-            stored_data = []
-            for value in deepcopy(stored_data):
-                if hasattr(value, "id"):
-                    del value.id
-                stored_documents_without_id.append(value)
+        # Duplicate checking is performed at ingestion time by comparing
+        # document content in the current batch. Database-level duplicate detection
+        # would require querying existing documents, which is not currently implemented.
+        documents_to_add = []
+        seen_documents = set()
 
-        # Process only Data objects (like Chroma)
-        documents = []
         for _input in ingest_data or []:
             if isinstance(_input, Data):
-                if _input not in stored_documents_without_id:
-                    documents.append(_input.to_lc_document())
+                # Create a hashable representation for duplicate detection
+                doc_content = _input.text if hasattr(_input, "text") else str(_input.data)
+
+                # Always prevent duplicates
+                if doc_content not in seen_documents:
+                    documents_to_add.append(_input.to_lc_document())
+                    seen_documents.add(doc_content)
             else:
                 msg = "Vector Store Inputs must be Data objects."
                 raise TypeError(msg)
 
         # Add documents with minimal metadata only to avoid storing file/session-related fields.
-        if documents and self.embedding is not None:
-            self.log(f"Adding {len(documents)} documents to the Vector Store.")
+        if documents_to_add and self.embedding is not None:
+            self.log(f"Adding {len(documents_to_add)} documents to the Vector Store.")
             try:
                 from langchain_community.vectorstores.utils import filter_complex_metadata
 
-                filtered_documents = filter_complex_metadata(documents)
+                filtered_documents = filter_complex_metadata(documents_to_add)
                 minimal_documents = []
                 for doc in filtered_documents:
                     doc.metadata = {}
@@ -250,7 +227,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             except ImportError:
                 self.log("Warning: Could not import filter_complex_metadata. Adding documents with stripped metadata.")
                 minimal_documents = []
-                for doc in documents:
+                for doc in documents_to_add:
                     doc.metadata = {}
                     minimal_documents.append(doc)
                 vector_store.add_documents(minimal_documents)
@@ -290,24 +267,30 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         if self.use_ssl:
             self.log("SSL/TLS enabled for database connection")
 
-            # Validate and prepare SSL certificate
+            # Validate that certificate path is provided when SSL is enabled
             cert_path_input = getattr(self, "ssl_certificate_path", None)
-            if cert_path_input and cert_path_input.strip():
-                self.log(f"Validating SSL certificate: {cert_path_input}")
-                ssl_cert_path, is_temp_cert, cert_error = validate_and_prepare_ssl_certificate(cert_path_input)
+            if not cert_path_input or not cert_path_input.strip():
+                msg = (
+                    "SSL/TLS is enabled but no certificate path provided. "
+                    "Please provide the SSL certificate path or disable SSL/TLS."
+                )
+                self.log(f"❌ {msg}")
+                raise ValueError(msg)
 
-                if cert_error:
-                    msg = f"SSL certificate validation failed: {cert_error}"
-                    self.log(f"❌ {msg}")
-                    raise ValueError(msg)
+            # Validate and prepare SSL certificate
+            self.log(f"Validating SSL certificate: {cert_path_input}")
+            ssl_cert_path, is_temp_cert, cert_error = validate_and_prepare_ssl_certificate(cert_path_input)
 
-                if is_temp_cert:
-                    self.log(f"Downloaded SSL certificate to temporary file: {ssl_cert_path}")
-                    temp_cert_cleanup = ssl_cert_path
-                else:
-                    self.log(f"Using SSL certificate: {ssl_cert_path}")
+            if cert_error:
+                msg = f"SSL certificate validation failed: {cert_error}"
+                self.log(f"❌ {msg}")
+                raise ValueError(msg)
+
+            if is_temp_cert:
+                self.log(f"Downloaded SSL certificate to temporary file: {ssl_cert_path}")
+                temp_cert_cleanup = ssl_cert_path
             else:
-                self.log("No SSL certificate provided - using system default CA certificates")
+                self.log(f"Using SSL certificate: {ssl_cert_path}")
         else:
             self.log("SSL/TLS disabled - connecting without encryption")
 
@@ -440,13 +423,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 query=query_text,
                 k=self.number_of_results,
             )
-        elif self.search_type == "similarity_score_threshold":
-            docs_and_scores = vector_store.similarity_search_with_relevance_scores(
-                query=query_text,
-                k=self.number_of_results,
-            )
-            # Apply threshold filtering
-            docs = [doc for doc, score in docs_and_scores if score >= self.score_threshold]
         else:  # MMR
             docs = vector_store.max_marginal_relevance_search(
                 query=query_text,
