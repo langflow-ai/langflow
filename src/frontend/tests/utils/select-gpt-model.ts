@@ -44,11 +44,12 @@ const enablePreferredOpenAiModel = async (page: Page) => {
   await page.getByTestId("provider-item-OpenAI").click();
   await page.waitForTimeout(500);
 
+  const apiKeyInput = page.getByTestId(
+    "provider-variable-input-OPENAI_API_KEY",
+  );
   const checkExistingKey = await page.getByTestId("input-end-icon").count();
-  if (checkExistingKey === 0) {
-    await page
-      .getByPlaceholder("Add API key")
-      .fill(process.env.OPENAI_API_KEY!);
+  if (checkExistingKey === 0 && (await apiKeyInput.count()) > 0) {
+    await apiKeyInput.fill(process.env.OPENAI_API_KEY!);
     await page.waitForSelector("text=OpenAI Api Key Saved", {
       timeout: 30000,
     });
