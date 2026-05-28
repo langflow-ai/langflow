@@ -4,6 +4,7 @@ import { test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   closeAdvancedOptions,
   openAdvancedOptions,
@@ -11,7 +12,6 @@ import {
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "should create a flow with decision",
   { tag: ["@release", "@components", "@workflow"] },

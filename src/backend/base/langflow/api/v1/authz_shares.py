@@ -103,11 +103,12 @@ async def _ensure_can_administer_share(
     if await authz.supports_cross_user_fetch() and await authz.is_enabled():
         # Why: in OSS, ``supports_cross_user_fetch()`` is False (see
         # LangflowAuthorizationService), so this early-return is dead and the
-        # explicit 403 below is the floor. In enterprise, the plugin is the
-        # authoritative gate via the ``ensure_share_permission()`` call that
-        # every share route makes immediately after this helper. Removing
-        # that downstream call — or weakening the plugin's cross-user fetch
-        # contract — REOPENS the ownership gap. Keep the two in lockstep.
+        # explicit 403 below is the floor. When an authorization plugin signals
+        # cross-user fetch support, the plugin is the authoritative gate via
+        # the ``ensure_share_permission()`` call that every share route makes
+        # immediately after this helper. Removing that downstream call — or
+        # weakening the plugin's cross-user fetch contract — REOPENS the
+        # ownership gap. Keep the two in lockstep.
         return
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,
@@ -135,8 +136,8 @@ async def create_share(
     # SECURITY: pass the *resource* owner (not the caller) so the owner-override
     # in ensure_share_permission only fast-paths the real resource owner. With
     # share_user_id=current_user.id the override would always trip and the
-    # enterprise plugin's enforce() would never run for non-owner creators when
-    # the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
+    # authorization plugin's enforce() would never run for non-owner creators
+    # when the OSS floor is bypassed (cross_user_fetch + AUTHZ_ENABLED).
     await ensure_share_permission(
         current_user,
         ShareAction.CREATE,

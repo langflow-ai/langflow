@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { skipIfMissing } from "../../utils/env/skip-if-missing";
@@ -9,7 +10,6 @@ import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { publishBasicPromptingAndOpenShareablePlayground } from "../../utils/playground/publish-and-open-shareable";
 import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "shareable playground: bot messages display token usage",
   { tag: ["@release", "@workspace", "@api"] },

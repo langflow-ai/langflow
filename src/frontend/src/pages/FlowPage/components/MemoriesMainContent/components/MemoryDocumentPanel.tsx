@@ -1,5 +1,5 @@
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { useTranslation } from "react-i18next";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { formatTimestamp } from "../helpers";
 import { MemoryDocumentPanelProps } from "../types";
 

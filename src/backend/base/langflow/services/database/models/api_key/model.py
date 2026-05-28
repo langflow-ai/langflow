@@ -21,7 +21,7 @@ class ApiKeyBase(SQLModel):
     last_used_at: datetime | None = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
-    expires_at: datetime | None = Field(default=None, nullable=True)
+    expires_at: datetime | None = Field(default=None, sa_column=Column(DateTime(timezone=True), nullable=True))
 
 
 class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]

@@ -1,7 +1,7 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetIngestionRun } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-run";
-import { useTranslation } from "react-i18next";
 
 interface IngestionRunDetailModalProps {
   kbName: string;

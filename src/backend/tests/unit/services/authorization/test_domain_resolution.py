@@ -1,4 +1,4 @@
-"""Tests for ``_resolve_casbin_domain``, ``_split_obj``, and action coercion."""
+"""Tests for ``_resolve_authz_domain``, ``_split_obj``, and action coercion."""
 
 from __future__ import annotations
 
@@ -8,15 +8,15 @@ from langflow.services.authorization import audit as authz_audit
 from langflow.services.authorization import guards as authz_guards
 
 
-def test_resolve_casbin_domain_precedence():
+def test_resolve_authz_domain_precedence():
     """Domain precedence: project > workspace > '*'."""
     ws, scope = uuid4(), uuid4()
-    assert authz_guards._resolve_casbin_domain(workspace_id=ws, scope_id=scope) == f"project:{scope}"
-    assert authz_guards._resolve_casbin_domain(workspace_id=ws, scope_id=None) == f"workspace:{ws}"
-    assert authz_guards._resolve_casbin_domain(workspace_id=None, scope_id=scope) == f"project:{scope}"
-    assert authz_guards._resolve_casbin_domain(workspace_id=None, scope_id=None) == "*"
+    assert authz_guards._resolve_authz_domain(workspace_id=ws, scope_id=scope) == f"project:{scope}"
+    assert authz_guards._resolve_authz_domain(workspace_id=ws, scope_id=None) == f"workspace:{ws}"
+    assert authz_guards._resolve_authz_domain(workspace_id=None, scope_id=scope) == f"project:{scope}"
+    assert authz_guards._resolve_authz_domain(workspace_id=None, scope_id=None) == "*"
     # Backward-compatible alias still resolves to the same function.
-    assert authz_guards._resolve_flow_domain is authz_guards._resolve_casbin_domain
+    assert authz_guards._resolve_flow_domain is authz_guards._resolve_authz_domain
 
 
 def test_split_obj_parses_uuid_suffix():

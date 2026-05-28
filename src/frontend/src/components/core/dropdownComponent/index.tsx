@@ -119,6 +119,7 @@ export default function Dropdown({
 
   // Utility functions
   const filterMetadataKeys = (
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     metadata: Record<string, any> = {},
     excludeKeys: string[] = [
       "api_endpoint",
@@ -179,6 +180,7 @@ export default function Dropdown({
     // Create a new metadata array that directly maps to filtered options
     if (optionsMetaData) {
       // Create a map of option -> metadata for quick lookup
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const metadataMap: Record<string, any> = {};
       validOptions.forEach((option, index) => {
         if (optionsMetaData[index]) {
@@ -286,6 +288,7 @@ export default function Dropdown({
 
         // Reset filteredMetadata to match the new filteredOptions
         if (optionsMetaData) {
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
           const metadataMap: Record<string, any> = {};
           validOptions.forEach((option, index) => {
             if (optionsMetaData[index]) {

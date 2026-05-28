@@ -9,6 +9,10 @@ import type {
   ExtensionEventsResponse,
 } from "@/types/extension-events";
 import { isOwnReload } from "./reload-dedup";
+import {
+  extractTypedErrorList,
+  renderTypedErrorList,
+} from "./typed-error-formatting";
 
 const IDLE_INTERVAL = 5000;
 const ACTIVE_INTERVAL = 1000;
@@ -153,11 +157,26 @@ export function useExtensionEvents(): UseExtensionEventsReturn {
               ? event.payload.components_changed.length
               : 0;
             const hasDelta = added > 0 || removed > 0 || changed > 0;
+            // Mirror bundleHeaderActions.onSuccess: a warning-bearing reload
+            // surfaces the diagnostics both inline on the success toast and
+            // as a separate blue notice. Without this branch a tab that
+            // picks up the event via the 30s mount-lookback (instead of
+            // the API response) sees only the green toast and silently
+            // loses the warnings the clicking tab saw.
+            const warnings = extractTypedErrorList(event.payload.warnings);
+            const warningList = renderTypedErrorList(warnings);
             alert.setSuccessData({
               title: hasDelta
                 ? `Reloaded ${bundle} (+${added} / -${removed} / ~${changed} components)`
                 : `Reloaded ${bundle} (no source changes detected)`,
+              ...(warningList ? { list: warningList.list } : {}),
             });
+            if (warningList && warningList.list.length > 0) {
+              alert.setNoticeData({
+                title: `Reloaded ${bundle} with warnings`,
+                list: warningList.list,
+              });
+            }
           } else if (
             event.type === "components_added" ||
             event.type === "components_removed"

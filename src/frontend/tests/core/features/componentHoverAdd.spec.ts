@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user can add components by hovering and clicking the plus icon",
   { tag: ["@release", "@components", "@workspace"] },

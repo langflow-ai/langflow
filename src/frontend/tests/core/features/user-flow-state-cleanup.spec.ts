@@ -1,7 +1,11 @@
 import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import {
+  openTemplatesModal,
+  waitForNewProjectButton,
+} from "../../utils/flow/new-project-flow";
 import { renameFlow } from "../../utils/rename-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "flow state should be properly cleaned up between user sessions",
   { tag: ["@release", "@api", "@database"] },
@@ -117,7 +121,7 @@ test(
     ]);
 
     // Create a flow for User A
-    await page.waitForSelector('[id="new-project-btn"]', { timeout: 60000 });
+    await waitForNewProjectButton(page, { timeout: 60000 });
     // Check that User A starts with an empty flows list
     expect(
       (
@@ -133,13 +137,12 @@ test(
 
     try {
       await page.getByTestId("new_project_btn_empty_page").click();
+      await page.waitForSelector('[data-testid="modal-title"]', {
+        timeout: 30000,
+      });
     } catch (_error) {
-      await page.getByTestId("new-project-btn").click();
+      await openTemplatesModal(page, { modalTimeout: 30000 });
     }
-
-    await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 30000,
-    });
 
     // Use blank-flow instead of the Basic Prompting template. The template
     // path provisions multiple components on the backend and, on Windows CI
