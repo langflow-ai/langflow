@@ -13,6 +13,8 @@ BOCHA_SEARCH_URL = "https://api.bochaai.com/v1/web-search"
 BOCHA_FRESHNESS_OPTIONS = ["noLimit", "oneDay", "oneWeek", "oneMonth", "oneYear"]
 BOCHA_MIN_RESULTS = 1
 BOCHA_MAX_RESULTS = 50
+BOCHA_EMPTY_RESULTS_MESSAGE = "No search results found."
+BOCHA_COUNT_VALIDATION_MESSAGE = f"Max Results must be an integer between {BOCHA_MIN_RESULTS} and {BOCHA_MAX_RESULTS}."
 
 
 class BochaWebSearchComponent(Component):
@@ -54,7 +56,10 @@ class BochaWebSearchComponent(Component):
             value=True,
         ),
         IntInput(
-            name="count", display_name="Max Results", info="The maximum number of results to return (1-50).", value=10
+            name="count",
+            display_name="Max Results",
+            info="The maximum number of results to return (1-50).",
+            value=10,
         ),
         MessageTextInput(
             name="include",
@@ -88,7 +93,7 @@ class BochaWebSearchComponent(Component):
         payload: dict = {
             "query": self.query,
             "summary": bool(self.summary),
-            "count": int(self.count),
+            "count": self._parse_count(),
         }
 
         if self.freshness:
@@ -103,12 +108,22 @@ class BochaWebSearchComponent(Component):
 
         return payload
 
+    def _parse_count(self) -> int:
+        try:
+            return int(self.count)
+        except (TypeError, ValueError) as exc:
+            raise ValueError(BOCHA_COUNT_VALIDATION_MESSAGE) from exc
+
     def _validate_search_inputs(self) -> str | None:
         if not self.api_key:
             return "Missing Bocha API Key."
         if not self.query or not str(self.query).strip():
             return "Empty search query."
-        if int(self.count) < BOCHA_MIN_RESULTS or int(self.count) > BOCHA_MAX_RESULTS:
+        try:
+            count = self._parse_count()
+        except ValueError as exc:
+            return str(exc)
+        if count < BOCHA_MIN_RESULTS or count > BOCHA_MAX_RESULTS:
             return f"Max Results must be between {BOCHA_MIN_RESULTS} and {BOCHA_MAX_RESULTS}."
         if self.freshness and self.freshness not in BOCHA_FRESHNESS_OPTIONS:
             return f"Invalid freshness value: {self.freshness}"
@@ -137,27 +152,39 @@ class BochaWebSearchComponent(Component):
         self._cached_search_results = search_results
         return search_results
 
-    def _build_text_output(self, search_results: dict) -> str:
+    def _build_text_output(self, search_results: object) -> str:
+        if not isinstance(search_results, dict):
+            return BOCHA_EMPTY_RESULTS_MESSAGE
         response_data = search_results.get("data", search_results)
+        if not isinstance(response_data, dict):
+            return BOCHA_EMPTY_RESULTS_MESSAGE
         web_pages = response_data.get("webPages", {})
+        if not isinstance(web_pages, dict):
+            return BOCHA_EMPTY_RESULTS_MESSAGE
         contexts = web_pages.get("value", [])
+        if not isinstance(contexts, list):
+            return BOCHA_EMPTY_RESULTS_MESSAGE
         if not contexts:
-            return "暂无搜索结果"
+            return BOCHA_EMPTY_RESULTS_MESSAGE
 
         max_context = min(len(contexts), 10)
         formatted_contexts = []
         for index in range(max_context):
             context = contexts[index]
+            if not isinstance(context, dict):
+                continue
             formatted_context = (
-                f"[[引用:{index + 1}]]\n"
-                f"网页标题:{context.get('name', '')}\n"
-                f"网页链接:{context.get('url', '')}\n"
-                f"网页内容:{context.get('summary') or context.get('snippet', '')}\n"
-                f"发布时间:{context.get('datePublished', '')}\n"
-                f"网站名称:{context.get('siteName') or context.get('name', '')}"
+                f"[[Reference:{index + 1}]]\n"
+                f"Webpage Title: {context.get('name', '')}\n"
+                f"Webpage URL: {context.get('url', '')}\n"
+                f"Webpage Content: {context.get('summary') or context.get('snippet', '')}\n"
+                f"Published Time: {context.get('datePublished', '')}\n"
+                f"Site Name: {context.get('siteName') or context.get('name', '')}"
             )
             formatted_contexts.append(formatted_context)
 
+        if not formatted_contexts:
+            return BOCHA_EMPTY_RESULTS_MESSAGE
         return "\n\n".join(formatted_contexts)
 
     def fetch_content(self) -> Data:
