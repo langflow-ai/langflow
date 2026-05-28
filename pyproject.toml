@@ -92,6 +92,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
+    "langflow-base[docling]>=0.9.5",
     "langchain-docling>=1.1.0",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",

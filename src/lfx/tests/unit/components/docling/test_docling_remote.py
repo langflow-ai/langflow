@@ -6,9 +6,7 @@ from typing import Any
 
 import httpx
 import pytest
-
-pytest.importorskip("docling_core")
-
+from lfx.base.data import docling_utils
 from lfx.components.docling import docling_remote
 from lfx.components.docling.docling_remote import DoclingRemoteComponent
 from lfx.inputs import TableInput
@@ -131,3 +129,33 @@ def test_poll_raises_later_4xx_before_json_parse(monkeypatch: pytest.MonkeyPatch
 
     assert pending_response.json_called is True
     assert not_found_response.json_called is False
+
+
+def test_poll_returns_exportable_document_when_docling_core_is_missing(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setattr(docling_remote.time, "sleep", lambda _seconds: None)
+
+    def _missing_docling_core():
+        dependency_name = "docling-core"
+        install_command = "install docling"
+        raise docling_utils.DoclingDependencyError(dependency_name, install_command)
+
+    monkeypatch.setattr(docling_utils, "_get_docling_document_class", _missing_docling_core)
+    component = DoclingRemoteComponent()
+    component._attributes["max_poll_timeout"] = 60
+    serialized_doc = {
+        "name": "remote-doc",
+        "texts": [{"text": "Remote heading", "label": "section_header", "level": 1}, {"text": "Remote body"}],
+    }
+    client = _Client(
+        [
+            _Response(200, {"task_status": "success"}),
+            _Response(200, {"document": {"json_content": serialized_doc}}),
+        ]
+    )
+
+    result = component._poll_and_fetch_result(client, "http://docling.test/v1", "task-1", "report.pdf")
+
+    assert result is not None
+    assert result.data["file_path"] == "report.pdf"
+    assert result.data["doc"].name == "remote-doc"
+    assert result.data["doc"].export_to_markdown() == "# Remote heading\n\nRemote body"
