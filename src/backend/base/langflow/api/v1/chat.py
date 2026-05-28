@@ -266,6 +266,17 @@ async def build_flow(
     except HTTPException as exc:
         raise deny_to_404(exc, detail=f"Flow with id {flow_id} not found") from exc
 
+    # Execute-only shares must run the stored graph — non-owners cannot inject
+    # alternate flow data via the request body (would bypass the owner's definition).
+    if data is not None and flow.user_id != current_user.id:
+        raise deny_to_404(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the flow owner can override flow data during build",
+            ),
+            detail=f"Flow with id {flow_id} not found",
+        )
+
     try:
         if data:
             validate_flow_for_current_settings(data.model_dump())

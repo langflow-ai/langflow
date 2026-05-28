@@ -125,6 +125,70 @@ async def test_build_flow_owner_succeeds(patch_build_flow):
 
 
 @pytest.mark.asyncio
+async def test_build_flow_shared_private_non_owner_succeeds(patch_build_flow):
+    """Non-owner can build a private shared flow when the plugin allows execute."""
+    from langflow.api.v1 import chat as chat_module
+
+    user = _make_user()
+    flow = _make_flow(owner_id=uuid4(), public=False)
+    patch_build_flow["read_flow"] = flow
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=user,
+        queue_service=_make_queue_service(),
+    )
+    assert result == {"job_id": "fake-job-id"}
+
+
+@pytest.mark.asyncio
+async def test_build_flow_non_owner_cannot_override_flow_data(patch_build_flow):
+    """Non-owner with execute access cannot supply alternate graph data in the body."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+
+    user = _make_user()
+    flow = _make_flow(owner_id=uuid4(), public=False)
+    patch_build_flow["read_flow"] = flow
+    override = FlowDataRequest(nodes=[{"id": "n1"}], edges=[])
+
+    with pytest.raises(HTTPException) as excinfo:
+        await chat_module.build_flow(
+            flow_id=flow.id,
+            background_tasks=None,
+            current_user=user,
+            queue_service=_make_queue_service(),
+            data=override,
+        )
+    assert excinfo.value.status_code == 404
+    assert f"Flow with id {flow.id} not found" in excinfo.value.detail
+
+
+@pytest.mark.asyncio
+async def test_build_flow_owner_can_override_flow_data(patch_build_flow, monkeypatch):
+    """Owner may still pass flow data overrides in the build request."""
+    from langflow.api.v1 import chat as chat_module
+    from langflow.api.v1.schemas import FlowDataRequest
+
+    monkeypatch.setattr(chat_module, "validate_flow_for_current_settings", lambda _data: None)
+
+    owner = _make_user()
+    flow = _make_flow(owner_id=owner.id, public=False)
+    patch_build_flow["read_flow"] = flow
+    override = FlowDataRequest(nodes=[{"id": "n1"}], edges=[])
+
+    result = await chat_module.build_flow(
+        flow_id=flow.id,
+        background_tasks=None,
+        current_user=owner,
+        queue_service=_make_queue_service(),
+        data=override,
+    )
+    assert result == {"job_id": "fake-job-id"}
+
+
+@pytest.mark.asyncio
 async def test_build_flow_plugin_deny_returns_404_not_403(patch_build_flow):
     """ensure_flow_permission raising 403 must surface as 404 (UUID privacy)."""
     from langflow.api.v1 import chat as chat_module
