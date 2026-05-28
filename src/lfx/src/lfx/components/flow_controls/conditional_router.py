@@ -194,7 +194,7 @@ class ConditionalRouterComponent(Component):
                 self.iterate_and_stop_once("false_result")
             return true_message
         self.iterate_and_stop_once("true_result")
-        return Message(content="")
+        return Message(text="")
 
     def false_response(self) -> Message:
         result = self.evaluate_condition(
@@ -208,7 +208,7 @@ class ConditionalRouterComponent(Component):
             return false_message
 
         self.iterate_and_stop_once("false_result")
-        return Message(content="")
+        return Message(text="")
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "operator":
