@@ -136,27 +136,30 @@ export const ErrorView = ({
       {showLoading ? (
         <ErrorLoadingState />
       ) : (
-        blocks.map((block, blockIndex) => (
-          <div
-            key={blockIndex}
-            className="w-full rounded-xl border border-border/70 bg-primary-foreground p-2 text-sm text-foreground shadow-sm ring-1 ring-inset ring-destructive/15"
-          >
-            {block.contents.map((content, contentIndex) => {
-              if (content.type === "error") {
-                return (
-                  <ErrorAccordion
-                    key={contentIndex}
-                    content={content}
-                    chat={chat}
-                    closeChat={closeChat}
-                    fitViewNode={fitViewNode}
-                  />
-                );
-              }
-              return null;
-            })}
-          </div>
-        ))
+        <div className="flex flex-col gap-2" data-testid="error-card-stack">
+          {blocks.map((block, blockIndex) => (
+            <div
+              key={blockIndex}
+              className="w-full rounded-xl border border-border/70 bg-primary-foreground p-2 text-sm text-foreground shadow-sm ring-1 ring-inset ring-destructive/15"
+              data-testid="error-card"
+            >
+              {block.contents.map((content, contentIndex) => {
+                if (content.type === "error") {
+                  return (
+                    <ErrorAccordion
+                      key={contentIndex}
+                      content={content}
+                      chat={chat}
+                      closeChat={closeChat}
+                      fitViewNode={fitViewNode}
+                    />
+                  );
+                }
+                return null;
+              })}
+            </div>
+          ))}
+        </div>
       )}
     </AnimatePresence>
   );
