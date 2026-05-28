@@ -22,6 +22,7 @@ interface ToolbarModalsProps {
   setOpenModal: (value: boolean) => void;
 
   // Data and handlers
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any;
   flowComponent: FlowType;
   handleOnNewValue: (value: string | string[]) => void;

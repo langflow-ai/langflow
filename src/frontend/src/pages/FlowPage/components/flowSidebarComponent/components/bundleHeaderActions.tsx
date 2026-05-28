@@ -8,42 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type {
-  ExtensionErrorPayload,
-  ReloadBundleResponse,
-} from "@/controllers/API/queries/extensions";
+import type { ReloadBundleResponse } from "@/controllers/API/queries/extensions";
 import { useReloadBundle } from "@/controllers/API/queries/extensions";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import { markOwnReload } from "@/hooks/extensions/reload-dedup";
+import { renderTypedErrorList } from "@/hooks/extensions/typed-error-formatting";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-
-type AlertList = { title: string; list: string[] } | undefined;
-
-/**
- * Render a list of typed errors / warnings into the alert-store list shape.
- *
- * The UI shows the first sentence (code + message) plus the hint indented;
- * keeping the hint in the same alert means the user does not need to dig
- * for the fix when a reload fails.  Returns ``undefined`` when the input
- * list is empty so the alert store does not render an empty bullet list.
- */
-function renderTypedErrorList(
-  payloads: readonly ExtensionErrorPayload[],
-): AlertList {
-  if (payloads.length === 0) {
-    return undefined;
-  }
-  const list = payloads.flatMap((p) => {
-    const lines: string[] = [`[${p.code}] ${p.message}`];
-    if (p.hint) {
-      lines.push(`  ${p.hint}`);
-    }
-    return lines;
-  });
-  return { title: "Reload diagnostics", list };
-}
 
 interface BundleHeaderActionsProps {
   bundleName: string;

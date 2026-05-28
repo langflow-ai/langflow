@@ -1,11 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-import { renameFlow } from "../../utils/rename-flow";
-import { zoomOut } from "../../utils/zoom-out";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { renameFlow } from "../../utils/rename-flow";
+
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
   { tag: ["@release", "@api", "@database", "@mainpage"] },

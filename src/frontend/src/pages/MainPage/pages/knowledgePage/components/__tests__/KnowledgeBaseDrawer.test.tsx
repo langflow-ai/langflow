@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from "@testing-library/react";
-import React from "react";
 
 // Mock the component to avoid complex dependency chains
 jest.mock("../KnowledgeBaseDrawer", () => {

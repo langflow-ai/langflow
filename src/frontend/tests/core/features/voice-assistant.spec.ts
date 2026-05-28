@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 // TODO: Need to review the voice assistant vs text to voice
 test.skip(
   "should able to see and interact with voice assistant",

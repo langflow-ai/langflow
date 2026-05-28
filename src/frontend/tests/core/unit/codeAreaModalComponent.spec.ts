@@ -1,8 +1,8 @@
 import { expect } from "@playwright/test";
 import { test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "CodeAreaModalComponent",
   { tag: ["@release", "@workspace"] },
