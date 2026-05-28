@@ -138,7 +138,7 @@ jobs:
           curl -fsSL -X POST http://127.0.0.1:7860/api/v1/variables/ \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"name": "migration_witness_secret", "value": "witness_value_12345", "type": "Credential"}' > variable_response.json  # pragma: allowlist secret
+            -d '{"name": "migration_witness_secret", "value": "witness_value_12345", "type": "Credential", "default_fields": []}' > variable_response.json  # pragma: allowlist secret
 
           if ! grep -q '"id"' variable_response.json; then
             echo "❌ Credential creation failed - no id in response"
@@ -377,7 +377,7 @@ jobs:
           curl -fsSL -X POST http://localhost:7860/api/v1/variables/ \
             -H "Content-Type: application/json" \
             -H "Authorization: Bearer $TOKEN" \
-            -d '{"name": "migration_witness_secret", "value": "witness_value_12345", "type": "Credential"}' > variable_response.json  # pragma: allowlist secret
+            -d '{"name": "migration_witness_secret", "value": "witness_value_12345", "type": "Credential", "default_fields": []}' > variable_response.json  # pragma: allowlist secret
 
           if ! grep -q '"id"' variable_response.json; then
             echo "❌ Credential creation failed - no id in response"
