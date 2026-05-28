@@ -313,19 +313,6 @@ jobs:
       nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
     secrets: inherit
 
-
-  db-migration-validation:
-    name: Run DB Migration Validation
-    needs: [create-nightly-tag, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && always() && needs.release-nightly-build.result == 'success' }}
-    uses: ./.github/workflows/db-migration-validation.yml
-    with:
-      # Pass Docker image reference for docker-compose and version without 'v' prefix for pip
-      # release_tag format: v1.10.0.dev20260522
-      # We need: langflowai/langflow-nightly:1.10.0.dev20260522 for Docker
-      nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
-    secrets: inherit
-
   slack-notification:
     name: Send Slack Notification
     needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build, db-migration-validation]
