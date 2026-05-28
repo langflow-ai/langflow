@@ -444,6 +444,21 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(payload).toEqual({ deployment_id: "deploy-1" });
   });
 
+  it("detects empty update payloads", async () => {
+    const { isDeploymentUpdatePayloadEmpty } = await import(
+      "../helpers/deployment-payload-builders"
+    );
+    expect(isDeploymentUpdatePayloadEmpty({ deployment_id: "deploy-1" })).toBe(
+      true,
+    );
+    expect(
+      isDeploymentUpdatePayloadEmpty({
+        deployment_id: "deploy-1",
+        description: "updated",
+      }),
+    ).toBe(false);
+  });
+
   it("includes description change when description differs from initial", () => {
     const { result } = renderEditHook();
 

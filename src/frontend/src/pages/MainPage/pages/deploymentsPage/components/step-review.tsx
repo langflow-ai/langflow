@@ -85,8 +85,6 @@ export default function StepReview() {
     [allFlows, removedFlowIds, selectedVersionByFlow],
   );
 
-  const toolNameErrors = useMemo(() => new Map<string, string>(), []);
-
   useEffect(() => {
     setHasToolNameErrors(false);
   }, [setHasToolNameErrors]);
@@ -120,7 +118,6 @@ export default function StepReview() {
               <ReviewFlowConfigCard
                 key={item.attachmentKey}
                 item={item}
-                toolError={toolNameErrors.get(item.attachmentKey)}
                 toolNameValue={
                   toolNameByFlow.get(item.attachmentKey)?.trim() ?? ""
                 }

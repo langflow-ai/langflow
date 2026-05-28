@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Deployment } from "../types";
 
@@ -76,13 +76,14 @@ describe("Row rendering", () => {
     expect(screen.getByText("watsonx Prod")).toBeInTheDocument();
   });
 
-  it("renders empty name when display_name is missing", () => {
+  it("renders em dash when display_name is missing", () => {
     renderTable([
       makeDeployment({ provider_data: null, resource_key: "dep-rk" }),
     ]);
 
+    const row = screen.getByTestId("deployment-row-dep-1");
+    expect(within(row).getByText("—")).toBeInTheDocument();
     expect(screen.queryByText("dep-rk")).not.toBeInTheDocument();
-    expect(screen.getByTestId("deployment-row-dep-1")).toBeInTheDocument();
   });
 
   it("renders description under the deployment name", () => {

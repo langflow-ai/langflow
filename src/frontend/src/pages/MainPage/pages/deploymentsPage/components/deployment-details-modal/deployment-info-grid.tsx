@@ -45,7 +45,9 @@ export default function DeploymentInfoGrid({
         {deployment?.created_at ? formatDate(deployment.created_at) : "—"}
       </span>
 
-      <span className="text-xs text-muted-foreground">Name</span>
+      <span className="text-xs text-muted-foreground">
+        {t("deployments.labelName")}
+      </span>
       <span className="min-w-0 break-words text-sm text-foreground">
         {displayName || "—"}
       </span>

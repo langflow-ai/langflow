@@ -342,3 +342,11 @@ export function buildDeploymentUpdatePayload({
 
   return result;
 }
+
+export function isDeploymentUpdatePayloadEmpty(
+  payload: DeploymentUpdateRequest,
+): boolean {
+  return (
+    payload.description === undefined && payload.provider_data === undefined
+  );
+}

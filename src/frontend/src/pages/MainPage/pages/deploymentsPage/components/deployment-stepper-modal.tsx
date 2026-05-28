@@ -12,12 +12,14 @@ import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
 } from "../contexts/deployment-stepper-context";
+import { isDeploymentUpdatePayloadEmpty } from "../helpers/deployment-payload-builders";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import {
   DEFAULT_FLOW_NAME,
@@ -228,6 +230,7 @@ function DeploymentStepperModalContent({
 
   const { t } = useTranslation();
   const showError = useErrorAlert();
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
@@ -271,9 +274,13 @@ function DeploymentStepperModalContent({
 
       if (isEditMode) {
         const payload = buildDeploymentUpdatePayload();
-        if (payload.description !== undefined || payload.provider_data) {
-          await updateDeployment(payload);
+        if (isDeploymentUpdatePayloadEmpty(payload)) {
+          onDeployingChange(false);
+          setDeploymentPhase("idle");
+          setNoticeData({ title: t("deployments.noChangesToSave") });
+          return;
         }
+        await updateDeployment(payload);
         onDeployingChange(false);
         setOpen(false);
         return;

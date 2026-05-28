@@ -146,7 +146,8 @@ export default function StepType() {
 
       <div className="flex flex-col">
         <span className="pb-2 text-sm font-medium">
-          Name <span className="text-destructive">*</span>
+          {t("deployments.labelName")}{" "}
+          <span className="text-destructive">*</span>
         </span>
         <Input
           placeholder={t("deployments.placeholderSalesBot")}
@@ -161,7 +162,7 @@ export default function StepType() {
         />
         {hasDeploymentNameFormatError && (
           <span className="mt-1 text-xs text-destructive">
-            Name is required.
+            {t("deployments.nameRequired")}
           </span>
         )}
       </div>

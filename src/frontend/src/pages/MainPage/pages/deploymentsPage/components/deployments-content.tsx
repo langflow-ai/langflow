@@ -119,7 +119,9 @@ export default function DeploymentsContent({
       <TypeToConfirmDeleteDialog
         open={!!deploymentDelete.target}
         onOpenChange={deploymentDelete.setModalOpen}
-        deploymentName={getDeploymentDisplayName(deploymentDelete.target)}
+        deploymentName={
+          getDeploymentDisplayName(deploymentDelete.target) || "—"
+        }
         onConfirm={deploymentDelete.confirmDelete}
       />
     </>
