@@ -227,20 +227,12 @@ class FlowRegistry:
             if old_store_key is not None:
                 self._store.delete(old_store_key)
                 self._flows.pop(old_store_key, None)
-            elif getattr(self._store, "is_persistent", False):
-                # No alias recorded — the replace path skips the get() that would
-                # have learned it. A pre-placed file (e.g. my-flow.json) may still
-                # carry meta.id in its JSON "id" field under a differently-named key.
-                # Scan and delete it so the new {uuid}.json is the single source of
-                # truth. Mirrors remove()'s scan for the same stem-keyed-file case.
-                for stem_id in self._store.list_ids():
-                    if stem_id == meta.id:
-                        continue
-                    stem_raw = self._store.read(stem_id)
-                    if stem_raw and stem_raw.get("id") == meta.id:
-                        self._store.delete(stem_id)
-                        self._flows.pop(stem_id, None)
-                        self._store_meta_cache.pop(stem_id, None)
+            else:
+                # No alias recorded — the replace path skips the get() that would have
+                # learned it. A pre-placed file (e.g. my-flow.json) may still carry meta.id
+                # in its JSON "id" under a differently-named key; delete it so the new
+                # {uuid}.json becomes the single source of truth.
+                self._delete_aliased_store_files(meta.id)
         if raw_json is not None:
             self._store.write(meta.id, raw_json)
             if getattr(self._store, "is_persistent", False):
@@ -257,6 +249,27 @@ class FlowRegistry:
             self._flows.pop(k, None)
             self._store_meta_cache.pop(k, None)
         self._store_sourced.discard(meta_id)
+
+    def _delete_aliased_store_files(self, canonical_id: str) -> None:
+        """Delete stem-keyed store files that are aliases of *canonical_id*.
+
+        Targets persistent-store files whose JSON ``id`` equals *canonical_id* but are
+        keyed under a different stem (e.g. a pre-placed ``my-flow.json`` alongside
+        ``{uuid}.json``), so the canonical key stays the single source of truth. Also
+        drops any in-memory cache entries for those stems. No-op for non-persistent
+        stores (NullFlowStore has no other files). Uses a live ``list_ids()`` rather than
+        the TTL cache so a listing taken right after a delete is current.
+        """
+        if not getattr(self._store, "is_persistent", False):
+            return
+        for stem_id in self._store.list_ids():
+            if stem_id == canonical_id:
+                continue
+            stem_raw = self._store.read(stem_id)
+            if stem_raw and stem_raw.get("id") == canonical_id:
+                self._store.delete(stem_id)
+                self._flows.pop(stem_id, None)
+                self._store_meta_cache.pop(stem_id, None)
 
     def get(self, flow_id: str) -> tuple[Graph, FlowMeta] | None:
         if flow_id in self._flows:
@@ -382,17 +395,10 @@ class FlowRegistry:
         if store_key != meta_id:
             # Alias known: primary key was a stem, UUID-keyed file may also exist.
             self._store.delete(meta_id)
-        elif store_had_it and getattr(self._store, "is_persistent", False):
-            # Primary key IS the UUID: scan for any stem-keyed file with the same
+        elif store_had_it:
+            # Primary key IS the UUID: delete any stem-keyed file carrying the same
             # "id" field (e.g. a pre-placed my-flow.json alongside {uuid}.json).
-            # Only needed for persistent stores; NullFlowStore has no other files.
-            # Bypass the TTL cache here — we need a live listing after the delete.
-            for stem_id in self._store.list_ids():
-                if stem_id == meta_id:
-                    continue  # already deleted above
-                stem_raw = self._store.read(stem_id)
-                if stem_raw and stem_raw.get("id") == meta_id:
-                    self._store.delete(stem_id)
+            self._delete_aliased_store_files(meta_id)
         self._invalidate_store_ids_cache()
         return mem_had_it or store_had_it
 

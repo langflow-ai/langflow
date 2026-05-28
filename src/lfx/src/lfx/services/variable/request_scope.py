@@ -13,6 +13,7 @@ enforces for ``load_from_db`` fields — keeping the two resolution paths consis
 from __future__ import annotations
 
 import contextvars
+import json
 
 _request_variables: contextvars.ContextVar[dict[str, str] | None] = contextvars.ContextVar(
     "lfx_request_variables",
@@ -22,6 +23,20 @@ _no_env_fallback: contextvars.ContextVar[bool] = contextvars.ContextVar(
     "lfx_no_env_fallback",
     default=False,
 )
+
+
+def normalize_parsed_variables(parsed: dict) -> dict[str, str]:
+    """Flatten a parsed JSON variable map to ``str`` values.
+
+    Drops ``None`` (so a JSON ``null`` never becomes the truthy string "None" and
+    masquerades as a credential) and serializes dict/list values as valid JSON
+    (round-trippable via ``json.loads``) rather than a lossy Python repr. Scalars use ``str``.
+    """
+    return {
+        str(key): json.dumps(value) if isinstance(value, dict | list) else str(value)
+        for key, value in parsed.items()
+        if value is not None
+    }
 
 
 def get_active_request_variables() -> dict[str, str] | None:

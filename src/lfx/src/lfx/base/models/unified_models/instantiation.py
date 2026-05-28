@@ -6,12 +6,25 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_utils import _to_str
+from lfx.services.variable.request_scope import is_env_fallback_disabled
 
 from .class_registry import EMBEDDING_PARAM_MAPPINGS, EMBEDDING_PROVIDER_CLASS_MAPPING
 from .provider_queries import model_provider_metadata
 
 if TYPE_CHECKING:
     from uuid import UUID
+
+
+def _env_if_allowed(key: str) -> str | None:
+    """Return ``os.environ.get(key)`` unless the active request disables env fallback.
+
+    Connection config (provider URLs, project IDs, attribution headers) falls back to
+    process env only when env fallback is allowed, so a served flow under
+    ``no_env_fallback`` stays isolated from process-wide environment.
+    """
+    if is_env_fallback_disabled():
+        return None
+    return os.environ.get(key)
 
 
 def get_llm(
@@ -143,12 +156,12 @@ def get_llm(
 
         # Priority: component value > database value > env var
         watsonx_url_value = (
-            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+            watsonx_url if watsonx_url else provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         )
         watsonx_project_id_value = (
             watsonx_project_id
             if watsonx_project_id
-            else provider_vars.get("WATSONX_PROJECT_ID") or os.environ.get("WATSONX_PROJECT_ID")
+            else provider_vars.get("WATSONX_PROJECT_ID") or _env_if_allowed("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(watsonx_url_value)
@@ -180,7 +193,7 @@ def get_llm(
         ollama_base_url_value = (
             ollama_base_url
             if ollama_base_url
-            else provider_vars.get("OLLAMA_BASE_URL") or os.environ.get("OLLAMA_BASE_URL")
+            else provider_vars.get("OLLAMA_BASE_URL") or _env_if_allowed("OLLAMA_BASE_URL")
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
@@ -203,7 +216,7 @@ def get_llm(
             # KeyError on a misconfigured metadata entry beats silently
             # skipping a header the operator expects to be sent.
             variable_key = var["variable_key"]
-            value = provider_vars.get(variable_key) or os.environ.get(variable_key)
+            value = provider_vars.get(variable_key) or _env_if_allowed(variable_key)
             if header_name and value:
                 default_headers[header_name] = value
         if default_headers:
@@ -338,11 +351,11 @@ def get_embeddings(
     # Watson-specific parameters
     if provider in {"IBM WatsonX", "IBM watsonx.ai"}:
         watsonx_provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
-        url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or os.environ.get("WATSONX_URL")
+        url_value = watsonx_url or watsonx_provider_vars.get("WATSONX_URL") or _env_if_allowed("WATSONX_URL")
         pid_value = (
             watsonx_project_id
             or watsonx_provider_vars.get("WATSONX_PROJECT_ID")
-            or os.environ.get("WATSONX_PROJECT_ID")
+            or _env_if_allowed("WATSONX_PROJECT_ID")
         )
 
         has_url = bool(url_value)
@@ -388,7 +401,7 @@ def get_embeddings(
         base_url_value = (
             ollama_base_url
             or provider_vars.get("OLLAMA_BASE_URL")
-            or os.environ.get("OLLAMA_BASE_URL")
+            or _env_if_allowed("OLLAMA_BASE_URL")
             or "http://localhost:11434"
         )
         kwargs[param_mapping["base_url"]] = base_url_value

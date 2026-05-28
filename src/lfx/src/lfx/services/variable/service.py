@@ -5,7 +5,11 @@ import os
 
 from lfx.log.logger import logger
 from lfx.services.base import Service
-from lfx.services.variable.request_scope import get_active_request_variables, is_env_fallback_disabled
+from lfx.services.variable.request_scope import (
+    get_active_request_variables,
+    is_env_fallback_disabled,
+    normalize_parsed_variables,
+)
 
 
 class VariableService(Service):
@@ -35,6 +39,12 @@ class VariableService(Service):
         if active is not None:
             return active
 
+        # LANGFLOW_REQUEST_VARIABLES is a process-wide env var, so reading it is an
+        # os.environ access. Honor the no-env-fallback contract and skip it when the
+        # request disables env fallback, keeping the "never reads os.environ" guarantee.
+        if is_env_fallback_disabled():
+            return {}
+
         raw = os.getenv("LANGFLOW_REQUEST_VARIABLES")
         if not raw:
             return {}
@@ -46,7 +56,7 @@ class VariableService(Service):
         if not isinstance(parsed, dict):
             logger.debug("LANGFLOW_REQUEST_VARIABLES must be a JSON object; skipping request-scoped lookup")
             return {}
-        return {str(key): str(value) for key, value in parsed.items()}
+        return normalize_parsed_variables(parsed)
 
     async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.

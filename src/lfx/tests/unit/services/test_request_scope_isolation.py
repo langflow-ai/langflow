@@ -144,6 +144,41 @@ async def test_no_env_fallback_suppresses_env_in_variable_service():
     assert not mock_getenv.call_args_list, f"os.getenv must not be consulted, got: {mock_getenv.call_args_list}"
 
 
+async def test_no_env_fallback_suppresses_langflow_request_variables_env():
+    """Env fallback disabled + no active scope must not leak the process LANGFLOW_REQUEST_VARIABLES blob.
+
+    Regression: _get_request_variables() read os.getenv("LANGFLOW_REQUEST_VARIABLES")
+    before the no-env-fallback gate, so an empty-global_vars request under
+    --no-env-fallback (which binds the scope to None) still resolved credentials
+    from the process env blob, violating the "never reads os.environ" contract.
+    """
+    service = VariableService()
+    scope_token = activate_request_variables(None)  # None == empty global_vars in serve
+    flag_token = activate_no_env_fallback(disabled=True)
+    with patch.dict(os.environ, {"LANGFLOW_REQUEST_VARIABLES": '{"leaked_token": "SHOULD-NOT-LEAK"}'}):
+        try:
+            assert await service.get_variable("leaked_token") is None
+        finally:
+            reset_no_env_fallback(flag_token)
+            reset_request_variables(scope_token)
+
+
+async def test_langflow_request_variables_env_blob_used_when_fallback_enabled():
+    """Env blob resolves when fallback is enabled: null dropped, structured -> valid JSON string."""
+    service = VariableService()
+    scope_token = activate_request_variables(None)
+    blob = '{"shared_token": "from-env-blob", "null_cred": null, "nested": {"a": 1}}'
+    with patch.dict(os.environ, {"LANGFLOW_REQUEST_VARIABLES": blob}):
+        try:
+            assert await service.get_variable("shared_token") == "from-env-blob"
+            # null is dropped (not the truthy string "None"); env/None fallthrough -> None.
+            assert await service.get_variable("null_cred") is None
+            # Structured value serialized as valid JSON, round-trippable via json.loads.
+            assert await service.get_variable("nested") == '{"a": 1}'
+        finally:
+            reset_request_variables(scope_token)
+
+
 async def test_no_env_fallback_flag_is_isolated_per_request():
     """The no-env-fallback flag is per-request.
 

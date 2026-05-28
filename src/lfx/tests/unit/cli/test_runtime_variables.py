@@ -37,6 +37,29 @@ def test_build_request_variables_ignores_non_dict_blob():
     assert flat == {"access_token": "raw-tok"}
 
 
+def test_build_request_variables_coerces_structured_blob_values():
+    """JSON null is dropped (never the truthy "None"); dict/list become valid JSON strings."""
+    global_vars = {
+        "LANGFLOW_REQUEST_VARIABLES": json.dumps(
+            {"good": "tok", "null_cred": None, "nested": {"a": 1}, "listy": [1, 2]}
+        ),
+    }
+    flat = build_request_variables_from_global_vars(global_vars)
+    assert flat == {"good": "tok", "nested": '{"a": 1}', "listy": "[1, 2]"}
+    # Structured values round-trip back through json.loads (a Python repr would not).
+    assert json.loads(flat["nested"]) == {"a": 1}
+
+
+def test_normalize_parsed_variables_coercion_rules():
+    """Scalars -> str, None dropped, dict/list -> valid JSON (round-trippable)."""
+    from lfx.services.variable.request_scope import normalize_parsed_variables
+
+    out = normalize_parsed_variables({"s": "v", "n": 5, "f": 1.5, "b": True, "drop": None, "d": {"a": 1}, "l": [1, 2]})
+    assert out == {"s": "v", "n": "5", "f": "1.5", "b": "True", "d": '{"a": 1}', "l": "[1, 2]"}
+    assert "drop" not in out
+    assert json.loads(out["d"]) == {"a": 1}
+
+
 def test_reset_request_variables_restores_previous_scope():
     """Nested activate/reset restores the prior scope, not None."""
     from lfx.services.variable.request_scope import (

@@ -11,6 +11,7 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import secret_value_to_str
 
@@ -33,9 +34,12 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
 
     # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
     def _resolve_var_name(var_name: str) -> str | None:
-        env_value = os.environ.get(var_name)
-        if env_value and env_value.strip():
-            return env_value.strip()
+        # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
+        # served flow stays isolated from process-wide credentials (matches VariableService).
+        if not is_env_fallback_disabled():
+            env_value = os.environ.get(var_name)
+            if env_value and env_value.strip():
+                return env_value.strip()
         if user_id and not (isinstance(user_id, str) and user_id == "None"):
 
             async def _get_by_var_name():
@@ -109,6 +113,8 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     if api_key:
         return api_key
 
+    if is_env_fallback_disabled():
+        return None
     return os.getenv(variable_name)
 
 

@@ -6,6 +6,7 @@ import json
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
+from lfx.services.variable.request_scope import normalize_parsed_variables
 
 if TYPE_CHECKING:
     from lfx.graph.graph.base import Graph
@@ -40,7 +41,7 @@ def build_request_variables_from_global_vars(global_vars: dict[str, str] | None)
             )
             parsed = None
         if isinstance(parsed, dict):
-            merged.update({str(key): str(value) for key, value in parsed.items()})
+            merged.update(normalize_parsed_variables(parsed))
         elif parsed is not None:
             logger.warning(
                 f"{_LANGFLOW_REQUEST_VARIABLES_KEY} must be a JSON object, got {type(parsed).__name__}; ignoring blob."
@@ -62,4 +63,9 @@ def apply_global_vars_to_graph(graph: Graph, global_vars: dict[str, str] | None)
         return
     if "request_variables" not in graph.context:
         graph.context["request_variables"] = {}
+    # TODO: stored verbatim, so blob-form vars (LANGFLOW_REQUEST_VARIABLES) are NOT flattened
+    # here. The no-DB load_from_db path (load_from_env_vars reads graph.context) only resolves
+    # direct keys, while the VariableService/ContextVar path (common.py) sees the flattened blob.
+    # For parity, consider flattening via build_request_variables_from_global_vars. No current
+    # impact: TRM also sends raw direct keys; defer unless a caller sends blob-only vars.
     graph.context["request_variables"].update(global_vars)
