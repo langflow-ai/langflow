@@ -242,7 +242,7 @@ To verify that cancellation works across workers, trigger a build with the API t
 
    `dispatched_foreign` increments when the signal is dispatched to a job owned by a different worker, which confirms the cross-worker cancel path is working.
 
-   For a full description of all fields, see [Monitor the job queue](#monitor-the-job-queue).
+   For more information, see [Monitor the job queue](#monitor-the-job-queue).
 
 ## Troubleshoot
 
@@ -254,13 +254,13 @@ For troubleshooting, see [Multi-worker deployments](./troubleshoot#multi-worker-
 |---|---|---|
 | `LANGFLOW_JOB_QUEUE_TYPE` | `asyncio` | Job queue backend. Set to `redis` to enable the cross-worker queue. |
 | `LANGFLOW_REDIS_QUEUE_URL` | Not set | Full Redis connection URL. Takes priority over `HOST`/`PORT`/`DB` when set. Use this for any Redis instance that requires authentication or TLS. |
-| `LANGFLOW_REDIS_QUEUE_HOST` | `LANGFLOW_REDIS_HOST` | Redis host for the job queue. Falls back to the general Redis host setting. No auth or TLS support — use `URL` instead for secured instances. |
+| `LANGFLOW_REDIS_QUEUE_HOST` | `LANGFLOW_REDIS_HOST` | Redis host for the job queue. Falls back to the general Redis host setting. Does not support auth or TLS (use `LANGFLOW_REDIS_QUEUE_URL` instead for secured instances). |
 | `LANGFLOW_REDIS_QUEUE_PORT` | `LANGFLOW_REDIS_PORT` | Redis port for the job queue. Falls back to the general Redis port setting. |
 | `LANGFLOW_REDIS_QUEUE_DB` | `1` | Redis database index for the job queue. Must differ from the cache database index (default `0`) to avoid key collisions. |
 | `LANGFLOW_REDIS_QUEUE_TTL` | `3600` | TTL in seconds for job stream and ownership keys in Redis. |
-| `LANGFLOW_REDIS_QUEUE_STARTUP_GRACE_S` | `30.0` | Seconds a consumer waits for the producer's first write before treating a missing stream as end-of-stream. Increase this if your workers have slow cold-starts. Set to `0` to disable. |
+| `LANGFLOW_REDIS_QUEUE_STARTUP_GRACE_S` | `30.0` | Seconds a consumer waits for the producer's first write before treating a missing stream as end-of-stream. Increase this if your workers have slow cold-starts. Setting to `0` removes the grace period so a not-yet-created stream is treated as EOF immediately. |
 | `LANGFLOW_REDIS_QUEUE_CANCEL_CHANNEL_ENABLED` | `True` | When `true`, each worker runs a Redis pub/sub dispatcher so that `POST /build/{id}/cancel` cancels a build on any worker, not just the one that received the request. Closing a browser tab also signals cancel cross-worker. |
-| `LANGFLOW_REDIS_QUEUE_CANCEL_MARKER_TTL` | `60` | TTL in seconds for the cancel-marker key. The marker closes a race where a cancel signal is published before the target worker's dispatcher has subscribed. Must be greater than `0`. |
+| `LANGFLOW_REDIS_QUEUE_CANCEL_MARKER_TTL` | `60` | TTL in seconds for the cancel-marker key. The marker closes a race where a cancel signal is published before the target worker's dispatcher has subscribed. A non-positive value is rejected at startup. |
 | `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S` | `90.0` | Seconds without client activity before the watchdog cancels an abandoned polling build. Set to `0` to disable the watchdog entirely. |
 | `LANGFLOW_REDIS_QUEUE_POLLING_WATCHDOG_INTERVAL_S` | `15.0` | How often in seconds the watchdog scans for stale jobs. Lower values reclaim resources faster at the cost of more Redis reads. |
 | `LANGFLOW_GUNICORN_PRELOAD` | `False` | **Experimental.** Loads the app in the Gunicorn master process before workers fork, reducing per-worker startup overhead. Pairs well with `LANGFLOW_WORKERS`. Non-Windows only. |
@@ -321,7 +321,7 @@ The Redis backend response includes the following fields:
 | `cancel_stats.publish_errors` | Number of Redis errors on the cancel publish path. Persistent non-zero values indicate a Redis connectivity problem. |
 | `cancel_stats.dispatcher_reconnects` | Number of times the cancel dispatcher has reconnected after a Redis pub/sub error. |
 | `cancel_stats.dispatcher_internal_errors` | Number of unexpected errors inside the cancel dispatcher (not Redis disconnects). Non-zero values indicate a bug; check logs for details. |
-| `cancel_stats.polling_watchdog_kills` | Number of abandoned polling builds reclaimed by the watchdog. Non-zero is normal under load; a very high count may indicate frequent client disconnects — consider increasing `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S`. |
+| `cancel_stats.polling_watchdog_kills` | Number of abandoned polling builds reclaimed by the watchdog. Non-zero is normal under load. A very high count may indicate frequent client disconnects (consider increasing `LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S`). |
 | `cancel_stats.activity_touch_errors` | Number of errors writing the client heartbeat key to Redis. |
 | `cancel_stats.activity_get_errors` | Number of errors reading the client heartbeat key from Redis. |
 | `cancel_stats.activity_parse_errors` | Number of malformed heartbeat values encountered by the watchdog. |
