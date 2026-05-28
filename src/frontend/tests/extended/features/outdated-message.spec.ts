@@ -3,9 +3,11 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test("user must be able outdated message on error", async ({ page }) => {
-  await awaitBootstrapTest(page);
-
-  await page.locator("span").filter({ hasText: "Close" }).first().click();
+  // `skipModal: true` keeps us on the home page (cards-wrapper lives here).
+  // Without it, openTemplatesModal navigates to a fresh canvas + FlowBuilderWelcome
+  // overlay, so closing the modal leaves the user on the canvas and the
+  // drag-and-drop target below never appears.
+  await awaitBootstrapTest(page, { skipModal: true });
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   // Read the asset and rename the flow uniquely so we can wait for THIS
