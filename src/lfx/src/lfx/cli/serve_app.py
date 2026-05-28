@@ -35,6 +35,7 @@ from lfx.cli.common import (
     extract_result_data,
     get_api_key,
 )
+from lfx.cli.runtime_variables import apply_global_vars_to_graph
 from lfx.load import load_flow_from_json
 from lfx.log.logger import logger
 from lfx.utils.flow_validation import validate_flow_for_current_settings
@@ -663,10 +664,7 @@ def create_multi_serve_app(
             graph_copy = deepcopy(graph)
             # deepcopy() drops graph.context; re-apply the registry's env policy.
             registry.stamp(graph_copy)
-            if request.global_vars:
-                if "request_variables" not in graph_copy.context:
-                    graph_copy.context["request_variables"] = {}
-                graph_copy.context["request_variables"].update(request.global_vars)
+            apply_global_vars_to_graph(graph_copy, request.global_vars)
             results, logs = await execute_graph_with_capture(
                 graph_copy, request.input_value, session_id=request.session_id
             )
@@ -728,10 +726,7 @@ def create_multi_serve_app(
             graph_copy = deepcopy(graph)
             # deepcopy() drops graph.context; re-apply the registry's env policy.
             registry.stamp(graph_copy)
-            if request.global_vars:
-                if "request_variables" not in graph_copy.context:
-                    graph_copy.context["request_variables"] = {}
-                graph_copy.context["request_variables"].update(request.global_vars)
+            apply_global_vars_to_graph(graph_copy, request.global_vars)
             main_task = asyncio.create_task(
                 run_flow_generator_for_serve(
                     graph=graph_copy,
