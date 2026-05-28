@@ -2,6 +2,14 @@
    Redocusaurus / API Reference Pages
    ======================================== */
 
+/* The Redoc two-column layout (sidebar 300px + content 1300px = 1600px) expands
+   .main-wrapper beyond the viewport because it has overflow:visible. Docusaurus
+   adds html.plugin-redoc on API pages — clip only there, no effect on regular docs. */
+html.plugin-redoc .main-wrapper {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 /* Remove Redoc's built-in left gutter so it aligns with the rest of the layout */
 .redocusaurus .menu-content {
   padding-left: 0 !important;
