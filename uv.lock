@@ -6935,6 +6935,7 @@ couchbase = [
 ]
 docling = [
     { name = "langchain-docling" },
+    { name = "langflow-base", extra = ["docling"] },
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
     { name = "tesserocr" },
@@ -7005,6 +7006,7 @@ requires-dist = [
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling'", editable = "src/backend/base" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
@@ -7359,8 +7361,6 @@ complete = [
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "datasets" },
     { name = "ddgs" },
-    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
-    { name = "docling-core" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
@@ -7895,7 +7895,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["couchbase"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["cuga"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["datasets"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["docling"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["docling"], marker = "extra == 'all'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docx"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["duckduckgo"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["easyocr"], marker = "extra == 'complete'", editable = "src/backend/base" },

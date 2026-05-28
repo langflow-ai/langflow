@@ -461,7 +461,6 @@ complete = [
     "langflow-base[traceloop]",
     "langflow-base[openlayer]",
     # Document processing / OCR
-    "langflow-base[docling]",
     "langflow-base[easyocr]",
     # Additional tools
     "langflow-base[cleanlab]",
@@ -489,6 +488,7 @@ complete = [
 
 all = [
     "langflow-base[complete]",
+    "langflow-base[docling]",
 ]
 
 [project.scripts]

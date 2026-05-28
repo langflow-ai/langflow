@@ -8,10 +8,9 @@ from pathlib import Path  # noqa: TC003
 from typing import Any
 
 import httpx
-from docling_core.types.doc import DoclingDocument
-from pydantic import ValidationError
 
 from lfx.base.data import BaseFileComponent
+from lfx.base.data.docling_utils import coerce_docling_document
 from lfx.inputs import IntInput, NestedDictInput, StrInput, TableInput
 from lfx.inputs.inputs import FloatInput
 from lfx.schema import Data, dotdict
@@ -271,15 +270,17 @@ class DoclingRemoteComponent(BaseFileComponent):
             self.log("No JSON DoclingDocument found in the result.")
             return None
 
+        document = result["document"]["json_content"]
         try:
-            doc = DoclingDocument.model_validate(result["document"]["json_content"])
-            data_dict: dict[str, Any] = {"doc": doc}
-            if file_path:
-                data_dict["file_path"] = file_path
-            return Data(data=data_dict)
-        except ValidationError as e:
+            document = coerce_docling_document(document)
+        except (TypeError, ValueError) as e:
             self.log(f"Error validating the document. {e}")
             return None
+
+        data_dict: dict[str, Any] = {"doc": document}
+        if file_path:
+            data_dict["file_path"] = file_path
+        return Data(data=data_dict)
 
     def _process_task_id(self) -> list[Data]:
         """Process an existing task by polling for status and retrieving results.

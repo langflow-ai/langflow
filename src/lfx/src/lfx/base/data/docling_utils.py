@@ -2,14 +2,21 @@ import importlib
 import signal
 import traceback
 from contextlib import suppress
+from dataclasses import dataclass
 from functools import lru_cache
+from html import escape
+from typing import TYPE_CHECKING, Any
 
-from docling_core.types.doc import DoclingDocument
 from pydantic import BaseModel, SecretStr, TypeAdapter
 
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+
+if TYPE_CHECKING:
+    from docling_core.types.doc import DoclingDocument
+else:
+    DoclingDocument = Any
 
 
 class DoclingDependencyError(Exception):
@@ -19,6 +26,306 @@ class DoclingDependencyError(Exception):
         self.dependency_name = dependency_name
         self.install_command = install_command
         super().__init__(f"{dependency_name} is not correctly installed. {install_command}")
+
+
+@dataclass(slots=True)
+class SerializedDoclingOrigin:
+    """Small origin object compatible with the DoclingDocument metadata used by components."""
+
+    filename: str | None = None
+    binary_hash: str | int | None = None
+    mimetype: str | None = None
+
+    @classmethod
+    def from_value(cls, value: Any) -> "SerializedDoclingOrigin | None":
+        if value is None:
+            return None
+        if not isinstance(value, dict):
+            return cls(
+                filename=getattr(value, "filename", None),
+                binary_hash=getattr(value, "binary_hash", None),
+                mimetype=getattr(value, "mimetype", None),
+            )
+        return cls(
+            filename=value.get("filename"),
+            binary_hash=value.get("binary_hash"),
+            mimetype=value.get("mimetype") or value.get("mime_type"),
+        )
+
+
+class SerializedDoclingDocument:
+    """DoclingDocument-compatible wrapper for serialized Docling JSON.
+
+    Docling Serve returns JSON content that is already enough for the export component
+    to produce useful text formats. This wrapper keeps that path working when
+    docling-core is not installed.
+    """
+
+    def __init__(self, document: dict[str, Any]) -> None:
+        if not isinstance(document, dict):
+            msg = f"Expected serialized DoclingDocument as dict, got {type(document).__name__}."
+            raise TypeError(msg)
+        self._document = document
+        self.name = document.get("name")
+        self.origin = SerializedDoclingOrigin.from_value(document.get("origin"))
+
+    @classmethod
+    def model_validate(cls, document: dict[str, Any]) -> "SerializedDoclingDocument":
+        return cls(document)
+
+    def export_to_dict(self) -> dict[str, Any]:
+        return self._document
+
+    def export_to_text(self, **_kwargs: Any) -> str:
+        blocks = [block for block in self._text_blocks(include_tables=True) if block]
+        return "\n\n".join(blocks)
+
+    def export_to_markdown(
+        self,
+        *,
+        image_placeholder: str = "<!-- image -->",
+        page_break_placeholder: str = "",
+        **_kwargs: Any,
+    ) -> str:
+        blocks: list[str] = []
+        previous_page = None
+        for kind, item in self._document_items():
+            page_no = self._page_no(item)
+            if previous_page is not None and page_no != previous_page and page_break_placeholder:
+                blocks.append(page_break_placeholder)
+            if page_no is not None:
+                previous_page = page_no
+
+            if kind == "texts":
+                text = self._item_text(item)
+                if text:
+                    blocks.append(self._markdown_text_block(item, text))
+            elif kind == "tables":
+                table = self._table_text(item, markdown=True)
+                if table:
+                    blocks.append(table)
+            elif kind == "pictures" and image_placeholder:
+                blocks.append(image_placeholder)
+
+        return "\n\n".join(block for block in blocks if block)
+
+    def export_to_html(self, **_kwargs: Any) -> str:
+        blocks: list[str] = []
+        for kind, item in self._document_items():
+            if kind == "texts":
+                text = self._item_text(item)
+                if not text:
+                    continue
+                label = str(item.get("label") or "").lower()
+                if label in {"title", "section_header", "heading", "header"}:
+                    level = self._heading_level(item)
+                    blocks.append(f"<h{level}>{escape(text)}</h{level}>")
+                elif "list" in label:
+                    blocks.append(f"<ul><li>{escape(text)}</li></ul>")
+                else:
+                    blocks.append(f"<p>{escape(text)}</p>")
+            elif kind == "tables":
+                table = self._table_text(item, markdown=False)
+                if table:
+                    rows = []
+                    for row in table.splitlines():
+                        cells = "".join(f"<td>{escape(cell)}</td>" for cell in row.split("\t"))
+                        rows.append(f"<tr>{cells}</tr>")
+                    blocks.append(f"<table>{''.join(rows)}</table>")
+        return "\n".join(blocks)
+
+    def export_to_doctags(self, **_kwargs: Any) -> str:
+        tags = []
+        for kind, item in self._document_items():
+            if kind == "texts":
+                text = self._item_text(item)
+                if text:
+                    label = escape(str(item.get("label") or "text"))
+                    tags.append(f'<text label="{label}">{escape(text)}</text>')
+            elif kind == "tables":
+                table = self._table_text(item, markdown=False)
+                if table:
+                    tags.append(f"<table>{escape(table)}</table>")
+        return "<document>" + "".join(tags) + "</document>"
+
+    def _document_items(self) -> list[tuple[str, dict[str, Any]]]:
+        ordered_items: list[tuple[str, dict[str, Any]]] = []
+        body = self._document.get("body")
+        children = body.get("children") if isinstance(body, dict) else None
+        if isinstance(children, list):
+            for child in children:
+                item = self._resolve_child(child)
+                if item is not None:
+                    ordered_items.append(item)
+
+        if ordered_items:
+            return ordered_items
+
+        for kind in ("texts", "tables", "pictures"):
+            values = self._document.get(kind)
+            if isinstance(values, list):
+                ordered_items.extend((kind, value) for value in values if isinstance(value, dict))
+        return ordered_items
+
+    def _resolve_child(self, child: Any) -> tuple[str, dict[str, Any]] | None:
+        if not isinstance(child, dict):
+            return None
+        ref = child.get("$ref") or child.get("ref")
+        if not isinstance(ref, str):
+            return None
+        kind, separator, index = ref.removeprefix("#/").partition("/")
+        if not separator:
+            return None
+        values = self._document.get(kind)
+        if kind not in {"texts", "tables", "pictures"} or not isinstance(values, list):
+            return None
+        try:
+            value = values[int(index)]
+        except (IndexError, TypeError, ValueError):
+            return None
+        if not isinstance(value, dict):
+            return None
+        return kind, value
+
+    def _text_blocks(self, *, include_tables: bool) -> list[str]:
+        blocks: list[str] = []
+        for kind, item in self._document_items():
+            if kind == "texts":
+                text = self._item_text(item)
+                if text:
+                    blocks.append(text)
+            elif include_tables and kind == "tables":
+                table = self._table_text(item, markdown=False)
+                if table:
+                    blocks.append(table)
+        return blocks
+
+    @staticmethod
+    def _item_text(item: dict[str, Any]) -> str:
+        text = item.get("text")
+        return text.strip() if isinstance(text, str) else ""
+
+    @staticmethod
+    def _page_no(item: dict[str, Any]) -> Any:
+        prov = item.get("prov")
+        if isinstance(prov, list) and prov and isinstance(prov[0], dict):
+            return prov[0].get("page_no")
+        return None
+
+    @staticmethod
+    def _heading_level(item: dict[str, Any]) -> int:
+        try:
+            level = int(item.get("level") or 1)
+        except (TypeError, ValueError):
+            level = 1
+        return max(1, min(level, 6))
+
+    def _markdown_text_block(self, item: dict[str, Any], text: str) -> str:
+        label = str(item.get("label") or "").lower()
+        if label in {"title", "section_header", "heading", "header"}:
+            return f"{'#' * self._heading_level(item)} {text}"
+        if "list" in label:
+            return f"- {text}"
+        if label in {"code", "formula"}:
+            return f"```\n{text}\n```"
+        return text
+
+    @staticmethod
+    def _table_text(item: dict[str, Any], *, markdown: bool) -> str:
+        table_data = item.get("data") if isinstance(item.get("data"), dict) else item
+        cells = table_data.get("table_cells") if isinstance(table_data, dict) else None
+        if not isinstance(cells, list):
+            return ""
+
+        rows: dict[int, dict[int, str]] = {}
+        for cell in cells:
+            if not isinstance(cell, dict):
+                continue
+            text = cell.get("text")
+            if not isinstance(text, str) or not text.strip():
+                continue
+            row = cell.get("start_row_offset_idx", cell.get("row", 0))
+            col = cell.get("start_col_offset_idx", cell.get("col", 0))
+            try:
+                row_index = int(row)
+                col_index = int(col)
+            except (TypeError, ValueError):
+                continue
+            rows.setdefault(row_index, {})[col_index] = text.strip()
+
+        if not rows:
+            return ""
+
+        ordered_rows = []
+        for row_index in sorted(rows):
+            row = rows[row_index]
+            ordered_rows.append([row.get(col_index, "") for col_index in range(max(row) + 1)])
+
+        if not markdown:
+            return "\n".join("\t".join(row) for row in ordered_rows)
+
+        markdown_rows = ["| " + " | ".join(row) + " |" for row in ordered_rows]
+        if len(markdown_rows) > 1:
+            column_count = len(ordered_rows[0])
+            markdown_rows.insert(1, "| " + " | ".join("---" for _ in range(column_count)) + " |")
+        return "\n".join(markdown_rows)
+
+
+def _get_docling_document_class():
+    try:
+        docling_doc_module = importlib.import_module("docling_core.types.doc")
+    except ImportError as e:
+        dependency_name = "docling-core"
+        install_command = "Install Docling with `uv pip install 'langflow[docling]'`."
+        raise DoclingDependencyError(dependency_name, install_command) from e
+    return docling_doc_module.DoclingDocument
+
+
+def get_docling_image_ref_mode(image_mode: str) -> Any:
+    try:
+        docling_doc_module = importlib.import_module("docling_core.types.doc")
+    except ImportError:
+        return image_mode
+    return docling_doc_module.ImageRefMode(image_mode)
+
+
+def coerce_docling_document(doc: Any) -> Any:
+    if all(hasattr(doc, method) for method in ("export_to_markdown", "export_to_html", "export_to_text")):
+        return doc
+    if isinstance(doc, dict):
+        if not _looks_like_serialized_docling_document(doc):
+            msg = f"Expected serialized DoclingDocument fields, got keys: {sorted(doc.keys())}."
+            raise TypeError(msg)
+        try:
+            docling_document = _get_docling_document_class()
+        except DoclingDependencyError:
+            return SerializedDoclingDocument.model_validate(doc)
+        try:
+            return docling_document.model_validate(doc)
+        except (TypeError, ValueError):
+            return SerializedDoclingDocument.model_validate(doc)
+    if _is_docling_document(doc):
+        return doc
+
+    msg = f"Expected a DoclingDocument or serialized DoclingDocument, got {type(doc).__name__}."
+    raise TypeError(msg)
+
+
+def _looks_like_serialized_docling_document(value: Any) -> bool:
+    docling_keys = ("texts", "tables", "pictures", "body", "origin", "name")
+    return isinstance(value, dict) and any(key in value for key in docling_keys)
+
+
+def _is_docling_document(value: Any) -> bool:
+    if isinstance(value, SerializedDoclingDocument):
+        return True
+    if _looks_like_serialized_docling_document(value):
+        return True
+    try:
+        docling_document = _get_docling_document_class()
+    except DoclingDependencyError:
+        return all(hasattr(value, method) for method in ("export_to_markdown", "export_to_html", "export_to_text"))
+    return isinstance(value, docling_document)
 
 
 def extract_docling_documents(
@@ -58,7 +365,7 @@ def extract_docling_documents(
                 try:
                     # Check if this column contains DoclingDocument objects
                     sample = data_inputs[col].dropna().iloc[0] if len(data_inputs[col].dropna()) > 0 else None
-                    if sample is not None and isinstance(sample, DoclingDocument):
+                    if sample is not None and _is_docling_document(sample):
                         found_column = col
                         break
                 except (IndexError, AttributeError):
@@ -106,9 +413,11 @@ def extract_docling_documents(
                 documents = [
                     input_.data[doc_key]
                     for input_ in data_inputs
-                    if isinstance(input_, Data)
-                    and doc_key in input_.data
-                    and isinstance(input_.data[doc_key], DoclingDocument)
+                    if (
+                        isinstance(input_, Data)
+                        and doc_key in input_.data
+                        and _is_docling_document(input_.data[doc_key])
+                    )
                 ]
                 if not documents:
                     msg = f"No valid Data inputs found in {type(data_inputs)}"

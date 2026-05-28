@@ -1,9 +1,6 @@
 """Tests for ExportDoclingDocumentComponent metadata preservation."""
 
-import pytest
-
-pytest.importorskip("docling_core")
-
+from lfx.base.data import docling_utils
 from lfx.components.docling.export_docling_document import ExportDoclingDocumentComponent
 
 
@@ -136,3 +133,39 @@ class TestExportDoclingDocumentMetadata:
         assert "filename" not in data.data
         assert "document_id" not in data.data
         assert "mimetype" not in data.data
+
+    def test_serialized_docling_document_exports_without_docling_core(self, monkeypatch):
+        def _missing_docling_core():
+            dependency_name = "docling-core"
+            install_command = "install docling"
+            raise docling_utils.DoclingDependencyError(dependency_name, install_command)
+
+        monkeypatch.setattr(docling_utils, "_get_docling_document_class", _missing_docling_core)
+        serialized_doc = {
+            "name": "remote-report",
+            "origin": {
+                "filename": "remote-report.pdf",
+                "binary_hash": "remote-hash",
+                "mimetype": "application/pdf",
+            },
+            "body": {
+                "children": [
+                    {"$ref": "#/texts/0"},
+                    {"$ref": "#/texts/1"},
+                ]
+            },
+            "texts": [
+                {"text": "Remote Report", "label": "section_header", "level": 1},
+                {"text": "This came from Docling Serve JSON.", "label": "text"},
+            ],
+        }
+
+        results = self._run_export(monkeypatch, serialized_doc)
+
+        assert len(results) == 1
+        data = results[0]
+        assert data.get_text() == "# Remote Report\n\nThis came from Docling Serve JSON."
+        assert data.data["name"] == "remote-report"
+        assert data.data["filename"] == "remote-report.pdf"
+        assert data.data["document_id"] == "remote-hash"
+        assert data.data["mimetype"] == "application/pdf"
