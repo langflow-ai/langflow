@@ -1581,7 +1581,6 @@
   "memory.preprocessingModel": "Preprocessing model:",
   "memory.preprocessingInstructions": "Preprocessing instructions:",
   "memory.preprocessingInstructionsHint": "Summarize the key context, facts, and user preferences from this chat to remember for future conversations, skipping the casual chitchat.",
-  "memory.seePromptExamples": "See prompt examples",
   "memory.senderLabel": "Sender:",
   "memory.activate": "Activate",
   "memory.sessionFilter": "Session filter",
