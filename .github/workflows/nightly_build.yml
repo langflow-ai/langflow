@@ -283,7 +283,7 @@ jobs:
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
   release-nightly-build:
-    if: github.repository == 'langflow-ai/langflow' && always() && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
+    if: github.repository == 'langflow-ai/langflow' && always() && needs.create-nightly-tag.result == 'success' && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
       [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests]

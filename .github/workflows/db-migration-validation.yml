@@ -302,7 +302,7 @@ jobs:
 
       - name: Create Docker Compose file for stable
         working-directory: docker-migration-test
-        run: |
+        run: |  # pragma: allowlist secret
           cat > docker-compose.yml <<'EOF'
           services:
             langflow:
