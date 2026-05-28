@@ -37,7 +37,7 @@ from lfx.schema.content_types import ErrorContent, TextContent
 from lfx.schema.data import Data
 from lfx.schema.image import Image, get_file_paths, is_image_file
 from lfx.schema.properties import Properties, Source
-from lfx.schema.validators import timestamp_to_str, timestamp_to_str_validator
+from lfx.schema.validators import str_to_timestamp_validator, timestamp_to_str, timestamp_to_str_validator
 from lfx.utils.constants import MESSAGE_SENDER_AI, MESSAGE_SENDER_NAME_AI, MESSAGE_SENDER_NAME_USER, MESSAGE_SENDER_USER
 from lfx.utils.image import create_image_content_dict
 from lfx.utils.mustache_security import safe_mustache_render
@@ -725,7 +725,13 @@ class DefaultModel(BaseModel):
 class MessageResponse(DefaultModel):
     id: str | UUID | None = Field(default=None)
     flow_id: UUID | None = Field(default=None)
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    # ``Message.timestamp`` is a string with microsecond+timezone precision
+    # (``%Y-%m-%d %H:%M:%S.%f %Z``) which Pydantic's default datetime parser
+    # rejects. Reuse the shared parser so MessageResponse.from_message
+    # accepts any of the formats ``Message`` itself recognises.
+    timestamp: Annotated[datetime, str_to_timestamp_validator] = Field(
+        default_factory=lambda: datetime.now(timezone.utc)
+    )
     sender: str
     sender_name: str
     session_id: str
