@@ -10,8 +10,8 @@ import emoji
 from emoji import purely_emoji
 from lfx.log.logger import logger
 from pydantic import BaseModel, ValidationInfo, field_serializer, field_validator
+from sqlalchemy import BigInteger, Text, UniqueConstraint, text
 from sqlalchemy import Enum as SQLEnum
-from sqlalchemy import Text, UniqueConstraint, text
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.data import Data
@@ -190,6 +190,10 @@ class FlowBase(SQLModel):
 
 class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     id: UUID = Field(default_factory=uuid4, primary_key=True, unique=True)
+    latest_operation_revision: int = Field(
+        default=0,
+        sa_column=Column(BigInteger, nullable=False, server_default=text("0"), index=True),
+    )
     data: dict | None = Field(default=None, sa_column=Column(JSON))
     user_id: UUID | None = Field(index=True, foreign_key="user.id", nullable=True)
     user: "User" = Relationship(back_populates="flows")
