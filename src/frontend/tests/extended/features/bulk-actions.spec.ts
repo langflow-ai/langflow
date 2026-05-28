@@ -3,6 +3,7 @@ import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user should be able to select flows with different methods and perform bulk actions",
   { tag: ["@release", "@workspace", "@mainpage"] },

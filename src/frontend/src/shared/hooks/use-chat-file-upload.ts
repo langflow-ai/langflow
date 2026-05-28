@@ -1,22 +1,22 @@
+import type { AxiosError } from "axios";
 import {
-  useCallback,
   type ChangeEvent,
   type Dispatch,
   type SetStateAction,
+  useCallback,
 } from "react";
-import type { AxiosError } from "axios";
+import { useTranslation } from "react-i18next";
 import ShortUniqueId from "short-unique-id";
 import {
   FS_ERROR_TEXT,
   SN_ERROR_TEXT,
 } from "@/constants/file-upload-constants";
-import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import { usePostUploadFile } from "@/controllers/API/queries/files/use-post-upload-file";
+import { ENABLE_FILES_ON_PLAYGROUND } from "@/customization/feature-flags";
 import useFileSizeValidator from "@/shared/hooks/use-file-size-validator";
-import { isAllowedChatAttachmentFile } from "@/utils/file-validation";
 import useAlertStore from "@/stores/alertStore";
 import type { FilePreviewType } from "@/types/components";
-import { useTranslation } from "react-i18next";
+import { isAllowedChatAttachmentFile } from "@/utils/file-validation";
 
 interface UseChatFileUploadParams {
   currentFlowId: string;

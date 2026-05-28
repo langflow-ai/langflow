@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 /**
  * Tests for folder deletion integrity
  *

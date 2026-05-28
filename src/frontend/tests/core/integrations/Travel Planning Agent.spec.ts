@@ -1,12 +1,12 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
-import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Travel Planning Agent",
   { tag: ["@release", "@starter-projects"] },

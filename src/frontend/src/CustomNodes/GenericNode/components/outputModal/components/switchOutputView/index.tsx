@@ -169,10 +169,12 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
         <DataOutputComponent
           rows={
             Array.isArray(resultMessageMemoized)
-              ? (resultMessageMemoized as Array<any>).every(
+              ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+                (resultMessageMemoized as Array<any>).every(
                   (item) => item?.data,
                 )
-                ? (resultMessageMemoized as Array<any>).map(
+                ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+                  (resultMessageMemoized as Array<any>).map(
                     (item) => item?.data,
                   )
                 : resultMessageMemoized
@@ -213,8 +215,10 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
     <DataOutputComponent
       rows={
         Array.isArray(results)
-          ? (results as Array<any>).every((item) => item?.data)
-            ? (results as Array<any>).map((item) => item?.data)
+          ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+            (results as Array<any>).every((item) => item?.data)
+            ? // biome-ignore lint/suspicious/noExplicitAny: legacy
+              (results as Array<any>).map((item) => item?.data)
             : results
           : Object.keys(results)?.length > 0
             ? [results]

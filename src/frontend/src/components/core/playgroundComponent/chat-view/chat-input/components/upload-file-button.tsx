@@ -1,8 +1,8 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
-import { CHAT_UPLOAD_ATTACHMENT_ACCEPT } from "@/constants/file-upload-constants";
 import { Button } from "@/components/ui/button";
+import { CHAT_UPLOAD_ATTACHMENT_ACCEPT } from "@/constants/file-upload-constants";
 
 interface UploadFileButtonProps {
   fileInputRef: React.RefObject<HTMLInputElement | null>;
