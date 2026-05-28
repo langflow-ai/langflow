@@ -82,6 +82,48 @@ async def test_get_allowed_actions_returns_full_list(service: AuthorizationServi
     assert result == actions
 
 
+async def test_get_effective_permissions_default_returns_all_actions_per_resource(
+    service: AuthorizationService,
+) -> None:
+    """Default impl returns every requested action for every resource (no enforcement)."""
+    rids = [uuid4(), uuid4()]
+    actions = ["read", "write"]
+    result = await service.get_effective_permissions(
+        user_id=uuid4(),
+        resource_type="flow",
+        resource_ids=rids,
+        actions=actions,
+        domain="*",
+    )
+    assert result == {rids[0]: actions, rids[1]: actions}
+
+
+async def test_get_effective_permissions_validates_batch_enforce_length(
+    service: AuthorizationService,
+) -> None:
+    """A plugin returning a wrong-sized batch must raise ValueError, not silently slice.
+
+    Without this guard, a too-short ``flat`` produces empty lists for later
+    resources (out-of-bounds slice returns ``[]``) and a too-long ``flat``
+    drops the tail — both yielding incorrect per-resource permissions.
+    """
+
+    async def bad_batch_enforce(**_kwargs):
+        # Caller will pass 2 resources x 2 actions = 4 requests; return only 3.
+        return [True, True, True]
+
+    service.batch_enforce = bad_batch_enforce  # type: ignore[assignment]
+
+    with pytest.raises(ValueError, match="returned 3 results for 4 requests"):
+        await service.get_effective_permissions(
+            user_id=uuid4(),
+            resource_type="flow",
+            resource_ids=[uuid4(), uuid4()],
+            actions=["read", "write"],
+            domain="*",
+        )
+
+
 async def test_invalidate_user_is_noop(service: AuthorizationService) -> None:
     """Cache invalidation hooks are no-ops on the default LFX implementation."""
     assert await service.invalidate_user(uuid4()) is None

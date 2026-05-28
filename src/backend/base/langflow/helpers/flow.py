@@ -459,7 +459,7 @@ async def get_flow_by_id_or_endpoint_name(
     """Resolve a flow by UUID or endpoint_name.
 
     By default this is owner-scoped (``user_id`` must match the flow owner)
-    even when an enterprise authorization plugin is registered.  Callers that
+    even when an authorization plugin is registered.  Callers that
     immediately follow up with ``ensure_flow_permission(...)`` and therefore
     *want* the widening — so a shared flow becomes reachable — can opt in by
     passing ``widen_for_shares=True``.  Helpers that read ``flow.data`` without

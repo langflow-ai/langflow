@@ -74,7 +74,7 @@ from langflow.api.v1.schemas.deployments import (
 from langflow.services.adapters.deployment.context import deployment_provider_scope
 from langflow.services.authorization import DeploymentAction, ensure_deployment_permission, filter_visible_resources
 from langflow.services.authorization.fetch import deny_to_404
-from langflow.services.authorization.utils import _resolve_casbin_domain
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models.deployment.crud import (
     count_deployments_by_provider,
     delete_deployment_by_id,
@@ -785,7 +785,7 @@ async def list_deployments(
         resource_type="deployment",
         candidates=list(rows_with_counts),
         key=lambda row: row[0].id,
-        domain_extractor=lambda row: _resolve_casbin_domain(row[0].workspace_id, row[0].project_id),
+        domain_extractor=lambda row: _resolve_authz_domain(row[0].workspace_id, row[0].project_id),
         owner_extractor=lambda row: row[0].user_id,
         act=DeploymentAction.READ,
     )
