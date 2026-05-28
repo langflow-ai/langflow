@@ -489,3 +489,58 @@ class TestFromLcMessageToolCallId:
         tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
         assert [b.text for b in text_blocks] == ["I'll search for that."]
         assert [b.id for b in tool_blocks] == ["call_abc"]
+
+
+class TestMessageResponseFromMessage:
+    """Regression tests for ``MessageResponse.from_message`` timestamp parity.
+
+    ``Message.timestamp`` is a string with microsecond precision and a UTC
+    timezone label (``2026-05-28 19:41:56.196419 UTC``). Pydantic's default
+    datetime parser rejects that shape, so freshly built Messages used to
+    raise ``ValidationError`` when round-tripped through
+    ``MessageResponse.from_message``. The field now uses the shared
+    ``str_to_timestamp_validator`` so any format ``Message`` recognises also
+    round-trips through ``MessageResponse``.
+    """
+
+    def test_from_message_round_trips_microsecond_timestamp(self):
+        from lfx.schema.message import Message, MessageResponse
+
+        msg = Message(sender="AI", sender_name="Bot", text="hi")
+        # If the default format ever drifts, this test should still catch
+        # the regression because Message.timestamp is fed straight into
+        # MessageResponse.timestamp during ``from_message``.
+        assert " UTC" in msg.timestamp
+
+        response = MessageResponse.from_message(msg)
+        # Naive equality against the source timestamp would require a
+        # round-trip serialization; just confirm we got a real datetime
+        # back and that it's tz-aware (UTC).
+        assert response.timestamp.tzinfo is not None
+        assert response.timestamp.utcoffset().total_seconds() == 0
+
+
+class TestContentBlockExcludeUnset:
+    """Regression test for ``ContentBlock.__init__`` only marking the discriminator as set.
+
+    The previous override marked every field as ``model_fields_set``, which
+    defeated ``model_dump(exclude_unset=True)`` for ``ContentBlock``: a patch
+    like ``ContentBlock(title="...")`` would dump every default field and,
+    when merged onto an existing block by ``aupdate_messages``, would
+    overwrite fields the caller never touched (e.g. ``duration``).
+    """
+
+    def test_exclude_unset_only_carries_explicit_fields(self):
+        from lfx.schema.content_types import ContentBlock
+
+        patch = ContentBlock(title="new", allow_markdown=False)
+        dump = patch.model_dump(exclude_unset=True)
+        # The discriminator must survive so downstream validators that
+        # consume the partial dict still pick the right ContentType
+        # variant.
+        assert dump["type"] == "group"
+        # Only the explicitly-set fields (plus the discriminator) ride
+        # along. Defaulted fields like ``duration``, ``contents``,
+        # ``header``, ``media_url`` must stay out of the dump so they
+        # don't clobber existing values on merge.
+        assert dump.keys() <= {"type", "title", "allow_markdown"}

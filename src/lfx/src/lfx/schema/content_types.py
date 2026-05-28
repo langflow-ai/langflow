@@ -262,11 +262,15 @@ class ContentBlock(BaseContent):
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
-        # Mark every field as "set" so legacy callers iterating
-        # ``model_fields_set`` (and ``model_dump(exclude_unset=True)``) see
-        # the full ContentBlock shape, including the ``type="group"``
-        # discriminator that downstream validators depend on.
-        self.model_fields_set.update(type(self).model_fields)
+        # Mark only the discriminator as "set" so partial-update callers
+        # using ``model_dump(exclude_unset=True)`` (notably
+        # ``aupdate_messages``) still carry the ``type="group"`` field
+        # downstream. Other defaulted fields stay unset so true
+        # exclude_unset semantics survive: a patch like
+        # ``ContentBlock(title="...")`` no longer overwrites an existing
+        # block's ``duration`` / ``header`` / ``contents`` with their
+        # defaults on merge.
+        self.model_fields_set.add("type")
 
     @field_validator("contents", mode="before")
     @classmethod
