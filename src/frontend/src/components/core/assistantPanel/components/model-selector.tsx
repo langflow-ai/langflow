@@ -103,7 +103,7 @@ export function ModelSelector({
         disabled
       >
         <span className="text-accent-emerald-foreground">•</span>
-        <span>Loading...</span>
+        <span>{t("assistant.loading")}</span>
       </Button>
     );
   }
@@ -138,7 +138,7 @@ export function ModelSelector({
                 className="h-4 w-4 shrink-0"
               />
             </span>
-            <span>{currentModel?.displayName || "Select model"}</span>
+            <span>{currentModel?.displayName || t("assistant.selectModel")}</span>
             <ForwardedIconComponent
               name={isOpen ? "ChevronUp" : "ChevronDown"}
               className="h-3 w-3"

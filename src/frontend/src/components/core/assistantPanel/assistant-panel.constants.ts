@@ -1,3 +1,4 @@
+import i18n from "@/i18n";
 import type { AssistantSuggestion } from "./assistant-panel.types";
 
 export const ASSISTANT_TITLE = "Langflow Assistant";
@@ -5,18 +6,20 @@ export const ASSISTANT_TITLE = "Langflow Assistant";
 export const ASSISTANT_SESSION_STORAGE_KEY_PREFIX =
   "langflow-assistant-session-";
 
-export const ASSISTANT_PLACEHOLDERS = [
-  "Create an agent component...",
-  "Build a RAG pipeline...",
-  "Create a web scraper component...",
-  "Build a document parser...",
-  "Ask me anything about Langflow...",
+const ASSISTANT_PLACEHOLDER_KEYS = [
+  "assistant.placeholder.0",
+  "assistant.placeholder.1",
+  "assistant.placeholder.2",
+  "assistant.placeholder.3",
+  "assistant.placeholder.4",
 ];
 
 export function getAssistantPlaceholder(): string {
-  return ASSISTANT_PLACEHOLDERS[
-    Math.floor(Math.random() * ASSISTANT_PLACEHOLDERS.length)
-  ];
+  const key =
+    ASSISTANT_PLACEHOLDER_KEYS[
+      Math.floor(Math.random() * ASSISTANT_PLACEHOLDER_KEYS.length)
+    ];
+  return i18n.t(key);
 }
 
 export const ASSISTANT_SESSIONS_STORAGE_KEY = "langflow-assistant-sessions";
