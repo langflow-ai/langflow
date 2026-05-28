@@ -28,6 +28,7 @@ from langflow.api.v1.authz_route_dependencies import (
     AuthorizedDeleteFlow,
     AuthorizedReadFlow,
     AuthorizedWriteFlow,
+    OptionalAuthorizedReadFlow,
     RequireFlowCreate,
 )
 from langflow.api.v1.flows_helpers import (
@@ -224,7 +225,7 @@ async def read_flow(
 async def get_note_translations(
     *,
     flow_id: UUID,  # noqa: ARG001
-    flow: AuthorizedReadFlow,
+    flow: OptionalAuthorizedReadFlow,
     request: Request,
 ) -> dict[str, str]:
     """Return translated note node descriptions for the current locale.
@@ -235,7 +236,7 @@ async def get_note_translations(
     """
     from langflow.utils.i18n import translate
 
-    if not flow.data:
+    if not flow or not flow.data:
         return {}
 
     locale = getattr(request.state, "locale", "en")

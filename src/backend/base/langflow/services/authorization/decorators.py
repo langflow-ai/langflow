@@ -98,6 +98,21 @@ _ORM_ATTR_BY_SPEC_KW: dict[str, dict[str, str]] = {
 _F = TypeVar("_F", bound=Callable[..., Awaitable[Any]])
 
 
+def _action_value(act: _Action) -> str:
+    """Return the string value for enum-like and raw-string actions."""
+    return str(getattr(act, "value", act))
+
+
+def _requires_resource_id(act: _Action) -> bool:
+    """Return True when the action targets an existing resource."""
+    return _action_value(act) != "create"
+
+
+def _raise_missing_resource_id(func_name: str, spec_key: str, id_kw: str) -> None:
+    msg = f"@requires_resource_permission: '{func_name}' requires a non-null '{id_kw}' for {spec_key} permission"
+    raise ValueError(msg)
+
+
 def _kwargs_from_resource(spec_key: str, resource: Any) -> dict[str, Any]:
     """Build ensure_* kwargs from a loaded ORM row."""
     spec = _RESOURCE_SPECS[spec_key]
@@ -157,6 +172,13 @@ def requires_resource_permission(
                 f"a '{resource_param}' parameter when resource_param is set"
             )
             raise TypeError(msg)
+        spec = _RESOURCE_SPECS[spec_key]
+        if resource_param is None and _requires_resource_id(act) and spec.id_kw not in sig.parameters:
+            msg = (
+                f"@requires_resource_permission: '{func.__name__}' must have "
+                f"a '{spec.id_kw}' parameter for {spec_key} permission"
+            )
+            raise TypeError(msg)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -168,7 +190,6 @@ def requires_resource_permission(
             if resource_param is not None:
                 perm_kwargs = _kwargs_from_resource(spec_key, arguments[resource_param])
             else:
-                spec = _RESOURCE_SPECS[spec_key]
                 perm_kwargs = {}
                 for kw in (
                     spec.id_kw,
@@ -181,6 +202,9 @@ def requires_resource_permission(
                     perm_kwargs[spec.workspace_kw] = arguments[spec.workspace_kw]
                 if spec.scope_kw and spec.scope_kw in arguments:
                     perm_kwargs[spec.scope_kw] = arguments[spec.scope_kw]
+
+            if _requires_resource_id(act) and perm_kwargs.get(spec.id_kw) is None:
+                _raise_missing_resource_id(func.__name__, spec_key, spec.id_kw)
 
             try:
                 await ensure_fn(user, act, **perm_kwargs)
@@ -224,6 +248,12 @@ def requires_flow_permission(
                 f"a '{user_param}' parameter (got {list(sig.parameters)})"
             )
             raise TypeError(msg)
+        if _requires_resource_id(act) and flow_id_param not in sig.parameters:
+            msg = (
+                f"@requires_flow_permission: '{func.__name__}' must have "
+                f"a '{flow_id_param}' parameter for flow permission"
+            )
+            raise TypeError(msg)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -236,6 +266,8 @@ def requires_flow_permission(
                 "workspace_id": arguments.get("workspace_id"),
                 "folder_id": arguments.get("folder_id"),
             }
+            if _requires_resource_id(act) and perm_kwargs["flow_id"] is None:
+                _raise_missing_resource_id(func.__name__, "flow", "flow_id")
             try:
                 await ensure_flow_permission(arguments[user_param], act, **perm_kwargs)
             except HTTPException as exc:

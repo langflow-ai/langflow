@@ -270,9 +270,9 @@ def test_get_note_translations_is_owner_scoped_and_guarded(routes):
         assert read_flow_calls, "get_note_translations must fetch the flow via _read_flow (owner-scoped)"
         return
 
-    assert _uses_authorized_flow_dependency(func, "AuthorizedReadFlow"), (
-        "get_note_translations must declare AuthorizedReadFlow or call ensure_flow_permission"
-    )
+    assert any(
+        _uses_authorized_flow_dependency(func, alias) for alias in ("AuthorizedReadFlow", "OptionalAuthorizedReadFlow")
+    ), "get_note_translations must declare an authorized read dependency or call ensure_flow_permission"
 
 
 def test_read_flows_list_uses_filter_visible_resources(routes):

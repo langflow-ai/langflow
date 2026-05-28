@@ -76,3 +76,48 @@ def test_requires_flow_permission_raises_on_missing_user_param():
         @requires_flow_permission(FlowAction.READ, user_param="actor")
         async def bad(*, user):
             pass
+
+
+def test_requires_flow_permission_raises_on_missing_flow_id_param():
+    """Existing-resource actions must not silently authorize flow:*."""
+    with pytest.raises(TypeError, match="must have a 'missing_id' parameter"):
+
+        @requires_flow_permission(FlowAction.READ, user_param="user", flow_id_param="missing_id")
+        async def bad(*, user, flow_id):
+            pass
+
+
+@pytest.mark.anyio
+async def test_requires_flow_permission_rejects_none_flow_id_before_body(fake_user):
+    """A None resource id fails closed before ensure_flow_permission can see flow:*."""
+    ran = False
+
+    @requires_flow_permission(FlowAction.READ, user_param="user", flow_id_param="flow_id")
+    async def handler(*, user, flow_id):  # noqa: ARG001
+        nonlocal ran
+        ran = True
+
+    with pytest.raises(ValueError, match="non-null 'flow_id'"):
+        await handler(user=fake_user, flow_id=None)
+    assert ran is False
+
+
+@pytest.mark.anyio
+async def test_requires_flow_permission_resource_param_rejects_missing_id_before_body(fake_user):
+    """Loaded-resource mode also fails closed when the row lacks an id."""
+    ran = False
+
+    class _Flow:
+        id = None
+        user_id = uuid4()
+        workspace_id = None
+        folder_id = None
+
+    @requires_flow_permission(FlowAction.EXECUTE, user_param="user", flow_param="flow")
+    async def handler(*, user, flow):  # noqa: ARG001
+        nonlocal ran
+        ran = True
+
+    with pytest.raises(ValueError, match="non-null 'flow_id'"):
+        await handler(user=fake_user, flow=_Flow())
+    assert ran is False
