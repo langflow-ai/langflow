@@ -2,6 +2,8 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user should be able to select flows with different methods and perform bulk actions",
   { tag: ["@release", "@workspace", "@mainpage"] },
@@ -10,7 +12,9 @@ test(
 
     // Add some flows to test with
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await adjustScreenView(page);
 
     // Go back to main page
@@ -19,7 +23,7 @@ test(
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.getByText("Projects").first().isVisible();
+    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Document Q&A" }).click();
@@ -28,16 +32,18 @@ test(
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.getByText("Projects").first().isVisible();
+    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.getByTestId("new-project-btn").click();
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.getByText("Projects").first().isVisible();
+    await expect(page.getByText("Projects").first()).toBeVisible();
     await page.waitForSelector('[data-testid="home-dropdown-menu"]', {
       timeout: 100000,
     });
@@ -108,7 +114,7 @@ test(
     await page.getByText("This can't be undone.").isVisible({
       timeout: 1000,
     });
-    await page.getByText("Delete").last().click();
+    await page.getByText(TEXTS.delete).last().click();
 
     // Verify deletion success message
     await expect(page.getByText("Flows deleted successfully")).toBeVisible({

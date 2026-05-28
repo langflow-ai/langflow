@@ -83,6 +83,7 @@ export default function ShareModal({
       fields: ["name", "id", "is_component"],
       filterByUser: true,
     }).then((res) => {
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       res?.results?.forEach((element: any) => {
         if ((element.is_component ?? false) === is_component)
           unavaliableNames.push({ name: element.name, id: element.id });

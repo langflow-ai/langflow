@@ -551,6 +551,16 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
+                    # Drain pending audit writes before services tear down so
+                    # rows scheduled mid-request still land in the DB. We do
+                    # this here (not in teardown_services) because the DB
+                    # session factory must still be alive.
+                    try:
+                        from langflow.services.authorization.utils import drain_pending_audit_writes
+
+                        await drain_pending_audit_writes(timeout=5.0)
+                    except Exception as drain_exc:  # noqa: BLE001 — never block shutdown on audit
+                        await logger.awarning(f"drain_pending_audit_writes failed: {drain_exc}")
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:

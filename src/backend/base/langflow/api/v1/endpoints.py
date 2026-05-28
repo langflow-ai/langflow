@@ -60,6 +60,7 @@ from langflow.services.auth.utils import (
     get_current_user_for_sse,
     get_optional_user,
 )
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
@@ -94,6 +95,7 @@ _SIMPLIFIED_API_FORM_FIELDS = (
     "output_type",
     "output_component",
     "session_id",
+    "user_id",
 )
 
 
@@ -242,6 +244,11 @@ async def simple_run_flow(
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
+        # Forward the caller-supplied identifier to tracing providers without
+        # affecting authn/authz. The API-key owner remains the effective user
+        # for permissions, global variables, and job ownership.
+        if input_request.user_id:
+            graph.tracing_user_id = input_request.user_id
         run_id_uuid = uuid4() if run_id is None else UUID(run_id)
         run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
@@ -506,23 +513,6 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-async def check_flow_user_permission(
-    flow: FlowRead | None,
-    api_key_user: UserRead,
-) -> None:
-    """Check if the user associated with the API key has permission to run the flow.
-
-    Args:
-        flow (FlowRead | None): The flow to check permissions for
-        api_key_user (UserRead): The user associated with the API key
-
-    Raises:
-        HTTPException: If the user does not have permission to run the flow
-    """
-    if flow and flow.user_id != api_key_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
-
-
 async def get_flow_for_api_key_user(
     flow_id_or_name: str,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -531,15 +521,17 @@ async def get_flow_for_api_key_user(
 
     Using the raw helper as a FastAPI ``Depends`` exposed ``user_id`` as a
     plain query parameter that no real caller sets, so flow lookups on the
-    ``/run*`` routes bypassed user scoping entirely and relied on
-    ``check_flow_user_permission`` later in the handler for a 403.  That gave
-    attackers a 403-vs-404 existence oracle on flow UUIDs.  This wrapper
-    pulls the authenticated user from ``api_key_security`` and passes it to
-    the helper, so cross-user access fails closed with 404 at the helper
-    layer.  ``check_flow_user_permission`` is kept in the handler chain as
-    defense in depth.
+    ``/run*`` routes bypassed user scoping entirely. This wrapper pulls the
+    authenticated user from ``api_key_security`` and passes it to the helper,
+    so cross-user access fails closed with 404 at the helper layer.
+
+    When an authorization plugin is registered, the lookup is
+    share-aware (load by id, route guard decides access). The OSS pass-through
+    default keeps the owner-scoped lookup.
     """
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id)
+    # These wrappers always pair with ``ensure_flow_permission`` in the route
+    # handler, so opting in to share-aware widening is safe.
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id, widen_for_shares=True)
 
 
 async def get_flow_for_current_user(
@@ -547,15 +539,32 @@ async def get_flow_for_current_user(
     current_user: CurrentActiveUser,
 ) -> FlowRead:
     """Session-auth variant of :func:`get_flow_for_api_key_user`."""
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id)
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id, widen_for_shares=True)
+
+
+class SseAuth:
+    """Helper to carry both authenticated user and flow for SSE subscription."""
+
+    def __init__(self, user: User | UserRead, flow: FlowRead):
+        self.user = user
+        self.flow = flow
 
 
 async def get_flow_for_sse_user(
     flow_id_or_name: str,
     user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
-) -> FlowRead:
-    """Auth-aware wrapper around ``get_flow_by_id_or_endpoint_name`` for SSE routes."""
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id)
+) -> SseAuth:
+    """Auth-aware dependency for SSE routes.
+
+    Returns both the SSE user and the flow so the route can call
+    ``ensure_flow_permission`` *before* subscribing to the event stream.
+    Widening to share-aware lookup is safe here only because the route
+    immediately enforces ``flow:read``; without that enforcement, a non-owner
+    with cross-user fetch enabled could subscribe to another user's webhook
+    event stream and exfiltrate flow id/name plus event payloads.
+    """
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id, widen_for_shares=True)
+    return SseAuth(user=user, flow=flow)
 
 
 class WebhookAuth:
@@ -575,7 +584,9 @@ async def get_webhook_auth(
     Centralizes the security logic for webhook run endpoints.
     """
     webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
-    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id)
+    # Webhook route also calls ``ensure_flow_permission`` after, so widening
+    # for shared resources is acceptable here.
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
     return WebhookAuth(user=webhook_user, flow=flow)
 
 
@@ -610,8 +621,12 @@ async def _run_flow_internal(
         HTTPException: For flow not found (404) or invalid input (400)
         APIException: For internal execution errors (500)
     """
-    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
-
+    # Authorization happens upstream: every caller of _run_flow_internal must
+    # have called ensure_flow_permission(FlowAction.EXECUTE, ...) before
+    # invoking us. The owner-only check that used to live here would reject any
+    # plugin execute-grant on a shared flow, defeating the plugin's
+    # purpose. Adding a defense-in-depth check here would re-introduce the
+    # same regression.
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -766,6 +781,14 @@ async def simplified_run_flow(
             - "end": Final execution result
         - Authentication: Requires API key (Bearer token)
     """
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -834,6 +857,14 @@ async def simplified_run_flow_session(
             detail="This endpoint is not available",
         )
 
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -847,7 +878,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
-    flow: Annotated[FlowRead, Depends(get_flow_for_sse_user)],
+    auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -856,8 +887,21 @@ async def webhook_events_stream(
     of webhook execution progress, similar to clicking "Play" in the UI.
 
     Authentication: Requires user to be logged in (via cookie) or provide API key.
-    The user must own the flow to subscribe to its events.
+    The user must own the flow OR have an authorization-plugin-granted
+    ``flow:read`` permission to subscribe to its events.
     """
+    flow = auth.flow
+    # Enforce flow:read before subscribing — the SSE fetcher uses share-aware
+    # lookup, so without this check a non-owner with cross-user fetch enabled
+    # would receive another user's webhook event payloads.
+    await ensure_flow_permission(
+        auth.user,
+        FlowAction.READ,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=getattr(flow, "workspace_id", None),
+        folder_id=getattr(flow, "folder_id", None),
+    )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -921,6 +965,15 @@ async def webhook_run_flow(
     # Webhook user and flow are resolved by the dependency
     webhook_user = auth.user
     flow = auth.flow
+
+    await ensure_flow_permission(
+        webhook_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     try:
         data = await request.body()
@@ -1038,8 +1091,14 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
-    # Get the flow from the id or name
-    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     session_service = get_session_service()
     flow_id_str = str(flow.id)

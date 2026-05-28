@@ -192,6 +192,66 @@ class TestLangfuseTracerFunctionality:
         # Should set trace metadata via update_trace
         mock_langfuse["root_span"].update_trace.assert_called()
 
+    def test_trace_user_id_uses_auth_user_when_no_tracing_override(self, mock_langfuse):
+        """``trace.userId`` should be the authenticated Langflow user (pre-#9505 behavior)."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="auth-user",
+            session_id="session-1",
+        )
+
+        update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert update_kwargs["user_id"] == "auth-user"
+        # No override → no metadata payload was supplied for the override.
+        assert "metadata" not in update_kwargs
+
+    def test_trace_user_id_stays_auth_user_and_override_goes_to_metadata(self, mock_langfuse):
+        """``tracing_user_id`` must not redefine ``trace.userId``; it is stamped in metadata.
+
+        Regression for GitHub issue #9505 / PR #13266 review: external Langfuse
+        consumers depend on ``trace.userId`` continuing to mean the authenticated
+        Langflow user. The caller-supplied override surfaces as
+        ``metadata.langflow.tracing_user_id`` instead.
+        """
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="auth-user",
+            session_id="session-1",
+            tracing_user_id="end-user-456",
+        )
+
+        update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert update_kwargs["user_id"] == "auth-user"
+        assert update_kwargs["metadata"] == {"langflow.tracing_user_id": "end-user-456"}
+
+    def test_tracing_user_id_equal_to_auth_user_is_not_stamped(self, mock_langfuse):
+        """When the override matches the auth user there is nothing extra to record."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+            user_id="same-user",
+            session_id="session-1",
+            tracing_user_id="same-user",
+        )
+
+        update_kwargs = mock_langfuse["root_span"].update_trace.call_args.kwargs
+        assert update_kwargs["user_id"] == "same-user"
+        assert "metadata" not in update_kwargs
+
     def test_add_trace_creates_child_span(self, mock_langfuse):
         """Test that add_trace creates a child span using v3 API."""
         from langflow.services.tracing.langfuse import LangFuseTracer
@@ -424,3 +484,154 @@ class TestLangfuseClientSingleton:
                 _get_langfuse_client()
 
             assert mock_langfuse_class.call_count == 2
+
+
+class TestLangfuseIsolatedTracerProvider:
+    """Verify Langfuse is initialized with an isolated OTel ``TracerProvider``.
+
+    Regression test for https://github.com/langflow-ai/langflow/issues/13319.
+
+    Without an explicit ``tracer_provider``, the Langfuse v3 SDK registers
+    itself as the global OTel tracer provider. Because ``langflow.main`` calls
+    ``FastAPIInstrumentor.instrument_app(app)`` (which uses the global
+    provider), every FastAPI HTTP request span would then be exported to
+    Langfuse — flooding traces with health checks, flow list calls, and other
+    unrelated routes. Passing an isolated provider keeps Langfuse spans
+    private to the langfuse client.
+    """
+
+    def test_shared_client_uses_isolated_tracer_provider(self):
+        """``Langfuse(...)`` must receive an explicit, non-global ``TracerProvider``."""
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+        from opentelemetry.sdk.trace import TracerProvider
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.return_value = MagicMock()
+
+            _get_langfuse_client()
+
+            mock_langfuse_class.assert_called_once()
+            call_kwargs = mock_langfuse_class.call_args.kwargs
+            assert "tracer_provider" in call_kwargs, (
+                "Langfuse() must be called with an explicit tracer_provider so it does not"
+                " register itself as the global OTel tracer provider (issue #13319)."
+            )
+            assert isinstance(call_kwargs["tracer_provider"], TracerProvider)
+
+    def test_global_tracer_provider_is_not_replaced_by_langfuse_init(self):
+        """Initializing the Langfuse client must not swap out the global TracerProvider.
+
+        If Langfuse becomes the global provider, ``FastAPIInstrumentor`` will
+        emit HTTP request spans into Langfuse, which is the symptom reported
+        in #13319.
+        """
+        from langflow.services.tracing.langfuse import _get_langfuse_client
+        from opentelemetry import trace as otel_trace_api
+
+        before = otel_trace_api.get_tracer_provider()
+
+        with patch("langfuse.Langfuse") as mock_langfuse_class:
+            mock_langfuse_class.return_value = MagicMock()
+            _get_langfuse_client()
+
+        after = otel_trace_api.get_tracer_provider()
+        assert after is before, (
+            "Global OTel TracerProvider must not change when the Langfuse client is initialized (issue #13319)."
+        )
+
+
+class TestLangfuseSetupFailureVisibility:
+    """Regression for https://github.com/langflow-ai/langflow/issues/13317.
+
+    On Docker v1.9.3 (Python 3.14 + pydantic<2.13) langfuse fails to import
+    with ``pydantic.v1.errors.ConfigError`` and the tracer was silently
+    initializing with ``_ready = False`` because the broad except branch in
+    ``_setup_langfuse`` only logged at ``debug`` level. Users saw no traces
+    in Langfuse and no diagnostic message in logs. Setup failures must now
+    surface at ``WARNING``/``ERROR`` level (via loguru) so the cause is
+    visible. The module logger is loguru's ``lfx.log.logger.logger`` so we
+    patch its methods directly rather than relying on stdlib ``caplog``.
+    """
+
+    def test_auth_check_failure_logs_warning(self):
+        """A failed auth_check must log a WARNING so users see the problem."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with (
+            patch("langfuse.Langfuse") as mock_langfuse_class,
+            patch("langflow.services.tracing.langfuse.logger") as mock_logger,
+        ):
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = False
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test - flow-1",
+                trace_type="chain",
+                project_name="proj",
+                trace_id=uuid.uuid4(),
+            )
+
+            assert tracer.ready is False
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args.args[0].lower()
+            assert "authentication failed" in warning_msg
+
+    def test_auth_check_exception_logs_warning(self):
+        """A connection error during auth_check must log a WARNING, not debug."""
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with (
+            patch("langfuse.Langfuse") as mock_langfuse_class,
+            patch("langflow.services.tracing.langfuse.logger") as mock_logger,
+        ):
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.side_effect = ConnectionError("upstream unreachable")
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test - flow-1",
+                trace_type="chain",
+                project_name="proj",
+                trace_id=uuid.uuid4(),
+            )
+
+            assert tracer.ready is False
+            mock_logger.warning.assert_called_once()
+            warning_msg = mock_logger.warning.call_args.args[0].lower()
+            assert "cannot connect to langfuse" in warning_msg
+
+    def test_setup_exception_logs_with_traceback(self):
+        """Unexpected setup errors must call logger.exception so users see the cause.
+
+        Simulates the production failure mode: langfuse import succeeds (mocked)
+        but ``start_span`` raises something other than ``ImportError`` — exactly
+        the shape ``pydantic.v1.errors.ConfigError`` takes on Python 3.14 with
+        pydantic<2.13, just raised later in the path. The previous ``debug``
+        log meant users got no signal at all.
+        """
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        with (
+            patch("langfuse.Langfuse") as mock_langfuse_class,
+            patch("langflow.services.tracing.langfuse.logger") as mock_logger,
+        ):
+            mock_langfuse_class.create_trace_id = MagicMock(return_value="a" * 32)
+            mock_client = MagicMock()
+            mock_client.auth_check.return_value = True
+            mock_client.start_span.side_effect = RuntimeError("simulated pydantic v1 config error")
+            mock_langfuse_class.return_value = mock_client
+
+            tracer = LangFuseTracer(
+                trace_name="test - flow-1",
+                trace_type="chain",
+                project_name="proj",
+                trace_id=uuid.uuid4(),
+            )
+
+            assert tracer.ready is False
+            mock_logger.exception.assert_called_once()
+            err_msg = mock_logger.exception.call_args.args[0].lower()
+            assert "error setting up langfuse tracer" in err_msg

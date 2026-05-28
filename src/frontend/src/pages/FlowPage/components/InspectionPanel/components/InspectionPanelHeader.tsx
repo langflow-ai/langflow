@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";

@@ -3,11 +3,12 @@ from collections import deque
 
 import pytest
 from ag_ui.core import RunFinishedEvent, RunStartedEvent
-from lfx.components.input_output import ChatInput, ChatOutput, TextOutputComponent
+from lfx.components.input_output import ChatInput, ChatOutput, TextInputComponent, TextOutputComponent
 from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
 from lfx.components.processing.combine_text import CombineTextComponent
 from lfx.graph import Graph
 from lfx.graph.graph.constants import Finish
+from lfx.schema.schema import INPUT_FIELD_NAME
 
 
 @pytest.mark.asyncio
@@ -74,6 +75,42 @@ async def test_graph_functional_async_start():
     assert len(results) == 3
     assert all(result.vertex.id in ids for result in results if hasattr(result, "vertex"))
     assert results[-1] == Finish()
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_chat_input_with_custom_id():
+    chat_input = ChatInput(_id="input_1")
+    chat_output = ChatOutput(_id="output_1")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}])
+
+    assert result[0].outputs[0].results["message"].data["text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_text_input_with_custom_id():
+    text_input = TextInputComponent(_id="input_1")
+    text_output = TextOutputComponent(_id="output_1")
+    text_output.set(input_value=text_input.text_response)
+    graph = Graph(text_input, text_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}], types=["text"])
+
+    assert result[0].outputs[0].results["text"].data["text"] == "hello"
+
+
+@pytest.mark.asyncio
+async def test_graph_arun_sets_custom_id_when_input_component_is_explicit():
+    chat_input = ChatInput(_id="input_1")
+    chat_output = ChatOutput(_id="output_1")
+    chat_output.set(input_value=chat_input.message_response)
+    graph = Graph(chat_input, chat_output)
+
+    result = await graph.arun(inputs=[{INPUT_FIELD_NAME: "hello"}], inputs_components=[["input_1"]])
+
+    assert result[0].outputs[0].results["message"].data["text"] == "hello"
 
 
 def test_graph_functional_start_end():

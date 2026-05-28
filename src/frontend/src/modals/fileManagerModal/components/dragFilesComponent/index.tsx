@@ -157,6 +157,7 @@ export default function DragFilesComponent({
                 : t("fileManager.fileUploadedSuccessfully"),
           });
         }
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (error: any) {
         setErrorData({
           title: t("fileManager.errorUploadingFile"),
@@ -206,6 +207,7 @@ export default function DragFilesComponent({
               : t("fileManager.fileUploadedSuccessfully"),
         });
       }
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       setErrorData({
         title: t("fileManager.errorUploadingFile"),
@@ -226,6 +228,7 @@ export default function DragFilesComponent({
               : t("fileManager.fileUploadedSuccessfully"),
         });
       }
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       setErrorData({
         title: t("fileManager.errorUploadingFile"),

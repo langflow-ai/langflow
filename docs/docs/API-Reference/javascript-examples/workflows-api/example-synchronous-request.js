@@ -13,6 +13,10 @@ const options = {
     "ChatInput-abc.input_type": "chat",
     "ChatInput-abc.input_value": "what is 2+2",
     "ChatInput-abc.session_id": "session-123"
+  },
+  "globals": {
+    "FILENAME": "relatório—final.pdf",
+    "OWNER_NAME": "José"
   }
 }),
 };

@@ -1,70 +1,39 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { publishBasicPromptingAndOpenShareablePlayground } from "../../utils/playground/publish-and-open-shareable";
+import { sendPlaygroundMessage } from "../../utils/playground/send-playground-message";
 
 test(
   "shareable playground: bot messages display token usage",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page, context }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    const { playgroundPage } =
+      await publishBasicPromptingAndOpenShareablePlayground(page, context);
 
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
-    await initialGPTsetup(page);
-
-    // Build first
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
-
-    // Publish
-    await page.getByTestId("publish-button").click();
-    await page.waitForSelector('[data-testid="shareable-playground"]', {
-      timeout: 10000,
+    await sendPlaygroundMessage(playgroundPage, "Say hi", {
+      surface: "shareable",
     });
-    await page.waitForTimeout(1000);
-    await page.getByTestId("publish-switch").click();
-    await page.waitForTimeout(2000);
-
-    const pagePromise = context.waitForEvent("page");
-    await page.getByTestId("shareable-playground").click();
-    const newPage = await pagePromise;
-    await newPage.waitForTimeout(3000);
-
-    // Send message
-    await newPage.getByPlaceholder("Send a message...").fill("Say hi");
-    await newPage.getByTestId("button-send").last().click();
-
-    // Wait for build to complete (Stop button lifecycle)
-    const stopButton = newPage.getByRole("button", { name: "Stop" });
-    await stopButton.waitFor({ state: "visible", timeout: 30000 });
-    await stopButton.waitFor({ state: "hidden", timeout: 120000 });
-
-    // Wait for UI to settle
-    await newPage.waitForTimeout(3000);
 
     // Token count should be visible (Coins icon indicates token display)
-    await newPage.waitForSelector('[data-testid="icon-Coins"]', {
-      timeout: 30000,
+    await playgroundPage.waitForSelector(`[data-testid="${TID.iconCoins}"]`, {
+      timeout: TIMEOUTS.standard,
     });
-    const coinsIcons = await newPage
-      .locator('[data-testid="icon-Coins"]')
+    const coinsIcons = await playgroundPage
+      .locator(`[data-testid="${TID.iconCoins}"]`)
       .count();
     expect(coinsIcons).toBeGreaterThan(0);
 
-    await newPage.close();
+    await playgroundPage.close();
   },
 );
 
@@ -72,48 +41,34 @@ test(
   "regular playground: Finished In with token display still works (regression)",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
-
+    await openStarterProject(page, "Basic Prompting");
     await initialGPTsetup(page);
 
-    // Build
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await buildFlowAndWait(page);
 
-    // Open regular playground
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 10000,
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
+    await page.waitForSelector(`[data-testid="${TID.inputChatPlayground}"]`, {
+      timeout: TIMEOUTS.medium,
     });
 
-    // Send message
-    await page.getByTestId("input-chat-playground").click();
-    await page.getByTestId("input-chat-playground").fill("Say hello briefly");
+    await page.getByTestId(TID.inputChatPlayground).click();
+    await page.getByTestId(TID.inputChatPlayground).fill("Say hello briefly");
     await page.keyboard.press("Enter");
 
-    // Wait for AI response
     await page.waitForFunction(
       () =>
         document.querySelectorAll('[data-testid="div-chat-message"]').length >=
         2,
-      { timeout: 120000 },
+      { timeout: TIMEOUTS.buildComplete },
     );
 
-    // "Finished in" should appear (regular playground specific)
     await expect(page.getByText("Finished in")).toBeVisible({
-      timeout: 30000,
+      timeout: TIMEOUTS.standard,
     });
   },
 );

@@ -3,6 +3,7 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -22,7 +23,7 @@ test(
     await page.getByTestId("blank-flow").click();
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
     await page.waitForSelector('[data-testid="input_outputChat Output"]', {
       timeout: 100000,
     });
@@ -37,7 +38,7 @@ test(
     await zoomOut(page, 2);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
     await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 100000,
     });
@@ -49,7 +50,7 @@ test(
       });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);
     await page.waitForSelector('[data-testid="input_outputText Output"]', {
       timeout: 100000,
     });
@@ -77,7 +78,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").click();
 
-    await page.getByText("New Flow").isVisible();
+    await expect(page.getByText("New Flow")).toBeVisible();
     await page.getByTestId("new-project-btn").click();
 
     await page.getByTestId("blank-flow").click();
@@ -116,7 +117,7 @@ test(
       .fill("THIS IS A TEST FOR RUN FLOW COMPONENT");
 
     await page.getByTestId("button_run_run flow").click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 30000,
     });
 
@@ -127,7 +128,9 @@ test(
 
     await page.locator('[data-testid^="output-inspection-"]').first().click();
 
-    const value = await page.getByPlaceholder("Empty").inputValue();
+    const value = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .inputValue();
 
     expect(value).toBe("THIS IS A TEST FOR RUN FLOW COMPONENT");
   },
