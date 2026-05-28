@@ -146,15 +146,17 @@ def requires_resource_permission(
         sig = inspect.signature(func)
 
         if user_param not in sig.parameters:
-            raise TypeError(
+            msg = (
                 f"@requires_resource_permission: '{func.__name__}' must have "
                 f"a '{user_param}' parameter (got {list(sig.parameters)})"
             )
+            raise TypeError(msg)
         if resource_param is not None and resource_param not in sig.parameters:
-            raise TypeError(
+            msg = (
                 f"@requires_resource_permission: '{func.__name__}' must have "
                 f"a '{resource_param}' parameter when resource_param is set"
             )
+            raise TypeError(msg)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:
@@ -217,12 +219,11 @@ def requires_flow_permission(
     def decorator(func: _F) -> _F:
         sig = inspect.signature(func)
         if user_param not in sig.parameters:
-            raise TypeError(
+            msg = (
                 f"@requires_flow_permission: '{func.__name__}' must have "
                 f"a '{user_param}' parameter (got {list(sig.parameters)})"
             )
-
-        inner = requires_resource_permission("flow", act, user_param=user_param)
+            raise TypeError(msg)
 
         @functools.wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> Any:

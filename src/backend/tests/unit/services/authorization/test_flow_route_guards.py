@@ -99,7 +99,8 @@ def test_single_guard_route_uses_enum_action(routes, func_name, expected_action)
         "FlowAction.DELETE": "AuthorizedDeleteFlow",
     }
     alias = alias_by_action.get(expected_action)
-    assert alias and _uses_authorized_flow_dependency(func, alias), (
+    assert alias is not None
+    assert _uses_authorized_flow_dependency(func, alias), (
         f"{func_name} has no ensure_flow_permission call or {alias} dependency"
     )
 

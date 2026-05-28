@@ -213,6 +213,7 @@ async def read_flows(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
+    flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedReadFlow,
 ):
     """Read a flow."""
@@ -222,6 +223,7 @@ async def read_flow(
 @router.get("/{flow_id}/note_translations", status_code=200)
 async def get_note_translations(
     *,
+    flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedReadFlow,
     request: Request,
 ) -> dict[str, str]:
@@ -492,7 +494,7 @@ async def upsert_flow(
 async def delete_flow(
     *,
     session: DbSession,
-    flow_id: UUID,
+    flow_id: UUID,  # noqa: ARG001
     flow: AuthorizedDeleteFlow,
     current_user: CurrentActiveUser,
 ):

@@ -28,7 +28,7 @@ async def test_requires_flow_permission_denies_before_body(monkeypatch, fake_use
     @requires_flow_permission(
         FlowAction.READ, user_param="user", flow_id_param="flow_id", flow_user_id_param="owner_id"
     )
-    async def handler(*, user, flow_id, owner_id):
+    async def handler(*, user, flow_id, owner_id):  # noqa: ARG001
         nonlocal ran
         ran = True
 
@@ -62,7 +62,7 @@ async def test_requires_flow_permission_maps_forbidden_to_value_error(monkeypatc
         forbidden_as_not_found=True,
         not_found_template="Flow missing",
     )
-    async def handler(*, user, flow):
+    async def handler(*, user, flow):  # noqa: ARG001
         return "ok"
 
     with pytest.raises(ValueError, match="Flow missing"):

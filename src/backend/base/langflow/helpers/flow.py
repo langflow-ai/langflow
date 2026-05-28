@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
 
+    from langflow.services.database.models.user.model import User
+
 from langflow.schema.data import Data
 
 INPUT_TYPE_MAP = {
@@ -165,7 +167,7 @@ async def get_flow_by_id_or_name(
 
 async def _build_graph_from_authorized_flow(
     *,
-    caller: User,
+    caller: User,  # noqa: ARG001
     flow: Flow,
     flow_id: str,
     user_id: str,
