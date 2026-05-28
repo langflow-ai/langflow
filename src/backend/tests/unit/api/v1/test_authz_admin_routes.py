@@ -173,7 +173,8 @@ def test_role_create_accepts_canonical_permission_slugs():
         permissions=[
             "flow:read",
             "flow:execute",
-            "deployment:deploy",
+            "flow:deploy",  # deploy is a FLOW action, not deployment
+            "deployment:execute",
             "share:create",
             "knowledge_base:ingest",
             "file:*",
@@ -195,6 +196,15 @@ def test_role_create_accepts_canonical_permission_slugs():
         "flow:invent",  # unknown action
         "*:read",  # resource wildcard not allowed
         "",  # empty
+        # Per-resource action validation — these are syntactically valid
+        # ``<resource>:<action>`` slugs whose action doesn't belong to that
+        # resource's enum. Independent validation would let them through.
+        "file:deploy",  # deploy is a flow-only action
+        "share:execute",  # execute isn't a share action
+        "project:ingest",  # ingest is knowledge_base-only
+        "deployment:deploy",  # deploy is flow-only — deployments use execute
+        "share:write",  # write isn't a share action
+        "variable:execute",  # variables aren't executed
     ],
 )
 def test_role_create_rejects_non_canonical_permission_slugs(bad_slug):
@@ -204,6 +214,36 @@ def test_role_create_rejects_non_canonical_permission_slugs(bad_slug):
 
     with pytest.raises(ValidationError):
         RoleCreate(name="bad", permissions=[bad_slug])
+
+
+@pytest.mark.parametrize(
+    "good_slug",
+    [
+        # Action that's valid on its own resource shouldn't false-positive
+        # the per-resource check. Cover the cross-product edges that the
+        # bad-slug parametrize complements. ``deploy`` is intentionally
+        # flow-only (matches FlowAction.DEPLOY); deployments use execute.
+        "flow:deploy",
+        "flow:execute",
+        "deployment:execute",
+        "knowledge_base:ingest",
+        "share:update",
+        "share:create",
+        "file:read",
+        "variable:write",
+        "project:delete",
+        # Wildcard remains valid on every resource.
+        "flow:*",
+        "share:*",
+        "knowledge_base:*",
+    ],
+)
+def test_role_create_accepts_per_resource_action_pairs(good_slug):
+    """Per-resource validation must still accept every (resource, action) the enums define."""
+    from langflow.api.v1.schemas.authz_roles import RoleCreate
+
+    payload = RoleCreate(name="ok", permissions=[good_slug])
+    assert payload.permissions == [good_slug]
 
 
 def test_role_update_validates_permissions_when_provided():
@@ -1079,3 +1119,348 @@ async def test_me_permissions_handler_uses_normalized_actions(stub_authz):
     await authz_me.get_effective_permissions(body=body, current_user=user)
     # Normalization happened at the model layer; handler sees the bounded set.
     assert tuple(captured["actions"]) == ("read", "write")
+
+
+# =====================================================================
+# Cache-invalidation failure semantics
+#
+# The route handlers commit a policy-relevant DB change before asking the
+# plugin to drop its cached decisions. A naive ``await invalidate_user(...)``
+# would surface a plugin RPC failure as an API 5xx — leaving the DB write
+# durable while the caller believes the mutation failed.
+#
+# ``safe_invalidate_*`` in services/authorization/invalidation.py instead
+# (1) catches the plugin failure, (2) falls back to invalidate_all, and
+# (3) never raises. Cover both grant and revoke paths so a regression to
+# the un-safe pattern fails loudly.
+# =====================================================================
+
+
+class _FailingInvalidateUserAuthz(_StubAuthz):
+    """Stub that raises on invalidate_user; tracks invalidate_all fallback."""
+
+    def __init__(self, *, fail_invalidate_all: bool = False) -> None:
+        super().__init__(allow=True)
+        self._fail_invalidate_all = fail_invalidate_all
+
+    async def invalidate_user(self, user_id: UUID) -> None:  # type: ignore[override]
+        self.invalidate_user_calls.append(user_id)
+        msg = "plugin RPC failure"
+        raise RuntimeError(msg)
+
+    async def invalidate_all(self) -> None:  # type: ignore[override]
+        self.invalidate_all_calls += 1
+        if self._fail_invalidate_all:
+            msg = "plugin invalidate_all failure"
+            raise RuntimeError(msg)
+
+
+@pytest.fixture
+def failing_invalidate_authz(monkeypatch):
+    """Install a stub whose invalidate_user raises; assert no 5xx leaks out."""
+    from langflow.api.v1 import authz_role_assignments, authz_roles, authz_teams
+
+    def _apply(*, fail_invalidate_all: bool = False) -> _FailingInvalidateUserAuthz:
+        stub = _FailingInvalidateUserAuthz(fail_invalidate_all=fail_invalidate_all)
+        for module in (authz_roles, authz_role_assignments, authz_teams):
+            monkeypatch.setattr(module, "get_authorization_service", lambda s=stub: s)
+        return stub
+
+    return _apply
+
+
+@pytest.mark.asyncio
+async def test_create_assignment_succeeds_when_invalidate_user_fails(failing_invalidate_authz):
+    """Grant: DB write is durable, so a plugin invalidation failure must NOT 5xx."""
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.api.v1.schemas.authz_role_assignments import RoleAssignmentCreate
+    from langflow.services.database.models.auth import AuthzRole
+    from langflow.services.database.models.user.model import User
+
+    authz = failing_invalidate_authz()
+    target_user = SimpleNamespace(id=uuid4())
+    role = SimpleNamespace(id=uuid4(), name="viewer")
+    session = _FakeAsyncSession(
+        {(User, target_user.id): target_user, (AuthzRole, role.id): role},
+    )
+    actor = _make_user(is_superuser=True)
+    payload = RoleAssignmentCreate(user_id=target_user.id, role_id=role.id)
+
+    # Must NOT raise — the durable commit happened before invalidation.
+    await authz_role_assignments.create_assignment(
+        payload=payload,
+        current_user=actor,
+        session=session,
+    )
+    assert session.committed == 1
+    # invalidate_user was attempted (and raised), then invalidate_all fallback ran.
+    assert authz.invalidate_user_calls == [target_user.id]
+    assert authz.invalidate_all_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_delete_assignment_succeeds_when_invalidate_user_fails(failing_invalidate_authz):
+    """Revoke: stale cache risk is sharpest here — must still report success and flush."""
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment
+
+    authz = failing_invalidate_authz()
+    assignment_id = uuid4()
+    target_user_id = uuid4()
+    assignment = SimpleNamespace(
+        id=assignment_id,
+        user_id=target_user_id,
+        role_id=uuid4(),
+        domain_type="global",
+        domain_id=None,
+    )
+    session = _FakeAsyncSession({(AuthzRoleAssignment, assignment_id): assignment})
+    actor = _make_user(is_superuser=True)
+
+    await authz_role_assignments.delete_assignment(
+        assignment_id=assignment_id,
+        current_user=actor,
+        session=session,
+    )
+    assert session.deleted == [assignment]
+    assert session.committed == 1
+    assert authz.invalidate_user_calls == [target_user_id]
+    assert authz.invalidate_all_calls == 1  # fallback fired
+
+
+@pytest.mark.asyncio
+async def test_delete_assignment_succeeds_when_both_invalidations_fail(failing_invalidate_authz):
+    """Total invalidation failure is logged but still doesn't propagate — DB is durable."""
+    from langflow.api.v1 import authz_role_assignments
+    from langflow.services.database.models.auth import AuthzRoleAssignment
+
+    authz = failing_invalidate_authz(fail_invalidate_all=True)
+    assignment_id = uuid4()
+    target_user_id = uuid4()
+    assignment = SimpleNamespace(
+        id=assignment_id,
+        user_id=target_user_id,
+        role_id=uuid4(),
+        domain_type="global",
+        domain_id=None,
+    )
+    session = _FakeAsyncSession({(AuthzRoleAssignment, assignment_id): assignment})
+    actor = _make_user(is_superuser=True)
+
+    # Even with both calls failing, the API must return success — there is no
+    # way to undo a durable DB delete and a 5xx would just confuse the caller.
+    await authz_role_assignments.delete_assignment(
+        assignment_id=assignment_id,
+        current_user=actor,
+        session=session,
+    )
+    assert authz.invalidate_user_calls == [target_user_id]
+    assert authz.invalidate_all_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_remove_member_succeeds_when_invalidate_user_fails(failing_invalidate_authz):
+    """Team membership revoke: same stale-cache concern as role-assignment revoke."""
+    from langflow.api.v1 import authz_teams
+
+    authz = failing_invalidate_authz()
+    team_id = uuid4()
+    user_id = uuid4()
+    member = SimpleNamespace(team_id=team_id, user_id=user_id)
+    session = _FakeAsyncSession(exec_results=[[member]])
+    actor = _make_user(is_superuser=True)
+
+    await authz_teams.remove_member(
+        team_id=team_id,
+        user_id=user_id,
+        current_user=actor,
+        session=session,
+    )
+    assert session.deleted == [member]
+    assert session.committed == 1
+    assert authz.invalidate_user_calls == [user_id]
+    assert authz.invalidate_all_calls == 1
+
+
+# Direct unit tests on the safe-invalidate helpers — keeps the contract
+# (catches, falls back, never raises) covered even if every route handler
+# is refactored later.
+
+
+@pytest.mark.asyncio
+async def test_safe_invalidate_user_falls_back_to_invalidate_all():
+    """Helper-level test: invalidate_user raises, invalidate_all is attempted."""
+    from langflow.services.authorization.invalidation import safe_invalidate_user
+
+    stub = _FailingInvalidateUserAuthz()
+    user_id = uuid4()
+
+    # Must NOT raise.
+    await safe_invalidate_user(stub, user_id, op="test")
+    assert stub.invalidate_user_calls == [user_id]
+    assert stub.invalidate_all_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_safe_invalidate_user_swallows_invalidate_all_failure():
+    """Helper-level test: both invalidations fail; the helper still returns cleanly."""
+    from langflow.services.authorization.invalidation import safe_invalidate_user
+
+    stub = _FailingInvalidateUserAuthz(fail_invalidate_all=True)
+    user_id = uuid4()
+
+    await safe_invalidate_user(stub, user_id, op="test")  # MUST NOT raise
+    assert stub.invalidate_user_calls == [user_id]
+    assert stub.invalidate_all_calls == 1
+
+
+@pytest.mark.asyncio
+async def test_safe_invalidate_user_happy_path_skips_invalidate_all():
+    """Helper-level test: successful invalidate_user does NOT trigger fallback."""
+    from langflow.services.authorization.invalidation import safe_invalidate_user
+
+    stub = _StubAuthz()
+    user_id = uuid4()
+    await safe_invalidate_user(stub, user_id, op="test")
+    assert stub.invalidate_user_calls == [user_id]
+    assert stub.invalidate_all_calls == 0
+
+
+# =====================================================================
+# Pagination on list endpoints
+#
+# All three of list_roles / list_teams / list_members / list_assignments
+# take ``limit`` (1..200) and ``offset`` (>=0) so an authenticated client
+# can't enumerate the entire catalog in one call.
+# =====================================================================
+
+
+@pytest.mark.asyncio
+async def test_list_roles_passes_limit_offset_to_query(stub_authz):
+    """Listing roles applies the limit/offset args to the SQL statement."""
+    from langflow.api.v1 import authz_roles
+
+    stub_authz()
+    # Record the executed statement so we can inspect the LIMIT/OFFSET clause.
+    captured: dict = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    session = _RecordingSession()
+    user = _make_user()
+
+    await authz_roles.list_roles(
+        session=session,
+        current_user=user,
+        limit=25,
+        offset=50,
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "LIMIT 25" in compiled
+    assert "OFFSET 50" in compiled
+
+
+@pytest.mark.asyncio
+async def test_list_teams_passes_limit_offset_to_query(stub_authz):
+    from langflow.api.v1 import authz_teams
+
+    stub_authz()
+    captured: dict = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    session = _RecordingSession()
+    user = _make_user()
+
+    await authz_teams.list_teams(
+        session=session,
+        current_user=user,
+        limit=10,
+        offset=200,
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "LIMIT 10" in compiled
+    assert "OFFSET 200" in compiled
+
+
+@pytest.mark.asyncio
+async def test_list_members_passes_limit_offset_to_query(stub_authz):
+    from langflow.api.v1 import authz_teams
+    from langflow.services.database.models.auth import AuthzTeam
+
+    stub_authz()
+    team_id = uuid4()
+    team = _make_team_row(id=team_id)
+    captured: dict = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    session = _RecordingSession({(AuthzTeam, team_id): team})
+    user = _make_user()
+
+    await authz_teams.list_members(
+        team_id=team_id,
+        session=session,
+        current_user=user,
+        limit=5,
+        offset=15,
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "LIMIT 5" in compiled
+    assert "OFFSET 15" in compiled
+
+
+@pytest.mark.asyncio
+async def test_list_assignments_passes_limit_offset_to_query(stub_authz):
+    from langflow.api.v1 import authz_role_assignments
+
+    stub_authz()
+    captured: dict = {}
+
+    class _RecordingSession(_FakeAsyncSession):
+        async def exec(self, stmt):  # type: ignore[override]
+            captured["stmt"] = stmt
+            return _ExecResult([])
+
+    session = _RecordingSession()
+    user = _make_user(is_superuser=False)
+
+    await authz_role_assignments.list_assignments(
+        session=session,
+        current_user=user,
+        limit=12,
+        offset=60,
+    )
+    compiled = str(captured["stmt"].compile(compile_kwargs={"literal_binds": True}))
+    assert "LIMIT 12" in compiled
+    assert "OFFSET 60" in compiled
+
+
+@pytest.mark.parametrize(
+    "endpoint_module",
+    [
+        "langflow.api.v1.authz_roles",
+        "langflow.api.v1.authz_teams",
+        "langflow.api.v1.authz_role_assignments",
+    ],
+)
+def test_list_endpoint_pagination_bounds_match_convention(endpoint_module):
+    """All four list endpoints share the same (1..200) / (>=0) cap as authz_shares.
+
+    Couples the constants together so a future loosening to e.g. 1000 in one
+    module fails a single fast test rather than landing silently.
+    """
+    import importlib
+
+    module = importlib.import_module(endpoint_module)
+    assert module._LIST_MAX_LIMIT == 200
+    assert module._LIST_DEFAULT_LIMIT == 100

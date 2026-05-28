@@ -13,11 +13,21 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas.authz_roles import RoleCreate, RoleRead, RoleUpdate
+from langflow.services.authorization.invalidation import (
+    safe_invalidate_all,
+    safe_invalidate_role,
+)
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/roles", tags=["Authorization"])
+
+# Match ``authz_shares``: cap any single list call so an authenticated client
+# (or a buggy frontend) can't enumerate the entire role/team catalog in one
+# request. 100 default / 200 max is enough for typical UI dropdowns.
+_LIST_MAX_LIMIT = 200
+_LIST_DEFAULT_LIMIT = 100
 
 
 def _require_superuser(user) -> None:
@@ -60,14 +70,22 @@ async def list_roles(
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
     is_system: Annotated[bool | None, Query(description="Filter by is_system flag")] = None,
     name: Annotated[str | None, Query(description="Substring match on role name")] = None,
+    limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[RoleRead]:
-    """List all roles. Open to authenticated users so the UI can populate dropdowns."""
+    """List roles. Open to authenticated users so the UI can populate dropdowns.
+
+    Paginated via ``limit`` / ``offset`` so a single call cannot return the
+    entire catalog of roles + their permissions. Stable order is ``(name, id)``
+    so ``offset`` is deterministic across calls.
+    """
     stmt = select(AuthzRole)
     if is_system is not None:
         stmt = stmt.where(AuthzRole.is_system == is_system)
     if name:
         stmt = stmt.where(AuthzRole.name.ilike(f"%{name}%"))
-    rows = (await session.exec(stmt.order_by(AuthzRole.name))).all()
+    stmt = stmt.order_by(AuthzRole.name, AuthzRole.id).offset(offset).limit(limit)
+    rows = (await session.exec(stmt)).all()
     return [RoleRead.model_validate(row) for row in rows]
 
 
@@ -119,7 +137,7 @@ async def create_role(
             detail=f"Role with name {payload.name!r} already exists",
         ) from exc
     await session.refresh(role)
-    await get_authorization_service().invalidate_all()
+    await safe_invalidate_all(get_authorization_service(), op="role:create")
     await audit_decision(
         user_id=current_user.id,
         action="role:create",
@@ -218,7 +236,7 @@ async def update_role(
             detail="Name conflict — another role already uses this name",
         ) from exc
     await session.refresh(role)
-    await get_authorization_service().invalidate_role(role.id)
+    await safe_invalidate_role(get_authorization_service(), role.id, op="role:update")
     await audit_decision(
         user_id=current_user.id,
         action="role:update",
@@ -267,7 +285,7 @@ async def delete_role(
     role_name = role.name
     await session.delete(role)
     await session.commit()
-    await get_authorization_service().invalidate_role(role_id)
+    await safe_invalidate_role(get_authorization_service(), role_id, op="role:delete")
     await audit_decision(
         user_id=current_user.id,
         action="role:delete",

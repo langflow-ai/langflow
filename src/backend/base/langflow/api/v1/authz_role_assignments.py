@@ -22,12 +22,17 @@ from langflow.api.v1.schemas.authz_role_assignments import (
     RoleAssignmentCreate,
     RoleAssignmentRead,
 )
+from langflow.services.authorization.invalidation import safe_invalidate_user
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzRole, AuthzRoleAssignment
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/role-assignments", tags=["Authorization"])
+
+# See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to assignments.
+_LIST_MAX_LIMIT = 200
+_LIST_DEFAULT_LIMIT = 100
 
 
 def _require_superuser(user) -> None:
@@ -47,6 +52,8 @@ async def list_assignments(
     role_id: Annotated[UUID | None, Query(description="Filter by role")] = None,
     domain_type: Annotated[str | None, Query()] = None,
     domain_id: Annotated[UUID | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[RoleAssignmentRead]:
     """List role assignments scoped to one user.
 
@@ -55,7 +62,8 @@ async def list_assignments(
     * Passing a different ``user_id`` requires superuser; otherwise 403.
 
     Results are always filtered by the resolved ``user_id``. Admins who need
-    cross-user lookups make one call per user.
+    cross-user lookups make one call per user. Paginated via ``limit`` /
+    ``offset`` (default 100, max 200).
     """
     if user_id is None:
         user_id = current_user.id
@@ -68,7 +76,8 @@ async def list_assignments(
         stmt = stmt.where(AuthzRoleAssignment.domain_type == domain_type)
     if domain_id is not None:
         stmt = stmt.where(AuthzRoleAssignment.domain_id == domain_id)
-    rows = (await session.exec(stmt.order_by(AuthzRoleAssignment.assigned_at.desc()))).all()
+    stmt = stmt.order_by(AuthzRoleAssignment.assigned_at.desc(), AuthzRoleAssignment.id).offset(offset).limit(limit)
+    rows = (await session.exec(stmt)).all()
     return [RoleAssignmentRead.model_validate(row) for row in rows]
 
 
@@ -107,7 +116,11 @@ async def create_assignment(
             detail="Assignment already exists for this user/role/domain",
         ) from exc
     await session.refresh(assignment)
-    await get_authorization_service().invalidate_user(payload.user_id)
+    await safe_invalidate_user(
+        get_authorization_service(),
+        payload.user_id,
+        op="role_assignment:create",
+    )
     await audit_decision(
         user_id=current_user.id,
         action="role_assignment:create",
@@ -148,7 +161,11 @@ async def delete_assignment(
     domain_id = assignment.domain_id
     await session.delete(assignment)
     await session.commit()
-    await get_authorization_service().invalidate_user(user_id)
+    await safe_invalidate_user(
+        get_authorization_service(),
+        user_id,
+        op="role_assignment:delete",
+    )
     await audit_decision(
         user_id=current_user.id,
         action="role_assignment:delete",

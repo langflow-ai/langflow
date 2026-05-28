@@ -24,12 +24,20 @@ from langflow.api.v1.schemas.authz_teams import (
     TeamRead,
     TeamUpdate,
 )
+from langflow.services.authorization.invalidation import (
+    safe_invalidate_all,
+    safe_invalidate_user,
+)
 from langflow.services.authorization.utils import audit_decision
 from langflow.services.database.models.auth import AuthzTeam, AuthzTeamMember
 from langflow.services.database.models.user.model import User
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/teams", tags=["Authorization"])
+
+# See ``authz_roles._LIST_MAX_LIMIT`` — same bound, applied to teams + members.
+_LIST_MAX_LIMIT = 200
+_LIST_DEFAULT_LIMIT = 100
 
 
 def _require_superuser(user) -> None:
@@ -50,15 +58,22 @@ async def list_teams(
     current_user: CurrentActiveUser,  # noqa: ARG001 — any authenticated user can list
     search: Annotated[str | None, Query(description="Substring match on team_name or adom_name")] = None,
     is_active: Annotated[bool | None, Query()] = None,
+    limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TeamRead]:
-    """List teams. Open to any authenticated user (for the share dialog's team picker)."""
+    """List teams. Open to any authenticated user (for the share dialog's team picker).
+
+    Paginated via ``limit`` / ``offset`` so a single call cannot enumerate every
+    team. Stable order is ``(team_name, id)`` so ``offset`` is deterministic.
+    """
     stmt = select(AuthzTeam)
     if search:
         like = f"%{search}%"
         stmt = stmt.where((AuthzTeam.team_name.ilike(like)) | (AuthzTeam.adom_name.ilike(like)))
     if is_active is not None:
         stmt = stmt.where(AuthzTeam.is_active == is_active)
-    rows = (await session.exec(stmt.order_by(AuthzTeam.team_name))).all()
+    stmt = stmt.order_by(AuthzTeam.team_name, AuthzTeam.id).offset(offset).limit(limit)
+    rows = (await session.exec(stmt)).all()
     return [TeamRead.model_validate(row) for row in rows]
 
 
@@ -160,7 +175,7 @@ async def update_team(
     # is_active gates whether the team's memberships should grant access at
     # all — invalidate so the next enforce reflects the new state.
     if policy_relevant_changed:
-        await get_authorization_service().invalidate_all()
+        await safe_invalidate_all(get_authorization_service(), op="team:update")
     await audit_decision(
         user_id=current_user.id,
         action="team:update",
@@ -187,7 +202,7 @@ async def delete_team(
     # are left in place (caller may want to migrate them before deleting).
     await session.delete(team)
     await session.commit()
-    await get_authorization_service().invalidate_all()
+    await safe_invalidate_all(get_authorization_service(), op="team:delete")
     await audit_decision(
         user_id=current_user.id,
         action="team:delete",
@@ -206,20 +221,25 @@ async def list_members(
     team_id: UUID,
     session: DbSession,
     current_user: CurrentActiveUser,  # noqa: ARG001
+    limit: Annotated[int, Query(ge=1, le=_LIST_MAX_LIMIT)] = _LIST_DEFAULT_LIMIT,
+    offset: Annotated[int, Query(ge=0)] = 0,
 ) -> list[TeamMemberRead]:
-    """List members of a team. Any authenticated user (so the UI can render team rosters)."""
+    """List members of a team. Any authenticated user (so the UI can render team rosters).
+
+    Paginated via ``limit`` / ``offset`` so a single call cannot enumerate a
+    large team's full roster. Stable order is ``(created_at, user_id)``.
+    """
     team = await session.get(AuthzTeam, team_id)
     if team is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found")
-    rows = (
-        await session.exec(
-            select(AuthzTeamMember)
-            .where(AuthzTeamMember.team_id == team_id)
-            .order_by(
-                AuthzTeamMember.created_at,
-            )
-        )
-    ).all()
+    stmt = (
+        select(AuthzTeamMember)
+        .where(AuthzTeamMember.team_id == team_id)
+        .order_by(AuthzTeamMember.created_at, AuthzTeamMember.user_id)
+        .offset(offset)
+        .limit(limit)
+    )
+    rows = (await session.exec(stmt)).all()
     return [TeamMemberRead.model_validate(row) for row in rows]
 
 
@@ -257,7 +277,11 @@ async def add_member(
             detail="User is already a member of this team",
         ) from exc
     await session.refresh(member)
-    await get_authorization_service().invalidate_user(payload.user_id)
+    await safe_invalidate_user(
+        get_authorization_service(),
+        payload.user_id,
+        op="team_member:create",
+    )
     await audit_decision(
         user_id=current_user.id,
         action="team_member:create",
@@ -299,7 +323,11 @@ async def remove_member(
         )
     await session.delete(member)
     await session.commit()
-    await get_authorization_service().invalidate_user(user_id)
+    await safe_invalidate_user(
+        get_authorization_service(),
+        user_id,
+        op="team_member:delete",
+    )
     await audit_decision(
         user_id=current_user.id,
         action="team_member:delete",
