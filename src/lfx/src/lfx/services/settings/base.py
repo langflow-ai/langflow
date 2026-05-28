@@ -69,33 +69,6 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
-    vector_store_backend: str = "chroma"
-    """Vector-store backend for Knowledge Bases.
-
-    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
-    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
-    of the KB DB-Connectors epic."""
-    vector_store_backend_config: dict = {}
-    """Backend-specific configuration for the selected ``vector_store_backend``.
-
-    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
-    connection URIs, index names, auth references) as additional backends land."""
-
-    kb_allowed_folder_roots: list[str] = []
-    """Directories the server-side ``FolderSource`` is permitted to walk.
-
-    Each entry is expanded (``~`` → user home) and resolved before use.
-    ``FolderSource`` refuses to ingest any folder whose resolved path is
-    not equal to or underneath one of these roots, which blocks both
-    arbitrary-path access and symlink escapes (``resolve()`` follows
-    symlinks before the containment check).
-
-    Defaults to an empty list — folder ingestion is disabled until an
-    operator opts in. Single-user desktop / self-hosted deployments can
-    set this to ``["~"]`` to allow ingestion from the user's home
-    directory; multi-tenant cloud deployments should configure
-    per-tenant roots (or leave empty to keep folder ingestion off)."""
-
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -238,6 +211,16 @@ class Settings(BaseSettings):
     """
     langchain_cache: str = "InMemoryCache"
     load_flows_path: str | None = None
+    load_flows_overwrite_on_name_match: bool = False
+    """When a flow loaded from ``load_flows_path`` shares a name with an existing DB row but has
+    a different id, overwrite the existing row's content from the file.
+
+    Default ``False`` preserves user edits made in the UI on restart: name-matched rows are
+    skipped with a warning instead of being silently overwritten when file UUIDs regenerate.
+    (Pre-1.10.0 this case raised ``IntegrityError`` and crashed startup; the loader now boots
+    successfully either way.) Set ``True`` to opt into "prepackaged flows are the source of
+    truth on restart" semantics, typically for CI/CD pipelines.
+    """
     bundle_urls: list[str] = []
 
     # Redis
@@ -246,6 +229,47 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Job Queue
+    job_queue_type: Literal["asyncio", "redis"] = "asyncio"
+    """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
+    redis_queue_host: str | None = None
+    """Redis host for the job queue. Falls back to redis_host if not set."""
+    redis_queue_port: int | None = None
+    """Redis port for the job queue. Falls back to redis_port if not set."""
+    redis_queue_db: int = 1
+    """Redis DB number for the job queue. Defaults to 1 to avoid conflict with the cache (DB 0)."""
+    redis_queue_url: str | None = None
+    """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
+    redis_queue_ttl: int = 3600
+    """TTL in seconds for job stream keys in Redis."""
+    redis_queue_startup_grace_s: float = Field(default=30.0, ge=0)
+    """Seconds a cross-worker consumer waits for the producer's first XADD before
+    treating a missing stream key as end-of-stream. Bump this if cold-start build
+    latency on the producer worker can exceed the default (e.g. large graph
+    instantiation, slow container image pulls). Negative values would make
+    consumers treat a not-yet-created stream as EOF immediately, so values must
+    be non-negative."""
+    redis_queue_cancel_channel_enabled: bool = True
+    """If True, RedisJobQueueService runs a single PSUBSCRIBE dispatcher per worker
+    so POST /build/{job_id}/cancel works cross-worker. Any worker can publish a
+    cancel signal; the owning worker cancels the local build task."""
+    redis_queue_cancel_marker_ttl: int = Field(default=60, gt=0)
+    """TTL in seconds for the persistent cancel-marker key used to close the race
+    where a cancel signal is published before the owning worker's dispatcher
+    subscribes or before the job is registered. Should comfortably exceed worker
+    cold-start latency. Must be > 0: a non-positive TTL makes the marker
+    ineffective and reopens the publish-before-subscribe race it closes."""
+    redis_queue_polling_stale_threshold_s: float = Field(default=90.0, ge=0)
+    """Maximum seconds a polling job may go without client activity before the
+    watchdog publishes a cross-worker cancel. Polling clients have no persistent
+    connection, so the server detects abandonment by tracking the most recent
+    poll (or streaming-response heartbeat). Set to 0 to disable the watchdog."""
+    redis_queue_polling_watchdog_interval_s: float = Field(default=15.0, gt=0)
+    """How often the polling watchdog scans owned jobs. Smaller values give
+    faster reclamation of abandoned builds at the cost of more Redis GETs.
+    The watchdog only checks jobs this worker owns (entries in self._queues).
+    Must be > 0 so the scan loop makes progress."""
 
     # Sentry
     sentry_dsn: str | None = None
@@ -413,6 +437,19 @@ class Settings(BaseSettings):
     update_starter_projects: bool = True
     """If set to True, Langflow will update starter projects."""
 
+    # Extension reload (Mode A only)
+    enable_extension_reload: bool = False
+    """If True, registers ``POST /api/v1/extensions/{id}/bundles/{name}/reload``
+    so authenticated users can hot-swap a Bundle's components in-process.
+
+    This is a Mode A (local-dev / pip-installed) facility only.  In Mode B/C
+    (Docker image with baked-in bundles) Bundle changes require an image
+    rebuild and the in-process reload route would mask the real deploy
+    pipeline.  Defaults to ``False`` so self-hosted / production deployments
+    do not expose runtime imports through an HTTP endpoint without an
+    explicit opt-in.  Set ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` in your
+    local dev environment to turn it on."""
+
     # Custom Component Security
     allow_custom_components: bool = True
     """If set to False, blocks execution of components whose code does not match a known
@@ -429,12 +466,12 @@ class Settings(BaseSettings):
     use hardware-level isolation to restrict access."""
 
     # SSRF Protection
-    ssrf_protection_enabled: bool = False
+    ssrf_protection_enabled: bool = True
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.
     When enabled, blocks requests to private IP ranges, localhost, and cloud metadata endpoints.
-    When False (default), no URL validation is performed, allowing requests to any destination
+    When False, no URL validation is performed, allowing requests to any destination
     including internal services, private networks, and cloud metadata endpoints.
-    Default is False for backward compatibility. In v2.0, this will be changed to True.
+    Default is True to protect against SSRF attacks including DNS rebinding.
 
     Note: When ssrf_protection_enabled is disabled, the ssrf_allowed_hosts setting is ignored and has no effect."""
     ssrf_allowed_hosts: list[str] = []
@@ -494,11 +531,25 @@ class Settings(BaseSettings):
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
-        # If workers > 1, we need to use direct delivery
-        # because polling and streaming are not supported
-        # in multi-worker environments
-        if info.data.get("workers", 1) > 1:
-            logger.warning("Multi-worker environment detected, using direct event delivery")
+        # Multi-worker deployments with the in-memory job queue cannot route
+        # ``polling`` or ``streaming`` responses correctly: build events live in
+        # the in-process queue of whichever worker started the job, and a later
+        # poll/stream request may land on a different worker.  Switch to Redis
+        # (LANGFLOW_JOB_QUEUE_TYPE=redis) to share state across workers, or
+        # accept ``direct`` delivery which keeps the whole exchange on one
+        # worker.  The override below preserves backwards compatibility for
+        # deployments that haven't set this explicitly; new explicit values are
+        # logged loudly so the cause is easy to diagnose if the UI loses events.
+        if info.data.get("workers", 1) > 1 and info.data.get("job_queue_type", "asyncio") != "redis":
+            requested = value or "polling"
+            if requested != "direct":
+                logger.warning(
+                    "Multi-worker mode without a Redis-backed job queue cannot deliver "
+                    "'%s' events across workers; forcing event_delivery='direct'. "
+                    "Set LANGFLOW_JOB_QUEUE_TYPE=redis to keep '%s' delivery in multi-worker setups.",
+                    requested,
+                    requested,
+                )
             return "direct"
         return value
 
@@ -696,18 +747,29 @@ class Settings(BaseSettings):
         appended to the provided list if not already present. If the input list is empty or missing, it is
         set to an empty list.
         """
-        if os.getenv("LANGFLOW_COMPONENTS_PATH"):
+        env_value = os.getenv("LANGFLOW_COMPONENTS_PATH")
+        if env_value:
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
-            langflow_component_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
-            if Path(langflow_component_path).exists() and langflow_component_path not in value:
-                if isinstance(langflow_component_path, list):
-                    for path in langflow_component_path:
-                        if path not in value:
-                            value.append(path)
-                    logger.debug(f"Extending {langflow_component_path} to components_path")
-                elif langflow_component_path not in value:
-                    value.append(langflow_component_path)
-                    logger.debug(f"Appending {langflow_component_path} to components_path")
+            # Split on os.pathsep so multi-entry env vars
+            # ("/path/A:/path/B" on POSIX, "C:\\a;D:\\b" on Windows) are
+            # parsed as multiple components paths instead of one literal
+            # non-existent path. Empty segments (e.g. trailing pathsep) are
+            # ignored.
+            for raw_entry in env_value.split(os.pathsep):
+                entry = raw_entry.strip()
+                if not entry:
+                    continue
+                if not Path(entry).exists():
+                    # Surface at warning so a typo in LANGFLOW_COMPONENTS_PATH
+                    # is visible in default log levels rather than silently
+                    # producing zero components and zero diagnostics. The
+                    # extension loader emits a typed ``inline-path-missing``
+                    # warning at the same layer for events-pipeline consumers.
+                    logger.warning(f"Skipping non-existent components path: {entry}")
+                    continue
+                if entry not in value:
+                    value.append(entry)
+                    logger.debug(f"Appending {entry} to components_path")
 
         if not value:
             value = [BASE_COMPONENTS_PATH]

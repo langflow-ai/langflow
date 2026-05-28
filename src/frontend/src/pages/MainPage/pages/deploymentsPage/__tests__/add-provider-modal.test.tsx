@@ -3,12 +3,21 @@ import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const mockMutateAsync = jest.fn();
+const mockPatchMutateAsync = jest.fn();
 
 jest.mock(
   "@/controllers/API/queries/deployment-provider-accounts/use-post-provider-account",
   () => ({
     usePostProviderAccount: () => ({
       mutateAsync: mockMutateAsync,
+    }),
+  }),
+);
+jest.mock(
+  "@/controllers/API/queries/deployment-provider-accounts/use-patch-provider-account",
+  () => ({
+    usePatchProviderAccount: () => ({
+      mutateAsync: mockPatchMutateAsync,
     }),
   }),
 );
@@ -26,12 +35,28 @@ jest.mock(
 );
 
 import AddProviderModal from "../components/add-provider-modal";
+import type { ProviderAccount } from "../types";
 
-function renderModal(open = true) {
+const makeProvider = (
+  overrides: Partial<ProviderAccount> = {},
+): ProviderAccount => ({
+  id: "prov-1",
+  name: "Production WxO",
+  provider_key: "watsonx-orchestrate",
+  provider_data: {
+    url: "https://api.example.com",
+    tenant_id: "tenant-1",
+  },
+  created_at: "2025-01-01T00:00:00Z",
+  updated_at: "2025-01-02T00:00:00Z",
+  ...overrides,
+});
+
+function renderModal(open = true, provider?: ProviderAccount | null) {
   const setOpen = jest.fn();
   const result = render(
     <TooltipProvider>
-      <AddProviderModal open={open} setOpen={setOpen} />
+      <AddProviderModal open={open} setOpen={setOpen} provider={provider} />
     </TooltipProvider>,
   );
   return { setOpen, ...result };
@@ -79,13 +104,13 @@ describe("Rendering", () => {
       screen.getByRole("link", { name: "Sign up for watsonx Orchestrate" }),
     ).toHaveAttribute(
       "href",
-      "https://www.ibm.com/products/watsonx-orchestrate#pricing",
+      "https://www.ibm.com/products/watsonx-orchestrate?utm_source=langflow&utm_medium=integration&utm_campaign=wxo-integration&utm_content=signup-pricing#pricing",
     );
     expect(
       screen.getByRole("link", { name: "Find your credentials" }),
     ).toHaveAttribute(
       "href",
-      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started",
+      "https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=api-getting-started&utm_source=langflow&utm_medium=integration&utm_campaign=wxo-integration&utm_content=docs-credentials",
     );
   });
 
@@ -97,6 +122,9 @@ describe("Rendering", () => {
     ).toBeInTheDocument();
     expect(
       screen.getByPlaceholderText("https://api.example.com"),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Show API key" }),
     ).toBeInTheDocument();
   });
 
@@ -233,6 +261,67 @@ describe("Submit behavior", () => {
     });
     // setOpen(false) should NOT have been called
     expect(setOpen).not.toHaveBeenCalledWith(false);
+  });
+});
+
+describe("Edit mode", () => {
+  it("renders configure state and readonly URL", () => {
+    renderModal(true, makeProvider());
+
+    expect(screen.getByText("Configure Environment")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Update environment name or rotate API key. Service instance URL is fixed after creation.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.getByDisplayValue("Production WxO")).toBeInTheDocument();
+    expect(screen.getByDisplayValue("https://api.example.com")).toBeDisabled();
+    expect(screen.getByText("(optional)")).toBeInTheDocument();
+    expect(
+      screen.getByText("Leave blank to keep current credential."),
+    ).toBeInTheDocument();
+    expect(screen.getByTestId("add-provider-save")).toHaveTextContent("Update");
+  });
+
+  it("allows update with renamed environment only", async () => {
+    mockPatchMutateAsync.mockResolvedValue({ id: "prov-1" });
+    const user = userEvent.setup();
+    const { setOpen } = renderModal(true, makeProvider());
+
+    const nameInput = screen.getByDisplayValue("Production WxO");
+    await user.clear(nameInput);
+    await user.type(nameInput, "Prod Renamed");
+    await user.click(screen.getByTestId("add-provider-save"));
+
+    await waitFor(() => {
+      expect(mockPatchMutateAsync).toHaveBeenCalledWith({
+        provider_id: "prov-1",
+        name: "Prod Renamed",
+      });
+    });
+    expect(setOpen).toHaveBeenCalledWith(false);
+  });
+
+  it("sends api_key when rotating credentials", async () => {
+    mockPatchMutateAsync.mockResolvedValue({ id: "prov-1" });
+    const user = userEvent.setup();
+    renderModal(true, makeProvider());
+
+    await user.type(
+      screen.getByPlaceholderText("Enter a new API key"),
+      " sk-next ", // pragma: allowlist secret
+    );
+    await user.click(screen.getByTestId("add-provider-save"));
+
+    await waitFor(() => {
+      expect(mockPatchMutateAsync).toHaveBeenCalledWith({
+        provider_id: "prov-1",
+        name: "Production WxO",
+        provider_data: {
+          api_key: "sk-next", // pragma: allowlist secret
+        },
+      });
+    });
   });
 });
 

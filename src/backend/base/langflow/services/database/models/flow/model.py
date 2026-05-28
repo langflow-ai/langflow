@@ -197,6 +197,7 @@ class Flow(FlowBase, table=True):  # type: ignore[call-arg]
     tags: list[str] | None = Field(sa_column=Column(JSON), default=[])
     locked: bool | None = Field(default=False, nullable=True)
     folder_id: UUID | None = Field(default=None, foreign_key="folder.id", nullable=True, index=True)
+    workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
     fs_path: str | None = Field(default=None, nullable=True)
     folder: Optional["Folder"] = Relationship(back_populates="flows")
 
@@ -226,6 +227,7 @@ class FlowCreate(FlowBase):
     id: UUID | None = None
     user_id: UUID | None = None
     folder_id: UUID | None = None
+    workspace_id: UUID | None = None
     fs_path: str | None = None
 
 
@@ -233,6 +235,7 @@ class FlowRead(FlowBase):
     id: UUID
     user_id: UUID | None = Field()
     folder_id: UUID | None = Field()
+    workspace_id: UUID | None = Field(default=None)
     tags: list[str] | None = Field(None, description="The tags of the flow")
     name_key: str | None = Field(None, description="Stable i18n key derived from the original English name")
 
@@ -269,6 +272,7 @@ class FlowUpdate(SQLModel):
     description: str | None = None
     data: dict | None = None
     folder_id: UUID | None = None
+    workspace_id: UUID | None = None
     endpoint_name: str | None = None
     mcp_enabled: bool | None = None
     locked: bool | None = None

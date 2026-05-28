@@ -29,6 +29,7 @@ class Folder(FolderBase, table=True):  # type: ignore[call-arg]
     )
     children: list["Folder"] = Relationship(back_populates="parent")
     user_id: UUID | None = Field(default=None, foreign_key="user.id")
+    workspace_id: UUID | None = Field(default=None, nullable=True, index=True)
     user: User = Relationship(back_populates="folders")
     flows: list[Flow] = Relationship(
         back_populates="folder", sa_relationship_kwargs={"cascade": "all, delete, delete-orphan"}

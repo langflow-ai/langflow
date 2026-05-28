@@ -197,3 +197,88 @@ class TestStrategyPriority:
         assert isinstance(usage, Usage)
         assert usage.input_tokens == 10
         assert usage.output_tokens == 20
+
+
+class TestErrorPathCaptureInputTokens:
+    """QA UI-013 (PR #12992): a failed LLM call must still contribute its input tokens.
+
+    An LLM call that fails (e.g. HTTP 429 quota) must NOT silently contribute 0 tokens
+    to the accumulator. The user is billed for the tokens sent in the request body;
+    dropping them under-counts real consumption.
+
+    The handler MUST capture an estimate of the input tokens on
+    `on_chat_model_start` / `on_llm_start` and flush it into the totals on
+    `on_llm_error` (when there is no successful `on_llm_end` to read actual usage
+    from). On `on_llm_end`, the actual server-reported usage supersedes the
+    estimate (no double counting).
+    """
+
+    def test_should_accumulate_estimated_input_tokens_when_chat_model_call_errors(self):
+        import uuid
+
+        from langchain_core.messages import HumanMessage, SystemMessage
+
+        handler = TokenUsageCallbackHandler()
+        run_id = uuid.uuid4()
+
+        # A roughly 80-char prompt + 200-char system instruction. With the chars/4
+        # heuristic that maps to ~70 input tokens — close enough for billing-aware
+        # observability without taking on tiktoken as a dependency.
+        messages = [
+            [
+                SystemMessage(content="x" * 200),
+                HumanMessage(content="Please look up the latest results for last quarter."),
+            ]
+        ]
+        handler.on_chat_model_start({}, messages, run_id=run_id)
+
+        # No on_llm_end: the call failed before the server returned a usage block.
+        handler.on_llm_error(RuntimeError("HTTP 429 insufficient_quota"), run_id=run_id)
+
+        usage = handler.get_usage()
+        assert usage is not None, (
+            "Tokens sent with a failed LLM call must still be accumulated. Otherwise "
+            "the trace under-counts real billed consumption (UI-013 regression)."
+        )
+        assert usage.input_tokens, (
+            f"Expected an input-token estimate from the failed call's messages; got {usage.input_tokens}"
+        )
+        assert usage.input_tokens >= 50, (
+            f"Expected an input-token estimate from the failed call's messages; got {usage.input_tokens}"
+        )
+
+    def test_should_not_double_count_input_tokens_when_call_succeeds(self):
+        """If on_llm_end fires (call succeeded), prefer server-reported usage.
+
+        Drop the pre-call estimate — otherwise we double-count input tokens.
+        """
+        import uuid
+
+        from langchain_core.messages import HumanMessage
+
+        handler = TokenUsageCallbackHandler()
+        run_id = uuid.uuid4()
+
+        handler.on_chat_model_start({}, [[HumanMessage(content="z" * 400)]], run_id=run_id)
+        handler.on_llm_end(
+            _make_llm_result(llm_output={"token_usage": {"prompt_tokens": 100, "completion_tokens": 50}}),
+            run_id=run_id,
+        )
+
+        usage = handler.get_usage()
+        assert usage is not None
+        assert usage.input_tokens == 100, (
+            f"on_llm_end must overwrite the estimate with server-reported usage, got {usage.input_tokens}"
+        )
+        assert usage.output_tokens == 50
+
+    def test_should_handle_llm_error_without_prior_start_gracefully(self):
+        """If the runtime swallowed on_*_start (unusual but possible), tolerate it.
+
+        An error with no recorded estimate must not raise — just count nothing for it.
+        """
+        import uuid
+
+        handler = TokenUsageCallbackHandler()
+        handler.on_llm_error(RuntimeError("boom"), run_id=uuid.uuid4())
+        assert handler.get_usage() is None

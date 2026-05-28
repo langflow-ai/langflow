@@ -5,6 +5,7 @@ import { addNewUserAndLogin } from "../../utils/add-new-user-and-loggin";
 import { cleanAllFlows } from "../../utils/clean-all-flows";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "admin user must be able to track their progress in getting started",
   { tag: ["@release", "@api"] },
@@ -81,7 +82,9 @@ async function progressTrackTestFn(
   await page.getByTestId("new_project_btn_empty_page").click();
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
 
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,

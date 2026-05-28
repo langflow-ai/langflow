@@ -1,6 +1,9 @@
 from langflow.api.v1.api_key import router as api_key_router
+from langflow.api.v1.authz_audit import router as authz_audit_router
+from langflow.api.v1.authz_shares import router as authz_shares_router
 from langflow.api.v1.chat import router as chat_router
 from langflow.api.v1.endpoints import router as endpoints_router
+from langflow.api.v1.extensions import router as extensions_router
 from langflow.api.v1.files import router as files_router
 from langflow.api.v1.flow_events import router as flow_events_router
 from langflow.api.v1.flow_version import router as flow_version_router
@@ -26,8 +29,11 @@ from langflow.api.v1.voice_mode import router as voice_mode_router
 
 __all__ = [
     "api_key_router",
+    "authz_audit_router",
+    "authz_shares_router",
     "chat_router",
     "endpoints_router",
+    "extensions_router",
     "files_router",
     "flow_events_router",
     "flow_version_router",

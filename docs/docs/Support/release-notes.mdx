@@ -51,13 +51,80 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+
+### Breaking changes
+
+- Upcoming breaking change: bundle separation
+
+    Langflow 1.10.x introduces the Extension bundles model.
+    In future releases, bundle separation will extend to more component providers.
+
+    Saved flows will continue to open normally, but the following may require manual updates before upgrading:
+
+    - Code or scripts that reference component class names or `lfx.components.<provider>` import paths.
+    - External tooling that reads component type identifiers from raw flow JSON.
+    - Custom deployment scripts that install or pin individual component packages.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+
 ### New features and enhancements
+
+- Extension bundles
+
+    Langflow 1.10 introduces Extension bundles: component providers that are packaged and versioned as standalone pip packages, independent of the core Langflow server.
+    The [arXiv](/bundles-arxiv) and [DuckDuckGo](/bundles-duckduckgo) bundles are the pilot examples.
+    Both bundles are still included in `uv pip install langflow`, so nothing changes for existing users.
+
+    To view all Extension bundles currently loaded in your environment:
+
+    ```bash
+    lfx extension list
+    ```
+
+    If a bundle is not installed, its components are absent from the canvas.
+    To install a missing bundle, install its standalone package and restart Langflow:
+
+    ```bash
+    uv pip install lfx-duckduckgo
+    uv run langflow run
+    ```
+
+    Components in Extension bundles use a namespaced identifier instead of a bare class name.
+    For example, `DuckDuckGoSearchComponent` is now identified as:
+
+    ```text
+    ext:duckduckgo:DuckDuckGoSearchComponent@official
+    ```
+
+    You can see this identifier in the raw JSON of any saved flow that uses the component.
+    Langflow migrates saved flow references to the new format automatically when you open a flow.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+
+- File System component
+
+    The **File System** component gives agents sandboxed read/write access to files on disk.
+    An optional **Read Only** mode restricts the agent to read and search operations only.
+
+    For more information, see [File System](../Components/file-system.mdx).
+
+- Unified **Knowledge Base** component
+
+    The **Knowledge Ingestion** and **Knowledge Base** (legacy) components are merged into a single **Knowledge Base** component with a **Mode** selector.
+
+    Existing flows that use the legacy components continue to work.
+
+    For more information, see the [**Knowledge Base** component](/knowledge-base) and [Manage vector data](/knowledge).
 
 - Database connectors for knowledge bases
 
     Knowledge bases now support configurable vector database backends through **DB Providers** configured in **Settings → DB Providers**.
 
     For setup instructions and configuration details, see [Manage vector data](/knowledge).
+
+- macOS support matrix
+
+    A new [macOS support](./macos-support-matrix.mdx) page documents feature availability across Apple Silicon and Intel Macs.
 
 ### Deprecations
 

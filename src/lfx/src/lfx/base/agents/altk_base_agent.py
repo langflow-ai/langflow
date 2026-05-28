@@ -201,6 +201,26 @@ class ALTKBaseAgentComponent(AgentComponent):
         super().__init__(**kwargs)
         self.pipeline_manager = ToolPipelineManager()
 
+    def create_agent_runnable(self):
+        """Build the legacy LC tool-calling agent runnable.
+
+        AgentComponent.create_agent_runnable returns a `CompiledStateGraph` from
+        `langchain.agents.create_agent`. ALTK's `run_agent` (below) still wraps
+        that runnable in `AgentExecutor.from_agent_and_tools(...)`, and at run
+        time AgentExecutor's RunnableAgent path tries to accumulate the graph's
+        chunk dicts with `+=`, raising `TypeError: unsupported operand type(s)
+        for +=: 'dict' and 'dict'` (OpenAI) or surfacing as `contents are
+        required` when a Gemini-backed flow is built on top.
+
+        ALTK was designed against the legacy AgentExecutor contract, so route
+        around AgentComponent and call the grandparent ToolCallingAgentComponent
+        path (`create_tool_calling_agent`-based) which returns a Runnable that
+        AgentExecutor can iterate correctly.
+        """
+        from lfx.components.langchain_utilities.tool_calling import ToolCallingAgentComponent
+
+        return ToolCallingAgentComponent.create_agent_runnable(self)
+
     # ---- Hooks for subclasses ----
     def configure_tool_pipeline(self) -> None:
         """Configure the tool pipeline with wrappers. Subclasses override this."""

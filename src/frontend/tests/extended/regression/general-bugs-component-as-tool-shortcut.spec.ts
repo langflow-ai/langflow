@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
+import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to use component as tool shortcut only if has tool mode is True",
   { tag: ["@release", "@components"] },
@@ -15,7 +16,7 @@ test(
     });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page
       .getByTestId("models_and_agentsPrompt Template")

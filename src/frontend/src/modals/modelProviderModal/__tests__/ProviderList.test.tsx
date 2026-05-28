@@ -59,10 +59,16 @@ jest.mock("@/controllers/API/queries/models/use-get-model-providers", () => ({
   })),
 }));
 
+interface MockProviderListItemProps {
+  provider: { provider: string; model_count?: number };
+  isSelected: boolean;
+  onSelect: (provider: MockProviderListItemProps["provider"]) => void;
+}
+
 // Mock ProviderListItem
 jest.mock("../components/ProviderListItem", () => ({
   __esModule: true,
-  default: ({ provider, isSelected, onSelect }: any) => (
+  default: ({ provider, isSelected, onSelect }: MockProviderListItemProps) => (
     <div
       data-testid={`provider-item-${provider.provider}`}
       data-selected={isSelected}
@@ -153,6 +159,40 @@ describe("ProviderList", () => {
 
       const anthropicItem = screen.getByTestId("provider-item-Anthropic");
       expect(anthropicItem).toHaveAttribute("data-selected", "false");
+    });
+  });
+
+  describe("Search filtering", () => {
+    it("should render every provider when the query is empty", () => {
+      render(<ProviderList modelType="all" query="" />);
+
+      expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
+      expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
+    });
+
+    it("should filter providers by case-insensitive substring match", () => {
+      render(<ProviderList modelType="all" query="ANTHROP" />);
+
+      expect(
+        screen.queryByTestId("provider-item-OpenAI"),
+      ).not.toBeInTheDocument();
+      expect(screen.getByTestId("provider-item-Anthropic")).toBeInTheDocument();
+    });
+
+    it("should show the no-results message when nothing matches", () => {
+      render(<ProviderList modelType="all" query="xyzzy" />);
+
+      expect(screen.queryByTestId("provider-list")).not.toBeInTheDocument();
+      expect(screen.getByTestId("provider-list-empty")).toBeInTheDocument();
+    });
+
+    it("should ignore leading and trailing whitespace in the query", () => {
+      render(<ProviderList modelType="all" query="  open  " />);
+
+      expect(screen.getByTestId("provider-item-OpenAI")).toBeInTheDocument();
+      expect(
+        screen.queryByTestId("provider-item-Anthropic"),
+      ).not.toBeInTheDocument();
     });
   });
 });

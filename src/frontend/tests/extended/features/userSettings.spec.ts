@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
 test.beforeAll(async () => {
   await new Promise((resolve) => setTimeout(resolve, 10000));
 });
@@ -26,7 +27,7 @@ test(
     });
     await page.getByTestId("user-profile-settings").click();
 
-    await page.getByText("Settings").click();
+    await page.getByText(TEXTS.settings).click();
 
     // Wait for settings page to fully load
     await page
@@ -85,15 +86,13 @@ test(
       skipModal: true,
     });
     await page.getByTestId("user-profile-settings").click();
-    await page.getByText("Settings").click();
+    await page.getByText(TEXTS.settings).click();
     await page.getByText("Global Variables").click();
     await expect(
       page.getByText("Global Variables", { exact: true }).nth(1),
     ).toBeVisible({ timeout: 10000 });
     await page.getByText("Add New").click();
-    await page
-      .getByPlaceholder("Enter a name for the variable...")
-      .fill(randomName);
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).fill(randomName);
     await expect(page.getByText("Generic", { exact: true }).last()).toBeVisible(
       { timeout: 10000 },
     );
@@ -128,13 +127,13 @@ test(
 
     await page.locator(`.ag-cell:has-text("${randomName}")`).first().click();
 
-    await page.getByPlaceholder("Enter a name for the variable...").waitFor({
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByPlaceholder("Enter a name for the variable...")
+      .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(randomName2);
 
     await page
@@ -151,13 +150,13 @@ test(
 
     await page.locator(`.ag-cell:has-text("${randomName2}")`).first().click();
 
-    await page.getByPlaceholder("Enter a name for the variable...").waitFor({
+    await page.getByPlaceholder(TEXTS.placeholderVariableName).waitFor({
       state: "visible",
       timeout: 30000,
     });
 
     await page
-      .getByPlaceholder("Enter a name for the variable...")
+      .getByPlaceholder(TEXTS.placeholderVariableName)
       .fill(randomName3);
 
     await page
@@ -192,7 +191,7 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   });
   await page.getByTestId("user-profile-settings").click();
 
-  await page.getByText("Settings").click();
+  await page.getByText(TEXTS.settings).click();
 
   // Wait for settings page to fully load
   await page
@@ -238,7 +237,7 @@ test("should see shortcuts", { tag: ["@release"] }, async ({ page }) => {
   await expect(page.getByText("Changes Save", { exact: true })).toBeVisible({
     timeout: 10000,
   });
-  await expect(page.getByText("Delete", { exact: true })).toBeVisible({
+  await expect(page.getByText(TEXTS.delete, { exact: true })).toBeVisible({
     timeout: 10000,
   });
   await expect(page.getByText("Open Playground", { exact: true })).toBeVisible({
@@ -317,7 +316,7 @@ test(
       skipModal: true,
     });
     await page.getByTestId("user-profile-settings").click();
-    await page.getByText("Settings").click();
+    await page.getByText(TEXTS.settings).click();
 
     // Wait for settings page to fully load
     await page
@@ -369,7 +368,9 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

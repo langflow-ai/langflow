@@ -329,7 +329,7 @@ export function StepConfiguration({
                           </span>
                         </TooltipTrigger>
                         <TooltipContent className="max-w-[260px]">
-                          Configure column behavior for the knowledge base.
+                          {t("knowledge.configureColumns")}
                         </TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
@@ -495,6 +495,14 @@ export function StepConfiguration({
                 onPairsChange={onMetadataPairsChange}
                 testIdScope="kb-run"
               />
+              {validationErrors.metadata && (
+                <span
+                  className="text-xs text-destructive"
+                  data-testid="kb-run-metadata-form-error"
+                >
+                  {validationErrors.metadata}
+                </span>
+              )}
             </div>
           </div>
         </div>

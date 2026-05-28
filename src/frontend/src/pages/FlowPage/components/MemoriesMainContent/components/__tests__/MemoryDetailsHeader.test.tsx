@@ -1,11 +1,48 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "@testing-library/react";
 import type { MemoryInfo } from "@/controllers/API/queries/memories/types";
 import type { MemoryDetailsHeaderProps } from "../../types";
 import { MemoryDetailsHeader } from "../MemoryDetailsHeader";
 
+const mockSetSuccessData = jest.fn();
+const mockSetErrorData = jest.fn();
+
+jest.mock("@/stores/alertStore", () => ({
+  __esModule: true,
+  default: (selector: (s: unknown) => unknown) =>
+    selector({
+      setSuccessData: mockSetSuccessData,
+      setErrorData: mockSetErrorData,
+    }),
+}));
+
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
   default: ({ name }: { name: string }) => <span>{name}</span>,
+}));
+
+jest.mock("@/components/ui/switch", () => ({
+  Switch: ({
+    checked,
+    onCheckedChange,
+    "aria-label": ariaLabel,
+  }: {
+    checked: boolean;
+    onCheckedChange: (v: boolean) => void;
+    "aria-label"?: string;
+  }) => (
+    <button
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      onClick={() => onCheckedChange(!checked)}
+    />
+  ),
 }));
 
 jest.mock("@/components/ui/dropdown-menu", () => ({
@@ -41,6 +78,19 @@ jest.mock("@/components/ui/dropdown-menu", () => ({
   ),
 }));
 
+jest.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div role="tooltip">{children}</div>
+  ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
 jest.mock("@/modals/deleteConfirmationModal", () => ({
   __esModule: true,
   default: ({
@@ -58,6 +108,10 @@ jest.mock("@/modals/deleteConfirmationModal", () => ({
     </div>
   ),
 }));
+
+beforeEach(() => {
+  jest.clearAllMocks();
+});
 
 describe("MemoryDetailsHeader", () => {
   const makeProps = (overrides?: Partial<MemoryDetailsHeaderProps>) => {
@@ -99,9 +153,10 @@ describe("MemoryDetailsHeader", () => {
     });
     render(<MemoryDetailsHeader {...props} />);
     expect(screen.getByText("Memory One")).toBeInTheDocument();
-    expect(
-      screen.getByRole("button", { name: "Toggle auto-capture" }),
-    ).toHaveTextContent("Auto-capture");
+    expect(screen.getByText("Activate")).toBeInTheDocument();
+    const toggle = screen.getByRole("switch", { name: "Toggle auto-capture" });
+    expect(toggle).toBeInTheDocument();
+    expect(toggle).toHaveAttribute("aria-checked", "true");
   });
 
   it("calls mutate handlers for actions", () => {
@@ -115,16 +170,15 @@ describe("MemoryDetailsHeader", () => {
   });
 
   it("toggles auto-capture", () => {
-    const props = makeProps();
+    const props = makeProps({
+      memory: { ...makeProps().memory, is_active: true },
+    });
     render(<MemoryDetailsHeader {...props} />);
     fireEvent.click(
-      screen.getByRole("button", { name: "Toggle auto-capture" }),
+      screen.getByRole("switch", { name: "Toggle auto-capture" }),
     );
 
-    const firstCallArg = (props.handleToggleActive as jest.Mock).mock
-      .calls[0]?.[0];
-    expect(firstCallArg).toEqual(expect.any(Function));
-    expect(firstCallArg(true)).toBe(false);
+    expect(props.handleToggleActive).toHaveBeenCalledWith(false);
   });
 
   it("renders the session selector when sessions exist", () => {
@@ -138,7 +192,7 @@ describe("MemoryDetailsHeader", () => {
     expect(sessionTrigger).not.toBeDisabled();
   });
 
-  it("disables the session selector when only one session and no more pages", () => {
+  it("always enables the session selector regardless of session count", () => {
     const props = makeProps({
       sessions: ["session-1"],
       hasNextSessionsPage: false,
@@ -146,7 +200,7 @@ describe("MemoryDetailsHeader", () => {
     render(<MemoryDetailsHeader {...props} />);
     expect(
       screen.getByRole("button", { name: "Session filter" }),
-    ).toBeDisabled();
+    ).not.toBeDisabled();
   });
 
   it("renders the reload button with correct aria-label", () => {
@@ -277,5 +331,107 @@ describe("MemoryDetailsHeader", () => {
     const scrollDiv = container.querySelector(".overflow-y-auto");
     expect(scrollDiv).not.toBeNull();
     expect(scrollDiv).toHaveTextContent("Loading");
+  });
+
+  describe("handleRefresh", () => {
+    it("disables the refresh button while refreshing", async () => {
+      let resolve!: () => void;
+      const onRefresh = jest.fn(
+        () =>
+          new Promise<void>((res) => {
+            resolve = res;
+          }),
+      );
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const btn = screen.getByRole("button", {
+        name: "Reload sessions and messages",
+      });
+      fireEvent.click(btn);
+      expect(btn).toBeDisabled();
+
+      await act(async () => {
+        resolve();
+      });
+    });
+
+    it("shows success toast after onRefresh resolves", async () => {
+      const onRefresh = jest.fn().mockResolvedValue(undefined);
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSetSuccessData).toHaveBeenCalledWith({
+          title: `Memory "Memory One" refreshed`,
+        });
+      });
+    });
+
+    it("does not show success toast when onRefresh rejects", async () => {
+      const onRefresh = jest.fn().mockRejectedValue(new Error("network"));
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSetErrorData).toHaveBeenCalled();
+      });
+      expect(mockSetSuccessData).not.toHaveBeenCalled();
+    });
+
+    it("shows error toast with api message when onRefresh rejects", async () => {
+      const onRefresh = jest.fn().mockRejectedValue(new Error("timeout"));
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      fireEvent.click(
+        screen.getByRole("button", { name: "Reload sessions and messages" }),
+      );
+
+      await waitFor(() => {
+        expect(mockSetErrorData).toHaveBeenCalledWith({
+          title: "Failed to refresh memory",
+          list: ["timeout"],
+        });
+      });
+    });
+
+    it("re-enables the refresh button after onRefresh rejects", async () => {
+      const onRefresh = jest.fn().mockRejectedValue(new Error("fail"));
+      const props = makeProps({ onRefresh });
+      render(<MemoryDetailsHeader {...props} />);
+
+      const btn = screen.getByRole("button", {
+        name: "Reload sessions and messages",
+      });
+      fireEvent.click(btn);
+
+      await waitFor(() => expect(btn).not.toBeDisabled());
+    });
+  });
+
+  it("shows activate tooltip description", () => {
+    render(<MemoryDetailsHeader {...makeProps()} />);
+    expect(
+      screen.getByText(/conversation messages are automatically processed/i),
+    ).toBeInTheDocument();
+  });
+
+  it("shows read the docs link in activate tooltip with correct href", () => {
+    render(<MemoryDetailsHeader {...makeProps()} />);
+    const link = screen.getByRole("link", { name: /read the docs/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/memory-bases",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
   });
 });

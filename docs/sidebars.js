@@ -185,6 +185,15 @@ module.exports = {
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
+        {
+          type: "category",
+          label: "Bundle extensions",
+          items: [
+            "Develop/extensions-overview",
+            "Develop/extensions-quickstart",
+            "Develop/extensions-manifest",
+          ],
+        },
       ],
     },
     {
@@ -326,6 +335,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -343,7 +353,7 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",
@@ -550,6 +560,11 @@ module.exports = {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",

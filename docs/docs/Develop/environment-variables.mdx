@@ -412,6 +412,8 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
 | `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. Can reduce per-worker startup cost; behavior and compatibility may change. |
+| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. |
+| `LANGFLOW_REDIS_QUEUE_DB` | Integer | `1` | Redis database index used by the Redis job queue backend. |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
@@ -431,6 +433,19 @@ GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"
 Here is what these arguments do:
 - `--max-requests 100`: Automatically restarts a worker after it has processed 100 requests. This helps prevent memory leaks from accumulating over time.
 - `--max-requests-jitter 20`: Adds a random jitter of up to 20 requests to the `--max-requests` value. This ensures that all workers don't restart simultaneously, which could cause a brief downtime or spikes in latency.
+
+#### High-load and multi-worker environments
+
+For high-concurrency deployments (such as when increasing `LANGFLOW_WORKERS`), consider the following best practices:
+- **Enable Gunicorn preload (experimental):**
+  Set `LANGFLOW_GUNICORN_PRELOAD=true` to enable Gunicorn’s `preload_app` mode, which can reduce per-worker startup overhead (non-Windows only).
+- **Use Redis-backed job queue:**
+  Set `LANGFLOW_JOB_QUEUE_TYPE=redis` to share queue events across workers.
+  **Note:** Always configure a dedicated Redis database for the job queue, separate from the cache database.
+- **Disable tracing:**
+  Set `LANGFLOW_DEACTIVATE_TRACING=True` to turn off tracing, which may cause concurrency bottlenecks under high load or in multi-worker environments.
+- **Use PostgreSQL instead of SQLite:**
+  SQLite can experience database locks and deadlocks with concurrent, write-heavy usage. For production or multi-worker environments, configure Langflow to use PostgreSQL by setting the `LANGFLOW_DATABASE_URL` environment variable (see [Memory management options](/memory#configure-external-memory)). This is strongly recommended to avoid operational issues.
 
 For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
@@ -455,11 +470,13 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_COMPONENTS_INDEX_PATH` | String | Not set | File path or URL (`http://` or `https://`) to a prebuilt component index JSON file used to populate built-in components in the visual editor. When not set, Langflow uses the included index. Useful for supplying a curated component index, for example in airgapped deployments. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components and in-editor editing of component code. This feature is in beta. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
+| `LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH` | Boolean | `False` | When a flow file in `LANGFLOW_LOAD_FLOWS_PATH` shares a name with an existing DB row but has a different `id`, controls whether to overwrite the existing row. `False` (default) skips with a warning so UI edits are preserved on restart when file UUIDs regenerate. Set to `True` to opt into prepackaged-flows-are-source-of-truth semantics, typically for CI/CD pipelines. |
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | `True` | Whether to create templates during initialization. If `false`, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as `false`. |
 | `LANGFLOW_UPDATE_STARTER_PROJECTS` | Boolean | `True` | Whether to update templates with the latest component versions when initializing after an upgrade. |
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | `False` | If `true`, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but can cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend: `polling`, `streaming` or `direct`. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. For development purposes only when you need to serve specific frontend code. |
+| `LANGFLOW_FS_TOOL_BASE_DIR` | String | `~/.langflow/fs_tool/fs_sandbox` | Base directory for the [**File System** component](../Components/file-system.mdx) sandbox. All agent file operations are confined to this directory. |
 | `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect outputs or data passed between components. |
 | `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate outputs or responses passed between components. |
 | `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of flow transaction events to keep in the database. |

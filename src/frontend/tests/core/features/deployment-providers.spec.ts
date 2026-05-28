@@ -6,6 +6,11 @@ import {
   PROVIDERS_MOCK,
 } from "../../utils/deployment-mocks";
 
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
+
 async function navigateToProvidersTab(
   page: Parameters<typeof test>[2]["page"],
 ) {
@@ -19,11 +24,6 @@ test(
   "Empty state shows Add Environment button",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await page.route("**/api/v1/deployments/providers*", (route) => {
       route.fulfill({
         status: 200,
@@ -50,11 +50,6 @@ test(
   "New Environment button opens modal with save disabled on empty form",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await page.route("**/api/v1/deployments/providers*", (route) => {
       route.fulfill({
         status: 200,
@@ -84,11 +79,6 @@ test(
   "Save button becomes enabled after filling all required fields",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await page.route("**/api/v1/deployments/providers*", (route) => {
       route.fulfill({
         status: 200,
@@ -127,11 +117,6 @@ test(
   "Save calls POST and modal closes",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let postCalled = false;
 
     await page.route("**/api/v1/deployments/providers*", (route) => {
@@ -196,11 +181,6 @@ test(
   "Delete triggers confirmation dialog then calls DELETE",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await page.route("**/api/v1/deployments*", (route) => {
       route.fulfill({
         status: 200,
@@ -234,8 +214,7 @@ test(
 
     await expect(page.getByTestId("provider-row-prov-1")).toBeVisible();
 
-    await page.getByTestId("actions-provider-prov-1").click();
-    await page.getByText("Delete").click();
+    await page.getByTestId("delete-provider-prov-1").click();
 
     await expect(
       page.getByTestId("btn_delete_delete_confirmation_modal"),
@@ -257,11 +236,6 @@ test(
   "Cancel delete dismisses confirmation without calling DELETE",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let deleteRequestCount = 0;
 
     await page.route("**/api/v1/deployments*", (route) => {
@@ -293,8 +267,7 @@ test(
 
     await expect(page.getByTestId("provider-row-prov-1")).toBeVisible();
 
-    await page.getByTestId("actions-provider-prov-1").click();
-    await page.getByText("Delete").click();
+    await page.getByTestId("delete-provider-prov-1").click();
 
     await expect(
       page.getByTestId("btn_cancel_delete_confirmation_modal"),

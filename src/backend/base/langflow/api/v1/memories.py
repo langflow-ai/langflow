@@ -5,7 +5,8 @@ Endpoints:
     GET    /memories                    - List (current user, paginated)
     GET    /memories/{id}               - Get one
     GET    /memories/{id}/sessions      - List sessions (tracked + untracked from MessageTable)
-    PATCH  /memories/{id}               - Update (name / threshold / auto_capture / preprocessing)
+    GET    /memories/{id}/messages      - List ingested messages (optionally filtered by ?session_id=)
+    PATCH  /memories/{id}               - Update (name / threshold / auto_capture)
     DELETE /memories/{id}               - Delete (cancels active tasks + removes KB from disk)
     POST   /memories/{id}/flush        - Manual flush / trigger ingestion
     POST   /memories/{id}/regenerate    - Regenerate from mismatch
@@ -180,18 +181,20 @@ async def list_sessions(
     return raw_page.model_copy(update={"items": items})
 
 
-@router.get("/{memory_base_id}/sessions/{session_id}/messages", status_code=HTTPStatus.OK)
-async def list_session_messages(
+@router.get("/{memory_base_id}/messages", status_code=HTTPStatus.OK)
+async def list_memory_base_messages(
     memory_base_id: uuid.UUID,
-    session_id: str,
     current_user: CurrentActiveUser,
     params: Annotated[Params, Depends()],
+    session_id: str | None = None,
 ) -> Page[MessageReadResponse]:
-    """List messages ingested into this Memory Base session (paginated).
+    """List messages ingested into this Memory Base (paginated).
 
     Only messages that have been successfully ingested into the requested Memory Base
-    are returned. Messages are ordered by timestamp ascending.
-    Each item includes ``job_id`` and ``ingested_at`` from the MessageIngestionRecord.
+    are returned, ordered by timestamp descending. When ``session_id`` is provided,
+    results are filtered to that session; otherwise all ingested messages across
+    sessions are returned. Each item includes ``job_id`` and ``ingested_at`` from
+    the MessageIngestionRecord.
 
     Returns 404 if the Memory Base does not belong to the current user.
     """
@@ -257,15 +260,17 @@ async def update_memory_base(
     current_user: CurrentActiveUser,
     patch: Annotated[MemoryBaseUpdate, Body(embed=False)] = ...,
 ) -> MemoryBaseRead:
-    """Update mutable parameters (threshold, auto_capture, preprocessing, etc.).
+    """Update mutable parameters (name, threshold, auto_capture).
 
     Threshold changes only take effect at the next auto-capture trigger.
     Any already-running ingestion task continues with its original arguments.
+    Preprocessing fields (preprocessing, preproc_model, preproc_instructions, preproc_kill_phrase)
+    are immutable after creation and cannot be patched.
     """
     try:
         mb = await get_memory_base_service().update(memory_base_id, user_id=current_user.id, patch=patch)
     except PreprocessingValidationError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     if mb is None:
         raise HTTPException(status_code=404, detail="Memory base not found")
     return MemoryBaseRead.model_validate(mb)

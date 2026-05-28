@@ -12,6 +12,7 @@ if TYPE_CHECKING:
 
 
 def utc_now():
+    """Return the current UTC datetime."""
     return datetime.now(timezone.utc)
 
 
@@ -20,6 +21,7 @@ class ApiKeyBase(SQLModel):
     last_used_at: datetime | None = Field(default=None, nullable=True)
     total_uses: int = Field(default=0)
     is_active: bool = Field(default=True)
+    expires_at: datetime | None = Field(default=None, nullable=True)
 
 
 class ApiKey(ApiKeyBase, table=True):  # type: ignore[call-arg]
@@ -45,6 +47,7 @@ class ApiKeyCreate(ApiKeyBase):
     @field_validator("created_at", mode="before")
     @classmethod
     def set_created_at(cls, v):
+        """Default created_at to the current UTC time when not provided."""
         return v or utc_now()
 
 
@@ -63,5 +66,5 @@ class ApiKeyRead(ApiKeyBase):
     @field_validator("api_key")
     @classmethod
     def mask_api_key(cls, v) -> str:
-        # This validator will always run, and will mask the API key
+        """Mask all but the first 8 characters of the API key."""
         return f"{v[:8]}{'*' * (len(v) - 8)}"
