@@ -5,7 +5,11 @@ from lfx.services.settings.feature_flags import FEATURE_FLAGS
 from langflow.api.v1 import (
     api_key_router,
     authz_audit_router,
+    authz_me_router,
+    authz_role_assignments_router,
+    authz_roles_router,
     authz_shares_router,
+    authz_teams_router,
     chat_router,
     endpoints_router,
     extensions_router,
@@ -81,6 +85,10 @@ router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
 router_v1.include_router(authz_shares_router)
 router_v1.include_router(authz_audit_router)
+router_v1.include_router(authz_roles_router)
+router_v1.include_router(authz_role_assignments_router)
+router_v1.include_router(authz_teams_router)
+router_v1.include_router(authz_me_router)
 
 
 # Extension reload is Mode A (local-dev / pip-installed) only.  The route is

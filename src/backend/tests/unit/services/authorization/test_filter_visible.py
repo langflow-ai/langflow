@@ -124,7 +124,7 @@ async def test_filter_visible_resources_groups_by_extracted_domain(monkeypatch, 
         fake_user,
         resource_type="project",
         candidates=items,
-        domain_extractor=lambda project: authz_guards._resolve_casbin_domain(project.workspace_id, None),
+        domain_extractor=lambda project: authz_guards._resolve_authz_domain(project.workspace_id, None),
         act=FlowAction.READ,
     )
 

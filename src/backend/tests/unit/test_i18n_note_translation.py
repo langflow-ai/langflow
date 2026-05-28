@@ -200,9 +200,8 @@ async def test_note_translations_returns_translated_text_for_baked_node(
     assert "Bonjour" in translations.values()
 
 
-async def test_note_translations_returns_404_equivalent_for_missing_flow(client: AsyncClient, logged_in_headers):
-    """Non-existent flow returns empty dict (endpoint returns {} not 404)."""
+async def test_note_translations_returns_404_for_missing_flow(client: AsyncClient, logged_in_headers):
+    """A non-existent (or inaccessible) flow returns 404, consistent with GET /flows/{id}."""
     fake_id = str(uuid.uuid4())
     resp = await client.get(f"api/v1/flows/{fake_id}/note_translations", headers=logged_in_headers)
-    assert resp.status_code == status.HTTP_200_OK
-    assert resp.json() == {}
+    assert resp.status_code == status.HTTP_404_NOT_FOUND
