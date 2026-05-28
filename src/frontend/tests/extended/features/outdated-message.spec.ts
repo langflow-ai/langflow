@@ -13,7 +13,10 @@ test("user must be able outdated message on error", async ({ page }) => {
   // "Basic Prompting" card or stale "Memory Chatbot" entries from sibling tests.
   const rawJson = readFileSync("tests/assets/outdated_flow.json", "utf-8");
   const flowName = `Outdated Test Flow ${Date.now()}`;
-  const jsonContent = JSON.stringify({ ...JSON.parse(rawJson), name: flowName });
+  const jsonContent = JSON.stringify({
+    ...JSON.parse(rawJson),
+    name: flowName,
+  });
 
   // Create the DataTransfer and File
   const dataTransfer = await page.evaluateHandle((data) => {
