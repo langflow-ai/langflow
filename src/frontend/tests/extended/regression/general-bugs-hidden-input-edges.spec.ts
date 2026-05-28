@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -9,7 +9,6 @@ import {
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should not be able to hide connected inputs",
   { tag: ["@release", "@api", "@database"] },

@@ -1,7 +1,7 @@
 import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "refresh dropdown list",

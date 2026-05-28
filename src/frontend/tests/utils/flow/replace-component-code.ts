@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test";
-import { TID } from "../constants/testIds";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { TID } from "../constants/testIds";
 /**
  * Replace the code of the currently-selected custom component.
  *

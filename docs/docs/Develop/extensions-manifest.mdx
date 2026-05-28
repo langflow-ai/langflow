@@ -1,11 +1,13 @@
 ---
 title: Manifest reference
-description: Field-by-field reference for the Langflow extension manifest (`extension.json`).
-sidebar_position: 3
 slug: /extensions-manifest
 ---
 
-This page is the field-by-field reference for the `extension.json` manifest the Langflow Extension loader consumes. The canonical JSON Schema lives at [`https://schemas.langflow.org/extension/v1.json`](https://schemas.langflow.org/extension/v1.json) and is generated from the Pydantic model at [`lfx.extension.manifest.ExtensionManifest`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/extension/manifest.py). To export the live schema:
+This page is the reference for the `extension.json` manifest the Langflow Extension loader consumes.
+
+The canonical JSON Schema lives at [`https://schemas.langflow.org/extension/v1.json`](https://schemas.langflow.org/extension/v1.json) and is generated from the Pydantic model at [`lfx.extension.manifest.ExtensionManifest`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/extension/manifest.py).
+
+To export the live schema, run:
 
 ```bash
 lfx extension schema --output extension.schema.json
@@ -28,7 +30,7 @@ Use the `$schema` reference in your manifest so editors can autocomplete and val
 
 | Field | Type | Required | Description |
 | --- | --- | --- | --- |
-| `id` | string | yes | Globally-unique extension ID. Lowercase, hyphenated, starts with a letter, 2-64 chars. Convention: `lfx-<provider>`. |
+| `id` | string | yes | Globally-unique extension ID. Lowercase, hyphenated, starts with a letter, 2-64 chars. Convention: `lfx-<name>`. |
 | `version` | string | yes | SemVer 2.0.0 version string for this extension release. |
 | `name` | string | yes | Human-readable display name shown in the Langflow palette. 1-200 chars. |
 | `description` | string \| null | no | Optional one-paragraph summary, max 2000 chars. |
@@ -61,7 +63,7 @@ The runtime compares `str(BUNDLE_API_VERSION)` against this list. A mismatch fai
 
 | Field | Type | Description |
 | --- | --- | --- |
-| `name` | string | Bundle name; addressable as `ext:<name>:<Class>@<slot>`. Lowercase snake_case, starts with a letter, 2-64 chars. |
+| `name` | string | Bundle name; addressable as `ext:<bundle>:<Class>@<slot>`. Lowercase snake_case, starts with a letter, 2-64 chars. |
 | `path` | string | Path to the bundle directory, relative to the manifest. Must not start with `/` or contain `..`. |
 
 v0 enforces `minItems: 1, maxItems: 1`; multi-bundle extensions are rejected with `multi-bundle-deferred-in-this-milestone` and ship in a later epic.
@@ -127,8 +129,3 @@ The loader and validator both emit typed errors keyed by the manifest field that
 Run `lfx extension validate <path>` to see every error as a structured object with `code`, `message`, `location`, `hint`, and `ref_url`.
 
 ## See also
-
-* [Build your first Langflow Extension](./extensions-quickstart.mdx) — three-minute getting-started.
-* [Author guide for Langflow Extensions](./extensions-author-guide.mdx) — long-form authoring guidance, including how to port an existing in-tree component.
-* [Production install pattern for Extensions](../Deployment/deployment-extensions-production.mdx) — Mode B/C Docker image patterns.
-* [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md) — the stable surface bundle code may consume.

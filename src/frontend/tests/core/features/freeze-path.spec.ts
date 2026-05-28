@@ -4,9 +4,9 @@ import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to freeze a path",
   { tag: ["@release", "@workspace", "@components"] },

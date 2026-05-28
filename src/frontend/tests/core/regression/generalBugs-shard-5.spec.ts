@@ -2,9 +2,9 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "should be able to see output preview from grouped components and connect components with a single click",
   { tag: ["@release", "@workspace", "@components"] },
