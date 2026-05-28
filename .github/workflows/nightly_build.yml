@@ -301,7 +301,6 @@ jobs:
       # When triggered manually, use the provided value (default is also true)
       push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
-
   db-migration-validation:
     name: Run DB Migration Validation
     needs: [create-nightly-tag, release-nightly-build]
