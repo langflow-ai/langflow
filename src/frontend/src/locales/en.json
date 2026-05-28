@@ -1600,7 +1600,7 @@
   "updateComponent.sidebarNote": "Components added from the sidebar always use the latest version.",
   "updateComponent.singleUpdateDesc": "This update may change inputs, outputs, or component behavior. In some cases, it will disconnect this component from your flow, requiring you to review or reconnect it afterward.",
   "updateComponent.standard": "Standard",
-  "updateComponent.breaking": "Breaking Change",
+  "updateComponent.breaking": "Breaking",
   "updateComponent.titleMultiple": "Update components",
   "updateComponent.titleSingle": "Update {{name}}",
   "updateComponent.columnComponent": "Component",

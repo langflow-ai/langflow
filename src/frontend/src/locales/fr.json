@@ -1579,7 +1579,6 @@
   "trace.traceId": "ID de la trace",
   "ui.resizeSidebar": "Redimensionner la barre latérale (utilisez les touches fléchées ou faites glisser pour redimensionner)",
   "ui.toggleSidebar": "Afficher/masquer la barre latérale",
-  "updateComponent.breaking": "Changement majeur",
   "updateComponent.breakingUpdateDesc": "Les mises à jour signalées comme majeures peuvent modifier les entrées, les sorties ou le comportement des composants. Dans certains cas, ils déconnecteront des composants de votre flux, ce qui vous obligera à les vérifier ou à les reconnecter par la suite. Les composants ajoutés depuis la barre latérale utilisent toujours la dernière version.",
   "updateComponent.columnComponent": "Composant",
   "updateComponent.columnUpdateType": "Type de mise à jour",
