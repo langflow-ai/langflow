@@ -801,6 +801,78 @@ async def test_should_call_tool_and_populate_token_usage_when_running_against_re
 
 
 @pytest.mark.asyncio
+@pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), reason="OpenAI API key required")
+async def test_should_stream_multiple_token_chunks_to_event_manager_when_running_against_real_openai_model() -> None:
+    """E2E proof that the streaming pipeline works against a real OpenAI model.
+
+    Hard-coding ``stream=True`` in ``_get_llm`` is only useful if the pipeline that
+    consumes those chunks (``astream_events(v2)`` → ``handle_on_chain_stream`` →
+    ``event_manager.on_token``) is intact. This test exercises the full chain against
+    a real model and asserts that multiple token callbacks fire — meaning real
+    token-by-token streaming, not a single bulk delivery.
+
+    A failure here would indicate either: (a) the underlying chat model is not built
+    with ``streaming=True``, or (b) ``handle_on_chain_stream`` stopped forwarding
+    ``on_chat_model_stream`` chunks to the event manager.
+    """
+    langchain_openai = pytest.importorskip("langchain_openai")
+
+    llm = langchain_openai.ChatOpenAI(
+        model="gpt-4o-mini",
+        temperature=0,
+        streaming=True,
+        stream_usage=True,
+    )
+
+    component = _build_component()
+    component.set_attributes(
+        {
+            "input_value": "Count from 1 to 8 in English, one number per line.",
+            "chat_history": [],
+        }
+    )
+
+    token_chunks: list[str] = []
+
+    def _on_token(*, data):
+        chunk = data.get("chunk")
+        if chunk:
+            token_chunks.append(chunk)
+
+    component._event_manager = SimpleNamespace(
+        on_token=_on_token,
+        on_message=lambda **_kw: None,
+        on_remove_message=lambda **_kw: None,
+    )
+
+    # Simulate the production send_message callback: it stores the message and
+    # assigns an ID. handle_on_chain_stream short-circuits when ``message_id`` is
+    # falsy, so without this the streaming path never fires the on_token callback.
+    async def _send_message_with_id(message, **_kw):
+        if not message.get_id():
+            message.id = "stub-message-id"
+        return message
+
+    with (
+        patch.object(type(component), "_get_llm", return_value=llm),
+        patch.object(type(component), "get_agent_requirements", new=AsyncMock(return_value=(llm, [], []))),
+        patch.object(type(component), "send_message", new=AsyncMock(side_effect=_send_message_with_id)),
+    ):
+        result = await component.message_response()
+
+    from lfx.schema.message import Message as _Msg
+
+    assert isinstance(result, _Msg)
+    assert (result.text or "").strip(), "real model must return some text"
+    assert len(token_chunks) > 1, (
+        f"Expected multiple streamed token chunks; got {len(token_chunks)} chunk(s). "
+        "When ChatOpenAI is instantiated with streaming=False, LangGraph delivers the "
+        "response in a single on_chat_model_end event and on_token never fires — the "
+        "Playground's live-typing UX is silently disabled in that case."
+    )
+
+
+@pytest.mark.asyncio
 async def test_should_invoke_graph_astream_events_with_messages_input_when_run_agent_called() -> None:
     """`run_agent(graph)` must feed the graph a `{"messages": [...]}` dict.
 
@@ -1347,3 +1419,63 @@ async def test_should_pass_recursion_limit_when_max_iterations_is_clamped_from_z
     assert captured_config.get("recursion_limit", 0) >= 7, (
         "Clamped max_iterations of 1 must still permit at least one model+tool round-trip"
     )
+
+
+@pytest.mark.asyncio
+async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_false() -> None:
+    """Streaming is mandatory for AgentComponent.
+
+    The LLM must always be instantiated with ``stream=True`` so ``astream_events(v2)``
+    emits ``on_chat_model_stream`` chunks.
+
+    Bug: when ``self.stream`` (the legacy BoolInput toggle introduced in PR #13155) is
+    False, ``_get_llm`` forwards ``stream=False`` to ``get_llm`` and ChatOpenAI is built
+    with ``streaming=False``. LangGraph then accumulates the response and only emits
+    ``on_chat_model_end``, so the Playground/API surface stops receiving tokens
+    incrementally — i.e. the live-typing UX is silently disabled.
+
+    The Agent has no opt-out from streaming (see
+    ``reference_agent_streaming_mandatory.md``); the toggle is a leftover and the
+    underlying ``get_llm`` call must always use ``stream=True``.
+    """
+    captured: dict[str, Any] = {}
+
+    def _capture_get_llm(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="fake_chat_model")
+
+    component = _build_component()
+    component.set_attributes({"stream": False})
+
+    with patch("lfx.components.models_and_agents.agent.get_llm", side_effect=_capture_get_llm):
+        component._get_llm()
+
+    assert captured.get("stream") is True, (
+        "AgentComponent._get_llm must hard-code stream=True regardless of the BoolInput "
+        f"toggle value — got stream={captured.get('stream')!r}. Without it the underlying "
+        "ChatOpenAI is built with streaming=False and astream_events stops emitting "
+        "on_chat_model_stream chunks."
+    )
+
+
+@pytest.mark.asyncio
+async def test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_true() -> None:
+    """Sanity check that an explicit stream=True toggle still reaches get_llm.
+
+    When the user explicitly toggles stream=True, get_llm must still receive stream=True.
+    This guards against a regression where the toggle inverts the flag or is consumed
+    elsewhere before reaching get_llm.
+    """
+    captured: dict[str, Any] = {}
+
+    def _capture_get_llm(**kwargs):
+        captured.update(kwargs)
+        return MagicMock(name="fake_chat_model")
+
+    component = _build_component()
+    component.set_attributes({"stream": True})
+
+    with patch("lfx.components.models_and_agents.agent.get_llm", side_effect=_capture_get_llm):
+        component._get_llm()
+
+    assert captured.get("stream") is True
