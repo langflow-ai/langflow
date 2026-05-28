@@ -1,0 +1,526 @@
+name: Nightly Fresh Install
+
+# Smoke-test that a freshly published nightly is actually installable end-to-end
+# from all the channels users consume it through:
+#
+#   Scenario 1 — uv pip install langflow-nightly                  (unpinned, latest)
+#   Scenario 2 — uv pip install langflow-nightly==<PyPI latest>   (explicit pin)
+#   Scenario 3 — docker run langflowai/langflow-nightly:latest    (image)
+#   Scenario 4 — docker compose up                                (compose)
+#
+# Each scenario is exercised twice: once against SQLite (default) and once
+# against a fresh PostgreSQL. The job fails if:
+#   * the install/resolver fails,
+#   * the process/container does not become healthy,
+#   * /api/v1/version disagrees with what was installed, or
+#   * (Scenario 1) an unpinned install silently backtracks away from the
+#     PyPI latest — this catches broken releases whose dependency pins are
+#     unsatisfiable from public indexes.
+
+on:
+  workflow_call:
+    inputs:
+      nightly_tag:
+        description: "Nightly Docker tag under test (e.g. langflowai/langflow-nightly:v1.10.0.devNN)"
+        required: true
+        type: string
+      pypi_version:
+        description: "PyPI version of langflow-nightly under test (e.g. 1.10.0.devNN). Blank = resolve from PyPI."
+        required: false
+        type: string
+        default: ""
+  workflow_dispatch:
+    inputs:
+      nightly_tag:
+        description: "Nightly Docker tag under test"
+        required: false
+        type: string
+        default: "langflowai/langflow-nightly:latest"
+      pypi_version:
+        description: "PyPI version to pin (blank = current latest on PyPI)"
+        required: false
+        type: string
+        default: ""
+
+env:
+  PYTHON_VERSION: "3.13"
+  POSTGRES_DB: langflow_test
+  POSTGRES_USER: langflow
+  POSTGRES_PASSWORD: langflow_test_pass  # pragma: allowlist secret
+  HEALTH_PATH: /health_check
+  LANGFLOW_PORT: "7860"
+
+jobs:
+  resolve-versions:
+    name: Resolve versions under test
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      pypi_version: ${{ steps.resolve.outputs.pypi_version }}
+      image_version: ${{ steps.resolve.outputs.image_version }}
+      nightly_tag: ${{ steps.resolve.outputs.nightly_tag }}
+    steps:
+      - name: Resolve PyPI and image versions
+        id: resolve
+        run: |
+          set -euo pipefail
+          NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
+          PYPI_VER="${{ inputs.pypi_version }}"
+          if [ -z "$PYPI_VER" ]; then
+            PYPI_VER=$(curl -fsSL https://pypi.org/pypi/langflow-nightly/json \
+              | python3 -c "import json,sys;print(json.load(sys.stdin)['info']['version'])")
+          fi
+          docker pull "$NIGHTLY_TAG" >/dev/null
+          IMG_VER=$(docker run --rm --entrypoint sh "$NIGHTLY_TAG" \
+            -c "pip show langflow-nightly | awk '/^Version:/ {print \$2}'")
+
+          echo "PyPI latest:   $PYPI_VER"
+          echo "Image version: $IMG_VER"
+          echo "Image tag:     $NIGHTLY_TAG"
+
+          {
+            echo "pypi_version=$PYPI_VER"
+            echo "image_version=$IMG_VER"
+            echo "nightly_tag=$NIGHTLY_TAG"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Warn if PyPI and image versions disagree
+        run: |
+          if [ "${{ steps.resolve.outputs.pypi_version }}" != "${{ steps.resolve.outputs.image_version }}" ]; then
+            echo "::warning::PyPI latest (${{ steps.resolve.outputs.pypi_version }}) and image (${{ steps.resolve.outputs.image_version }}) advertise different langflow-nightly versions. This is expected briefly during a release, but a persistent gap means one of the publish steps failed."
+          fi
+
+  uv-unpinned:
+    name: "Scenario 1 — uv unpinned (${{ matrix.database }})"
+    needs: resolve-versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: langflow_test
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow_test_pass  # pragma: allowlist secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Fresh install (unpinned)
+        working-directory: ${{ runner.temp }}
+        run: |
+          set -euo pipefail
+          mkdir -p fresh && cd fresh
+          uv venv
+          source .venv/bin/activate
+          if [ "${{ matrix.database }}" = "postgres" ]; then
+            uv pip install "langflow-nightly[postgresql]"
+          else
+            uv pip install "langflow-nightly"
+          fi
+          INSTALLED=$(pip show langflow-nightly | awk '/^Version:/ {print $2}')
+          echo "Installed version: $INSTALLED"
+          echo "INSTALLED_VERSION=$INSTALLED" >> "$GITHUB_ENV"
+
+      - name: Assert unpinned install resolved to PyPI latest
+        run: |
+          EXPECTED="${{ needs.resolve-versions.outputs.pypi_version }}"
+          if [ "$INSTALLED_VERSION" != "$EXPECTED" ]; then
+            echo "::error::Unpinned 'uv pip install langflow-nightly' silently resolved to $INSTALLED_VERSION (expected PyPI latest $EXPECTED). This usually means the latest release has unsatisfiable dependency pins and the resolver backtracked to an older nightly."
+            exit 1
+          fi
+
+      - name: Start Langflow
+        working-directory: ${{ runner.temp }}/fresh
+        env:
+          LANGFLOW_AUTO_LOGIN: "true"
+          LANGFLOW_DATABASE_URL: ${{ matrix.database == 'postgres' && 'postgresql://langflow:langflow_test_pass@localhost:5432/langflow_test' || 'sqlite:///./langflow.db' }}
+        run: |
+          set -euo pipefail
+          source .venv/bin/activate
+          nohup python -m langflow run \
+            --host 127.0.0.1 --port "${LANGFLOW_PORT}" --backend-only \
+            > langflow.log 2>&1 &
+          echo $! > langflow.pid
+
+      - name: Wait for health check
+        working-directory: ${{ runner.temp }}/fresh
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            if curl -fsS -m 2 "http://127.0.0.1:${LANGFLOW_PORT}${HEALTH_PATH}" >/dev/null 2>&1; then
+              echo "ready after ${i} attempts"
+              exit 0
+            fi
+            if ! kill -0 "$(cat langflow.pid)" 2>/dev/null; then
+              echo "::error::Process died during startup"
+              tail -200 langflow.log
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::Timed out waiting for ${HEALTH_PATH}"
+          tail -200 langflow.log
+          exit 1
+
+      - name: Assert /api/v1/version matches installed
+        run: |
+          set -euo pipefail
+          REPORTED=$(curl -fsS "http://127.0.0.1:${LANGFLOW_PORT}/api/v1/version" \
+            | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])")
+          echo "reported=$REPORTED installed=$INSTALLED_VERSION"
+          if [ "$REPORTED" != "$INSTALLED_VERSION" ]; then
+            echo "::error::API reports $REPORTED but pip installed $INSTALLED_VERSION"
+            exit 1
+          fi
+
+      - name: Stop Langflow
+        if: always()
+        working-directory: ${{ runner.temp }}/fresh
+        run: |
+          if [ -f langflow.pid ]; then kill "$(cat langflow.pid)" 2>/dev/null || true; fi
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario1-${{ matrix.database }}-log
+          path: ${{ runner.temp }}/fresh/langflow.log
+          if-no-files-found: ignore
+
+  uv-pinned:
+    name: "Scenario 2 — uv pinned (${{ matrix.database }})"
+    needs: resolve-versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_DB: langflow_test
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow_test_pass  # pragma: allowlist secret
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    steps:
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+
+      - name: Fresh install (pinned to PyPI latest)
+        working-directory: ${{ runner.temp }}
+        env:
+          PIN: ${{ needs.resolve-versions.outputs.pypi_version }}
+        run: |
+          set -euo pipefail
+          mkdir -p fresh && cd fresh
+          uv venv
+          source .venv/bin/activate
+          if [ "${{ matrix.database }}" = "postgres" ]; then
+            uv pip install "langflow-nightly[postgresql]==${PIN}"
+          else
+            uv pip install "langflow-nightly==${PIN}"
+          fi
+          INSTALLED=$(pip show langflow-nightly | awk '/^Version:/ {print $2}')
+          if [ "$INSTALLED" != "$PIN" ]; then
+            echo "::error::Pinned install resolved to $INSTALLED instead of $PIN"
+            exit 1
+          fi
+          echo "INSTALLED_VERSION=$INSTALLED" >> "$GITHUB_ENV"
+
+      - name: Start Langflow
+        working-directory: ${{ runner.temp }}/fresh
+        env:
+          LANGFLOW_AUTO_LOGIN: "true"
+          LANGFLOW_DATABASE_URL: ${{ matrix.database == 'postgres' && 'postgresql://langflow:langflow_test_pass@localhost:5432/langflow_test' || 'sqlite:///./langflow.db' }}
+        run: |
+          set -euo pipefail
+          source .venv/bin/activate
+          nohup python -m langflow run \
+            --host 127.0.0.1 --port "${LANGFLOW_PORT}" --backend-only \
+            > langflow.log 2>&1 &
+          echo $! > langflow.pid
+
+      - name: Wait for health check
+        working-directory: ${{ runner.temp }}/fresh
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 90); do
+            if curl -fsS -m 2 "http://127.0.0.1:${LANGFLOW_PORT}${HEALTH_PATH}" >/dev/null 2>&1; then
+              echo "ready after ${i} attempts"; exit 0
+            fi
+            if ! kill -0 "$(cat langflow.pid)" 2>/dev/null; then
+              echo "::error::Process died during startup"
+              tail -200 langflow.log
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::Timed out waiting for ${HEALTH_PATH}"
+          tail -200 langflow.log
+          exit 1
+
+      - name: Assert /api/v1/version matches installed
+        run: |
+          set -euo pipefail
+          REPORTED=$(curl -fsS "http://127.0.0.1:${LANGFLOW_PORT}/api/v1/version" \
+            | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])")
+          if [ "$REPORTED" != "$INSTALLED_VERSION" ]; then
+            echo "::error::API reports $REPORTED but pip installed $INSTALLED_VERSION"
+            exit 1
+          fi
+
+      - name: Stop Langflow
+        if: always()
+        working-directory: ${{ runner.temp }}/fresh
+        run: |
+          if [ -f langflow.pid ]; then kill "$(cat langflow.pid)" 2>/dev/null || true; fi
+
+      - name: Upload log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scenario2-${{ matrix.database }}-log
+          path: ${{ runner.temp }}/fresh/langflow.log
+          if-no-files-found: ignore
+
+  docker-run:
+    name: "Scenario 3 — docker run (${{ matrix.database }})"
+    needs: resolve-versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+    steps:
+      - name: Provision Postgres (if needed)
+        if: matrix.database == 'postgres'
+        run: |
+          set -euo pipefail
+          docker network create lftest
+          docker run -d --name lf-pg --network lftest \
+            -e POSTGRES_DB=langflow_test \
+            -e POSTGRES_USER=langflow \
+            -e POSTGRES_PASSWORD=langflow_test_pass \
+            postgres:16
+          for i in $(seq 1 30); do
+            if docker exec lf-pg pg_isready -U langflow >/dev/null 2>&1; then break; fi
+            sleep 2
+          done
+
+      - name: docker run langflow-nightly
+        env:
+          NIGHTLY_TAG: ${{ needs.resolve-versions.outputs.nightly_tag }}
+        run: |
+          set -euo pipefail
+          if [ "${{ matrix.database }}" = "postgres" ]; then
+            docker run -d --name lf --network lftest -p ${LANGFLOW_PORT}:7860 \
+              -e LANGFLOW_DATABASE_URL=postgresql://langflow:langflow_test_pass@lf-pg:5432/langflow_test \
+              -e LANGFLOW_AUTO_LOGIN=true \
+              "${NIGHTLY_TAG}"
+          else
+            docker run -d --name lf -p ${LANGFLOW_PORT}:7860 \
+              -e LANGFLOW_AUTO_LOGIN=true \
+              "${NIGHTLY_TAG}"
+          fi
+
+      - name: Wait for health check
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            if curl -fsS -m 2 "http://127.0.0.1:${LANGFLOW_PORT}${HEALTH_PATH}" >/dev/null 2>&1; then
+              echo "ready"; exit 0
+            fi
+            STATE=$(docker inspect -f '{{.State.Status}}' lf 2>/dev/null || echo missing)
+            if [ "$STATE" != "running" ]; then
+              echo "::error::Container state: $STATE"
+              docker logs lf 2>&1 | tail -200
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::Timed out waiting for ${HEALTH_PATH}"
+          docker logs lf 2>&1 | tail -200
+          exit 1
+
+      - name: Assert /api/v1/version matches image
+        env:
+          IMG_VER: ${{ needs.resolve-versions.outputs.image_version }}
+        run: |
+          set -euo pipefail
+          REPORTED=$(curl -fsS "http://127.0.0.1:${LANGFLOW_PORT}/api/v1/version" \
+            | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])")
+          if [ "$REPORTED" != "$IMG_VER" ]; then
+            echo "::error::API reports $REPORTED but image has $IMG_VER installed"
+            exit 1
+          fi
+
+      - name: Container logs (on failure)
+        if: failure()
+        run: |
+          docker logs lf 2>&1 | tail -300 || true
+          if [ "${{ matrix.database }}" = "postgres" ]; then docker logs lf-pg 2>&1 | tail -200 || true; fi
+
+      - name: Tear down
+        if: always()
+        run: |
+          docker rm -f lf 2>/dev/null || true
+          docker rm -f lf-pg 2>/dev/null || true
+          docker network rm lftest 2>/dev/null || true
+
+  docker-compose:
+    name: "Scenario 4 — docker compose (${{ matrix.database }})"
+    needs: resolve-versions
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        database: [sqlite, postgres]
+    steps:
+      - name: Write compose file
+        env:
+          NIGHTLY_TAG: ${{ needs.resolve-versions.outputs.nightly_tag }}
+        run: |
+          set -euo pipefail
+          mkdir -p compose-test && cd compose-test
+          if [ "${{ matrix.database }}" = "postgres" ]; then
+            cat > compose.yaml <<EOF
+          services:
+            postgres:
+              image: postgres:16
+              environment:
+                POSTGRES_DB: langflow_test
+                POSTGRES_USER: langflow
+                POSTGRES_PASSWORD: langflow_test_pass
+              healthcheck:
+                test: ["CMD", "pg_isready", "-U", "langflow"]
+                interval: 5s
+                timeout: 5s
+                retries: 10
+            langflow:
+              image: ${NIGHTLY_TAG}
+              depends_on:
+                postgres:
+                  condition: service_healthy
+              ports:
+                - "${LANGFLOW_PORT}:7860"
+              environment:
+                LANGFLOW_DATABASE_URL: postgresql://langflow:langflow_test_pass@postgres:5432/langflow_test
+                LANGFLOW_AUTO_LOGIN: "true"
+          EOF
+          else
+            cat > compose.yaml <<EOF
+          services:
+            langflow:
+              image: ${NIGHTLY_TAG}
+              ports:
+                - "${LANGFLOW_PORT}:7860"
+              environment:
+                LANGFLOW_AUTO_LOGIN: "true"
+          EOF
+          fi
+          cat compose.yaml
+
+      - name: docker compose up
+        working-directory: compose-test
+        run: docker compose up -d
+
+      - name: Wait for health check
+        working-directory: compose-test
+        run: |
+          set -euo pipefail
+          for i in $(seq 1 120); do
+            if curl -fsS -m 2 "http://127.0.0.1:${LANGFLOW_PORT}${HEALTH_PATH}" >/dev/null 2>&1; then
+              echo "ready"; exit 0
+            fi
+            STATE=$(docker compose ps --format json langflow | python3 -c "import json,sys;d=json.loads(sys.stdin.read() or '{}'); print(d.get('State','missing'))" 2>/dev/null || echo missing)
+            if [ "$STATE" != "running" ]; then
+              echo "::error::langflow service state: $STATE"
+              docker compose logs langflow 2>&1 | tail -200
+              exit 1
+            fi
+            sleep 2
+          done
+          echo "::error::Timed out waiting for ${HEALTH_PATH}"
+          docker compose logs 2>&1 | tail -300
+          exit 1
+
+      - name: Assert /api/v1/version matches image
+        env:
+          IMG_VER: ${{ needs.resolve-versions.outputs.image_version }}
+        run: |
+          set -euo pipefail
+          REPORTED=$(curl -fsS "http://127.0.0.1:${LANGFLOW_PORT}/api/v1/version" \
+            | python3 -c "import json,sys;print(json.load(sys.stdin)['version'])")
+          if [ "$REPORTED" != "$IMG_VER" ]; then
+            echo "::error::API reports $REPORTED but image has $IMG_VER installed"
+            exit 1
+          fi
+
+      - name: Compose logs (on failure)
+        if: failure()
+        working-directory: compose-test
+        run: docker compose logs 2>&1 | tail -300 || true
+
+      - name: Tear down
+        if: always()
+        working-directory: compose-test
+        run: docker compose down -v 2>/dev/null || true
+
+  summary:
+    name: Fresh install summary
+    if: always()
+    needs: [resolve-versions, uv-unpinned, uv-pinned, docker-run, docker-compose]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report
+        run: |
+          echo "PyPI version under test:  ${{ needs.resolve-versions.outputs.pypi_version }}"
+          echo "Image version under test: ${{ needs.resolve-versions.outputs.image_version }}"
+          echo "Image tag:                ${{ needs.resolve-versions.outputs.nightly_tag }}"
+          echo "scenario1 (uv unpinned):  ${{ needs.uv-unpinned.result }}"
+          echo "scenario2 (uv pinned):    ${{ needs.uv-pinned.result }}"
+          echo "scenario3 (docker run):   ${{ needs.docker-run.result }}"
+          echo "scenario4 (docker compose): ${{ needs.docker-compose.result }}"
+          if [ "${{ needs.uv-unpinned.result }}" != "success" ] \
+             || [ "${{ needs.uv-pinned.result }}" != "success" ] \
+             || [ "${{ needs.docker-run.result }}" != "success" ] \
+             || [ "${{ needs.docker-compose.result }}" != "success" ]; then
+            echo "::error::One or more fresh-install scenarios failed — see job logs"
+            exit 1
+          fi
