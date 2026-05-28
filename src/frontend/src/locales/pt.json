@@ -1579,7 +1579,7 @@
   "trace.traceId": "ID de rastreio",
   "ui.resizeSidebar": "Redimensione a barra lateral (use as setas do teclado ou arraste para redimensionar)",
   "ui.toggleSidebar": "Alternar a barra lateral",
-  "updateComponent.breaking": "Últimas notícias",
+  "updateComponent.breaking": "Alteração que causa incompatibilidade",
   "updateComponent.breakingUpdateDesc": "As atualizações marcadas como \"urgentes\" podem alterar entradas, saídas ou o comportamento dos componentes. Em alguns casos, eles desconectarão componentes do seu fluxo, exigindo que você os revise ou reconecte posteriormente. Os componentes adicionados pela barra lateral sempre utilizam a versão mais recente.",
   "updateComponent.columnComponent": "Componente",
   "updateComponent.columnUpdateType": "Tipo de atualização",

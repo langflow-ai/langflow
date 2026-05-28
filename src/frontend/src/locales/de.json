@@ -1579,7 +1579,7 @@
   "trace.traceId": "Trace-ID",
   "ui.resizeSidebar": "Seitenleiste in der Größe anpassen (mit den Pfeiltasten oder durch Ziehen)",
   "ui.toggleSidebar": "Seitenleiste ein-/ausblenden",
-  "updateComponent.breaking": "Eilmeldung",
+  "updateComponent.breaking": "Kompatibilitätsbrechende Änderung",
   "updateComponent.breakingUpdateDesc": "Als „breaking“ gekennzeichnete Aktualisierungen können sich auf Eingaben, Ausgaben oder das Verhalten von Komponenten auswirken. In manchen Fällen werden Komponenten aus Ihrem Ablauf entfernt, sodass Sie diese anschließend überprüfen oder wieder anschließen müssen. Komponenten, die über die Seitenleiste hinzugefügt werden, verwenden immer die neueste Version.",
   "updateComponent.columnComponent": "Komponente",
   "updateComponent.columnUpdateType": "Aktualisierungstyp",

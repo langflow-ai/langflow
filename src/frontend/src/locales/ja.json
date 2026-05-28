@@ -1579,7 +1579,7 @@
   "trace.traceId": "トレース ID",
   "ui.resizeSidebar": "サイドバーのサイズを変更する（矢印キーを使用するか、ドラッグしてサイズを変更してください）",
   "ui.toggleSidebar": "サイドバーの表示/非表示を切り替える",
-  "updateComponent.breaking": "速報",
+  "updateComponent.breaking": "互換性を損なう変更",
   "updateComponent.breakingUpdateDesc": "「重大な変更」とマークされた更新では、入力、出力、またはコンポーネントの動作が変更される場合があります。 場合によっては、フローからコンポーネントが切り離されることがあり、その場合は後でそれらを確認したり、再接続したりする必要があります。 サイドバーから追加されたコンポーネントは、常に最新バージョンが使用されます。",
   "updateComponent.columnComponent": "コンポーネント",
   "updateComponent.columnUpdateType": "更新の種類",

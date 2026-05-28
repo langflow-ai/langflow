@@ -1579,7 +1579,7 @@
   "trace.traceId": "跟踪标识",
   "ui.resizeSidebar": "调整侧边栏大小（使用方向键或拖动来调整大小）",
   "ui.toggleSidebar": "切换侧边栏",
-  "updateComponent.breaking": "突发新闻",
+  "updateComponent.breaking": "重大变更",
   "updateComponent.breakingUpdateDesc": "标记为“重大变更”的更新可能会改变输入、输出或组件的行为。 在某些情况下，系统会将组件从您的流程中断开，届时您需要进行审查或重新连接。 从侧边栏添加的组件始终使用最新版本。",
   "updateComponent.columnComponent": "组件",
   "updateComponent.columnUpdateType": "更新类型",
