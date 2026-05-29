@@ -1362,6 +1362,26 @@
       "added_in": "1.10.0"
     },
     {
+      "bare_class_name": "DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.db2_vector.DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:DB2VectorStoreComponent@official-pre-a",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
       "bare_class_name": "WatsonxAIComponent",
       "target": "ext:ibm:WatsonxAIComponent@official",
       "added_in": "1.10.0"

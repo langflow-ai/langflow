@@ -19,21 +19,9 @@ maintainers = [
 dependencies = [
     "langflow-base[complete]>=0.10.0",
     # langflow-extensions:bundle-deps-start
-    # Bundle pilot: lfx-duckduckgo ships the DuckDuckGoSearchComponent
-    # as a standalone Extension distribution.  Listed as a regular dep so
-    # ``pip install langflow`` still pulls the component in -- there must
-    # be no user-visible change at install time.
     "lfx-duckduckgo>=0.1.0",
-    # Second pilot port (validates src/bundles/PORTING.md): lfx-arxiv ships
-    # ArXivComponent as a standalone Bundle.  Same regular-dep rationale --
-    # ``pip install langflow`` keeps shipping the arxiv component as before.
     "lfx-arxiv>=0.1.0",
-    # Third pilot port: lfx-datastax ships the 11 DataStax / AstraDB
-    # components (vector store, Data API, CQL, Graph, chat memory,
-    # vectorize, Graph RAG, HCD, .env helpers) as a standalone bundle,
-    # along with the shared ``AstraDBBaseComponent`` mixin (was
-    # ``lfx.base.datastax.astradb_base`` pre-extraction).  Regular dep so
-    # ``pip install langflow`` keeps shipping the datastax components.
+    "lfx-ibm>=0.1.0",
     "lfx-datastax>=0.1.0",
     "lfx-wikipedia>=0.1.0",
     "lfx-wolframalpha>=0.1.0",
@@ -58,7 +46,6 @@ dependencies = [
     "lfx-deepseek>=0.1.0",
     "lfx-groq>=0.1.0",
     "lfx-huggingface>=0.1.0",
-    "lfx-ibm>=0.1.0",
     "lfx-litellm>=0.1.0",
     "lfx-lmstudio>=0.1.0",
     "lfx-maritalk>=0.1.0",
@@ -181,6 +168,7 @@ langflow-sdk = { workspace = true }
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-datastax = { workspace = true }
+lfx-ibm = { workspace = true }
 lfx-wikipedia = { workspace = true }
 lfx-wolframalpha = { workspace = true }
 lfx-serpapi = { workspace = true }
@@ -204,7 +192,6 @@ lfx-cohere = { workspace = true }
 lfx-deepseek = { workspace = true }
 lfx-groq = { workspace = true }
 lfx-huggingface = { workspace = true }
-lfx-ibm = { workspace = true }
 lfx-litellm = { workspace = true }
 lfx-lmstudio = { workspace = true }
 lfx-maritalk = { workspace = true }
@@ -278,6 +265,7 @@ members = [
     # langflow-extensions:bundle-members-start
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
+    "src/bundles/ibm",
     "src/bundles/datastax",
     "src/bundles/wikipedia",
     "src/bundles/wolframalpha",
@@ -302,7 +290,6 @@ members = [
     "src/bundles/deepseek",
     "src/bundles/groq",
     "src/bundles/huggingface",
-    "src/bundles/ibm",
     "src/bundles/litellm",
     "src/bundles/lmstudio",
     "src/bundles/maritalk",

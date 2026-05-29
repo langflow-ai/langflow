@@ -440,6 +440,7 @@ edges:
         with pytest.raises(ValueError, match="unknown target 'Z'"):
             await mcp_server_module.create_flow_from_spec(spec)
 
+    @pytest.mark.api_key_required
     async def test_create_flow_from_spec_prompt_template_variables(self):
         """Prompt Template with {var} in template creates dynamic input fields."""
         spec = """\
