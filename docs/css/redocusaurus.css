@@ -31,11 +31,6 @@ html[data-theme='light'] .redocusaurus .menu-content li:hover > label {
   color: #111827 !important;
 }
 
-/* Page background — matches component card color */
-/* [data-theme="dark"] .redocusaurus {
-  background: #1717171 !important;
-} */
-
 [data-theme="light"] .redocusaurus {
   background: #f5f5f5 !important;
 }
@@ -65,7 +60,7 @@ html[data-theme='light'] .redocusaurus [class*="RightPanel"] {
   background: #f5f5f5 !important;
 }
 
-/* ── HTTP method button card ──────────────────────────────── */
+/* ── HTTP method button wrapper  ──────────────────────────────── */
 
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) {
   background: #18181b !important;
@@ -77,31 +72,37 @@ html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) >
   background: #ffffff !important;
   border: 1px solid #e4e4e7 !important;
   border-radius: 8px !important;
-  overflow: hidden !important;
 }
 
-/* Fix inner button background in light mode */
-html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > button {
-  background: #ffffff !important;
+/* ── HTTP method button   ──────────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:first-child > button {
+  background: #18181b !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
 }
 
-/* HTTP method dropdown */
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:first-child > button {
+  background: #fff !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  color: hsl(240, 4%, 46%) !important;
+}
+
+/* ── HTTP method dropdown ──────────────────────────────── */
+
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div  {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  box-shadow: none !important;
+  border-top: none !important;
+}
+
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
   background: #18181b !important;
   border: 1px solid #303038 !important;
-  border-top: none !important;
-  border-bottom-left-radius: 8px !important;
-  border-bottom-right-radius: 8px !important;
-  box-shadow: none !important;
-}
-
-html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
-  background: #ffffff !important;
-  border: 1px solid #e4e4e7 !important;
-  border-top: none !important;
-  border-bottom-left-radius: 8px !important;
-  border-bottom-right-radius: 8px !important;
-  box-shadow: none !important;
 }
 
 /* ── Request + Response component cards ───────────────────── */
@@ -147,10 +148,6 @@ html[data-theme='light'] .redocusaurus .react-tabs__tab--selected {
   border-color: #e4e4e7 !important;
 }
 
-/* Payload tab — white font in dark, default in light */
-html[data-theme='dark'] .redocusaurus .react-tabs__tab:not(.tab-success):not(.tab-error) {
-  color: #ffffff !important;
-}
 
 /* ── Card title (h3) ──────────────────────────────────────── */
 
@@ -160,22 +157,21 @@ html[data-theme='dark'] .redocusaurus .react-tabs__tab:not(.tab-success):not(.ta
   padding-bottom: 8px !important;
 }
 
-html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
-html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
   padding-top: 12px !important;
   padding-left: 16px !important;
   padding-bottom: 12px !important;
-  border-bottom: 1px solid #303038 !important;
   margin: 0 !important;
+}
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
+  border-bottom: 1px solid #303038 !important;
 }
 
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
-  padding-top: 12px !important;
-  padding-left: 16px !important;
-  padding-bottom: 12px !important;
   border-bottom: 1px solid #e4e4e7 !important;
-  margin: 0 !important;
   color: #111827 !important;
 }
 
