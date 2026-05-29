@@ -207,10 +207,7 @@ async def update_deployment_metadata(
     """Update provider-owned metadata without changing local audit fields."""
     owner_id = deployment.user_id
     if user_id != owner_id:
-        msg = (
-            "user_id must match the deployment owner for provider metadata sync "
-            f"(expected {owner_id}, got {user_id})"
-        )
+        msg = f"user_id must match the deployment owner for provider metadata sync (expected {owner_id}, got {user_id})"
         raise ValueError(msg)
 
     update_item = DeploymentMetadataUpdate(
