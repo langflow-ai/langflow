@@ -262,11 +262,7 @@ jobs:
           uv venv test-env --seed
         shell: bash
 
-      # Core install (release gate): SDK/LFX + langflow-base, then langflow
-      # itself further below.  Bundles install in their own NON-BLOCKING step in
-      # between, so a single bundle that cannot install on this platform does not
-      # block the core langflow release.
-      - name: Install core packages from wheel (SDK/LFX + base)
+      - name: Install packages from wheel
         if: steps.install-method.outputs.method == 'wheel'
         run: |
           set -eo pipefail
@@ -278,119 +274,46 @@ jobs:
             PYTHON=./test-env/bin/python
           fi
 
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
+          refresh_find_links() {
+            FIND_LINKS=()
+            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+              if [ -d "$wheel_dir" ]; then
+                FIND_LINKS+=(--find-links "$wheel_dir")
+              fi
+            done
+          }
+
+          install_wheels() {
+            label="$1"
+            shift
+            if [ "$#" -eq 0 ]; then
+              echo "No $label wheel found"
+              exit 1
             fi
-          done
+            printf 'Installing %s wheel(s):\n' "$label"
+            printf '%s\n' "$@"
+            refresh_find_links
+            # Use `if-necessary-or-explicit` (not `allow`): nightly langflow* wheels
+            # are .dev pre-releases so we need to allow them explicitly, but `allow`
+            # leaks to transitive deps and resolves pre-release pydantic alphas
+            # (e.g. 2.14.0a1) which break langchain-core's module-level
+            # `RunnablePassthrough()` call at import time.
+            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
+          }
 
           SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
           if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
-            echo "Installing SDK/LFX wheel(s):"
-            printf '%s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
-            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
+            install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
           fi
 
           BASE_WHEELS=(./base-dist/*.whl)
-          if [ ${#BASE_WHEELS[@]} -eq 0 ]; then
-            echo "No base wheel found"
-            exit 1
+          install_wheels "base" "${BASE_WHEELS[@]}"
+
+          if [ -d ./bundles-dist ]; then
+            BUNDLE_WHEELS=(./bundles-dist/*.whl)
+            install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
           fi
-          echo "Installing base wheel(s):"
-          printf '%s\n' "${BASE_WHEELS[@]}"
-          uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "${BASE_WHEELS[@]}"
-        shell: bash
-
-      # Bundles install one wheel at a time and this step is NON-BLOCKING: a
-      # bundle whose dependency has no wheel on this platform is reported as
-      # "failed (non-blocking)" instead of failing the release gate.  Installing
-      # the local wheels here (before main) also ensures langflow resolves its
-      # bundle deps from the freshly-built wheels rather than PyPI.
-      # NOTE: a bundle that langflow *hard-depends* on is still pulled (and thus
-      # gated) by the main install below; to make a bundle optional on a
-      # platform, also add a PEP 508 marker to its dependency line in langflow's
-      # pyproject.toml so `main` does not require it there.
-      - name: Install bundle wheels from wheel (per-bundle, non-blocking)
-        if: steps.install-method.outputs.method == 'wheel'
-        continue-on-error: true
-        run: |
-          shopt -s nullglob
-
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            PYTHON=./test-env/Scripts/python.exe
-          else
-            PYTHON=./test-env/bin/python
-          fi
-
-          if [ ! -d ./bundles-dist ]; then
-            echo "No bundles-dist directory; nothing to install."
-            exit 0
-          fi
-          BUNDLE_WHEELS=(./bundles-dist/*.whl)
-          if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
-            echo "No bundle wheels found; nothing to install."
-            exit 0
-          fi
-
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
-            fi
-          done
-
-          failed=()
-          for wheel in "${BUNDLE_WHEELS[@]}"; do
-            name=$(basename "$wheel")
-            echo "::group::Installing bundle $name"
-            # --prerelease=if-necessary-or-explicit: see the main install step.
-            if uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$wheel"; then
-              echo "OK: $name"
-            else
-              echo "FAILED (non-blocking): $name on ${{ matrix.os }}-${{ matrix.arch }} py${{ matrix.python-version }}"
-              failed+=("$name")
-            fi
-            echo "::endgroup::"
-          done
-
-          {
-            echo "### Bundle install - ${{ matrix.os }}-${{ matrix.arch }} py${{ matrix.python-version }}"
-            if [ ${#failed[@]} -eq 0 ]; then
-              echo "All ${#BUNDLE_WHEELS[@]} bundle wheel(s) installed."
-            else
-              echo "WARNING: ${#failed[@]} of ${#BUNDLE_WHEELS[@]} bundle(s) failed (non-blocking): ${failed[*]}"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # Bundle availability is per-platform; never fail the job from here.
-          exit 0
-        shell: bash
-
-      # Main install (release gate).  --prerelease=if-necessary-or-explicit (not
-      # `allow`): nightly langflow* wheels are .dev pre-releases so we allow them
-      # explicitly, but `allow` leaks to transitive deps and resolves pre-release
-      # pydantic alphas (e.g. 2.14.0a1) which break langchain-core's module-level
-      # `RunnablePassthrough()` call at import time.
-      - name: Install langflow main from wheel
-        if: steps.install-method.outputs.method == 'wheel'
-        run: |
-          set -eo pipefail
-          shopt -s nullglob
-
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            PYTHON=./test-env/Scripts/python.exe
-          else
-            PYTHON=./test-env/bin/python
-          fi
-
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
-            fi
-          done
 
           MAIN_WHEELS=()
           while IFS= read -r wheel; do
@@ -401,9 +324,7 @@ jobs:
             find ./main-dist -name "*.whl" -type f | sort
             exit 1
           fi
-          echo "Installing main wheel:"
-          printf '%s\n' "${MAIN_WHEELS[@]}"
-          uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "${MAIN_WHEELS[@]}"
+          install_wheels "main" "${MAIN_WHEELS[@]}"
         shell: bash
 
       # PyPI installation steps
@@ -634,11 +555,7 @@ jobs:
           uv venv test-env --seed
         shell: bash
 
-      # Core install (release gate): SDK/LFX + langflow-base, then langflow
-      # itself further below.  Bundles install in their own NON-BLOCKING step in
-      # between, so a single bundle that cannot install on this platform does not
-      # block the core langflow release.
-      - name: Install core packages from wheel (SDK/LFX + base)
+      - name: Install packages from wheel
         if: steps.install-method.outputs.method == 'wheel'
         run: |
           set -eo pipefail
@@ -650,119 +567,42 @@ jobs:
             PYTHON=./test-env/bin/python
           fi
 
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
+          refresh_find_links() {
+            FIND_LINKS=()
+            for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
+              if [ -d "$wheel_dir" ]; then
+                FIND_LINKS+=(--find-links "$wheel_dir")
+              fi
+            done
+          }
+
+          install_wheels() {
+            label="$1"
+            shift
+            if [ "$#" -eq 0 ]; then
+              echo "No $label wheel found"
+              exit 1
             fi
-          done
+            printf 'Installing %s wheel(s):\n' "$label"
+            printf '%s\n' "$@"
+            refresh_find_links
+            # See stable job above for rationale on --prerelease=if-necessary-or-explicit.
+            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
+          }
 
           SDK_WHEELS=(./sdk-dist/*.whl)
           LFX_WHEELS=(./lfx-dist/*.whl)
           if [ ${#SDK_WHEELS[@]} -gt 0 ] || [ ${#LFX_WHEELS[@]} -gt 0 ]; then
-            echo "Installing SDK/LFX wheel(s):"
-            printf '%s\n' "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
-            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
+            install_wheels "SDK/LFX" "${SDK_WHEELS[@]}" "${LFX_WHEELS[@]}"
           fi
 
           BASE_WHEELS=(./base-dist/*.whl)
-          if [ ${#BASE_WHEELS[@]} -eq 0 ]; then
-            echo "No base wheel found"
-            exit 1
+          install_wheels "base" "${BASE_WHEELS[@]}"
+
+          if [ -d ./bundles-dist ]; then
+            BUNDLE_WHEELS=(./bundles-dist/*.whl)
+            install_wheels "bundle" "${BUNDLE_WHEELS[@]}"
           fi
-          echo "Installing base wheel(s):"
-          printf '%s\n' "${BASE_WHEELS[@]}"
-          uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "${BASE_WHEELS[@]}"
-        shell: bash
-
-      # Bundles install one wheel at a time and this step is NON-BLOCKING: a
-      # bundle whose dependency has no wheel on this platform is reported as
-      # "failed (non-blocking)" instead of failing the release gate.  Installing
-      # the local wheels here (before main) also ensures langflow resolves its
-      # bundle deps from the freshly-built wheels rather than PyPI.
-      # NOTE: a bundle that langflow *hard-depends* on is still pulled (and thus
-      # gated) by the main install below; to make a bundle optional on a
-      # platform, also add a PEP 508 marker to its dependency line in langflow's
-      # pyproject.toml so `main` does not require it there.
-      - name: Install bundle wheels from wheel (per-bundle, non-blocking)
-        if: steps.install-method.outputs.method == 'wheel'
-        continue-on-error: true
-        run: |
-          shopt -s nullglob
-
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            PYTHON=./test-env/Scripts/python.exe
-          else
-            PYTHON=./test-env/bin/python
-          fi
-
-          if [ ! -d ./bundles-dist ]; then
-            echo "No bundles-dist directory; nothing to install."
-            exit 0
-          fi
-          BUNDLE_WHEELS=(./bundles-dist/*.whl)
-          if [ ${#BUNDLE_WHEELS[@]} -eq 0 ]; then
-            echo "No bundle wheels found; nothing to install."
-            exit 0
-          fi
-
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
-            fi
-          done
-
-          failed=()
-          for wheel in "${BUNDLE_WHEELS[@]}"; do
-            name=$(basename "$wheel")
-            echo "::group::Installing bundle $name"
-            # --prerelease=if-necessary-or-explicit: see the main install step.
-            if uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$wheel"; then
-              echo "OK: $name"
-            else
-              echo "FAILED (non-blocking): $name on ${{ matrix.os }}-${{ matrix.arch }} py${{ matrix.python-version }}"
-              failed+=("$name")
-            fi
-            echo "::endgroup::"
-          done
-
-          {
-            echo "### Bundle install - ${{ matrix.os }}-${{ matrix.arch }} py${{ matrix.python-version }}"
-            if [ ${#failed[@]} -eq 0 ]; then
-              echo "All ${#BUNDLE_WHEELS[@]} bundle wheel(s) installed."
-            else
-              echo "WARNING: ${#failed[@]} of ${#BUNDLE_WHEELS[@]} bundle(s) failed (non-blocking): ${failed[*]}"
-            fi
-          } >> "$GITHUB_STEP_SUMMARY"
-
-          # Bundle availability is per-platform; never fail the job from here.
-          exit 0
-        shell: bash
-
-      # Main install (release gate).  --prerelease=if-necessary-or-explicit (not
-      # `allow`): nightly langflow* wheels are .dev pre-releases so we allow them
-      # explicitly, but `allow` leaks to transitive deps and resolves pre-release
-      # pydantic alphas (e.g. 2.14.0a1) which break langchain-core's module-level
-      # `RunnablePassthrough()` call at import time.
-      - name: Install langflow main from wheel
-        if: steps.install-method.outputs.method == 'wheel'
-        run: |
-          set -eo pipefail
-          shopt -s nullglob
-
-          if [ "${{ matrix.os }}" = "windows" ]; then
-            PYTHON=./test-env/Scripts/python.exe
-          else
-            PYTHON=./test-env/bin/python
-          fi
-
-          FIND_LINKS=()
-          for wheel_dir in ./sdk-dist ./lfx-dist ./base-dist ./bundles-dist; do
-            if [ -d "$wheel_dir" ]; then
-              FIND_LINKS+=(--find-links "$wheel_dir")
-            fi
-          done
 
           MAIN_WHEELS=()
           while IFS= read -r wheel; do
@@ -773,9 +613,7 @@ jobs:
             find ./main-dist -name "*.whl" -type f | sort
             exit 1
           fi
-          echo "Installing main wheel:"
-          printf '%s\n' "${MAIN_WHEELS[@]}"
-          uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "${MAIN_WHEELS[@]}"
+          install_wheels "main" "${MAIN_WHEELS[@]}"
         shell: bash
 
       - name: Force reinstall local wheels to prevent downgrades (Windows)
