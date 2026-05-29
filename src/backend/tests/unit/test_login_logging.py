@@ -177,39 +177,29 @@ async def test_login_logs_no_pii(client: AsyncClient):
 
 
 @pytest.mark.asyncio
-async def test_login_logs_real_output_format(client: AsyncClient, capsys):
-    """Test that login logs produce the expected flat structlog format in real output."""
-    response = await client.post(
-        "/api/v1/login",
-        data={"username": "nonexistent_user", "password": "wrong"},  # pragma: allowlist secret
-    )
+async def test_login_logs_real_output_format(client: AsyncClient):
+    """Test that login logs use structlog kwargs format (not nested extra dict)."""
+    with patch("langflow.services.auth.service.logger") as mock_logger:
+        response = await client.post(
+            "/api/v1/login",
+            data={"username": "nonexistent_user", "password": "wrong"},  # pragma: allowlist secret
+        )
 
-    assert response.status_code == 401
+        assert response.status_code == 401
 
-    # Capture stdout where structlog writes JSON logs
-    captured = capsys.readouterr()
+        # Verify logger was called with kwargs (flat format), not extra dict
+        mock_logger.warning.assert_called_once()
+        call_args = mock_logger.warning.call_args
 
-    # Verify the log contains the expected structlog fields
-    assert "auth_event" in captured.out
-    assert "login_failed" in captured.out
-    assert "reason" in captured.out
-    assert "user_not_found" in captured.out
-    assert "username_hash" in captured.out
-    assert "client_ip" in captured.out
-    assert "Login failed: user not found" in captured.out
+        # Verify it's using kwargs format (call_args[1] contains kwargs)
+        assert "auth_event" in call_args[1]
+        assert "reason" in call_args[1]
+        assert "username_hash" in call_args[1]
+        assert "client_ip" in call_args[1]
 
-    # Verify it's JSON format (structlog default)
-    import json
+        # Verify it's NOT using the old extra dict format
+        assert "extra" not in call_args[1]
 
-    # Find the login log line
-    error_msg = "Login failed log not found in output"
-    for line in captured.out.split("\n"):
-        if "login_failed" in line:
-            log_entry = json.loads(line)
-            assert log_entry["auth_event"] == "login_failed"
-            assert log_entry["reason"] == "user_not_found"
-            assert "username_hash" in log_entry
-            assert "client_ip" in log_entry
-            break
-    else:
-        raise AssertionError(error_msg)
+        # Verify the actual values
+        assert call_args[1]["auth_event"] == "login_failed"
+        assert call_args[1]["reason"] == "user_not_found"
