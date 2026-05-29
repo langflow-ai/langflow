@@ -265,23 +265,6 @@ export default function UpdateAllComponents() {
     buildInfo?.success;
 
   const showDismissedWarning = !allowCustomComponents && allDismissed;
-  const summaryMessage = showDismissedWarning
-    ? blockedComponents.length > 0
-      ? t("updateComponents.customComponentsDisabled")
-      : t("updateComponents.upgradeRequired")
-    : !allowCustomComponents
-      ? blockedComponents.length > 0 && updatableComponents.length > 0
-        ? `${t("updateComponents.blockedCannotRun", { count: blockedComponents.length })} ${t("updateComponents.andMustBeUpdated", { count: updatableComponents.length })}`
-        : blockedComponents.length > 0
-          ? t("updateComponents.cannotRunDisabled", {
-              count: blockedComponents.length,
-            })
-          : t("updateComponents.mustBeUpdated", {
-              count: updatableComponents.length,
-            })
-      : t("updateComponents.updatesAvailable", {
-          count: updatableComponents.length,
-        });
 
   return (
     <AnimatePresence mode="wait">
@@ -294,7 +277,7 @@ export default function UpdateAllComponents() {
             variants={CONTAINER_VARIANTS}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
+              "flex items-start justify-between gap-6 rounded-lg border bg-background px-4 py-3 text-sm shadow-md",
               (showDismissedWarning ||
                 !allowCustomComponents ||
                 updatableComponents.some(
@@ -303,15 +286,39 @@ export default function UpdateAllComponents() {
                 "border-accent-amber-foreground",
             )}
           >
-            <div className="flex items-center gap-3">
-              <span>{summaryMessage}</span>
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold">
+                {showDismissedWarning
+                  ? blockedComponents.length > 0
+                    ? t("updateComponents.customComponentsDisabled")
+                    : t("updateComponents.upgradeRequired")
+                  : t("updateComponents.flowNeedsReview")}
+              </span>
+              {!showDismissedWarning && (
+                <div className="flex flex-col font-normal text-muted-foreground">
+                  {blockedComponents.length > 0 && (
+                    <span>
+                      {t("updateComponents.blockedCannotRun", {
+                        count: blockedComponents.length,
+                      })}
+                    </span>
+                  )}
+                  {updatableComponents.length > 0 && (
+                    <span>
+                      {t("updateComponents.updatableCount", {
+                        count: updatableComponents.length,
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-3">
               {!allDismissed && (
                 <Button
-                  variant="link"
-                  size="icon"
-                  className="shrink-0 text-sm"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
                   onClick={handleDismissAllComponents}
                 >
                   {componentsToUpdateFiltered.length > 1

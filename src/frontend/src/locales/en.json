@@ -1626,5 +1626,8 @@
   "updateComponents.dismissAll": "Dismiss All",
   "updateComponents.reviewAll": "Review All",
   "updateComponents.updateAll": "Update All",
+  "updateComponents.flowNeedsReview": "Flow needs review",
+  "updateComponents.updatableCount_one": "{{count}} component needs updates",
+  "updateComponents.updatableCount_other": "{{count}} components need updates",
   "fetchError.retry": "Retry"
 }
