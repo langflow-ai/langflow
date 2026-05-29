@@ -62,12 +62,14 @@ html[data-theme='dark'] .redocusaurus a[href*="redocly"] {
   background: var(--redoc-bg-secondary) !important;
   display: block !important;
   padding: 8px !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
 }
 
 html[data-theme='light'] .redocusaurus a[href*="redocly"] {
   background: var(--ifm-background-color) !important;
   display: block !important;
   padding: 8px !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
 }
 
 
