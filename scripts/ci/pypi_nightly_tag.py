@@ -45,20 +45,25 @@ def _root_base_version() -> str:
 
 
 def _all_dev_numbers(url: str, base_version: str) -> list[int]:
-    """Dev numbers of every release of ``url`` whose base_version matches ``base_version``.
+    """Dev numbers of every release of url whose base_version matches base_version.
 
-    Returns ``[]`` for a missing package (404), any network/HTTP error, a malformed response, or
-    when no release shares ``base_version`` (e.g. right after a base_version bump, so the old
-    series cannot poison the new counter). Non-dev/final releases never contribute.
+    A 404 means the package genuinely has no releases yet (e.g. the first-ever nightly): it
+    contributes nothing and returns an empty list. Every OTHER failure -- a network error, a
+    non-404 HTTP status (5xx / 403 / ...), or a malformed 200 response -- is fatal and raises,
+    so the nightly job aborts BEFORE mutating tags. Failing closed prevents a transient lookup
+    failure on the higher-versioned package from lowering max(dev) + 1 and regenerating an
+    already-published version. Non-dev/final releases and releases from another base_version
+    never contribute.
     """
-    try:
-        res = requests.get(url, timeout=10)
-        if res.status_code == requests.codes.not_found:
-            return []
-        res.raise_for_status()
-        releases = res.json()["releases"]
-    except (requests.RequestException, KeyError, ValueError):
+    res = requests.get(url, timeout=10)
+    if res.status_code == requests.codes.not_found:
         return []
+    res.raise_for_status()
+    try:
+        releases = res.json()["releases"]
+    except (ValueError, KeyError) as e:
+        msg = f"Unexpected response from {url!r}: missing 'releases' mapping"
+        raise RuntimeError(msg) from e
 
     dev_numbers: list[int] = []
     for version_str in releases:

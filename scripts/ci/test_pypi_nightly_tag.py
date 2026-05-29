@@ -128,9 +128,37 @@ def test_only_final_releases_yield_dev0():
     assert _run(["1.10.0"], ["1.10.0"]) == "v1.10.0.dev0"
 
 
-def test_malformed_response_is_treated_as_no_contribution():
-    # main returns 200 without a "releases" key; base has dev10 -> dev11.
-    assert _run("malformed", ["1.10.0.dev10"]) == "v1.10.0.dev11"
+def test_malformed_response_raises():
+    # A 200 response missing "releases" is fatal (fail closed), not silently ignored.
+    with pytest.raises(RuntimeError):
+        _run("malformed", ["1.10.0.dev10"])
+
+
+def test_server_error_raises():
+    # A non-404 HTTP status on the higher-versioned package must abort, not emit a stale tag.
+    with pytest.raises(requests.HTTPError):
+        _run(500, ["1.10.0.dev48"])
+
+
+def test_higher_package_lookup_failure_aborts():
+    # P1 regression: langflow-nightly (dev54) lookup fails transiently while
+    # langflow-base-nightly reports dev48. Must NOT emit v1.10.0.dev49 -- must raise so the job
+    # stops before deleting/recreating tags or republishing an already-existing version.
+    with pytest.raises(requests.HTTPError):
+        _run(503, [f"1.10.0.dev{n}" for n in range(49)])
+
+
+def test_network_error_raises():
+    # A transient connection failure must abort rather than lower the computed dev number.
+    def boom(url, timeout=10):  # noqa: ARG001
+        raise requests.ConnectionError("transient")
+
+    with (
+        mock.patch.object(nt.requests, "get", side_effect=boom),
+        mock.patch.object(nt, "_root_base_version", return_value="1.10.0"),
+        pytest.raises(requests.ConnectionError),
+    ):
+        nt.create_tag("both")
 
 
 def test_unparseable_version_string_is_skipped():
