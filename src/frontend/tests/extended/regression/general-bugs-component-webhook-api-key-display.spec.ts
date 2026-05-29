@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { loginLangflow } from "../../utils/login-langflow";
 import {
   closeAdvancedOptions,
@@ -9,9 +11,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to see api key in webhook component when auto login is disabled",
   { tag: ["@release"] },

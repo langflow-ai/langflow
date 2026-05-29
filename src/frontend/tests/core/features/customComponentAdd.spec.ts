@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "custom component code button should be pink when adding custom component",
   { tag: ["@release", "@components"] },

@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import ToolsModal from "@/modals/toolsModal";
@@ -28,6 +27,7 @@ export default function ToolsComponent({
   hideButton = false,
   open,
   setOpen,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
   const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);

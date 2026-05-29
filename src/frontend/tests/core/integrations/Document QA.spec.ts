@@ -1,13 +1,13 @@
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { openStarterProject } from "../../utils/flow/open-starter-project";
-import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
 
-import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Document Q&A",
   { tag: ["@release", "@starter-projects"] },

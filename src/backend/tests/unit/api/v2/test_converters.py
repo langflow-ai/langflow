@@ -897,6 +897,15 @@ class TestCreateErrorResponse:
         response = create_error_response("flow-1", str(uuid4()), request, error)
         assert response.inputs == inputs
 
+    def test_create_error_response_preserves_globals(self):
+        """Test that body globals are preserved in error response."""
+        globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
+        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={}, globals=globals_)
+        error = Exception("Error")
+
+        response = create_error_response("flow-1", str(uuid4()), request, error)
+        assert response.globals == globals_
+
 
 class TestRunResponseToWorkflowResponse:
     """Test suite for run_response_to_workflow_response function."""
@@ -940,6 +949,22 @@ class TestRunResponseToWorkflowResponse:
         assert response.status == JobStatus.COMPLETED
         assert "output-123" in response.outputs
         assert response.outputs["output-123"].content == "Hello World"
+
+    def test_run_response_preserves_globals(self):
+        """Test conversion echoes body globals for debugging."""
+        graph = Mock()
+        graph.vertices = []
+        graph.get_terminal_nodes = Mock(return_value=[])
+
+        run_response = Mock()
+        run_response.outputs = []
+
+        globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
+        request = WorkflowExecutionRequest(flow_id="flow-123", inputs={}, globals=globals_)
+
+        response = run_response_to_workflow_response(run_response, "flow-123", str(uuid4()), request, graph)
+
+        assert response.globals == globals_
 
     def test_run_response_non_output_terminal_node(self):
         """Test conversion with non-output terminal node."""

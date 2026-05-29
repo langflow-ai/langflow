@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "user should be able to use ComposIO without getting api_key error",

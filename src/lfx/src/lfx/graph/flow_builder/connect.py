@@ -19,6 +19,81 @@ from lfx.graph.edge.base import types_compatible
 # Langflow uses oe (U+0153) as a quote replacement in ReactFlow handle strings
 _Q = "\u0153"
 
+# Synthetic output name created at runtime when a component is set to tool
+# mode. Must match lfx.base.tools.constants.TOOL_OUTPUT_NAME \u2014 duplicated as
+# a literal here to avoid a cross-package import in the flow_builder layer.
+_TOOL_OUTPUT_NAME = "component_as_tool"
+_TOOL_OUTPUT_DISPLAY_NAME = "Toolset"
+
+
+def _node_template_supports_tool_mode(node: dict) -> bool:
+    """Return True when any INPUT field has tool_mode=True.
+
+    Matches the runtime heuristic in Component._handle_tool_mode \u2014 the
+    canonical source of truth for whether the Tool Mode toggle would
+    render on the canvas. Output-side tool_mode is also accepted for
+    backward compat with components that placed the flag there instead.
+    """
+    template = node.get("data", {}).get("node", {}).get("template", {})
+    if any(isinstance(fdata, dict) and fdata.get("tool_mode") for fdata in template.values()):
+        return True
+    outputs = node.get("data", {}).get("node", {}).get("outputs", [])
+    return any(o.get("tool_mode") for o in outputs)
+
+
+def _enable_tool_mode(flow: dict, source_id: str) -> None:
+    """Flip a component to tool mode in place.
+
+    Mirrors Component._handle_tool_mode: when tool_mode is enabled the
+    outputs list is replaced with a single synthesized tool output. The
+    source node must already exist in the flow; raises ValueError otherwise.
+
+    Raises ValueError when the component does not declare any tool-mode
+    capable input (i.e. it genuinely cannot be wrapped as a Tool).
+    """
+    for node in flow.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {})
+        nid = node_data.get("id", node.get("id", ""))
+        if nid != source_id:
+            continue
+        if not _node_template_supports_tool_mode(node):
+            msg = (
+                f"Cannot connect '{source_id}.component_as_tool': this component "
+                "has no tool_mode-capable input. Either pick a different output or "
+                "wire a component whose inputs declare tool_mode=True."
+            )
+            raise ValueError(msg)
+        inner = node_data.setdefault("node", {})
+        # Idempotent: already in tool mode with the synthesized output present.
+        if inner.get("tool_mode") and any(o.get("name") == _TOOL_OUTPUT_NAME for o in inner.get("outputs", [])):
+            return
+        inner["tool_mode"] = True
+        # Mirror the full Output schema (see lfx.template.field.base.Output).
+        # The /custom_component/update endpoint and the canvas serializers
+        # both expect every field — omitting any of them breaks the popup
+        # with "string indices must be integers, not 'str'" because dataclass
+        # validators downstream cannot reconcile a partial output dict.
+        inner["outputs"] = [
+            {
+                "allows_loop": False,
+                "cache": True,
+                "display_name": _TOOL_OUTPUT_DISPLAY_NAME,
+                "group_outputs": False,
+                "hidden": False,
+                "method": "to_toolkit",
+                "name": _TOOL_OUTPUT_NAME,
+                "options": None,
+                "required_inputs": None,
+                "selected": "Tool",
+                "tool_mode": True,
+                "types": ["Tool"],
+                "value": "__UNDEFINED__",
+            }
+        ]
+        return
+    msg = f"Component not found in flow: {source_id}"
+    raise ValueError(msg)
+
 
 def _scaped_json_stringify(obj: Any) -> str:
     """Replicate Langflow frontend's scapedJSONStringfy: sorted keys, compact, oe for quotes."""
@@ -107,8 +182,20 @@ def add_connection(
     When source_types/target_types are None they are resolved from the flow
     and type-compatibility is enforced.  When the caller passes explicit types
     the check is skipped (the caller is taking responsibility).
+
+    When source_output is the synthesized "component_as_tool" handle, the
+    source node is automatically flipped into tool mode before resolving
+    types — this mirrors what the canvas does when a user drags from the
+    Tool Mode toggle, and is required because the static component template
+    does not list ``component_as_tool`` until tool mode is enabled.
     """
     source_type = source_id.rsplit("-", 1)[0] if "-" in source_id else source_id
+
+    # Auto-enable tool mode on the source when wiring via component_as_tool.
+    # Raises ValueError when the source has no tool-mode-capable input — so
+    # the LLM gets a clear domain error instead of "output not found".
+    if source_output == _TOOL_OUTPUT_NAME:
+        _enable_tool_mode(flow, source_id)
 
     # Resolve types from the flow's node data if not explicitly provided
     types_resolved = source_types is None and target_types is None

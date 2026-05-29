@@ -1,3 +1,4 @@
+import contextlib
 from datetime import datetime, timezone
 
 from langchain_classic.agents import create_tool_calling_agent
@@ -114,6 +115,19 @@ class ToolCallingAgentComponent(LCToolsAgentComponent):
         effective_system_prompt = self.system_prompt or ""
 
         llm = self._get_llm()
+
+        # Backward-compat: serialized flows embed an older AgentComponent whose
+        # _get_llm() does not pass stream=True to get_llm(), so the resolved
+        # chat model is instantiated with streaming=False. Force streaming here
+        # — at the live parent chokepoint reached by every serialized agent that
+        # does not override create_agent_runnable — so astream_events(v2) emits
+        # on_chat_model_stream chunks regardless of the embedded code version
+        # (e.g. openrag_agent.json with code_hash 154c71cf7441). PR #13358's
+        # agent.py fix cannot reach serialized class bodies.
+        # Agent streaming is mandatory and has no opt-out.
+        if getattr(llm, "streaming", True) is False:
+            with contextlib.suppress(AttributeError, TypeError, ValueError):
+                llm.streaming = True
 
         # Substitute known runtime env placeholders (no-op when absent) so the
         # default template's {current_date}, {model_name}, {optional_user_context}
