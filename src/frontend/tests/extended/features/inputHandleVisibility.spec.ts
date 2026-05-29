@@ -4,13 +4,13 @@ import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 /**
- * Input (target) handles are invisible by default and only revealed when the
- * node is selected or the handle itself is hovered (connected/drag states are
- * covered by unit tests on `isInputHandleHidden`). Output handles are not
- * affected by this rule.
+ * Input (target) handles render as a small collapsed dot by default and grow
+ * to full size when the node is selected or the handle itself is hovered
+ * (connected/drag states are covered by unit tests on
+ * `isInputHandleCollapsed`). Output handles are not affected by this rule.
  */
 test(
-  "input handle is invisible by default and revealed on selection and hover",
+  "input handle is small by default and grows on selection and hover",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await openBlankFlow(page);
@@ -46,25 +46,30 @@ test(
 
     await inputDot.waitFor({ state: "attached", timeout: 30000 });
 
-    const opacityOf = () =>
-      inputDot.evaluate((el) => getComputedStyle(el).opacity);
+    const COLLAPSED_SIZE = "5px";
+    const EXPANDED_SIZE = "10px";
+    const widthOf = () => inputDot.evaluate((el) => getComputedStyle(el).width);
 
     // Deselect the freshly-dropped node by clicking empty canvas.
-    await page.locator(".react-flow__pane").click({ position: { x: 50, y: 50 } });
+    await page
+      .locator(".react-flow__pane")
+      .click({ position: { x: 50, y: 50 } });
 
-    // Default: input handle dot is invisible.
-    await expect.poll(opacityOf, { timeout: 10000 }).toBe("0");
+    // Default: input handle dot is small (collapsed) but still visible.
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(COLLAPSED_SIZE);
 
-    // Selecting the node reveals the input handle.
+    // Selecting the node grows the input handle to full size.
     await page.getByTestId("title-Chat Output").first().click();
-    await expect.poll(opacityOf, { timeout: 10000 }).toBe("1");
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(EXPANDED_SIZE);
 
-    // Deselect again — back to invisible.
-    await page.locator(".react-flow__pane").click({ position: { x: 50, y: 50 } });
-    await expect.poll(opacityOf, { timeout: 10000 }).toBe("0");
+    // Deselect again — back to the small collapsed size.
+    await page
+      .locator(".react-flow__pane")
+      .click({ position: { x: 50, y: 50 } });
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(COLLAPSED_SIZE);
 
-    // Hovering the handle hitbox reveals the dot.
+    // Hovering the handle hitbox grows the dot to full size.
     await inputHandle.hover();
-    await expect.poll(opacityOf, { timeout: 10000 }).toBe("1");
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(EXPANDED_SIZE);
   },
 );

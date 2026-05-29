@@ -1,12 +1,12 @@
 /**
  * Visibility state inputs for an input (target / left-side) handle.
  *
- * Input handles are invisible by default to keep the canvas clean and are
- * revealed by any of the reveal flags below. Output (source) handles are
- * never affected by this rule.
+ * Input handles render as a small collapsed dot by default to keep the canvas
+ * clean, and grow to full size when any of the reveal flags below is true.
+ * Output (source) handles are never affected by this rule.
  */
 export interface InputHandleVisibilityState {
-  /** Whether this is an input (target/left) handle. Output handles are never hidden. */
+  /** Whether this is an input (target/left) handle. Output handles never collapse. */
   left: boolean;
   /** The handle itself is hovered. */
   isHovered: boolean;
@@ -21,13 +21,12 @@ export interface InputHandleVisibilityState {
 }
 
 /**
- * Decide whether an input handle's visible dot should be hidden.
+ * Decide whether an input handle should render in its collapsed (small) state.
  *
  * Returns `true` only for input handles that nothing currently reveals.
- * Output handles always return `false` (they keep their always-visible
- * behavior).
+ * Output handles always return `false` (they keep their normal size).
  */
-export function isInputHandleHidden(
+export function isInputHandleCollapsed(
   state: InputHandleVisibilityState,
 ): boolean {
   if (!state.left) {

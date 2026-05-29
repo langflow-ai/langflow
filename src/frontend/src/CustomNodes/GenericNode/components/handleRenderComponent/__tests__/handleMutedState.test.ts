@@ -2,8 +2,8 @@
  * Unit tests for model-connection-mode logic in HandleRenderComponent.
  *
  * NOTE: The previous model-only "muted" handle behavior has been generalized
- * into the default-invisible input-handle behavior. The visibility decision
- * now lives in `isInputHandleHidden` and is covered by
+ * into the default-collapsed (small) input-handle behavior. The size decision
+ * now lives in `isInputHandleCollapsed` and is covered by
  * `inputHandleVisibility.test.ts`. This file retains only the
  * `isOwnModelConnectionMode` logic, which is still computed in
  * HandleRenderComponent to keep a model handle visible while its own node

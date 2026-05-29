@@ -12,7 +12,12 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { cn, groupByFamily } from "../../../../utils/utils";
 import HandleTooltipComponent from "../HandleTooltipComponent";
-import { isInputHandleHidden } from "./inputHandleVisibility";
+import { isInputHandleCollapsed } from "./inputHandleVisibility";
+
+// Resting size of an input handle dot when it is not revealed, vs. its full
+// size when hovered/selected/connected/connecting.
+const COLLAPSED_HANDLE_SIZE = "5px";
+const EXPANDED_HANDLE_SIZE = "10px";
 
 const BASE_HANDLE_STYLES = {
   width: "32px",
@@ -123,14 +128,14 @@ const HandleContent = memo(function HandleContent({
     [isNullHandle],
   );
 
-  // Input handles are invisible by default and revealed on hover, node
-  // selection, connection, or while a connection drag/filter is active.
-  // Null handles always stay visible (grayed) so an in-progress drag can show
-  // incompatible targets.
-  const isHidden = useMemo(
+  // Input handles render as a small collapsed dot by default and grow to full
+  // size when hovered, when the node is selected, when connected, or while a
+  // connection drag/filter is active. Null handles always render at full size
+  // (grayed) so an in-progress drag can show incompatible targets.
+  const isCollapsed = useMemo(
     () =>
       !isNullHandle &&
-      isInputHandleHidden({
+      isInputHandleCollapsed({
         left,
         isHovered,
         selected,
@@ -149,34 +154,33 @@ const HandleContent = memo(function HandleContent({
     ],
   );
 
-  const contentStyle = useMemo(
-    () => ({
+  const contentStyle = useMemo(() => {
+    const dotSize = isCollapsed ? COLLAPSED_HANDLE_SIZE : EXPANDED_HANDLE_SIZE;
+    return {
       background: isNullHandle ? "hsl(var(--border))" : handleColor,
-      width: "10px",
-      height: "10px",
+      width: dotSize,
+      height: dotSize,
       transition: "all 0.2s",
-      opacity: isHidden ? 0 : 1,
-      boxShadow: getNeonShadow(
-        accentForegroundColorName,
-        isHovered || openHandle,
-      ),
+      opacity: 1,
+      boxShadow: isCollapsed
+        ? "none"
+        : getNeonShadow(accentForegroundColorName, isHovered || openHandle),
       animation:
         (isHovered || openHandle) && !isNullHandle
           ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
       border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
-    }),
-    [
-      isNullHandle,
-      isHidden,
-      handleColor,
-      getNeonShadow,
-      accentForegroundColorName,
-      isHovered,
-      openHandle,
-      nodeId,
-    ],
-  );
+    };
+  }, [
+    isNullHandle,
+    isCollapsed,
+    handleColor,
+    getNeonShadow,
+    accentForegroundColorName,
+    isHovered,
+    openHandle,
+    nodeId,
+  ]);
 
   return (
     <div
