@@ -1,11 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { addCustomComponent } from "../../utils/add-custom-component";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-
-import { zoomOut } from "../../utils/zoom-out";
+import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to see errors on popups when raise an error",
   { tag: ["@release", "@workspace", "@components"] },

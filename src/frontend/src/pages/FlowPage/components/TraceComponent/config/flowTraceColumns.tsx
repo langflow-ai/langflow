@@ -1,6 +1,6 @@
 import type { ColDef } from "ag-grid-community";
-import i18n from "@/i18n";
 import IconComponent from "@/components/common/genericIconComponent";
+import i18n from "@/i18n";
 import { formatSmartTimestamp } from "@/utils/dateTime";
 import { formatTotalLatency, getStatusIconProps } from "../traceViewHelpers";
 import {

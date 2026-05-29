@@ -6,6 +6,7 @@ import { cleanAllFlows } from "../../utils/clean-all-flows";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "admin user must be able to track their progress in getting started",
   { tag: ["@release", "@api"] },

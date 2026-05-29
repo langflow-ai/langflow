@@ -378,7 +378,7 @@ async def _update_existing_flow(
 
     ``current_user`` is the *actor* (the API caller). The flow's owner is
     ``existing_flow.user_id``. When the actor is not the owner — a cross-user
-    shared edit allowed by an enterprise authorization plugin — ownership-
+    shared edit allowed by a registered authorization plugin — ownership-
     bound state (folder, fs_path, ownership) must stay rooted at the owner,
     otherwise the write silently retargets folders/storage that belong to the
     actor. This mirrors the cross-user semantics already enforced by

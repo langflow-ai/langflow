@@ -58,6 +58,76 @@ def format_token_event(chunk: str) -> str:
     return f"data: {json.dumps({'event': 'token', 'chunk': chunk})}\n\n"
 
 
+def format_flow_update_event(update: dict) -> str:
+    """Format SSE flow_update event for real-time canvas changes."""
+    return f"data: {json.dumps({'event': 'flow_update', **update})}\n\n"
+
+
 def format_cancelled_event() -> str:
     """Format SSE cancelled event when client disconnects."""
     return f"data: {json.dumps({'event': 'cancelled', 'message': 'Generation cancelled by user'})}\n\n"
+
+
+_DRIVE_LETTER_PREFIX_LEN = 2
+
+
+def format_file_written_event(
+    *,
+    action: str,
+    path: str,
+    size: int,
+    content: str | None = None,
+) -> str:
+    """Format SSE file_written event for sandboxed filesystem writes.
+
+    Emitted by ``assistant_service`` between LLM tokens when the agent's
+    ``write_file`` or ``edit_file`` tool ran successfully. The frontend uses
+    these to render a per-file card with Open/Download actions — and, when
+    ``content`` is provided, renders the body inline without a second HTTP
+    round-trip.
+
+    Security: refuses absolute paths or Windows drive letters so a misbehaving
+    upstream cannot leak ``BASE_DIR`` to the SSE consumer. This is the second
+    enforcement point — the first is ``emit_file_event`` at the queue boundary.
+    """
+    if not path:
+        msg = "format_file_written_event: path must be non-empty"
+        raise ValueError(msg)
+    if path.startswith(("/", "\\")):
+        msg = f"format_file_written_event: path must be relative, got absolute: {path!r}"
+        raise ValueError(msg)
+    if len(path) >= _DRIVE_LETTER_PREFIX_LEN and path[1] == ":" and path[0].isalpha():
+        msg = f"format_file_written_event: path must be relative, got drive-letter: {path!r}"
+        raise ValueError(msg)
+    payload: dict[str, object] = {
+        "event": "file_written",
+        "action": action,
+        "path": path,
+        "size": size,
+    }
+    if content is not None:
+        payload["content"] = content
+    return f"data: {json.dumps(payload)}\n\n"
+
+
+def format_flow_preview_event(
+    flow_data: dict,
+    name: str = "",
+    node_count: int = 0,
+    edge_count: int = 0,
+    graph: str = "",
+) -> str:
+    """Format SSE flow_preview event with the built flow data.
+
+    The frontend can use this to render a preview of the flow
+    without saving it to the server.
+    """
+    payload = {
+        "event": "flow_preview",
+        "flow": flow_data,
+        "name": name,
+        "node_count": node_count,
+        "edge_count": edge_count,
+        "graph": graph,
+    }
+    return f"data: {json.dumps(payload)}\n\n"

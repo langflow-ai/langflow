@@ -1,10 +1,9 @@
 import { expect, test } from "../../fixtures";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   disableInspectPanel,
   enableInspectPanel,
 } from "../../utils/open-advanced-options";
-import { unselectNodes } from "../../utils/unselect-nodes";
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user should be able to edit name and description of a node",

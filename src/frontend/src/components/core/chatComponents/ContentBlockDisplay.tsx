@@ -147,15 +147,15 @@ export function ContentBlockDisplay({
                     <AccordionItem
                       key={toolKey}
                       value={toolKey}
-                      className="border border-border rounded-lg overflow-hidden bg-background"
+                      className="overflow-hidden rounded-xl border border-border/70 bg-primary-foreground shadow-sm"
                     >
-                      <AccordionTrigger className="hover:bg-muted hover:no-underline px-3 py-2.5">
+                      <AccordionTrigger className="rounded-lg px-4 py-3 hover:bg-background/30 hover:no-underline">
                         <div className="flex items-center justify-between w-full pr-2">
                           <div className="flex items-center gap-1 text-sm font-normal min-w-0 flex-1 overflow-hidden">
                             <div className="text-muted-foreground whitespace-nowrap flex-shrink-0">
                               {toolLabel}{" "}
                             </div>
-                            <div className="truncate flex-1 muted-foreground bg-muted py-1 px-1.5 rounded-sm text-xs max-w-fit">
+                            <div className="max-w-fit flex-1 truncate rounded-md border border-border/60 bg-transparent px-2 py-1 text-xs muted-foreground">
                               <p className="truncate font-normal font-mono">
                                 {toolTitle}
                               </p>
@@ -169,7 +169,7 @@ export function ContentBlockDisplay({
                         </div>
                       </AccordionTrigger>
                       <AccordionContent className="pt-0">
-                        <div className="text-sm text-muted-foreground px-4 pb-4 max-h-96 overflow-auto">
+                        <div className="max-h-96 overflow-auto px-4 pb-4 text-sm text-muted-foreground">
                           <ContentDisplay
                             playgroundPage={playgroundPage}
                             content={content}

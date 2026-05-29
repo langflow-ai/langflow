@@ -65,6 +65,10 @@ jest.mock("../HelpDropdown", () => ({
 }));
 
 jest.mock("@/assets/langflow_assistant.svg", () => "mock-assistant-icon.svg");
+jest.mock(
+  "@/assets/langflow_assistant_idle.svg",
+  () => "mock-assistant-idle-icon.svg",
+);
 
 jest.mock("@/stores/assistantManagerStore", () => ({
   __esModule: true,
