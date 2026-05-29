@@ -81,34 +81,6 @@ def validate_identifier(value: object, field_name: str = "identifier") -> str:
     return identifier
 
 
-def get_quoted_identifier(identifier: str) -> str:
-    """Return a properly quoted SQL identifier for Db2.
-
-    Args:
-        identifier: The identifier to quote (already validated)
-
-    Returns:
-        The quoted identifier safe for SQL queries
-    """
-    # Db2 uses double quotes for identifiers
-    # Escape any existing double quotes by doubling them
-    escaped = identifier.replace('"', '""')
-    return f'"{escaped}"'
-
-
-def sanitize_sql_string(value: str) -> str:
-    """Sanitize a string value for use in SQL queries.
-
-    Args:
-        value: The string value to sanitize
-
-    Returns:
-        The sanitized string with dangerous characters escaped
-    """
-    # Escape single quotes by doubling them (SQL standard)
-    return value.replace("'", "''")
-
-
 def create_safe_error_message(error: Exception, context: str | None = None) -> str:
     """Create a sanitized error message without exposing connection details."""
     error_text = str(error).strip() or "Unknown error"

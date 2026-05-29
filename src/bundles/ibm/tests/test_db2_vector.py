@@ -13,7 +13,7 @@ historical schema fixtures to validate against.
 import importlib.util
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 from lfx.schema.data import Data
@@ -54,11 +54,23 @@ class TestDB2VectorStoreComponent:
 
     @pytest.fixture
     def mock_embedding(self):
-        """Create a mock embedding model."""
-        embedding = Mock()
-        embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
-        embedding.embed_query = Mock(return_value=[0.1, 0.2, 0.3])
-        return embedding
+        """Return a real Embeddings instance.
+
+        ``build_vector_store`` resolves the ModelInput via ``get_embeddings``,
+        which passes an already-instantiated ``Embeddings`` straight through
+        (the same path a connected Embeddings handle takes). Using a real
+        subclass here exercises that passthrough without patching.
+        """
+        from langchain_core.embeddings import Embeddings
+
+        class _FakeEmbeddings(Embeddings):
+            def embed_documents(self, texts):
+                return [[0.1, 0.2, 0.3] for _ in texts]
+
+            def embed_query(self, text):  # noqa: ARG002
+                return [0.1, 0.2, 0.3]
+
+        return _FakeEmbeddings()
 
     def test_component_metadata(self):
         """Test component metadata is correctly set."""
@@ -74,7 +86,7 @@ class TestDB2VectorStoreComponent:
 
     def test_missing_ibm_db_package(self, component, mock_embedding):
         """Test error when ibm_db package is not installed."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         with (
             patch.dict("sys.modules", {"ibm_db_dbi": None}),
             pytest.raises(ImportError, match="Could not import required DB2 packages"),
@@ -83,35 +95,35 @@ class TestDB2VectorStoreComponent:
 
     def test_invalid_database_name(self, component, mock_embedding):
         """Test validation of database name."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.database = "invalid; DROP TABLE users;"
         with pytest.raises(ValueError, match="Invalid connection parameters"):
             component.build_vector_store()
 
     def test_invalid_hostname(self, component, mock_embedding):
         """Test validation of hostname."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.hostname = "localhost; DROP TABLE users;"
         with pytest.raises(ValueError, match="Invalid connection parameters"):
             component.build_vector_store()
 
     def test_invalid_port(self, component, mock_embedding):
         """Test validation of port number."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.port = 99999
         with pytest.raises(ValueError, match="Invalid connection parameters"):
             component.build_vector_store()
 
     def test_invalid_table_name(self, component, mock_embedding):
         """Test validation of table name."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.collection_name = "invalid; DROP TABLE users;"
         with pytest.raises(ValueError, match="Invalid connection parameters"):
             component.build_vector_store()
 
     def test_missing_credentials(self, component, mock_embedding):
         """Test error when credentials are missing."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.username = ""
         with pytest.raises(ValueError, match="Missing required credentials"):
             component.build_vector_store()
@@ -127,7 +139,7 @@ class TestDB2VectorStoreComponent:
 
     def test_similarity_search(self, component, mock_embedding):
         """Test similarity search functionality through the component."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         # Mock the vector store and its methods
         with patch.object(component, "build_vector_store") as mock_build:
@@ -160,7 +172,7 @@ class TestDB2VectorStoreComponent:
 
     def test_mmr_search(self, component, mock_embedding):
         """Test MMR search functionality through the component."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         # Mock the vector store and its methods
         with patch.object(component, "build_vector_store") as mock_build:
@@ -196,7 +208,7 @@ class TestDB2VectorStoreComponent:
 
     def test_search_with_different_types(self, component, mock_embedding):
         """Test search with different search types."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         with patch.object(component, "build_vector_store") as mock_build:
             mock_vector_store = MagicMock()
@@ -230,7 +242,7 @@ class TestDB2VectorStoreComponent:
 
     def test_duplicate_handling(self, component, mock_embedding):
         """Test handling of duplicate documents in the same batch."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         # Set ingest data with duplicates (duplicates are always prevented)
         component.ingest_data = [
@@ -245,7 +257,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             mock_vector_store = MagicMock()
             with (
@@ -266,7 +278,7 @@ class TestDB2VectorStoreComponent:
 
     def test_metadata_filtering_with_complex_data(self, component, mock_embedding):
         """Test that complex metadata is properly handled during ingestion."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         # Mock the build_vector_store to test metadata handling
         with patch.object(component, "build_vector_store") as mock_build:
@@ -328,7 +340,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_enabled_without_certificate(self, component, mock_embedding):
         """Test that SSL requires a certificate path."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = None
 
@@ -338,7 +350,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_enabled_with_empty_certificate(self, component, mock_embedding):
         """Test that SSL requires a non-empty certificate path."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = ""
 
@@ -348,7 +360,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_enabled_with_whitespace_certificate(self, component, mock_embedding):
         """Test that SSL requires a non-whitespace certificate path."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = "   "
 
@@ -358,7 +370,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_enabled_with_local_certificate(self, component, mock_embedding):
         """Test SSL connection with local certificate file."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
 
         # Create a temporary certificate file
@@ -376,7 +388,7 @@ class TestDB2VectorStoreComponent:
                 mock_connection = MagicMock()
                 mock_connect.return_value = mock_connection
 
-                from lfx_ibm.components.ibm.db2vs import DB2VS
+                from langchain_db2 import DB2VS
 
                 with patch.object(DB2VS, "__init__", return_value=None):
                     component.build_vector_store()
@@ -393,7 +405,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_enabled_with_certificate_password(self, component, mock_embedding):
         """Test SSL connection with certificate password."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_password = "test_password"  # noqa: S105  # pragma: allowlist secret
 
@@ -412,7 +424,7 @@ class TestDB2VectorStoreComponent:
                 mock_connection = MagicMock()
                 mock_connect.return_value = mock_connection
 
-                from lfx_ibm.components.ibm.db2vs import DB2VS
+                from langchain_db2 import DB2VS
 
                 with patch.object(DB2VS, "__init__", return_value=None):
                     component.build_vector_store()
@@ -430,7 +442,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_certificate_url_download(self, component, mock_embedding):
         """Test SSL certificate download from URL."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = "https://example.com/cert.crt"
 
@@ -445,7 +457,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             with patch.object(DB2VS, "__init__", return_value=None):
                 component.build_vector_store()
@@ -455,7 +467,7 @@ class TestDB2VectorStoreComponent:
 
     def test_ssl_certificate_invalid_path(self, component, mock_embedding):
         """Test error handling for invalid certificate path."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = "/nonexistent/path/cert.crt"
 
@@ -464,7 +476,7 @@ class TestDB2VectorStoreComponent:
 
     def test_connection_failure_cleanup(self, component, mock_embedding):
         """Test that temporary certificate is cleaned up on connection failure."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.use_ssl = True
         component.ssl_certificate_path = "https://example.com/cert.crt"
 
@@ -486,7 +498,7 @@ class TestDB2VectorStoreComponent:
 
     def test_search_query_from_message_object(self, component, mock_embedding):
         """Test extracting search query from Message object."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         message = Message(text="search from message")
         component.search_query = message
 
@@ -504,7 +516,7 @@ class TestDB2VectorStoreComponent:
 
     def test_search_query_from_data_with_text_data(self, component, mock_embedding):
         """Test extracting search query from Data object with text_data attribute."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         # Create Data object and manually set text_data attribute
         data = Data(data={"content": "some content"})
         data.text_data = "search from text_data"
@@ -524,7 +536,7 @@ class TestDB2VectorStoreComponent:
 
     def test_search_query_from_data_with_dict(self, component, mock_embedding):
         """Test extracting search query from Data object with dict data."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         data = Data(data={"text": "search from dict", "other": "field"})
         component.search_query = data
 
@@ -542,7 +554,7 @@ class TestDB2VectorStoreComponent:
 
     def test_search_query_from_string(self, component, mock_embedding):
         """Test search with plain string query."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.search_query = "plain string query"
 
         with patch.object(component, "build_vector_store") as mock_build:
@@ -562,7 +574,7 @@ class TestDB2VectorStoreComponent:
 
     def test_metadata_cleared_during_ingestion(self, component, mock_embedding):
         """Test that metadata is cleared during document ingestion."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         # Create data with complex metadata
         component.ingest_data = [
@@ -584,7 +596,7 @@ class TestDB2VectorStoreComponent:
             mock_connect.return_value = mock_connection
 
             from langchain_core.documents import Document
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             # Mock filter to return documents
             filtered_doc = Document(page_content="Test document", metadata={"some": "metadata"})
@@ -607,7 +619,7 @@ class TestDB2VectorStoreComponent:
 
     def test_metadata_cleared_fallback_without_filter(self, component, mock_embedding):
         """Test metadata clearing fallback when filter_complex_metadata is unavailable."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.ingest_data = [Data(text="Test document", data={"text": "Test document", "field": "value"})]
 
         with (
@@ -617,7 +629,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             mock_vector_store = MagicMock()
             with (
@@ -636,7 +648,7 @@ class TestDB2VectorStoreComponent:
 
     def test_search_results_return_text_only(self, component, mock_embedding):
         """Test that search results return only text, not metadata."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.search_query = "test query"
 
         with patch.object(component, "build_vector_store") as mock_build:
@@ -657,7 +669,7 @@ class TestDB2VectorStoreComponent:
 
     def test_build_method_search_mode(self, component, mock_embedding):
         """Test build() method in Search mode."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.mode = "Search"
         component.search_query = "test"
 
@@ -670,7 +682,7 @@ class TestDB2VectorStoreComponent:
 
     def test_build_method_ingest_mode(self, component, mock_embedding):
         """Test build() method in Ingest mode (default)."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         # No mode set, defaults to Ingest
 
         with patch.object(component, "build_vector_store") as mock_build_vs:
@@ -683,7 +695,7 @@ class TestDB2VectorStoreComponent:
 
     def test_connection_string_format(self, component, mock_embedding):
         """Test that connection string is properly formatted."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.database = "TESTDB"
         component.hostname = "db.example.com"
         component.port = 50000
@@ -697,7 +709,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             with patch.object(DB2VS, "__init__", return_value=None):
                 component.build_vector_store()
@@ -713,7 +725,7 @@ class TestDB2VectorStoreComponent:
 
     def test_distance_strategy_mapping(self, component, mock_embedding):
         """Test that distance strategies are correctly mapped."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         with (
             patch("ibm_db_dbi.connect") as mock_connect,
@@ -723,7 +735,7 @@ class TestDB2VectorStoreComponent:
             mock_connect.return_value = mock_connection
 
             from langchain_community.vectorstores.utils import DistanceStrategy
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             # Test COSINE
             component.distance_strategy = "COSINE"
@@ -751,7 +763,7 @@ class TestDB2VectorStoreComponent:
 
     def test_no_embedding_model_error(self, component):
         """Test error when no embedding model is provided."""
-        component.embedding = None
+        component.embedding_model = None
 
         with (
             patch("ibm_db_dbi.connect") as mock_connect,
@@ -764,13 +776,13 @@ class TestDB2VectorStoreComponent:
 
     def test_connection_closed_on_error(self, component, mock_embedding):
         """Test that DB connection is closed when vector store creation fails."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
 
         with patch("ibm_db_dbi.connect") as mock_connect:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             # Mock DB2VS to raise an error
             with patch.object(DB2VS, "__init__", side_effect=Exception("DB2VS creation failed")):
@@ -782,7 +794,7 @@ class TestDB2VectorStoreComponent:
 
     def test_empty_ingest_data(self, component, mock_embedding):
         """Test handling of empty ingest data."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.ingest_data = []
 
         with (
@@ -791,7 +803,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             mock_vector_store = MagicMock()
             with patch.object(DB2VS, "__init__", return_value=None):
@@ -803,7 +815,7 @@ class TestDB2VectorStoreComponent:
 
     def test_non_data_object_raises_error(self, component, mock_embedding):
         """Test that non-Data objects in ingest_data raise TypeError."""
-        component.embedding = mock_embedding
+        component.embedding_model = mock_embedding
         component.ingest_data = ["not a Data object"]
 
         with (
@@ -812,7 +824,7 @@ class TestDB2VectorStoreComponent:
             mock_connection = MagicMock()
             mock_connect.return_value = mock_connection
 
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
 
             mock_vector_store = MagicMock()
             with (

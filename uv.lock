@@ -6997,6 +6997,20 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-db2"
+version = "1.0.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "ibm-db" },
+    { name = "langchain-community" },
+    { name = "langchain-core" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/22/ab/11e9d31a755f8fe9d8482a8026a2d0ce9aed200c82a47487ac0e0ffdf338/langchain_db2-1.0.0.tar.gz", hash = "sha256:2b6f8a3e3d1cb9223d378403ab432b28c1ad71a97c834b5be93c08048990c25b", size = 15503, upload-time = "2025-10-30T09:13:21.148Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/d3/92/79b5967bf89d30060a8c51bf7fd3e8e5c20f48dcae1d3e44a2ef4076dc9b/langchain_db2-1.0.0-py3-none-any.whl", hash = "sha256:1c089684b205487fef4d602fc7813b8419288c58f5eca5d3dc68fb3791b98632", size = 10688, upload-time = "2025-10-30T09:13:19.37Z" },
+]
+
+[[package]]
 name = "langchain-docling"
 version = "2.0.0"
 source = { registry = "https://pypi.org/simple" }
@@ -9099,6 +9113,7 @@ dependencies = [
     { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "ibm-watsonx-ai", version = "1.5.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
     { name = "langchain-community" },
+    { name = "langchain-db2", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
     { name = "langchain-ibm", marker = "python_full_version < '3.14'" },
     { name = "lfx" },
 ]
@@ -9108,6 +9123,7 @@ requires-dist = [
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=3.2.9,<4.0.0" },
     { name = "ibm-watsonx-ai", marker = "python_full_version < '3.14'", specifier = ">=1.3.1,<2.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-db2", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-ibm", marker = "python_full_version < '3.14'", specifier = "~=1.0.2" },
     { name = "lfx", editable = "src/lfx" },
 ]

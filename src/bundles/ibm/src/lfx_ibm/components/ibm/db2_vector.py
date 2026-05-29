@@ -4,9 +4,14 @@ import contextlib
 from pathlib import Path
 from typing import Any
 
+from lfx.base.models.unified_models import (
+    get_embedding_model_options,
+    get_embeddings,
+    handle_model_input_update,
+)
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
-from lfx.io import Output, QueryInput
+from lfx.io import ModelInput, Output, QueryInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx_ibm.components.ibm.db2_security import (
@@ -40,12 +45,21 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             required=True,
             info="Name of the DB2 table to store vectors (will be created if it doesn't exist)",
         ),
-        HandleInput(
-            name="embedding",
+        ModelInput(
+            name="embedding_model",
             display_name="Embedding Model",
+            info="Select an embedding model provider, or connect an Embeddings component (e.g. watsonx.ai).",
+            model_type="embedding",
             input_types=["Embeddings"],
             required=True,
-            info="Embedding model to use for vectorization",
+            real_time_refresh=True,
+        ),
+        SecretStrInput(
+            name="api_key",
+            display_name="API Key",
+            info="Overrides global provider settings. Leave blank to use your pre-configured API Key.",
+            real_time_refresh=True,
+            advanced=True,
         ),
         HandleInput(
             name="ingest_data",
@@ -176,9 +190,21 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
     ]
 
     def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None):
-        """Update build configuration to show/hide SSL fields based on use_ssl toggle."""
+        """Refresh embedding-model options and toggle SSL fields based on user input."""
+        # Refresh the ModelInput provider/options on initial load, when the model
+        # selection changes, or when the API key changes.
+        if field_name in (None, "embedding_model", "api_key"):
+            build_config = handle_model_input_update(
+                self,
+                build_config,
+                field_value,
+                field_name,
+                cache_key_prefix="embedding_model_options",
+                get_options_func=get_embedding_model_options,
+                model_field_name="embedding_model",
+            )
+        # Show/hide SSL certificate fields based on the use_ssl toggle.
         if field_name == "use_ssl":
-            # Show/hide SSL certificate fields based on use_ssl value
             build_config["ssl_certificate_path"]["show"] = field_value
             build_config["ssl_certificate_password"]["show"] = field_value
         return build_config
@@ -223,7 +249,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 raise TypeError(msg)
 
         # Add documents with minimal metadata only to avoid storing file/session-related fields.
-        if documents_to_add and self.embedding is not None:
+        if documents_to_add:
             self.log(f"Adding {len(documents_to_add)} documents to the Vector Store.")
             try:
                 from langchain_community.vectorstores.utils import filter_complex_metadata
@@ -250,7 +276,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         try:
             import ibm_db_dbi
             from langchain_community.vectorstores.utils import DistanceStrategy
-            from lfx_ibm.components.ibm.db2vs import DB2VS
+            from langchain_db2 import DB2VS
         except ImportError as e:
             msg = "Could not import required DB2 packages. Please install ibm_db and ibm_db_dbi."
             raise ImportError(msg) from e
@@ -364,19 +390,27 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
 
         try:
             # Validate embedding model is provided
-            if not self.embedding:
+            if not self.embedding_model:
                 msg = (
                     "❌ Embedding Model Required\n\n"
-                    "Please connect an embedding model to the 'Embedding Model' input.\n"
+                    "Please select an embedding model provider (or connect an Embeddings component) "
+                    "to the 'Embedding Model' input.\n"
                     "This is required to generate embeddings for your data."
                 )
                 raise ValueError(msg)
 
-            # Build vector store (will automatically generate embeddings for existing empty rows)
+            # Resolve the ModelInput selection (or a connected Embeddings handle) to an Embeddings instance.
+            embeddings = get_embeddings(
+                model=self.embedding_model,
+                user_id=self.user_id,
+                api_key=getattr(self, "api_key", None),
+            )
+
+            # Build vector store
             self.log(f"Connecting to DB2 table: {validated_table_name}")
             vector_store = DB2VS(
                 client=connection,
-                embedding_function=self.embedding,
+                embedding_function=embeddings,
                 table_name=validated_table_name,
                 distance_strategy=distance_strategy_map.get(self.distance_strategy, DistanceStrategy.COSINE),
             )

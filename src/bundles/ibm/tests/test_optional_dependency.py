@@ -9,10 +9,11 @@ These tests *simulate* the driver's absence (a ``None`` entry in
 ``sys.modules`` makes ``import ibm_db_dbi`` raise ``ImportError`` -- the same
 trick the in-tree missing-package test uses), so they run on every platform,
 including the x86_64 CI runners where ibm-db is installed. They guard against
-re-introducing a module-level ``import ibm_db_dbi`` in ``db2vs.py``.
+re-introducing a module-level ``import ibm_db_dbi`` -- directly, or via
+``langchain_db2`` -- in ``db2_vector.py`` (it must stay inside
+``build_vector_store``).
 """
 
-import importlib
 import sys
 
 import pytest
@@ -21,7 +22,6 @@ import pytest
 # absence; dropping them from the cache forces a fresh import.
 _BUNDLE_MODULES = (
     "lfx_ibm.components.ibm",
-    "lfx_ibm.components.ibm.db2vs",
     "lfx_ibm.components.ibm.db2_vector",
 )
 
@@ -33,13 +33,6 @@ def without_ibm_db(monkeypatch):
     monkeypatch.setitem(sys.modules, "ibm_db_dbi", None)
     for name in _BUNDLE_MODULES:
         monkeypatch.delitem(sys.modules, name, raising=False)
-
-
-@pytest.mark.usefixtures("without_ibm_db")
-def test_db2vs_module_imports_without_ibm_db():
-    """db2vs must import with no module-level ibm_db_dbi dependency."""
-    module = importlib.import_module("lfx_ibm.components.ibm.db2vs")
-    assert module is not None
 
 
 @pytest.mark.usefixtures("without_ibm_db")
