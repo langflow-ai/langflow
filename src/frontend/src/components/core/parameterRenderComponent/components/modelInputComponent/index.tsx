@@ -37,7 +37,7 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = "Setup Provider",
+  placeholder,
   nodeId,
   nodeClass,
   handleNodeClass,
@@ -50,6 +50,7 @@ export default function ModelInputComponent({
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -731,7 +732,7 @@ export default function ModelInputComponent({
               disabled={disabled}
               options={flatOptions}
               selectedModel={selectedModel}
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               hasEnabledProviders={hasEnabledProviders ?? false}
               onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
               id={id}

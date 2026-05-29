@@ -161,6 +161,26 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
     For setup instructions and configuration details, see [Manage vector data](/knowledge).
 
+- MCP server management lock
+
+    Set `LANGFLOW_MCP_SERVERS_LOCKED=true` to prevent non-superusers from adding, editing, or removing MCP server connections.
+
+    For more information, see [Restrict MCP server management to superusers](/mcp-server#restrict-mcp-server-management).
+
+- Embedded mode UI flags
+
+    Set `LANGFLOW_EMBEDDED_MODE=true` to hide standalone UI elements when embedding the Langflow visual editor in another application.
+
+    These flags control UI visibility only. They do not block the underlying API endpoints.
+
+    For more information, see [Embedded mode](/environment-variables#embedded-mode).
+
+- Custom component admin-only restriction
+
+    Set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true` to restrict custom component creation and code editing to superusers.
+
+    For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components#restrict-custom-components-to-superusers).
+    
 - macOS support matrix
 
     A new [macOS support](./macos-support-matrix.mdx) page documents feature availability across Apple Silicon and Intel Macs.

@@ -98,6 +98,7 @@ export default function ProvidersContent({
   addProviderOpen,
   setAddProviderOpen,
 }: ProvidersContentProps) {
+  const { t } = useTranslation();
   const { mutate: deleteProviderAccount } = useDeleteProviderAccount();
   const [editingProvider, setEditingProvider] =
     useState<ProviderAccount | null>(null);
@@ -105,7 +106,7 @@ export default function ProvidersContent({
   const providerDelete = useDeleteWithConfirmation(
     deleteProviderAccount,
     buildProviderDeleteParams,
-    "Error deleting environment",
+    t("deployments.errorDeletingEnvironment"),
   );
 
   const content = (() => {
