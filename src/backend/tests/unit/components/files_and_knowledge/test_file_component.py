@@ -7,6 +7,17 @@ from langflow.io import Output
 from lfx.components.files_and_knowledge.file import FileComponent
 
 
+class TestFileComponentFrontendMetadata:
+    def test_file_types_are_serialized_for_frontend(self):
+        component = FileComponent()
+
+        frontend_node = component.to_frontend_node()
+        path_template = frontend_node["data"]["node"]["template"]["path"]
+
+        assert path_template["fileTypes"][:3] == ["csv", "json", "pdf"]
+        assert "zip" in path_template["fileTypes"]
+
+
 class TestFileComponentDynamicOutputs:
     def test_update_outputs_single_csv_file(self):
         """Test single CSV file shows structured + raw outputs."""

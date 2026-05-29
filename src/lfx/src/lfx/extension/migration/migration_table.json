@@ -40,6 +40,66 @@
       "legacy_slot": "ext:arxiv:ArXivComponent@official-pre-a",
       "target": "ext:arxiv:ArXivComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.db2_vector.DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:DB2VectorStoreComponent@official-pre-a",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.watsonx.WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:WatsonxAIComponent@official-pre-a",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:WatsonxEmbeddingsComponent@official-pre-a",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -1,12 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { zoomOut } from "../../utils/zoom-out";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to see output inspection",
   { tag: ["@release", "@components"] },

@@ -1,13 +1,10 @@
-import dotenv from "dotenv";
-import { readFileSync } from "fs";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { zoomOut } from "../../utils/zoom-out";
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { zoomOut } from "../../utils/zoom-out";
+
 test(
   "user can run flow with If-Else component multiple times with different branches",
   { tag: ["@release", "@components"] },

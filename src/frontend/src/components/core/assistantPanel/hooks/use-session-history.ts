@@ -2,7 +2,7 @@
  * Manages saved assistant sessions: persist, switch, and delete.
  */
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import {
   ASSISTANT_MAX_SESSIONS,
@@ -71,6 +71,20 @@ export function useSessionHistory(
       return updated;
     });
   }, [currentSessionId, currentMessages]);
+
+  // WS-6 / RC-7: persist the current session as soon as a turn settles —
+  // not only on the explicit New session click. Without this a panel close
+  // or page reload loses the session (report #5: "new session lost", "only
+  // the last two kept"). We persist only when no message is in flight so a
+  // half-streamed turn isn't written every token; the in-place merge in
+  // saveCurrentSession keeps a single up-to-date entry per session.
+  const hasInFlightMessage = currentMessages.some(
+    (m) => m.status === "streaming" || m.status === "pending",
+  );
+  useEffect(() => {
+    if (currentMessages.length === 0 || hasInFlightMessage) return;
+    saveCurrentSession();
+  }, [currentMessages, hasInFlightMessage, saveCurrentSession]);
 
   const switchSession = useCallback(
     (targetSessionId: string) => {

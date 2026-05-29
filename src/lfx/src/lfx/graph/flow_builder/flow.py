@@ -59,6 +59,9 @@ def flow_info(flow: dict) -> dict:
     }
 
 
+EMPTY_CANVAS_SUMMARY = "(empty canvas)"
+
+
 def flow_to_spec_summary(flow: dict) -> str:
     """Convert a flow dict to a compact summary with component IDs for LLM context.
 
@@ -70,7 +73,7 @@ def flow_to_spec_summary(flow: dict) -> str:
     edges = data.get("edges", [])
 
     if not nodes:
-        return "(empty canvas)"
+        return EMPTY_CANVAS_SUMMARY
 
     id_to_type: dict[str, str] = {}
     lines = [f"name: {flow.get('name', 'Untitled')}"]

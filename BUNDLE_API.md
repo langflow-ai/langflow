@@ -391,3 +391,14 @@ the deserialize half is covered by
   "no source changes detected", and (b) surface a failed reload's
   ``errors[0].message`` instead of degrading to a generic
   "check server logs" fallback.  HTTP response shape unchanged.
+- **``GET /api/v1/extensions/events`` rejects ``keyspace`` explicitly.**
+  Previously the endpoint accepted but silently ignored any
+  client-supplied ``keyspace`` query parameter (server-derived from the
+  authenticated user since the prior entry).  Silent drop masked client
+  bugs that assumed the value had effect.  The route now returns ``422
+  Unprocessable Entity`` with a typed
+  ``extension-events-keyspace-forbidden`` error envelope when the
+  parameter is present.  ``extension-events-keyspace-forbidden`` is
+  added to ``ERROR_CODES`` (additive; codes-as-contract semantics
+  preserved).  In-tree polling clients that never sent the parameter
+  are unaffected.

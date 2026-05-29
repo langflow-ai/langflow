@@ -2,12 +2,11 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { TEXTS } from "../../utils/constants/texts";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 // TODO: fix this test
 test(
   "user must be able to stop a building",

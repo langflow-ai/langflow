@@ -915,3 +915,128 @@ class TestBugsAndEdgeCases:
             result = await execute_flow_file("test.json", global_variables={"KEY": "val"})
 
         assert isinstance(result, dict)
+
+
+class TestExecuteFlowFileTokenMetrics:
+    """Token usage must be attached to flow execution results.
+
+    The executor owns the graph object after the run completes; it is the only
+    place from which token usage can be summed by walking ``graph.vertices``
+    (the engine's run_outputs carry only OUTPUT vertices, whose ``token_usage``
+    is ``None`` by design — see ``extract_graph_token_usage`` docstring).
+
+    These tests pin the wiring between the executor and ``flow_run.extract_graph_token_usage``
+    so the assistant turn can surface its real LLM cost to the user.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_attach_metrics_to_end_event_when_streaming_succeeds(self):
+        mock_graph = MagicMock(context={})
+        expected_metrics = {"input_tokens": 12, "output_tokens": 7, "total_tokens": 19}
+
+        async def mock_consume(*_args, **_kwargs):
+            yield ("end", None)
+
+        mock_result = MagicMock()
+        mock_result.has_error = False
+        mock_result.has_result = True
+        mock_result.result = {"text": "ok"}
+
+        with (
+            patch(f"{MODULE}.resolve_flow_path", return_value=(Path("/fake/test.json"), "json")),
+            patch(f"{MODULE}.load_graph_for_execution", new_callable=AsyncMock, return_value=mock_graph),
+            patch(f"{MODULE}.create_default_event_manager"),
+            patch(f"{MODULE}.consume_streaming_events", side_effect=mock_consume),
+            patch(f"{MODULE}._run_graph_with_events", new_callable=AsyncMock),
+            patch(f"{MODULE}.FlowExecutionResult", return_value=mock_result),
+            patch(f"{MODULE}.extract_graph_token_usage", return_value=expected_metrics),
+        ):
+            events = [event async for event in execute_flow_file_streaming("test.json", input_value="hi")]
+
+        end_payloads = [payload for kind, payload in events if kind == "end"]
+        assert len(end_payloads) == 1
+        assert end_payloads[0]["_metrics"] == expected_metrics
+        # Pre-existing keys must not be lost.
+        assert end_payloads[0]["text"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_should_attach_zero_metrics_when_graph_has_no_token_usage(self):
+        """A flow without an LLM/Agent vertex must still emit zero-tokens metrics — never crash."""
+        mock_graph = MagicMock(context={})
+        zero_metrics = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+
+        async def mock_consume(*_args, **_kwargs):
+            yield ("end", None)
+
+        mock_result = MagicMock()
+        mock_result.has_error = False
+        mock_result.has_result = True
+        mock_result.result = {}
+
+        with (
+            patch(f"{MODULE}.resolve_flow_path", return_value=(Path("/fake/test.json"), "json")),
+            patch(f"{MODULE}.load_graph_for_execution", new_callable=AsyncMock, return_value=mock_graph),
+            patch(f"{MODULE}.create_default_event_manager"),
+            patch(f"{MODULE}.consume_streaming_events", side_effect=mock_consume),
+            patch(f"{MODULE}._run_graph_with_events", new_callable=AsyncMock),
+            patch(f"{MODULE}.FlowExecutionResult", return_value=mock_result),
+            patch(f"{MODULE}.extract_graph_token_usage", return_value=zero_metrics),
+        ):
+            events = [event async for event in execute_flow_file_streaming("test.json", input_value="hi")]
+
+        end_payloads = [payload for kind, payload in events if kind == "end"]
+        assert len(end_payloads) == 1
+        assert end_payloads[0]["_metrics"] == zero_metrics
+
+    @pytest.mark.asyncio
+    async def test_should_attach_metrics_to_execute_flow_file_result(self):
+        """Non-streaming execution must return ``_metrics`` so classify_intent can read it."""
+        mock_graph = MagicMock(context={})
+        mock_graph.prepare = MagicMock()
+        expected_metrics = {"input_tokens": 4, "output_tokens": 2, "total_tokens": 6}
+
+        async def mock_async_start(*_args, **_kwargs):
+            return
+            yield  # pragma: no cover
+
+        mock_graph.async_start = mock_async_start
+
+        with (
+            patch(f"{MODULE}.resolve_flow_path", return_value=(Path("/fake/test.json"), "json")),
+            patch(f"{MODULE}.load_graph_for_execution", new_callable=AsyncMock, return_value=mock_graph),
+            patch(f"{MODULE}.extract_structured_result", return_value={"text": "ok"}),
+            patch(f"{MODULE}.extract_graph_token_usage", return_value=expected_metrics),
+        ):
+            result = await execute_flow_file("test.json", input_value="hi")
+
+        assert result["_metrics"] == expected_metrics
+        assert result["text"] == "ok"
+
+    @pytest.mark.asyncio
+    async def test_should_not_attach_metrics_when_execute_flow_file_result_is_non_dict(self):
+        """Defensive: a non-dict result (rare engine fallback) must not crash the executor."""
+        mock_graph = MagicMock(context={})
+        mock_graph.prepare = MagicMock()
+
+        async def mock_async_start(*_args, **_kwargs):
+            return
+            yield  # pragma: no cover
+
+        mock_graph.async_start = mock_async_start
+
+        with (
+            patch(f"{MODULE}.resolve_flow_path", return_value=(Path("/fake/test.json"), "json")),
+            patch(f"{MODULE}.load_graph_for_execution", new_callable=AsyncMock, return_value=mock_graph),
+            patch(f"{MODULE}.extract_structured_result", return_value="plain-text"),
+            patch(
+                f"{MODULE}.extract_graph_token_usage",
+                return_value={"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+            ),
+        ):
+            result = await execute_flow_file("test.json", input_value="hi")
+
+        # Either the function wraps the primitive in a dict carrying _metrics,
+        # or it returns the primitive untouched — never raise.
+        assert result == "plain-text" or (
+            isinstance(result, dict) and result.get("_metrics", {}).get("total_tokens") == 2
+        )

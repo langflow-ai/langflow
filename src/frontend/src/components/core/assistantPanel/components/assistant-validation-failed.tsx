@@ -1,6 +1,6 @@
+import { AlertTriangle, ChevronDown, ChevronUp, Code2 } from "lucide-react";
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
-import { AlertTriangle, ChevronDown, ChevronUp, Code2 } from "lucide-react";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Button } from "@/components/ui/button";
 import type { AgenticResult } from "@/controllers/API/queries/agentic";
