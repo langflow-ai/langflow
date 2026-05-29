@@ -327,8 +327,18 @@ openlayer = ["openlayer>=0.9.0,<1.0.0"]
 # Document processing / OCR
 docling = [
     "docling-core>=2.77.0,<3.0.0",
-    "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "docling-slim[cli,convert-core,extract-core,feat-ocr-rapidocr,format-latex,format-office,format-pdf,format-web,models-local,service-client]>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
+docling-chunking = [
+    "langflow-base[docling]",
+    "docling-core[chunking]>=2.77.0,<3.0.0",
+    "tiktoken>=0.7.0",
+]
+docling-image-description = [
+    "langflow-base[docling]",
+    "langchain-docling>=1.1.0",
+]
+
 easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Additional tools
