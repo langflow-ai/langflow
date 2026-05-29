@@ -1,8 +1,18 @@
 """Unit tests for DB2VS (DB2 Vector Store) module."""
 
+import importlib.util
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
+# ibm-db (ibm_db_dbi) ships no linux/aarch64 wheel.  After the lazy-import
+# refactor, db2vs imports fine without it, so the helper-function tests below
+# run on every platform; only the tests that construct DB2VS (which imports the
+# driver in __init__) need it, and those are gated with @requires_ibm_db.
+requires_ibm_db = pytest.mark.skipif(
+    importlib.util.find_spec("ibm_db_dbi") is None,
+    reason="ibm-db (ibm_db_dbi) not installed on this platform (e.g. linux/aarch64)",
+)
 
 
 class TestDB2VSHelperFunctions:
@@ -64,6 +74,7 @@ class TestDB2VSHelperFunctions:
         assert "DOT" in func
 
 
+@requires_ibm_db
 class TestDB2VSClass:
     """Test DB2VS class."""
 

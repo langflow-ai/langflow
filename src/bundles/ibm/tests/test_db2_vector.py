@@ -10,6 +10,7 @@ dropped: ``DB2VectorStoreComponent`` is new in 1.10.0 and has no
 historical schema fixtures to validate against.
 """
 
+import importlib.util
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
@@ -19,7 +20,18 @@ from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx_ibm.components.ibm.db2_vector import DB2VectorStoreComponent
 
+# ibm-db (ibm_db_dbi) ships no linux/aarch64 wheel.  The imports above work
+# without it (db2_vector imports the driver lazily inside build_vector_store),
+# so importability is exercised on every platform; the tests below need a live
+# driver -- build_vector_store imports it before the validation paths run -- so
+# gate the whole test class.
+requires_ibm_db = pytest.mark.skipif(
+    importlib.util.find_spec("ibm_db_dbi") is None,
+    reason="ibm-db (ibm_db_dbi) not installed on this platform (e.g. linux/aarch64)",
+)
 
+
+@requires_ibm_db
 class TestDB2VectorStoreComponent:
     """Test DB2 Vector Store Component."""
 

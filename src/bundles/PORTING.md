@@ -70,6 +70,17 @@ substitute names + the runtime-dep block. The non-obvious bits:
 - `dependencies` lists every runtime dep the component imports. Pin `lfx`
   to a range that covers the `BUNDLE_API_VERSION` you target
   (currently `>=0.5.0,<0.6.0`).
+- **Platform-gated deps:** if a runtime dep has no wheel on some platform
+  (e.g. `ibm-db` ships none for linux/aarch64), gate it with a PEP 508 marker
+  so `pip install langflow` still succeeds there, e.g.
+  `"ibm-db>=3.2.9,<4.0.0; sys_platform != 'linux' or platform_machine != 'aarch64'"`.
+  Import that dep *lazily* (inside the method that uses it, not at module top
+  level) so the bundle still loads on the excluded platform and the affected
+  component degrades gracefully instead of breaking discovery. The
+  cross-platform install test gates a hard-dep bundle through langflow's main
+  install; if the **bundle itself** (not just a transitive dep) cannot install
+  on a platform, also add the same marker to its dependency line in the root
+  [`pyproject.toml`](../../pyproject.toml) so langflow does not require it there.
 - `[project.entry-points."langflow.extensions"]`: `<dist-name> = "lfx_<bundle>"`.
   This is what `lfx.extension.loader._plugins._manifest_via_entry_point`
   reads to find the manifest; an editable install with no `dist.files`
