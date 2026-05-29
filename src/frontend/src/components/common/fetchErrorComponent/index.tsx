@@ -35,7 +35,7 @@ export default function FetchErrorComponent({
 
         <BaseModal.Footer
           submit={{
-            label: t("fetchError.retry"),
+            label: t("common.retry"),
             loading: isLoadingHealth,
             onClick: () => {
               setRetry();
