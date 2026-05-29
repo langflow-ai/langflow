@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to use component as tool shortcut only if has tool mode is True",
   { tag: ["@release", "@components"] },

@@ -386,6 +386,32 @@ async def test_get_vertices_returns_404_for_other_users_private_flow(
     assert response.status_code == 404, response.text
 
 
+async def test_get_vertices_with_supplied_data_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """A non-owner cannot pollute another user's graph cache via the deprecated supplied-data path.
+
+    Regression for the reported cache-pollution scenario: a second user POSTs
+    attacker-controlled graph ``data`` for someone else's private flow UUID. The
+    owner-or-public ownership guard runs *before* the build-and-cache branch
+    (``build_and_cache_graph_from_data`` -> ``set_cache(str(flow_id), ...)``), so the
+    request fails closed with 404 and no graph is cached under the victim flow id.
+
+    Complements ``test_get_vertices_returns_404_for_other_users_private_flow`` (which
+    exercises the no-data branch) by covering the supplied-data branch specifically.
+    The payload is a schema-valid ``FlowDataRequest`` so the request clears body
+    validation and actually reaches the ownership guard.
+    """
+    flow_id = added_flow_webhook_test["id"]
+    attacker_data = {
+        "nodes": [{"id": "attacker-node", "data": {"type": "AttackerControlled"}}],
+        "edges": [],
+        "viewport": {"x": 1, "y": 2, "zoom": 0.75},
+    }
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", json=attacker_data, headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
 async def test_build_vertex_returns_404_for_other_users_private_flow(
     client, added_flow_webhook_test, second_user_headers
 ):

@@ -1,9 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+
 test.skip(
   "should like and add components and flows (requires store API key)",
   { tag: ["@release"] },

@@ -29,9 +29,10 @@ export const generateUniqueVariableName = (
     ? /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g
     : /\{([^{}]+)\}/g;
   const existingVariables = new Set<string>();
-  let match: RegExpExecArray | null;
-  while ((match = variableRegex.exec(templateValue)) !== null) {
+  let match: RegExpExecArray | null = variableRegex.exec(templateValue);
+  while (match !== null) {
     existingVariables.add(match[1]);
+    match = variableRegex.exec(templateValue);
   }
 
   let variableName = "variable_name";

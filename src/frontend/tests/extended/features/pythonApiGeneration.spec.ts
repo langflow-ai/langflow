@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "python_api_generation",
   { tag: ["@release", "@api", "@workspace"] },

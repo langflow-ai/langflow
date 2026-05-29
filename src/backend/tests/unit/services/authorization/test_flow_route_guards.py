@@ -40,6 +40,20 @@ def _ensure_flow_permission_calls(func: ast.AsyncFunctionDef) -> list[ast.Call]:
     return calls
 
 
+def _uses_authorized_flow_dependency(func: ast.AsyncFunctionDef, alias: str) -> bool:
+    """Return True if *func* declares an authorized-flow dependency alias in its signature."""
+    for arg in func.args.args + func.args.kwonlyargs:
+        if arg.annotation is None:
+            continue
+        ann = ast.unparse(arg.annotation)
+        if alias in ann:
+            return True
+    for node in ast.walk(func):
+        if isinstance(node, ast.AnnAssign) and node.annotation is not None and alias in ast.unparse(node.annotation):
+            return True
+    return False
+
+
 def _action_arg(call: ast.Call) -> str | None:
     """Extract the action argument (positional[1]) as the dotted name like 'FlowAction.READ'."""
     if len(call.args) < 2:
@@ -72,9 +86,23 @@ def test_single_guard_route_uses_enum_action(routes, func_name, expected_action)
     """Single-call guard routes call ensure_flow_permission once with the right FlowAction."""
     func = routes[func_name]
     calls = _ensure_flow_permission_calls(func)
-    assert calls, f"{func_name} has no ensure_flow_permission call"
-    actions = {_action_arg(c) for c in calls}
-    assert expected_action in actions, f"{func_name} actions={actions}, expected {expected_action}"
+    if calls:
+        actions = {_action_arg(c) for c in calls}
+        assert expected_action in actions, f"{func_name} actions={actions}, expected {expected_action}"
+        return
+
+    # Routes migrated to FastAPI dependencies declare protection in the signature.
+    alias_by_action = {
+        "FlowAction.CREATE": "RequireFlowCreate",
+        "FlowAction.READ": "AuthorizedReadFlow",
+        "FlowAction.WRITE": "AuthorizedWriteFlow",
+        "FlowAction.DELETE": "AuthorizedDeleteFlow",
+    }
+    alias = alias_by_action.get(expected_action)
+    assert alias is not None
+    assert _uses_authorized_flow_dependency(func, alias), (
+        f"{func_name} has no ensure_flow_permission call or {alias} dependency"
+    )
 
 
 def test_upsert_flow_guards_both_create_and_write(routes):
@@ -224,34 +252,27 @@ def test_read_public_flow_remains_unguarded(routes):
 
 
 def test_get_note_translations_is_owner_scoped_and_guarded(routes):
-    """`GET /flows/{flow_id}/note_translations` must scope the fetch by owner and authorize READ.
-
-    Regression for the cross-user data leak found in the PR #13153 review: the
-    original handler used ``session.get(Flow, flow_id)`` with no ownership
-    filter and no ensure_flow_permission, so any authenticated user could read
-    note text from any flow by guessing the UUID. Fix scopes the fetch through
-    ``_read_flow(..., user_id=current_user.id)`` and adds an explicit
-    ``ensure_flow_permission(FlowAction.READ, ...)`` so authorization plugins can
-    extend visibility via shares.
-    """
+    """`GET /flows/{flow_id}/note_translations` must authorize READ via dependency or inline guard."""
     func = routes["get_note_translations"]
     calls = _ensure_flow_permission_calls(func)
-    assert calls, "get_note_translations is missing its ensure_flow_permission guard"
-    actions = {_action_arg(c) for c in calls}
-    assert "FlowAction.READ" in actions, f"expected FlowAction.READ, got {actions}"
+    if calls:
+        actions = {_action_arg(c) for c in calls}
+        assert "FlowAction.READ" in actions, f"expected FlowAction.READ, got {actions}"
+        read_flow_calls = [
+            node
+            for node in ast.walk(func)
+            if isinstance(node, ast.Call)
+            and (
+                (isinstance(node.func, ast.Name) and node.func.id == "_read_flow")
+                or (isinstance(node.func, ast.Attribute) and node.func.attr == "_read_flow")
+            )
+        ]
+        assert read_flow_calls, "get_note_translations must fetch the flow via _read_flow (owner-scoped)"
+        return
 
-    # The fetch must go through _read_flow (which scopes by current_user.id),
-    # not a bare session.get(Flow, ...) call.
-    read_flow_calls = [
-        node
-        for node in ast.walk(func)
-        if isinstance(node, ast.Call)
-        and (
-            (isinstance(node.func, ast.Name) and node.func.id == "_read_flow")
-            or (isinstance(node.func, ast.Attribute) and node.func.attr == "_read_flow")
-        )
-    ]
-    assert read_flow_calls, "get_note_translations must fetch the flow via _read_flow (owner-scoped)"
+    assert any(_uses_authorized_flow_dependency(func, alias) for alias in ("AuthorizedReadFlow",)), (
+        "get_note_translations must declare an authorized read dependency or call ensure_flow_permission"
+    )
 
 
 def test_read_flows_list_uses_filter_visible_resources(routes):

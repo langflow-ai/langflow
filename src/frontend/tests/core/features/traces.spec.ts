@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "should able to see and interact with Traces",
   { tag: ["@release", "@workspace", "@api"] },

@@ -16,6 +16,7 @@ from lfx.log.logger import logger
 from lfx.schema.schema import InputValueRequest
 from lfx.utils.flow_validation import CustomComponentValidationError
 
+from langflow.agentic.services.flow_run import extract_graph_token_usage
 from langflow.agentic.services.flow_types import (
     STREAMING_QUEUE_MAX_SIZE,
     FlowExecutionError,
@@ -131,8 +132,7 @@ async def execute_flow_file(
         inputs = InputValueRequest(input_value=input_value) if input_value else None
 
         results = [result async for result in graph.async_start(inputs=inputs)]
-        return extract_structured_result(results)
-
+        flow_result = extract_structured_result(results)
     except HTTPException:
         raise
     except CustomComponentValidationError as e:
@@ -143,6 +143,10 @@ async def execute_flow_file(
     except Exception as e:
         logger.error(f"Flow execution error: {e}")
         raise HTTPException(status_code=500, detail="An internal error occurred while executing the flow.") from e
+    else:
+        if isinstance(flow_result, dict):
+            flow_result["_metrics"] = extract_graph_token_usage(graph)
+        return flow_result
 
 
 async def execute_flow_file_streaming(
@@ -225,6 +229,8 @@ async def execute_flow_file_streaming(
         async for event_type, chunk in consume_streaming_events(event_queue, is_disconnected, cancel_event):
             if event_type == "token":
                 yield ("token", chunk)
+            elif event_type == "flow_preview":
+                yield ("flow_preview", chunk)
             elif event_type == "end":
                 break
             elif event_type == "cancelled":
@@ -254,7 +260,10 @@ async def execute_flow_file_streaming(
             original_error_message=str(execution_result.error),
         ) from execution_result.error
 
-    yield ("end", execution_result.result if execution_result.has_result else {})
+    end_payload = execution_result.result if execution_result.has_result else {}
+    if isinstance(end_payload, dict):
+        end_payload["_metrics"] = extract_graph_token_usage(graph)
+    yield ("end", end_payload)
 
 
 def extract_response_text(result: dict) -> str:

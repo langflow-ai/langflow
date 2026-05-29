@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -7,7 +8,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 test(
   "ToggleComponent",
   { tag: ["@release", "@workspace"] },
