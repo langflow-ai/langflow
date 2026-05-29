@@ -56,6 +56,21 @@ html[data-theme='dark'] .redocusaurus .menu-content {
   border-right: 1px solid var(--redoc-border-color) !important;
 }
 
+/* "API docs by Redocly" badge — position:fixed, background transparent from Redoc.
+   Give it a solid background so it renders above the sidebar. */
+html[data-theme='dark'] .redocusaurus a[href*="redocly"] {
+  background: var(--redoc-bg-secondary) !important;
+  display: block !important;
+  padding: 8px !important;
+}
+
+html[data-theme='light'] .redocusaurus a[href*="redocly"] {
+  background: var(--ifm-background-color) !important;
+  display: block !important;
+  padding: 8px !important;
+}
+
+
 html[data-theme='light'] .redocusaurus .menu-content {
   background: var(--ifm-background-color) !important;
   border-right: 1px solid var(--redoc-border-color) !important;
