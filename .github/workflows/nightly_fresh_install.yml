@@ -482,6 +482,8 @@ jobs:
 
       - name: docker compose up
         working-directory: compose-test
+        env:
+          LANGFLOW_PORT: ${{ env.LANGFLOW_PORT }}
         run: docker compose up -d
 
       - name: Wait for health check
@@ -492,7 +494,10 @@ jobs:
             if curl -fsS -m 2 "http://127.0.0.1:${LANGFLOW_PORT}${HEALTH_PATH}" >/dev/null 2>&1; then
               echo "ready"; exit 0
             fi
-            STATE=$(docker compose ps --format json langflow | python3 -c "import json,sys;d=json.loads(sys.stdin.read() or '{}'); print(d.get('State','missing'))" 2>/dev/null || echo missing)
+            # `docker compose ps --format json` returns an array on most compose v2
+            # versions even when a single service name is passed, but older releases
+            # have returned an object — accept both shapes.
+            STATE=$(docker compose ps --format json langflow | python3 -c "import json,sys; raw=sys.stdin.read().strip() or '[]'; d=json.loads(raw); d=(d[0] if d else {}) if isinstance(d, list) else d; print(d.get('State','missing'))" 2>/dev/null || echo missing)
             if [ "$STATE" != "running" ]; then
               echo "::error::langflow service state: $STATE"
               docker compose logs langflow 2>&1 | tail -200
