@@ -15,12 +15,17 @@ interface MessageMetadataProps {
   };
   /** Human-readable timestamp for the "Last run" tooltip line */
   timestamp?: string;
+  /** When true, renders the badge in the muted-foreground color and drops the
+   * default ``ml-auto`` so callers can place it inline (e.g. next to a
+   * message header). Default is the playground's emerald look. */
+  subtle?: boolean;
 }
 
 export default function MessageMetadata({
   duration,
   usage,
   timestamp,
+  subtle = false,
 }: MessageMetadataProps): JSX.Element | null {
   const { t } = useTranslation();
   const hasDuration = typeof duration === "number" && duration > 0;
@@ -72,7 +77,11 @@ export default function MessageMetadata({
     >
       <span
         data-testid="chat-message-token-usage"
-        className="ml-auto flex cursor-help items-center gap-1 font-mono text-xs font-normal text-accent-emerald-foreground"
+        className={
+          subtle
+            ? "flex cursor-help items-center gap-1 font-mono text-xs font-normal text-muted-foreground"
+            : "ml-auto flex cursor-help items-center gap-1 font-mono text-xs font-normal text-accent-emerald-foreground"
+        }
       >
         {hasTokens && (
           <span className="flex items-center gap-1">

@@ -13,6 +13,7 @@ from langflow.services.authorization.audit import (
     audit_decision,
     drain_pending_audit_writes,
 )
+from langflow.services.authorization.decorators import requires_flow_permission, requires_resource_permission
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.authorization.guards import (
     ensure_deployment_permission,
@@ -49,4 +50,6 @@ __all__ = [
     "ensure_share_permission",
     "ensure_variable_permission",
     "filter_visible_resources",
+    "requires_flow_permission",
+    "requires_resource_permission",
 ]

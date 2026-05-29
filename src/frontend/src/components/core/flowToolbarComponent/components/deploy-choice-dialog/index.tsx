@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { usePatchSnapshot } from "@/controllers/API/queries/deployments";
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
@@ -56,6 +57,7 @@ export default function DeployChoiceDialog({
   onUpdateComplete,
   onTestDeployment,
 }: DeployChoiceDialogProps) {
+  const { t } = useTranslation();
   const [phase, setPhase] = useState<Phase>("provider");
   const [selectedProviderId, setSelectedProviderId] =
     useState<string>(NEW_DEPLOYMENT_VALUE);
@@ -148,8 +150,8 @@ export default function DeployChoiceDialog({
     );
     if (!nextReviewAttachment) {
       showError(
-        "Failed to load deployment details",
-        "No provider snapshot was found for this flow on the selected deployment.",
+        t("deployments.failedToLoadDetails"),
+        t("deployments.noProviderSnapshot"),
       );
       setPhase("deployments");
       setReviewAttachment(null);
@@ -221,7 +223,7 @@ export default function DeployChoiceDialog({
       setUpdatePhase("updated");
     } catch (err: unknown) {
       setUpdatePhase("idle");
-      showError("Failed to update deployment", err);
+      showError(t("deployments.failedToUpdate"), err);
     }
   };
 

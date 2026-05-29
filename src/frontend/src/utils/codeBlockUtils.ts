@@ -17,6 +17,13 @@
  * numeric expressions, or single-word labels; rendering each one as a full
  * code-panel breaks the surrounding paragraph/list flow.
  *
+ * Note: newlines alone are NOT sufficient to mark a code block. During
+ * streaming, react-markdown can split a single fenced block into multiple
+ * code elements; if newlines alone triggered block rendering, each fragment
+ * would render as a separate panel. The `data-language` discriminator above
+ * keeps streaming chunks (which arrive without `data-language`) as inline
+ * until react-markdown finalizes the fence.
+ *
  * @param className - CSS class name that may contain a language identifier
  * @param props - Element props that may contain a `data-language` attribute
  * @param content - The code content to analyze
@@ -52,38 +59,10 @@ export function isCodeBlock(
 }
 
 /**
- * Extracts the language identifier from a className or detects from content.
+ * Extracts the language identifier from a className.
  * Returns empty string if no language is found.
  */
-export function extractLanguage(
-  className: string | undefined,
-  content?: string,
-): string {
+export function extractLanguage(className: string | undefined): string {
   const match = /language-(\w+)/.exec(className ?? "");
-  if (match?.[1]) {
-    return match[1];
-  }
-
-  // Try to detect language from content
-  if (content) {
-    const trimmed = content.trim();
-    // Python patterns
-    if (
-      /^(from |import |class \w+.*:|def \w+|async def )/.test(trimmed) ||
-      trimmed.includes("self.") ||
-      trimmed.includes("__init__")
-    ) {
-      return "python";
-    }
-    // JavaScript/TypeScript patterns
-    if (
-      /^(const |let |var |function |export |import \{|interface |type )/.test(
-        trimmed,
-      )
-    ) {
-      return "javascript";
-    }
-  }
-
-  return "";
+  return match?.[1] ?? "";
 }

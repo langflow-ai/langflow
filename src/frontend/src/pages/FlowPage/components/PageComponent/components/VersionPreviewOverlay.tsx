@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
@@ -14,6 +15,8 @@ export default function VersionPreviewOverlay() {
   const isPreviewLoading = useVersionPreviewStore((s) => s.isPreviewLoading);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
 
+  const { t } = useTranslation();
+
   if (previewLabel === null) return null;
 
   return (
@@ -23,10 +26,12 @@ export default function VersionPreviewOverlay() {
           <span className="h-2 w-2 shrink-0 rounded-lg bg-[#6366F1]" />
           <span className="text-sm">
             {previewLabel === "Current Draft"
-              ? "Current Flow"
-              : `Previewing ${previewLabel}`}
+              ? t("version.currentFlow")
+              : t("version.previewing", { label: previewLabel })}
           </span>
-          <span className="text-muted-foreground text-sm">(Read-Only)</span>
+          <span className="text-muted-foreground text-sm">
+            {t("version.readOnly")}
+          </span>
         </div>
         {previewDescription && (
           <span className="max-w-[300px] pl-4 text-xs text-muted-foreground">
@@ -43,7 +48,7 @@ export default function VersionPreviewOverlay() {
               className="h-4 w-4 animate-spin text-muted-foreground"
             />
             <span className="text-sm text-muted-foreground">
-              Loading preview...
+              {t("version.loadingPreview")}
             </span>
           </div>
         </div>
