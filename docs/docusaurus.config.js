@@ -226,7 +226,7 @@ const config = {
               requireLabelColor: "#F471B5",
             },
             rightPanel: {
-              backgroundColor: "#0d0d0f",
+              backgroundColor: "#00000000",
               textColor: "#c6c6d1",
             },
             typography: {
