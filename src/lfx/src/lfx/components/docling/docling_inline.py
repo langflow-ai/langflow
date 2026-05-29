@@ -145,7 +145,11 @@ class DoclingInlineComponent(BaseFileComponent):
                         except ImportError as e:
                             print(json.dumps({
                                 "ok": False,
-                                "error": "langchain-docling is not installed. Please install it with `pip install langchain-docling` or `pip install 'langflow[docling-image-description]'`."
+                                "error": (
+                                    "langchain-docling is not installed. Please install it with "
+                                    "`pip install langchain-docling` or "
+                                    "`pip install 'langflow[docling-image-description]'`."
+                                )
                             }))
                             return
                         mod_name, cls_name = pic_desc_config["__class_path__"].rsplit(".", 1)
