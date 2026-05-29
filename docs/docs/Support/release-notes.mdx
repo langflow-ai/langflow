@@ -69,6 +69,39 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Python 3.14 support
+
+    Langflow now supports Python 3.10 through 3.14 on macOS, Linux, and Windows.
+    The Langflow Docker images now use Python 3.14.
+
+    <details>
+    <summary>Optional integrations not yet available on Python 3.14</summary>
+
+    The following optional integrations are excluded from installs on Python 3.14:
+
+    - [IBM watsonx](/bundles-ibm)
+    - [IBM watsonx Orchestrate](/deployment-wxo)
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - OpenDsStar
+
+    </details>
+    
+- **Agent** component: structured response output
+
+    The **Agent** component now includes a **Structured Response** (`structured_response`) output that returns the agent's reply as structured data according to an **Output Schema** you define.
+
+    For more information, see [Agent component output](/agents#agent-component-output).
+
+- **Agent** component: default system prompt
+
+    The **Agent** component now uses a structured default system prompt that includes the current date and the active model name.
+    Existing flows are not affected.
+
+    For more information, see [Agent instructions and input](/agents#agent-instructions-and-input).
+    
 - Extension bundles
 
     Langflow 1.10 introduces Extension bundles: component providers that are packaged and versioned as standalone pip packages, independent of the core Langflow server.
