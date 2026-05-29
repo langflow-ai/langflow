@@ -2680,7 +2680,7 @@ class TestGetDeploymentSync:
         result = await get_deployment(deployment_id=dep_row.id, session=session, current_user=_fake_user())
 
         assert result.attached_count == 2
-        session.rollback.assert_not_awaited()
+        session.rollback.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
@@ -2726,7 +2726,7 @@ class TestGetDeploymentSync:
         assert exc_info.value.status_code == 500
         assert str(dep_row.id) in str(exc_info.value.detail)
         assert "Failed to retrieve the number of flows attached" in str(exc_info.value.detail)
-        session.rollback.assert_not_awaited()
+        session.rollback.assert_awaited_once()
 
     @pytest.mark.asyncio
     @patch(f"{HELPERS_MODULE}.delete_unbound_attachments", new_callable=AsyncMock)
