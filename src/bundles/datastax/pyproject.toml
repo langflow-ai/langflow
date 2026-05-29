@@ -20,14 +20,14 @@ keywords = [
 ]
 
 # Runtime deps: lfx (the BUNDLE_API surface) plus the DataStax SDKs that
-# every astra-* component pulls in.  We pin lfx to the range that
-# includes the BUNDLE_API_VERSION=1 contract.  ``astrapy`` is the Data
+# every astra-* component pulls in.  lfx is floored at >=0.5.0 with no
+# upper bound; BUNDLE_API compat is via extension.json.  ``astrapy`` is the Data
 # API client, ``langchain-astradb`` carries the LangChain vectorstore /
 # collection-env helpers we re-use, ``langchain-graph-retriever`` powers
 # the Graph RAG component, and ``orjson`` is used by ``astradb_graph``
 # for vector store serialization.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx>=0.5.0",
     "astrapy>=2.1.0,<3.0.0",
     "langchain-astradb~=1.0.0",
     "langchain-graph-retriever==0.8.0",

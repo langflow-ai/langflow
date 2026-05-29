@@ -11,7 +11,7 @@ authors = [
 keywords = ["langflow", "lfx", "extension", "bundle", "google", "google_search"]
 
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx>=0.5.0",
     "langchain-google-community~=3.0.2",
     "langchain-community~=0.4.1",
 ]

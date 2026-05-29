@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "faiss"]
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx>=0.5.0",
     "langchain-community~=0.4.1",
     "faiss-cpu==1.9.0.post1; python_version<'3.14'",
     "faiss-cpu>=1.13.2; python_version>='3.14'",
