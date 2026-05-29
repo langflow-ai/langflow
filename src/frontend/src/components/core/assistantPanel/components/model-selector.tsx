@@ -153,7 +153,9 @@ export function ModelSelector({
                 className="h-4 w-4 shrink-0"
               />
             </span>
-            <span>{currentModel?.displayName || t("assistant.selectModel")}</span>
+            <span>
+              {currentModel?.displayName || t("assistant.selectModel")}
+            </span>
             <ForwardedIconComponent
               name={isOpen ? "ChevronUp" : "ChevronDown"}
               className="h-3 w-3"

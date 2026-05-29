@@ -29,7 +29,9 @@ export default function VersionPreviewOverlay() {
               ? t("version.currentFlow")
               : t("version.previewing", { label: previewLabel })}
           </span>
-          <span className="text-muted-foreground text-sm">{t("version.readOnly")}</span>
+          <span className="text-muted-foreground text-sm">
+            {t("version.readOnly")}
+          </span>
         </div>
         {previewDescription && (
           <span className="max-w-[300px] pl-4 text-xs text-muted-foreground">
