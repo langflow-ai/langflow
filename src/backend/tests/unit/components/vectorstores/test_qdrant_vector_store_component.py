@@ -35,7 +35,7 @@ def _captured_ids(documents: list[Document]) -> list[str]:
         captured["ids"] = ids
         return MagicMock()
 
-    with patch("lfx_qdrant.components.qdrant.qdrant.Qdrant.from_documents", side_effect=fake_from_documents):
+    with patch("lfx_qdrant.components.qdrant.qdrant.QdrantVectorStore.from_documents", side_effect=fake_from_documents):
         component.build_vector_store()
 
     return captured["ids"]
