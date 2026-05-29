@@ -455,10 +455,10 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// Test 8: Review step — shows duplicate tool name error when provider has existing tool
+// Test 8: Review step — provider duplicate tools do not block deploy (display names)
 // ---------------------------------------------------------------------------
 test(
-  "deployment-create: review step shows error when tool name already exists in provider",
+  "deployment-create: review step does not block deploy when provider has matching tool names",
   {
     tag: ["@deployment", "@workspace"],
   },
@@ -466,13 +466,11 @@ test(
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
     await goToStepReview(page);
 
-    // The duplicate tool name error should appear
     await expect(
       page.getByText("Edit tool name (already exists in provider)"),
-    ).toBeVisible({ timeout: 10000 });
+    ).not.toBeVisible();
 
-    // Deploy button should be disabled while there are tool name errors
-    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
+    await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
   },
 );
 
@@ -499,10 +497,10 @@ test(
 );
 
 // ---------------------------------------------------------------------------
-// Test 10: Review step — fixing duplicate tool name clears error
+// Test 10: Review step — editing tool display name with provider duplicates present
 // ---------------------------------------------------------------------------
 test(
-  "deployment-create: editing tool name to unique value clears duplicate error",
+  "deployment-create: editing tool display name on review with provider duplicates",
   {
     tag: ["@deployment", "@workspace"],
   },
@@ -510,37 +508,28 @@ test(
     await openDeploymentStepper(page, SNAPSHOTS_DUPLICATE_MOCK);
     await goToStepReview(page);
 
-    // Error should be visible initially
-    await expect(
-      page.getByText("Edit tool name (already exists in provider)"),
-    ).toBeVisible({ timeout: 10000 });
-    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
+    await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
 
-    // Override the snapshots mock to return empty (unique name) for the next check
-    await page.route("**/api/v1/deployments/snapshots**", (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: "application/json",
-        body: JSON.stringify(SNAPSHOTS_EMPTY_MOCK),
-      });
-    });
-
-    // Edit the tool name to something unique
+    await expect(page.getByTestId("edit-tool-name")).toBeVisible();
     await page.getByTestId("edit-tool-name").click();
     const toolNameInput = page.getByTestId("tool-name-input");
+    await expect(toolNameInput).toBeVisible();
     await toolNameInput.fill("Unique Tool Name");
     await toolNameInput.press("Enter");
 
-    // Error should clear and deploy button should re-enable
+    await expect(toolNameInput).not.toBeVisible();
     await expect(
-      page.getByText("Edit tool name (already exists in provider)"),
-    ).not.toBeVisible({ timeout: 10000 });
+      page
+        .getByTestId("edit-tool-name")
+        .locator("..")
+        .getByText("Unique Tool Name"),
+    ).toBeVisible();
     await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
   },
 );
 
 test(
-  "deployment-create: review step shows inline error when flow name starts with number",
+  "deployment-create: review step allows numeric flow names as tool display names",
   {
     tag: ["@deployment", "@workspace"],
   },
@@ -550,11 +539,10 @@ test(
     ]);
     await goToStepReview(page);
 
+    // Flow name also appears in the summary card; scope to the tool display row.
     await expect(
-      page.getByText(
-        "Tool name must start with a letter and contain at least one alphanumeric character.",
-      ),
+      page.getByTestId("edit-tool-name").locator("..").getByText("12925"),
     ).toBeVisible();
-    await expect(page.getByTestId("deployment-stepper-next")).toBeDisabled();
+    await expect(page.getByTestId("deployment-stepper-next")).toBeEnabled();
   },
 );

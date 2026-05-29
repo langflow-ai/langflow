@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { ModelOption } from "@/components/core/parameterRenderComponent/components/modelInputComponent/types";
 import { useCreateMemory } from "@/controllers/API/queries/memories/use-create-memory";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
@@ -27,6 +28,7 @@ export function useCreateMemoryModal({
   >([]);
   const [preprocessingPrompt, setPreprocessingPrompt] = useState("");
 
+  const { t } = useTranslation();
   const { data: modelProviders = [] } = useGetModelProviders({});
   const { setErrorData, setSuccessData } = useAlertStore((state) => ({
     setErrorData: state.setErrorData,
@@ -84,14 +86,14 @@ export function useCreateMemoryModal({
 
   const createMemoryMutation = useCreateMemory({
     onSuccess: (data) => {
-      setSuccessData({ title: "Memory created successfully" });
+      setSuccessData({ title: t("memory.createdSuccess") });
       onClose();
       resetForm();
       onSuccess?.(data.id);
     },
     onError: (error: unknown) => {
       setErrorData({
-        title: "Failed to create memory",
+        title: t("memory.createError"),
         list: extractApiErrorMessages(error),
       });
     },
@@ -100,31 +102,31 @@ export function useCreateMemoryModal({
   const handleSubmit = () => {
     if (!flowId) {
       setErrorData({
-        title: "Validation error",
-        list: ["No flow selected"],
+        title: t("memory.validationError"),
+        list: [t("memory.noFlowSelected")],
       });
       return;
     }
     if (!name.trim()) {
       setErrorData({
-        title: "Validation error",
-        list: ["Please provide a name for the memory"],
+        title: t("memory.validationError"),
+        list: [t("memory.nameRequired")],
       });
       return;
     }
 
     if (selectedEmbeddingModel.length === 0) {
       setErrorData({
-        title: "Validation error",
-        list: ["Please select an embedding model"],
+        title: t("memory.validationError"),
+        list: [t("memory.embeddingRequired")],
       });
       return;
     }
 
     if (preprocessingEnabled && selectedPreprocessingModel.length === 0) {
       setErrorData({
-        title: "Validation error",
-        list: ["Please provide a preprocessing model"],
+        title: t("memory.validationError"),
+        list: [t("memory.preprocessingRequired")],
       });
       return;
     }

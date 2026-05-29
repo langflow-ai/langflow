@@ -15,8 +15,7 @@ let mockAttachmentsData: {
     version_number: number;
     attached_at: string | null;
     provider_snapshot_id: string | null;
-    tool_name: string | null;
-    provider_data: { app_ids?: string[] } | null;
+    provider_data: { app_ids?: string[]; tool_display_name?: string } | null;
   }>;
 } | null = null;
 let mockIsLoadingAttachments = false;
@@ -173,15 +172,17 @@ import DeploymentStepperModal from "../components/deployment-stepper-modal";
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   id: "dep-1",
   provider_id: "prov-1",
-  name: "My Agent",
   description: "A sales agent",
   type: "agent",
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-06-10T00:00:00Z",
-  provider_data: { llm: "granite-13b-chat" },
+  provider_data: {
+    display_name: "My Agent",
+    name: "my_agent",
+    llm: "granite-13b-chat",
+  },
   resource_key: "rk-1",
   attached_count: 2,
-  matched_attachments: null,
   ...overrides,
 });
 
@@ -304,8 +305,10 @@ describe("Edit mode — initial state from attachments", () => {
           version_number: 2,
           attached_at: "2025-06-01T00:00:00Z",
           provider_snapshot_id: "snap-1",
-          tool_name: "custom_sales_tool",
-          provider_data: { app_ids: ["cfg-1"] },
+          provider_data: {
+            app_ids: ["cfg-1"],
+            tool_display_name: "Custom Sales Tool",
+          },
         },
       ],
     };

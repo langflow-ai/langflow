@@ -951,6 +951,14 @@ class Component(CustomComponent):
         except KeyError:
             input_ = self._get_fallback_input(name=key, display_name=key)
             self._inputs[key] = input_
+            # ``self.inputs`` resolves to the class attribute when the instance
+            # has not shadowed it yet. Appending in that case mutates the
+            # class-level list and leaks fallback values (e.g. a live LLM
+            # client) into every future instance — which then crashes during
+            # ``map_inputs`` deepcopy on the next ``Component()``. Promote to
+            # an instance-local copy before mutating.
+            if "inputs" not in self.__dict__:
+                self.inputs = list(self.inputs) if self.inputs else []
             self.inputs.append(input_)
             return input_
 

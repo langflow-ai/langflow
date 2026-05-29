@@ -28,7 +28,8 @@ export function usePrepareDeploy() {
     ProviderAccount | undefined
   >();
 
-  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlowId = currentFlow?.id;
   const saveFlow = useSaveFlow();
   const { mutateAsync: createSnapshot } = usePostCreateSnapshot();
   const { refetch: fetchProviderAccounts } = useGetProviderAccounts(
@@ -44,10 +45,12 @@ export function usePrepareDeploy() {
     try {
       await saveFlow();
       const snapshot = await createSnapshot({ flowId: currentFlowId });
+      const key = getSelectedFlowVersionKey(currentFlowId, snapshot.id);
       const versionMap = new Map<string, SelectedFlowVersion>();
-      versionMap.set(currentFlowId, {
-        key: getSelectedFlowVersionKey(currentFlowId, snapshot.id),
+      versionMap.set(key, {
+        key,
         flowId: currentFlowId,
+        flowName: currentFlow?.name,
         versionId: snapshot.id,
         versionTag: snapshot.version_tag,
       });
