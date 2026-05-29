@@ -3,9 +3,9 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { generateRandomFilename } from "../../utils/generate-filename";
 
-import { TEXTS } from "../../utils/constants/texts";
 // Configure tests to run serially with a delay between each test
 test(
   "should navigate to files page and show empty state",

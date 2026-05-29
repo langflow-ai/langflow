@@ -1,11 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
-import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import { zoomOut } from "../../utils/zoom-out";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { initialGPTsetup } from "../../utils/initialGPTsetup";
+
 test(
   "user must be able to save or delete a global variable",
   { tag: ["@release", "@workspace", "@api"] },

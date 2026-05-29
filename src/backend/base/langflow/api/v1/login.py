@@ -26,6 +26,7 @@ class SessionResponse(BaseModel):
 
 @router.post("/login", response_model=Token, include_in_schema=False)
 async def login_to_get_access_token(
+    request: Request,
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
@@ -33,7 +34,7 @@ async def login_to_get_access_token(
     auth_settings = get_settings_service().auth_settings
     try:
         auth = get_auth_service()
-        user = await auth.authenticate_user(form_data.username, form_data.password, db)
+        user = await auth.authenticate_user(form_data.username, form_data.password, db, request)
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise

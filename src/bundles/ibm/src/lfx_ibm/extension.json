@@ -1,0 +1,16 @@
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-ibm",
+  "version": "0.1.0",
+  "name": "IBM",
+  "description": "IBM components (Db2 Vector Store + watsonx.ai LLM and embeddings) as a standalone Langflow Extension Bundle.",
+  "lfx": {
+    "compat": ["1"]
+  },
+  "bundles": [
+    {
+      "name": "ibm",
+      "path": "components/ibm"
+    }
+  ]
+}

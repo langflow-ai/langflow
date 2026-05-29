@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/utils/utils";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -13,7 +12,9 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
+import { cn } from "@/utils/utils";
 import type { AssistantModel } from "../assistant-panel.types";
+import { classifyModelStrength } from "../helpers/model-strength";
 import { useEnabledModels } from "../hooks";
 
 interface ModelSelectorProps {
@@ -94,6 +95,17 @@ export function ModelSelector({
     setIsOpen(false);
   };
 
+  // Discreet UX hint: when the selected model is too small for agent loops
+  // (heuristic in helpers/model-strength.ts), surface an inline italic note
+  // next to the chip. Classification is advisory; the dropdown behaves the
+  // same regardless of result. Re-evaluated on every change of currentModel.
+  // Must stay above the early returns below — Rules of Hooks: hook count
+  // can't change between renders, and isLoading flips false on first fetch.
+  const modelStrength = useMemo(
+    () => classifyModelStrength(currentModel?.name ?? ""),
+    [currentModel?.name],
+  );
+
   if (isLoading) {
     return (
       <Button
@@ -103,7 +115,7 @@ export function ModelSelector({
         disabled
       >
         <span className="text-accent-emerald-foreground">•</span>
-        <span>Loading...</span>
+        <span>{t("assistant.loading")}</span>
       </Button>
     );
   }
@@ -123,7 +135,10 @@ export function ModelSelector({
   }
 
   return (
-    <>
+    // gap-3: leaves room for the chip's focus ring (~4px outline + offset)
+    // so the italic warning to the right doesn't visually overlap it after
+    // the user clicks the dropdown and the button keeps keyboard focus.
+    <div className="flex items-center gap-3">
       <DropdownMenu open={isOpen} onOpenChange={setIsOpen}>
         <DropdownMenuTrigger asChild>
           <Button
@@ -138,7 +153,9 @@ export function ModelSelector({
                 className="h-4 w-4 shrink-0"
               />
             </span>
-            <span>{currentModel?.displayName || "Select model"}</span>
+            <span>
+              {currentModel?.displayName || t("assistant.selectModel")}
+            </span>
             <ForwardedIconComponent
               name={isOpen ? "ChevronUp" : "ChevronDown"}
               className="h-3 w-3"
@@ -236,6 +253,15 @@ export function ModelSelector({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      {modelStrength === "weak" && (
+        <span
+          data-testid="assistant-model-weak-hint"
+          className="select-none text-xs italic text-muted-foreground/70"
+          title="Smaller models may underperform on agent tasks"
+        >
+          Smaller models may underperform on agent tasks
+        </span>
+      )}
       {isManageProvidersOpen && (
         <ModelProviderModal
           open={isManageProvidersOpen}
@@ -243,6 +269,6 @@ export function ModelSelector({
           modelType="llm"
         />
       )}
-    </>
+    </div>
   );
 }

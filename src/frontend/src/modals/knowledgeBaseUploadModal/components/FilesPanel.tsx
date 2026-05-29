@@ -1,7 +1,7 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
-import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { formatFileSize } from "../utils";
 import { MetadataEditor, type MetadataPair } from "./MetadataEditor";
