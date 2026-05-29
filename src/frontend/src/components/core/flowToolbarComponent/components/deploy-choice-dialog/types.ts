@@ -3,6 +3,7 @@ import type {
   Deployment,
   DeploymentType,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getDeploymentDisplayName } from "@/pages/MainPage/pages/deploymentsPage/types";
 
 export interface FlowAttachment {
   deployment_id: string;
@@ -25,7 +26,7 @@ export function toReviewAttachment(
 
   return {
     deployment_id: deployment.id,
-    deployment_name: deployment.name,
+    deployment_name: getDeploymentDisplayName(deployment),
     deployment_type: deployment.type,
     flow_version_id: selectedFlowVersion.id,
     provider_snapshot_id: selectedFlowVersion.provider_snapshot_id,

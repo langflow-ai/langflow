@@ -19,37 +19,25 @@ from lfx.services.adapters.deployment.exceptions import (
 )
 from lfx.services.adapters.deployment.schema import _normalize_and_validate_id
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    WXO_SANITIZE_RE,
-    WXO_TRANSLATE,
-    ErrorPrefix,
-)
-
 if TYPE_CHECKING:
-    from collections.abc import Sequence
-
     from lfx.services.adapters.deployment.schema import (
         ConfigListParams,
         SnapshotListParams,
     )
 
+    from langflow.services.adapters.deployment.watsonx_orchestrate.constants import ErrorPrefix
+
 logger = logging.getLogger(__name__)
 
 
-def normalize_wxo_name(s: str) -> str:
-    return WXO_SANITIZE_RE.sub("", s.translate(WXO_TRANSLATE))
+def resolve_agent_description(description: str | None, *, agent_display_name: str) -> str:
+    """Resolve the required description content used for agent create payloads.
 
-
-def validate_wxo_name(name: str) -> str:
-    """Normalize and validate a wxO resource name."""
-    normalized_name = normalize_wxo_name(str(name))
-    if not normalized_name:
-        msg = "Deployment name must include at least one alphanumeric character."
-        raise InvalidContentError(message=msg)
-    if not normalized_name[0].isalpha():
-        msg = "Deployment name must start with a letter."
-        raise InvalidContentError(message=msg)
-    return normalized_name
+    wxO does not allow null or empty descriptions.
+    """
+    if description and (desc := description.strip()):
+        return desc
+    return f"Langflow deployment {agent_display_name}"
 
 
 def require_tool_id(tool_response: dict[str, Any]) -> str:
@@ -169,22 +157,15 @@ def build_agent_payload_from_values(
     *,
     agent_name: str,
     agent_display_name: str,
-    deployment_name: str,
-    description: str,
-    tool_ids: Sequence[str],
+    description: str | None,
+    tool_ids: list[str],
     llm: str,
 ) -> dict[str, Any]:
     return {
         "name": agent_name,
         "display_name": agent_display_name,
-        "description": str(description).strip() or f"Langflow deployment {deployment_name}",
-        "tools": list(tool_ids),
+        "description": resolve_agent_description(description, agent_display_name=agent_display_name),
+        "tools": tool_ids,
         "style": "default",
-        "llm": str(llm).strip(),
+        "llm": llm,
     }
-
-
-def extract_agent_tool_ids(agent: dict[str, Any]) -> list[str]:
-    # Shape source:
-    # - SDK/API agent payload uses "tools" as list[str] in this adapter flow.
-    return [str(tool_id) for tool_id in agent.get("tools", []) if tool_id]

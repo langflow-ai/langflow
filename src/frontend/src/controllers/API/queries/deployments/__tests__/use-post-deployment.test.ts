@@ -36,16 +36,16 @@ describe("usePostDeployment", () => {
 
   const validPayload: DeploymentCreateRequest = {
     provider_id: "prov-1",
-    name: "My Agent",
     description: "A test agent",
     type: "agent",
     provider_data: {
+      display_name: "My Agent",
       llm: "ibm/granite-3-8b-instruct",
       add_flows: [
         {
           flow_version_id: "fv-1",
           app_ids: ["app-1"],
-          tool_name: "my_tool",
+          tool_display_name: "My Tool",
         },
       ],
       connections: [
@@ -80,7 +80,7 @@ describe("usePostDeployment", () => {
     });
   });
 
-  it("sends add_flows without tool_name when not provided", async () => {
+  it("sends add_flows without tool_display_name when not provided", async () => {
     const payloadNoToolName: DeploymentCreateRequest = {
       ...validPayload,
       provider_data: {
@@ -94,6 +94,8 @@ describe("usePostDeployment", () => {
     await mutation.mutate(payloadNoToolName);
 
     const sentPayload = mockApiPost.mock.calls[0][1];
-    expect(sentPayload.provider_data.add_flows[0].tool_name).toBeUndefined();
+    expect(
+      sentPayload.provider_data.add_flows[0].tool_display_name,
+    ).toBeUndefined();
   });
 });
