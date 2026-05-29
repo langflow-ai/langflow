@@ -15,7 +15,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "arxiv", "search"]
 # but we list it here as a direct runtime dep so the bundle keeps building
 # even if lfx drops it later.
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx-nightly==0.5.0.dev56",
     "defusedxml>=0.7.1,<1.0.0",
 ]
 
