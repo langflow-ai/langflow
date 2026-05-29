@@ -272,7 +272,7 @@ class FileComponent(BaseFileComponent):
 
         This helps the Agent understand which files are available to read.
         """
-        base_description = type(self)._base_description
+        base_description = type(self)._base_description  # noqa: SLF001
 
         # Get the list of uploaded file paths
         file_paths = getattr(self, "path", None)
