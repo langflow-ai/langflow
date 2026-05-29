@@ -184,6 +184,9 @@ const config = {
             disableSearch: true,
           },
           theme: {
+            sidebar: {
+              backgroundColor: "transparent",
+            },
             colors: {
               http: {
                 get: "#3b82f6",
