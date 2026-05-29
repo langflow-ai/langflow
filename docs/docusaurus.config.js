@@ -180,6 +180,9 @@ const config = {
         ],
         theme: {
           primaryColor: "#7528FC",
+          options: {
+            disableSearch: true,
+          },
         },
       },
     ],
