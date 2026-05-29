@@ -179,9 +179,38 @@ const config = {
           },
         ],
         theme: {
-          primaryColor: "#7528FC",
+          primaryColor: "#F471B5",
           options: {
             disableSearch: true,
+          },
+          theme: {
+            colors: {
+              http: {
+                get: "#3b82f6",
+                post: "#10b981",
+                put: "#f59e0b",
+                delete: "#ef4444",
+                patch: "#8b5cf6",
+                head: "#6366f1",
+                options: "#6b7280",
+              },
+            },
+            schema: {
+              linesColor: "#F471B5",
+              requireLabelColor: "#F471B5",
+            },
+            rightPanel: {
+              backgroundColor: "#0d0d0f",
+              textColor: "#c6c6d1",
+            },
+            typography: {
+              code: {
+                color: "#F471B5",
+              },
+            },
+            codeBlock: {
+              backgroundColor: "#161618",
+            },
           },
         },
       },
