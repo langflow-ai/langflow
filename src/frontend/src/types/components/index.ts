@@ -150,6 +150,7 @@ export type NodeInputFieldComponentType = {
   isToolMode?: boolean;
   isPrimaryInput?: boolean;
   displayHandle?: boolean;
+  selected?: boolean;
 };
 
 export type IOJSONInputComponentType = {

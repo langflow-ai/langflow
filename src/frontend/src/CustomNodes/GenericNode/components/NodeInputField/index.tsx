@@ -44,6 +44,7 @@ export default function NodeInputField({
   isToolMode = false,
   isPrimaryInput = false,
   displayHandle = false,
+  selected = false,
 }: NodeInputFieldComponentType): JSX.Element {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
@@ -115,6 +116,7 @@ export default function NodeInputField({
       }`}
       nodeId={data.id}
       colorName={colorName}
+      selected={selected}
     />
   );
 

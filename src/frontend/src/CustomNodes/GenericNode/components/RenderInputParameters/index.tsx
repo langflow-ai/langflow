@@ -19,6 +19,7 @@ const RenderInputParameters = ({
   showNode,
   shownOutputs,
   showHiddenOutputs,
+  selected = false,
 }) => {
   const edges = useFlowStore((state) => state.edges);
 
@@ -134,6 +135,7 @@ const RenderInputParameters = ({
           isToolMode={isToolMode && template.tool_mode}
           isPrimaryInput={templateField === primaryInputFieldName}
           displayHandle={displayHandleMap.get(templateField) ?? false}
+          selected={selected}
         />
       );
     },

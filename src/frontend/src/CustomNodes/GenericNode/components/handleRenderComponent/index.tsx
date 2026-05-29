@@ -12,6 +12,7 @@ import {
 } from "../../../../utils/reactflowUtils";
 import { cn, groupByFamily } from "../../../../utils/utils";
 import HandleTooltipComponent from "../HandleTooltipComponent";
+import { isInputHandleHidden } from "./inputHandleVisibility";
 
 const BASE_HANDLE_STYLES = {
   width: "32px",
@@ -25,11 +26,14 @@ const BASE_HANDLE_STYLES = {
 
 const HandleContent = memo(function HandleContent({
   isNullHandle,
-  isMuted,
   handleColor,
   accentForegroundColorName,
   isHovered,
   openHandle,
+  selected,
+  hasConnectedEdge,
+  filterPresent,
+  isInConnectionMode,
   testIdComplement,
   title,
   showNode,
@@ -37,11 +41,14 @@ const HandleContent = memo(function HandleContent({
   nodeId,
 }: {
   isNullHandle: boolean;
-  isMuted: boolean;
   handleColor: string;
   accentForegroundColorName: string;
   isHovered: boolean;
   openHandle: boolean;
+  selected: boolean;
+  hasConnectedEdge: boolean;
+  filterPresent: boolean;
+  isInConnectionMode: boolean;
   testIdComplement?: string;
   title: string;
   showNode: boolean;
@@ -100,7 +107,7 @@ const HandleContent = memo(function HandleContent({
 
   const getNeonShadow = useCallback(
     (color: string, isActive: boolean) => {
-      if (isNullHandle || isMuted) return "none";
+      if (isNullHandle) return "none";
       if (!isActive) return `0 0 0 3px ${color}`;
       return [
         "0 0 0 1px hsl(var(--border))",
@@ -113,34 +120,61 @@ const HandleContent = memo(function HandleContent({
         `0 0 20px ${color}`,
       ].join(", ");
     },
-    [isNullHandle, isMuted],
+    [isNullHandle],
+  );
+
+  // Input handles are invisible by default and revealed on hover, node
+  // selection, connection, or while a connection drag/filter is active.
+  // Null handles always stay visible (grayed) so an in-progress drag can show
+  // incompatible targets.
+  const isHidden = useMemo(
+    () =>
+      !isNullHandle &&
+      isInputHandleHidden({
+        left,
+        isHovered,
+        selected,
+        hasConnectedEdge,
+        filterPresent,
+        isInConnectionMode,
+      }),
+    [
+      isNullHandle,
+      left,
+      isHovered,
+      selected,
+      hasConnectedEdge,
+      filterPresent,
+      isInConnectionMode,
+    ],
   );
 
   const contentStyle = useMemo(
     () => ({
       background: isNullHandle ? "hsl(var(--border))" : handleColor,
-      width: isMuted && !isNullHandle ? "6px" : "10px",
-      height: isMuted && !isNullHandle ? "6px" : "10px",
+      width: "10px",
+      height: "10px",
       transition: "all 0.2s",
-      opacity: isMuted && !isNullHandle ? 0 : 1,
+      opacity: isHidden ? 0 : 1,
       boxShadow: getNeonShadow(
         accentForegroundColorName,
         isHovered || openHandle,
       ),
       animation:
-        (isHovered || openHandle) && !isNullHandle && !isMuted
+        (isHovered || openHandle) && !isNullHandle
           ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
       border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
     }),
     [
       isNullHandle,
-      isMuted,
+      isHidden,
       handleColor,
       getNeonShadow,
       accentForegroundColorName,
       isHovered,
       openHandle,
+      nodeId,
     ],
   );
 
@@ -168,6 +202,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement,
   nodeId,
   colorName,
+  selected = false,
 }: {
   left: boolean;
   tooltipTitle?: string;
@@ -181,6 +216,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   testIdComplement?: string;
   nodeId: string;
   colorName?: string[];
+  selected?: boolean;
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
@@ -251,7 +287,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
     filterPresent,
     currentFilter,
     isNullHandle,
-    isMuted,
+    hasConnectedEdge,
     handleColor,
     accentForegroundColorName,
   } = useMemo(() => {
@@ -353,10 +389,6 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           color: handleColorName,
         };
 
-    const isModelType = id?.type === "model";
-    const isMuted =
-      isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
-
     return {
       sameNode: sameDraggingNode || sameFilterNode,
       ownHandle: ownDraggingHandle || ownFilterHandle,
@@ -366,7 +398,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
       filterPresent,
       currentFilter,
       isNullHandle,
-      isMuted,
+      hasConnectedEdge: !!connectedEdge,
       handleColor,
     };
   }, [
@@ -476,11 +508,14 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
         >
           <HandleContent
             isNullHandle={isNullHandle ?? false}
-            isMuted={isMuted ?? false}
             handleColor={handleColor}
             accentForegroundColorName={accentForegroundColorName}
             isHovered={isHovered}
             openHandle={openHandle}
+            selected={selected}
+            hasConnectedEdge={hasConnectedEdge ?? false}
+            filterPresent={!!filterPresent}
+            isInConnectionMode={isInConnectionMode}
             testIdComplement={testIdComplement}
             title={title}
             showNode={showNode}
