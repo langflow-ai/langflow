@@ -60,6 +60,10 @@ const useAssistantManagerStore = create<AssistantManagerStoreType>(
     setAssistantSidebarOpen: (assistantSidebarOpen: boolean) => {
       set({ assistantSidebarOpen });
     },
+    isAssistantProcessing: false,
+    setAssistantProcessing: (isAssistantProcessing: boolean) => {
+      set({ isAssistantProcessing });
+    },
     takeSnapshot: () => {
       const currentFlowId = get().currentFlowId;
       // push the current graph to the past state

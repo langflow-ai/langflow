@@ -205,6 +205,94 @@ class TestQAResponse:
             assert len(complete_events) == 1
 
 
+class TestCompoundOrchestration:
+    """Compound prompt → the SINGLE agent loop, no phase recursion.
+
+    `component_then_flow` goes to the FlowBuilderAssistant (which has the
+    generate_component tool). ONE agent turn owns the whole inline request and
+    calls generate_component → search_components → build_flow → run_flow as
+    tools. Single-intent requests keep their existing dedicated paths
+    (covered by TestComponentGeneration / the build-flow tests).
+    """
+
+    @pytest.mark.asyncio
+    async def test_compound_routes_to_single_agent_loop_no_phase_recursion(self):
+        mock_stream = MagicMock(
+            side_effect=lambda **_kw: _make_flow_events([("end", {"result": "14 is not prime."})])()
+        )
+        mock_classify = AsyncMock(return_value=_make_intent("component_then_flow"))
+
+        with (
+            patch(f"{MODULE}.classify_intent", mock_classify),
+            patch(f"{MODULE}.execute_flow_file_streaming", mock_stream),
+            # The agent's build emits set_flow (it used build_flow as a tool).
+            patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow"}], [], []]),
+            patch(f"{MODULE}.extract_response_text", return_value="14 is not prime."),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            events = await _collect_events(
+                execute_flow_with_validation_streaming(
+                    flow_filename="TestFlow",
+                    input_value="create a prime checker component then build a flow with it and run it with 14",
+                    global_variables={},
+                    max_retries=1,
+                )
+            )
+
+        blob = "\n".join(events)
+        # Routed to the single FlowBuilderAssistant loop — NOT the component
+        # path, and NOT a second recursive turn.
+        assert mock_stream.call_count == 1, blob[:800]
+        assert mock_stream.call_args.kwargs["flow_filename"].startswith("flow_builder_assistant")
+        # The compound request never went through component-code validation
+        # (the agent owns component creation as a tool, in-loop).
+        assert not any('"validated"' in e for e in events), blob[:800]
+        completes = [e for e in events if '"event": "complete"' in e]
+        assert len(completes) == 1, blob[:800]
+        assert not any('"event": "error"' in e for e in events), blob[:800]
+
+
+class TestBuildAndRunAutoApply:
+    """A 'build a flow AND run it' request must auto-apply to the canvas.
+
+    Bug: a non-compound build_flow that ALSO asks to run ("crie um flow
+    ... e rode") emitted set_flow GATED behind the Continue card and the
+    agent claimed "coloquei no canvas" — but the canvas stayed empty
+    (only compound `component_then_flow` set auto_apply). Gating a flow
+    the user explicitly asked to RUN is contradictory. Deterministic,
+    from the user's intent — never the LLM's wording.
+    """
+
+    @pytest.mark.asyncio
+    async def test_build_plus_run_sets_auto_apply_and_skips_the_continue_gate(self):
+        mock_stream = MagicMock(side_effect=lambda **_kw: _make_flow_events([("end", {"result": "17 é primo."})])())
+        mock_classify = AsyncMock(return_value=_make_intent("build_flow"))
+
+        with (
+            patch(f"{MODULE}.classify_intent", mock_classify),
+            patch(f"{MODULE}.execute_flow_file_streaming", mock_stream),
+            patch(f"{MODULE}.drain_flow_events", side_effect=[[{"action": "set_flow"}], [], []]),
+            patch(f"{MODULE}.extract_response_text", return_value="17 é primo."),
+            patch("asyncio.sleep", new_callable=AsyncMock),
+        ):
+            events = await _collect_events(
+                execute_flow_with_validation_streaming(
+                    flow_filename="flow_builder_assistant",
+                    input_value="crie um flow com um agent que identifica primos e rode esse flow",
+                    global_variables={},
+                    max_retries=1,
+                )
+            )
+
+        blob = "\n".join(events)
+        set_flow_events = [e for e in events if '"action": "set_flow"' in e]
+        assert set_flow_events, blob[:800]
+        # The built flow is APPLIED, not proposed-and-gated.
+        assert any('"auto_apply": true' in e for e in set_flow_events), blob[:800]
+        assert not any('"step": "flow_proposal_ready"' in e for e in events), blob[:800]
+        assert not any('"event": "error"' in e for e in events), blob[:800]
+
+
 class TestComponentGeneration:
     """Tests for component generation flow."""
 
@@ -511,3 +599,209 @@ class TestErrorHandling:
 
             error_events = [e for e in events if "error" in e.lower() or "no result" in e.lower()]
             assert len(error_events) >= 1
+
+
+class TestFlowProposalReady:
+    """Tests for the flow_proposal_ready signal.
+
+    Emitted only when a build-from-scratch set_flow action was produced by the
+    agent during a build_flow intent. The signal lets the frontend gate the
+    destructive canvas replacement behind an explicit user Continue/Dismiss
+    step. Incremental edits (add_component, connect, configure, edit_field)
+    MUST NOT trigger this signal — they keep applying live to the canvas.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_emit_flow_proposal_ready_when_build_flow_intent_with_set_flow_event(self):
+        """When agent emits a set_flow action during build_flow intent, emit flow_proposal_ready."""
+        flow_gen = _make_flow_events([("end", {"result": "Flow built"})])
+        # First drain returns set_flow (build_flow tool fired); subsequent drains return [].
+        drain_calls = [[{"action": "set_flow", "flow": {"data": {"nodes": [], "edges": []}}}], []]
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("build_flow"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", side_effect=drain_calls + [[]] * 10),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build me a chatbot",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            proposal_events = [e for e in events if "flow_proposal_ready" in e]
+            assert proposal_events, f"Expected flow_proposal_ready step in SSE stream. Events: {events}"
+
+    @pytest.mark.asyncio
+    async def test_should_not_emit_flow_proposal_ready_when_build_flow_intent_with_only_incremental_edits(self):
+        """Incremental edits (add_component / configure) must not trigger the proposal gate."""
+        flow_gen = _make_flow_events([("end", {"result": "Edits applied"})])
+        drain_calls = [
+            [
+                {"action": "add_component", "node": {"id": "n1"}},
+                {"action": "configure", "component_id": "n1", "params": {"x": 1}},
+            ],
+            [],
+        ]
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("build_flow"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", side_effect=drain_calls + [[]] * 10),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="add a chatinput",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            assert not any("flow_proposal_ready" in e for e in events), (
+                f"Did NOT expect flow_proposal_ready for incremental-edits-only run. Events: {events}"
+            )
+
+    @pytest.mark.asyncio
+    async def test_should_not_emit_flow_proposal_ready_for_generate_component_intent(self):
+        """Component generation path never emits the flow proposal signal."""
+        flow_gen = _make_flow_events([("end", {"result": "class Foo(Component): pass"})])
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("generate_component"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="create a component",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            assert not any("flow_proposal_ready" in e for e in events)
+
+    @pytest.mark.asyncio
+    async def test_should_not_emit_flow_proposal_ready_for_question_intent(self):
+        """Q&A path never emits the flow proposal signal."""
+        flow_gen = _make_flow_events([("token", "Langflow is..."), ("end", {"result": "Langflow is..."})])
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("question"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", return_value=[]),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="what is langflow",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            assert not any("flow_proposal_ready" in e for e in events)
+
+    @pytest.mark.asyncio
+    async def test_should_emit_flow_proposal_ready_before_complete_event(self):
+        """The flow_proposal_ready step must precede the complete event.
+
+        The frontend uses this ordering to render the Continue gate before
+        finalizing the message — if `complete` arrived first the message
+        would transition to its terminal state and the gate would never render.
+        """
+        flow_gen = _make_flow_events([("end", {"result": "ok"})])
+        drain_calls = [[{"action": "set_flow", "flow": {"data": {"nodes": [], "edges": []}}}], []]
+
+        with (
+            patch(
+                f"{MODULE}.classify_intent",
+                new_callable=AsyncMock,
+                return_value=_make_intent("build_flow"),
+            ),
+            patch(f"{MODULE}.execute_flow_file_streaming", return_value=flow_gen()),
+            patch(f"{MODULE}.drain_flow_events", side_effect=drain_calls + [[]] * 10),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="build",
+                global_variables={},
+            )
+            events = await _collect_events(gen)
+
+            proposal_idx = next(
+                (i for i, e in enumerate(events) if "flow_proposal_ready" in e),
+                -1,
+            )
+            complete_idx = next(
+                (i for i, e in enumerate(events) if '"event": "complete"' in e),
+                -1,
+            )
+            assert proposal_idx >= 0, "flow_proposal_ready missing"
+            assert complete_idx >= 0, "complete event missing"
+            assert proposal_idx < complete_idx, (
+                f"flow_proposal_ready (idx {proposal_idx}) must come before complete (idx {complete_idx})"
+            )
+
+
+class TestCurrentUserIdContextVarIsolation:
+    """SECURITY regression — ``_current_user_id_var`` MUST stay clean across requests.
+
+    Bug shape: ``set_current_user_id`` was called above the ``try:`` block,
+    leaving a 37-line gap in which an exception (e.g. inside
+    ``inject_conversation_history`` or any pre-try helper) would bypass
+    the matching ``reset_current_user_id`` in the ``finally`` clause. The
+    next request reusing the same asyncio task would inherit the stale
+    user_id and resolve the wrong user's components / registry overlay.
+    """
+
+    @pytest.mark.asyncio
+    async def test_should_not_leak_current_user_id_when_pre_try_setup_raises(self):
+        from langflow.agentic.services.user_components_context import (
+            current_user_id,
+            reset_current_user_id,
+        )
+
+        # Start from a known-clean state so the post-raise assertion is
+        # unambiguous (this is also how a freshly spawned asyncio task arrives).
+        reset_current_user_id()
+        assert current_user_id() is None
+
+        def boom(*_args, **_kwargs):
+            msg = "simulated mid-handler exception in the pre-try setup gap"
+            raise RuntimeError(msg)
+
+        with (
+            patch(f"{MODULE}.classify_intent", AsyncMock(return_value=_make_intent())),
+            # inject_conversation_history runs in the gap between set_current_user_id
+            # and the main try block — forcing it to raise reproduces the leak.
+            patch(f"{MODULE}.inject_conversation_history", boom),
+        ):
+            gen = execute_flow_with_validation_streaming(
+                flow_filename="TestFlow",
+                input_value="hello",
+                global_variables={},
+                session_id="session-leak-test",
+                user_id="user-alice",
+            )
+            with pytest.raises(RuntimeError, match="simulated mid-handler exception"):
+                await _collect_events(gen)
+
+        assert current_user_id() is None, (
+            "ContextVar leaked: next request on this asyncio task would inherit "
+            "'user-alice' as the current_user_id. set_current_user_id must live "
+            "inside the same try/finally that resets it."
+        )

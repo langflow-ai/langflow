@@ -19,6 +19,7 @@ let mockComponentsToUpdate: Array<{
   userEdited: boolean;
 }> = [];
 let mockAllowCustomComponents = true;
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 let mockTemplates: Record<string, any> = {};
 
 // Mock dependencies
@@ -285,6 +286,7 @@ describe("createUpdatedNode", () => {
     const existingOutputs = [
       { name: "existing", types: ["str"], display_name: "Existing" },
     ];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     (currentNode.data.node as any).outputs = existingOutputs;
 
     const newTemplate: APITemplateType = {
@@ -319,6 +321,7 @@ describe("refreshAllModelInputs", () => {
   it("should show success message when no model nodes exist", async () => {
     mockNodes = [];
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(mockSetSuccessData).toHaveBeenCalledWith({
@@ -329,6 +332,7 @@ describe("refreshAllModelInputs", () => {
   it("should not show notifications when silent option is true", async () => {
     mockNodes = [];
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any, { silent: true });
 
     expect(mockSetSuccessData).not.toHaveBeenCalled();
@@ -337,6 +341,7 @@ describe("refreshAllModelInputs", () => {
   it("should invalidate query cache when queryClient is provided", async () => {
     mockNodes = [];
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(mockQueryClient.invalidateQueries).toHaveBeenCalledWith({
@@ -375,6 +380,7 @@ describe("refreshAllModelInputs", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).toHaveBeenCalled();
@@ -403,6 +409,7 @@ describe("refreshAllModelInputs", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(mockSetSuccessData).toHaveBeenCalledWith({
@@ -429,6 +436,7 @@ describe("refreshAllModelInputs", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     // Should still call setNode to clear the invalid value
@@ -441,6 +449,7 @@ describe("refreshAllModelInputs", () => {
     const consoleWarnSpy = jest.spyOn(console, "warn").mockImplementation();
     (api.post as jest.Mock).mockRejectedValue(new Error("API Error"));
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(consoleWarnSpy).toHaveBeenCalled();
@@ -479,9 +488,11 @@ describe("refreshAllModelInputs", () => {
     );
 
     // Start first refresh
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     const firstRefresh = refreshAllModelInputs(mockQueryClient as any);
 
     // Try to start second refresh while first is in progress
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     const secondRefresh = refreshAllModelInputs(mockQueryClient as any);
 
     // Complete first refresh
@@ -522,6 +533,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     ];
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).not.toHaveBeenCalled();
@@ -560,6 +572,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).toHaveBeenCalledTimes(1);
@@ -601,6 +614,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).toHaveBeenCalledTimes(1);
@@ -643,6 +657,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     // Only the fresh node should have been refreshed
@@ -660,6 +675,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     };
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).not.toHaveBeenCalled();
@@ -680,6 +696,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     ];
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).not.toHaveBeenCalled();
@@ -699,6 +716,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     };
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).not.toHaveBeenCalled();
@@ -720,6 +738,7 @@ describe("refreshAllModelInputs — outdated component guard", () => {
       },
     });
 
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     await refreshAllModelInputs(mockQueryClient as any);
 
     expect(api.post).toHaveBeenCalledTimes(1);

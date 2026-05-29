@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { DeploymentType } from "../../types";
@@ -16,16 +17,19 @@ export function ReviewSummaryCard({
   reviewFlows,
   selectedLlm,
 }: ReviewSummaryCardProps) {
+  const { t } = useTranslation();
   return (
     <div className="rounded-xl border border-border bg-background p-4">
       <div className="grid grid-cols-2 gap-6">
         <div className="flex flex-col gap-3">
           <span className="text-sm font-medium text-foreground">
-            Deployment
+            {t("deployments.deploymentLabel")}
           </span>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-10 text-xs text-muted-foreground">Type</span>
+              <span className="w-24 text-xs text-muted-foreground">
+                {t("deployments.labelType")}
+              </span>
               <div className="flex items-center gap-1.5">
                 <ForwardedIconComponent
                   name={deploymentType === "agent" ? "Bot" : "Server"}
@@ -37,15 +41,17 @@ export function ReviewSummaryCard({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-10 text-xs text-muted-foreground">Name</span>
+              <span className="w-24 text-xs text-muted-foreground">
+                {t("deployments.labelName")}
+              </span>
               <span className="text-sm text-foreground">
                 {deploymentName || "—"}
               </span>
             </div>
             {selectedLlm && (
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">
-                  Model
+                <span className="w-24 text-xs text-muted-foreground">
+                  {t("deployments.labelModel")}
                 </span>
                 <span className="text-sm text-foreground">{selectedLlm}</span>
               </div>
@@ -55,7 +61,7 @@ export function ReviewSummaryCard({
 
         <div className="flex flex-col gap-3">
           <span className="text-sm font-medium text-foreground">
-            Attached Flows
+            {t("deployments.attachedFlowsLabel")}
           </span>
           <div className="flex flex-col gap-1.5">
             {reviewFlows.length === 0 ? (

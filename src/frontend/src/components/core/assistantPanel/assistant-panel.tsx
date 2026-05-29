@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
+import { useSidebar } from "@/components/ui/sidebar";
 import type { AgenticStepType } from "@/controllers/API/queries/agentic";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { cn } from "@/utils/utils";
 import type {
   AssistantModel,
@@ -42,6 +45,7 @@ interface AssistantInputWithScrollProps {
   autoFocus?: boolean;
   draftMessage?: string;
   onDraftChange?: (draft: string) => void;
+  isRefiningPlan?: boolean;
 }
 
 function AssistantInputWithScroll({
@@ -53,6 +57,7 @@ function AssistantInputWithScroll({
   autoFocus,
   draftMessage,
   onDraftChange,
+  isRefiningPlan,
 }: AssistantInputWithScrollProps) {
   const { scrollToBottom } = useStickToBottomContext();
 
@@ -71,6 +76,7 @@ function AssistantInputWithScroll({
       autoFocus={autoFocus}
       draftMessage={draftMessage}
       onDraftChange={onDraftChange}
+      isRefiningPlan={isRefiningPlan}
       compact
     />
   );
@@ -79,6 +85,12 @@ function AssistantInputWithScroll({
 export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const { hasEnabledModels } = useEnabledModels();
   const panelRef = useRef<HTMLDivElement>(null);
+  // Mirror the FlowPage sidebar's open state. When the sidebar is expanded
+  // the canvas is offset 280px from the viewport's left edge, so the panel
+  // shifts right by half that (140px) to align with the canvas center. When
+  // collapsed (offcanvas slid off), the canvas takes the full viewport and
+  // the panel sits at plain ``left-1/2``.
+  const isSidebarOpen = useSidebar().open;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -120,11 +132,77 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     currentStep,
     handleSend,
     handleApprove,
+    handleUpdateFlowAction,
+    handleApplyFlowProposal,
+    handleDismissFlowProposal,
+    handleApprovePlan,
+    handleDismissPlan,
+    handleResetPlan,
+    handleAcknowledgeValidation,
+    isRefiningPlan,
+    skipAll,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,
     loadSession,
   } = useAssistantChat();
+
+  // Sync processing state to store so the canvas can lock during assistant work
+  const setAssistantProcessing = useAssistantManagerStore(
+    (state) => state.setAssistantProcessing,
+  );
+  useEffect(() => {
+    setAssistantProcessing(isProcessing);
+    return () => setAssistantProcessing(false);
+  }, [isProcessing, setAssistantProcessing]);
+
+  // Welcome → Assistant hand-off: when the user submits text from the
+  // FlowBuilderWelcome overlay, the typed prompt is stashed as
+  // ``pendingMessage`` and the panel is told to open. Once the panel is
+  // visible AND a model is available (read from localStorage so we don't
+  // race the ModelSelector's auto-select effect), fire a single
+  // ``handleSend`` with the pending text, then clear so a remount or
+  // re-open doesn't replay it.
+  const pendingMessage = useFlowBuilderWelcomeStore(
+    (state) => state.pendingMessage,
+  );
+  const clearPendingMessage = useFlowBuilderWelcomeStore(
+    (state) => state.clearPendingMessage,
+  );
+  useEffect(() => {
+    if (!isOpen || !pendingMessage) return;
+    let saved: AssistantModel | null = null;
+    try {
+      const raw = localStorage.getItem("langflow-assistant-selected-model");
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed && parsed.provider && parsed.name) {
+          saved = parsed as AssistantModel;
+        }
+      }
+    } catch {
+      // localStorage may be unavailable (private browsing) — fall through;
+      // handleSend will early-return on null model and the welcome's pending
+      // message stays around for a manual retry.
+    }
+    if (!saved) return;
+    void handleSend(pendingMessage, saved);
+    clearPendingMessage();
+  }, [isOpen, pendingMessage, handleSend, clearPendingMessage]);
+
+  // When the panel opens with a pendingMessage in the store, the user just
+  // submitted from the welcome overlay. Capture that and lock a min-height
+  // so the panel doesn't open in its tiny compact form — the user has just
+  // committed an intent and needs vertical room for their auto-sent message
+  // + the assistant's reply to render without feeling cramped.
+  const [openedWithPending, setOpenedWithPending] = useState(false);
+  useEffect(() => {
+    if (isOpen && pendingMessage) {
+      setOpenedWithPending(true);
+    } else if (!isOpen) {
+      setOpenedWithPending(false);
+    }
+  }, [isOpen, pendingMessage]);
 
   const { sessions, saveCurrentSession, switchSession, deleteSession } =
     useSessionHistory(sessionId, messages, loadSession);
@@ -143,6 +221,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   const hasMessages = messages.length > 0;
   const [hasExpandedOnce, setHasExpandedOnce] = useState(false);
+  const [hasUserResized, setHasUserResized] = useState(false);
 
   // Track if panel has ever shown messages (to keep expanded size after new session)
   useEffect(() => {
@@ -151,10 +230,16 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
   // Reset when panel is closed
   useEffect(() => {
-    if (!isOpen) setHasExpandedOnce(false);
+    if (!isOpen) {
+      setHasExpandedOnce(false);
+      setHasUserResized(false);
+    }
   }, [isOpen]);
 
-  const useExpandedSize = hasMessages || hasExpandedOnce;
+  // Once the user grabs a handle in the empty state, treat the panel as
+  // expanded so its dimensions become driven by panelSize (instead of
+  // auto-fitting to the input height).
+  const useExpandedSize = hasMessages || hasExpandedOnce || hasUserResized;
   const [panelSize, setPanelSize] = useState(getStoredSize);
   const resizeCleanupRef = useRef<(() => void) | null>(null);
 
@@ -169,10 +254,42 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     (e: React.MouseEvent, edges: { x?: "left" | "right"; y?: "top" }) => {
       e.preventDefault();
       e.stopPropagation();
+      // Only vertical drags transition the empty panel into expanded mode
+      // (height becomes panelSize-driven, input is pushed to the bottom).
+      // Horizontal-only drags should just widen the auto-height panel.
+      //
+      // Seed startH from the actual rendered height (not panelSize.height)
+      // when promoting from compact mode. The compact panel is auto-sized to
+      // the input (~200px) while panelSize.height carries the *expanded*
+      // default/stored value (~600px). Without this seed, the first pixel of
+      // drag flips useExpandedSize and snaps the panel from ~200px to 600px
+      // in one frame — visible as a "glitch" jump on first resize after open.
       const startX = e.clientX;
       const startY = e.clientY;
       const startW = panelSize.width;
-      const startH = panelSize.height;
+      let startH = panelSize.height;
+
+      if (edges.y === "top") {
+        if (!useExpandedSize && panelRef.current) {
+          const measuredH = panelRef.current.getBoundingClientRect().height;
+          if (measuredH > 0) {
+            startH = measuredH;
+            // Push the measured height into state before the flip so the
+            // very first frame after useExpandedSize becomes true renders at
+            // the measured height instead of the stored expanded default.
+            setPanelSize((prev) => ({ ...prev, height: measuredH }));
+          }
+        }
+        setHasUserResized(true);
+      }
+
+      // When the user starts dragging the compact panel taller, the measured
+      // start height is below ``MIN_SIZE.height``. Clamping to MIN_SIZE.height
+      // on the very first mousemove would snap the panel from ~200px to 400px
+      // in one frame. The per-drag effective floor lets the panel grow
+      // smoothly from its current size while still preventing the user from
+      // shrinking BELOW where they started.
+      const effectiveMinH = Math.min(MIN_SIZE.height, startH);
 
       const handleMouseMove = (ev: MouseEvent) => {
         let newW = startW;
@@ -190,7 +307,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
 
         setPanelSize({
           width: Math.min(MAX_SIZE.width, Math.max(MIN_SIZE.width, newW)),
-          height: Math.min(MAX_SIZE.height, Math.max(MIN_SIZE.height, newH)),
+          height: Math.min(MAX_SIZE.height, Math.max(effectiveMinH, newH)),
         });
       };
 
@@ -203,12 +320,24 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       const handleMouseUp = () => {
         cleanup();
         setPanelSize((prev) => {
+          // Clamp to the absolute floor in BOTH in-memory state and the
+          // persisted localStorage value. The per-drag ``effectiveMinH``
+          // intentionally lets a compact-promoted drag stay below
+          // ``MIN_SIZE.height`` while the mouse is held; once the user
+          // releases, the panel commits to at least the floor so a later
+          // transition (e.g. loaded session messages flipping
+          // ``useExpandedSize`` to true) doesn't render the panel
+          // uncomfortably small.
+          const committed = {
+            ...prev,
+            height: Math.max(MIN_SIZE.height, prev.height),
+          };
           try {
-            localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(prev));
+            localStorage.setItem(PANEL_SIZE_KEY, JSON.stringify(committed));
           } catch {
             // localStorage may be unavailable (private browsing)
           }
-          return prev;
+          return committed;
         });
       };
 
@@ -216,27 +345,41 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
       document.addEventListener("mouseup", handleMouseUp);
       resizeCleanupRef.current = cleanup;
     },
-    [panelSize],
+    [panelSize, useExpandedSize],
   );
 
   if (!isOpen) return null;
 
   const containerClasses = cn(
     "flex flex-col transition-[opacity,transform] duration-200 fixed shadow-xl will-change-[opacity,transform]",
-    "z-50 bottom-16 left-[calc(50%+140px)] -translate-x-1/2 rounded-2xl border border-border",
+    "z-50 bottom-16 -translate-x-1/2 rounded-2xl border border-border",
+    isSidebarOpen ? "left-[calc(50%+140px)]" : "left-1/2",
     "opacity-100 translate-y-0 max-w-[calc(100vw-2rem)]",
   );
+
+  // When the panel was opened from a welcome submit, enforce a 18.75rem
+  // (300px) floor so the auto-sent message + assistant reply have room to
+  // breathe. Compact-mode (no messages yet) would otherwise render at the
+  // input height (~200px) — too short for the user to see what's happening.
+  const pendingMinHeight = openedWithPending ? "18.75rem" : undefined;
 
   const containerStyle = useExpandedSize
     ? {
         width: panelSize.width,
         height: panelSize.height,
         minWidth: "28.5rem",
-        minHeight: MIN_SIZE.height,
+        minHeight: pendingMinHeight,
+        // No inline ``minHeight`` here — that would clamp the rendered height
+        // BEFORE the resize handler runs, snapping a freshly-promoted compact
+        // panel from its measured ~200px straight to MIN_SIZE.height in one
+        // frame. The mousemove clamp (``effectiveMinH``) enforces the floor
+        // for actual user drags instead. (Exception: the welcome-submit
+        // override above intentionally clamps.)
       }
     : {
         width: panelSize.width,
         minWidth: "28.5rem",
+        minHeight: pendingMinHeight,
       };
 
   return (
@@ -258,6 +401,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           onSelectSession={switchSession}
           onDeleteSession={deleteSession}
           isExpanded={useExpandedSize}
+          skipAll={skipAll}
         />
         {!hasEnabledModels && !hasMessages ? (
           <AssistantNoModelsState />
@@ -273,7 +417,15 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   key={msg.id}
                   message={msg}
                   onApprove={handleApproveAndClose}
+                  onUpdateFlowAction={handleUpdateFlowAction}
+                  onApplyFlowProposal={handleApplyFlowProposal}
+                  onDismissFlowProposal={handleDismissFlowProposal}
+                  onApprovePlan={handleApprovePlan}
+                  onDismissPlan={handleDismissPlan}
+                  onResetPlan={handleResetPlan}
                   onRetry={hasEnabledModels ? handleRetry : undefined}
+                  skipApprovalGate={skipAll}
+                  onAcknowledgeValidation={handleAcknowledgeValidation}
                 />
               ))}
             </StickToBottom.Content>
@@ -288,11 +440,12 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               onDraftChange={(draft) => {
                 draftMessageCache = draft;
               }}
+              isRefiningPlan={isRefiningPlan}
             />
           </StickToBottom>
         ) : (
           <>
-            {hasExpandedOnce && <div className="flex-1" />}
+            {useExpandedSize && <div className="flex-1" />}
             <AssistantInput
               onSend={handleSend}
               onStop={handleStopGeneration}
@@ -305,46 +458,49 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
               onDraftChange={(draft) => {
                 draftMessageCache = draft;
               }}
+              isRefiningPlan={isRefiningPlan}
             />
           </>
         )}
       </div>
 
-      {/* Edge resize handles — invisible hitboxes with hover highlight */}
-      {useExpandedSize && (
-        <>
-          {/* Left edge */}
-          <div
-            data-resize-handle
-            className="absolute top-3 bottom-3 -left-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "left" })}
-          />
-          {/* Right edge */}
-          <div
-            data-resize-handle
-            className="absolute top-3 bottom-3 -right-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "right" })}
-          />
-          {/* Top edge */}
-          <div
-            data-resize-handle
-            className="absolute -top-[5px] right-3 left-3 z-30 h-[10px] cursor-ns-resize rounded-full transition-colors hover:bg-primary/20"
-            onMouseDown={(e) => handleEdgeResize(e, { y: "top" })}
-          />
-          {/* Top-left corner */}
-          <div
-            data-resize-handle
-            className="absolute -top-[5px] -left-[5px] z-30 h-[14px] w-[14px] cursor-nw-resize rounded-full transition-colors hover:bg-primary/30"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "left", y: "top" })}
-          />
-          {/* Top-right corner */}
-          <div
-            data-resize-handle
-            className="absolute -top-[5px] -right-[5px] z-30 h-[14px] w-[14px] cursor-ne-resize rounded-full transition-colors hover:bg-primary/30"
-            onMouseDown={(e) => handleEdgeResize(e, { x: "right", y: "top" })}
-          />
-        </>
-      )}
+      {/* Edge resize handles — invisible hitboxes with hover highlight.
+          Always rendered: the empty state needs them too so the user can
+          widen the panel before sending the first message. First drag flips
+          hasUserResized → panel transitions from auto-height to
+          panelSize-driven dimensions. */}
+      <>
+        {/* Left edge */}
+        <div
+          data-resize-handle
+          className="absolute top-3 bottom-3 -left-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "left" })}
+        />
+        {/* Right edge */}
+        <div
+          data-resize-handle
+          className="absolute top-3 bottom-3 -right-[5px] z-30 w-[10px] cursor-ew-resize rounded-full transition-colors hover:bg-primary/20"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "right" })}
+        />
+        {/* Top edge */}
+        <div
+          data-resize-handle
+          className="absolute -top-[5px] right-3 left-3 z-30 h-[10px] cursor-ns-resize rounded-full transition-colors hover:bg-primary/20"
+          onMouseDown={(e) => handleEdgeResize(e, { y: "top" })}
+        />
+        {/* Top-left corner */}
+        <div
+          data-resize-handle
+          className="absolute -top-[5px] -left-[5px] z-30 h-[14px] w-[14px] cursor-nw-resize rounded-full transition-colors hover:bg-primary/30"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "left", y: "top" })}
+        />
+        {/* Top-right corner */}
+        <div
+          data-resize-handle
+          className="absolute -top-[5px] -right-[5px] z-30 h-[14px] w-[14px] cursor-ne-resize rounded-full transition-colors hover:bg-primary/30"
+          onMouseDown={(e) => handleEdgeResize(e, { x: "right", y: "top" })}
+        />
+      </>
     </div>
   );
 }

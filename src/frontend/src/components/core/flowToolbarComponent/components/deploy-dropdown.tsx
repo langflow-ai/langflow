@@ -73,16 +73,17 @@ export default function PublishDropdown({
             setCurrentFlow(updatedFlow);
           } else {
             setErrorData({
-              title: "Failed to save flow",
-              list: ["Flows variable undefined"],
+              title: t("errors.failedToSaveFlow"),
+              list: [t("errors.flowsVariableUndefined")],
             });
           }
         },
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         onError: (e: any) => {
           const detail =
             e.response?.data?.detail || e.message || "Unknown error";
           setErrorData({
-            title: "Failed to save flow",
+            title: t("errors.failedToSaveFlow"),
             list: [detail],
           });
         },

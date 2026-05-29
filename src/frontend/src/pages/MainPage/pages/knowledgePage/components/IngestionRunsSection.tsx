@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   type PaginatedIngestionRunResponse,
@@ -30,13 +31,13 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
-  file_upload: "File Upload",
-  folder: "Folder",
-  template: "Flow Template",
-  google_drive: "Google Drive",
-  s3: "AWS S3",
-  onedrive: "OneDrive",
-  sharepoint: "SharePoint",
+  file_upload: "knowledge.ingestionSourceFileUpload",
+  folder: "knowledge.ingestionSourceFolder",
+  template: "knowledge.ingestionSourceTemplate",
+  google_drive: "knowledge.ingestionSourceGoogleDrive",
+  s3: "knowledge.ingestionSourceS3",
+  onedrive: "knowledge.ingestionSourceOneDrive",
+  sharepoint: "knowledge.ingestionSourceSharePoint",
 };
 
 function formatBytes(bytes: number): string {
@@ -58,6 +59,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
+  const { t } = useTranslation();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const { data, isLoading, isError } = useGetIngestionRuns(
     {
@@ -84,7 +86,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
   return (
     <div className="space-y-3 px-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Ingestion Runs</h4>
+        <h4 className="text-sm font-medium">{t("knowledge.ingestionRuns")}</h4>
         {data?.total ? (
           <span className="text-xs text-muted-foreground">
             {data.total} total
@@ -93,7 +95,9 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
       </div>
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Loading runs…</div>
+        <div className="text-sm text-muted-foreground">
+          {t("knowledge.loadingRuns")}
+        </div>
       )}
       {isError && (
         <div className="text-sm text-destructive">
@@ -111,8 +115,9 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
         {data?.runs.map((run) => {
           const statusClass =
             STATUS_STYLES[run.status] ?? STATUS_STYLES.pending;
-          const sourceLabel =
-            SOURCE_TYPE_LABELS[run.source_type] ?? run.source_type;
+          const sourceLabel = SOURCE_TYPE_LABELS[run.source_type]
+            ? t(SOURCE_TYPE_LABELS[run.source_type])
+            : run.source_type;
           return (
             <button
               key={run.id}

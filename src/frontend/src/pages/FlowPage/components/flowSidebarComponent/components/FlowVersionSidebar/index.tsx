@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   SidebarGroupLabel,
@@ -14,6 +15,7 @@ import { useFlowVersionSidebar } from "./use-flow-version-sidebar";
 export default function FlowVersionSidebarContent({
   flowId,
 }: FlowVersionSidebarContentProps) {
+  const { t } = useTranslation();
   const {
     selectedId,
     deleteDialogEntry,
@@ -36,7 +38,7 @@ export default function FlowVersionSidebarContent({
     <>
       <div className="flex h-full flex-col">
         <SidebarGroupLabel className="flex items-center justify-between px-3 pt-3">
-          <span>Version History</span>
+          <span>{t("sidebar.nav.versionHistory")}</span>
           {versions && versions.length > 0 && (
             <span className="font-normal text-foreground/50">
               {versions.length}
@@ -48,7 +50,7 @@ export default function FlowVersionSidebarContent({
         {isEntryError && (
           <div className="flex items-center gap-2 bg-destructive/10 px-2 py-2">
             <span className="text-xs text-destructive">
-              Failed to load version data
+              {t("flowVersion.failedToLoadData")}
             </span>
           </div>
         )}
@@ -56,7 +58,7 @@ export default function FlowVersionSidebarContent({
         {processedPreview?.error && (
           <div className="flex items-center gap-2 bg-destructive/10 px-2 py-2">
             <span className="text-xs text-destructive">
-              This version's data could not be rendered for preview
+              {t("flowVersion.dataCannotBeRendered")}
             </span>
           </div>
         )}
@@ -71,9 +73,11 @@ export default function FlowVersionSidebarContent({
               >
                 <div className="flex w-full items-center justify-between">
                   <div className="flex flex-col items-start">
-                    <span className="font-medium text-sm pb-1">Current</span>
+                    <span className="font-medium text-sm pb-1">
+                      {t("flowVersion.currentLabel")}
+                    </span>
                     <span className="text-xs text-muted-foreground">
-                      Working version
+                      {t("flowVersion.workingVersion")}
                     </span>
                   </div>
                   {isViewingDraft && (
@@ -93,14 +97,14 @@ export default function FlowVersionSidebarContent({
             )}
             {isListError && (
               <div className="px-2 py-6 text-center text-xs text-destructive">
-                Failed to load versions
+                {t("flowVersion.failedToLoadVersions")}
               </div>
             )}
             {!isLoading &&
               !isListError &&
               (!versions || versions.length === 0) && (
                 <div className="px-2 py-6 text-center text-xs text-muted-foreground">
-                  No saved versions yet
+                  {t("flowVersion.noSavedVersions")}
                 </div>
               )}
 

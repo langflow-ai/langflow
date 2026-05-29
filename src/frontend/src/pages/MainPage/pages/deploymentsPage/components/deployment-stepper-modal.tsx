@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import {
   Dialog,
@@ -11,17 +12,20 @@ import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
 } from "../contexts/deployment-stepper-context";
+import { isDeploymentUpdatePayloadEmpty } from "../helpers/deployment-payload-builders";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import {
   DEFAULT_FLOW_NAME,
   type Deployment,
   type DeploymentProvider,
+  getDeploymentDisplayName,
   getSelectedFlowVersionKey,
   type ProviderAccount,
   type SelectedFlowVersion,
@@ -43,7 +47,7 @@ interface DeploymentStepperModalProps {
     providerId: string,
   ) => void;
   initialFlowId?: string;
-  initialVersionByFlow?: Map<string, { versionId: string; versionTag: string }>;
+  initialVersionByFlow?: Map<string, SelectedFlowVersion>;
   initialProvider?: DeploymentProvider;
   initialInstance?: ProviderAccount;
   /** When provided, the modal opens in edit mode. */
@@ -60,6 +64,7 @@ export default function DeploymentStepperModal({
   initialInstance,
   editingDeployment,
 }: DeploymentStepperModalProps) {
+  const { t } = useTranslation();
   const [isDeploying, setIsDeploying] = useState(false);
   const isEditMode = !!editingDeployment;
   const { folderId } = useParams();
@@ -111,7 +116,7 @@ export default function DeploymentStepperModal({
         versionTag: `v${fv.version_number}`,
       });
       // Pre-populate tool names from the provider (may differ from flow name).
-      const providerToolName = fv.provider_data?.tool_name;
+      const providerToolName = fv.provider_data?.tool_display_name;
       if (providerToolName) {
         toolNames.set(key, providerToolName);
       }
@@ -169,7 +174,7 @@ export default function DeploymentStepperModal({
           {isLoadingEditData ? (
             <div className="flex flex-1 items-center justify-center">
               <span className="text-sm text-muted-foreground">
-                Loading deployment data...
+                {t("deployments.loadingDeploymentData")}
               </span>
             </div>
           ) : (
@@ -223,7 +228,9 @@ function DeploymentStepperModalContent({
     buildDeploymentUpdatePayload,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const showError = useErrorAlert();
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
@@ -251,7 +258,7 @@ function DeploymentStepperModalContent({
         const newAccount = await createProviderAccount(accountPayload);
         setSelectedInstance(newAccount);
       } catch (err: unknown) {
-        showError("Failed to create provider account", err);
+        showError(t("deployments.failedToCreateProviderAccount"), err);
         return;
       } finally {
         setIsCreatingAccount(false);
@@ -267,6 +274,12 @@ function DeploymentStepperModalContent({
 
       if (isEditMode) {
         const payload = buildDeploymentUpdatePayload();
+        if (isDeploymentUpdatePayloadEmpty(payload)) {
+          onDeployingChange(false);
+          setDeploymentPhase("idle");
+          setNoticeData({ title: t("deployments.noChangesToSave") });
+          return;
+        }
         await updateDeployment(payload);
         onDeployingChange(false);
         setOpen(false);
@@ -281,15 +294,11 @@ function DeploymentStepperModalContent({
 
       const payload = buildDeploymentPayload(providerId);
       const result = await createDeployment(payload);
-      if (
-        result &&
-        typeof result === "object" &&
-        "id" in result &&
-        "name" in result
-      ) {
+      if (result && typeof result === "object" && "id" in result) {
+        const deployment = result as Deployment;
         setCreatedDeployment({
           id: String(result.id),
-          name: String(result.name),
+          name: getDeploymentDisplayName(deployment),
         });
       }
       setDeploymentPhase("deployed");
@@ -297,8 +306,12 @@ function DeploymentStepperModalContent({
     } catch (err: unknown) {
       setDeploymentPhase("idle");
       onDeployingChange(false);
-      const action = isEditMode ? "update" : "create";
-      showError(`Failed to ${action} deployment`, err);
+      showError(
+        isEditMode
+          ? t("deployments.failedToUpdateDeployment")
+          : t("deployments.failedToCreateDeployment"),
+        err,
+      );
     }
   };
 
@@ -308,17 +321,23 @@ function DeploymentStepperModalContent({
     setOpen(false);
   };
 
-  const actionLabel = isEditMode ? "Update" : "Deploy";
+  const actionLabel = isEditMode
+    ? t("deployments.update")
+    : t("deployments.deploy");
   const actionIcon = isEditMode ? "Save" : "Rocket";
-  const progressLabel = isEditMode ? "Updating..." : "Deploying...";
+  const progressLabel = isEditMode
+    ? t("deployments.updating")
+    : t("deployments.deploying");
 
   return (
     <>
       <DialogTitle className="sr-only">
-        {isEditMode ? "Update Deployment" : "Create New Deployment"}
+        {isEditMode
+          ? t("deployments.updateDeployment")
+          : t("deployments.createNewDeploymentTitle")}
       </DialogTitle>
       <DialogDescription className="sr-only">
-        Step {currentStep} of {totalSteps}
+        {t("deployments.stepOf", { current: currentStep, total: totalSteps })}
       </DialogDescription>
 
       {/* Title + Stepper */}
@@ -328,10 +347,10 @@ function DeploymentStepperModalContent({
           data-testid="stepper-modal-title"
         >
           {isDeployed && !isEditMode
-            ? "Deployed"
+            ? t("deployments.deployed")
             : isEditMode
-              ? "Update Deployment"
-              : "Create New Deployment"}
+              ? t("deployments.updateDeployment")
+              : t("deployments.createNewDeploymentTitle")}
         </h2>
         <DeploymentStepper
           steps={!isEditMode && isDeployed ? CREATE_DEPLOYED_STEPS : undefined}

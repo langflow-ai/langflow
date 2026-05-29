@@ -22,6 +22,7 @@ import useAlertStore from "@/stores/alertStore";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -213,6 +214,10 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   };
 
   const isMobile = useIsMobile();
+  // When the welcome overlay is open, the FlowSidebarComponent should be
+  // completely hidden — the welcome paints its own faux rail and any flash
+  // of the real expanded sidebar is jarring on first paint.
+  const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
   const isSlidingContainerOpen = usePlaygroundStore((state) => state.isOpen);
   const setSlidingContainerOpen = usePlaygroundStore(
     (state) => state.setIsOpen,
@@ -275,12 +280,6 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
 
   return (
     <>
-      {/* Assistant Panel - single instance that handles both modes internally */}
-      <AssistantPanel
-        isOpen={assistantOpen}
-        onClose={() => setAssistantOpen(false)}
-      />
-
       <div className="flow-page-positioning">
         {currentFlow && (
           <div className="flex h-full overflow-hidden">
@@ -308,9 +307,30 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
                 defaultOpen={!isMobile}
                 segmentedSidebar={ENABLE_NEW_SIDEBAR}
               >
+                {/* Assistant Panel — single instance, mounted INSIDE the
+                    SidebarProvider so it can read sidebar open state via
+                    ``useSidebar`` and shift its horizontal position when the
+                    sidebar slides off-canvas. */}
+                <AssistantPanel
+                  isOpen={assistantOpen}
+                  onClose={() => setAssistantOpen(false)}
+                />
                 <FlowSearchProvider>
-                  {/* FlowSidebarComponent - stays in place */}
-                  {!view && <FlowSidebarComponent isLoading={isLoading} />}
+                  {/* FlowSidebarComponent - stays in place. Wrapped in a
+                      ``display: none`` container while the welcome is open
+                      so it never paints on first render (and never flashes
+                      while the welcome's open-effect catches up). The
+                      wrapper uses ``display: contents`` when visible so it
+                      doesn't break the parent flex layout. */}
+                  {!view && (
+                    <div
+                      style={{
+                        display: isWelcomeOpen ? "none" : "contents",
+                      }}
+                    >
+                      <FlowSidebarComponent isLoading={isLoading} />
+                    </div>
+                  )}
 
                   <main
                     className={cn(

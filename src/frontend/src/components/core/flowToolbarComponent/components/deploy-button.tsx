@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import DeploymentStepperModal from "@/pages/MainPage/pages/deploymentsPage/components/deployment-stepper-modal";
 import { useNavigateToTest } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-navigate-to-test";
@@ -6,6 +7,7 @@ import DeployChoiceDialog from "./deploy-choice-dialog";
 import { usePrepareDeploy } from "./deploy-choice-dialog/hooks/use-prepare-deploy";
 
 function DeployButtonInner() {
+  const { t } = useTranslation();
   const {
     currentFlowId,
     isPreparingDeploy,
@@ -44,7 +46,7 @@ function DeployButtonInner() {
           name="Rocket"
           className={`h-4 w-4 ${isPreparingDeploy ? "animate-pulse" : ""}`}
         />
-        <span className="font-normal text-mmd">Deploy</span>
+        <span className="font-normal text-mmd">{t("misc.deploy")}</span>
       </button>
       <DeployChoiceDialog
         open={choiceDialogOpen}
@@ -53,7 +55,9 @@ function DeployButtonInner() {
         flowId={currentFlowId ?? ""}
         snapshotVersionId={pendingSnapshotVersionId}
         snapshotVersionTag={
-          initialVersionByFlow.get(currentFlowId ?? "")?.versionTag ?? ""
+          Array.from(initialVersionByFlow.values()).find(
+            (entry) => entry.flowId === currentFlowId,
+          )?.versionTag ?? ""
         }
         onChooseNew={handleChooseNew}
         onUpdateComplete={handleUpdateComplete}

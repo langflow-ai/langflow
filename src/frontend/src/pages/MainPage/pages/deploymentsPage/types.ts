@@ -59,47 +59,34 @@ export function getSelectedFlowVersionKey(flowId: string, versionId: string) {
   return `${flowId}:${versionId}`;
 }
 
-function getShortIdentifier(value: string) {
-  const normalizedValue = value.trim();
-  const compactValue = normalizedValue.includes("-")
-    ? normalizedValue.split("-").at(-1) || normalizedValue
-    : normalizedValue;
-  return compactValue.slice(0, 8) || "tool";
-}
-
-export function createDeploymentToolNameScopeId() {
-  if (typeof globalThis.crypto?.randomUUID === "function") {
-    return globalThis.crypto.randomUUID();
-  }
-
-  return `${Date.now()}-${Math.random().toString(16).slice(2, 10)}`;
-}
-
-export function getDefaultDeploymentToolName(
-  flowName: string,
-  uniqueId: string,
-  scopeId?: string | null,
-) {
+export function getDefaultDeploymentToolName(flowName: string) {
   const trimmedFlowName = flowName.trim() || DEFAULT_FLOW_NAME;
-  const shortId = getShortIdentifier(uniqueId);
-  const shortScopeId = scopeId ? getShortIdentifier(scopeId).slice(0, 6) : "";
-  return shortScopeId
-    ? `${trimmedFlowName} ${shortScopeId}-${shortId}`
-    : `${trimmedFlowName} ${shortId}`;
+  return trimmedFlowName;
 }
 
 export interface Deployment {
   id: string;
-  provider_id?: string;
-  name: string;
-  description?: string;
+  provider_id: string;
+  description?: string | null;
   type: DeploymentType;
-  created_at: string;
-  updated_at: string;
-  provider_data?: Record<string, unknown>;
+  created_at: string | null;
+  updated_at: string | null;
+  provider_data?: DeploymentProviderData | null;
   resource_key: string;
   attached_count: number;
   flow_version_ids?: string[];
+}
+
+export interface DeploymentProviderData extends Record<string, unknown> {
+  display_name: string;
+  name: string;
+  environments?: string[];
+  llm?: string | null;
+}
+
+export function getDeploymentDisplayName(deployment: Deployment | null) {
+  if (!deployment) return "";
+  return deployment.provider_data?.display_name ?? "";
 }
 
 export interface SnapshotUpdateResponse {

@@ -21,11 +21,13 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.tools import
     FlowToolBindingSpec,
     create_and_upload_wxo_flow_tools_with_bindings,
 )
-from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import WatsonxResultToolRefBinding
+from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
+    WatsonxResultToolRefBinding,
+    validate_wxo_name,
+)
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
     extract_error_detail,
-    validate_wxo_name,
 )
 
 if TYPE_CHECKING:
@@ -80,7 +82,7 @@ class RawConnectionCreatePlan:
         # operations[*].app_ids use operation_app_id as the caller-visible key.
         # provider_app_id is used for provider calls and must follow wxO rules.
         # Normalizing here keeps create/validate/rollback on one canonical id.
-        self.provider_app_id = validate_wxo_name(self.provider_app_id)
+        self.provider_app_id = validate_wxo_name(self.provider_app_id, field_label="Connection app id")
 
 
 @dataclass(slots=True)

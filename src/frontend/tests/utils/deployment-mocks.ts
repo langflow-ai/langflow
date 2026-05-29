@@ -30,7 +30,6 @@ export const NEW_PROVIDER = {
 export const DEPLOYMENT = {
   id: "dep-1",
   provider_id: "prov-1",
-  name: "Test Deployment",
   description: "Mock deployment for E2E tests",
   type: "agent",
   created_at: "2026-04-06T00:00:00Z",
@@ -38,7 +37,12 @@ export const DEPLOYMENT = {
   resource_key: "dep-1-resource",
   attached_count: 1,
   flow_version_ids: ["fv1"],
+  provider_data: {
+    display_name: "Test Deployment",
+    name: "test_deployment",
+  },
   // Keep legacy keys to avoid breaking any tests still reading them.
+  name: "Test Deployment",
   provider_account_id: "prov-1",
   provider_account_name: "My Env",
   status: "deployed",
@@ -48,7 +52,11 @@ export const DEPLOYMENTS_MOCK = { deployments: [DEPLOYMENT] };
 
 export const DEPLOYMENT_DETAIL_MOCK = {
   ...DEPLOYMENT,
-  provider_data: { llm: "ibm/granite-13b-chat" },
+  provider_data: {
+    display_name: "Test Deployment",
+    name: "test_deployment",
+    llm: "ibm/granite-13b-chat",
+  },
 };
 
 export const ATTACHMENTS_MOCK = {
@@ -111,10 +119,14 @@ export const FLOW_VERSIONS_MOCK = {
 export const DEPLOY_RESPONSE = {
   id: "dep-new",
   provider_id: "prov-1",
-  name: "My Deployment",
+  resource_key: "dep-new-rk",
   type: "agent",
   provider_account_id: "prov-1",
   status: "deploying",
+  provider_data: {
+    display_name: "My Deployment",
+    name: "langflow_my_deployment_abc12345",
+  },
 };
 
 // Attachments with provider_data for edit-mode connection tests.

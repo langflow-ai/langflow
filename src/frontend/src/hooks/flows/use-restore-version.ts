@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
@@ -7,6 +8,7 @@ import useAlertStore from "@/stores/alertStore";
 import useVersionPreviewStore from "@/stores/versionPreviewStore";
 
 export default function useRestoreVersion(flowId: string) {
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -37,11 +39,12 @@ export default function useRestoreVersion(flowId: string) {
 
         queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
         applyFlowToCanvas(updatedFlow);
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (err: any) {
         const apiDetail = err?.response?.data?.detail;
         const message = apiDetail ?? err?.message ?? "Unknown error";
         setErrorData({
-          title: "Failed to restore version",
+          title: t("errors.failedToRestoreVersion"),
           list: [message],
         });
         setIsRestoring(false);
@@ -54,7 +57,7 @@ export default function useRestoreVersion(flowId: string) {
       try {
         useVersionPreviewStore.setState({ didRestore: true });
         clearPreview();
-        setSuccessData({ title: "Version restored" });
+        setSuccessData({ title: t("success.versionRestored") });
         options?.onSuccess?.();
       } catch (err) {
         console.error("useRestoreVersion: post-restore cleanup failed", err);

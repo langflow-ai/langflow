@@ -13,6 +13,10 @@ payload = {
     "background": False,
     "stream": False,
     "inputs": {},
+    "globals": {
+        "FILENAME": "relatório—final.pdf",
+        "OWNER_NAME": "José",
+    },
 }
 
 response = requests.post(f"{base}/api/v2/workflows", headers=headers, json=payload, timeout=120)

@@ -2,6 +2,8 @@
  * Dropdown showing saved assistant sessions with switch and delete actions.
  */
 
+import moment from "moment";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -14,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
-import moment from "moment";
 import type { SessionHistoryEntry } from "../assistant-panel.types";
 
 interface SessionHistoryDropdownProps {
@@ -32,6 +33,7 @@ export function SessionHistoryDropdown({
   onDeleteSession,
   isExpanded = false,
 }: SessionHistoryDropdownProps) {
+  const { t } = useTranslation();
   const hasSessions = sessions.length > 0;
   // Expanded panel (has messages / height > min) → dropdown grows down; compact → grows up
   const dropAlign = isExpanded ? "start" : "end";
@@ -43,7 +45,7 @@ export function SessionHistoryDropdown({
           variant="ghost"
           size="icon"
           className="h-8 w-8"
-          title="Session history"
+          title={t("assistant.sessionHistory")}
           data-testid="assistant-session-history"
           disabled={!hasSessions}
         >
@@ -61,9 +63,9 @@ export function SessionHistoryDropdown({
         className="z-[70] max-h-80 w-72 overflow-y-auto"
       >
         <DropdownMenuLabel className="flex items-center gap-1.5 text-xs font-semibold">
-          Session History
+          {t("assistant.sessionHistoryLabel")}
           <ShadTooltip
-            content="Sessions are stored in your browser only and will not be preserved across different browsers or after clearing browser data."
+            content={t("assistant.sessionHistoryTooltip")}
             side="right"
           >
             <div>
@@ -78,7 +80,7 @@ export function SessionHistoryDropdown({
 
         {!hasSessions ? (
           <div className="px-2 py-3 text-center text-xs text-muted-foreground">
-            No previous sessions
+            {t("assistant.noPreviousSessions")}
           </div>
         ) : (
           sessions.map((entry) => {
@@ -103,7 +105,9 @@ export function SessionHistoryDropdown({
                     {entry.firstUserMessage}
                   </span>
                   <span className="text-[10px] text-muted-foreground">
-                    {entry.messageCount} msgs
+                    {t("assistant.messageCounts", {
+                      count: entry.messageCount,
+                    })}
                     {" · "}
                     {moment(entry.lastActiveAt).fromNow()}
                   </span>
