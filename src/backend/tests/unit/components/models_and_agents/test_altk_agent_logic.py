@@ -1657,7 +1657,7 @@ class TestALTKAgentRunnableType:
         from unittest.mock import patch
 
         from langgraph.graph.state import CompiledStateGraph
-        from lfx.components.altk.altk_agent import ALTKAgentComponent
+        from lfx_altk.components.altk.altk_agent import ALTKAgentComponent
 
         agent = ALTKAgentComponent(
             _type="Agent",
