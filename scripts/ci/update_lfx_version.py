@@ -60,8 +60,8 @@ _BUNDLE_LFX_DEP_PATTERN = re.compile(r'"lfx(?:-nightly)?(?=[<>=!~])[^"]*"')
 def update_lfx_dep_in_bundles(lfx_version: str) -> None:
     """Pin every bundle's `lfx` dep to the renamed `lfx-nightly==<version>`.
 
-    Each `src/bundles/*/pyproject.toml` declares an `lfx>=X.Y,<Z` style pin
-    against the published `lfx` package. During nightly builds the
+    Each `src/bundles/*/pyproject.toml` floors its `lfx` dep at `>=X.Y`
+    (no upper bound) against the published `lfx` package. During nightly builds the
     workspace `lfx` package gets renamed to `lfx-nightly`, so those pins
     no longer resolve against the workspace member — and PyPI may not yet
     ship a matching `lfx` either. Rewrite each bundle's pin to

@@ -2,11 +2,10 @@ from typing import Any
 
 from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
 from langchain_ibm import WatsonxEmbeddings
-
 from lfx.base.embeddings.model import LCEmbeddingsModel
 from lfx.base.models.model_utils import get_watsonx_embedding_models
 from lfx.field_typing import Embeddings
-from lfx.io import BoolInput, DropdownInput, IntInput, SecretStrInput, StrInput
+from lfx.io import BoolInput, DropdownInput, IntInput, Output, SecretStrInput, StrInput
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.utils.secrets import secret_value_to_str
@@ -84,6 +83,13 @@ class WatsonxEmbeddingsComponent(LCEmbeddingsModel):
             value=True,
             advanced=True,
         ),
+    ]
+
+    # Explicit re-declaration mirrors LCEmbeddingsModel.outputs so the
+    # bundle's static AST validator (``lfx extension validate``) detects
+    # the entry-point method without having to resolve the MRO.
+    outputs = [
+        Output(display_name="Embedding Model", name="embeddings", method="build_embeddings"),
     ]
 
     @staticmethod

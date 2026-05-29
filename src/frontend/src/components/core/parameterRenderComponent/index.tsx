@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import CodeAreaComponent from "@/components/core/parameterRenderComponent/components/codeAreaComponent";
 import DBProviderInputComponent from "@/components/core/parameterRenderComponent/components/dbProviderInputComponent";
@@ -62,7 +63,7 @@ export function ParameterRenderComponent({
   isToolMode?: boolean;
   nodeInformationMetadata?: NodeInfoType;
 }) {
-  // no-op
+  const { t } = useTranslation();
   const id = (
     templateData.type +
     "_" +
@@ -231,7 +232,7 @@ export function ParameterRenderComponent({
         return (
           <TableNodeComponent
             {...baseInputProps}
-            description={templateData.info || "Add or edit data"}
+            description={templateData.info || t("paramRender.addOrEditData")}
             columns={
               templateData?.table_schema?.columns ?? templateData?.table_schema
             }
@@ -246,7 +247,7 @@ export function ParameterRenderComponent({
         return (
           <ToolsComponent
             {...baseInputProps}
-            description={templateData.info || "Add or edit data"}
+            description={templateData.info || t("paramRender.addOrEditData")}
             title={nodeClass?.display_name ?? "Tools"}
             icon={nodeClass?.icon ?? ""}
             template={nodeClass?.template}

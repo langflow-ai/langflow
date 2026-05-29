@@ -1,21 +1,25 @@
 """Unit tests for IBM watsonx.ai component."""
 
-import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
 try:
     import langchain_ibm  # noqa: F401
 except ImportError:
-    # langchain-ibm is gated to python_version<'3.14' in pyproject.toml because
-    # upstream pins exclude 3.14. Skip these tests on 3.14 until upstream adapts.
+    # langchain-ibm is gated to python_version<'3.14' in the bundle's
+    # pyproject.toml because upstream pins exclude 3.14. Skip these tests
+    # on 3.14 until upstream adapts.
     pytest.skip("langchain-ibm not available", allow_module_level=True)
 
 from lfx.schema.dotdict import dotdict
 
-# Mock the langchain_ibm module before importing the component
-sys.modules["langchain_ibm"] = MagicMock()
+# NOTE: the prior in-tree test pre-populated ``sys.modules["langchain_ibm"]``
+# with a MagicMock so the lfx workspace venv (which did not pull
+# langchain-ibm in) could still import the component.  The bundle declares
+# the library as a real runtime dep, so the mock is no longer needed.
+# Tests that need to fake out the SDK use ``@patch`` at the bundle
+# import path, e.g. ``@patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")``.
 
 
 # Create a mock SecretStr class
@@ -35,7 +39,7 @@ class TestWatsonxAIComponent:
     @pytest.fixture
     def wx_component(self):
         """Create a WatsonxAIComponent instance for testing."""
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         return WatsonxAIComponent()
 
@@ -63,7 +67,7 @@ class TestWatsonxAIComponent:
 
     def test_default_models(self):
         """Test that default models are defined."""
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         assert len(WatsonxAIComponent._default_models) == 3
         assert "ibm/granite-3-2b-instruct" in WatsonxAIComponent._default_models
@@ -72,7 +76,7 @@ class TestWatsonxAIComponent:
 
     def test_urls_defined(self):
         """Test that API URLs are defined."""
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         expected_urls = [
             "https://us-south.ml.cloud.ibm.com",
@@ -106,7 +110,7 @@ class TestWatsonxAIComponent:
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_success(self, mock_get, mock_response):
         """Test successful model fetching from API."""
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         mock_get.return_value = mock_response
 
@@ -125,7 +129,7 @@ class TestWatsonxAIComponent:
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_api_error(self, mock_get):
         """Test that default models are returned on API error."""
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         mock_get.side_effect = Exception("API Error")
 
@@ -137,7 +141,7 @@ class TestWatsonxAIComponent:
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_timeout(self, mock_get):
         """Test that default models are returned on timeout."""
-        from lfx.components.ibm.watsonx import WatsonxAIComponent
+        from lfx_ibm.components.ibm.watsonx import WatsonxAIComponent
 
         mock_get.side_effect = TimeoutError("Request timeout")
 
@@ -145,7 +149,7 @@ class TestWatsonxAIComponent:
 
         assert models == WatsonxAIComponent._default_models
 
-    @patch("lfx.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
     def test_update_build_config_base_url(self, mock_fetch, wx_component):
         """Test update_build_config when base_url changes."""
         mock_fetch.return_value = ["model1", "model2", "model3"]
@@ -160,7 +164,7 @@ class TestWatsonxAIComponent:
         assert result["model_name"]["value"] == "model1"
         mock_fetch.assert_called_once_with(base_url="https://us-south.ml.cloud.ibm.com")
 
-    @patch("lfx.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
     def test_update_build_config_base_url_preserves_valid_model(self, mock_fetch, wx_component):
         """Test that valid model selection is preserved when updating base_url."""
         mock_fetch.return_value = ["model1", "model2", "model3"]
@@ -174,7 +178,7 @@ class TestWatsonxAIComponent:
         # model2 is in the new list, so it should be preserved
         assert result["model_name"]["value"] == "model2"
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_project_id(self, mock_chatwatsonx, wx_component):
         """Test building model with ProjectID container scope."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -206,7 +210,7 @@ class TestWatsonxAIComponent:
         assert call_kwargs["model_id"] == "ibm/granite-3-8b-instruct"
         assert call_kwargs["streaming"] is False
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_space_id(self, mock_chatwatsonx, wx_component):
         """Test building model with SpaceID container scope."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -239,7 +243,7 @@ class TestWatsonxAIComponent:
         assert call_kwargs["streaming"] is True
         assert call_kwargs["params"]["stop"] == ["END"]
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_secret_str_api_key(self, mock_chatwatsonx, wx_component):
         """Test that SecretStr API key is properly converted to string.
 
@@ -271,8 +275,8 @@ class TestWatsonxAIComponent:
         assert call_kwargs["apikey"] == "secret-api-key"  # pragma: allowlist secret
         assert isinstance(call_kwargs["apikey"], str)
 
-    @patch("lfx.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
-    @patch("lfx.components.ibm.watsonx.logger")
+    @patch("lfx_ibm.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx.logger")
     def test_update_build_config_base_url_with_exception(self, mock_logger, mock_fetch, wx_component):
         """Test update_build_config handles exceptions when fetching models."""
         mock_fetch.side_effect = Exception("Network error")
@@ -289,7 +293,7 @@ class TestWatsonxAIComponent:
         assert result["model_name"]["options"] == ["old_model"]
         assert result["model_name"]["value"] == "old_model"
 
-    @patch("lfx.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
     def test_update_build_config_base_url_empty_models_list(self, mock_fetch, wx_component):
         """Test update_build_config when fetch_models returns empty list."""
         mock_fetch.return_value = []
@@ -303,7 +307,7 @@ class TestWatsonxAIComponent:
         assert result["model_name"]["options"] == []
         assert result["model_name"]["value"] is None
 
-    @patch("lfx.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx.WatsonxAIComponent.fetch_models")
     def test_update_build_config_base_url_resets_invalid_model(self, mock_fetch, wx_component):
         """Test that invalid model value is reset when base_url changes."""
         mock_fetch.return_value = ["model1", "model2"]
@@ -371,7 +375,7 @@ class TestWatsonxAIComponent:
         assert result["model_name"]["options"] == ["model1"]
         assert result["model_name"]["value"] == "model1"
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_logit_bias_json(self, mock_chatwatsonx, wx_component):
         """Test building model with logit_bias as JSON string."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -388,8 +392,8 @@ class TestWatsonxAIComponent:
         call_kwargs = mock_chatwatsonx.call_args[1]
         assert call_kwargs["params"]["logit_bias"] == {"1003": -100, "1004": 100}
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
-    @patch("lfx.components.ibm.watsonx.logger")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.logger")
     def test_build_model_with_invalid_logit_bias_json(self, mock_logger, mock_chatwatsonx, wx_component):
         """Test that invalid logit_bias JSON uses default value."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -407,7 +411,7 @@ class TestWatsonxAIComponent:
         assert call_kwargs["params"]["logit_bias"] == {"1003": -100, "1004": -100}
         mock_logger.warning.assert_called_once()
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_params_structure(self, mock_chatwatsonx, wx_component):
         """Test that model params are structured correctly."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -445,7 +449,7 @@ class TestWatsonxAIComponent:
         assert params["time_limit"] == 600000
         assert params["logit_bias"] is None
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_both_project_and_space_id_raises_error(self, mock_chatwatsonx, wx_component):
         """Test that providing both project_id and space_id raises ValueError."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -460,7 +464,7 @@ class TestWatsonxAIComponent:
         # Ensure ChatWatsonx was not called
         mock_chatwatsonx.assert_not_called()
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_neither_project_nor_space_id_raises_error(self, mock_chatwatsonx, wx_component):
         """Test that providing neither project_id nor space_id raises ValueError."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -475,7 +479,7 @@ class TestWatsonxAIComponent:
         # Ensure ChatWatsonx was not called
         mock_chatwatsonx.assert_not_called()
 
-    @patch("lfx.components.ibm.watsonx.ChatWatsonx")
+    @patch("lfx_ibm.components.ibm.watsonx.ChatWatsonx")
     def test_build_model_with_empty_string_project_and_space_id_raises_error(self, mock_chatwatsonx, wx_component):
         """Test that providing empty strings for both project_id and space_id raises ValueError."""
         wx_component.api_key = "test-api-key"  # pragma: allowlist secret

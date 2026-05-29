@@ -2,12 +2,12 @@ import json
 from typing import Any
 
 from langchain_ibm import ChatWatsonx
-
 from lfx.base.models.model import LCModelComponent
 from lfx.base.models.model_utils import get_watsonx_llm_models
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
 from lfx.inputs.inputs import BoolInput, DropdownInput, IntInput, SecretStrInput, SliderInput, StrInput
+from lfx.io import Output
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 from lfx.utils.secrets import secret_value_to_str
@@ -147,6 +147,14 @@ class WatsonxAIComponent(LCModelComponent):
             info='JSON string of token IDs to bias or suppress (e.g., {"1003": -100, "1004": 100}).',
             field_type="str",
         ),
+    ]
+
+    # Explicit re-declaration mirrors LCModelComponent.outputs so the
+    # bundle's static AST validator (``lfx extension validate``) detects
+    # the entry-point methods without having to resolve the MRO.
+    outputs = [
+        Output(display_name="Model Response", name="text_output", method="text_response"),
+        Output(display_name="Language Model", name="model_output", method="build_model"),
     ]
 
     @staticmethod

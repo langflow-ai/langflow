@@ -37,7 +37,7 @@ Available for Windows and macOS.
 
 ### Install locally (recommended)
 
-Requires Python 3.10–3.13 and [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended package manager).
+Requires Python 3.10–3.14 and [uv](https://docs.astral.sh/uv/getting-started/installation/) (recommended package manager).
 
 #### Install
 

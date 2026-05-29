@@ -1,7 +1,6 @@
 """Unit tests for IBM watsonx.ai embeddings component."""
 
-import sys
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -10,16 +9,24 @@ try:
     import langchain_ibm  # noqa: F401
 except ImportError:
     # langchain-ibm and ibm-watsonx-ai are gated to python_version<'3.14' in
-    # pyproject.toml because upstream pins exclude 3.14. Skip these tests on
-    # 3.14 until upstream adapts.
+    # the bundle's pyproject.toml because upstream pins exclude 3.14. Skip
+    # these tests on 3.14 until upstream adapts.
     pytest.skip("langchain-ibm / ibm-watsonx-ai not available", allow_module_level=True)
 
 from lfx.schema.dotdict import dotdict
 
-# Mock the required modules before importing the component
-sys.modules["langchain_ibm"] = MagicMock()
-sys.modules["ibm_watsonx_ai"] = MagicMock()
-sys.modules["ibm_watsonx_ai.metanames"] = MagicMock()
+# NOTE: prior in-tree versions of these tests pre-populated
+# ``sys.modules`` with MagicMocks for ``langchain_ibm`` /
+# ``ibm_watsonx_ai`` so the lfx workspace venv (which did not pull either
+# package in) could still import the component module.  The bundle
+# declares both libraries as real runtime deps, so the mock is no longer
+# needed -- and actively breaks tests that round-trip enum values like
+# ``EmbedTextParamsMetaNames.RETURN_OPTIONS`` through a dict key, because
+# the component imports the real symbol at module-load time while the
+# in-test re-import would resolve to a stale MagicMock attribute.
+# Tests that need to fake out specific call sites use ``@patch`` at the
+# import path inside the bundle, e.g.
+# ``@patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")``.
 
 
 # Create a mock SecretStr class
@@ -40,7 +47,7 @@ class TestWatsonxEmbeddingsComponent:
     def wx_embeddings_component(self):
         """Create a WatsonxEmbeddingsComponent instance for testing."""
         # Import here to ensure mocks are in place
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+        from lfx_ibm.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
         return WatsonxEmbeddingsComponent()
 
@@ -68,7 +75,7 @@ class TestWatsonxEmbeddingsComponent:
 
     def test_default_models(self):
         """Test that default models are defined."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+        from lfx_ibm.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
         assert len(WatsonxEmbeddingsComponent._default_models) == 4
         assert "sentence-transformers/all-minilm-l12-v2" in WatsonxEmbeddingsComponent._default_models
@@ -109,7 +116,7 @@ class TestWatsonxEmbeddingsComponent:
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_success(self, mock_get, mock_response):
         """Test successful model fetching from API."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+        from lfx_ibm.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
         mock_get.return_value = mock_response
 
@@ -132,7 +139,7 @@ class TestWatsonxEmbeddingsComponent:
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_sorted(self, mock_get):
         """Test that fetched models are sorted."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+        from lfx_ibm.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
         mock_resp = Mock()
         mock_resp.json.return_value = {
@@ -152,7 +159,7 @@ class TestWatsonxEmbeddingsComponent:
     @patch("lfx.base.models.model_utils.requests.get")
     def test_fetch_models_empty_resources(self, mock_get):
         """Test handling of empty resources in API response."""
-        from lfx.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
+        from lfx_ibm.components.ibm.watsonx_embeddings import WatsonxEmbeddingsComponent
 
         mock_resp = Mock()
         mock_resp.json.return_value = {"resources": []}
@@ -163,7 +170,7 @@ class TestWatsonxEmbeddingsComponent:
 
         assert models == []
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
     def test_update_build_config_url(self, mock_fetch, wx_embeddings_component):
         """Test update_build_config when url changes."""
         mock_fetch.return_value = ["model1", "model2", "model3"]
@@ -180,7 +187,7 @@ class TestWatsonxEmbeddingsComponent:
         assert result["model_name"]["value"] == "model1"
         mock_fetch.assert_called_once_with(base_url="https://us-south.ml.cloud.ibm.com")
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
     def test_update_build_config_url_resets_model_on_url_change(self, mock_fetch, wx_embeddings_component):
         """Test that model selection is reset to the first available model when URL changes."""
         mock_fetch.return_value = ["model1", "model2", "model3"]
@@ -199,8 +206,8 @@ class TestWatsonxEmbeddingsComponent:
         # model2 is in the new list, so value should be reset to first model
         assert result["model_name"]["value"] == "model1"
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
-    @patch("lfx.components.ibm.watsonx_embeddings.logger")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent.fetch_models")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.logger")
     def test_update_build_config_url_with_exception(self, mock_logger, mock_fetch, wx_embeddings_component):
         """Test update_build_config handles exceptions when fetching models."""
         mock_fetch.side_effect = Exception("Network error")
@@ -259,7 +266,7 @@ class TestWatsonxEmbeddingsComponent:
         assert result["model_name"]["options"] == ["model1"]
         assert result["model_name"]["value"] == "model1"
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_project_id(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test building embeddings with ProjectID container scope."""
         wx_embeddings_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -281,7 +288,7 @@ class TestWatsonxEmbeddingsComponent:
         assert call_kwargs["space_id"] is None
         assert call_kwargs["model_id"] == "ibm/slate-125m-english-rtrvr-v2"
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_space_id(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test building embeddings with SpaceID container scope."""
         wx_embeddings_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -303,7 +310,7 @@ class TestWatsonxEmbeddingsComponent:
         assert call_kwargs["space_id"] == "test-space-id"
         assert call_kwargs["model_id"] == "sentence-transformers/all-minilm-l12-v2"
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_secret_str_api_key(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test that SecretStr API key is properly converted to string.
 
@@ -326,7 +333,7 @@ class TestWatsonxEmbeddingsComponent:
         assert call_kwargs["apikey"] == "secret-api-key"  # pragma: allowlist secret
         assert isinstance(call_kwargs["apikey"], str)
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_params_structure(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test that embeddings params are structured correctly."""
         from ibm_watsonx_ai.metanames import EmbedTextParamsMetaNames
@@ -350,7 +357,7 @@ class TestWatsonxEmbeddingsComponent:
         assert EmbedTextParamsMetaNames.RETURN_OPTIONS in params
         assert params[EmbedTextParamsMetaNames.RETURN_OPTIONS] == {"input_text": False}
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_both_project_and_space_id_raises_error(
         self, mock_watsonx_embeddings, wx_embeddings_component
     ):
@@ -369,7 +376,7 @@ class TestWatsonxEmbeddingsComponent:
         # Ensure WatsonxEmbeddings was not called
         mock_watsonx_embeddings.assert_not_called()
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_neither_project_nor_space_id_raises_error(
         self, mock_watsonx_embeddings, wx_embeddings_component
     ):
@@ -388,7 +395,7 @@ class TestWatsonxEmbeddingsComponent:
         # Ensure WatsonxEmbeddings was not called
         mock_watsonx_embeddings.assert_not_called()
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_empty_string_project_and_space_id_raises_error(
         self, mock_watsonx_embeddings, wx_embeddings_component
     ):
@@ -407,7 +414,7 @@ class TestWatsonxEmbeddingsComponent:
         # Ensure WatsonxEmbeddings was not called
         mock_watsonx_embeddings.assert_not_called()
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_default_truncate_input_tokens(
         self, mock_watsonx_embeddings, wx_embeddings_component
     ):
@@ -429,7 +436,7 @@ class TestWatsonxEmbeddingsComponent:
 
         assert params[EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS] == 200
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_custom_truncate_input_tokens(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test building embeddings with custom truncate_input_tokens value."""
         wx_embeddings_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -449,7 +456,7 @@ class TestWatsonxEmbeddingsComponent:
 
         assert params[EmbedTextParamsMetaNames.TRUNCATE_INPUT_TOKENS] == 500
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_input_text_true(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test building embeddings with input_text set to True."""
         wx_embeddings_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -469,7 +476,7 @@ class TestWatsonxEmbeddingsComponent:
 
         assert params[EmbedTextParamsMetaNames.RETURN_OPTIONS]["input_text"] is True
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_input_text_false(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test building embeddings with input_text set to False."""
         wx_embeddings_component.api_key = "test-api-key"  # pragma: allowlist secret
@@ -489,7 +496,7 @@ class TestWatsonxEmbeddingsComponent:
 
         assert params[EmbedTextParamsMetaNames.RETURN_OPTIONS]["input_text"] is False
 
-    @patch("lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
+    @patch("lfx_ibm.components.ibm.watsonx_embeddings.WatsonxEmbeddings")
     def test_build_embeddings_with_different_urls(self, mock_watsonx_embeddings, wx_embeddings_component):
         """Test building embeddings with different API endpoint URLs."""
         urls = [

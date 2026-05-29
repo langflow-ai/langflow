@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   MemoryInfo,
   UpdateMemoryParams,
@@ -27,6 +28,7 @@ export const useAutoCaptureDebouncedToggle = ({
   updateMemoryMutation,
   debounceMs = AUTO_CAPTURE_DEBOUNCE_MS,
 }: UseAutoCaptureDebouncedToggleArgs) => {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
 
@@ -126,14 +128,14 @@ export const useAutoCaptureDebouncedToggle = ({
             clearDraft();
             setSuccessData({
               title: nextIsActive
-                ? `Auto-capture enabled for memory "${currentName}"`
-                : `Auto-capture disabled for memory "${currentName}"`,
+                ? t("memory.autoCaptureEnabledFor", { name: currentName })
+                : t("memory.autoCaptureDisabledFor", { name: currentName }),
             });
           },
           onError: (error: unknown) => {
             clearDraft();
             setErrorData({
-              title: "Failed to update auto-capture",
+              title: t("memory.autoCaptureError"),
               list: extractApiErrorMessages(error),
             });
           },
