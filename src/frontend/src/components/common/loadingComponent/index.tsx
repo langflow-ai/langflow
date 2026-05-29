@@ -12,7 +12,10 @@ export default function LoadingComponent({
         aria-hidden="true"
         title={t("common.langflowLogo")}
         className="animate-pulse text-primary"
-        style={{ width: `${remSize * 0.25}rem`, height: `${remSize * 0.25}rem` }}
+        style={{
+          width: `${remSize * 0.25}rem`,
+          height: `${remSize * 0.25}rem`,
+        }}
       />
       <br></br>
       <span className="animate-pulse text-lg text-primary">
