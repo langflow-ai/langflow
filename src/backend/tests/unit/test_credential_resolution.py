@@ -168,6 +168,56 @@ class TestGetApiKeyForProviderDbFallback:
         assert result is None
 
 
+class TestExplicitVarNameDbPrecedence:
+    """A var-name api_key must resolve the user's DB global variable before env.
+
+    Production bug (P2): .env held an old/revoked OPENAI_API_KEY; the user added
+    a valid key as a DB global variable via Settings → Global Variables. A flow's
+    Agent (which resolves via load_from_db) used the valid DB key, but the
+    Assistant resolved the api_key NAME env-first and authenticated with the
+    revoked .env key → 401. Global variables are per-user and encrypted; the
+    env read silently bypassed that boundary.
+    """
+
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_prefer_db_global_variable_over_env_for_explicit_var_name(self, mock_run, monkeypatch):
+        user_id = str(uuid4())
+        # The user's valid key, stored as a DB global variable (SecretStr).
+        mock_run.return_value = SecretStr("sk-db-valid")
+        # The stale/revoked key in .env that must NOT win.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-env-revoked")
+
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(user_id, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-db-valid"
+
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_fallback_to_env_for_var_name_when_db_has_no_value(self, mock_run, monkeypatch):
+        # Regression guard: DB-first must still fall back to env when the user
+        # has no such DB variable (the value the .env provides is the only one).
+        user_id = str(uuid4())
+        mock_run.return_value = None
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-env-fallback")
+
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(user_id, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-env-fallback"
+
+    def test_should_use_env_for_var_name_when_no_user_id(self, monkeypatch):
+        # lfx run (no user): no DB to consult, so the env var is the source.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-env-only")
+
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(None, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-env-only"
+
+
 class TestGetAllVariablesForProviderDbFallback:
     """Tests for get_all_variables_for_provider when DB lookup yields nothing.
 
