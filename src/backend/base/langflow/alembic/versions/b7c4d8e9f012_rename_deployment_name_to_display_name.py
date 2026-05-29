@@ -1,7 +1,7 @@
 """rename deployment name to display_name
 
 Revision ID: b7c4d8e9f012
-Revises: 7c8d9e0f1a2b
+Revises: c35e9db03a66
 Create Date: 2026-05-08 00:00:00.000000
 
 Phase: EXPAND + CONTRACT
@@ -22,7 +22,7 @@ from langflow.utils import migration
 
 # revision identifiers, used by Alembic.
 revision: str = "b7c4d8e9f012"  # pragma: allowlist secret
-down_revision: str | None = "7c8d9e0f1a2b"  # pragma: allowlist secret
+down_revision: str | None = "c35e9db03a66"  # pragma: allowlist secret
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
