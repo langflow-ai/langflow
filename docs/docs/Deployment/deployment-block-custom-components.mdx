@@ -39,7 +39,7 @@ If both environment variables are set, Langflow builds one combined set of compo
 
 ### Disable the allow-list bypass
 
-The allow-list behavior above assumes the admin controls which env vars are set at startup. In deployments where that assumption doesn't hold — for example, where operators want a hard guarantee that only built-in server templates execute — set:
+The allow-list behavior above assumes the admin controls which env vars are set at startup. In deployments where that assumption doesn't hold, set:
 
 ```bash
 LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=false
