@@ -1,4 +1,5 @@
 {
+  "components._toolmode.outputs.component_as_tool.display_name.108f1240": "Toolset",
   "components.addcontenttopage.description.05abfe1f": "Convert markdown text to Notion blocks and append them to a Notion page.",
   "components.addcontenttopage.display_name.aacaf495": "Add Content to Page ",
   "components.addcontenttopage.inputs.block_id.display_name.8fa0a68b": "Page/Block ID",
@@ -3550,6 +3551,7 @@
   "components.faiss.outputs.dataframe.display_name.16d1c905": "Table",
   "components.faiss.outputs.search_results.display_name.39414102": "Search Results",
   "components.faiss.outputs.search_results.info.c3d7164d": "Performs semantic similarity search in the vector store to find relevant documents/files. Input: A natural language search query (str). Returns: A list of Data objects (dicts). Each result has structure: {'data': {'text': '...', ...}}. The 'text' field always contains the matched document content. Other metadata fields depend on what was indexed (may include: 'file_path', 'source', 'page', etc.). IMPORTANT: To extract metadata like file_path, use: result['data'].get('file_path') or result.data.get('file_path'). Check what fields are available by inspecting result['data'].keys() or the first search result.",
+  "components.file.description.1bbb6b83": "Loads and returns the content from uploaded files.",
   "components.file.display_name.fb9b615c": "Read File",
   "components.file.inputs.advanced_mode.display_name.ba4c746b": "Advanced Parser",
   "components.file.inputs.advanced_mode.info.b96917ee": "Enable advanced document processing and export with Docling for PDFs, images, and office documents. Note that advanced document processing can consume significant resources.",
