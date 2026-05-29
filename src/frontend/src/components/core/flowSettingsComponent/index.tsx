@@ -140,7 +140,7 @@ const FlowSettingsComponent = ({
             type="button"
             onClick={() => close()}
           >
-            Cancel
+            {t("modal.cancelButton")}
           </Button>
           <Form.Submit asChild>
             <Button
@@ -150,7 +150,7 @@ const FlowSettingsComponent = ({
               loading={isSaving}
               disabled={disableSave}
             >
-              Save
+              {t("modal.saveButton")}
             </Button>
           </Form.Submit>
         </div>

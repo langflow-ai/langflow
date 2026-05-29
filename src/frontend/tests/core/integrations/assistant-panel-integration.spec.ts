@@ -58,20 +58,25 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
       page.getByTestId("assistant-message-user").first(),
     ).toContainText("uppercase");
 
-    // Wait for component result OR for an assistant message wrapper to mount.
-    // page.waitForFunction is capped at actionTimeout=20s (PLAYWRIGHT_RULE #4),
-    // so we use locator.waitFor which respects its own timeout.
-    await Promise.race([
-      page
-        .getByTestId("assistant-component-result")
-        .waitFor({ state: "visible", timeout: 150000 }),
-      page
-        .getByTestId("assistant-message-assistant")
-        .last()
-        .waitFor({ state: "visible", timeout: 150000 }),
+    // Wait for a TERMINAL generation state before branching. With a real LLM
+    // the run is non-deterministic: it either builds a component (the
+    // component-result card renders) or answers with plain text (the input
+    // re-enables). Both are terminal. We must NOT race on
+    // `assistant-message-assistant` — that wrapper mounts MID-STREAM, before the
+    // component card renders and before the input re-enables, so branching on it
+    // checks `componentResult.count()` too early and trips on the still-disabled
+    // "Generating component..." textarea.
+    //
+    // `Promise.any` resolves on the FIRST terminal signal and only rejects if
+    // BOTH time out (a truly hung generation). `locator.waitFor` /
+    // `expect().toBeEnabled()` respect their own timeouts (page.waitForFunction
+    // would be capped at actionTimeout=20s per PLAYWRIGHT_RULE #4).
+    const componentResult = page.getByTestId("assistant-component-result");
+    await Promise.any([
+      componentResult.waitFor({ state: "visible", timeout: 150000 }),
+      expect(textarea).toBeEnabled({ timeout: 150000 }),
     ]);
 
-    const componentResult = page.getByTestId("assistant-component-result");
     const hasComponentResult = (await componentResult.count()) > 0;
 
     if (hasComponentResult) {
