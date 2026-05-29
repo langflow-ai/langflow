@@ -15,6 +15,15 @@ from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+
+try:
+    import ibm_db_dbi  # noqa: F401
+except ImportError:
+    # ibm-db ships no linux/aarch64 wheel (see the bundle's pyproject marker).
+    # These tests patch ``ibm_db_dbi.*`` directly, which needs the real module,
+    # so skip the whole module when the driver is unavailable on this platform.
+    pytest.skip("ibm-db (ibm_db_dbi) not available on this platform", allow_module_level=True)
+
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx_ibm.components.ibm.db2_vector import DB2VectorStoreComponent

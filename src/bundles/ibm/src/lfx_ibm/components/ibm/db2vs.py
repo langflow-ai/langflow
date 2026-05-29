@@ -14,8 +14,6 @@ from typing import (
     cast,
 )
 
-import ibm_db_dbi  # type: ignore[import-untyped]
-
 if TYPE_CHECKING:
     from ibm_db_dbi import Connection
 
@@ -361,6 +359,12 @@ class DB2VS(VectorStore):
             ValueError: If table name is invalid or other validation fails
             RuntimeError: If database operations fail
         """
+        # Imported lazily because ibm-db ships no linux/aarch64 wheel (see the
+        # platform marker in this bundle's pyproject.toml).  Keeping it out of
+        # module import lets the bundle load on that arch even though this
+        # vector store cannot run there.  Mirrors db2_vector.build_vector_store.
+        import ibm_db_dbi
+
         try:
             # SECURITY: Validate table name before any operations
             validated_table_name = validate_identifier(table_name, "table name")

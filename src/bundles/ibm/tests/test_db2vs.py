@@ -4,6 +4,14 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 
+try:
+    import ibm_db_dbi  # noqa: F401
+except ImportError:
+    # ibm-db ships no linux/aarch64 wheel (see the bundle's pyproject marker),
+    # and DB2VS lazily imports ibm_db_dbi when constructed.  Skip the module
+    # where the driver is unavailable rather than erroring at runtime.
+    pytest.skip("ibm-db (ibm_db_dbi) not available on this platform", allow_module_level=True)
+
 
 class TestDB2VSHelperFunctions:
     """Test helper functions in db2vs module."""
