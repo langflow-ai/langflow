@@ -6989,6 +6989,7 @@ couchbase = [
     { name = "couchbase" },
 ]
 docling = [
+    { name = "langchain-docling" },
     { name = "langflow-base", extra = ["docling"] },
     { name = "ocrmac", marker = "sys_platform == 'darwin'" },
     { name = "rapidocr-onnxruntime" },
@@ -6999,7 +7000,6 @@ docling = [
     { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
 ]
 docling-chunking = [
-    { name = "langchain-docling" },
     { name = "langflow-base", extra = ["docling-chunking"] },
 ]
 local = [
@@ -7062,7 +7062,7 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "langchain-docling", marker = "extra == 'docling-chunking'", specifier = ">=1.1.0" },
+    { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling-chunking"], marker = "extra == 'docling-chunking'", editable = "src/backend/base" },

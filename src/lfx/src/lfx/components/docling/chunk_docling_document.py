@@ -9,7 +9,7 @@ from lfx.schema import Data, DataFrame
 _CHUNKING_INSTALL_HINT = (
     "Install them with `uv pip install 'langflow[docling-chunking]'`, "
     "`uv pip install 'langflow-base[docling-chunking]'`, or "
-    "`uv pip install 'docling-core[chunking]'`."
+    "`uv pip install 'docling-core[chunking]' tiktoken`."
 )
 
 
