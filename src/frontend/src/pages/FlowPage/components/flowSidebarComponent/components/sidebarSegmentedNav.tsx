@@ -15,11 +15,6 @@ import { useSearchContext } from "../index";
 import { NAV_ITEMS } from "./sidebar-nav-items";
 
 export type { SidebarSection };
-// NAV_ITEMS lives in its own dependency-free module so the
-// FlowBuilderWelcome faux rail can import it without pulling this file's
-// transitive deps. Upstream's content changes (dropped "search", memories
-// icon → "BrainCog") were applied there. Re-exported here for existing
-// callers that import it from this module.
 export { NAV_ITEMS };
 
 const SidebarSegmentedNav = () => {

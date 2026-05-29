@@ -289,7 +289,7 @@ export default function DragFilesComponent({
                   className="text-muted-foreground flex items-center gap-1"
                   data-testid="info-types"
                 >
-                  +{types.length - 3} more
+                  {t("fileManager.moreTypes", { count: types.length - 3 })}
                   <ForwardedIconComponent name="info" className="w-3 h-3" />
                 </span>
               </ShadTooltip>
