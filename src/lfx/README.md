@@ -494,7 +494,7 @@ uv run lfx run simple_agent.py "How are you?" --verbose
 
 `lfx-mcp` is a separate binary installed with `lfx`. It starts an MCP server that gives any MCP-compatible client programmatic control over a Langflow instance for building flows, managing components, and running executions.
 
-For more information, see [LFX-MCP.md](./LFX-MCP.md).
+For more information, see [LFX_MCP.md](./LFX_MCP.md).
 
 ## Development
 

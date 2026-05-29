@@ -98,7 +98,7 @@ The server exposes the following tool groups to the connected MCP client.
 | `components` | Search or describe component types in one call |
 | `add_component` | Add a component to a flow |
 | `remove_component` | Remove a component and its connections from a flow |
-| `configure_component` | Set parameter values on a component |
+| `configure_component` | Set parameter values on a component. Returns a `warnings` field if a server-side refresh failed for a parameter, such an API key not yet configured on the component. |
 | `list_components` | List all components in a flow |
 | `get_component_info` | Get a component's current parameter values (sensitive fields redacted) |
 | `freeze_component` | Freeze a component so it uses cached output and skips re-execution |
@@ -115,9 +115,9 @@ The server exposes the following tool groups to the connected MCP client.
 
 | Tool | Description |
 |------|-------------|
-| `run_flow` | Run a flow and return the output; streams progress events when the client supports it |
-| `build_flow` | Trigger a server-side build to validate components and connections |
-| `validate_flow` | Validate a flow and return structured per-component results |
+| `run_flow` | Run a flow and return the output; streams progress events when the client supports it. Accepts `input_type` (default: `"chat"`), `output_type` (default: `"chat"`), and `tweaks` (dict of component param overrides at runtime, e.g. `{"MyComponent": {"temperature": 0.2}}`). |
+| `build_flow` | Trigger a server-side build to validate components and connections (async, returns `job_id`; poll separately for results) |
+| `validate_flow` | Validate a flow inline; fast-fails on the first component error and returns the structured result (blocks until done, unlike `build_flow`) |
 | `get_build_results` | Get per-component build results from the last run |
 | `get_component_output` | Get a specific component's output from the last run |
 
@@ -126,8 +126,8 @@ The server exposes the following tool groups to the connected MCP client.
 | Tool | Description |
 |------|-------------|
 | `layout_flow` | Re-layout a flow's components using the Sugiyama algorithm |
-| `notify_done` | Signal that you are done modifying a flow so the UI updates immediately |
-| `batch` | Execute multiple actions in sequence; use `$N.field` to reference results from previous steps |
+| `notify_done` | Signal that you are done modifying a flow so the UI updates immediately. Optional `summary` string is forwarded in the `flow_settled` event payload visible in the UI (e.g. `"Built a RAG pipeline with OpenAI and Pinecone"`). |
+| `batch` | Execute multiple actions in sequence; use `$N.field` to reference results from previous steps. Cannot nest `batch` inside another `batch` (excluded from its own tool map). |
 
 ## How to use the server
 
