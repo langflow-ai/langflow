@@ -1,7 +1,8 @@
 import Convert from "ansi-to-html";
 import { useEffect, useRef, useState } from "react";
-import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
+import { useTranslation } from "react-i18next";
 import MessageMetadata from "@/components/common/messageMetadataComponent";
+import { ContentBlockDisplay } from "@/components/core/chatComponents/ContentBlockDisplay";
 import { useUpdateMessage } from "@/controllers/API/queries/messages";
 import { CustomMarkdownField } from "@/customization/components/custom-markdown-field";
 import { CustomProfileIcon } from "@/customization/components/custom-profile-icon";
@@ -13,7 +14,6 @@ import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "../../../../../components/common/sanitizedHTMLWrapper";
-import { useTranslation } from "react-i18next";
 import useAlertStore from "../../../../../stores/alertStore";
 import type { chatMessagePropsType } from "../../../../../types/components";
 import { cn } from "../../../../../utils/utils";

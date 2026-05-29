@@ -1,8 +1,9 @@
 import { type Page } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
 
@@ -10,20 +11,12 @@ withEventDeliveryModes(
   "Travel Planning Agent",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
+    skipIfMissing.openAiKey();
     test.skip(
       !process?.env?.SEARCH_API_KEY,
       "SEARCH_API_KEY required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    loadDotenvIfLocal(__dirname);
     await page.goto("/");
     await awaitBootstrapTest(page);
 
@@ -64,11 +57,13 @@ withEventDeliveryModes(
       test.skip();
     }
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 60000 * 3,
     });
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector("text=default session", {
       timeout: 30000,

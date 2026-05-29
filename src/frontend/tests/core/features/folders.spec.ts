@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -11,33 +12,32 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 
     await page.getByTestId("icon-ChevronLeft").first().click();
-    await page.getByPlaceholder("Search flows").first().isVisible();
-    await page.getByText("Flows").first().isVisible();
-    if (await page.getByText("Components").first().isVisible()) {
-      await page.getByText("Components").first().isVisible();
+    await expect(page.getByPlaceholder("Search flows").first()).toBeVisible();
+    await expect(page.getByText("Flows").first()).toBeVisible();
+    if (await page.getByText(TEXTS.labelComponents).first().isVisible()) {
+      await expect(page.getByText(TEXTS.labelComponents).first()).toBeVisible();
     } else {
-      await page.getByText("MCP Server").first().isVisible();
+      await expect(page.getByText("MCP Server").first()).toBeVisible();
     }
-    await page.getByText("All").first().isVisible();
-    await page.getByText("Select All").first().isVisible();
-
     await page.getByTestId("add-project-button").click();
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .isVisible();
 
     await page
       .locator("[data-testid='project-sidebar']")
-      .getByText("New Project")
+      .getByText(TEXTS.labelNewProject)
       .last()
       .dblclick();
 
@@ -62,8 +62,8 @@ test(
     await page.getByTestId("more-options-button_new-project-test-name").click();
 
     await page.getByTestId("btn-delete-project").click();
-    await page.getByText("Delete").last().click();
-    await expect(page.getByText("Project deleted successfully")).toBeVisible({
+    await page.getByText(TEXTS.delete).last().click();
+    await expect(page.getByText(TEXTS.toastProjectDeleted)).toBeVisible({
       timeout: 3000,
     });
   },
@@ -138,7 +138,9 @@ test("change flow folder", async ({ page }) => {
   // unique so our assertions can't collide with any template that
   // Starter ships with by default.
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
 
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
@@ -155,12 +157,12 @@ test("change flow folder", async ({ page }) => {
   await page.getByTestId("add-project-button").click();
   await page
     .locator("[data-testid='project-sidebar']")
-    .getByText("New Project")
+    .getByText(TEXTS.labelNewProject)
     .last()
     .waitFor({ state: "visible", timeout: 10000 });
   await page
     .locator("[data-testid='project-sidebar']")
-    .getByText("New Project")
+    .getByText(TEXTS.labelNewProject)
     .last()
     .dblclick();
   await page.getByTestId("input-project").fill(destinationProjectName);

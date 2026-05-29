@@ -16,9 +16,11 @@ so the agent path, the direct ``execute_action`` path, and the legacy
 
 from __future__ import annotations
 
+import keyword
 from typing import TYPE_CHECKING, Any
 
 try:
+    import composio_langchain.provider as _composio_lc_provider
     from composio.core.models import _files as _composio_files
     from composio.core.models._files import FileHelper
     from composio.utils import shared as _composio_shared
@@ -26,11 +28,18 @@ try:
 except ImportError:  # composio extra not installed; module becomes a no-op
     _composio_files = None  # type: ignore[assignment]
     _composio_shared = None  # type: ignore[assignment]
+    _composio_lc_provider = None  # type: ignore[assignment]
     FileHelper = None  # type: ignore[assignment]
     LangchainProvider = None  # type: ignore[assignment,misc]
     _COMPOSIO_AVAILABLE = False
 else:
     _COMPOSIO_AVAILABLE = True
+    # composio_langchain hardcodes only {"for", "async"} as reserved Python
+    # keywords. Any action whose schema contains a field named after another
+    # keyword (e.g. Outlook's "from") hits inspect.Parameter's validation and
+    # raises ValueError. Expand the set to the full Python keyword list once at
+    # import time so _substitute_reserved_python_keywords handles all of them.
+    _composio_lc_provider._python_reserved = set(keyword.kwlist)  # noqa: SLF001
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -185,5 +194,51 @@ def _patch_pydantic_builder_once() -> None:
     _composio_shared._lfx_safe_patched = True  # noqa: SLF001
 
 
+def _patch_identifier_substitution_once() -> None:
+    """Extend composio_langchain's keyword substitution to cover all invalid Python identifiers.
+
+    composio_langchain._substitute_reserved_python_keywords only renames schema
+    properties that are in its hardcoded _python_reserved set. Property names
+    like 'extension-id' (hyphen) are valid JSON Schema names but not valid
+    Python identifiers, causing inspect.Parameter to raise ValueError when the
+    tool signature is built.
+
+    We wrap _substitute_reserved_python_keywords so that after it runs, any
+    remaining property whose name is not a valid Python identifier is also
+    renamed (invalid chars replaced with underscores) and registered in the
+    keywords dict. This ensures _reinstate_reserved_python_keywords maps the
+    cleaned name back to the original when the action is executed.
+
+    Idempotent via the _lfx_identifier_patched sentinel.
+    """
+    if not _COMPOSIO_AVAILABLE or getattr(_composio_lc_provider, "_lfx_identifier_patched", False):
+        return
+
+    import re as _re
+
+    _invalid_char_re = _re.compile(r"[^a-zA-Z0-9_]")
+    original_substitute = _composio_lc_provider._substitute_reserved_python_keywords  # noqa: SLF001
+
+    def safe_substitute(schema: dict) -> tuple:
+        schema, keywords = original_substitute(schema)
+        if "properties" not in schema:
+            return schema, keywords
+        for p_name in list(schema["properties"]):
+            if p_name.isidentifier():
+                continue
+            clean_name = _invalid_char_re.sub("_", p_name)
+            if clean_name and clean_name[0].isdigit():
+                clean_name = f"_{clean_name}"
+            while clean_name in schema["properties"]:
+                clean_name = f"{clean_name}_"
+            schema["properties"][clean_name] = schema["properties"].pop(p_name)
+            keywords[clean_name] = p_name
+        return schema, keywords
+
+    _composio_lc_provider._substitute_reserved_python_keywords = safe_substitute  # noqa: SLF001
+    _composio_lc_provider._lfx_identifier_patched = True  # noqa: SLF001
+
+
 _patch_file_helper_once()
 _patch_pydantic_builder_once()
+_patch_identifier_substitution_once()

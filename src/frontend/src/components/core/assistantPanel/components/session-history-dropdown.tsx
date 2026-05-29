@@ -2,6 +2,7 @@
  * Dropdown showing saved assistant sessions with switch and delete actions.
  */
 
+import moment from "moment";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -15,7 +16,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/utils/utils";
-import moment from "moment";
 import type { SessionHistoryEntry } from "../assistant-panel.types";
 
 interface SessionHistoryDropdownProps {

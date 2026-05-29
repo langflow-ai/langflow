@@ -18,8 +18,10 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -33,14 +35,20 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
-
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
+import {
+  INVALID_SELECTION_ERROR_ALERT,
+  UPLOAD_ALERT_LIST,
+  UPLOAD_ERROR_ALERT,
+  WRONG_FILE_ERROR_ALERT,
+} from "../../../../constants/alerts_constants";
 import ExportModal from "../../../../modals/exportModal";
 import useAlertStore from "../../../../stores/alertStore";
 import useFlowStore from "../../../../stores/flowStore";
@@ -77,12 +85,12 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
-import { useShiftDragSelectFix } from "./hooks/useShiftDragSelectFix";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
@@ -93,7 +101,6 @@ export default function Page({
   view?: boolean;
   setIsLoading: (isLoading: boolean) => void;
 }): JSX.Element {
-  const { t } = useTranslation();
   const uploadFlow = useUploadFlow();
   const autoSaveFlow = useAutoSaveFlow();
 
@@ -115,6 +122,7 @@ export default function Page({
 
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
   const isPreviewActive = previewLabel !== null;
+  const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -153,7 +161,10 @@ export default function Page({
   const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
     currentFlowId || undefined,
   );
-  const effectiveLocked = isLocked || isAgentWorking;
+  const isAssistantProcessing = useAssistantManagerStore(
+    (state) => state.isAssistantProcessing,
+  );
+  const effectiveLocked = isLocked || isAgentWorking || isAssistantProcessing;
 
   // Keep banner mounted during exit animation, preserve last text
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -328,7 +339,7 @@ export default function Page({
       ]);
     } else {
       setErrorData({
-        title: t("errors.invalidSelection"),
+        title: INVALID_SELECTION_ERROR_ALERT,
         list: validateSelection(lastSelection!, edgesState),
       });
     }
@@ -681,14 +692,14 @@ export default function Page({
           position: position,
         }).catch((error) => {
           setErrorData({
-            title: t("errors.upload"),
+            title: UPLOAD_ERROR_ALERT,
             list: [(error as Error).message],
           });
         });
       } else {
         setErrorData({
-          title: t("errors.wrongFileType"),
-          list: [t("errors.uploadJsonOnly")],
+          title: WRONG_FILE_ERROR_ALERT,
+          list: [UPLOAD_ALERT_LIST],
         });
       }
     },
@@ -730,7 +741,7 @@ export default function Page({
     setSelectionEnded(false);
   }, []);
 
-  useShiftDragSelectFix(reactFlowWrapper);
+  useCanvasDragSelectFix(reactFlowWrapper);
 
   // Workaround to show the menu only after the selection has ended.
   useEffect(() => {
@@ -929,7 +940,7 @@ export default function Page({
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
-            {!view && (
+            {!view && !isWelcomeOpen && (
               <>
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
@@ -944,7 +955,7 @@ export default function Page({
                 )}
               </>
             )}
-            <MemoizedSidebarTrigger />
+            {!isWelcomeOpen && <MemoizedSidebarTrigger />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
@@ -1037,6 +1048,11 @@ export default function Page({
               </div>
             )}
             {isPreviewActive && <VersionPreviewOverlay />}
+            {/* Welcome overlay surfaces on freshly-created empty flows —
+                its visibility is driven entirely by the
+                ``flowBuilderWelcomeStore`` which is primed by the
+                "New Flow" button on the home page. */}
+            <FlowBuilderWelcomeMount />
           </div>
           <div
             id="shadow-box"

@@ -74,4 +74,23 @@ describe("AssistantHeader", () => {
       expect(onNewSession).toHaveBeenCalledTimes(1);
     });
   });
+
+  describe("skip-all badge", () => {
+    it("should_not_render_skip_all_badge_when_skipAll_is_false", () => {
+      render(<AssistantHeader {...defaultProps} skipAll={false} />);
+      expect(
+        screen.queryByTestId("assistant-skip-all-badge"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should_render_skip_all_badge_when_skipAll_is_true", () => {
+      // Badge sits next to the title to remind the user that gates are
+      // being auto-approved — without it, skip-all is invisible after the
+      // toggle's inline message scrolls out of view.
+      render(<AssistantHeader {...defaultProps} skipAll={true} />);
+      expect(
+        screen.getByTestId("assistant-skip-all-badge"),
+      ).toBeInTheDocument();
+    });
+  });
 });

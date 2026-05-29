@@ -353,6 +353,14 @@ class SimplifiedAPIRequest(BaseModel):
     )
     tweaks: Tweaks | None = Field(default=None, description="The tweaks")
     session_id: str | None = Field(default=None, description="The session id")
+    user_id: str | None = Field(
+        default=None,
+        description=(
+            "Optional end-user identifier forwarded to tracing providers (e.g. Langfuse) "
+            "as the trace's user_id. Does not affect authentication or authorization — the "
+            "API key owner remains the effective Langflow user."
+        ),
+    )
 
 
 # (alias) type ReactFlowJsonObject<NodeData = any, EdgeData = any> = {
@@ -387,6 +395,9 @@ class BaseConfigResponse(BaseModel):
     # but ``lfx extension dev`` and ``--env-file LANGFLOW_ENABLE_EXTENSION_RELOAD=true``
     # opt in after the build is frozen, so the UI consults this field too.
     enable_extension_reload: bool
+    # Mirrors ``LANGFLOW_AUTHZ_ENABLED``. EE/custom frontends gate the Access
+    # Control settings entry on this flag; OSS UI ignores it until wired.
+    authz_enabled: bool = False
 
 
 class PublicConfigResponse(BaseConfigResponse):
@@ -400,11 +411,12 @@ class PublicConfigResponse(BaseConfigResponse):
     allow_custom_components: bool
 
     @classmethod
-    def from_settings(cls, settings: Settings) -> "PublicConfigResponse":
+    def from_settings(cls, settings: Settings, auth_settings) -> "PublicConfigResponse":
         """Create a PublicConfigResponse instance using values from a Settings object.
 
         Parameters:
             settings (Settings): The Settings object containing configuration values.
+            auth_settings: Auth settings (for ``authz_enabled``).
 
         Returns:
             PublicConfigResponse: An instance populated with public-safe configuration values.
@@ -418,6 +430,7 @@ class PublicConfigResponse(BaseConfigResponse):
             mcp_base_url=settings.mcp_base_url,
             enable_extension_reload=settings.enable_extension_reload,
             allow_custom_components=settings.allow_custom_components,
+            authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
         )
 
 
@@ -476,6 +489,7 @@ class ConfigResponse(BaseConfigResponse):
             default_folder_name=DEFAULT_FOLDER_NAME,
             hide_getting_started_progress=os.getenv("HIDE_GETTING_STARTED_PROGRESS", "").lower() == "true",
             allow_custom_components=settings.allow_custom_components,
+            authz_enabled=bool(getattr(auth_settings, "AUTHZ_ENABLED", False)),
         )
 
 

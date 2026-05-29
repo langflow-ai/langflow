@@ -23,6 +23,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
   ModelInputComponentType,
@@ -61,17 +62,21 @@ export default function ModelInputComponent({
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
-  // Connection mode: local state for reactivity, persisted in node data for reload
-  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+  // Connection mode is persisted in node data (for reload + external
+  // mutations like the agentic flow_builder). We subscribe to the live
+  // store value so updates from outside the component (e.g. when the
+  // assistant flips `_connectionMode` after wiring an external model)
+  // re-render the dropdown immediately. Falling back to local-only state
+  // would freeze the UI on the value captured at mount.
+  const isConnectionMode = useFlowStore((state) => {
     if (!nodeId) return false;
-    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    const node = state.nodes.find((n) => n.id === nodeId);
     const data = node?.data as { _connectionMode?: boolean } | undefined;
     return data?._connectionMode === true;
   });
 
   const setConnectionMode = useCallback(
     (enabled: boolean) => {
-      setIsConnectionMode(enabled);
       if (!nodeId) return;
       const store = useFlowStore.getState();
       store.setNode(
@@ -156,14 +161,31 @@ export default function ModelInputComponent({
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
+    error: providersError,
+    refetch: refetchProviders,
   } = useGetModelProviders({});
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
+    error: enabledModelsError,
+    refetch: refetchEnabledModels,
   } = useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
+  const isFetching = isFetchingProviders || isFetchingEnabledModels;
+  // Only surface the retry UI when a query failed AND it has no usable data
+  // to fall back on. TanStack Query exposes ``data`` alongside ``error`` for
+  // refetch failures (the providers hook explicitly preserves stale data on
+  // error), so a transient background-refetch error should not replace a
+  // working dropdown with the "couldn't load models" affordance. We also
+  // wait until any in-flight refetch settles to avoid flicker.
+  const providersUnusable =
+    !!providersError && (!providersData || providersData.length === 0);
+  const enabledModelsUnusable =
+    !!enabledModelsError && enabledModelsData === undefined;
+  const hasInitialLoadError =
+    !isFetching && (providersUnusable || enabledModelsUnusable);
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -347,7 +369,14 @@ export default function ModelInputComponent({
       } as SelectedModel;
     }
 
-    const currentName = value?.[0]?.name;
+    // Bug 3 [P2] — defensive: sanitize the saved value before reading
+    // `name`. A doubly-encoded payload from the assistant's flow_update
+    // pipeline can leave the entire model list serialized into the
+    // ``name`` field (or wrap the whole structured value into the first
+    // element of the array). Without recovery, the trigger renders the
+    // literal JSON, e.g. ``[{"provider":"OpenAI","name":"gpt-4o",...]``.
+    const saved = recoverModelOption(value?.[0]);
+    const currentName = saved?.name;
     if (!currentName) {
       // Logic to auto-select the first model if none is selected
       // We only do this check if we have options available
@@ -372,7 +401,6 @@ export default function ModelInputComponent({
     // model has been actively deactivated (not missing-because-unconfigured).
     // Fall through to the first available option so the user isn't shown a
     // wrench for a provider that doesn't need configuring.
-    const saved = value?.[0];
     if (saved) {
       const savedProviderConfigured = providersData?.some(
         (p) => p.provider === saved.provider && p.is_configured,
@@ -501,7 +529,7 @@ export default function ModelInputComponent({
     setOpen(false);
     setRefreshOptions(true);
     try {
-      await refreshAllModelInputs({ silent: true });
+      await refreshAllModelInputs({ silent: false });
     } catch {
       // refreshAllModelInputs handles its own error notifications via alertStore
     } finally {
@@ -561,6 +589,30 @@ export default function ModelInputComponent({
       disabled
     >
       <LoadingTextComponent text={t("modelInput.loadingModels")} />
+    </Button>
+  );
+
+  const handleRetryLoad = useCallback(() => {
+    void refetchProviders();
+    void refetchEnabledModels();
+  }, [refetchProviders, refetchEnabledModels]);
+
+  const renderErrorButton = () => (
+    <Button
+      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+      variant="primary"
+      size="xs"
+      data-testid="model-input-load-failed"
+      onClick={handleRetryLoad}
+    >
+      <span className="flex items-center gap-2 truncate text-left">
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
+        />
+        <span className="truncate">{t("modelInput.loadFailed")}</span>
+      </span>
+      <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
     </Button>
   );
 
@@ -642,6 +694,17 @@ export default function ModelInputComponent({
 
   if (!showParameter) {
     return null;
+  }
+
+  // Surface a retry affordance only when the queries failed AND we have no
+  // usable data to display. Without this the dropdown silently stays empty
+  // (or, before the api interceptor fix, looped on "Loading models…"
+  // indefinitely) when the auth/model endpoints reject the initial request.
+  // We deliberately ignore refetch errors that leave stale data intact so a
+  // transient background refresh failure doesn't replace a working dropdown
+  // with the error state.
+  if (hasInitialLoadError) {
+    return <div className="w-full">{renderErrorButton()}</div>;
   }
 
   // Show loading indicator only when actually loading data, not when options are genuinely empty

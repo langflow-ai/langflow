@@ -29,7 +29,13 @@ from __future__ import annotations
 
 import re
 
-_CONFIG_KEY_RE = re.compile(r"^(\w+\.\w+): (.*)$")
+# A config key is `Node.field` followed by ':' and an OPTIONAL inline
+# value. The value is optional (and the space after ':' is optional) so a
+# key whose value is on following lines — `C.model:` then a YAML list —
+# is still recognized as a NEW key and correctly terminates an open `|`
+# block instead of being swallowed into it. Deterministic and
+# LLM-agnostic: tolerates the format variations weaker models emit.
+_CONFIG_KEY_RE = re.compile(r"^(\w+\.\w+):\s*(.*)$")
 
 
 def _coerce_value(v: str):

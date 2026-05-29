@@ -155,6 +155,106 @@ nodes:
         assert result["edge_count"] == 0
 
 
+class TestLoadLocalRegistryEncoding:
+    """Regression: registry JSON must be read as UTF-8 regardless of the OS locale.
+
+    Bug: on Windows the default text encoding is cp1252, which rejects the UTF-8
+    bytes embedded in ``component_index.json`` (first occurrence: byte 0x8f at
+    offset 590097). Every Flow Builder tool that touches the registry crashed
+    with ``UnicodeDecodeError: 'charmap' codec can't decode byte 0x8f``.
+    """
+
+    def test_should_load_registry_when_system_default_encoding_is_cp1252(self, monkeypatch):
+        from pathlib import Path
+
+        from lfx.graph.flow_builder import builder as builder_module
+
+        monkeypatch.setattr(builder_module, "_registry_cache", None)
+
+        original_open = Path.open
+
+        def windows_like_open(self, mode="r", buffering=-1, encoding=None, errors=None, newline=None):
+            if "b" not in mode and encoding is None:
+                encoding = "cp1252"
+            return original_open(self, mode, buffering, encoding, errors, newline)
+
+        monkeypatch.setattr(Path, "open", windows_like_open)
+
+        registry = builder_module.load_local_registry()
+
+        assert isinstance(registry, dict)
+        assert registry, "registry must contain at least one component after a successful UTF-8 load"
+
+
+class TestBuildFlowFromSpecModelFieldNormalization:
+    r"""Regression: PR-12575 round 7 — bug 2 reopened on the build path.
+
+    The flow-builder agent emits a YAML multi-line block in config when
+    asked to "Build a brand-new agent flow":
+
+        config:
+          Ag.model: |
+            - provider: OpenAI
+              name: gpt-5.4
+
+    The parser keeps multi-line values as raw strings, and the builder
+    helper at ``flow_builder/component.py::configure_component`` writes
+    them straight into ``template['model'].value``. Without
+    normalization at this layer, ``verify_built_flow`` fails three times
+    with ``ValueError: missing a provider`` and the UI ModelInput
+    renders the raw YAML truncated. The fix lives in the shared
+    helper so this path AND the ConfigureComponent tool path go through
+    the same normalizer.
+    """
+
+    def test_should_normalize_model_field_when_spec_emits_yaml_block(self):
+        spec = (
+            "name: Agent Test\n"
+            "\n"
+            "nodes:\n"
+            "  Ag: Agent\n"
+            "\n"
+            "config:\n"
+            "  Ag.model: |\n"
+            "    - provider: OpenAI\n"
+            "      name: gpt-5.4\n"
+        )
+        result = build_flow_from_spec(spec)
+        assert "flow" in result, f"build failed: {result}"
+        nodes = result["flow"]["data"]["nodes"]
+        agent = next(n for n in nodes if n["data"]["type"] == "Agent")
+        value = agent["data"]["node"]["template"]["model"]["value"]
+        assert isinstance(value, list), (
+            f"model value must be a canonical list[dict] after build, got {type(value).__name__}: {value!r}"
+        )
+        assert len(value) == 1, f"expected 1-element list, got {value!r}"
+        assert value[0].get("provider") == "OpenAI", (
+            f"provider must be parsed from the YAML block, got provider={value[0].get('provider')!r} "
+            f"(catalog 'Unknown' fallback firing → user sees the 'missing a provider' ValueError)"
+        )
+        assert value[0].get("name") == "gpt-5.4", f"name must be the bare model name, got {value[0].get('name')!r}"
+
+    def test_should_normalize_model_field_when_spec_emits_json_inline(self):
+        spec = (
+            "name: Agent Test\n"
+            "\n"
+            "nodes:\n"
+            "  Ag: Agent\n"
+            "\n"
+            "config:\n"
+            '  Ag.model: [{"provider": "OpenAI", "name": "gpt-5.4"}]\n'
+        )
+        result = build_flow_from_spec(spec)
+        assert "flow" in result, f"build failed: {result}"
+        nodes = result["flow"]["data"]["nodes"]
+        agent = next(n for n in nodes if n["data"]["type"] == "Agent")
+        value = agent["data"]["node"]["template"]["model"]["value"]
+        assert isinstance(value, list)
+        assert len(value) == 1
+        assert value[0].get("provider") == "OpenAI"
+        assert value[0].get("name") == "gpt-5.4"
+
+
 class TestFlowToSpecSummary:
     def test_summary_of_built_flow(self):
         spec = """\

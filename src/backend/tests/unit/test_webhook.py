@@ -899,6 +899,53 @@ class TestWebhookEventsStreamAuth:
         assert response.status_code == 404
         assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]
 
+    async def test_sse_route_calls_ensure_flow_permission_for_shared_flow(self):
+        """Regression: webhook_events_stream must enforce flow:read before subscribing.
+
+        The SSE dependency widens to share-aware lookup when an authz plugin is
+        active, so a non-owner *could* resolve another user's flow.  The route
+        guards against this by calling ``ensure_flow_permission`` before any
+        event-bus subscription happens — without that, a non-owner with
+        cross-user fetch enabled could exfiltrate webhook event payloads for
+        another user's flow.
+        """
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from uuid import uuid4
+
+        from fastapi import HTTPException
+        from langflow.api.v1 import endpoints as endpoints_module
+
+        owner = SimpleNamespace(id=uuid4(), is_superuser=False)
+        attacker = SimpleNamespace(id=uuid4(), is_superuser=False)
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="shared-flow",
+            user_id=owner.id,
+            workspace_id=None,
+            folder_id=None,
+        )
+        auth = endpoints_module.SseAuth(user=attacker, flow=flow)
+
+        async def _deny(*_args, **_kwargs):
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        # Subscribe must NOT be reached when permission is denied — if the
+        # route accidentally falls through to event_generator() and calls
+        # subscribe(), this AsyncMock will fail the test.
+        subscribe_mock = AsyncMock(side_effect=AssertionError("subscribe() must not be called when authz denies"))
+
+        with (
+            patch.object(endpoints_module, "ensure_flow_permission", side_effect=_deny),
+            patch.object(endpoints_module.webhook_event_manager, "subscribe", subscribe_mock),
+        ):
+            request_stub = SimpleNamespace()
+            with pytest.raises(HTTPException) as exc_info:
+                await endpoints_module.webhook_events_stream(auth=auth, request=request_stub)
+
+        assert exc_info.value.status_code == 403
+        subscribe_mock.assert_not_awaited()
+
     async def test_webhook_run_cross_user_uuid_returns_404(self, client, added_webhook_test, user_two_api_key):
         """Regression test: cross-user access to run webhook via UUID returns 404."""
         flow_id = added_webhook_test["id"]

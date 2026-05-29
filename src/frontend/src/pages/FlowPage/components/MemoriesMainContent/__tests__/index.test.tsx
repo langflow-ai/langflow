@@ -10,10 +10,12 @@ const mockFlowState = {
   currentFlow: { name: "Flow One" },
 };
 
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 let mockedHookValue: any;
 
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: (selector: (state: any) => unknown) => selector(mockFlowState),
 }));
 
@@ -35,6 +37,7 @@ jest.mock("../components/MemoriesSidebar", () => ({
     onCreateMemory,
     onSelectMemory,
     selectedMemoryId,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
   }: any) => (
     <div>
       <button onClick={onCreateMemory}>open-create</button>
@@ -46,6 +49,7 @@ jest.mock("../components/MemoriesSidebar", () => ({
 
 const capturedMemoryDetailsProps: Record<string, unknown> = {};
 jest.mock("../components/MemoryDetails", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   MemoryDetails: (props: any) => {
     Object.assign(capturedMemoryDetailsProps, props);
     return <div>MemoryDetails</div>;
@@ -53,6 +57,7 @@ jest.mock("../components/MemoryDetails", () => ({
 }));
 
 jest.mock("../components/MemoryDocumentPanel", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   MemoryDocumentPanel: ({ onOpenChange }: any) => (
     <button onClick={() => onOpenChange(false)}>close-panel</button>
   ),
@@ -60,6 +65,7 @@ jest.mock("../components/MemoryDocumentPanel", () => ({
 
 jest.mock("@/modals/createMemoryModal", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: ({ onSuccess }: any) => (
     <button onClick={() => onSuccess("m-created")}>create-success</button>
   ),
