@@ -13,9 +13,9 @@ def get_deployment_metadata(
     provider_data: dict[str, Any] | None = None,
 ) -> ItemResult:
     result: dict[str, Any] = {
-        "id": data.get("id"),
+        "id": data["id"],
         "type": deployment_type.value,
-        "name": data.get("name"),
+        "name": data["name"],
         "created_at": data.get("created_on"),
         "updated_at": data.get("updated_at"),
     }
@@ -29,18 +29,15 @@ def get_deployment_detail_metadata(
     data: dict[str, Any],
     deployment_type: DeploymentType,
     provider_data: dict[str, Any] | None = None,
-    provider_raw: bool = False,  # noqa: FBT001,FBT002
 ) -> DeploymentGetResult:
     result: dict[str, Any] = {
-        "id": data.get("id"),
+        "id": data["id"],
         "type": deployment_type.value,
-        "name": data.get("name"),
-        "description": data.get("description"),
+        "name": data["name"],
+        "description": data["description"],
     }
     if provider_data:
         result["provider_data"] = provider_data
-    if provider_raw:
-        result["provider_data"] = data if not provider_data else {**provider_data, "provider_raw": data}
 
     return DeploymentGetResult(**result)
 

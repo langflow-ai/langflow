@@ -60,7 +60,7 @@ async def _seed_flow_and_version(async_session: AsyncSession, user_id, project_i
 
 
 @pytest.mark.asyncio
-async def test_names_filter_combinations(async_session: AsyncSession):
+async def test_local_deployment_queries_filter_project_and_flow_versions(async_session: AsyncSession):
     user, provider_account, project_a, project_b = await _seed_user_provider_and_projects(async_session)
 
     _flow_a, fv_a = await _seed_flow_and_version(async_session, user.id, project_a.id)
@@ -73,7 +73,7 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         project_id=project_a.id,
         deployment_provider_account_id=provider_account.id,
         resource_key=f"rk-{uuid4()}",
-        name="A",
+        display_name="A",
         deployment_type=DeploymentType.AGENT,
     )
     dep_b1 = await create_deployment(
@@ -82,7 +82,7 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         project_id=project_a.id,
         deployment_provider_account_id=provider_account.id,
         resource_key=f"rk-{uuid4()}",
-        name="B",
+        display_name="B",
         deployment_type=DeploymentType.AGENT,
     )
     dep_b2 = await create_deployment(
@@ -91,7 +91,7 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         project_id=project_b.id,
         deployment_provider_account_id=provider_account.id,
         resource_key=f"rk-{uuid4()}",
-        name="C",
+        display_name="C",
         deployment_type=DeploymentType.AGENT,
     )
 
@@ -118,14 +118,13 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         provider_snapshot_id="snap-b2",
     )
 
-    async def assert_names(names, expected_ids, project_id=None, flow_version_ids=None):
+    async def assert_deployments(expected_ids, project_id=None, flow_version_ids=None):
         page = await list_deployments_page(
             async_session,
             user_id=user.id,
             deployment_provider_account_id=provider_account.id,
             offset=0,
             limit=10,
-            names=names,
             project_id=project_id,
             flow_version_ids=flow_version_ids,
         )
@@ -133,44 +132,20 @@ async def test_names_filter_combinations(async_session: AsyncSession):
             async_session,
             user_id=user.id,
             deployment_provider_account_id=provider_account.id,
-            names=names,
             project_id=project_id,
             flow_version_ids=flow_version_ids,
         )
         assert count == len(expected_ids)
         assert {d[0].id for d in page} == set(expected_ids)
 
-    # Single name match
-    await assert_names(["A"], [dep_a.id])
+    all_ids = [dep_a.id, dep_b1.id, dep_b2.id]
 
-    # Multi-name match
-    await assert_names(["A", "B", "C"], [dep_a.id, dep_b1.id, dep_b2.id])
-
-    # No match
-    await assert_names(["D"], [])
-
-    # Case-sensitive
-    await assert_names(["a"], [])
-
-    # Whitespace handling (CRUD does not strip, API does)
-    await assert_names([" A "], [])
-
-    # Duplicate names in input
-    await assert_names(["A", "A"], [dep_a.id])
-
-    # Names + project_id
-    await assert_names(["B"], [dep_b1.id], project_id=project_a.id)
-    await assert_names(["C"], [dep_b2.id], project_id=project_b.id)
-    await assert_names(["A"], [], project_id=project_b.id)
-
-    # Names + flow_version_ids
-    await assert_names(["B"], [dep_b1.id], flow_version_ids=[fv_a.id])
-    await assert_names(["C"], [dep_b2.id], flow_version_ids=[fv_b.id])
-    await assert_names(["A"], [], flow_version_ids=[fv_b.id])
-
-    # Names + project_id + flow_version_ids
-    await assert_names(["B"], [dep_b1.id], project_id=project_a.id, flow_version_ids=[fv_a.id])
-    await assert_names(["C"], [], project_id=project_a.id, flow_version_ids=[fv_a.id])
+    await assert_deployments(all_ids)
+    await assert_deployments([dep_a.id, dep_b1.id], project_id=project_a.id)
+    await assert_deployments([dep_b2.id], project_id=project_b.id)
+    await assert_deployments([dep_a.id, dep_b1.id], flow_version_ids=[fv_a.id])
+    await assert_deployments([dep_b2.id], flow_version_ids=[fv_b.id])
+    await assert_deployments([dep_a.id, dep_b1.id], project_id=project_a.id, flow_version_ids=[fv_a.id])
 
     # Pagination interaction
     page = await list_deployments_page(
@@ -179,13 +154,11 @@ async def test_names_filter_combinations(async_session: AsyncSession):
         deployment_provider_account_id=provider_account.id,
         offset=0,
         limit=1,
-        names=["B", "C"],
     )
     assert len(page) == 1
     count = await count_deployments_by_provider(
         async_session,
         user_id=user.id,
         deployment_provider_account_id=provider_account.id,
-        names=["B", "C"],
     )
-    assert count == 2
+    assert count == 3
