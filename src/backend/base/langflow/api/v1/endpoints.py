@@ -1304,7 +1304,7 @@ async def custom_component(
 
         try:
             built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to translate component node", extra={"locale": locale})
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
@@ -1408,7 +1408,7 @@ async def custom_component_update(
 
         try:
             component_node = translate_component_node(get_instance_name(cc_instance), component_node, locale)
-        except Exception:
+        except Exception:  # noqa: BLE001
             logger.exception("Failed to translate component node", extra={"locale": locale})
 
     try:

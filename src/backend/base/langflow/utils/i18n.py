@@ -38,6 +38,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+
 from langflow.utils.i18n_keys import (
     component_field_key,
     normalize_component_key,
@@ -45,7 +47,6 @@ from langflow.utils.i18n_keys import (
 from langflow.utils.i18n_keys import (
     safe_flow_key as _safe_flow_key,
 )
-from lfx.base.tools.constants import TOOL_OUTPUT_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -142,8 +143,9 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
 
 
 def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    """Build the set of all known translations for display_name and description per component,
-    plus all known translations for each input field's display_name.
+    """Build the set of all known translations for display_name and description per component.
+
+    Also includes all known translations for each input field's display_name.
 
     Iterates every loaded locale and looks up each component's display_name / description key
     directly in the locale dicts (one key lookup per locale, not a full translate_component_dict
