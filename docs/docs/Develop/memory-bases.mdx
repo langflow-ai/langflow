@@ -1,0 +1,178 @@
+---
+title: Manage memory bases
+slug: /memory-bases
+---
+
+import Icon from "@site/src/components/icon";
+
+A memory base stores the long-term chat history for a Langflow agent in a vectorized format, enabling semantic retrieval of past conversations across sessions.
+
+Unlike the [Message History component](/message-history), which retrieves messages in chronological order from the `messages` table, a memory base embeds messages into a vector store and retrieves by semantic similarity to returning the _most relevant context_ instead of the _most recent messages_.
+
+Unlike a [knowledge base](/knowledge), which you populate manually with files, a memory base fills itself from a flow's chat sessions, which are stored in Langflow's [messages](/memory#store-chat-memory) table.
+
+By default, each memory base is backed by a local [ChromaDB](https://docs.trychroma.com/docs/overview/introduction) vector store, but ChromaDB cloud, OpenSearch, and other providers are available.
+
+After a memory base is created, you can include its knowledge in a flow by adding the [**Memory Base** component](../Components/memory-base.mdx).
+
+### Configure memory bases ingestion
+
+Each memory base can only be attached to one flow, but a single flow can have multiple memory bases attached to it by including multiple [**Memory Base** components](../Components/memory-base.mdx).
+Each time the flow completes a run, the captured messages are counted toward a configurable **threshold**.
+When the number of unprocessed runs reaches the threshold, an asynchronous ingestion job writes the messages to the vector store.
+
+**Auto-capture** controls whether this counting and triggering happens automatically.
+Auto-capture is enabled by default, so the memory base tracks every flow run and fires an ingestion job when the batch threshold is reached.
+When auto-capture is disabled, the counter never increments and no ingestion job fires automatically.
+If auto-capture is re-enabled after being disabled, the memory base catches up to the current state by processing all messages that accumulated while it was disabled.
+
+:::tip
+The flow must contain a **Chat Input** or a **Chat Output** component to write messages to the `messages` table.
+:::
+
+By default, the [**Memory Base** component](../Components/memory-base.mdx) retrieves only chunks that match the current `session_id`.
+Disable **Filter by Session** to search across all sessions that have been ingested into the memory base.
+
+When optional **LLM preprocessing** is enabled, messages are passed through an LLM before they are embedded.
+The LLM distills the raw conversation into a compact summary, and the summary is written to the vector store instead of the raw messages.
+Preprocessing requires an embedding model.
+For more information, see [Preprocessing prompt examples](#preprocessing-prompt-examples).
+
+Configure a **kill phrase** to gate ingestion.
+If the LLM's response contains the configured kill phrase, the batch is skipped, with no data written to the vector store. The ingestion cursor still advances so the same batch is not re-evaluated.
+The default kill phrase is `NO_INGEST`: if the LLM response contains `NO_INGEST`, the batch is skipped.
+For more information, see [Preprocessing prompt examples](#preprocessing-prompt-examples).
+
+#### Preprocessing prompt examples {#preprocessing-prompt-examples}
+
+This section includes preprocessing prompts you can copy and paste directly into Langflow.
+The instructions tell the preprocessing LLM how to filter and summarize each batch of chat history before it is embedded, not how to respond to the user.
+
+To summarize content for support, troubleshooting, or any flow where you want concise facts from each batch, use the general prompt:
+
+```
+Summarize the key facts from this conversation: the issue the user reported,
+any troubleshooting steps taken, and the outcome or resolution.
+Focus on information a support agent would need in a future session.
+```
+
+To use the kill phrase, instruct the LLM to return it when the conversation contains nothing worth storing. For example:
+
+```
+Summarize the key facts from this conversation: the issue the user reported,
+any troubleshooting steps taken, and the outcome or resolution.
+Focus on information a support agent would need in a future session.
+If the conversation contains no meaningful facts (for example, it is only
+greetings or filler), respond with exactly: NO_INGEST
+```
+
+When the LLM returns `NO_INGEST`, the batch is skipped.
+
+For agent memory that retains durable user context and skips noise, use the context extraction rubric:
+
+```
+Analyze this conversation batch and decide whether it contains durable,
+high-value information worth storing in long-term memory.
+
+Award +1 point for each pillar present:
+- Core user traits (biography, values, relationships)
+- Durable preferences (tools, formats, constraints)
+- Active projects and milestones (goals, deadlines, multi-step work)
+
+The batch has zero value if it consists entirely of:
+- Transactional tech noise (stack traces, syntax-only debugging)
+- Conversational filler ("thanks", "got it", pleasantries)
+- Stale re-statements of facts already established
+
+If the total score is 0, respond with exactly: NO_INGEST
+
+If the score is 1 or higher, extract and summarize only the durable
+facts in concise bullet points. Omit ephemeral debugging details.
+```
+
+## Create a memory base
+
+A memory base is scoped to a single flow and automatically captures that flow's conversation history.
+Create one from within the visual editor.
+
+1. To open the **Memory Bases** pane, in the left sidebar, click <Icon name="BrainCircuit" aria-hidden="true"/> **Memories**.
+2. Click **Create**.
+3. In the **Create Memory** pane, enter the following information:
+
+    * **Name**: Display name for this memory base. Must be unique within your account.
+    * **Embedding Model**: The embedding model used to vectorize messages. The available models are those you have configured in **Settings → Model Providers**.
+
+    Optionally, enable **LLM Preprocessing**.
+    This option allows you to include a natural language prompt for preprocessing instructions, such as `Summarize the key facts from this conversation: the issue the user reported, any troubleshooting steps taken, and the outcome or resolution.`
+    * **Preprocessing Model**: The LLM used for distillation.
+    * **Preprocessing Instructions**: Optional system prompt prepended to each preprocessing request.
+    If no prompt is included, the connected LLM processes the conversation however it deems reasonable.
+
+4. Click **Create Memory**.
+The memory base and its backing ChromaDB directory is created.
+A new memory base's status is **Empty** until the first ingestion job completes.
+
+## Use a memory base in a flow
+
+After creating a memory base, add the [**Memory Base** component](../Components/memory-base.mdx) to your flow to retrieve relevant context from it.
+For example, to connect a Memory Base to an Agent to give the agent memory of all past conversations, do the following:
+
+1. Create a [Simple Agent starter flow](/get-started-quickstart).
+2. In the visual editor, add a **Memory Base** component.
+3. In the **Memory Base** field, select the memory base you created in [Create a memory base](#create-a-memory-base).
+4. In the **Memory Base** component, enable **Tool Mode**.
+5. Connect the Memory Base component's **Toolset** output to the **Agent** component's **Tools** input.
+
+    Each time the flow runs, the component queries the memory base for chunks similar to the current **Search Query**.
+    By default, only chunks from the same `session_id` are returned. To retrieve chunks from all sessions, disable **Filter by Session**.
+
+For more information, see the [**Memory Base** component reference](../Components/memory-base.mdx).
+
+## Manage memory bases
+
+To view and manage the memory bases attached to the current flow, on the visual editor page, click <Icon name="BrainCircuit" aria-hidden="true"/> **Memories**.
+
+Click a memory base name to open its detailed view.
+The following information is available for each memory base:
+
+* Name
+* Embedding model
+* Ingestion threshold
+* Auto-capture
+* Session history
+
+The detail view header contains the following controls:
+
+The session dropdown menu switches between sessions to view their processed message counts and chunk totals.
+
+To reload the session and message data displayed on the page, click <Icon name="RefreshCw" aria-hidden="true"/> **Reload sessions and messages**.
+
+To toggle **Auto-capture**, click <Icon name="ToggleRight" aria-hidden="true"/>**Auto-capture**.
+
+To delete the memory, click <Icon name="Trash2" aria-hidden="true"/> **Delete**.
+
+### Memory base storage location
+
+Memory bases use the same on-disk layout as [knowledge bases](/knowledge).
+The default storage location depends on your operating system and installation method:
+
+- **Langflow Desktop**:
+    - **macOS**: `/Users/<username>/.langflow/knowledge_bases`
+    - **Windows**: `C:\Users\<name>\AppData\Roaming\com.LangflowDesktop\knowledge_bases`
+- **Langflow OSS**:
+    - **macOS/Windows/Linux/WSL with `uv pip install`**: `<path_to_venv>/lib/python3.12/site-packages/langflow/knowledge_bases`
+    - **macOS/Windows/Linux/WSL with `git clone`**: `<path_to_clone>/src/backend/base/langflow/knowledge_bases`
+
+If you set the `LANGFLOW_CONFIG_DIR` environment variable, the `knowledge_bases` subdirectory is created relative to that path.
+
+To change the default directory, set `LANGFLOW_KNOWLEDGE_BASES_DIR`:
+
+```bash
+export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
+```
+
+## See also
+
+- [Memory Base component](../Components/memory-base.mdx)
+- [Manage vector data](/knowledge)
+- [Memory management options](/memory)
