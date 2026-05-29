@@ -178,7 +178,8 @@ export function StepConfiguration({
         {/* Backend Selection */}
         <div className="flex flex-col gap-2 pt-4">
           <Label className="text-sm font-medium">
-            DB Provider <span className="text-destructive">*</span>
+            {t("knowledge.dbProviderLabel")}{" "}
+            <span className="text-destructive">*</span>
           </Label>
           <div
             className={cn(
@@ -198,8 +199,7 @@ export function StepConfiguration({
             />
           </div>
           <span className="text-xs text-muted-foreground">
-            The backend controls where this knowledge base stores vectors.
-            Existing knowledge bases keep their original backend.
+            {t("knowledge.dbProviderDescription")}
           </span>
           {validationErrors.backend && (
             <span className="text-xs text-destructive">
@@ -488,7 +488,9 @@ export function StepConfiguration({
                   name="Tag"
                   className="h-4 w-4 text-muted-foreground"
                 />
-                <span className="text-sm font-medium">Metadata</span>
+                <span className="text-sm font-medium">
+                  {t("knowledge.metadataSection")}
+                </span>
               </div>
               <MetadataEditor
                 pairs={metadataPairs}

@@ -1,4 +1,5 @@
 import { Square } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import useFlowStore from "@/stores/flowStore";
@@ -25,6 +26,7 @@ const ButtonSendWrapper = ({
   files,
   isBuilding,
 }: ButtonSendWrapperProps) => {
+  const { t } = useTranslation();
   const stopBuilding = useFlowStore((state) => state.stopBuilding);
   const isLoading = files.some((file) => file.loading);
 
@@ -55,7 +57,9 @@ const ButtonSendWrapper = ({
       disabled={isLoading}
       unstyled
       data-testid="button-send"
-      title={isBuilding ? "Cancel" : "Send"}
+      title={
+        isBuilding ? t("playground.cancelButton") : t("playground.sendButton")
+      }
     >
       <div className="flex h-fit w-fit items-center gap-2 text-sm font-medium">
         {isBuilding ? (

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,6 +27,7 @@ export const ChunksMetadataFilter = ({
   kbName,
   onAdd,
 }: ChunksMetadataFilterProps) => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const [key, setKey] = useState("");
   const [value, setValue] = useState("");
@@ -65,10 +67,10 @@ export const ChunksMetadataFilter = ({
   };
 
   const keyPlaceholder = isLoading
-    ? "Loading keys..."
+    ? t("knowledge.chunksMetadataKeyLoading")
     : hasKeys
-      ? "Pick or type a key"
-      : "Type a key";
+      ? t("knowledge.chunksMetadataKeyPick")
+      : t("knowledge.chunksMetadataKeyType");
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
@@ -80,7 +82,7 @@ export const ChunksMetadataFilter = ({
           data-testid="chunks-metadata-add-filter"
         >
           <ForwardedIconComponent name="Plus" className="mr-1 h-3.5 w-3.5" />
-          Filter by metadata
+          {t("knowledge.chunksMetadataFilterButton")}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-72" align="end">
@@ -96,10 +98,10 @@ export const ChunksMetadataFilter = ({
             placeholder={keyPlaceholder}
             emptyMessage={
               isLoading
-                ? "Loading keys..."
+                ? t("knowledge.chunksMetadataKeyLoading")
                 : hasKeys
-                  ? "No matching key. Press Enter or pick to use as typed."
-                  : "Type a key to filter."
+                  ? t("knowledge.chunksMetadataKeyNoMatch")
+                  : t("knowledge.chunksMetadataKeyEmpty")
             }
             testId="chunks-metadata-filter-key"
           />
@@ -112,13 +114,13 @@ export const ChunksMetadataFilter = ({
             options={valueSuggestions}
             placeholder={
               valueSuggestions.length > 0
-                ? "Pick or type a value"
-                : "Type a value"
+                ? t("knowledge.chunksMetadataValuePick")
+                : t("knowledge.chunksMetadataValueType")
             }
             emptyMessage={
               valueSuggestions.length > 0
-                ? "No matching value. Press Enter or pick to use as typed."
-                : "Type a value."
+                ? t("knowledge.chunksMetadataValueNoMatch")
+                : t("knowledge.chunksMetadataValueEmpty")
             }
             testId="chunks-metadata-filter-value"
             disabled={!key.trim()}
@@ -129,7 +131,7 @@ export const ChunksMetadataFilter = ({
               className="text-xs text-muted-foreground"
               data-testid="chunks-metadata-filter-empty"
             >
-              No metadata keys found in this KB. Type a key to filter anyway.
+              {t("knowledge.chunksMetadataNoKeys")}
             </span>
           )}
           {truncated && (
@@ -137,7 +139,7 @@ export const ChunksMetadataFilter = ({
               className="text-xs text-muted-foreground"
               data-testid="chunks-metadata-filter-truncated"
             >
-              Showing first 50 values per key.
+              {t("knowledge.chunksMetadataShowingFirst")}
             </span>
           )}
           {error && <span className="text-xs text-destructive">{error}</span>}
@@ -146,7 +148,7 @@ export const ChunksMetadataFilter = ({
             size="sm"
             data-testid="chunks-metadata-filter-submit"
           >
-            Add filter
+            {t("knowledge.chunksMetadataAddFilter")}
           </Button>
         </div>
       </PopoverContent>

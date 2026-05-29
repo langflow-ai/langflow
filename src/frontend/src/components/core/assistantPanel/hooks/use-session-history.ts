@@ -3,6 +3,7 @@
  */
 
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   ASSISTANT_MAX_SESSIONS,
   ASSISTANT_SESSIONS_STORAGE_KEY,
@@ -31,6 +32,7 @@ export function useSessionHistory(
   currentMessages: AssistantMessage[],
   loadSession: (id: string, msgs: AssistantMessage[]) => void,
 ): UseSessionHistoryReturn {
+  const { t } = useTranslation();
   const [sessions, setSessions] = useState<SessionHistoryEntry[]>(() =>
     loadSessionsFromStorage(ASSISTANT_SESSIONS_STORAGE_KEY),
   );
@@ -41,7 +43,7 @@ export function useSessionHistory(
     const firstUserMsg = currentMessages.find((m) => m.role === "user");
     const preview = firstUserMsg
       ? firstUserMsg.content.slice(0, ASSISTANT_SESSION_PREVIEW_LENGTH)
-      : "New conversation";
+      : t("assistant.newConversation");
 
     const entry: SessionHistoryEntry = {
       sessionId: currentSessionId,
