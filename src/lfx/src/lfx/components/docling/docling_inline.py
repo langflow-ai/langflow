@@ -140,19 +140,13 @@ class DoclingInlineComponent(BaseFileComponent):
                     try:
                         import importlib
                         from pydantic import TypeAdapter
-                        from langchain_docling.picture_description import (
-                            PictureDescriptionLangChainOptions,
-                        )
                         mod_name, cls_name = pic_desc_config["__class_path__"].rsplit(".", 1)
                         mod = importlib.import_module(mod_name)
                         cls = getattr(mod, cls_name)
                         adapter = TypeAdapter(cls)
-                        llm = adapter.validate_python(pic_desc_config["config"])
+                        adapter.validate_python(pic_desc_config["config"])
                         pipe.do_picture_description = True
-                        pipe.allow_external_plugins = True
-                        pipe.picture_description_options = PictureDescriptionLangChainOptions(
-                            llm=llm, prompt=pic_desc_prompt,
-                        )
+                        pipe.picture_description_options.prompt = pic_desc_prompt
                     except Exception as e:
                         print(json.dumps({"ok": False, "error": f"Picture description setup failed: {e}"}))
                         return
