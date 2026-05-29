@@ -694,9 +694,13 @@ If `LANGFLOW_REDIS_QUEUE_DB` is set to the same database index used by the Langf
 
 The cache defaults to DB `0` and the job queue defaults to DB `1`. Verify both settings point to different database indices.
 
-### Streaming or polling reverts to `direct` delivery
+### Server refuses to start with multiple workers and `LANGFLOW_JOB_QUEUE_TYPE=asyncio`
 
-This happens when `LANGFLOW_WORKERS > 1` and `LANGFLOW_JOB_QUEUE_TYPE` is still set to `asyncio` (the default). Langflow automatically forces `LANGFLOW_EVENT_DELIVERY=direct` in this case and logs a warning that names the `LANGFLOW_JOB_QUEUE_TYPE` environment variable. Set `LANGFLOW_JOB_QUEUE_TYPE=redis` to restore streaming and polling delivery.
+Startup fails with a `RuntimeError` that explains the in-memory job queue is worker-local.
+
+Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/events` request after the initial build POST, and the load balancer can route those requests to different workers, which produces intermittent "Job not found" errors.
+
+Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
 
 ### Builds are cancelled unexpectedly
 
