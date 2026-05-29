@@ -17,23 +17,44 @@ html.plugin-redoc .main-wrapper {
   font-family: var(--ifm-font-family-base) !important;
 }
 
-/* Light theme sidebar background */
+/* ── Sidebar background ───────────────────────────────────── */
+
+[data-theme="dark"] .redocusaurus .menu-content {
+  background: #111 !important;
+}
+
 [data-theme="light"] .redocusaurus .menu-content {
   background: var(--ifm-background-color) !important;
 }
 
-/* Light theme — no pink for active/hover sidebar items */
-html[data-theme='light'] .redocusaurus .menu-content label.active,
-html[data-theme='light'] .redocusaurus .menu-content label.active span,
+/* ── Sidebar active item color ────────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus .menu-content label.active {
+  background-color: #18181b !important;
+}
+
+html[data-theme='light'] .redocusaurus .menu-content label.active {
+  background-color: #f5f5f5 !important;
+}
+
+/* ── Sidebar hover color ──────────────────────────────────── */
+
 html[data-theme='light'] .redocusaurus .menu-content label:hover,
 html[data-theme='light'] .redocusaurus .menu-content label:hover span,
 html[data-theme='light'] .redocusaurus .menu-content li:hover > label {
   color: #111827 !important;
 }
 
-[data-theme="light"] .redocusaurus {
-  background: #f5f5f5 !important;
+/* ── Central content background ───────────────────────────── */
+
+[data-theme="dark"] .redocusaurus {
+  background: #111 !important;
 }
+
+[data-theme="light"] .redocusaurus {
+  background: #ffff !important;
+}
+
 
 /* Dark theme — markdown headings inside descriptions */
 [data-theme="dark"] .redocusaurus h1,
@@ -57,7 +78,7 @@ html[data-theme='light'] .redocusaurus .api-content > div > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='tag'] > div > div:nth-child(2),
 html[data-theme='light'] .redocusaurus [class*="RightPanel"] {
-  background: #f5f5f5 !important;
+  background: #fff !important;
 }
 
 /* ── HTTP method button wrapper  ──────────────────────────────── */
