@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import type { MemorySessionInfo } from "@/controllers/API/queries/memories/types";
 import { useGetMemorySessions } from "@/controllers/API/queries/memories/use-get-memory-sessions";
-import { resolveDefaultSessionId } from "./memorySessionResolverHelpers";
+
+export const ALL_SESSIONS_VALUE = "__all__";
 
 type UseMemorySessionResolverArgs = {
   memoryId?: string | null;
@@ -50,20 +51,18 @@ export const useMemorySessionResolver = ({
     if (!sessionIds.length) return;
 
     setSelectedSession((prev) => {
+      if (prev === ALL_SESSIONS_VALUE) return prev;
       if (prev && sessionIds.includes(prev)) return prev;
-      return resolveDefaultSessionId(memorySessions);
+      return ALL_SESSIONS_VALUE;
     });
   }, [memoryId, memorySessions]);
 
   const effectiveSessionId = useMemo(() => {
-    const candidate = selectedSession?.trim();
-    if (candidate) {
-      const exists = memorySessions.some((s) => s.session_id === candidate);
-      if (exists) return candidate;
-    }
+    if (!selectedSession || selectedSession === ALL_SESSIONS_VALUE) return null;
 
-    const fallback = resolveDefaultSessionId(memorySessions);
-    return fallback && fallback.trim() ? fallback : null;
+    const candidate = selectedSession.trim();
+    const exists = memorySessions.some((s) => s.session_id === candidate);
+    return exists ? candidate : null;
   }, [selectedSession, memorySessions]);
 
   return {

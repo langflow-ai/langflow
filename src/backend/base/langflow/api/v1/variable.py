@@ -15,6 +15,7 @@ from langflow.api.v1.models import (
     get_provider_from_variable_name,
 )
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
+from langflow.services.authorization import VariableAction, ensure_variable_permission
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
 from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
@@ -107,6 +108,11 @@ async def create_variable(
     current_user: CurrentActiveUser,
 ):
     """Create a new variable."""
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.CREATE,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not variable.name and not variable.value:
         raise HTTPException(status_code=400, detail="Variable name and value cannot be empty")
@@ -159,6 +165,11 @@ async def read_variables(
 
     Returns a list of variables.
     """
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.READ,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     if not isinstance(variable_service, DatabaseVariableService):
         msg = "Variable service is not an instance of DatabaseVariableService"
@@ -206,6 +217,12 @@ async def update_variable(
         # Get existing variable to check if it's a model provider credential
         existing_variable = await variable_service.get_variable_by_id(
             user_id=current_user.id, variable_id=variable_id, session=session
+        )
+        await ensure_variable_permission(
+            current_user,
+            VariableAction.WRITE,
+            variable_id=variable_id,
+            variable_user_id=current_user.id,
         )
 
         # Validate API key if updating a model provider variable
@@ -255,6 +272,12 @@ async def delete_variable(
         # Get the variable before deleting to check if it's a provider credential
         variable_to_delete = await variable_service.get_variable_by_id(
             user_id=current_user.id, variable_id=variable_id, session=session
+        )
+        await ensure_variable_permission(
+            current_user,
+            VariableAction.DELETE,
+            variable_id=variable_id,
+            variable_user_id=current_user.id,
         )
 
         # Check if this variable is a model provider credential
@@ -319,6 +342,11 @@ async def detect_env_vars(
     template values (including accidental secrets) and ensures results are
     actual stored global variables.
     """
+    await ensure_variable_permission(
+        current_user,
+        VariableAction.READ,
+        variable_user_id=current_user.id,
+    )
     variable_service = get_variable_service()
     existing_variable_names = {
         name

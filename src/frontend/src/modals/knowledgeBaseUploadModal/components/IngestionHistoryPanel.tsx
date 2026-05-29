@@ -1,6 +1,6 @@
 import { useState } from "react";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetIngestionRuns } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
 import { cn } from "@/utils/utils";
 
