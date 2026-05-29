@@ -18,7 +18,7 @@ import requests
 
 # Ensure the sibling module is importable regardless of how pytest is invoked.
 sys.path.insert(0, str(Path(__file__).parent))
-import pypi_nightly_tag as nt  # noqa: E402
+import pypi_nightly_tag as nt
 
 MAIN_URL = nt.PYPI_LANGFLOW_NIGHTLY_URL
 BASE_URL = nt.PYPI_LANGFLOW_BASE_NIGHTLY_URL
