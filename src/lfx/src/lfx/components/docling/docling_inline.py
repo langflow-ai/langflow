@@ -140,16 +140,28 @@ class DoclingInlineComponent(BaseFileComponent):
                     try:
                         import importlib
                         from pydantic import TypeAdapter
+                        try:
+                            from langchain_docling.picture_description import PictureDescriptionLangChainOptions
+                        except ImportError as e:
+                            print(json.dumps({
+                                "ok": False,
+                                "error": "langchain-docling is not installed. Please install it with `pip install langchain-docling` or `pip install 'langflow[docling-image-description]'`."
+                            }))
+                            return
                         mod_name, cls_name = pic_desc_config["__class_path__"].rsplit(".", 1)
                         mod = importlib.import_module(mod_name)
                         cls = getattr(mod, cls_name)
                         adapter = TypeAdapter(cls)
-                        adapter.validate_python(pic_desc_config["config"])
+                        llm = adapter.validate_python(pic_desc_config["config"])
                         pipe.do_picture_description = True
-                        pipe.picture_description_options.prompt = pic_desc_prompt
+                        pipe.allow_external_plugins = True
+                        pipe.picture_description_options = PictureDescriptionLangChainOptions(
+                            llm=llm, prompt=pic_desc_prompt,
+                        )
                     except Exception as e:
                         print(json.dumps({"ok": False, "error": f"Picture description setup failed: {e}"}))
                         return
+
 
                 if pipeline == "vlm":
                     try:

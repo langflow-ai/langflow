@@ -334,6 +334,11 @@ docling-chunking = [
     "docling-core[chunking]>=2.77.0,<3.0.0",
     "tiktoken>=0.7.0",
 ]
+docling-image-description = [
+    "langflow-base[docling]",
+    "langchain-docling>=1.1.0",
+]
+
 easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Additional tools

@@ -340,10 +340,23 @@ def docling_worker(
                 pipeline_options.ocr_options = ocr_options
 
             pipeline_options.do_picture_classification = do_picture_classification
-            _deserialize_pydantic_model(pic_desc_config)
+            try:
+                from langchain_docling.picture_description import PictureDescriptionLangChainOptions
+            except ImportError as e:
+                msg = (
+                    "langchain-docling is not installed. Please install it with `pip install langchain-docling` "
+                    "or `pip install 'langflow[docling-image-description]'`."
+                )
+                raise ImportError(msg) from e
+            pic_desc_llm = _deserialize_pydantic_model(pic_desc_config)
             logger.info("Docling enabling the picture description stage.")
             pipeline_options.do_picture_description = True
-            pipeline_options.picture_description_options.prompt = pic_desc_prompt
+            pipeline_options.allow_external_plugins = True
+            pipeline_options.picture_description_options = PictureDescriptionLangChainOptions(
+                llm=pic_desc_llm,
+                prompt=pic_desc_prompt,
+            )
+
 
             pdf_format_option = PdfFormatOption(pipeline_options=pipeline_options)
             format_options: dict[InputFormat, FormatOption] = {

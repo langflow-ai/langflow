@@ -107,6 +107,12 @@ docling-chunking = [
     "langflow-base[docling-chunking]>=0.9.5",
 ]
 
+docling-image-description = [
+    "langflow-base[docling-image-description]>=0.9.5",
+    "langchain-docling>=1.1.0",
+]
+
+
 audio = [
     "webrtcvad>=2.0.10",
 ]
