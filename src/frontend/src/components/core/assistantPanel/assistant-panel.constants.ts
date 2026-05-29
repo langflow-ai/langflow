@@ -14,12 +14,14 @@ const ASSISTANT_PLACEHOLDER_KEYS = [
   "assistant.placeholder.4",
 ];
 
+export const ASSISTANT_PLACEHOLDERS: string[] = ASSISTANT_PLACEHOLDER_KEYS.map(
+  (key) => i18n.t(key),
+);
+
 export function getAssistantPlaceholder(): string {
-  const key =
-    ASSISTANT_PLACEHOLDER_KEYS[
-      Math.floor(Math.random() * ASSISTANT_PLACEHOLDER_KEYS.length)
-    ];
-  return i18n.t(key);
+  return ASSISTANT_PLACEHOLDERS[
+    Math.floor(Math.random() * ASSISTANT_PLACEHOLDERS.length)
+  ];
 }
 
 export const ASSISTANT_SESSIONS_STORAGE_KEY = "langflow-assistant-sessions";
