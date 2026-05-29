@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
@@ -669,14 +670,14 @@ class AuthService(BaseAuthService):
 
         if not user:
             if request and request.client:
+                # Hash username for correlation without exposing PII
+                username_hash = hashlib.sha256(username.lower().encode()).hexdigest()[:16]
                 logger.warning(
                     "Login failed: user not found",
-                    extra={
-                        "event": "login_failed",
-                        "reason": "user_not_found",
-                        "username": username,
-                        "ip": request.client.host,
-                    },
+                    auth_event="login_failed",
+                    reason="user_not_found",
+                    username_hash=username_hash,
+                    client_ip=request.client.host,
                 )
             return None
 
@@ -684,12 +685,10 @@ class AuthService(BaseAuthService):
             if request and request.client:
                 logger.warning(
                     "Login failed: inactive user",
-                    extra={
-                        "event": "login_failed",
-                        "reason": "user_inactive",
-                        "auth_id": str(user.id),
-                        "ip": request.client.host,
-                    },
+                    auth_event="login_failed",
+                    reason="user_inactive",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
                 )
             if not user.last_login_at:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
@@ -699,12 +698,10 @@ class AuthService(BaseAuthService):
             if request and request.client:
                 logger.warning(
                     "Login failed: incorrect password",
-                    extra={
-                        "event": "login_failed",
-                        "reason": "incorrect_password",
-                        "auth_id": str(user.id),
-                        "ip": request.client.host,
-                    },
+                    auth_event="login_failed",
+                    reason="incorrect_password",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
                 )
             return None
 
@@ -712,11 +709,9 @@ class AuthService(BaseAuthService):
         if request and request.client:
             logger.info(
                 "Login successful",
-                extra={
-                    "event": "login_success",
-                    "auth_id": str(user.id),
-                    "ip": request.client.host,
-                },
+                auth_event="login_success",
+                auth_id=str(user.id),
+                client_ip=request.client.host,
             )
         return user
 
