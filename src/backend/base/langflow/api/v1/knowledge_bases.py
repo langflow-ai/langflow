@@ -120,7 +120,7 @@ async def _guard_kb_action(
     from langflow.services.authorization.utils import (
         _auth_context,
         _coerce_action,
-        _resolve_casbin_domain,
+        _resolve_authz_domain,
     )
     from langflow.services.database.models.user.crud import get_user_by_id
     from langflow.services.deps import get_authorization_service, session_scope
@@ -146,7 +146,7 @@ async def _guard_kb_action(
                 for candidate in candidates:
                     allowed = await authz.enforce(
                         user_id=current_user.id,
-                        domain=_resolve_casbin_domain(None, None),
+                        domain=_resolve_authz_domain(None, None),
                         obj=f"knowledge_base:{candidate.id}",
                         act=act_str,
                         context=context,

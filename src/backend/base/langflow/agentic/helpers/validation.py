@@ -159,6 +159,58 @@ def _format_root_error(exc: BaseException) -> str:
     return f"{error_type}: {error_msg}" if error_msg else error_type
 
 
+# Representative dummy values per declared input type. A non-empty string is
+# used for text because the screenshot-4 class of bug is an output method
+# that feeds a user string straight into ``Data(data=...)`` (which pydantic
+# requires to be a dict) — an empty string would not trip it.
+#
+# Only types with a SAFE, well-typed dummy are listed. Inputs whose type is
+# not here are deliberately left UNSET so they keep the original
+# missing-attribute → AttributeError → swallow behavior. Synthesizing a
+# wrong-typed value for a complex input (e.g. a string for a DictInput) would
+# make pydantic reject a perfectly valid component (false negative).
+_PROBE_BY_FIELD_TYPE: dict[str, object] = {
+    "str": "validation_probe",
+    "int": 1,
+    "float": 1.0,
+    "bool": True,
+    "dict": {},
+    "NestedDict": {},
+}
+
+
+def _synthesize_probe_inputs(cc_instance) -> dict[str, object]:
+    """Build representative values for every declared input.
+
+    Why: a component whose output method reads an input (e.g.
+    ``Data(data=self.animal_name[:3])``) never reaches the broken
+    construction when the sandbox sets no attributes — the missing
+    attribute raises ``AttributeError`` first and the schema bug is
+    masked (screenshot 4). Feeding each declared input a type-appropriate
+    dummy makes the output method actually run so pydantic surfaces the
+    real error.
+
+    Returns an empty dict when the component declares no inputs (the
+    no-input cases were already covered) or when inputs can't be read.
+    """
+    inputs = getattr(cc_instance, "inputs", None)
+    if not inputs:
+        return {}
+    probe: dict[str, object] = {}
+    for descriptor in inputs:
+        name = getattr(descriptor, "name", None)
+        if not name:
+            continue
+        field_type = getattr(descriptor, "field_type", None)
+        # FieldTypes is a str-valued enum (e.g. FieldTypes.TEXT == "str").
+        key = getattr(field_type, "value", field_type)
+        if key in _PROBE_BY_FIELD_TYPE:
+            probe[name] = _PROBE_BY_FIELD_TYPE[key]
+        # Unknown/complex types are intentionally left unset — see the
+        # _PROBE_BY_FIELD_TYPE rationale (avoid false rejections).
+    return probe
+
+
 async def _execute_output_methods_for_validation(cc_instance) -> str | None:
     """Invoke every output method and surface pydantic-schema failures only.
 
@@ -167,18 +219,22 @@ async def _execute_output_methods_for_validation(cc_instance) -> str | None:
     when a method constructs a schema object with the wrong shape, e.g.
     ``Data(data=[list])`` or ``Message(sender=<not-a-string>)``).
 
-    Non-schema runtime errors (network failures, missing inputs, auth problems)
-    are **intentionally swallowed**: a correct component can still fail
-    execution in the validation sandbox for environmental reasons, and we must
-    not mark it as broken on that basis. The retry loop in assistant_service
-    consumes only the schema errors this helper returns.
+    Output methods are exercised with synthesized representative inputs (see
+    ``_synthesize_probe_inputs``) so input-dependent schema bugs surface
+    instead of being masked by an ``AttributeError`` for a missing input.
+
+    Non-schema runtime errors (network failures, auth problems) are
+    **intentionally swallowed**: a correct component can still fail execution
+    in the validation sandbox for environmental reasons, and we must not mark
+    it as broken on that basis. The retry loop in assistant_service consumes
+    only the schema errors this helper returns.
 
     Note: uses ``_build_results`` directly instead of the public ``build_results``
     because the latter emits events via ``send_error`` and relies on a
     tracing/event manager that the validation sandbox does not wire up.
     """
     try:
-        cc_instance.set_attributes({})
+        cc_instance.set_attributes(_synthesize_probe_inputs(cc_instance))
     except ValidationError as exc:
         return _format_root_error(exc)
     except (AttributeError, TypeError, ValueError):
@@ -230,6 +286,18 @@ async def validate_component_runtime(code: str, user_id: str | None = None) -> s
     return await _execute_output_methods_for_validation(cc_instance)
 
 
+# The synthetic-tool sentinel name + method are reserved by the
+# Component base for the wiring layer's auto-generated tool output.
+# A user-declared Output that uses either of these collides with the
+# synthetic and (pre-fix) caused ComponentToolkit to drop the user's
+# tool — the agent then receives an empty tool list and silently does
+# nothing. Defense-in-depth: the runtime filter in component_tool.py is
+# now precise, but rejecting the bad code at generation time lets the
+# retry loop produce a correctly-named output instead.
+_RESERVED_OUTPUT_NAME = "component_as_tool"
+_RESERVED_OUTPUT_METHOD = "to_toolkit"
+
+
 def validate_component_code(code: str) -> ValidationResult:
     """Validate component code using static analysis only.
 
@@ -242,6 +310,8 @@ def validate_component_code(code: str) -> ValidationResult:
     2. Class name extraction
     3. Overlapping input/output names
     4. Output methods have return statements with values
+    5. No reserved output names/methods that would collide with the
+       synthetic Tool sentinel (``component_as_tool`` / ``to_toolkit``).
     """
     class_name = _safe_extract_class_name(code)
 
@@ -259,7 +329,34 @@ def validate_component_code(code: str) -> ValidationResult:
             msg = f"Inputs and outputs have overlapping names: {overlap}"
             raise ValueError(msg)
 
+        if _RESERVED_OUTPUT_NAME in output_names:
+            return ValidationResult(
+                is_valid=False,
+                code=code,
+                error=(
+                    f"Output name {_RESERVED_OUTPUT_NAME!r} is reserved by Langflow for the "
+                    "synthetic Tool sentinel that the wiring layer auto-generates when a "
+                    "component is flipped to Tool Mode. Declaring it on your own Output "
+                    "collides with that sentinel and the runtime will drop your tool. "
+                    "Pick a name describing the produced value (e.g. 'item', 'price', 'result')."
+                ),
+                class_name=class_name,
+            )
+
         output_methods = _extract_output_methods(tree, class_name)
+        if _RESERVED_OUTPUT_METHOD in output_methods:
+            return ValidationResult(
+                is_valid=False,
+                code=code,
+                error=(
+                    f"Output method {_RESERVED_OUTPUT_METHOD!r} is reserved by Langflow for "
+                    "the synthetic Tool sentinel. Defining your own method with that name "
+                    "shadows the Component base implementation and breaks tool exposure. "
+                    "Rename the method to describe its action (e.g. 'get_item', 'fetch_price')."
+                ),
+                class_name=class_name,
+            )
+
         if output_methods:
             checker = _ReturnChecker()
             checker.visit(tree)
