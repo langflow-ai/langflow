@@ -21,10 +21,12 @@ html.plugin-redoc .main-wrapper {
 
 [data-theme="dark"] .redocusaurus .menu-content {
   background: #111 !important;
+  border-right: 1px solid #303038 !important;
 }
 
 [data-theme="light"] .redocusaurus .menu-content {
   background: var(--ifm-background-color) !important;
+  border-right: 1px solid #e4e4e7 !important;
 }
 
 /* ── Sidebar active item color ────────────────────────────── */
@@ -296,6 +298,16 @@ html[data-theme='light'] .redocusaurus .token.operator {
 html[data-theme='light'] .redocusaurus .token.property {
   color: hsl(240, 4%, 46%) !important;
 }
+
+/* ── Operation divider (::after border between operations) ── */
+/* Note: .bHcLRs is a Styled Components hash from Redoc — stable unless Redoc updates */
+
+.redocusaurus .api-content > div:not(:last-of-type)::after{
+  display: none !important;
+  border: none !important;
+  content: none !important;
+}
+
 
 /* ── Dark theme misc ──────────────────────────────────────── */
 
