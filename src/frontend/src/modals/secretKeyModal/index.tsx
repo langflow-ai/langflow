@@ -10,8 +10,7 @@ import { ContentRenderKey } from "./components/content-render";
 import { FormKeyRender } from "./components/form-key-render";
 import { HeaderRender } from "./components/header-render";
 
-// Add this interface for the modal props
-interface ModalConfigProps {
+export interface ModalConfigProps {
   title?: string;
   description?: React.ReactNode;
   inputLabel?: React.ReactNode;
@@ -37,6 +36,7 @@ export default function SecretKeyModal({
   const [open, setOpen] = useState(false);
   const [apiKeyName, setApiKeyName] = useState(data?.apikeyname ?? "");
   const [apiKeyValue, setApiKeyValue] = useState("");
+  const [expiresAt, setExpiresAt] = useState<string>("");
   const [renderKey, setRenderKey] = useState(false);
   const [textCopied, setTextCopied] = useState(true);
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
@@ -56,6 +56,7 @@ export default function SecretKeyModal({
   function resetForm() {
     setApiKeyName("");
     setApiKeyValue("");
+    setExpiresAt("");
   }
 
   const handleCopyClick = async () => {
@@ -75,7 +76,12 @@ export default function SecretKeyModal({
   };
 
   function handleAddNewKey() {
-    createApiKey(apiKeyName)
+    // Append local end-of-day (no "Z" suffix) so the Date constructor treats it
+    // as local time, giving UTC+ users a key that expires at midnight their time.
+    const isoExpiry = expiresAt
+      ? new Date(expiresAt + "T23:59:59").toISOString()
+      : null;
+    createApiKey(apiKeyName, isoExpiry)
       .then((res) => {
         setApiKeyValue(res["api_key"]);
       })
@@ -151,6 +157,8 @@ export default function SecretKeyModal({
             apiKeyName={apiKeyName}
             inputRef={inputRef}
             setApiKeyName={setApiKeyName}
+            expiresAt={expiresAt}
+            setExpiresAt={setExpiresAt}
           />
         )}
       </BaseModal.Content>

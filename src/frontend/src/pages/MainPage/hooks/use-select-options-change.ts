@@ -16,7 +16,7 @@ const useSelectOptionsChange = (
       if (!hasSelected) {
         setErrorData({
           title: t("errors.noItemsSelected"),
-          list: ["Please select items to delete"],
+          list: [t("errors.selectItemsToDelete")],
         });
         return;
       }

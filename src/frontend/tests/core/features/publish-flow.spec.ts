@@ -1,11 +1,11 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { ANIMATIONS, TIMEOUTS } from "../../utils/constants/timeouts";
 import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
+import { ANIMATIONS, TIMEOUTS } from "../../utils/constants/timeouts";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to publish a flow",
   { tag: ["@release", "@workspace", "@api"] },

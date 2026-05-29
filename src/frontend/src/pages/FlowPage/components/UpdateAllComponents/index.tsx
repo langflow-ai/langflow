@@ -21,14 +21,6 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
-const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
-const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
-  "There was an error updating the components.",
-  "If the error persists, please report it on our Discord or GitHub.",
-];
-const ERROR_MESSAGE_EDGES_LOST =
-  "Some edges were lost after updating the components. Please review the flow and reconnect them.";
-
 const CONTAINER_VARIANTS = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
@@ -105,7 +97,7 @@ export default function UpdateAllComponents() {
       edgesUpdateRef.current.updateComponent
     ) {
       useAlertStore.getState().setNoticeData({
-        title: ERROR_MESSAGE_EDGES_LOST,
+        title: t("errors.edgesLost"),
       });
 
       resetEdgesUpdateRef();
@@ -114,9 +106,7 @@ export default function UpdateAllComponents() {
 
   const getSuccessTitle = (updatedCount: number) => {
     resetEdgesUpdateRef();
-    return `Successfully updated ${updatedCount} component${
-      updatedCount > 1 ? "s" : ""
-    }`;
+    return t("updateComponents.successCount", { count: updatedCount });
   };
 
   const breakingChanges = updatableComponents.filter(
@@ -210,8 +200,11 @@ export default function UpdateAllComponents() {
       })
       .catch((error) => {
         setErrorData({
-          title: ERROR_MESSAGE_UPDATING_COMPONENTS,
-          list: ERROR_MESSAGE_UPDATING_COMPONENTS_LIST,
+          title: t("errors.updateComponents"),
+          list: [
+            t("errors.updateComponentsList"),
+            t("errors.updateComponentsContact"),
+          ],
         });
         console.error(error);
       })

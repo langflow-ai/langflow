@@ -3,9 +3,10 @@
 Verifies that starter project JSON files are properly structured and that:
 - noteNode types have width/height at the root level
 - Other node types have width/height removed from root level
-- Agent nodes ship with the new structured default system prompt (not the
-  legacy one-liner that QA flagged on Simple Agent / SaaS Pricing /
-  Market Research).
+- Agent nodes never ship with the legacy one-line prompt that QA flagged
+  during the structured-default rollout
+- Agent nodes that previously had purpose-specific instructions (e.g.
+  Market Research, Pokédex) do not regress to the generic default
 """
 
 import json
@@ -19,6 +20,24 @@ STARTER_PROJECTS_DIR = Path(__file__).parent.parent / "base" / "langflow" / "ini
 # QA observed this exact legacy text in starter project Agents on the cz/default-sys-prompt branch.
 LEGACY_AGENT_SYSTEM_PROMPT = "You are a helpful assistant that can use tools to answer questions and perform tasks."
 AGENT_NODE_TYPES = ("Agent", "ToolCallingAgent")
+
+# Templates whose Agents must keep purpose-specific Agent Instructions (not the
+# generic DEFAULT_SYSTEM_PROMPT_TEMPLATE). Regression guard for #12855: that PR
+# replaced every starter Agent's system_prompt.value with the new structured
+# default, wiping the role-specific prompts these flows depend on. Each entry
+# pairs (starter project filename, agent node id) with a substring that must
+# appear in the agent's system_prompt.value.
+TEMPLATES_WITH_CUSTOM_AGENT_PROMPTS: dict[tuple[str, str], str] = {
+    ("Instagram Copywriter.json", "Agent-DYPjp"): "information from a web search",
+    ("Market Research.json", "Agent-Hz2it"): "expert business research agent",
+    ("News Aggregator.json", "Agent-ZH2Rd"): "content writer researching news",
+    ("Pokédex Agent.json", "Agent-R27kt"): "You are a pokedex",
+    ("Research Agent.json", "Agent-mIgZ5"): "research analyst with access to Tavily Search",
+    ("SaaS Pricing.json", "Agent-bNGtH"): "Subscription Pricing Calculator",
+    ("Travel Planning Agents.json", "Agent-9tDeE"): "knowledgeable Local Expert",
+    ("Travel Planning Agents.json", "Agent-C8zRS"): "Amazing Travel Concierge",
+    ("Youtube Analysis.json", "Agent-2FN2V"): "comprehensive YouTube video analysis",
+}
 
 
 def get_starter_project_files() -> list[Path]:
@@ -93,25 +112,28 @@ class TestStarterProjects:
 
         assert not issues, f"{json_file.name}: Width/height issues found:\n" + "\n".join(issues)
 
-    def test_agent_nodes_use_default_system_prompt_template(self, json_file: Path):
-        """Agent nodes must ship with the new DEFAULT_SYSTEM_PROMPT_TEMPLATE.
+    def test_agent_nodes_do_not_use_legacy_system_prompt(self, json_file: Path):
+        """Agent nodes must not ship with the legacy one-line system prompt.
 
-        Bug: QA reported that Simple Agent, SaaS Pricing, and Market Research
-        templates load the legacy one-line system prompt instead of the new
-        structured 7-section default. This regression occurs because the
-        starter project JSON snapshots embed the literal value at authoring
-        time, so they don't pick up the new default when the AgentComponent
-        input default changes.
+        Background: PR #12855 introduced a structured 7-section
+        DEFAULT_SYSTEM_PROMPT_TEMPLATE to replace the old one-line
+        "You are a helpful assistant..." default. The original version of
+        this test asserted that every Agent in every starter project use
+        the new DEFAULT_SYSTEM_PROMPT_TEMPLATE — that assertion caused a
+        regression: starter projects with purpose-specific Agent
+        Instructions (Market Research, Pokédex, SaaS Pricing, etc.) had
+        their custom prompts overwritten by the generic default to keep
+        the test green.
 
-        Fix: every Agent / ToolCallingAgent node in every starter project must
-        store the new DEFAULT_SYSTEM_PROMPT_TEMPLATE as its system_prompt
-        value (or at the very least, must not store the legacy one-liner).
+        New contract: ship the generic default OR a template-specific
+        prompt, but never the legacy one-liner. A separate parametrised
+        test (test_agent_keeps_template_specific_prompt) guards the
+        specific templates that must keep their custom instructions.
         """
         data = load_json_file(json_file)
         nodes = data.get("data", {}).get("nodes", [])
 
         legacy_offenders: list[str] = []
-        non_template_offenders: list[str] = []
 
         for node in nodes:
             node_data = node.get("data", {}) or {}
@@ -126,14 +148,49 @@ class TestStarterProjects:
 
             if value.strip() == LEGACY_AGENT_SYSTEM_PROMPT:
                 legacy_offenders.append(f"{node_id} ({node_type})")
-            elif value != DEFAULT_SYSTEM_PROMPT_TEMPLATE:
-                non_template_offenders.append(f"{node_id} ({node_type})")
 
         assert not legacy_offenders, (
             f"{json_file.name}: Agent nodes still use the legacy one-line system prompt: "
-            f"{legacy_offenders}. They must use DEFAULT_SYSTEM_PROMPT_TEMPLATE."
+            f"{legacy_offenders}. Use DEFAULT_SYSTEM_PROMPT_TEMPLATE or a template-specific prompt."
         )
-        assert not non_template_offenders, (
-            f"{json_file.name}: Agent nodes do not use DEFAULT_SYSTEM_PROMPT_TEMPLATE: "
-            f"{non_template_offenders}. Update the starter project to ship the new default."
+
+
+@pytest.mark.parametrize(
+    ("template_file", "agent_id", "required_substring"),
+    [
+        (filename, agent_id, substring)
+        for (filename, agent_id), substring in TEMPLATES_WITH_CUSTOM_AGENT_PROMPTS.items()
+    ],
+    ids=lambda v: v if isinstance(v, str) else repr(v),
+)
+def test_agent_keeps_template_specific_prompt(template_file: str, agent_id: str, required_substring: str):
+    """Templates with purpose-specific Agent Instructions must not regress to the generic default.
+
+    Regression guard for #12855: that PR's auto-bake replaced every starter
+    Agent's system_prompt.value with DEFAULT_SYSTEM_PROMPT_TEMPLATE,
+    silently dropping role-specific prompts (Market Research's business
+    researcher, Pokédex's API guidance, etc.). The flows that depend on
+    those instructions broke at runtime. If you legitimately need to
+    change one of these prompts, update the substring in
+    TEMPLATES_WITH_CUSTOM_AGENT_PROMPTS in the same change.
+    """
+    path = STARTER_PROJECTS_DIR / template_file
+    assert path.exists(), f"Starter template not found: {path}"
+
+    data = load_json_file(path)
+    for node in data.get("data", {}).get("nodes", []):
+        node_data = node.get("data", {}) or {}
+        if node_data.get("id") != agent_id:
+            continue
+        template = node_data.get("node", {}).get("template", {}) or {}
+        value = (template.get("system_prompt", {}) or {}).get("value", "")
+        assert value != DEFAULT_SYSTEM_PROMPT_TEMPLATE, (
+            f"{template_file}: agent {agent_id} regressed to DEFAULT_SYSTEM_PROMPT_TEMPLATE; "
+            f"restore the template-specific Agent Instructions containing {required_substring!r}."
         )
+        assert required_substring in value, (
+            f"{template_file}: agent {agent_id} system_prompt does not contain expected "
+            f"substring {required_substring!r}. Got: {value[:120]!r}..."
+        )
+        return
+    pytest.fail(f"{template_file}: agent node {agent_id!r} not found")

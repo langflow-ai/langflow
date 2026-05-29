@@ -286,6 +286,10 @@ export const lazyIconsMapping = {
     import("@/icons/IBM").then((mod) => ({
       default: mod.IBMIcon,
     })),
+  DB2: () =>
+    import("@/icons/IBM").then((mod) => ({
+      default: mod.DB2Icon,
+    })),
   WatsonxAI: () =>
     import("@/icons/IBM").then((mod) => ({
       default: mod.WatsonxAiIcon,

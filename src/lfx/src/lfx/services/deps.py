@@ -109,6 +109,18 @@ def get_shared_component_cache_service() -> CacheServiceProtocol | None:
     return get_service(ServiceType.SHARED_COMPONENT_CACHE_SERVICE, SharedComponentCacheServiceFactory())
 
 
+def get_extension_events_service():
+    """Retrieves the ExtensionEventsService instance.
+
+    Returns None if the service manager is not initialised (e.g. in unit-test
+    environments that don't boot the full service stack).  Callers must guard
+    against None and fall back to structured logging.
+    """
+    from lfx.services.extension_events.factory import ExtensionEventsServiceFactory
+
+    return get_service(ServiceType.EXTENSION_EVENTS_SERVICE, ExtensionEventsServiceFactory())
+
+
 def get_chat_service() -> ChatServiceProtocol | None:
     """Retrieves the chat service instance."""
     from lfx.services.schema import ServiceType

@@ -63,7 +63,7 @@ export default function UpdateComponentModal({
   const columnDefs: ColDef[] = [
     { field: "id", hide: true },
     {
-      headerName: t("updateComponent.columnComponent"),
+      headerName: t("updateComponent.componentHeader"),
       field: "display_name",
       headerClass: "!text-mmd !font-normal",
       flex: 1,
@@ -85,7 +85,7 @@ export default function UpdateComponentModal({
       },
     },
     {
-      headerName: t("updateComponent.columnUpdateType"),
+      headerName: t("updateComponent.updateTypeHeader"),
       field: "breakingChange",
       headerClass: "!text-mmd !font-normal",
       resizable: false,
@@ -136,8 +136,8 @@ export default function UpdateComponentModal({
       <BaseModal.Header>
         <span className="">
           {isMultiple
-            ? t("updateComponent.titleMultiple")
-            : t("updateComponent.titleSingle", {
+            ? t("updateComponent.updateMultipleTitle")
+            : t("updateComponent.updateSingleTitle", {
                 name: components?.[0]?.display_name ?? "",
               })}
         </span>

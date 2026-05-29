@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
@@ -30,6 +31,7 @@ export default function DeploymentsContent({
   stepperOpen,
   setStepperOpen,
 }: DeploymentsContentProps) {
+  const { t } = useTranslation();
   const testModal = useTestDeploymentModal();
 
   const { mutate: deleteDeployment } = useDeleteDeployment();
@@ -37,7 +39,11 @@ export default function DeploymentsContent({
   const deploymentDelete = useDeleteWithConfirmation<
     Deployment,
     { deployment_id: string }
-  >(deleteDeployment, buildDeploymentDeleteParams, "Error deleting deployment");
+  >(
+    deleteDeployment,
+    buildDeploymentDeleteParams,
+    t("deployments.errorDeletingDeployment"),
+  );
 
   const [editingDeployment, setEditingDeployment] = useState<Deployment | null>(
     null,

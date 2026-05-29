@@ -4,6 +4,12 @@ from lfx.services.settings.feature_flags import FEATURE_FLAGS
 
 from langflow.api.v1 import (
     api_key_router,
+    authz_audit_router,
+    authz_me_router,
+    authz_role_assignments_router,
+    authz_roles_router,
+    authz_shares_router,
+    authz_teams_router,
     chat_router,
     endpoints_router,
     extensions_router,
@@ -77,6 +83,12 @@ router_v1.include_router(mcp_projects_router)
 router_v1.include_router(openai_responses_router)
 router_v1.include_router(models_router)
 router_v1.include_router(model_options_router)
+router_v1.include_router(authz_shares_router)
+router_v1.include_router(authz_audit_router)
+router_v1.include_router(authz_roles_router)
+router_v1.include_router(authz_role_assignments_router)
+router_v1.include_router(authz_teams_router)
+router_v1.include_router(authz_me_router)
 
 
 # Extension reload is Mode A (local-dev / pip-installed) only.  The route is
@@ -97,9 +109,13 @@ include_deployment_router(router_v1)
 
 # Agentic flow execution - lazy import to avoid circular dependency
 def _include_agentic_router():
+    from langflow.agentic.api.files_router import router as agentic_files_router
     from langflow.agentic.api.router import router as agentic_router
+    from langflow.agentic.api.sessions_router import router as agentic_sessions_router
 
     router_v1.include_router(agentic_router)
+    router_v1.include_router(agentic_files_router)
+    router_v1.include_router(agentic_sessions_router)
 
 
 _include_agentic_router()

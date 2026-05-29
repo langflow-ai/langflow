@@ -1,9 +1,9 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "CRUD folders",
   { tag: ["@release", "@api"] },

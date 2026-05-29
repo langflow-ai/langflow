@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
-import { selectAssistantOpenAiModel } from "../../utils/select-assistant-openai-model";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { openStarterProject } from "../../utils/flow/open-starter-project";
+import { selectAssistantOpenAiModel } from "../../utils/select-assistant-openai-model";
 
 test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
   test.beforeEach(async ({ page }) => {
@@ -33,18 +33,13 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
       page.getByTestId("assistant-message-user").first(),
     ).toContainText("What is Langflow");
 
-    // Wait for assistant response with substantial content
-    await page.waitForFunction(
-      () => {
-        const msgs = document.querySelectorAll(
-          '[data-testid="assistant-message-assistant"]',
-        );
-        if (msgs.length === 0) return false;
-        const lastMsg = msgs[msgs.length - 1];
-        return (lastMsg?.textContent || "").length > 20;
-      },
-      { timeout: 90000 },
-    );
+    // Wait for assistant response wrapper to appear (locator.waitFor respects
+    // its own timeout; page.waitForFunction is capped by actionTimeout=20s
+    // per PLAYWRIGHT_RULE.md #4).
+    await page
+      .getByTestId("assistant-message-assistant")
+      .last()
+      .waitFor({ state: "visible", timeout: 90000 });
 
     // Input should be re-enabled after response completes
     await expect(textarea).toBeEnabled({ timeout: 10000 });
@@ -63,26 +58,25 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
       page.getByTestId("assistant-message-user").first(),
     ).toContainText("uppercase");
 
-    // Wait for component result or text response
-    await page.waitForFunction(
-      () => {
-        const componentResult = document.querySelector(
-          '[data-testid="assistant-component-result"]',
-        );
-        if (componentResult) return true;
-
-        const msgs = document.querySelectorAll(
-          '[data-testid="assistant-message-assistant"]',
-        );
-        for (const msg of msgs) {
-          if ((msg.textContent || "").length > 50) return true;
-        }
-        return false;
-      },
-      { timeout: 150000 },
-    );
-
+    // Wait for a TERMINAL generation state before branching. With a real LLM
+    // the run is non-deterministic: it either builds a component (the
+    // component-result card renders) or answers with plain text (the input
+    // re-enables). Both are terminal. We must NOT race on
+    // `assistant-message-assistant` — that wrapper mounts MID-STREAM, before the
+    // component card renders and before the input re-enables, so branching on it
+    // checks `componentResult.count()` too early and trips on the still-disabled
+    // "Generating component..." textarea.
+    //
+    // `Promise.any` resolves on the FIRST terminal signal and only rejects if
+    // BOTH time out (a truly hung generation). `locator.waitFor` /
+    // `expect().toBeEnabled()` respect their own timeouts (page.waitForFunction
+    // would be capped at actionTimeout=20s per PLAYWRIGHT_RULE #4).
     const componentResult = page.getByTestId("assistant-component-result");
+    await Promise.any([
+      componentResult.waitFor({ state: "visible", timeout: 150000 }),
+      expect(textarea).toBeEnabled({ timeout: 150000 }),
+    ]);
+
     const hasComponentResult = (await componentResult.count()) > 0;
 
     if (hasComponentResult) {
@@ -111,23 +105,17 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
     await textarea.fill("Create a component that reverses a string input");
     await page.getByTestId("assistant-send-button").click();
 
-    await page.waitForFunction(
-      () => {
-        const componentResult = document.querySelector(
-          '[data-testid="assistant-component-result"]',
-        );
-        if (componentResult) return true;
-
-        const msgs = document.querySelectorAll(
-          '[data-testid="assistant-message-assistant"]',
-        );
-        for (const msg of msgs) {
-          if ((msg.textContent || "").length > 50) return true;
-        }
-        return false;
-      },
-      { timeout: 150000 },
-    );
+    // page.waitForFunction is capped at actionTimeout=20s (PLAYWRIGHT_RULE #4);
+    // use locator.waitFor which respects its own timeout.
+    await Promise.race([
+      page
+        .getByTestId("assistant-component-result")
+        .waitFor({ state: "visible", timeout: 150000 }),
+      page
+        .getByTestId("assistant-message-assistant")
+        .last()
+        .waitFor({ state: "visible", timeout: 150000 }),
+    ]);
 
     const hasComponentResult =
       (await page.getByTestId("assistant-component-result").count()) > 0;
@@ -193,18 +181,13 @@ test.describe("Assistant Panel Integration", { tag: ["@release"] }, () => {
       page.getByTestId("assistant-message-user").first(),
     ).toBeVisible();
 
-    // Wait for assistant response
-    await page.waitForFunction(
-      () => {
-        const msgs = document.querySelectorAll(
-          '[data-testid="assistant-message-assistant"]',
-        );
-        if (msgs.length === 0) return false;
-        const lastMsg = msgs[msgs.length - 1];
-        return (lastMsg?.textContent || "").length > 5;
-      },
-      { timeout: 90000 },
-    );
+    // Wait for assistant response wrapper to appear (locator.waitFor respects
+    // its own timeout; page.waitForFunction is capped at actionTimeout=20s
+    // per PLAYWRIGHT_RULE.md #4).
+    await page
+      .getByTestId("assistant-message-assistant")
+      .last()
+      .waitFor({ state: "visible", timeout: 90000 });
 
     await expect(textarea).toBeEnabled({ timeout: 10000 });
     await expect(page.getByTestId("assistant-new-session")).toBeEnabled();
