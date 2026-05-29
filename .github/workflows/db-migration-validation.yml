@@ -25,6 +25,17 @@ env:
 jobs:
   migration-pip-venv:
     name: "Migration Test: pip/venv (stable → nightly)"
+    # TEMPORARILY DISABLED (2026-05-28): the PyPI `langflow-nightly` is currently
+    # pip-uninstallable. Its core bundle deps (lfx-arxiv, lfx-duckduckgo) are
+    # published pinning stable `lfx>=0.5.0,<0.6.0`, but stable `lfx` tops out at
+    # 0.4.4 — the 0.5.0 line ships only as the separately-named `lfx-nightly`,
+    # which cannot satisfy an `lfx` pin. So this job fails at the install step.
+    # The Docker Compose job below is unaffected (it runs the prebuilt nightly
+    # image, whose environment is already resolved). Re-enable once EITHER a
+    # stable lfx 0.5.x is published to PyPI OR nightly bundle variants (e.g.
+    # lfx-arxiv-nightly pinning lfx-nightly) are published and langflow-nightly
+    # depends on them.
+    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
@@ -74,12 +85,11 @@ jobs:
         working-directory: migration-test
         env:
           LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
-          LANGFLOW_SUPERUSER: admin
-          LANGFLOW_SUPERUSER_PASSWORD: admin123  # pragma: allowlist secret
         run: |
           source .venv/bin/activate
 
           echo "Starting Langflow to initialize database..."
+          # shellcheck disable=SC2016
           timeout 120 bash -c '
             python -m langflow run --host 127.0.0.1 --port 7860 --backend-only &
             LANGFLOW_PID=$!
@@ -109,16 +119,25 @@ jobs:
           # Wait for startup
           timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
 
-          # Create a simple flow via API
+          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          TOKEN=$(curl -fsS http://127.0.0.1:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "❌ Failed to get authentication token"
+            kill $LANGFLOW_PID
+            exit 1
+          fi
+          echo "✅ Authentication token obtained"
+
+          # Create a witness flow (proves row persistence)
           curl -fsSL -X POST http://127.0.0.1:7860/api/v1/flows/ \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN" \
             -d '{
               "name": "Migration Witness Flow",
               "description": "Test flow to verify data persistence across migration",
               "data": {"nodes": [], "edges": []}
             }' > flow_response.json
 
-          # Verify flow was created
           if ! grep -q '"id"' flow_response.json; then
             echo "❌ Flow creation failed - no id in response"
             cat flow_response.json
@@ -126,11 +145,24 @@ jobs:
           fi
           echo "✅ Witness flow created successfully"
 
+          # Create a witness credential (type=Credential stores encrypted value, exercises encrypted-column migrations)
+          curl -fsSL -X POST http://127.0.0.1:7860/api/v1/variables/ \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN" \
+            -d '{"name": "migration_witness_secret", "value": "witness_value_12345", "type": "Credential", "default_fields": []}' > variable_response.json  # pragma: allowlist secret
+
+          if ! grep -q '"id"' variable_response.json; then
+            echo "❌ Credential creation failed - no id in response"
+            cat variable_response.json
+            exit 1
+          fi
+          echo "✅ Witness credential created successfully"
+
           # Stop Langflow
           kill $LANGFLOW_PID
           wait $LANGFLOW_PID 2>/dev/null || true
 
-          echo "Witness data created"
+          echo "Witness data created (flow + credential)"
 
       - name: Upgrade to nightly version
         working-directory: migration-test
@@ -139,6 +171,14 @@ jobs:
 
           NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
           echo "Upgrading to nightly version: $NIGHTLY_TAG"
+
+          # Remove stable distributions before installing nightly.
+          # langflow and langflow-nightly share langflow-base which writes to the
+          # same site-packages/langflow/ namespace. If stable stays installed,
+          # python -m langflow still boots the stable version and no real
+          # nightly migration is exercised (false-positive test).
+          echo "Removing stable langflow to avoid namespace collision with nightly..."
+          uv pip uninstall -y langflow langflow-base || true
 
           # Extract version from Docker tag (format: langflowai/langflow-nightly:v1.10.0.dev20260522)
           if [[ "$NIGHTLY_TAG" == *":"* ]]; then
@@ -151,7 +191,7 @@ jobs:
 
             if [[ "$VERSION" == "latest" ]]; then
               # Install latest nightly from PyPI
-              uv pip install --upgrade langflow-nightly[postgresql]
+              uv pip install --upgrade 'langflow-nightly[postgresql]'
             else
               # Install specific version
               uv pip install --upgrade "langflow-nightly[postgresql]==$VERSION"
@@ -169,12 +209,11 @@ jobs:
         working-directory: migration-test
         env:
           LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
-          LANGFLOW_SUPERUSER: admin
-          LANGFLOW_SUPERUSER_PASSWORD: admin123  # pragma: allowlist secret
         run: |
           source .venv/bin/activate
 
           echo "Starting Langflow nightly to run migrations..."
+          # shellcheck disable=SC2016
           timeout 180 bash -c '
             python -m langflow run --host 127.0.0.1 --port 7860 --backend-only > langflow_nightly.log 2>&1 &
             LANGFLOW_PID=$!
@@ -210,14 +249,37 @@ jobs:
 
           timeout 60 bash -c 'until curl -f http://127.0.0.1:7860/health_check 2>/dev/null; do sleep 2; done'
 
-          # Verify witness flow exists
-          curl -f http://127.0.0.1:7860/api/v1/flows/ > flows_after_migration.json
+          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          TOKEN=$(curl -fsS http://127.0.0.1:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "❌ Failed to get authentication token"
+            kill $LANGFLOW_PID
+            exit 1
+          fi
+          echo "✅ Authentication token obtained"
+
+          # Verify witness flow persisted
+          curl -fsSL --compressed http://127.0.0.1:7860/api/v1/flows/ \
+            -H "Authorization: Bearer $TOKEN" > flows_after_migration.json
 
           if grep -q "Migration Witness Flow" flows_after_migration.json; then
             echo "✅ Witness flow found after migration"
           else
             echo "❌ Witness flow NOT found after migration"
             cat flows_after_migration.json
+            kill $LANGFLOW_PID
+            exit 1
+          fi
+
+          # Verify witness credential persisted (confirms encrypted-column migration ran without data loss)
+          curl -fsSL --compressed http://127.0.0.1:7860/api/v1/variables/ \
+            -H "Authorization: Bearer $TOKEN" > variables_after_migration.json
+
+          if grep -q "migration_witness_secret" variables_after_migration.json; then
+            echo "✅ Witness credential found after migration"
+          else
+            echo "❌ Witness credential NOT found after migration"
+            cat variables_after_migration.json
             kill $LANGFLOW_PID
             exit 1
           fi
@@ -253,8 +315,6 @@ jobs:
         working-directory: docker-migration-test
         run: |  # pragma: allowlist secret
           cat > docker-compose.yml <<'EOF'
-          version: "3.8"
-
           services:
             langflow:
               image: langflowai/langflow:latest
@@ -262,8 +322,6 @@ jobs:
                 - "7860:7860"
               environment:  # pragma: allowlist secret
                 - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow  # pragma: allowlist secret
-                - LANGFLOW_SUPERUSER=admin
-                - LANGFLOW_SUPERUSER_PASSWORD=admin123  # pragma: allowlist secret
               depends_on:
                 postgres:
                   condition: service_healthy
@@ -309,22 +367,43 @@ jobs:
       - name: Create witness flow via API
         working-directory: docker-migration-test
         run: |
+          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          TOKEN=$(curl -fsS http://localhost:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "❌ Failed to get authentication token"
+            exit 1
+          fi
+          echo "✅ Authentication token obtained"
+
           echo "Creating witness flow..."
           curl -fsSL -X POST http://localhost:7860/api/v1/flows/ \
             -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN" \
             -d '{
               "name": "Docker Migration Witness Flow",
               "description": "Test flow for Docker Compose migration",
               "data": {"nodes": [], "edges": []}
             }' > flow_response.json
 
-          # Verify flow was created
           if ! grep -q '"id"' flow_response.json; then
             echo "❌ Flow creation failed - no id in response"
             cat flow_response.json
             exit 1
           fi
           echo "✅ Witness flow created successfully"
+
+          echo "Creating witness credential (exercises encrypted-column migrations)..."
+          curl -fsSL -X POST http://localhost:7860/api/v1/variables/ \
+            -H "Content-Type: application/json" \
+            -H "Authorization: Bearer $TOKEN" \
+            -d '{"name": "migration_witness_secret", "value": "witness_value_12345", "type": "Credential", "default_fields": []}' > variable_response.json  # pragma: allowlist secret
+
+          if ! grep -q '"id"' variable_response.json; then
+            echo "❌ Credential creation failed - no id in response"
+            cat variable_response.json
+            exit 1
+          fi
+          echo "✅ Witness credential created successfully"
 
       - name: Stop stable Langflow (keep PostgreSQL volume)
         working-directory: docker-migration-test
@@ -337,10 +416,15 @@ jobs:
         working-directory: docker-migration-test
         run: |
           NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
-          echo "Updating to nightly: $NIGHTLY_TAG"
+          # Strip 'v' prefix from version part — Docker images are published without it
+          # e.g. langflowai/langflow-nightly:v1.10.0.dev20260522 → langflowai/langflow-nightly:1.10.0.dev20260522
+          VERSION_PART="${NIGHTLY_TAG##*:}"
+          IMAGE_NAME="${NIGHTLY_TAG%%:*}"
+          DOCKER_TAG="${IMAGE_NAME}:${VERSION_PART#v}"
+          echo "Updating to nightly: $DOCKER_TAG"
 
           # Update docker-compose.yml to use nightly image
-          sed -i "s|image: langflowai/langflow:latest|image: $NIGHTLY_TAG|" docker-compose.yml
+          sed -i "s|image: langflowai/langflow:latest|image: $DOCKER_TAG|" docker-compose.yml
 
           cat docker-compose.yml
 
@@ -362,14 +446,35 @@ jobs:
       - name: Verify witness data persisted
         working-directory: docker-migration-test
         run: |
-          echo "Verifying witness flow..."
-          curl -f http://localhost:7860/api/v1/flows/ > flows_after_migration.json
+          # Get auth token via auto_login (works under default AUTO_LOGIN=true, no credentials needed)
+          TOKEN=$(curl -fsS http://localhost:7860/api/v1/auto_login | python3 -c "import json,sys; print(json.load(sys.stdin)['access_token'])")
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "❌ Failed to get authentication token"
+            exit 1
+          fi
+          echo "✅ Authentication token obtained"
+
+          echo "Verifying witness flow persisted..."
+          curl -fsSL --compressed http://localhost:7860/api/v1/flows/ \
+            -H "Authorization: Bearer $TOKEN" > flows_after_migration.json
 
           if grep -q "Docker Migration Witness Flow" flows_after_migration.json; then
             echo "✅ Witness flow found after Docker migration"
           else
             echo "❌ Witness flow NOT found after Docker migration"
             cat flows_after_migration.json
+            exit 1
+          fi
+
+          echo "Verifying witness credential persisted (confirms encrypted-column migration ran without data loss)..."
+          curl -fsSL --compressed http://localhost:7860/api/v1/variables/ \
+            -H "Authorization: Bearer $TOKEN" > variables_after_migration.json
+
+          if grep -q "migration_witness_secret" variables_after_migration.json; then
+            echo "✅ Witness credential found after Docker migration"
+          else
+            echo "❌ Witness credential NOT found after Docker migration"
+            cat variables_after_migration.json
             exit 1
           fi
 

@@ -313,7 +313,6 @@ jobs:
       nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
     secrets: inherit
 
-
   slack-notification:
     name: Send Slack Notification
     needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build, db-migration-validation]
