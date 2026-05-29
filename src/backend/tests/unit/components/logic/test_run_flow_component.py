@@ -1,8 +1,10 @@
+from copy import deepcopy
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from lfx.base.tools.run_flow import RunFlowBaseComponent
 from lfx.components.flow_controls.run_flow import RunFlowComponent
 from lfx.graph.graph.base import Graph
 from lfx.schema.data import Data
@@ -20,6 +22,29 @@ class TestRunFlowComponentInitialization:
         assert RunFlowComponent.name == "RunFlow"
         assert RunFlowComponent.icon == "Workflow"
         assert RunFlowComponent.beta is True
+
+    def test_flow_tweak_data_is_isolated_per_instance(self):
+        """flow_tweak_data should not be shared by reference across Run Flow instances."""
+        first = RunFlowComponent()
+        second = RunFlowComponent()
+
+        assert first.flow_tweak_data is not second.flow_tweak_data
+        assert not isinstance(vars(RunFlowBaseComponent)["flow_tweak_data"], dict)
+
+        first.flow_tweak_data["TextInput-AAA"] = {"input_value": "LEAK"}
+
+        assert "TextInput-AAA" not in second.flow_tweak_data
+
+    def test_tool_added_flow_tweak_input_does_not_mutate_class_inputs(self):
+        """Fallback inputs created by tool calls must stay on that component instance."""
+        component = deepcopy(RunFlowComponent())
+
+        component.set(flow_tweak_data={"TextInput-XYZ": {"input_value": "from-A"}})
+        fresh = RunFlowComponent()
+
+        assert any(input_.name == "flow_tweak_data" for input_ in component.inputs)
+        assert not any(input_.name == "flow_tweak_data" for input_ in fresh.inputs)
+        assert not any(input_.name == "flow_tweak_data" for input_ in RunFlowComponent.inputs)
 
 
 class TestRunFlowComponentHelperMethods:

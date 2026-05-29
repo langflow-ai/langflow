@@ -1,10 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-
-import { zoomOut } from "../../utils/zoom-out";
+import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "User should be able to use components as tool",
   { tag: ["@release", "@components"] },

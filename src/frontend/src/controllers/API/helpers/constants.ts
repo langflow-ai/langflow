@@ -44,6 +44,7 @@ export const URLs = {
   AGENTIC_ASSIST: `agentic/assist`,
   AGENTIC_ASSIST_STREAM: `agentic/assist/stream`,
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
+  AGENTIC_FILES: `agentic/files`,
   EXTENSIONS: `extensions`,
 } as const;
 

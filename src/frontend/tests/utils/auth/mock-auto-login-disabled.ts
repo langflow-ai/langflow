@@ -20,8 +20,10 @@ export async function mockAutoLoginDisabled(page: Page): Promise<void> {
 
   await page.addInitScript(() => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     (window as any).process = (window as any).process || {};
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     const proc = (window as any).process as { env?: Record<string, string> };
     const newEnv = {
       ...(proc.env ?? {}),

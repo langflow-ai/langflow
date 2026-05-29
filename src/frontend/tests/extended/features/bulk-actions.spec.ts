@@ -1,8 +1,9 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+
 test(
   "user should be able to select flows with different methods and perform bulk actions",
   { tag: ["@release", "@workspace", "@mainpage"] },
@@ -23,7 +24,7 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     await expect(page.getByText("Projects").first()).toBeVisible();
-    await page.getByTestId("new-project-btn").click();
+    await openTemplatesModal(page);
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Document Q&A" }).click();
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
@@ -32,7 +33,7 @@ test(
     await page.getByTestId("icon-ChevronLeft").first().click();
 
     await expect(page.getByText("Projects").first()).toBeVisible();
-    await page.getByTestId("new-project-btn").click();
+    await openTemplatesModal(page);
     await page.getByTestId("side_nav_options_all-templates").click();
     await page
       .getByRole("heading", { name: TEXTS.templateBasicPrompting })
