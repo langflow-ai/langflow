@@ -20,7 +20,7 @@ html.plugin-redoc .main-wrapper {
 /* ── Sidebar background ───────────────────────────────────── */
 
 [data-theme="dark"] .redocusaurus .menu-content {
-  background: #111 !important;
+  background: #18181b !important;
   border-right: 1px solid #303038 !important;
 }
 
@@ -32,7 +32,7 @@ html.plugin-redoc .main-wrapper {
 /* ── Sidebar active item color ────────────────────────────── */
 
 html[data-theme='dark'] .redocusaurus .menu-content label.active {
-  background-color: #18181b !important;
+  background-color: #111 !important;
 }
 
 html[data-theme='light'] .redocusaurus .menu-content label.active {
@@ -54,9 +54,21 @@ html[data-theme='light'] .redocusaurus .menu-content li:hover > label {
 }
 
 [data-theme="light"] .redocusaurus {
-  background: #ffff !important;
+  background: #f5f5f5 !important;
 }
 
+
+/* ── Expanded response/schema content background ──────────── */
+
+html[data-theme='dark'] .redocusaurus div[id^='tag'] button + div,
+html[data-theme='dark'] .redocusaurus div[id^='operation'] button + div {
+  background-color: #18181b !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='tag'] button + div,
+html[data-theme='light'] .redocusaurus div[id^='operation'] button + div {
+  background-color: #ffffff !important;
+}
 
 /* Dark theme — markdown headings inside descriptions */
 [data-theme="dark"] .redocusaurus h1,
@@ -80,7 +92,7 @@ html[data-theme='light'] .redocusaurus .api-content > div > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='tag'] > div > div:nth-child(2),
 html[data-theme='light'] .redocusaurus [class*="RightPanel"] {
-  background: #fff !important;
+  background: #f5f5f5 !important;
 }
 
 /* ── HTTP method button wrapper  ──────────────────────────────── */
