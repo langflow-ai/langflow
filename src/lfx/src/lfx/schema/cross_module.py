@@ -45,7 +45,7 @@ class CrossModuleMeta(type(BaseModel)):  # type: ignore[misc]
         # 1. Has model_fields attribute (is a Pydantic model)
         # 2. Has the same __class__.__name__
         # 3. Has compatible model fields
-        if not hasattr(instance, "model_fields"):
+        if not hasattr(type(instance), "model_fields"):
             return False
 
         # Check if class names match
