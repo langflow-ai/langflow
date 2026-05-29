@@ -81,7 +81,7 @@ describe("SessionSelector — checkbox visibility", () => {
     expect(icon.className).toContain("text-status-red");
   });
 
-  it("still reserves the 16x16 column when the icon is hidden so the layout does not jump", () => {
+  it("reserves the column width and a full-height click target so the layout does not jump", () => {
     render(
       <SessionSelector
         {...baseProps}
@@ -91,8 +91,14 @@ describe("SessionSelector — checkbox visibility", () => {
       />,
     );
     const wrapper = screen.getByTestId(`session-${baseProps.session}-checkbox`);
+    // The column reserves a fixed width (so the row layout does not jump) and
+    // spans the full row height to give the checkbox a larger click target.
     expect(wrapper.className).toContain("w-4");
-    expect(wrapper.className).toContain("h-4");
+    expect(wrapper.className).toContain("h-8");
+    // The icon itself stays a 16x16 square regardless of the taller column.
+    const icon = wrapper.firstElementChild as HTMLElement;
+    expect(icon.className).toContain("h-4");
+    expect(icon.className).toContain("w-4");
   });
 
   it("toggles selection when the checkbox column is clicked and stops row propagation", () => {

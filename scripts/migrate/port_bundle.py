@@ -86,8 +86,11 @@ keywords = ["langflow", "lfx", "extension", "bundle", "{bundle}"]
 # Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
+# lfx is floored at >=0.5.0 (the release that introduced extension bundles)
+# with no upper bound so bundles track the latest lfx; BUNDLE_API compat is
+# enforced via extension.json's lfx.compat list, not an upper version cap.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx>=0.5.0",
 ]
 
 [project.urls]

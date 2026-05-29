@@ -1,100 +1,122 @@
 #!/usr/bin/env python
-"""Idea from https://github.com/streamlit/streamlit/blob/4841cf91f1c820a392441092390c4c04907f9944/scripts/pypi_nightly_create_tag.py."""
+"""Idea from https://github.com/streamlit/streamlit/blob/4841cf91f1c820a392441092390c4c04907f9944/scripts/pypi_nightly_create_tag.py.
+
+`langflow-nightly` pins an EXACT dependency on `langflow-base-nightly[complete]==X.Y.Z.devN`.
+For the latest published `langflow-nightly` to be installable, the base version it pins must
+exist on PyPI. The two packages are therefore versioned in lockstep: they share a single dev
+number so that, in a single nightly run (publish order base -> main, gated), main's `devN` pin
+always references the base `devN` built and published in the same run.
+
+The shared dev number is `max(dev across BOTH packages' PyPI histories) + 1`, restricted to
+releases whose base_version matches the root pyproject. Both "main" and "base" build types
+return the identical tag; the "both" mode emits it twice so the workflow can read the release
+and base tags from a single invocation (one PyPI snapshot) and avoid any cross-call drift.
+"""
 
 import sys
+from pathlib import Path
 
 import packaging.version
 import requests
 from packaging.version import Version
 
-PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
 PYPI_LANGFLOW_NIGHTLY_URL = "https://pypi.org/pypi/langflow-nightly/json"
-
-PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
 PYPI_LANGFLOW_BASE_NIGHTLY_URL = "https://pypi.org/pypi/langflow-base-nightly/json"
 
+# main and base MUST share one dev number, so the shared number is derived from both packages.
+PYPI_NIGHTLY_URLS = (PYPI_LANGFLOW_NIGHTLY_URL, PYPI_LANGFLOW_BASE_NIGHTLY_URL)
+
 ARGUMENT_NUMBER = 2
+VALID_BUILD_TYPES = ("main", "base", "both")
 
 
-def get_latest_published_version(build_type: str, *, is_nightly: bool) -> Version:
-    url = ""
-    if build_type == "base":
-        url = PYPI_LANGFLOW_BASE_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_BASE_URL
-    elif build_type == "main":
-        url = PYPI_LANGFLOW_NIGHTLY_URL if is_nightly else PYPI_LANGFLOW_URL
-    else:
-        msg = f"Invalid build type: {build_type}"
-        raise ValueError(msg)
+def _root_base_version() -> str:
+    """Return the base_version (e.g. "1.10.0") from the root pyproject.toml.
 
-    res = requests.get(url, timeout=10)
-    res.raise_for_status()
-    try:
-        version_str = res.json()["info"]["version"]
-    except Exception as e:
-        msg = "Got unexpected response from PyPI"
-        raise RuntimeError(msg) from e
-    return Version(version_str)
-
-
-def create_tag(build_type: str):
-    from pathlib import Path
-
+    Both langflow-nightly and langflow-base-nightly are versioned from the ROOT pyproject on
+    purpose. Do not switch base to read src/backend/base/pyproject.toml, or the two dev counters
+    will fork again and the exact `==` pin can reference a version that was never published.
+    """
     import tomllib
 
-    # Read version from pyproject.toml
-    main_tag_pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
-    pyproject_data = tomllib.loads(main_tag_pyproject_path.read_text())
+    pyproject_path = Path(__file__).parent.parent.parent / "pyproject.toml"
+    pyproject_data = tomllib.loads(pyproject_path.read_text())
+    return Version(pyproject_data["project"]["version"]).base_version
 
-    current_version_str = pyproject_data["project"]["version"]
-    current_version = Version(current_version_str)
 
+def _all_dev_numbers(url: str, base_version: str) -> list[int]:
+    """Dev numbers of every release of url whose base_version matches base_version.
+
+    A 404 means the package genuinely has no releases yet (e.g. the first-ever nightly): it
+    contributes nothing and returns an empty list. Every OTHER failure -- a network error, a
+    non-404 HTTP status (5xx / 403 / ...), or a malformed 200 response -- is fatal and raises,
+    so the nightly job aborts BEFORE mutating tags. Failing closed prevents a transient lookup
+    failure on the higher-versioned package from lowering max(dev) + 1 and regenerating an
+    already-published version. Non-dev/final releases and releases from another base_version
+    never contribute.
+    """
+    res = requests.get(url, timeout=10)
+    if res.status_code == requests.codes.not_found:
+        return []
+    res.raise_for_status()
     try:
-        current_nightly_version = get_latest_published_version(build_type, is_nightly=True)
-    except (requests.RequestException, KeyError, ValueError):
-        # If nightly doesn't exist yet
-        current_nightly_version = None
+        releases = res.json()["releases"]
+    except (ValueError, KeyError) as e:
+        msg = f"Unexpected response from {url!r}: missing 'releases' mapping"
+        raise RuntimeError(msg) from e
 
-    build_number = "0"
-    latest_base_version = current_version.base_version
-    nightly_base_version = current_nightly_version.base_version if current_nightly_version else None
+    dev_numbers: list[int] = []
+    for version_str in releases:
+        try:
+            version = Version(version_str)
+        except packaging.version.InvalidVersion:
+            continue
+        if version.base_version == base_version and version.dev is not None:
+            dev_numbers.append(version.dev)
+    return dev_numbers
 
-    if latest_base_version == nightly_base_version:
-        # If the latest version is the same as the nightly version, increment the build number
-        dev_number = (current_nightly_version.dev or 0) if current_nightly_version else 0
-        build_number = str(dev_number + 1)
 
-    new_nightly_version = latest_base_version + ".dev" + build_number
+def _shared_nightly_version() -> str:
+    """Compute the single dev number shared by langflow-nightly and langflow-base-nightly."""
+    base_version = _root_base_version()
 
-    # Prepend "v" to the version, if DNE.
-    # This is an update to the nightly version format.
-    if not new_nightly_version.startswith("v"):
-        new_nightly_version = "v" + new_nightly_version
+    dev_numbers = [dev for url in PYPI_NIGHTLY_URLS for dev in _all_dev_numbers(url, base_version)]
 
-    # X.Y.Z.dev.YYYYMMDD
-    # This takes the base version of the current version and appends the
-    # current date. If the last release was on the same day, we exit, as
-    # pypi does not allow for overwriting the same version.
+    # First-ever nightly for this base_version -> dev0. Otherwise max+1, so the result is
+    # strictly ahead of BOTH packages' newest same-series dev release.
+    next_dev = max(dev_numbers) + 1 if dev_numbers else 0
 
-    # We could use a different versioning scheme, such as just incrementing
-    # an integer.
-    # version_with_date = (
-    #     ".".join([str(x) for x in current_version.release])
-    #     + ".dev"
-    #     + "0"
-    #     + datetime.now(pytz.timezone("UTC")).strftime("%Y%m%d")
-    # )
+    new_nightly_version = f"v{base_version}.dev{next_dev}"
 
-    # Verify if version is PEP440 compliant.
+    # Verify the version is PEP 440 compliant.
     packaging.version.Version(new_nightly_version)
 
     return new_nightly_version
 
 
+def create_tag(build_type: str) -> str:
+    """Return the shared nightly tag (with a leading ``v``).
+
+    ``build_type`` is accepted for backward compatibility and validated, but "main" and "base"
+    always return the identical version by design (lockstep versioning).
+    """
+    if build_type not in VALID_BUILD_TYPES:
+        msg = f"Invalid build type: {build_type}"
+        raise ValueError(msg)
+    return _shared_nightly_version()
+
+
 if __name__ == "__main__":
     if len(sys.argv) != ARGUMENT_NUMBER:
-        msg = "Specify base or main"
+        msg = "Specify base, main, or both"
         raise ValueError(msg)
 
-    build_type = sys.argv[1]
-    tag = create_tag(build_type)
-    print(tag)
+    requested_build_type = sys.argv[1]
+    tag = create_tag(requested_build_type)
+    if requested_build_type == "both":
+        # Emit twice so the workflow can capture release_tag and base_tag from a SINGLE
+        # invocation -> one PyPI snapshot -> guaranteed-identical tags.
+        print(tag)
+        print(tag)
+    else:
+        print(tag)

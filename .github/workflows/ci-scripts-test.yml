@@ -1,0 +1,27 @@
+name: CI Scripts Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/ci/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test CI release scripts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+
+      - name: Install dependencies
+        run: pip install pytest requests packaging
+
+      - name: Run CI script tests
+        run: python -m pytest scripts/ci/ -v

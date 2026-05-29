@@ -25,9 +25,7 @@ export const useCustomHandleBulkFilesDownload = () => {
         onError: (error) => {
           setErrorData({
             title: t("errors.errorDownloadingFiles"),
-            list: [
-              error.message || "An error occurred while downloading the files",
-            ],
+            list: [error.message || t("errors.downloadFilesDefault")],
           });
           setIsDownloading(false);
         },

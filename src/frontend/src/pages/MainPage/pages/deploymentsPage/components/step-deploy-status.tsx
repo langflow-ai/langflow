@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import Loading from "@/components/ui/loading";
 import { cn } from "@/utils/utils";
@@ -16,18 +17,23 @@ interface StepDeployStatusProps {
 export default function StepDeployStatus({
   phase,
   deploymentName,
-  loadingTitle = "Deploying...",
-  loadingDescription = "Your deployment is being provisioned. This usually takes a few seconds.",
-  doneTitle = "Deployment successful",
+  loadingTitle,
+  loadingDescription,
+  doneTitle,
   doneDescription,
 }: StepDeployStatusProps) {
+  const { t } = useTranslation();
   const isDeploying = phase === "deploying";
 
+  const resolvedLoadingTitle = loadingTitle ?? t("deployments.deployingTitle");
+  const resolvedLoadingDescription =
+    loadingDescription ?? t("deployments.deployingDescription");
+  const resolvedDoneTitle = doneTitle ?? t("deployments.deploymentSuccessful");
   const resolvedDoneDescription =
     doneDescription ??
     (deploymentName
-      ? `"${deploymentName}" is live and ready to use.`
-      : "Your deployment is live and ready to use.");
+      ? t("deployments.deploymentLiveNamed", { name: deploymentName })
+      : t("deployments.deploymentLive"));
 
   return (
     <div className="flex flex-1 flex-col items-center justify-center gap-6 py-10">
@@ -54,10 +60,10 @@ export default function StepDeployStatus({
 
       <div className="flex flex-col items-center gap-2 text-center">
         <h3 className="text-xl font-semibold">
-          {isDeploying ? loadingTitle : doneTitle}
+          {isDeploying ? resolvedLoadingTitle : resolvedDoneTitle}
         </h3>
         <p className="max-w-xs text-sm text-muted-foreground">
-          {isDeploying ? loadingDescription : resolvedDoneDescription}
+          {isDeploying ? resolvedLoadingDescription : resolvedDoneDescription}
         </p>
       </div>
 
