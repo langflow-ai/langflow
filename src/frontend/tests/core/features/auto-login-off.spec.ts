@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
+import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -61,9 +62,7 @@ test(
       timeout: 30000,
     });
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+    await waitForNewProjectButton(page);
 
     await page.getByTestId("user-profile-settings").click();
 
@@ -156,9 +155,7 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").first().click();
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+    await waitForNewProjectButton(page);
 
     await awaitBootstrapTest(page, { skipGoto: true });
 
@@ -222,9 +219,7 @@ test(
       sessionStorage.removeItem("testMockAutoLogin");
     });
 
-    await page.waitForSelector('[id="new-project-btn"]', {
-      timeout: 30000,
-    });
+    await waitForNewProjectButton(page);
 
     expect(
       (

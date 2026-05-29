@@ -1,6 +1,6 @@
-import { render, screen, fireEvent } from "@testing-library/react";
-import { AssistantLoadingState } from "../assistant-loading-state";
+import { fireEvent, render, screen } from "@testing-library/react";
 import type { AgenticProgressState } from "@/controllers/API/queries/agentic";
+import { AssistantLoadingState } from "../assistant-loading-state";
 
 function createProgress(
   overrides: Partial<AgenticProgressState> = {},
@@ -275,6 +275,31 @@ describe("AssistantLoadingState", () => {
         />,
       );
       expect(onComplete).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("flow-build icon mode for documents", () => {
+    // UX requirement (user request): generating_document gets the SAME
+    // minimal animated Langflow-glyph mode as generating_flow /
+    // orchestrating — NOT the bordered streaming card (which previously
+    // looked like a glitch morphing into the file card), and NOT the
+    // generic dotted thinking line.
+    it("should render the icon-only Langflow glyph for 'generating_document'", () => {
+      render(
+        <AssistantLoadingState
+          progress={createProgress({
+            step: "generating_document",
+            message: "Generating document...",
+          })}
+        />,
+      );
+
+      // The icon-ONLY minimal mode (not the bordered streaming card that
+      // previously looked like a glitch morphing into the file card).
+      expect(
+        screen.getByTestId("assistant-flow-loading-icon-mode"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Generating document...")).toBeInTheDocument();
     });
   });
 });

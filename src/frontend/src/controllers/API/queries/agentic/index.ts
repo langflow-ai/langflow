@@ -5,10 +5,13 @@ export type {
   AgenticCompleteData,
   AgenticCompleteEvent,
   AgenticErrorEvent,
+  AgenticFlowPreviewEvent,
+  AgenticFlowUpdateEvent,
   AgenticProgressEvent,
   AgenticProgressState,
   AgenticResult,
   AgenticSSEEvent,
   AgenticStepType,
   AgenticTokenEvent,
+  FlowAction,
 } from "./types";

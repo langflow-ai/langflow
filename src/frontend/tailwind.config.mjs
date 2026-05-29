@@ -267,6 +267,10 @@ const config = {
           DEFAULT: "hsl(var(--accent-pink))",
           foreground: "hsl(var(--accent-pink-foreground))",
         },
+        "accent-assistant": {
+          brand: "hsl(var(--accent-assistant-brand))",
+          purple: "hsl(var(--accent-assistant-purple))",
+        },
         popover: {
           DEFAULT: "hsl(var(--popover))",
           foreground: "hsl(var(--popover-foreground))",
