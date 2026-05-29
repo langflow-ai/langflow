@@ -28,6 +28,7 @@ html[data-theme='dark'] .redocusaurus {
   --redoc-border-color:  #303038;
   --redoc-text-primary:  #e3e3e3;
   --redoc-text-muted:    #cdcdd4;
+  --redoc-text-label:    #ffffff;
 }
 
 html[data-theme='light'] .redocusaurus {
@@ -37,6 +38,7 @@ html[data-theme='light'] .redocusaurus {
   --redoc-border-color:  #e4e4e7;
   --redoc-text-primary:  #111827;
   --redoc-text-muted:    hsl(240, 4%, 46%);
+  --redoc-text-label:    #111827;
 }
 
 /* ── Sidebar layout ───────────────────────────────────────── */
@@ -294,7 +296,7 @@ html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > d
 html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div > span {
   position: static !important;
   font-size: 0.875rem !important;
-  color: #ffffff !important;
+  color: var(--redoc-text-label) !important;
 }
 
 html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div > span,
