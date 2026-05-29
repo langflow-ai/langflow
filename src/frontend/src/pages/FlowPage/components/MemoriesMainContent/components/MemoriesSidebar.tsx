@@ -1,4 +1,5 @@
 import type { UIEvent } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +8,6 @@ import { SIDEBAR_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
 import { MemoriesSidebarProps } from "../types";
 
 export function MemoriesSidebar({
-  memories,
   filteredMemories,
   memoriesSearch,
   setMemoriesSearch,
@@ -19,6 +19,7 @@ export function MemoriesSidebar({
   onSelectMemory,
   onCreateMemory,
 }: MemoriesSidebarProps) {
+  const { t } = useTranslation();
   const handleScroll = (e: UIEvent<HTMLDivElement>) => {
     if (!fetchNextPage || !hasNextPage || isFetchingNextPage) return;
     const el = e.currentTarget;
@@ -31,52 +32,46 @@ export function MemoriesSidebar({
   return (
     <aside className="flex w-72 shrink-0 flex-col border-r border-border bg-background">
       <div className="border-b border-border px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <IconComponent
-              name="BrainCog"
-              className="h-4 w-4 text-muted-foreground"
-            />
-            <h2 className="text-sm font-semibold">Memories</h2>
-          </div>
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={onCreateMemory}
-            disabled={!currentFlowId}
-          >
-            <IconComponent name="Plus" className="h-3.5 w-3.5" />
-            Create
-          </Button>
+        <div className="flex items-center gap-2">
+          <IconComponent
+            name="BrainCog"
+            className="h-4 w-4 text-muted-foreground"
+          />
+          <h2 className="text-sm font-semibold">{t("memory.sidebarTitle")}</h2>
         </div>
-        <p className="mt-1 text-xs text-muted-foreground">
-          {(() => {
-            const count = memories?.length ?? 0;
-            return `${count} ${count === 1 ? "memory" : "memories"}`;
-          })()}
-        </p>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onCreateMemory}
+          disabled={!currentFlowId}
+          className="mt-3 rounded-[10px]"
+        >
+          <IconComponent name="Plus" className="h-3.5 w-3.5" />
+          {t("memory.createButton")}
+        </Button>
       </div>
 
       <div className="p-4">
         <Input
           value={memoriesSearch}
           onChange={(e) => setMemoriesSearch(e.target.value)}
-          placeholder="Search memories..."
+          placeholder={t("memory.searchMemories")}
         />
       </div>
 
       <div className="flex-1 overflow-auto px-2 pb-4" onScroll={handleScroll}>
-        {!filteredMemories.length ? (
+        {!filteredMemories.length && memoriesSearch.trim() && (
           <div className="px-3 py-6 text-center">
             <IconComponent
               name="BrainCog"
               className="mx-auto mb-2 h-8 w-8 text-muted-foreground opacity-50"
             />
             <p className="text-xs text-muted-foreground">
-              {memoriesSearch.trim() ? "No memories found" : "No memories yet"}
+              {t("memory.noMemoriesFound")}
             </p>
           </div>
-        ) : (
+        )}
+        {filteredMemories.length > 0 && (
           <div className="flex flex-col gap-1">
             {filteredMemories.map((memoryItem) => {
               const isSelected = selectedMemoryId === memoryItem.id;
@@ -104,13 +99,13 @@ export function MemoriesSidebar({
                         role="img"
                         aria-label={
                           memoryItem.is_active
-                            ? "Auto-capture enabled"
-                            : "Auto-capture disabled"
+                            ? t("memory.autoCaptureEnabled")
+                            : t("memory.autoCaptureDisabled")
                         }
                         title={
                           memoryItem.is_active
-                            ? "Auto-capture enabled"
-                            : "Auto-capture disabled"
+                            ? t("memory.autoCaptureEnabled")
+                            : t("memory.autoCaptureDisabled")
                         }
                       />
                       <div className="truncate text-sm font-medium">

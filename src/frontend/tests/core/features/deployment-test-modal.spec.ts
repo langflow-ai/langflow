@@ -1,6 +1,7 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   COMPLETED_RUN_RESPONSE,
   DEPLOYMENTS_MOCK,
@@ -8,6 +9,11 @@ import {
   PROVIDERS_MOCK,
   RUNNING_RUN_RESPONSE,
 } from "../../utils/deployment-mocks";
+
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
 
 async function setupBaseRoutes(page: Page) {
   // Register broad catch-all FIRST so specific routes (registered after) take priority via LIFO
@@ -44,18 +50,13 @@ test(
   "Test button opens modal with chat interface",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupBaseRoutes(page);
     await navigateToDeploymentsPage(page);
 
     await page.getByTestId("test-deployment-dep-1").click();
 
     await expect(page.getByTestId("test-deployment-modal-title")).toBeVisible();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
   },
 );
 
@@ -63,11 +64,6 @@ test(
   "Send message calls POST run with correct body",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let capturedRequestBody: Record<string, unknown> | null = null;
     let runCallCount = 0;
 
@@ -102,9 +98,9 @@ test(
     await navigateToDeploymentsPage(page);
 
     await page.getByTestId("test-deployment-dep-1").click();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
 
-    await page.getByPlaceholder("Message").fill("Hello AI");
+    await page.getByPlaceholder(TEXTS.placeholderMessage).fill("Hello AI");
     await page.getByRole("button", { name: /send message/i }).click();
 
     await expect
@@ -119,11 +115,6 @@ test(
   "Response appears in chat after polling completes",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
 
     await setupBaseRoutes(page);
@@ -155,12 +146,12 @@ test(
     await navigateToDeploymentsPage(page);
 
     await page.getByTestId("test-deployment-dep-1").click();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
 
-    await page.getByPlaceholder("Message").fill("Hello AI");
+    await page.getByPlaceholder(TEXTS.placeholderMessage).fill("Hello AI");
     await page.getByRole("button", { name: /send message/i }).click();
 
-    await expect(page.getByText("Hello from AI")).toBeVisible({
+    await expect(page.getByText(TEXTS.labelHelloFromAi)).toBeVisible({
       timeout: 30_000,
     });
     expect(runCallCount).toBeGreaterThanOrEqual(2);
@@ -171,11 +162,6 @@ test(
   "Input is disabled during polling and re-enabled after response",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
 
     await setupBaseRoutes(page);
@@ -207,19 +193,21 @@ test(
     await navigateToDeploymentsPage(page);
 
     await page.getByTestId("test-deployment-dep-1").click();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
 
-    await page.getByPlaceholder("Message").fill("Hello AI");
+    await page.getByPlaceholder(TEXTS.placeholderMessage).fill("Hello AI");
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Textarea should be disabled while waiting for response
-    await expect(page.getByPlaceholder("Message")).toBeDisabled();
+    await expect(
+      page.getByPlaceholder(TEXTS.placeholderMessage),
+    ).toBeDisabled();
 
     // After response arrives, textarea should be re-enabled
-    await expect(page.getByText("Hello from AI")).toBeVisible({
+    await expect(page.getByText(TEXTS.labelHelloFromAi)).toBeVisible({
       timeout: 30_000,
     });
-    await expect(page.getByPlaceholder("Message")).toBeEnabled();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeEnabled();
   },
 );
 
@@ -227,11 +215,6 @@ test(
   "Multi-turn: second message includes thread_id from first response",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
     const capturedBodies: Array<Record<string, unknown>> = [];
 
@@ -268,23 +251,25 @@ test(
     await navigateToDeploymentsPage(page);
 
     await page.getByTestId("test-deployment-dep-1").click();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
 
     // First message
-    await page.getByPlaceholder("Message").fill("First message");
+    await page.getByPlaceholder(TEXTS.placeholderMessage).fill("First message");
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Wait for first response
-    await expect(page.getByText("Hello from AI")).toBeVisible({
+    await expect(page.getByText(TEXTS.labelHelloFromAi)).toBeVisible({
       timeout: 30_000,
     });
 
     // Second message
-    await page.getByPlaceholder("Message").fill("Second message");
+    await page
+      .getByPlaceholder(TEXTS.placeholderMessage)
+      .fill("Second message");
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Wait for second response
-    await expect(page.getByText("Hello from AI")).toHaveCount(2, {
+    await expect(page.getByText(TEXTS.labelHelloFromAi)).toHaveCount(2, {
       timeout: 30_000,
     });
 
@@ -303,11 +288,6 @@ test(
   "Close and reopen modal resets chat history",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     let runCallCount = 0;
 
     await setupBaseRoutes(page);
@@ -340,13 +320,13 @@ test(
 
     // Open modal and send a message
     await page.getByTestId("test-deployment-dep-1").click();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
 
-    await page.getByPlaceholder("Message").fill("Hello AI");
+    await page.getByPlaceholder(TEXTS.placeholderMessage).fill("Hello AI");
     await page.getByRole("button", { name: /send message/i }).click();
 
     // Wait for response to appear
-    await expect(page.getByText("Hello from AI")).toBeVisible({
+    await expect(page.getByText(TEXTS.labelHelloFromAi)).toBeVisible({
       timeout: 30_000,
     });
 
@@ -354,16 +334,18 @@ test(
     await page.keyboard.press("Escape");
 
     // Verify the modal is closed
-    await expect(page.getByPlaceholder("Message")).not.toBeVisible();
+    await expect(
+      page.getByPlaceholder(TEXTS.placeholderMessage),
+    ).not.toBeVisible();
 
     // Reopen the modal
     runCallCount = 0;
     await page.getByTestId("test-deployment-dep-1").click();
-    await expect(page.getByPlaceholder("Message")).toBeVisible();
+    await expect(page.getByPlaceholder(TEXTS.placeholderMessage)).toBeVisible();
 
     // Chat should be empty — no previous messages visible
     await expect(page.getByText("Hello AI")).not.toBeVisible();
-    await expect(page.getByText("Hello from AI")).not.toBeVisible();
+    await expect(page.getByText(TEXTS.labelHelloFromAi)).not.toBeVisible();
 
     // Empty state ("Agent Chat") should be shown
     await expect(page.getByText("Agent Chat")).toBeVisible();

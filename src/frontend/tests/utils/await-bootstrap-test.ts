@@ -1,5 +1,9 @@
 import type { Page } from "@playwright/test";
 import { addFlowToTestOnEmptyLangflow } from "./add-flow-to-test-on-empty-langflow";
+import {
+  openTemplatesModal,
+  waitForNewProjectButton,
+} from "./flow/new-project-flow";
 
 export const awaitBootstrapTest = async (
   page: Page,
@@ -23,9 +27,7 @@ export const awaitBootstrapTest = async (
     await addFlowToTestOnEmptyLangflow(page);
   }
 
-  await page.waitForSelector('[id="new-project-btn"]', {
-    timeout: 30000,
-  });
+  await waitForNewProjectButton(page);
 
   if (!options?.skipModal) {
     let modalCount = 0;
@@ -44,10 +46,7 @@ export const awaitBootstrapTest = async (
     while (modalCount === 0 && attempts < maxAttempts) {
       attempts++;
       try {
-        await page.getByTestId("new-project-btn").click();
-        await page.waitForSelector('[data-testid="modal-title"]', {
-          timeout: 5000,
-        });
+        await openTemplatesModal(page);
         modalCount = await page.getByTestId("modal-title")?.count();
       } catch (error) {
         if (attempts >= maxAttempts) {

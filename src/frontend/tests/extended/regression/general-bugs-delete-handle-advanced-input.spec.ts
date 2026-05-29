@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -40,7 +41,7 @@ test(
     await closeAdvancedOptions(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 2000,
     });

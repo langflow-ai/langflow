@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import ToolsModal from "@/modals/toolsModal";
@@ -27,7 +27,9 @@ export default function ToolsComponent({
   hideButton = false,
   open,
   setOpen,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const isModalOpen = open ?? internalOpen;
   const setIsModalOpen = setOpen ?? setInternalOpen;
@@ -129,7 +131,7 @@ export default function ToolsComponent({
             ))}
             {remainingCount > 0 && (
               <span className="ml-1 self-center text-xs font-normal text-muted-foreground">
-                +{remainingCount} more
+                {t("input.moreActions", { count: remainingCount })}
               </span>
             )}
           </div>
@@ -138,15 +140,15 @@ export default function ToolsComponent({
           isAction &&
           (hideButton ? (
             <span className="py-1.5 text-sm text-muted-foreground">
-              No tools added to this server
+              {t("input.noActionsAddedToServer")}
             </span>
           ) : (
             <div className="mt-2 flex w-full flex-col items-center gap-2 rounded-md border border-dashed p-8">
               <span className="text-sm text-muted-foreground">
-                No tools added to this server
+                {t("input.noActionsAddedToServer")}
               </span>
               <Button size={"sm"} onClick={() => setIsModalOpen(true)}>
-                <span>Add tools</span>
+                <span>{t("input.addActions")}</span>
               </Button>
             </div>
           ))
@@ -165,8 +167,8 @@ export default function ToolsComponent({
             <span>
               {placeholder ||
                 (value.length === 0
-                  ? "No actions available"
-                  : "Select actions")}
+                  ? t("input.noActionsAvailable")
+                  : t("input.selectActions"))}
             </span>
           </Button>
         )}

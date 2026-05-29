@@ -463,8 +463,6 @@ The following environment variables set base Langflow server configuration, such
 
 ### High-load and multi-worker environments
 
-### High-load and multi-worker environments
-
 For high-concurrency deployments (such as when increasing `LANGFLOW_WORKERS`), consider the following best practices:
 - **Enable Gunicorn preload (experimental):**
   Set `LANGFLOW_GUNICORN_PRELOAD=true` to enable Gunicorn’s `preload_app` mode, which can reduce per-worker startup overhead (non-Windows only).

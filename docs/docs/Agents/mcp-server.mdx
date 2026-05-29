@@ -402,6 +402,15 @@ The default address is `http://localhost:6274`.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
 
+## Restrict MCP server management to superusers {#restrict-mcp-server-management}
+
+To prevent non-superusers from editing MCP server connections, set `LANGFLOW_MCP_SERVERS_LOCKED=true`.
+
+When set to `true`, non-superusers can use existing MCP servers that are already configured, but they cannot configure MCP server connections in the UI or API.
+Superusers retain full access to MCP server configuration.
+
+Locking the MCP server configuration for users does not disable Langflow's built-in MCP server for serving flows as MCP tools.
+
 ## MCP server environment variables
 
 The following environment variables set behaviors related to your Langflow projects' MCP servers:
@@ -414,6 +423,7 @@ The following environment variables set behaviors related to your Langflow proje
 | `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` | Integer | `180` | Global timeout in seconds for MCP tool calls. See [Configure tool execution timeouts](#configure-tool-execution-timeouts). |
 | `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
 | `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
+| `LANGFLOW_MCP_SERVERS_LOCKED` | Boolean | `False` | If `true`, non-superusers cannot add, edit, or remove MCP server connections through the UI or API. Superusers retain full access. For more information, see [Restrict MCP server management to superusers](#restrict-mcp-server-management). |
 
 ## Troubleshoot Langflow MCP servers {#troubleshooting-mcp-server}
 

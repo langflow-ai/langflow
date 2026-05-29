@@ -103,7 +103,7 @@ export default function ComponentTextModal({
             }}
             type="submit"
           >
-            Finish Editing
+            {t("editNode.finishEditing")}
           </Button>
         </div>
       </BaseModal.Footer>

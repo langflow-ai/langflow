@@ -1,4 +1,5 @@
 import React, { forwardRef } from "react";
+import SvgDB2 from "./db2/DB2";
 import SvgIBM from "./ibm/IBM";
 import SvgWatsonxAI from "./watsonx/WatsonxAI";
 import SvgWatsonxOrchestrate from "./watsonx/WatsonxOrchestrate";
@@ -20,5 +21,11 @@ export const WatsonxOrchestrateIcon = forwardRef<
 export const IBMIcon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
   (props, ref) => {
     return <SvgIBM ref={ref} {...props} />;
+  },
+);
+
+export const DB2Icon = forwardRef<SVGSVGElement, React.PropsWithChildren<{}>>(
+  (props, ref) => {
+    return <SvgDB2 ref={ref} {...props} />;
   },
 );

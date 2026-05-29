@@ -1,4 +1,5 @@
 import { memo, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/utils/utils";
@@ -18,6 +19,7 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
   onToggleConnection,
   onSwitchToCreate,
 }: ConnectionSearchListProps) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredConnections = useMemo(() => {
@@ -42,10 +44,10 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
         />
         <div>
           <p className="text-sm font-medium text-muted-foreground">
-            No connections yet
+            {t("deployments.noConnectionsYet")}
           </p>
           <p className="mt-0.5 text-xs text-muted-foreground/70">
-            Create a connection to attach credentials to this flow.
+            {t("deployments.noConnectionsDescription")}
           </p>
         </div>
         <button
@@ -53,7 +55,7 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
           onClick={onSwitchToCreate}
           className="text-xs font-medium text-primary hover:underline"
         >
-          Create your first connection
+          {t("deployments.createFirstConnection")}
         </button>
       </div>
     );
@@ -64,7 +66,7 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
       <div className="min-w-0">
         <Input
           icon="Search"
-          placeholder="Search connections..."
+          placeholder={t("deployments.placeholderSearchConnections")}
           className="bg-muted"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -72,7 +74,7 @@ export const ConnectionSearchList = memo(function ConnectionSearchList({
       </div>
       {filteredConnections.length === 0 ? (
         <p className="py-6 text-center text-sm text-muted-foreground">
-          No connections match &ldquo;{searchQuery}&rdquo;
+          {t("deployments.noConnectionsMatch", { query: searchQuery })}
         </p>
       ) : (
         <div className="mt-2 space-y-1.5">

@@ -476,6 +476,7 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_LAZY_LOAD_COMPONENTS` | Boolean | `False` | If `true`, Langflow only partially loads components at startup and fully loads them on demand. This significantly reduces startup time but can cause a slight delay when a component is first used. |
 | `LANGFLOW_EVENT_DELIVERY` | String | `streaming` | How to deliver build events to the frontend: `polling`, `streaming` or `direct`. |
 | `LANGFLOW_FRONTEND_PATH` | String | `./frontend` | Path to the frontend directory containing build files. For development purposes only when you need to serve specific frontend code. |
+| `LANGFLOW_FS_TOOL_BASE_DIR` | String | `~/.langflow/fs_tool/fs_sandbox` | Base directory for the [**File System** component](../Components/file-system.mdx) sandbox. All agent file operations are confined to this directory. |
 | `LANGFLOW_MAX_ITEMS_LENGTH` | Integer | `100` | Maximum number of items to store and display in the visual editor. Lists longer than this will be truncated when displayed in the visual editor. Doesn't affect outputs or data passed between components. |
 | `LANGFLOW_MAX_TEXT_LENGTH` | Integer | `1000` | Maximum number of characters to store and display in the visual editor. Responses longer than this will be truncated when displayed in the visual editor. Doesn't truncate outputs or responses passed between components. |
 | `LANGFLOW_MAX_TRANSACTIONS_TO_KEEP` | Integer | `3000` | Maximum number of flow transaction events to keep in the database. |
@@ -483,3 +484,30 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. Relates to [Playground](/concepts-playground) functionality. |
 | `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which data for [shared Playground](/concepts-playground#share-a-flows-playground) flows are cleaned up. Default: 3600 seconds (1 hour). Minimum: 600 seconds (10 minutes). |
 | `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a [shared Playground](/concepts-playground#share-a-flows-playground) flow is considered expired and eligible for cleanup. Default: 86400 seconds (24 hours). Minimum: 600 seconds (10 minutes). |
+
+### Hide UI elements with embedded mode {#embedded-mode}
+
+When you embed the Langflow visual editor in another application, such as an iframe within a host portal, you can hide UI elements that are usually visible in the visual editor.
+
+The embedded mode environment variables control which UI elements appear in the visual editor.
+Embedded mode controls UI visibility only, and does not block API endpoints or deploy Langflow.
+
+Embedded mode is distinct from the [embedded chat widget](/concepts-publish#embedded-chat-widget), which embeds a single flow's chat UI in a website.
+
+When `LANGFLOW_EMBEDDED_MODE=true`, Langflow hides the following buttons in the UI:
+
+* **Logout**
+* **New project**
+* **New flow**
+* **Starter projects**
+
+You can hide individual elements without enabling the umbrella flag.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_EMBEDDED_MODE` | Boolean | `False` | Umbrella flag for embedded or iframe deployments. When `true`, hides standalone UI elements: logout, new project, new flow, and starter projects. Individual hide flags can also be set without enabling this flag. |
+| `LANGFLOW_HIDE_LOGOUT_BUTTON` | Boolean | `False` | If `true`, hides the logout button in the account menu. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_NEW_PROJECT_BUTTON` | Boolean | `False` | If `true`, hides the new project/folder button in the sidebar. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_NEW_FLOW_BUTTON` | Boolean | `False` | If `true`, hides the new flow button in the header. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_STARTER_PROJECTS` | Boolean | `False` | If `true`, hides the starter projects tab in the templates modal. Does not affect database seeding of starter projects. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_GETTING_STARTED_PROGRESS` | Boolean | `False` | If `true`, hides the getting-started onboarding progress UI. Not automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |

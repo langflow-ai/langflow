@@ -20,7 +20,7 @@ from lfx.base.mcp.util import (
 from lfx.base.tools.constants import TOOL_OUTPUT_DISPLAY_NAME, TOOL_OUTPUT_NAME
 from lfx.custom.custom_component.component_with_cache import ComponentWithCache
 from lfx.inputs.inputs import InputTypes  # noqa: TC001
-from lfx.io import BoolInput, DictInput, DropdownInput, McpInput, MessageTextInput, Output
+from lfx.io import BoolInput, DictInput, DropdownInput, FloatInput, McpInput, MessageTextInput, Output
 from lfx.io.schema import schema_to_langflow_inputs
 from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
@@ -99,7 +99,8 @@ class MCPToolsComponent(ComponentWithCache):
         # Initialize cache keys to avoid CacheMiss when accessing them
         self._ensure_cache_structure()
 
-        # Initialize clients with access to the component cache
+        # Initialize clients with access to the component cache.
+        # Per-component timeout is normalized and applied immediately before MCP calls.
         self.stdio_client: MCPStdioClient = MCPStdioClient(component_cache=self._shared_component_cache)
         self.streamable_http_client: MCPStreamableHttpClient = MCPStreamableHttpClient(
             component_cache=self._shared_component_cache
@@ -138,14 +139,48 @@ class MCPToolsComponent(ComponentWithCache):
             return {str(k): str(v) for k, v in component_headers.items()}
         return {}
 
+    def _normalize_tool_execution_timeout(self) -> float | None:
+        """Normalize the timeout input and reject negative values with a field-specific error."""
+        timeout_value = getattr(self, "tool_execution_timeout", 0.0)
+
+        if timeout_value in (None, ""):
+            return None
+
+        try:
+            val = float(timeout_value)
+        except (ValueError, TypeError):
+            return None
+
+        if val < 0:
+            msg = "Tool Execution Timeout must be greater than or equal to 0."
+            raise ValueError(msg)
+
+        return val if val else None
+
     def _mcp_servers_cache_key(self, server_name: str) -> str:
-        """Cache key for shared servers map; includes headers so auth/tweak changes get distinct entries."""
+        """Cache key for shared servers map.
+
+        Includes headers and timeout so auth/tweak/timeout changes get distinct entries.
+        """
         if not server_name:
             return ""
+
+        raw_timeout = getattr(self, "tool_execution_timeout", 0.0) or 0.0
+        normalized_timeout = max(0.0, float(raw_timeout))
+
         hdrs = self._normalized_headers_for_cache()
-        if not hdrs:
+
+        # Build cache key components
+        cache_data = {
+            "headers": hdrs,
+            "timeout": normalized_timeout,
+        }
+
+        # If no headers and default timeout, just use server name
+        if not hdrs and normalized_timeout == 0.0:
             return server_name
-        payload = json.dumps(hdrs, sort_keys=True)
+
+        payload = json.dumps(cache_data, sort_keys=True)
         digest = hashlib.sha256(payload.encode()).hexdigest()[:16]
         return f"{server_name}:{digest}"
 
@@ -184,6 +219,7 @@ class MCPToolsComponent(ComponentWithCache):
         "use_cache",
         "verify_ssl",
         "headers",
+        "tool_execution_timeout",
     ]
 
     display_name = "MCP Tools"
@@ -229,6 +265,19 @@ class MCPToolsComponent(ComponentWithCache):
             ),
             advanced=True,
             is_list=True,
+        ),
+        FloatInput(
+            name="tool_execution_timeout",
+            display_name="Tool Execution Timeout (seconds)",
+            info=(
+                "Maximum time to wait for tool execution before timing out. "
+                "Supports decimal values for sub-second timeouts (e.g., 0.01 for 10ms). "
+                "Set to 0 to use the system-configured MCP timeout."
+            ),
+            value=0.0,
+            range_spec={"min": 0.0, "max": 3600.0, "step": 0.01},
+            real_time_refresh=True,
+            advanced=True,
         ),
         DropdownInput(
             name="tool",
@@ -460,12 +509,15 @@ class MCPToolsComponent(ComponentWithCache):
                     else "list-or-empty",
                 )
 
+                timeout = self._normalize_tool_execution_timeout()
+
                 _, tool_list, tool_cache = await update_tools(
                     server_name=server_name,
                     server_config=server_config,
                     mcp_stdio_client=self.stdio_client,
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
+                    tool_execution_timeout=timeout,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
@@ -748,6 +800,18 @@ class MCPToolsComponent(ComponentWithCache):
                         await logger.aexception(msg)
                         build_config["tool"]["options"] = []
                         build_config["tool"]["placeholder"] = msg
+            elif field_name == "tool_execution_timeout":
+                try:
+                    val = float(field_value) if field_value not in (None, "") else 0.0
+                except (ValueError, TypeError):
+                    val = 0.0
+                if val < 0:
+                    build_config["tool_execution_timeout"]["placeholder"] = (
+                        "⚠ Value must be ≥ 0. Negative timeouts cause immediate failures."
+                    )
+                    build_config["tool_execution_timeout"]["value"] = 0.0
+                else:
+                    build_config["tool_execution_timeout"]["placeholder"] = ""
             elif field_name == "tools_metadata":
                 self._not_load_actions = False
 

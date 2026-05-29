@@ -125,7 +125,7 @@ const McpSidebarGroup = ({
       )}
       <SidebarGroupContent className="h-full">
         <SidebarMenu className={!hasMcpServers ? " h-full" : ""}>
-          {isLoading && <span>Loading...</span>}
+          {isLoading && <span>{t("mcp.servers.statusLoading")}</span>}
           {isSuccess && !hasMcpServers && (
             <McpEmptyState isLoading={isLoading} />
           )}

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -68,11 +69,14 @@ function ProvidersLoadingSkeleton() {
 }
 
 function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col items-center justify-center py-24">
-      <h3 className="text-lg font-semibold">No Environments</h3>
+      <h3 className="text-lg font-semibold">
+        {t("deployments.noEnvironments")}
+      </h3>
       <p className="mt-1 text-sm text-muted-foreground">
-        Add your first environment to start deploying your flows.
+        {t("deployments.addFirstEnvironment")}
       </p>
       <Button
         variant="outline"
@@ -81,7 +85,7 @@ function ProvidersEmptyState({ onAddProvider }: { onAddProvider: () => void }) {
         onClick={onAddProvider}
       >
         <ForwardedIconComponent name="Plus" className="h-4 w-4" />
-        Add Environment
+        {t("deployments.addEnvironment")}
       </Button>
     </div>
   );
@@ -94,6 +98,7 @@ export default function ProvidersContent({
   addProviderOpen,
   setAddProviderOpen,
 }: ProvidersContentProps) {
+  const { t } = useTranslation();
   const { mutate: deleteProviderAccount } = useDeleteProviderAccount();
   const [editingProvider, setEditingProvider] =
     useState<ProviderAccount | null>(null);
@@ -101,7 +106,7 @@ export default function ProvidersContent({
   const providerDelete = useDeleteWithConfirmation(
     deleteProviderAccount,
     buildProviderDeleteParams,
-    "Error deleting environment",
+    t("deployments.errorDeletingEnvironment"),
   );
 
   const content = (() => {

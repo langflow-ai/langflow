@@ -187,23 +187,11 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Build extensions",
+          label: "Bundle extensions",
           items: [
-            {
-              type: "doc",
-              id: "Develop/extensions-quickstart",
-              label: "Build your first extension",
-            },
-            {
-              type: "doc",
-              id: "Develop/extensions-manifest",
-              label: "Manifest reference",
-            },
-            {
-              type: "doc",
-              id: "Develop/extensions-author-guide",
-              label: "Author guide",
-            },
+            "Develop/extensions-overview",
+            "Develop/extensions-quickstart",
+            "Develop/extensions-manifest",
           ],
         },
       ],
@@ -309,11 +297,6 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-extensions-production",
-          label: "Production install pattern for Extensions",
-        },
-        {
-          type: "doc",
           id: "Deployment/security",
           label: "Security",
         },
@@ -352,6 +335,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -369,6 +353,7 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
+                "Components/file-system",
                 "Components/knowledge-base",
                 "Components/read-file",
                 "Components/write-file",
@@ -575,6 +560,11 @@ module.exports = {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",

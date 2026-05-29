@@ -1,7 +1,8 @@
+import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
-import type { Page } from "@playwright/test";
 
 test.describe("Bulk Delete Sessions", () => {
   // Helper to send a message in the playground
@@ -73,12 +74,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -107,12 +110,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -156,12 +161,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -206,12 +213,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -266,12 +275,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -322,12 +333,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -383,12 +396,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 
@@ -420,12 +435,14 @@ test.describe("Bulk Delete Sessions", () => {
 
       // Load a starter project
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await initialGPTsetup(page);
 
       // Open playground
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       await page.waitForTimeout(2000);
 

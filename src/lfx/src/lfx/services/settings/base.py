@@ -69,33 +69,6 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
-    vector_store_backend: str = "chroma"
-    """Vector-store backend for Knowledge Bases.
-
-    Currently only ``chroma`` (local, persistent) is shipped; ``mongodb``,
-    ``astra``, and ``postgres`` are reserved identifiers for upcoming phases
-    of the KB DB-Connectors epic."""
-    vector_store_backend_config: dict = {}
-    """Backend-specific configuration for the selected ``vector_store_backend``.
-
-    Ignored for the default ``chroma`` backend. Populated per-backend (e.g.
-    connection URIs, index names, auth references) as additional backends land."""
-
-    kb_allowed_folder_roots: list[str] = []
-    """Directories the server-side ``FolderSource`` is permitted to walk.
-
-    Each entry is expanded (``~`` → user home) and resolved before use.
-    ``FolderSource`` refuses to ingest any folder whose resolved path is
-    not equal to or underneath one of these roots, which blocks both
-    arbitrary-path access and symlink escapes (``resolve()`` follows
-    symlinks before the containment check).
-
-    Defaults to an empty list — folder ingestion is disabled until an
-    operator opts in. Single-user desktop / self-hosted deployments can
-    set this to ``["~"]`` to allow ingestion from the user's home
-    directory; multi-tenant cloud deployments should configure
-    per-tenant roots (or leave empty to keep folder ingestion off)."""
-
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -153,8 +126,23 @@ class Settings(BaseSettings):
     the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
-    database."""
+    """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
+
+    mcp_tool_execution_timeout: float = 180.0
+    """Maximum seconds to wait for MCP tool execution before timing out.
+    Default is 180 seconds (3 minutes) to support long-running operations.
+    Supports decimal values for sub-second timeouts (e.g., 0.5 for 500ms).
+    Individual components can override this with their own timeout setting.
+    Must be a positive number greater than 0."""
+
+    @field_validator("mcp_tool_execution_timeout")
+    @classmethod
+    def validate_mcp_tool_execution_timeout(cls, v: float) -> float:
+        """Validate that mcp_tool_execution_timeout is positive."""
+        if v <= 0:
+            msg = "mcp_tool_execution_timeout must be greater than 0"
+            raise ValueError(msg)
+        return v
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning
@@ -270,6 +258,33 @@ class Settings(BaseSettings):
     """Full Redis URL for the job queue. Takes priority over host/port/db if set."""
     redis_queue_ttl: int = 3600
     """TTL in seconds for job stream keys in Redis."""
+    redis_queue_startup_grace_s: float = Field(default=30.0, ge=0)
+    """Seconds a cross-worker consumer waits for the producer's first XADD before
+    treating a missing stream key as end-of-stream. Bump this if cold-start build
+    latency on the producer worker can exceed the default (e.g. large graph
+    instantiation, slow container image pulls). Negative values would make
+    consumers treat a not-yet-created stream as EOF immediately, so values must
+    be non-negative."""
+    redis_queue_cancel_channel_enabled: bool = True
+    """If True, RedisJobQueueService runs a single PSUBSCRIBE dispatcher per worker
+    so POST /build/{job_id}/cancel works cross-worker. Any worker can publish a
+    cancel signal; the owning worker cancels the local build task."""
+    redis_queue_cancel_marker_ttl: int = Field(default=60, gt=0)
+    """TTL in seconds for the persistent cancel-marker key used to close the race
+    where a cancel signal is published before the owning worker's dispatcher
+    subscribes or before the job is registered. Should comfortably exceed worker
+    cold-start latency. Must be > 0: a non-positive TTL makes the marker
+    ineffective and reopens the publish-before-subscribe race it closes."""
+    redis_queue_polling_stale_threshold_s: float = Field(default=90.0, ge=0)
+    """Maximum seconds a polling job may go without client activity before the
+    watchdog publishes a cross-worker cancel. Polling clients have no persistent
+    connection, so the server detects abandonment by tracking the most recent
+    poll (or streaming-response heartbeat). Set to 0 to disable the watchdog."""
+    redis_queue_polling_watchdog_interval_s: float = Field(default=15.0, gt=0)
+    """How often the polling watchdog scans owned jobs. Smaller values give
+    faster reclamation of abandoned builds at the cost of more Redis GETs.
+    The watchdog only checks jobs this worker owns (entries in self._queues).
+    Must be > 0 so the scan loop makes progress."""
 
     # Sentry
     sentry_dsn: str | None = None
@@ -512,15 +527,7 @@ class Settings(BaseSettings):
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
-        """Convert comma-separated string to list if needed.
-
-        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
-        before this validator runs (the union list[str] | str resolves
-        differently). Collapse that back to the bare-string wildcard so
-        downstream consumers see the same shape on every Python version.
-        """
-        if isinstance(value, list) and value == ["*"]:
-            return "*"
+        """Convert comma-separated string to list if needed."""
         if isinstance(value, str) and value != "*":
             if "," in value:
                 # Convert comma-separated string to list
@@ -539,12 +546,25 @@ class Settings(BaseSettings):
     @field_validator("event_delivery", mode="before")
     @classmethod
     def set_event_delivery(cls, value, info):
-        # If workers > 1, we need to use direct delivery
-        # because polling and streaming are not supported
-        # in multi-worker environments — unless a Redis-backed job queue is configured,
-        # which shares state across workers and supports all delivery modes.
+        # Multi-worker deployments with the in-memory job queue cannot route
+        # ``polling`` or ``streaming`` responses correctly: build events live in
+        # the in-process queue of whichever worker started the job, and a later
+        # poll/stream request may land on a different worker.  Switch to Redis
+        # (LANGFLOW_JOB_QUEUE_TYPE=redis) to share state across workers, or
+        # accept ``direct`` delivery which keeps the whole exchange on one
+        # worker.  The override below preserves backwards compatibility for
+        # deployments that haven't set this explicitly; new explicit values are
+        # logged loudly so the cause is easy to diagnose if the UI loses events.
         if info.data.get("workers", 1) > 1 and info.data.get("job_queue_type", "asyncio") != "redis":
-            logger.warning("Multi-worker environment detected, using direct event delivery")
+            requested = value or "polling"
+            if requested != "direct":
+                logger.warning(
+                    "Multi-worker mode without a Redis-backed job queue cannot deliver "
+                    "'%s' events across workers; forcing event_delivery='direct'. "
+                    "Set LANGFLOW_JOB_QUEUE_TYPE=redis to keep '%s' delivery in multi-worker setups.",
+                    requested,
+                    requested,
+                )
             return "direct"
         return value
 
@@ -745,7 +765,7 @@ class Settings(BaseSettings):
         env_value = os.getenv("LANGFLOW_COMPONENTS_PATH")
         if env_value:
             logger.debug("Adding LANGFLOW_COMPONENTS_PATH to components_path")
-            # LE-1015: split on os.pathsep so multi-entry env vars
+            # Split on os.pathsep so multi-entry env vars
             # ("/path/A:/path/B" on POSIX, "C:\\a;D:\\b" on Windows) are
             # parsed as multiple components paths instead of one literal
             # non-existent path. Empty segments (e.g. trailing pathsep) are

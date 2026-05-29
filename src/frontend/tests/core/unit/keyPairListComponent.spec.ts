@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -12,12 +12,7 @@ test(
   "KeypairListComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await disableInspectPanel(page);
 
@@ -43,7 +38,7 @@ test(
     await openAdvancedOptions(page);
 
     await page.getByTestId("showmodel_kwargs").click();
-    expect(await page.getByTestId("showmodel_kwargs").isChecked()).toBeTruthy();
+    await expect(page.getByTestId("showmodel_kwargs")).toBeChecked();
     await closeAdvancedOptions(page);
 
     await adjustScreenView(page, {

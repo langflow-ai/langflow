@@ -1,5 +1,6 @@
 import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
@@ -34,6 +35,7 @@ export default function StepReview() {
     setHasToolNameErrors,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const currentFolderId = folderId ?? myCollectionId;
@@ -148,9 +150,11 @@ export default function StepReview() {
   return (
     <div className="flex flex-col gap-4 py-3">
       <div>
-        <h2 className="text-lg font-semibold">Review & Confirm</h2>
+        <h2 className="text-lg font-semibold">
+          {t("deployments.reviewAndConfirm")}
+        </h2>
         <p className="text-sm text-muted-foreground">
-          Review your deployment details before creating.
+          {t("deployments.reviewDetails")}
         </p>
       </div>
 

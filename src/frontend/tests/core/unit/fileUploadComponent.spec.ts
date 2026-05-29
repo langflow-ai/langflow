@@ -4,7 +4,9 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
   disableInspectPanel,
@@ -30,13 +32,7 @@ test(
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const fileContent = fs.readFileSync(testFilePath);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await disableInspectPanel(page);
 
@@ -88,7 +84,7 @@ test(
         ),
       ).toBeVisible();
 
-      await page.getByText("My Files").first().hover();
+      await page.getByText(TEXTS.labelMyFiles).first().hover();
       await page.waitForTimeout(500);
 
       await expect(page.getByText(`${sourceFileName}.txt`).last()).toBeVisible({
@@ -273,7 +269,7 @@ test(
     }
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page
       .getByTestId("input_outputChat Output")
@@ -291,7 +287,9 @@ test(
       .first()
       .click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     // Create a new session first
     await page.getByTestId("new-chat").click();
@@ -387,7 +385,7 @@ test(
         .click();
 
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
       // Use the chat header more menu to clear chat (stays in fullscreen)
       await page
@@ -445,13 +443,7 @@ test(
     // Read the test file content
     const testFilePath = path.join(__dirname, "../../assets/test_file.txt");
     const _fileContent = fs.readFileSync(testFilePath);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await disableInspectPanel(page);
 
@@ -696,7 +688,7 @@ test(
     await awaitBootstrapTest(page, { skipModal: true });
 
     // Navigate to My Files page
-    await page.getByText("My Files").first().click();
+    await page.getByText(TEXTS.labelMyFiles).first().click();
 
     // Check if we're on the files page
     await page.waitForSelector('[data-testid="mainpage_title"]');
@@ -903,7 +895,7 @@ test(
     });
     await page.getByTestId("output-inspection-file path-file").click();
     const filePaths = await page.getByTestId("textarea").textContent();
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     const cleanPath = filePaths
       ?.replace(/"/g, "")
@@ -998,7 +990,9 @@ test(
     await textInputs.first().fill(`${folderId}/${file1}.txt`);
     await textInputs.last().fill(`${folderId}/${file2}.txt`);
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     await page.waitForSelector("text=Run Flow", {
       timeout: 30000,
@@ -1011,7 +1005,7 @@ test(
     await expect(page.getByText(fileContent2)).toBeVisible();
 
     await page
-      .getByRole("button", { name: "Playground", exact: true })
+      .getByRole("button", { name: TEXTS.playground, exact: true })
       .click({ force: true });
 
     // Test Case 2: Single File (clear second input, use only first)
@@ -1019,7 +1013,7 @@ test(
     await textInputs.first().fill(`${folderId}/${file1}.txt`);
 
     await page
-      .getByRole("button", { name: "Playground", exact: true })
+      .getByRole("button", { name: TEXTS.playground, exact: true })
       .click({ force: true });
 
     await page.waitForSelector("text=Run Flow", {
