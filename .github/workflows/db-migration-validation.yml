@@ -25,17 +25,6 @@ env:
 jobs:
   migration-pip-venv:
     name: "Migration Test: pip/venv (stable → nightly)"
-    # TEMPORARILY DISABLED (2026-05-28): the PyPI `langflow-nightly` is currently
-    # pip-uninstallable. Its core bundle deps (lfx-arxiv, lfx-duckduckgo) are
-    # published pinning stable `lfx>=0.5.0,<0.6.0`, but stable `lfx` tops out at
-    # 0.4.4 — the 0.5.0 line ships only as the separately-named `lfx-nightly`,
-    # which cannot satisfy an `lfx` pin. So this job fails at the install step.
-    # The Docker Compose job below is unaffected (it runs the prebuilt nightly
-    # image, whose environment is already resolved). Re-enable once EITHER a
-    # stable lfx 0.5.x is published to PyPI OR nightly bundle variants (e.g.
-    # lfx-arxiv-nightly pinning lfx-nightly) are published and langflow-nightly
-    # depends on them.
-    if: false
     runs-on: ubuntu-latest
     timeout-minutes: 30
 
