@@ -1,12 +1,42 @@
 /* ========================================
    Redocusaurus / API Reference Pages
+
+   NOTE: This file uses `!important` throughout because Redoc injects styles
+   via CSS-in-JS (Styled Components) with high specificity at runtime.
+   Plain selectors cannot override them — `!important` is intentional here.
+
+   NOTE: Structural selectors (nth-child, first-child, etc.) target Redoc's
+   internal DOM layout. Tested against redocusaurus@2.5.0 / Redoc v2.x.
+   If Redoc is upgraded, verify these selectors still apply correctly.
    ======================================== */
 
-/* Prevent horizontal scroll — use clip (not hidden) so position:sticky
-   on child elements (sidebar, right panel) still works. */
+/* ── Prevent horizontal scroll ───────────────────────────── */
+/* clip (not hidden) so position:sticky on sidebar/right panel still works */
+
 html.plugin-redoc .main-wrapper {
   overflow-x: clip;
   width: 100%;
+}
+
+/* ── CSS custom properties ────────────────────────────────── */
+/* Centralizes all theme colors — change here, applies everywhere. */
+
+html[data-theme='dark'] .redocusaurus {
+  --redoc-bg-primary:    #111;
+  --redoc-bg-secondary:  #18181b;
+  --redoc-bg-code:       #161618;
+  --redoc-border-color:  #303038;
+  --redoc-text-primary:  #e3e3e3;
+  --redoc-text-muted:    #cdcdd4;
+}
+
+html[data-theme='light'] .redocusaurus {
+  --redoc-bg-primary:    #f5f5f5;
+  --redoc-bg-secondary:  #ffffff;
+  --redoc-bg-code:       #f5f5f5;
+  --redoc-border-color:  #e4e4e7;
+  --redoc-text-primary:  #111827;
+  --redoc-text-muted:    hsl(240, 4%, 46%);
 }
 
 /* ── Sidebar layout ───────────────────────────────────────── */
@@ -22,23 +52,23 @@ html.plugin-redoc .main-wrapper {
 /* ── Sidebar background ───────────────────────────────────── */
 
 html[data-theme='dark'] .redocusaurus .menu-content {
-  background: #18181b !important;
-  border-right: 1px solid #303038 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
 }
 
 html[data-theme='light'] .redocusaurus .menu-content {
   background: var(--ifm-background-color) !important;
-  border-right: 1px solid #e4e4e7 !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
 }
 
 /* ── Sidebar active item ──────────────────────────────────── */
 
 html[data-theme='dark'] .redocusaurus .menu-content label.active {
-  background-color: #111 !important;
+  background-color: var(--redoc-bg-primary) !important;
 }
 
 html[data-theme='light'] .redocusaurus .menu-content label.active {
-  background-color: #f5f5f5 !important;
+  background-color: var(--redoc-bg-primary) !important;
 }
 
 /* ── Sidebar hover ────────────────────────────────────────── */
@@ -46,17 +76,17 @@ html[data-theme='light'] .redocusaurus .menu-content label.active {
 html[data-theme='light'] .redocusaurus .menu-content label:hover,
 html[data-theme='light'] .redocusaurus .menu-content label:hover span,
 html[data-theme='light'] .redocusaurus .menu-content li:hover > label {
-  color: #111827 !important;
+  color: var(--redoc-text-primary) !important;
 }
 
 /* ── Central content background ───────────────────────────── */
 
 html[data-theme='dark'] .redocusaurus {
-  background: #111 !important;
+  background: var(--redoc-bg-primary) !important;
 }
 
 html[data-theme='light'] .redocusaurus {
-  background: #f5f5f5 !important;
+  background: var(--redoc-bg-primary) !important;
 }
 
 /* ── Dark theme headings ──────────────────────────────────── */
@@ -67,87 +97,97 @@ html[data-theme='dark'] .redocusaurus h3,
 html[data-theme='dark'] .redocusaurus h4,
 html[data-theme='dark'] .redocusaurus h5,
 html[data-theme='dark'] .redocusaurus h6 {
-  color: #e3e3e3 !important;
+  color: var(--redoc-text-primary) !important;
 }
 
 /* ── Expanded response/schema content background ──────────── */
+/* redocusaurus@2.5.0: button+div is the expanded schema panel */
 
 html[data-theme='dark'] .redocusaurus div[id^='tag'] button + div,
 html[data-theme='dark'] .redocusaurus div[id^='operation'] button + div {
-  background-color: #18181b !important;
+  background-color: var(--redoc-bg-secondary) !important;
 }
 
 html[data-theme='light'] .redocusaurus div[id^='tag'] button + div,
 html[data-theme='light'] .redocusaurus div[id^='operation'] button + div {
-  background-color: #ffffff !important;
+  background-color: var(--redoc-bg-secondary) !important;
 }
 
 /* ── Right panel background ───────────────────────────────── */
+/* redocusaurus@2.5.0: nth-child(2) of tag/operation is the right panel */
 
 html[data-theme='dark'] .redocusaurus .api-content > div > div:nth-child(2),
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2),
 html[data-theme='dark'] .redocusaurus div[id^='tag'] > div > div:nth-child(2) {
-  background: #111 !important;
+  background: var(--redoc-bg-primary) !important;
 }
 
 html[data-theme='light'] .redocusaurus .api-content > div > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='tag'] > div > div:nth-child(2),
 html[data-theme='light'] .redocusaurus [class*="RightPanel"] {
-  background: #f5f5f5 !important;
+  background: var(--redoc-bg-primary) !important;
 }
 
 /* ── HTTP method button wrapper ───────────────────────────── */
+/* redocusaurus@2.5.0: nth-child(1) of the right panel */
 
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) {
-  background: #18181b !important;
-  border: 1px solid #303038 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-radius: 8px !important;
 }
 
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) {
-  background: #ffffff !important;
-  border: 1px solid #e4e4e7 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-radius: 8px !important;
 }
 
 /* ── HTTP method button ───────────────────────────────────── */
+/* redocusaurus@2.5.0: button inside div:first-child of the right panel */
 
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:first-child > button {
-  background: #18181b !important;
+  background: var(--redoc-bg-secondary) !important;
   border: none !important;
   border-radius: 8px !important;
   box-shadow: none !important;
 }
 
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:first-child > button {
-  background: #ffffff !important;
+  background: var(--redoc-bg-secondary) !important;
   border: none !important;
   border-radius: 8px !important;
   box-shadow: none !important;
-  color: hsl(240, 4%, 46%) !important;
+  color: var(--redoc-text-muted) !important;
 }
 
 /* ── HTTP method dropdown ──────────────────────────────────── */
+/* redocusaurus@2.5.0: div>div inside the button wrapper */
 
-.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-bottom-left-radius: 8px !important;
   border-bottom-right-radius: 8px !important;
   box-shadow: none !important;
   border-top: none !important;
 }
 
-html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
-  background: #18181b !important;
-  border: 1px solid #303038 !important;
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  box-shadow: none !important;
+  border-top: none !important;
 }
 
 /* ── Request + Response cards ─────────────────────────────── */
+/* redocusaurus@2.5.0: nth-child(2) and nth-child(3) of the right panel */
 
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2),
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) {
-  background: #18181b !important;
-  border: 1px solid #303038 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-radius: 12px !important;
   overflow: hidden !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
@@ -156,8 +196,8 @@ html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > 
 
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2),
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) {
-  background: #ffffff !important;
-  border: 1px solid #e4e4e7 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-radius: 12px !important;
   overflow: hidden !important;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
@@ -174,18 +214,19 @@ html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) >
 html[data-theme='dark'] .redocusaurus .tab-success,
 html[data-theme='dark'] .redocusaurus .tab-error,
 html[data-theme='dark'] .redocusaurus .react-tabs__tab--selected {
-  background: #18181b !important;
-  border-color: #303038 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border-color: var(--redoc-border-color) !important;
 }
 
 html[data-theme='light'] .redocusaurus .tab-success,
 html[data-theme='light'] .redocusaurus .tab-error,
 html[data-theme='light'] .redocusaurus .react-tabs__tab--selected {
-  background: #ffffff !important;
-  border-color: #e4e4e7 !important;
+  background: var(--redoc-bg-secondary) !important;
+  border-color: var(--redoc-border-color) !important;
 }
 
 /* ── Card title (h3) ──────────────────────────────────────── */
+/* redocusaurus@2.5.0: h3 direct child of nth-child(2/3) of right panel */
 
 .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3 ~ div,
 .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 ~ div {
@@ -203,16 +244,17 @@ html[data-theme='light'] .redocusaurus .react-tabs__tab--selected {
 
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
 html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
-  border-bottom: 1px solid #303038 !important;
+  border-bottom: 1px solid var(--redoc-border-color) !important;
 }
 
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
 html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
-  border-bottom: 1px solid #e4e4e7 !important;
-  color: #111827 !important;
+  border-bottom: 1px solid var(--redoc-border-color) !important;
+  color: var(--redoc-text-primary) !important;
 }
 
 /* ── Tab panel content ────────────────────────────────────── */
+/* redocusaurus@2.5.0: structural selectors for content type / example area */
 
 .redocusaurus .react-tabs__tab-panel--selected > div {
   padding-top: 8px !important;
@@ -242,30 +284,30 @@ html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > 
 html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div > span {
   position: static !important;
   font-size: 0.875rem !important;
-  color: #111827 !important;
+  color: var(--redoc-text-primary) !important;
 }
 
 /* Content type / Example value borders + text color */
 html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:first-of-type > div:first-of-type,
 html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:last-child,
 html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:not(:last-child) > div {
-  border: 1px solid #303038 !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-radius: 6px !important;
   background: transparent !important;
   min-height: 20px !important;
   padding: 8px !important;
-  color: hsl(240, 4%, 46%) !important;
+  color: var(--redoc-text-muted) !important;
 }
 
 html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:first-of-type > div:first-of-type,
 html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:last-child,
 html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:not(:last-child) > div {
-  border: 1px solid #e4e4e7 !important;
+  border: 1px solid var(--redoc-border-color) !important;
   border-radius: 6px !important;
   background: transparent !important;
   min-height: 20px !important;
   padding: 8px !important;
-  color: hsl(240, 4%, 46%) !important;
+  color: var(--redoc-text-muted) !important;
 }
 
 /* Tab panel transparent so card bg shows through */
@@ -308,7 +350,7 @@ html[data-theme='light'] .redocusaurus .token.operator {
 }
 
 html[data-theme='light'] .redocusaurus .token.property {
-  color: hsl(240, 4%, 46%) !important;
+  color: var(--redoc-text-muted) !important;
 }
 
 /* ── Operation divider ────────────────────────────────────── */
@@ -321,10 +363,10 @@ html[data-theme='light'] .redocusaurus .token.property {
 
 html[data-theme='dark'] .redocusaurus [class*="OperationTitle"],
 html[data-theme='dark'] .redocusaurus [class*="operation-type"] {
-  color: #cdcdd4;
+  color: var(--redoc-text-muted);
 }
 
 html[data-theme='dark'] .redocusaurus [class*="CodeSample"] pre {
-  background: #161618 !important;
-  border: 1px solid #303038;
+  background: var(--redoc-bg-code) !important;
+  border: 1px solid var(--redoc-border-color);
 }

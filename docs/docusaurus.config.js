@@ -229,7 +229,7 @@ const config = {
               requireLabelColor: "#F471B5",
             },
             rightPanel: {
-              backgroundColor: "#00000000",
+              backgroundColor: "#00000000", // transparent — "transparent" not accepted by Redoc theme parser
               textColor: "#c6c6d1",
             },
             typography: {
