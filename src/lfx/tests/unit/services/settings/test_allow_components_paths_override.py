@@ -64,6 +64,21 @@ def test_override_false_has_no_effect_when_custom_allowed(monkeypatch):
         assert settings.components_index_path == "/nonexistent/index.json"
 
 
+def test_index_path_preserved_when_env_var_unset(monkeypatch):
+    """The index path is only stripped when it came from LANGFLOW_COMPONENTS_INDEX_PATH.
+
+    If that env var is unset, the enforcer must not touch components_index_path even
+    when both flags are off.
+    """
+    _clear_env(monkeypatch)
+    monkeypatch.setenv("LANGFLOW_ALLOW_CUSTOM_COMPONENTS", "false")
+    monkeypatch.setenv("LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE", "false")
+
+    settings = Settings()
+    # No env var set, so the default (built-in index) must be left intact.
+    assert settings.components_index_path is None
+
+
 def test_multi_path_env_var_stripped_when_override_false(monkeypatch):
     """Comma-separated LANGFLOW_COMPONENTS_PATH entries are each stripped when override is off."""
     _clear_env(monkeypatch)

@@ -789,7 +789,11 @@ class Settings(BaseSettings):
                     env_components_path,
                 )
 
-        if self.components_index_path:
+        # Only strip the index path when it came from the env var, mirroring the
+        # components_path handling above. A value set via config/YAML is not part of
+        # the env-var bypass this flag governs, so leave it untouched.
+        env_components_index_path = os.getenv("LANGFLOW_COMPONENTS_INDEX_PATH")
+        if env_components_index_path and self.components_index_path == env_components_index_path:
             logger.warning(
                 "Ignoring LANGFLOW_COMPONENTS_INDEX_PATH=%s: "
                 "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
