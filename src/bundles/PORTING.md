@@ -198,7 +198,7 @@ Remove the extra and any `langflow-base[<bundle>]` reference from
 
 ```bash
 uv lock
-git add uv.lock src/backend/base/uv.lock 2>/dev/null   # whichever changed
+git add uv.lock
 ```
 
 ---

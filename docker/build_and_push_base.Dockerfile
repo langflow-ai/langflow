@@ -76,7 +76,7 @@ RUN npm install \
 WORKDIR /app/src/backend/base
 # ``--extra duckduckgo`` pulls ``ddgs`` (the only dep the bundle adds on
 # top of langflow-base[complete]) at the version recorded in
-# ``src/backend/base/uv.lock``.  Routing the dep through the locked sync
+# ``uv.lock``.  Routing the dep through the locked sync
 # instead of an ad-hoc ``uv pip install ddgs`` keeps the base image
 # reproducible across builds and prevents future ``ddgs`` releases from
 # silently drifting from the tested lock state.
