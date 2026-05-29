@@ -1,4 +1,3 @@
-import i18n from "@/i18n";
 import {
   getFlowVersionCount,
   getScopedValueForUniqueFlowVersion,
