@@ -67,9 +67,13 @@ src/bundles/<bundle>/
 Copy [`src/bundles/duckduckgo/pyproject.toml`](duckduckgo/pyproject.toml) and
 substitute names + the runtime-dep block. The non-obvious bits:
 
-- `dependencies` lists every runtime dep the component imports. Pin `lfx`
-  to a range that covers the `BUNDLE_API_VERSION` you target
-  (currently `>=0.5.0,<0.6.0`).
+- `dependencies` lists every runtime dep the component imports. Floor `lfx`
+  at `>=0.5.0` (the release that introduced extension bundles) with **no
+  upper bound**, so the bundle always resolves the latest available `lfx` —
+  BUNDLE_API compatibility is enforced separately via `extension.json`'s
+  `"lfx": {"compat": [...]}` contract, not an upper version cap. A bundle
+  author *may* tighten this if a component needs a specific newer `lfx`, but
+  the default carries no ceiling.
 - **Platform-gated deps:** if a runtime dep has no wheel on some platform
   (e.g. `ibm-db` ships none for linux/aarch64), gate it with a PEP 508 marker
   so `pip install langflow` still succeeds there, e.g.
