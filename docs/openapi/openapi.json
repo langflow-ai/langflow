@@ -149,6 +149,125 @@
         "title": "AuthSettings",
         "type": "object"
       },
+      "AuthzAuditLogRead": {
+        "description": "Read-only projection of an ``AuthzAuditLog`` row.",
+        "properties": {
+          "action": {
+            "title": "Action",
+            "type": "string"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "resource_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Id"
+          },
+          "resource_type": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Resource Type"
+          },
+          "result": {
+            "title": "Result",
+            "type": "string"
+          },
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
+            "type": "string"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "User Id"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "action",
+          "resource_type",
+          "resource_id",
+          "result",
+          "details",
+          "timestamp"
+        ],
+        "title": "AuthzAuditLogRead",
+        "type": "object"
+      },
+      "AuthzAuditPage": {
+        "description": "Paginated audit-log response.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/AuthzAuditLogRead"
+            },
+            "title": "Items",
+            "type": "array"
+          },
+          "page": {
+            "title": "Page",
+            "type": "integer"
+          },
+          "pages": {
+            "title": "Pages",
+            "type": "integer"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "total": {
+            "title": "Total",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "items",
+          "total",
+          "page",
+          "size",
+          "pages"
+        ],
+        "title": "AuthzAuditPage",
+        "type": "object"
+      },
       "Body_build_flow_api_v1_build__flow_id__flow_post": {
         "properties": {
           "data": {
@@ -506,7 +625,64 @@
         "title": "ChatOutputResponse",
         "type": "object"
       },
-      "CodeContent": {
+      "CodeContent-Input": {
+        "description": "Content type for code snippets.",
+        "properties": {
+          "code": {
+            "title": "Code",
+            "type": "string"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "language": {
+            "title": "Language",
+            "type": "string"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          },
+          "type": {
+            "const": "code",
+            "default": "code",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "language"
+        ],
+        "title": "CodeContent",
+        "type": "object"
+      },
+      "CodeContent-Output": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -609,6 +785,11 @@
             "title": "Allow Custom Components",
             "type": "boolean"
           },
+          "authz_enabled": {
+            "default": false,
+            "title": "Authz Enabled",
+            "type": "boolean"
+          },
           "auto_saving": {
             "title": "Auto Saving",
             "type": "boolean"
@@ -620,6 +801,10 @@
           "default_folder_name": {
             "title": "Default Folder Name",
             "type": "string"
+          },
+          "enable_extension_reload": {
+            "title": "Enable Extension Reload",
+            "type": "boolean"
           },
           "event_delivery": {
             "enum": [
@@ -695,6 +880,7 @@
           "voice_mode_available",
           "frontend_timeout",
           "mcp_base_url",
+          "enable_extension_reload",
           "serialization_max_items_length",
           "serialization_max_text_length",
           "auto_saving",
@@ -711,7 +897,67 @@
         "title": "ConfigResponse",
         "type": "object"
       },
-      "ContentBlock": {
+      "ContentBlock-Input": {
+        "description": "A block of content that can contain different types of content.",
+        "properties": {
+          "allow_markdown": {
+            "default": true,
+            "title": "Allow Markdown",
+            "type": "boolean"
+          },
+          "contents": {
+            "items": {
+              "oneOf": [
+                {
+                  "$ref": "#/components/schemas/ToolContent-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/ErrorContent-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/TextContent-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/MediaContent-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/CodeContent-Input"
+                },
+                {
+                  "$ref": "#/components/schemas/JSONContent-Input"
+                }
+              ]
+            },
+            "title": "Contents",
+            "type": "array"
+          },
+          "media_url": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Media Url"
+          },
+          "title": {
+            "title": "Title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "contents"
+        ],
+        "title": "ContentBlock",
+        "type": "object"
+      },
+      "ContentBlock-Output": {
         "description": "A block of content that can contain different types of content.",
         "properties": {
           "allow_markdown": {
@@ -753,7 +999,187 @@
         "title": "ContentBlock",
         "type": "object"
       },
-      "ErrorContent": {
+      "EffectivePermissionsRequest": {
+        "description": "Body for :func:`get_effective_permissions`.",
+        "properties": {
+          "actions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Actions to check. Each entry is lowercased and de-duplicated; the list is capped at 10. Defaults to read/write/execute/delete/create.",
+            "title": "Actions"
+          },
+          "domain": {
+            "default": "*",
+            "description": "Authorization domain — typically ``project:{folder_id}`` or ``*``.",
+            "title": "Domain",
+            "type": "string"
+          },
+          "resource_ids": {
+            "description": "Resource IDs to evaluate. Capped at 500 per request to keep batch_enforce bounded.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "title": "Resource Ids",
+            "type": "array"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file",
+              "component"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_ids"
+        ],
+        "title": "EffectivePermissionsRequest",
+        "type": "object"
+      },
+      "EffectivePermissionsResponse": {
+        "description": "Response: ``{resource_id: [allowed_actions]}``.",
+        "properties": {
+          "permissions": {
+            "additionalProperties": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            "propertyNames": {
+              "format": "uuid"
+            },
+            "title": "Permissions",
+            "type": "object"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file",
+              "component"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "resource_type",
+          "permissions"
+        ],
+        "title": "EffectivePermissionsResponse",
+        "type": "object"
+      },
+      "ErrorContent-Input": {
+        "description": "Content type for error messages.",
+        "properties": {
+          "component": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Component"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "field": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Field"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "reason": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Reason"
+          },
+          "solution": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Solution"
+          },
+          "traceback": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Traceback"
+          },
+          "type": {
+            "const": "error",
+            "default": "error",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "ErrorContent",
+        "type": "object"
+      },
+      "ErrorContent-Output": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -802,6 +1228,51 @@
         ],
         "title": "EventDeliveryType",
         "type": "string"
+      },
+      "ExtensionEventResponse": {
+        "properties": {
+          "payload": {
+            "additionalProperties": true,
+            "title": "Payload",
+            "type": "object"
+          },
+          "timestamp": {
+            "title": "Timestamp",
+            "type": "number"
+          },
+          "type": {
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "type",
+          "timestamp",
+          "payload"
+        ],
+        "title": "ExtensionEventResponse",
+        "type": "object"
+      },
+      "ExtensionEventsResponse": {
+        "properties": {
+          "events": {
+            "items": {
+              "$ref": "#/components/schemas/ExtensionEventResponse"
+            },
+            "title": "Events",
+            "type": "array"
+          },
+          "settled": {
+            "title": "Settled",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "events",
+          "settled"
+        ],
+        "title": "ExtensionEventsResponse",
+        "type": "object"
       },
       "FeatureFlags": {
         "additionalProperties": false,
@@ -1043,6 +1514,18 @@
             "default": false,
             "description": "Can be used on the webhook endpoint",
             "title": "Webhook"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
           }
         },
         "required": [
@@ -1478,6 +1961,18 @@
             "title": "Name",
             "type": "string"
           },
+          "name_key": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Stable i18n key derived from the original English name",
+            "title": "Name Key"
+          },
           "tags": {
             "anyOf": [
               {
@@ -1529,6 +2024,18 @@
             "default": false,
             "description": "Can be used on the webhook endpoint",
             "title": "Webhook"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
           }
         },
         "required": [
@@ -1663,6 +2170,18 @@
               }
             ],
             "title": "Name"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
           }
         },
         "title": "FlowUpdate",
@@ -2044,6 +2563,34 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "HeaderDict": {
+        "properties": {
+          "icon": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Icon"
+          },
+          "title": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Title"
+          }
+        },
+        "title": "HeaderDict",
+        "type": "object"
+      },
       "HealthResponse": {
         "properties": {
           "chat": {
@@ -2177,7 +2724,49 @@
         "title": "InputValueRequest",
         "type": "object"
       },
-      "JSONContent": {
+      "JSONContent-Input": {
+        "description": "Content type for JSON content.",
+        "properties": {
+          "data": {
+            "additionalProperties": true,
+            "title": "Data",
+            "type": "object"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "const": "json",
+            "default": "json",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "data"
+        ],
+        "title": "JSONContent",
+        "type": "object"
+      },
+      "JSONContent-Output": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -2391,7 +2980,62 @@
         "title": "MCPSettings",
         "type": "object"
       },
-      "MediaContent": {
+      "MediaContent-Input": {
+        "description": "Content type for media content.",
+        "properties": {
+          "caption": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Caption"
+          },
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "type": {
+            "const": "media",
+            "default": "media",
+            "title": "Type",
+            "type": "string"
+          },
+          "urls": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Urls",
+            "type": "array"
+          }
+        },
+        "required": [
+          "urls"
+        ],
+        "title": "MediaContent",
+        "type": "object"
+      },
+      "MediaContent-Output": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -2404,7 +3048,7 @@
           },
           "content_blocks": {
             "items": {
-              "$ref": "#/components/schemas/ContentBlock"
+              "$ref": "#/components/schemas/ContentBlock-Output"
             },
             "title": "Content Blocks",
             "type": "array"
@@ -2457,6 +3101,18 @@
           "properties": {
             "$ref": "#/components/schemas/Properties"
           },
+          "run_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Run Id"
+          },
           "sender": {
             "title": "Sender",
             "type": "string"
@@ -2496,8 +3152,7 @@
           "sender_name",
           "session_id",
           "text",
-          "id",
-          "flow_id"
+          "id"
         ],
         "title": "MessageRead",
         "type": "object"
@@ -2519,7 +3174,7 @@
             "anyOf": [
               {
                 "items": {
-                  "$ref": "#/components/schemas/ContentBlock"
+                  "$ref": "#/components/schemas/ContentBlock-Output"
                 },
                 "type": "array"
               },
@@ -2646,6 +3301,31 @@
       },
       "MessageUpdate": {
         "properties": {
+          "category": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Category"
+          },
+          "content_blocks": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/components/schemas/ContentBlock-Input"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Content Blocks"
+          },
           "context_id": {
             "anyOf": [
               {
@@ -3022,6 +3702,15 @@
             "title": "Allow Custom Components",
             "type": "boolean"
           },
+          "authz_enabled": {
+            "default": false,
+            "title": "Authz Enabled",
+            "type": "boolean"
+          },
+          "enable_extension_reload": {
+            "title": "Enable Extension Reload",
+            "type": "boolean"
+          },
           "event_delivery": {
             "enum": [
               "polling",
@@ -3064,6 +3753,7 @@
           "voice_mode_available",
           "frontend_timeout",
           "mcp_base_url",
+          "enable_extension_reload",
           "allow_custom_components"
         ],
         "title": "PublicConfigResponse",
@@ -3197,6 +3887,316 @@
         "title": "ResultData",
         "type": "object"
       },
+      "RoleAssignmentCreate": {
+        "description": "Payload for assigning a role to a user.",
+        "properties": {
+          "domain_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Required when ``domain_type`` is org/workspace/project; must be null for ``global``.",
+            "title": "Domain Id"
+          },
+          "domain_type": {
+            "default": "global",
+            "description": "Domain scope of the assignment. ``global`` is unscoped (no ``domain_id``); ``org``/``workspace``/``project`` require a matching ``domain_id``.",
+            "enum": [
+              "global",
+              "org",
+              "workspace",
+              "project"
+            ],
+            "title": "Domain Type",
+            "type": "string"
+          },
+          "role_id": {
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "role_id"
+        ],
+        "title": "RoleAssignmentCreate",
+        "type": "object"
+      },
+      "RoleAssignmentRead": {
+        "description": "Serialized authz_role_assignment row returned by the API.",
+        "properties": {
+          "assigned_at": {
+            "format": "date-time",
+            "title": "Assigned At",
+            "type": "string"
+          },
+          "assigned_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Assigned By"
+          },
+          "domain_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Domain Id"
+          },
+          "domain_type": {
+            "title": "Domain Type",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "role_id": {
+            "format": "uuid",
+            "title": "Role Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "user_id",
+          "role_id",
+          "domain_type",
+          "domain_id",
+          "assigned_at",
+          "assigned_by"
+        ],
+        "title": "RoleAssignmentRead",
+        "type": "object"
+      },
+      "RoleCreate": {
+        "description": "Payload for creating an authz_role row.",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_role_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Role Id"
+          },
+          "permissions": {
+            "description": "Permission slugs in the canonical ``<resource>:<action>`` form — for example ``flow:read``, ``deployment:execute``, ``share:create``. Resources must be one of flow, deployment, project, knowledge_base, variable, file, share. Actions are constrained per-resource (see ``services/authorization/actions.py``): e.g. ``deploy`` is only valid on ``flow``, ``ingest`` only on ``knowledge_base``, ``update`` only on ``share``. ``*`` (all actions on that resource) is always accepted. A registered authorization plugin is responsible for compiling these into its policy format.",
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          }
+        },
+        "required": [
+          "name"
+        ],
+        "title": "RoleCreate",
+        "type": "object"
+      },
+      "RoleRead": {
+        "description": "Serialized authz_role row returned by the API.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_system": {
+            "title": "Is System",
+            "type": "boolean"
+          },
+          "name": {
+            "title": "Name",
+            "type": "string"
+          },
+          "parent_role_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Role Id"
+          },
+          "permissions": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Permissions",
+            "type": "array"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "workspace_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Workspace Id"
+          }
+        },
+        "required": [
+          "id",
+          "name",
+          "description",
+          "is_system",
+          "permissions",
+          "parent_role_id",
+          "workspace_id",
+          "created_at",
+          "updated_at",
+          "created_by"
+        ],
+        "title": "RoleRead",
+        "type": "object"
+      },
+      "RoleUpdate": {
+        "description": "Payload for updating an authz_role row (PATCH semantics — only set fields apply).",
+        "properties": {
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "parent_role_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Parent Role Id"
+          },
+          "permissions": {
+            "anyOf": [
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Permissions"
+          }
+        },
+        "title": "RoleUpdate",
+        "type": "object"
+      },
       "RunOutputs": {
         "properties": {
           "inputs": {
@@ -3253,6 +4253,176 @@
           }
         },
         "title": "RunResponse",
+        "type": "object"
+      },
+      "ShareCreate": {
+        "description": "Payload for creating an authz_share row.",
+        "properties": {
+          "permission_level": {
+            "default": "read",
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "admin"
+            ],
+            "title": "Permission Level",
+            "type": "string"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "private",
+              "team",
+              "user",
+              "public"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "required": [
+          "resource_type",
+          "resource_id",
+          "scope"
+        ],
+        "title": "ShareCreate",
+        "type": "object"
+      },
+      "ShareRead": {
+        "description": "Serialized authz_share row returned by the API.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "created_by": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Created By"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "permission_level": {
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "admin"
+            ],
+            "title": "Permission Level",
+            "type": "string"
+          },
+          "resource_id": {
+            "format": "uuid",
+            "title": "Resource Id",
+            "type": "string"
+          },
+          "resource_type": {
+            "enum": [
+              "flow",
+              "deployment",
+              "project",
+              "knowledge_base",
+              "variable",
+              "file"
+            ],
+            "title": "Resource Type",
+            "type": "string"
+          },
+          "scope": {
+            "enum": [
+              "private",
+              "team",
+              "user",
+              "public"
+            ],
+            "title": "Scope",
+            "type": "string"
+          },
+          "target_id": {
+            "anyOf": [
+              {
+                "format": "uuid",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Target Id"
+          }
+        },
+        "required": [
+          "id",
+          "resource_type",
+          "resource_id",
+          "scope",
+          "target_id",
+          "permission_level",
+          "created_by",
+          "created_at"
+        ],
+        "title": "ShareRead",
+        "type": "object"
+      },
+      "ShareUpdate": {
+        "description": "Payload for updating an authz_share permission level.",
+        "properties": {
+          "permission_level": {
+            "enum": [
+              "read",
+              "write",
+              "execute",
+              "admin"
+            ],
+            "title": "Permission Level",
+            "type": "string"
+          }
+        },
+        "required": [
+          "permission_level"
+        ],
+        "title": "ShareUpdate",
         "type": "object"
       },
       "SimplifiedAPIRequest": {
@@ -3341,6 +4511,18 @@
               }
             ],
             "description": "The tweaks"
+          },
+          "user_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "Optional end-user identifier forwarded to tracing providers (e.g. Langfuse) as the trace's user_id. Does not affect authentication or authorization — the API key owner remains the effective Langflow user.",
+            "title": "User Id"
           }
         },
         "title": "SimplifiedAPIRequest",
@@ -3541,11 +4723,331 @@
         "title": "SpanType",
         "type": "string"
       },
-      "TextContent": {
+      "TeamCreate": {
+        "description": "Payload for creating an authz_team.",
+        "properties": {
+          "adom_name": {
+            "description": "Administrative-domain slug, unique across all teams (often the SSO group name).",
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Adom Name",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "default": true,
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "team_name": {
+            "maxLength": 255,
+            "minLength": 1,
+            "title": "Team Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "team_name",
+          "adom_name"
+        ],
+        "title": "TeamCreate",
+        "type": "object"
+      },
+      "TeamMemberCreate": {
+        "description": "Payload for adding a user to a team.",
+        "properties": {
+          "source": {
+            "default": "manual",
+            "enum": [
+              "manual",
+              "sso"
+            ],
+            "title": "Source",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "TeamMemberCreate",
+        "type": "object"
+      },
+      "TeamMemberRead": {
+        "description": "Serialized authz_team_member row.",
+        "properties": {
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "source": {
+            "title": "Source",
+            "type": "string"
+          },
+          "team_id": {
+            "format": "uuid",
+            "title": "Team Id",
+            "type": "string"
+          },
+          "user_id": {
+            "format": "uuid",
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team_id",
+          "user_id",
+          "source",
+          "created_at"
+        ],
+        "title": "TeamMemberRead",
+        "type": "object"
+      },
+      "TeamRead": {
+        "description": "Serialized authz_team row returned by the API.",
+        "properties": {
+          "adom_name": {
+            "title": "Adom Name",
+            "type": "string"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "id": {
+            "format": "uuid",
+            "title": "Id",
+            "type": "string"
+          },
+          "is_active": {
+            "title": "Is Active",
+            "type": "boolean"
+          },
+          "team_name": {
+            "title": "Team Name",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "team_name",
+          "adom_name",
+          "description",
+          "is_active",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "TeamRead",
+        "type": "object"
+      },
+      "TeamUpdate": {
+        "description": "Payload for updating an authz_team (PATCH semantics).",
+        "properties": {
+          "adom_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Adom Name"
+          },
+          "description": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Description"
+          },
+          "is_active": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Is Active"
+          },
+          "team_name": {
+            "anyOf": [
+              {
+                "maxLength": 255,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Team Name"
+          }
+        },
+        "title": "TeamUpdate",
+        "type": "object"
+      },
+      "TextContent-Input": {
+        "description": "Content type for simple text content.",
+        "properties": {
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "text": {
+            "title": "Text",
+            "type": "string"
+          },
+          "type": {
+            "const": "text",
+            "default": "text",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "text"
+        ],
+        "title": "TextContent",
+        "type": "object"
+      },
+      "TextContent-Output": {
         "additionalProperties": true,
         "type": "object"
       },
-      "ToolContent": {
+      "ToolContent-Input": {
+        "description": "Content type for tool start content.",
+        "properties": {
+          "duration": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Duration"
+          },
+          "error": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "header": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/HeaderDict"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "input": {
+            "additionalProperties": true,
+            "title": "Input",
+            "type": "object"
+          },
+          "name": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Name"
+          },
+          "output": {
+            "anyOf": [
+              {},
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Output"
+          },
+          "type": {
+            "const": "tool_use",
+            "default": "tool_use",
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "title": "ToolContent",
+        "type": "object"
+      },
+      "ToolContent-Output": {
         "additionalProperties": true,
         "type": "object"
       },
@@ -3608,6 +5110,9 @@
                 "type": "object"
               },
               {
+                "type": "string"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -3622,6 +5127,9 @@
               {
                 "additionalProperties": true,
                 "type": "object"
+              },
+              {
+                "type": "string"
               },
               {
                 "type": "null"
@@ -3698,6 +5206,9 @@
                 "type": "object"
               },
               {
+                "type": "string"
+              },
+              {
                 "type": "null"
               }
             ],
@@ -3712,6 +5223,9 @@
               {
                 "additionalProperties": true,
                 "type": "object"
+              },
+              {
+                "type": "string"
               },
               {
                 "type": "null"
@@ -3815,6 +5329,15 @@
         "additionalProperties": {
           "anyOf": [
             {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
               "type": "string"
             },
             {
@@ -3832,7 +5355,9 @@
             "component_id": {
               "parameter_name": "value"
             },
-            "parameter_name": "value"
+            "parameter_name": "value",
+            "stream": false,
+            "temperature": 0.7
           }
         ],
         "title": "Tweaks",
@@ -4264,6 +5789,10 @@
           {
             "background": false,
             "flow_id": "flow_67ccd2be17f0819081ff3bb2cf6508e60bb6a6b452d3795b",
+            "globals": {
+              "FILENAME": "relatorio-final.pdf",
+              "OWNER_NAME": "Jose"
+            },
             "inputs": {
               "ChatInput-abc.input_value": "Hello, how can you help me today?",
               "ChatInput-abc.session_id": "session-123",
@@ -4299,6 +5828,19 @@
           "flow_id": {
             "title": "Flow Id",
             "type": "string"
+          },
+          "globals": {
+            "additionalProperties": {
+              "maxLength": 65536,
+              "type": "string"
+            },
+            "description": "Request-level global variables made available to workflow components. Keys may use any printable string up to 256 chars; values are capped at 65536 chars. Body globals always win over the legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers.",
+            "propertyNames": {
+              "maxLength": 256,
+              "minLength": 1
+            },
+            "title": "Globals",
+            "type": "object"
           },
           "inputs": {
             "anyOf": [
@@ -4544,13 +6086,13 @@
   },
   "info": {
     "title": "Langflow",
-    "version": "1.9.0"
+    "version": "1.10.0"
   },
   "openapi": "3.1.0",
   "paths": {
     "/api/v1/all": {
       "get": {
-        "description": "Retrieve all component types with compression for better performance.<br><br>Returns a compressed response containing all available component types.",
+        "description": "Retrieve all component types with compression for better performance.\n\nReturns a compressed response containing all available component types,\nwith display_names translated to the locale indicated by Accept-Language.",
         "operationId": "get_all_api_v1_all_get",
         "responses": {
           "200": {
@@ -4579,9 +6121,2591 @@
         ]
       }
     },
+    "/api/v1/authz/audit": {
+      "get": {
+        "description": "Return a paginated slice of the audit log filtered by the given query params.\n\nSuperuser only. The composite indexes on ``(user_id, timestamp)`` and\n``(resource_type, resource_id)`` keep both \"show me events for user X\"\nand \"show me events on resource Y\" fast at scale.",
+        "operationId": "list_audit_log_api_v1_authz_audit_get",
+        "parameters": [
+          {
+            "description": "Filter by acting user id.",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by acting user id.",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "Filter by resource type slug, e.g. ``flow`` or ``deployment``.",
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by resource type slug, e.g. ``flow`` or ``deployment``.",
+              "title": "Resource Type"
+            }
+          },
+          {
+            "description": "Filter by resource UUID.",
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by resource UUID.",
+              "title": "Resource Id"
+            }
+          },
+          {
+            "description": "Filter by action string, e.g. ``flow:read`` or ``share:create``.",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by action string, e.g. ``flow:read`` or ``share:create``.",
+              "title": "Action"
+            }
+          },
+          {
+            "description": "Filter by decision result (``allow`` / ``deny`` / ``owner_override``).",
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by decision result (``allow`` / ``deny`` / ``owner_override``).",
+              "title": "Result"
+            }
+          },
+          {
+            "description": "Inclusive lower bound on ``timestamp``.",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive lower bound on ``timestamp``.",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Exclusive upper bound on ``timestamp``.",
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exclusive upper bound on ``timestamp``.",
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthzAuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Audit Log",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/audit/": {
+      "get": {
+        "description": "Return a paginated slice of the audit log filtered by the given query params.\n\nSuperuser only. The composite indexes on ``(user_id, timestamp)`` and\n``(resource_type, resource_id)`` keep both \"show me events for user X\"\nand \"show me events on resource Y\" fast at scale.",
+        "operationId": "list_audit_log_api_v1_authz_audit__get",
+        "parameters": [
+          {
+            "description": "Filter by acting user id.",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by acting user id.",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "Filter by resource type slug, e.g. ``flow`` or ``deployment``.",
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by resource type slug, e.g. ``flow`` or ``deployment``.",
+              "title": "Resource Type"
+            }
+          },
+          {
+            "description": "Filter by resource UUID.",
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by resource UUID.",
+              "title": "Resource Id"
+            }
+          },
+          {
+            "description": "Filter by action string, e.g. ``flow:read`` or ``share:create``.",
+            "in": "query",
+            "name": "action",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by action string, e.g. ``flow:read`` or ``share:create``.",
+              "title": "Action"
+            }
+          },
+          {
+            "description": "Filter by decision result (``allow`` / ``deny`` / ``owner_override``).",
+            "in": "query",
+            "name": "result",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by decision result (``allow`` / ``deny`` / ``owner_override``).",
+              "title": "Result"
+            }
+          },
+          {
+            "description": "Inclusive lower bound on ``timestamp``.",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Inclusive lower bound on ``timestamp``.",
+              "title": "Since"
+            }
+          },
+          {
+            "description": "Exclusive upper bound on ``timestamp``.",
+            "in": "query",
+            "name": "until",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "date-time",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Exclusive upper bound on ``timestamp``.",
+              "title": "Until"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "schema": {
+              "default": 1,
+              "minimum": 1,
+              "title": "Page",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "schema": {
+              "default": 50,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Size",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AuthzAuditPage"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Audit Log",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/me/permissions": {
+      "post": {
+        "description": "Return per-resource allowed actions for the current user.\n\nUse this to render the UI permission gate (greyed-out buttons etc.) without\nflooding the audit log with denied probes. Empty list for a resource_id\nmeans the user cannot perform any of the requested actions on that resource.",
+        "operationId": "get_effective_permissions_api_v1_authz_me_permissions_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EffectivePermissionsRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/EffectivePermissionsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Effective Permissions",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/role-assignments": {
+      "get": {
+        "description": "List role assignments scoped to one user.\n\n* Omitting ``user_id`` defaults to the caller — no superuser needed.\n* Passing ``user_id == self.id`` is the same as omitting it.\n* Passing a different ``user_id`` requires superuser; otherwise 403.\n\nResults are always filtered by the resolved ``user_id``. Admins who need\ncross-user lookups make one call per user. Paginated via ``limit`` /\n``offset`` (default 100, max 200).",
+        "operationId": "list_assignments_api_v1_authz_role_assignments_get",
+        "parameters": [
+          {
+            "description": "Filter by user",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by user",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "Filter by role",
+            "in": "query",
+            "name": "role_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by role",
+              "title": "Role Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleAssignmentRead"
+                  },
+                  "title": "Response List Assignments Api V1 Authz Role Assignments Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Assignments",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Assign a role to a user. Superuser-only.",
+        "operationId": "create_assignment_api_v1_authz_role_assignments_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Assignment",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/role-assignments/": {
+      "get": {
+        "description": "List role assignments scoped to one user.\n\n* Omitting ``user_id`` defaults to the caller — no superuser needed.\n* Passing ``user_id == self.id`` is the same as omitting it.\n* Passing a different ``user_id`` requires superuser; otherwise 403.\n\nResults are always filtered by the resolved ``user_id``. Admins who need\ncross-user lookups make one call per user. Paginated via ``limit`` /\n``offset`` (default 100, max 200).",
+        "operationId": "list_assignments_api_v1_authz_role_assignments__get",
+        "parameters": [
+          {
+            "description": "Filter by user",
+            "in": "query",
+            "name": "user_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by user",
+              "title": "User Id"
+            }
+          },
+          {
+            "description": "Filter by role",
+            "in": "query",
+            "name": "role_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by role",
+              "title": "Role Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "domain_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Domain Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleAssignmentRead"
+                  },
+                  "title": "Response List Assignments Api V1 Authz Role Assignments  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Assignments",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Assign a role to a user. Superuser-only.",
+        "operationId": "create_assignment_api_v1_authz_role_assignments__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleAssignmentCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleAssignmentRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Assignment",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/role-assignments/{assignment_id}": {
+      "delete": {
+        "description": "Revoke a role assignment. Superuser-only.",
+        "operationId": "delete_assignment_api_v1_authz_role_assignments__assignment_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "assignment_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Assignment Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Assignment",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/roles": {
+      "get": {
+        "description": "List roles. Open to authenticated users so the UI can populate dropdowns.\n\nPaginated via ``limit`` / ``offset`` so a single call cannot return the\nentire catalog of roles + their permissions. Stable order is ``(name, id)``\nso ``offset`` is deterministic across calls.",
+        "operationId": "list_roles_api_v1_authz_roles_get",
+        "parameters": [
+          {
+            "description": "Filter by is_system flag",
+            "in": "query",
+            "name": "is_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by is_system flag",
+              "title": "Is System"
+            }
+          },
+          {
+            "description": "Substring match on role name",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Substring match on role name",
+              "title": "Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleRead"
+                  },
+                  "title": "Response List Roles Api V1 Authz Roles Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Roles",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Create a custom (non-system) role. Superuser-only.",
+        "operationId": "create_role_api_v1_authz_roles_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Role",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/roles/": {
+      "get": {
+        "description": "List roles. Open to authenticated users so the UI can populate dropdowns.\n\nPaginated via ``limit`` / ``offset`` so a single call cannot return the\nentire catalog of roles + their permissions. Stable order is ``(name, id)``\nso ``offset`` is deterministic across calls.",
+        "operationId": "list_roles_api_v1_authz_roles__get",
+        "parameters": [
+          {
+            "description": "Filter by is_system flag",
+            "in": "query",
+            "name": "is_system",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Filter by is_system flag",
+              "title": "Is System"
+            }
+          },
+          {
+            "description": "Substring match on role name",
+            "in": "query",
+            "name": "name",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Substring match on role name",
+              "title": "Name"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/RoleRead"
+                  },
+                  "title": "Response List Roles Api V1 Authz Roles  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Roles",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Create a custom (non-system) role. Superuser-only.",
+        "operationId": "create_role_api_v1_authz_roles__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Role",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/roles/{role_id}": {
+      "delete": {
+        "description": "Delete a custom role.\n\nSystem roles cannot be deleted; roles with active assignments return 409\n(delete the assignments first).",
+        "operationId": "delete_role_api_v1_authz_roles__role_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Role Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Role",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "get": {
+        "operationId": "read_role_api_v1_authz_roles__role_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Role Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Read Role",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "patch": {
+        "description": "Update fields on a custom role. System roles are read-only.",
+        "operationId": "update_role_api_v1_authz_roles__role_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "role_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Role Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RoleUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RoleRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Update Role",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares": {
+      "get": {
+        "description": "List share rows visible to the caller (paginated, max 200).",
+        "operationId": "list_shares_api_v1_authz_shares_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShareRead"
+                  },
+                  "title": "Response List Shares Api V1 Authz Shares Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Shares",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Create an authz_share row for a resource.",
+        "operationId": "create_share_api_v1_authz_shares_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Share",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares/": {
+      "get": {
+        "description": "List share rows visible to the caller (paginated, max 200).",
+        "operationId": "list_shares_api_v1_authz_shares__get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "resource_type",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Type"
+            }
+          },
+          {
+            "in": "query",
+            "name": "resource_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Resource Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "target_id",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "format": "uuid",
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Target Id"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Scope"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/ShareRead"
+                  },
+                  "title": "Response List Shares Api V1 Authz Shares  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Shares",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "description": "Create an authz_share row for a resource.",
+        "operationId": "create_share_api_v1_authz_shares__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Share",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/shares/{share_id}": {
+      "delete": {
+        "description": "Revoke an existing share.",
+        "operationId": "delete_share_api_v1_authz_shares__share_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Share",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "get": {
+        "description": "Fetch a single share by id with the same visibility rules as list.",
+        "operationId": "get_share_api_v1_authz_shares__share_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Share",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "patch": {
+        "description": "Update the permission level of an existing share.",
+        "operationId": "update_share_api_v1_authz_shares__share_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "share_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Share Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ShareUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ShareRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Update Share",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams": {
+      "get": {
+        "description": "List teams. Open to any authenticated user (for the share dialog's team picker).\n\nPaginated via ``limit`` / ``offset`` so a single call cannot enumerate every\nteam. Stable order is ``(team_name, id)`` so ``offset`` is deterministic.",
+        "operationId": "list_teams_api_v1_authz_teams_get",
+        "parameters": [
+          {
+            "description": "Substring match on team_name or adom_name",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Substring match on team_name or adom_name",
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamRead"
+                  },
+                  "title": "Response List Teams Api V1 Authz Teams Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Teams",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "operationId": "create_team_api_v1_authz_teams_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Team",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/": {
+      "get": {
+        "description": "List teams. Open to any authenticated user (for the share dialog's team picker).\n\nPaginated via ``limit`` / ``offset`` so a single call cannot enumerate every\nteam. Stable order is ``(team_name, id)`` so ``offset`` is deterministic.",
+        "operationId": "list_teams_api_v1_authz_teams__get",
+        "parameters": [
+          {
+            "description": "Substring match on team_name or adom_name",
+            "in": "query",
+            "name": "search",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Substring match on team_name or adom_name",
+              "title": "Search"
+            }
+          },
+          {
+            "in": "query",
+            "name": "is_active",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "boolean"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Is Active"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamRead"
+                  },
+                  "title": "Response List Teams Api V1 Authz Teams  Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Teams",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "operationId": "create_team_api_v1_authz_teams__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Create Team",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/{team_id}": {
+      "delete": {
+        "operationId": "delete_team_api_v1_authz_teams__team_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Delete Team",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "get": {
+        "operationId": "read_team_api_v1_authz_teams__team_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Read Team",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "patch": {
+        "operationId": "update_team_api_v1_authz_teams__team_id__patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Update Team",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/{team_id}/members": {
+      "get": {
+        "description": "List members of a team. Any authenticated user (so the UI can render team rosters).\n\nPaginated via ``limit`` / ``offset`` so a single call cannot enumerate a\nlarge team's full roster. Stable order is ``(created_at, user_id)``.",
+        "operationId": "list_members_api_v1_authz_teams__team_id__members_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "limit",
+            "required": false,
+            "schema": {
+              "default": 100,
+              "maximum": 200,
+              "minimum": 1,
+              "title": "Limit",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "offset",
+            "required": false,
+            "schema": {
+              "default": 0,
+              "minimum": 0,
+              "title": "Offset",
+              "type": "integer"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/TeamMemberRead"
+                  },
+                  "title": "Response List Members Api V1 Authz Teams  Team Id  Members Get",
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "List Members",
+        "tags": [
+          "Authorization"
+        ]
+      },
+      "post": {
+        "operationId": "add_member_api_v1_authz_teams__team_id__members_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TeamMemberCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TeamMemberRead"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Add Member",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
+    "/api/v1/authz/teams/{team_id}/members/{user_id}": {
+      "delete": {
+        "operationId": "remove_member_api_v1_authz_teams__team_id__members__user_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "team_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Team Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Remove Member",
+        "tags": [
+          "Authorization"
+        ]
+      }
+    },
     "/api/v1/build/{flow_id}/flow": {
       "post": {
-        "description": "Build and process a flow, returning a job ID for event polling.<br><br>This endpoint requires authentication through the CurrentActiveUser dependency.<br>For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.<br><br>Args:<br>    flow_id: UUID of the flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    data: Optional flow data<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    current_user: The authenticated user<br>    queue_service: Queue service for job management<br>    flow_name: Optional name for the flow<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
+        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
         "operationId": "build_flow_api_v1_build__flow_id__flow_post",
         "parameters": [
           {
@@ -4710,7 +8834,7 @@
     },
     "/api/v1/build/{job_id}/cancel": {
       "post": {
-        "description": "Cancel a specific build job.<br><br>Requires authentication and ownership verification to prevent a user from<br>aborting another user's running build (DoS via job cancellation).<br>Jobs with no registered owner (build_public_tmp) are accessible to any<br>authenticated user, consistent with get_build_events.",
+        "description": "Cancel a specific build job.\n\nRequires authentication and ownership verification to prevent a user from\naborting another user's running build (DoS via job cancellation).\nJobs with no registered owner (build_public_tmp) are accessible to any\nauthenticated user, consistent with get_build_events.",
         "operationId": "cancel_build_api_v1_build__job_id__cancel_post",
         "parameters": [
           {
@@ -4764,7 +8888,7 @@
     },
     "/api/v1/build/{job_id}/events": {
       "get": {
-        "description": "Get events for a specific build job.<br><br>Requires authentication and ownership verification. A job owner is registered<br>when build_flow is called; if a registered owner does not match the requesting<br>user the endpoint returns 404 to avoid leaking job existence.<br>Jobs started via build_public_tmp have no registered owner and remain accessible<br>to any authenticated user.",
+        "description": "Get events for a specific build job.\n\nRequires authentication and ownership verification. A job owner is registered\nwhen build_flow is called; if a registered owner does not match the requesting\nuser the endpoint returns 404 to avoid leaking job existence.\nJobs started via build_public_tmp have no registered owner and remain accessible\nto any authenticated user.",
         "operationId": "get_build_events_api_v1_build__job_id__events_get",
         "parameters": [
           {
@@ -4825,7 +8949,7 @@
     },
     "/api/v1/build_public_tmp/{flow_id}/flow": {
       "post": {
-        "description": "Build a public flow without requiring authentication.<br><br>This endpoint is specifically for public flows that don't require authentication.<br>It uses a client_id cookie to create a deterministic flow ID for tracking purposes.<br><br>Security Note:<br>- The 'data' parameter is NOT accepted to prevent flow definition tampering<br>- Public flows must execute the stored flow definition only<br>- The flow definition is always loaded from the database<br><br>The endpoint:<br>1. Verifies the requested flow is marked as public in the database<br>2. Creates a deterministic UUID based on client_id and flow_id<br>3. Uses the flow owner's permissions to build the flow<br>4. Always loads the flow definition from the database<br><br>Requirements:<br>- The flow must be marked as PUBLIC in the database<br>- The request must include a client_id cookie<br><br>Args:<br>    flow_id: UUID of the public flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    flow_name: Optional name for the flow<br>    request: FastAPI request object (needed for cookie access)<br>    queue_service: Queue service for job management<br>    authenticated_user: Optional authenticated user (resolved from cookie/token if present)<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
+        "description": "Build a public flow without requiring authentication.\n\nThis endpoint is specifically for public flows that don't require authentication.\nIt uses a client_id cookie to create a deterministic flow ID for tracking purposes.\n\nSecurity Note:\n- The 'data' parameter is NOT accepted to prevent flow definition tampering\n- Public flows must execute the stored flow definition only\n- The flow definition is always loaded from the database\n- Caller-supplied 'inputs.session' is namespaced under the (client_id,\n  flow_id) virtual flow ID so an unauthenticated caller cannot address a\n  session that lives outside its own namespace (CVE-2026-33017)\n\nThe endpoint:\n1. Verifies the requested flow is marked as public in the database\n2. Creates a deterministic UUID based on client_id and flow_id\n3. Uses the flow owner's permissions to build the flow\n4. Always loads the flow definition from the database\n\nRequirements:\n- The flow must be marked as PUBLIC in the database\n- The request must include a client_id cookie\n\nArgs:\n    flow_id: UUID of the public flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    flow_name: Optional name for the flow\n    request: FastAPI request object (needed for cookie access)\n    queue_service: Queue service for job management\n    authenticated_user: Optional authenticated user (resolved from cookie/token if present)\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
         "operationId": "build_public_tmp_api_v1_build_public_tmp__flow_id__flow_post",
         "parameters": [
           {
@@ -4950,7 +9074,7 @@
     },
     "/api/v1/build_public_tmp/{job_id}/cancel": {
       "post": {
-        "description": "Cancel a public flow build job.<br><br>This endpoint does not require authentication, matching the public build endpoint.<br>It is used by the shareable playground to cancel builds.",
+        "description": "Cancel a public flow build job.\n\nThis endpoint does not require authentication, matching the public build endpoint.\nIt is used by the shareable playground to cancel builds.",
         "operationId": "cancel_build_public_api_v1_build_public_tmp__job_id__cancel_post",
         "parameters": [
           {
@@ -4993,7 +9117,7 @@
     },
     "/api/v1/build_public_tmp/{job_id}/events": {
       "get": {
-        "description": "Get events for a public flow build job.<br><br>This endpoint does not require authentication, matching the public build endpoint.<br>It is used by the shareable playground to consume build events.",
+        "description": "Get events for a public flow build job.\n\nThis endpoint does not require authentication, matching the public build endpoint.\nIt is used by the shareable playground to consume build events.",
         "operationId": "get_build_events_public_api_v1_build_public_tmp__job_id__events_get",
         "parameters": [
           {
@@ -5043,7 +9167,7 @@
     },
     "/api/v1/config": {
       "get": {
-        "description": "Retrieve application configuration settings.<br><br>Returns different configuration based on authentication status:<br>- Authenticated users: Full ConfigResponse with all settings<br>- Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings<br><br>Args:<br>    user: The authenticated user, or None if unauthenticated.<br><br>Returns:<br>    ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.<br><br>Raises:<br>    HTTPException: If an error occurs while retrieving the configuration.",
+        "description": "Retrieve application configuration settings.\n\nReturns different configuration based on authentication status:\n- Authenticated users: Full ConfigResponse with all settings\n- Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings\n\nArgs:\n    user: The authenticated user, or None if unauthenticated.\n\nReturns:\n    ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.\n\nRaises:\n    HTTPException: If an error occurs while retrieving the configuration.",
         "operationId": "get_config_api_v1_config_get",
         "responses": {
           "200": {
@@ -5079,6 +9203,128 @@
         "summary": "Get Config",
         "tags": [
           "Base"
+        ]
+      }
+    },
+    "/api/v1/extensions/events": {
+      "get": {
+        "description": "Poll for extension lifecycle events the current user has triggered.\n\nEvents are scoped to the authenticated user via a server-derived keyspace\n(``user:{user_id}``); there is no client-controllable keyspace, so an\nauthenticated user cannot read another user's flow-migration or\nbundle-reload events.\n\nsvc.since() uses blocking sqlite3; run in a thread pool so the asyncio\nevent loop is not held while waiting on disk I/O.",
+        "operationId": "get_extension_events_api_v1_extensions_events_get",
+        "parameters": [
+          {
+            "description": "UTC epoch timestamp; return events after this cursor",
+            "in": "query",
+            "name": "since",
+            "required": false,
+            "schema": {
+              "default": 0.0,
+              "description": "UTC epoch timestamp; return events after this cursor",
+              "title": "Since",
+              "type": "number"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExtensionEventsResponse"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Extension Events",
+        "tags": [
+          "Extensions"
+        ]
+      }
+    },
+    "/api/v1/extensions/{extension_id}/bundles/{bundle_name}/reload": {
+      "post": {
+        "description": "Trigger an atomic-swap reload for a single Bundle.\n\nReturns the typed :class:`~lfx.extension.reload.ReloadResult` body on\nsuccess.  Per the typed-error contract, structural failures\n(broken bundle, missing source path, name mismatch) surface as\n``422 Unprocessable Entity`` with the first typed error in the body\nso clients can surface fix hints inline; the full ``ReloadResult``\npayload (with all errors and warnings) is returned via the FastAPI\n``detail`` envelope.  Concurrency-control collisions surface as\n``409 Conflict`` (``reload-in-progress``).  Non-2xx is the wire\ncontract for every error path -- the body still carries the typed\nerror so the client renders the same fix-hint envelope.",
+        "operationId": "reload_extension_bundle_api_v1_extensions__extension_id__bundles__bundle_name__reload_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "extension_id",
+            "required": true,
+            "schema": {
+              "title": "Extension Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "bundle_name",
+            "required": true,
+            "schema": {
+              "title": "Bundle Name",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Reload Extension Bundle Api V1 Extensions  Extension Id  Bundles  Bundle Name  Reload Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Reload Extension Bundle",
+        "tags": [
+          "Extensions"
         ]
       }
     },
@@ -5320,7 +9566,7 @@
     },
     "/api/v1/files/profile_pictures/list": {
       "get": {
-        "description": "List profile pictures from local filesystem.<br><br>Profile pictures are first looked up in config_dir/profile_pictures/,<br>then fallback to the package's bundled profile_pictures directory.",
+        "description": "List profile pictures from local filesystem.\n\nProfile pictures are first looked up in config_dir/profile_pictures/,\nthen fallback to the package's bundled profile_pictures directory.",
         "operationId": "list_profile_pictures_api_v1_files_profile_pictures_list_get",
         "responses": {
           "200": {
@@ -5340,7 +9586,7 @@
     },
     "/api/v1/files/profile_pictures/{folder_name}/{file_name}": {
       "get": {
-        "description": "Download profile picture from local filesystem.<br><br>Profile pictures are first looked up in config_dir/profile_pictures/,<br>then fallback to the package's bundled profile_pictures directory.",
+        "description": "Download profile picture from local filesystem.\n\nProfile pictures are first looked up in config_dir/profile_pictures/,\nthen fallback to the package's bundled profile_pictures directory.",
         "operationId": "download_profile_picture_api_v1_files_profile_pictures__folder_name___file_name__get",
         "parameters": [
           {
@@ -5839,7 +10085,7 @@
     },
     "/api/v1/flows/public_flow/{flow_id}": {
       "get": {
-        "description": "Read a public flow.",
+        "description": "Read a public flow without requiring authorization (public means public).",
         "operationId": "read_public_flow_api_v1_flows_public_flow__flow_id__get",
         "parameters": [
           {
@@ -6125,7 +10371,7 @@
         ]
       },
       "put": {
-        "description": "Create or update a flow with a specific ID (upsert).<br><br>Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.",
+        "description": "Create or update a flow with a specific ID (upsert).\n\nReturns 201 for creation, 200 for update.  Returns 404 if owned by another user.",
         "operationId": "upsert_flow_api_v1_flows__flow_id__put",
         "parameters": [
           {
@@ -6317,6 +10563,65 @@
         ]
       }
     },
+    "/api/v1/flows/{flow_id}/note_translations": {
+      "get": {
+        "description": "Return translated note node descriptions for the current locale.\n\nReturns a mapping of node_id → translated markdown text.  Only nodes\nwith a matching translation key are included; nodes without translations\nare omitted so the caller can leave them unchanged.",
+        "operationId": "get_note_translations_api_v1_flows__flow_id__note_translations_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "flow_id",
+            "required": true,
+            "schema": {
+              "format": "uuid",
+              "title": "Flow Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "string"
+                  },
+                  "title": "Response Get Note Translations Api V1 Flows  Flow Id  Note Translations Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Get Note Translations",
+        "tags": [
+          "Flows"
+        ]
+      }
+    },
     "/api/v1/mcp/project/{project_id}": {
       "get": {
         "description": "List project MCP tools.",
@@ -6380,7 +10685,7 @@
         ]
       },
       "patch": {
-        "description": "Update the MCP settings of all flows in a project and project-level auth settings.<br><br>On MCP Composer failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
+        "description": "Update the MCP settings of all flows in a project and project-level auth settings.\n\nOn MCP Composer failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
         "operationId": "update_project_mcp_settings_api_v1_mcp_project__project_id__patch",
         "parameters": [
           {
@@ -6443,7 +10748,7 @@
     },
     "/api/v1/mcp/project/{project_id}/composer-url": {
       "get": {
-        "description": "Get the MCP Composer URL for a specific project.<br><br>On failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
+        "description": "Get the MCP Composer URL for a specific project.\n\nOn failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
         "operationId": "get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get",
         "parameters": [
           {
@@ -6711,6 +11016,41 @@
         ]
       }
     },
+    "/api/v1/monitor/job_queue": {
+      "get": {
+        "description": "Return a snapshot of job-queue observability metrics.\n\nFor the in-memory backend this exposes only ``backend`` and ``active_jobs``.\nFor the Redis backend the snapshot also includes bridge counts, consumer\nwrappers, cancel-dispatcher liveness, and the cancel-stats counters\n(``published`` / ``marker_hit`` / ``dispatched_owned`` /\n``dispatched_foreign`` / ``publish_errors`` / ``dispatcher_reconnects`` /\n``polling_watchdog_kills`` / ``activity_touch_errors`` /\n``activity_get_errors`` / ``activity_parse_errors`` /\n``dispatcher_internal_errors``). ``dispatcher_reconnects`` tracks explicit\ndispatcher-loop retries and redis-py transparent pubsub reconnect callbacks.\n\nRestricted to superusers because the snapshot exposes process-wide tenant\nactivity (live job counts, cancel rates) — useful for ops, sensitive in\nmulti-tenant deployments.",
+        "operationId": "job_queue_metrics_api_v1_monitor_job_queue_get",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Job Queue Metrics Api V1 Monitor Job Queue Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearerCookie": []
+          },
+          {
+            "API key query": []
+          },
+          {
+            "API key header": []
+          }
+        ],
+        "summary": "Job Queue Metrics",
+        "tags": [
+          "Monitor"
+        ]
+      }
+    },
     "/api/v1/monitor/messages": {
       "delete": {
         "operationId": "delete_messages_api_v1_monitor_messages_delete",
@@ -6959,7 +11299,7 @@
     },
     "/api/v1/monitor/messages/session/{session_id}": {
       "delete": {
-        "description": "Delete messages for a single session.<br><br>Only deletes messages from sessions belonging to flows owned by the current user.",
+        "description": "Delete messages for a single session.\n\nOnly deletes messages from sessions belonging to flows owned by the current user.",
         "operationId": "delete_messages_session_api_v1_monitor_messages_session__session_id__delete",
         "parameters": [
           {
@@ -7006,7 +11346,7 @@
     },
     "/api/v1/monitor/messages/sessions": {
       "delete": {
-        "description": "Bulk delete messages for multiple sessions at once.<br><br>Only deletes messages from sessions belonging to flows owned by the current user.<br><br>Args:<br>    session_ids: List of session IDs to delete (max 500)<br>    session: Database session<br>    current_user: Current authenticated user<br><br>Returns:<br>    Confirmation message with count of deleted sessions<br><br>Raises:<br>    HTTPException: 400 if session_ids list exceeds 500 items<br>    HTTPException: 500 if database operation fails",
+        "description": "Bulk delete messages for multiple sessions at once.\n\nOnly deletes messages from sessions belonging to flows owned by the current user.\n\nArgs:\n    session_ids: List of session IDs to delete (max 500)\n    session: Database session\n    current_user: Current authenticated user\n\nReturns:\n    Confirmation message with count of deleted sessions\n\nRaises:\n    HTTPException: 400 if session_ids list exceeds 500 items\n    HTTPException: 500 if database operation fails",
         "operationId": "delete_messages_sessions_api_v1_monitor_messages_sessions_delete",
         "requestBody": {
           "content": {
@@ -7124,7 +11464,7 @@
     },
     "/api/v1/monitor/messages/shared": {
       "get": {
-        "description": "Get messages for a shared/public flow, scoped to the authenticated user.<br><br>Uses a deterministic virtual flow_id derived from the user's ID and the<br>original flow ID. Only messages stored under this virtual flow_id are returned.",
+        "description": "Get messages for a shared/public flow, scoped to the authenticated user.\n\nUses a deterministic virtual flow_id derived from the user's ID and the\noriginal flow ID. Only messages stored under this virtual flow_id are returned.",
         "operationId": "get_shared_messages_api_v1_monitor_messages_shared_get",
         "parameters": [
           {
@@ -7358,7 +11698,7 @@
     },
     "/api/v1/monitor/messages/shared/sessions": {
       "get": {
-        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.<br><br>Uses a deterministic virtual flow_id derived from the user's ID and the<br>original flow ID. Only messages stored under this virtual flow_id are returned.",
+        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.\n\nUses a deterministic virtual flow_id derived from the user's ID and the\noriginal flow ID. Only messages stored under this virtual flow_id are returned.",
         "operationId": "get_shared_message_sessions_api_v1_monitor_messages_shared_sessions_get",
         "parameters": [
           {
@@ -7560,7 +11900,7 @@
     },
     "/api/v1/monitor/traces": {
       "delete": {
-        "description": "Delete all traces for a flow.<br><br>Args:<br>    flow_id: The ID of the flow whose traces should be deleted.<br>    current_user: The authenticated user (required for authorization).",
+        "description": "Delete all traces for a flow.\n\nArgs:\n    flow_id: The ID of the flow whose traces should be deleted.\n    current_user: The authenticated user (required for authorization).",
         "operationId": "delete_traces_by_flow_api_v1_monitor_traces_delete",
         "parameters": [
           {
@@ -7606,7 +11946,7 @@
         ]
       },
       "get": {
-        "description": "Get list of traces for a flow.<br><br>Args:<br>    current_user: Authenticated user (required for authorization)<br>    flow_id: Filter by flow ID<br>    session_id: Filter by session ID<br>    status: Filter by trace status<br>    query: Search query for trace name/id/session id<br>    start_time: Filter traces starting on/after this time (ISO)<br>    end_time: Filter traces starting on/before this time (ISO)<br>    page: Page number (1-based)<br>    size: Page size<br><br>Returns:<br>    List of traces",
+        "description": "Get list of traces for a flow.\n\nArgs:\n    current_user: Authenticated user (required for authorization)\n    flow_id: Filter by flow ID\n    session_id: Filter by session ID\n    status: Filter by trace status\n    query: Search query for trace name/id/session id\n    start_time: Filter traces starting on/after this time (ISO)\n    end_time: Filter traces starting on/before this time (ISO)\n    page: Page number (1-based)\n    size: Page size\n\nReturns:\n    List of traces",
         "operationId": "get_traces_api_v1_monitor_traces_get",
         "parameters": [
           {
@@ -7773,7 +12113,7 @@
     },
     "/api/v1/monitor/traces/{trace_id}": {
       "delete": {
-        "description": "Delete a trace and all its spans.<br><br>Args:<br>    trace_id: The ID of the trace to delete.<br>    current_user: The authenticated user (required for authorization).",
+        "description": "Delete a trace and all its spans.\n\nArgs:\n    trace_id: The ID of the trace to delete.\n    current_user: The authenticated user (required for authorization).",
         "operationId": "delete_trace_api_v1_monitor_traces__trace_id__delete",
         "parameters": [
           {
@@ -7819,7 +12159,7 @@
         ]
       },
       "get": {
-        "description": "Get a single trace with its hierarchical span tree.<br><br>Args:<br>    trace_id: The ID of the trace to retrieve.<br>    current_user: The authenticated user (required for authorization).<br><br>Returns:<br>    TraceRead containing the trace and its hierarchical span tree.",
+        "description": "Get a single trace with its hierarchical span tree.\n\nArgs:\n    trace_id: The ID of the trace to retrieve.\n    current_user: The authenticated user (required for authorization).\n\nReturns:\n    TraceRead containing the trace and its hierarchical span tree.",
         "operationId": "get_trace_api_v1_monitor_traces__trace_id__get",
         "parameters": [
           {
@@ -8094,7 +12434,7 @@
     },
     "/api/v1/projects/upload/": {
       "post": {
-        "description": "Upload flows from a file.<br><br>Accepts either a JSON file with project metadata (folder_name, folder_description, flows)<br>or a ZIP file containing individual flow JSON files (as produced by the download endpoint).",
+        "description": "Upload flows from a file.\n\nAccepts either a JSON file with project metadata (folder_name, folder_description, flows)\nor a ZIP file containing individual flow JSON files (as produced by the download endpoint).",
         "operationId": "upload_file_api_v1_projects_upload__post",
         "requestBody": {
           "content": {
@@ -8381,7 +12721,7 @@
     },
     "/api/v1/responses": {
       "post": {
-        "description": "Create a response using OpenAI Responses API format.<br><br>This endpoint accepts a flow_id in the model parameter and processes<br>the input through the specified Langflow flow.<br><br>Args:<br>    request: OpenAI Responses API request with model (flow_id) and input<br>    background_tasks: FastAPI background task manager<br>    api_key_user: Authenticated user from API key<br>    http_request: The incoming HTTP request<br>    telemetry_service: Telemetry service for logging<br><br>Returns:<br>    OpenAI-compatible response or streaming response<br><br>Raises:<br>    HTTPException: For validation errors or flow execution issues",
+        "description": "Create a response using OpenAI Responses API format.\n\nThis endpoint accepts a flow_id in the model parameter and processes\nthe input through the specified Langflow flow.\n\nArgs:\n    request: OpenAI Responses API request with model (flow_id) and input\n    background_tasks: FastAPI background task manager\n    api_key_user: Authenticated user from API key\n    http_request: The incoming HTTP request\n    telemetry_service: Telemetry service for logging\n\nReturns:\n    OpenAI-compatible response or streaming response\n\nRaises:\n    HTTPException: For validation errors or flow execution issues",
         "operationId": "create_response_api_v1_responses_post",
         "requestBody": {
           "content": {
@@ -8429,7 +12769,7 @@
     },
     "/api/v1/run/advanced/{flow_id_or_name}": {
       "post": {
-        "description": "Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.<br><br>This endpoint supports running flows with caching to enhance performance and efficiency.<br><br>### Parameters:<br>- `flow` (Flow): The flow object to be executed, resolved via dependency injection.<br>- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components<br>  for the flow. Each input can target specific components and provide custom values.<br>- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.<br>  If not provided, all outputs are returned.<br>- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.<br>  The tweaks can be used to modify the flow's parameters and components.<br>  Tweaks can be overridden by the input values.<br>- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.<br>- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow<br>  execution.<br>- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.<br><br>### Returns:<br>A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow<br>and the session ID.<br>The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.<br><br>### Raises:<br>HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during<br>flow execution.<br><br>### Example usage:<br>```json<br>POST /run/flow_id<br>x-api-key: YOUR_API_KEY<br>Payload:<br>{<br>    \"inputs\": [<br>        {\"components\": [\"component1\"], \"input_value\": \"value1\"},<br>        {\"components\": [\"component3\"], \"input_value\": \"value2\"}<br>    ],<br>    \"outputs\": [\"Component Name\", \"component_id\"],<br>    \"tweaks\": {\"parameter_name\": \"value\", \"Component Name\": {\"parameter_name\": \"value\"}, \"component_id\": {\"parameter_name\": \"value\"}}<br>    \"stream\": false<br>}<br>```<br><br>This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,<br>catering to diverse application requirements.",
+        "description": "Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.\n\nThis endpoint supports running flows with caching to enhance performance and efficiency.\n\n### Parameters:\n- `flow` (Flow): The flow object to be executed, resolved via dependency injection.\n- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components\n  for the flow. Each input can target specific components and provide custom values.\n- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.\n  If not provided, all outputs are returned.\n- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.\n  The tweaks can be used to modify the flow's parameters and components.\n  Tweaks can be overridden by the input values.\n- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.\n- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow\n  execution.\n- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.\n\n### Returns:\nA `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow\nand the session ID.\nThe structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.\n\n### Raises:\nHTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during\nflow execution.\n\n### Example usage:\n```json\nPOST /run/flow_id\nx-api-key: YOUR_API_KEY\nPayload:\n{\n    \"inputs\": [\n        {\"components\": [\"component1\"], \"input_value\": \"value1\"},\n        {\"components\": [\"component3\"], \"input_value\": \"value2\"}\n    ],\n    \"outputs\": [\"Component Name\", \"component_id\"],\n    \"tweaks\": {\"parameter_name\": \"value\", \"Component Name\": {\"parameter_name\": \"value\"}, \"component_id\": {\"parameter_name\": \"value\"}}\n    \"stream\": false\n}\n```\n\nThis endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,\ncatering to diverse application requirements.",
         "operationId": "experimental_run_flow_api_v1_run_advanced__flow_id_or_name__post",
         "parameters": [
           {
@@ -8439,26 +12779,6 @@
             "schema": {
               "title": "Flow Id Or Name",
               "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "user_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "User Id"
             }
           }
         ],
@@ -8509,7 +12829,7 @@
     },
     "/api/v1/run/{flow_id_or_name}": {
       "post": {
-        "description": "Executes a specified flow by ID with support for streaming and telemetry (API key auth).<br><br>This endpoint executes a flow identified by ID or name, with options for streaming the response<br>and tracking execution metrics. It handles both streaming and non-streaming execution modes.<br>This endpoint uses API key authentication (Bearer token).<br><br>Args:<br>    background_tasks (BackgroundTasks): FastAPI background task manager<br>    flow (FlowRead | None): The flow to execute, loaded via dependency<br>    input_request (SimplifiedAPIRequest | None): Input parameters for the flow<br>    stream (bool): Whether to stream the response<br>    api_key_user (UserRead): Authenticated user from API key<br>    context (dict | None): Optional context to pass to the flow<br>    http_request (Request): The incoming HTTP request for extracting global variables<br><br>Returns:<br>    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results<br>    or a RunResponse with the complete execution results<br><br>Raises:<br>    HTTPException: For flow not found (404) or invalid input (400)<br>    APIException: For internal execution errors (500)<br><br>Notes:<br>    - Supports both streaming and non-streaming execution modes<br>    - Tracks execution time and success/failure via telemetry<br>    - Handles graceful client disconnection in streaming mode<br>    - Provides detailed error handling with appropriate HTTP status codes<br>    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*<br>    - Merges extracted variables with the context parameter as \"request_variables\"<br>    - In streaming mode, uses EventManager to handle events:<br>        - \"add_message\": New messages during execution<br>        - \"token\": Individual tokens during streaming<br>        - \"end\": Final execution result<br>    - Authentication: Requires API key (Bearer token)",
+        "description": "Executes a specified flow by ID with support for streaming and telemetry (API key auth).\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\nThis endpoint uses API key authentication (Bearer token).\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    context (dict | None): Optional context to pass to the flow\n    http_request (Request): The incoming HTTP request for extracting global variables\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*\n    - Merges extracted variables with the context parameter as \"request_variables\"\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result\n    - Authentication: Requires API key (Bearer token)",
         "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
         "parameters": [
           {
@@ -8529,26 +12849,6 @@
               "default": false,
               "title": "Stream",
               "type": "boolean"
-            }
-          },
-          {
-            "in": "query",
-            "name": "user_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "User Id"
             }
           }
         ],
@@ -8713,7 +13013,7 @@
         ]
       },
       "post": {
-        "description": "Add a new user to the database.<br><br>This endpoint allows public user registration (sign up).<br>User activation is controlled by the NEW_USER_IS_ACTIVE setting.",
+        "description": "Add a new user to the database.\n\nThis endpoint allows public user registration (sign up).\nUser activation is controlled by the NEW_USER_IS_ACTIVE setting.",
         "operationId": "add_user_api_v1_users__post",
         "requestBody": {
           "content": {
@@ -8992,7 +13292,7 @@
     },
     "/api/v1/webhook/{flow_id_or_name}": {
       "post": {
-        "description": "Run a flow using a webhook request.<br><br>Args:<br>    flow_id_or_name: The flow ID or endpoint name (used by dependency).<br>    flow: The flow to be executed.<br>    request: The incoming HTTP request.<br><br>Returns:<br>    A dictionary containing the status of the task.<br><br>Raises:<br>    HTTPException: If the flow is not found or if there is an error processing the request.",
+        "description": "Run a flow using a webhook request.\n\nArgs:\n    auth: Resolved webhook user and flow, scoped to the authenticated caller.\n    request: The incoming HTTP request.\n\nReturns:\n    A dictionary containing the status of the task.\n\nRaises:\n    HTTPException: If the flow is not found or if there is an error processing the request.",
         "operationId": "webhook_run_flow_api_v1_webhook__flow_id_or_name__post",
         "parameters": [
           {
@@ -9002,26 +13302,6 @@
             "schema": {
               "title": "Flow Id Or Name",
               "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "user_id",
-            "required": false,
-            "schema": {
-              "anyOf": [
-                {
-                  "type": "string"
-                },
-                {
-                  "format": "uuid",
-                  "type": "string"
-                },
-                {
-                  "type": "null"
-                }
-              ],
-              "title": "User Id"
             }
           }
         ],
@@ -9496,7 +13776,7 @@
         ]
       },
       "get": {
-        "description": "Download a file by its ID or return its content as a string/bytes.<br><br>Args:<br>    file_id: UUID of the file.<br>    current_user: Authenticated user.<br>    session: Database session.<br>    storage_service: File storage service.<br>    return_content: If True, return raw content (str) instead of StreamingResponse.<br><br>Returns:<br>    StreamingResponse for client downloads or str for internal use.",
+        "description": "Download a file by its ID or return its content as a string/bytes.\n\nArgs:\n    file_id: UUID of the file.\n    current_user: Authenticated user.\n    session: Database session.\n    storage_service: File storage service.\n    return_content: If True, return raw content (str) instead of StreamingResponse.\n\nReturns:\n    StreamingResponse for client downloads or str for internal use.",
         "operationId": "download_file_api_v2_files__file_id__get",
         "parameters": [
           {
@@ -9948,6 +14228,18 @@
                       "title": "Flow Id",
                       "type": "string"
                     },
+                    "globals": {
+                      "additionalProperties": {
+                        "maxLength": 65536,
+                        "type": "string"
+                      },
+                      "propertyNames": {
+                        "maxLength": 256,
+                        "minLength": 1
+                      },
+                      "title": "Globals",
+                      "type": "object"
+                    },
                     "inputs": {
                       "additionalProperties": true,
                       "default": {},
@@ -10100,6 +14392,18 @@
                           "title": "Flow Id",
                           "type": "string"
                         },
+                        "globals": {
+                          "additionalProperties": {
+                            "maxLength": 65536,
+                            "type": "string"
+                          },
+                          "propertyNames": {
+                            "maxLength": 256,
+                            "minLength": 1
+                          },
+                          "title": "Globals",
+                          "type": "object"
+                        },
                         "inputs": {
                           "additionalProperties": true,
                           "default": {},
@@ -10164,6 +14468,18 @@
                         "flow_id": {
                           "title": "Flow Id",
                           "type": "string"
+                        },
+                        "globals": {
+                          "additionalProperties": {
+                            "maxLength": 65536,
+                            "type": "string"
+                          },
+                          "propertyNames": {
+                            "maxLength": 256,
+                            "minLength": 1
+                          },
+                          "title": "Globals",
+                          "type": "object"
                         },
                         "job_id": {
                           "anyOf": [
@@ -10358,7 +14674,7 @@
     },
     "/logs": {
       "get": {
-        "description": "Retrieve application logs with authentication required.<br><br>SECURITY: Logs may contain sensitive information and require authentication.",
+        "description": "Retrieve application logs with authentication required.\n\nSECURITY: Logs may contain sensitive information and require authentication.",
         "operationId": "logs_logs_get",
         "parameters": [
           {
@@ -10437,7 +14753,7 @@
     },
     "/logs-stream": {
       "get": {
-        "description": "HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.<br><br>Requires authentication to prevent exposure of sensitive log data.<br>It establishes a long-lived connection to the server and receives log messages in real-time.<br>The client should use the header \"Accept: text/event-stream\".",
+        "description": "HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.\n\nRequires authentication to prevent exposure of sensitive log data.\nIt establishes a long-lived connection to the server and receives log messages in real-time.\nThe client should use the header \"Accept: text/event-stream\".",
         "operationId": "stream_logs_logs_stream_get",
         "responses": {
           "200": {
