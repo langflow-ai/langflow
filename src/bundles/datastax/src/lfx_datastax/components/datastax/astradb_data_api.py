@@ -90,7 +90,14 @@ OPERATION_ICONS: dict[str, str] = {
 # Groups of inputs that each operation needs. Centralising this makes the
 # dynamic show/hide logic trivial to audit and extend.
 OPERATION_FIELDS: dict[str, set[str]] = {
-    OP_FIND: {"filter_query", "projection", "sort", "limit", "skip", "include_similarity"},
+    OP_FIND: {
+        "filter_query",
+        "projection",
+        "sort",
+        "limit",
+        "skip",
+        "include_similarity",
+    },
     OP_FIND_ONE: {"filter_query", "projection", "sort", "include_similarity"},
     OP_INSERT_ONE: {"document"},
     OP_INSERT_MANY: {"documents", "ordered"},

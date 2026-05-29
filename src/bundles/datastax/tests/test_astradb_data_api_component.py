@@ -116,12 +116,25 @@ class TestStaticConfiguration:
     def test_tool_mode_inputs(self):
         """Key agent-controllable inputs expose ``tool_mode=True``."""
         tool_mode_names = {inp.name for inp in AstraDBDataAPIComponent.inputs if getattr(inp, "tool_mode", False)}
-        expected = {"operation", "filter_query", "limit", "document", "documents", "update"}
+        expected = {
+            "operation",
+            "filter_query",
+            "limit",
+            "document",
+            "documents",
+            "update",
+        }
         assert expected.issubset(tool_mode_names), (
             f"Missing tool_mode on agent-controllable inputs: {expected - tool_mode_names}"
         )
         # Secrets and selector fields should never be marked as tool-controllable.
-        forbidden = {"token", "api_endpoint", "database_name", "collection_name", "keyspace"}
+        forbidden = {
+            "token",
+            "api_endpoint",
+            "database_name",
+            "collection_name",
+            "keyspace",
+        }
         assert forbidden.isdisjoint(tool_mode_names), (
             f"Sensitive/selector fields must not be tool_mode: {forbidden & tool_mode_names}"
         )
@@ -545,10 +558,20 @@ class TestUpdateBuildConfig:
         build_config = {
             "token": {"value": "tok"},
             "environment": {"value": "prod"},
-            "database_name": {"value": "", "options": [], "options_metadata": [], "show": False},
+            "database_name": {
+                "value": "",
+                "options": [],
+                "options_metadata": [],
+                "show": False,
+            },
             "api_endpoint": {"value": "", "options": []},
             "keyspace": {"value": "", "options": []},
-            "collection_name": {"value": "", "options": [], "options_metadata": [], "show": False},
+            "collection_name": {
+                "value": "",
+                "options": [],
+                "options_metadata": [],
+                "show": False,
+            },
             "autodetect_collection": {"value": True},
             "operation": {"value": OP_FIND},
             # Fields managed by _apply_operation_visibility

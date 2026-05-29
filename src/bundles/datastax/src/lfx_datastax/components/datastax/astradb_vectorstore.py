@@ -8,8 +8,13 @@ from lfx.base.models.unified_models import (
     get_embeddings,
     update_model_options_in_build_config,
 )
-from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
-from lfx.base.vectorstores.vector_store_connection_decorator import vector_store_connection
+from lfx.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
+from lfx.base.vectorstores.vector_store_connection_decorator import (
+    vector_store_connection,
+)
 from lfx.helpers.data import docs_to_data
 from lfx.io import (
     BoolInput,
@@ -122,7 +127,11 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
             name="search_type",
             display_name="Search Type",
             info="Search type to use",
-            options=["Similarity", "Similarity with score threshold", "MMR (Max Marginal Relevance)"],
+            options=[
+                "Similarity",
+                "Similarity with score threshold",
+                "MMR (Max Marginal Relevance)",
+            ],
             value="Similarity",
             advanced=True,
         ),
@@ -232,7 +241,10 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
         # Apply hybrid search configuration
         if hybrid_capabilities["available"]:
             build_config["search_method"]["show"] = True
-            build_config["search_method"]["options"] = ["Hybrid Search", "Vector Search"]
+            build_config["search_method"]["options"] = [
+                "Hybrid Search",
+                "Vector Search",
+            ]
             build_config["search_method"]["value"] = build_config["search_method"].get("value", "Hybrid Search")
 
             build_config["reranker"]["options"] = hybrid_capabilities["reranker_models"]
@@ -409,7 +421,11 @@ class AstraDBVectorStoreComponent(AstraDBBaseComponent, LCVectorStoreComponent):
                 raise TypeError(msg)
 
         documents = [
-            Document(page_content=doc.page_content, metadata=serialize(doc.metadata, to_str=True)) for doc in documents
+            Document(
+                page_content=doc.page_content,
+                metadata=serialize(doc.metadata, to_str=True),
+            )
+            for doc in documents
         ]
 
         if documents and self.deletion_field:

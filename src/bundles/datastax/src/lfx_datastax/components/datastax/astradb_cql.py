@@ -24,7 +24,12 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
 
     inputs = [
         *AstraDBBaseComponent.inputs,
-        StrInput(name="tool_name", display_name="Tool Name", info="The name of the tool.", required=True),
+        StrInput(
+            name="tool_name",
+            display_name="Tool Name",
+            info="The name of the tool.",
+            required=True,
+        ),
         StrInput(
             name="tool_description",
             display_name="Tool Description",
@@ -97,7 +102,19 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
                     "description": "Set the operator for the field. "
                     "https://docs.datastax.com/en/astra-db-serverless/api-reference/documents.html#operators",
                     "default": "$eq",
-                    "options": ["$gt", "$gte", "$lt", "$lte", "$eq", "$ne", "$in", "$nin", "$exists", "$all", "$size"],
+                    "options": [
+                        "$gt",
+                        "$gte",
+                        "$lt",
+                        "$lte",
+                        "$eq",
+                        "$ne",
+                        "$in",
+                        "$nin",
+                        "$exists",
+                        "$all",
+                        "$size",
+                    ],
                     "edit_mode": EditMode.INLINE,
                 },
             ],
@@ -202,14 +219,20 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
                     raise ValueError(msg) from e
 
             if param["operator"] == "$exists":
-                where[field_name] = {**where.get(field_name, {}), param["operator"]: True}
+                where[field_name] = {
+                    **where.get(field_name, {}),
+                    param["operator"]: True,
+                }
             elif param["operator"] in ["$in", "$nin", "$all"]:
                 where[field_name] = {
                     **where.get(field_name, {}),
                     param["operator"]: field_value.split(",") if isinstance(field_value, str) else field_value,
                 }
             else:
-                where[field_name] = {**where.get(field_name, {}), param["operator"]: field_value}
+                where[field_name] = {
+                    **where.get(field_name, {}),
+                    param["operator"]: field_value,
+                }
 
         url = f"{astra_url}?page-size={self.number_of_results}"
         url += f"&where={json.dumps(where)}"
@@ -239,7 +262,10 @@ class AstraDBCQLToolComponent(AstraDBBaseComponent, LCToolComponent):
                 if param["mandatory"]:
                     args[param["name"]] = (str, Field(description=param["description"]))
                 else:
-                    args[param["name"]] = (str | None, Field(description=param["description"], default=None))
+                    args[param["name"]] = (
+                        str | None,
+                        Field(description=param["description"], default=None),
+                    )
 
         model = create_model("ToolInput", **args, __base__=BaseModel)
         return {"ToolInput": model}

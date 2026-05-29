@@ -22,7 +22,9 @@ class AstraDBChatMemory(AstraDBBaseComponent, LCChatMemoryComponent):
 
     def build_message_history(self) -> Memory:
         try:
-            from langchain_astradb.chat_message_histories import AstraDBChatMessageHistory
+            from langchain_astradb.chat_message_histories import (
+                AstraDBChatMessageHistory,
+            )
         except ImportError as e:
             msg = (
                 "Could not import langchain Astra DB integration package. "

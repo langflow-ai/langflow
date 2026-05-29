@@ -8,7 +8,14 @@ from lfx.base.models.google_generative_ai_model import ChatGoogleGenerativeAIFix
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
-from lfx.inputs.inputs import BoolInput, DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
+from lfx.inputs.inputs import (
+    BoolInput,
+    DropdownInput,
+    FloatInput,
+    IntInput,
+    SecretStrInput,
+    SliderInput,
+)
 from lfx.log.logger import logger
 from lfx.schema.dotdict import dotdict
 
@@ -22,7 +29,9 @@ class GoogleGenerativeAIComponent(LCModelComponent):
     inputs = [
         *LCModelComponent.get_base_inputs(),
         IntInput(
-            name="max_output_tokens", display_name="Max Output Tokens", info="The maximum number of tokens to generate."
+            name="max_output_tokens",
+            display_name="Max Output Tokens",
+            info="The maximum number of tokens to generate.",
         ),
         DropdownInput(
             name="model_name",
@@ -132,7 +141,11 @@ class GoogleGenerativeAIComponent(LCModelComponent):
                 else:
                     try:
                         ids = self.get_models(tool_model_enabled=self.tool_model_enabled)
-                    except (ImportError, ValueError, requests.exceptions.RequestException) as e:
+                    except (
+                        ImportError,
+                        ValueError,
+                        requests.exceptions.RequestException,
+                    ) as e:
                         logger.exception(f"Error getting model names: {e}")
                         ids = GOOGLE_GENERATIVE_AI_MODELS
                 build_config.setdefault("model_name", {})

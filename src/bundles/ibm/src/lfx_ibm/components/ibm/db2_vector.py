@@ -9,6 +9,7 @@ from lfx.inputs.inputs import BoolInput, DropdownInput, HandleInput, IntInput, S
 from lfx.io import Output, QueryInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
+
 from lfx_ibm.components.ibm.db2_security import (
     create_safe_error_message,
     validate_and_prepare_ssl_certificate,
@@ -250,6 +251,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         try:
             import ibm_db_dbi
             from langchain_community.vectorstores.utils import DistanceStrategy
+
             from lfx_ibm.components.ibm.db2vs import DB2VS
         except ImportError as e:
             msg = "Could not import required DB2 packages. Please install ibm_db and ibm_db_dbi."

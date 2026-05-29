@@ -141,7 +141,11 @@ class TestCloudProviderMapping:
         mock_region3.cloud_provider = "Azure"
         mock_region3.name = "eastus"
 
-        mock_admin.find_available_regions.return_value = [mock_region1, mock_region2, mock_region3]
+        mock_admin.find_available_regions.return_value = [
+            mock_region1,
+            mock_region2,
+            mock_region3,
+        ]
 
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
@@ -171,7 +175,12 @@ class TestCloudProviderMapping:
         mock_region4.cloud_provider = "Azure"
         mock_region4.name = "eastus"
 
-        mock_admin.find_available_regions.return_value = [mock_region1, mock_region2, mock_region3, mock_region4]
+        mock_admin.find_available_regions.return_value = [
+            mock_region1,
+            mock_region2,
+            mock_region3,
+            mock_region4,
+        ]
 
         mock_client = mock_client_class.return_value
         mock_client.get_admin.return_value = mock_admin
@@ -461,7 +470,11 @@ class TestGetDatabaseObject:
         mock_client.get_database.return_value = mock_database
 
         with (
-            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
+            patch.object(
+                mock_component,
+                "get_api_endpoint",
+                return_value="https://test.endpoint.com",
+            ),
             patch.object(mock_component, "get_keyspace", return_value="default_keyspace"),
         ):
             db = mock_component.get_database_object()
@@ -484,7 +497,11 @@ class TestGetDatabaseObject:
         mock_client_class.side_effect = Exception("Connection error")
 
         with (
-            patch.object(mock_component, "get_api_endpoint", return_value="https://test.endpoint.com"),
+            patch.object(
+                mock_component,
+                "get_api_endpoint",
+                return_value="https://test.endpoint.com",
+            ),
             pytest.raises(ValueError, match="Error fetching database object"),
         ):
             mock_component.get_database_object()

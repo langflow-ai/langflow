@@ -6,9 +6,19 @@ from langchain_community.vectorstores import MongoDBAtlasVectorSearch
 from pymongo.collection import Collection
 from pymongo.operations import SearchIndexModel
 
-from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
+from lfx.base.vectorstores.model import (
+    LCVectorStoreComponent,
+    check_cached_vector_store,
+)
 from lfx.helpers.data import docs_to_data
-from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
+from lfx.io import (
+    BoolInput,
+    DropdownInput,
+    HandleInput,
+    IntInput,
+    SecretStrInput,
+    StrInput,
+)
 from lfx.schema.data import Data
 
 
@@ -21,8 +31,18 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     SIMILARITY_OPTIONS = ["cosine", "euclidean", "dotProduct"]
     QUANTIZATION_OPTIONS = ["scalar", "binary"]
     inputs = [
-        SecretStrInput(name="mongodb_atlas_cluster_uri", display_name="MongoDB Atlas Cluster URI", required=True),
-        BoolInput(name="enable_mtls", display_name="Enable mTLS", value=False, advanced=True, required=True),
+        SecretStrInput(
+            name="mongodb_atlas_cluster_uri",
+            display_name="MongoDB Atlas Cluster URI",
+            required=True,
+        ),
+        BoolInput(
+            name="enable_mtls",
+            display_name="Enable mTLS",
+            value=False,
+            advanced=True,
+            required=True,
+        ),
         SecretStrInput(
             name="mongodb_atlas_client_cert",
             display_name="MongoDB Atlas Combined Client Certificate",
@@ -65,7 +85,10 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             value="embedding",
         ),
         StrInput(
-            name="filter_field", display_name="Filter Field", advanced=True, info="The field to filter the index."
+            name="filter_field",
+            display_name="Filter Field",
+            advanced=True,
+            info="The field to filter the index.",
         ),
         IntInput(
             name="number_dimensions",
@@ -152,7 +175,10 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
             self.__insert_mode(collection)
 
             return MongoDBAtlasVectorSearch.from_documents(
-                documents=documents, embedding=self.embedding, collection=collection, index_name=self.index_name
+                documents=documents,
+                embedding=self.embedding,
+                collection=collection,
+                index_name=self.index_name,
             )
         return MongoDBAtlasVectorSearch(embedding=self.embedding, collection=collection, index_name=self.index_name)
 

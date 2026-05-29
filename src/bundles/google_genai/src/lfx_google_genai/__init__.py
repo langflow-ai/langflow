@@ -10,7 +10,9 @@ directory were partitioned across 4 lfx-google-* bundles by audience
 (GenAI / Workspace / BigQuery / Search).
 """
 
-from lfx_google_genai.components.google_genai.google_generative_ai import GoogleGenerativeAIComponent
+from lfx_google_genai.components.google_genai.google_generative_ai import (
+    GoogleGenerativeAIComponent,
+)
 from lfx_google_genai.components.google_genai.google_generative_ai_embeddings import (
     GoogleGenerativeAIEmbeddingsComponent,
 )

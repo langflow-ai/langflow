@@ -30,7 +30,11 @@ class AstraDBBaseComponent(Component):
                         "name": "create_database",
                         "description": "Please allow several minutes for creation to complete.",
                         "display_name": "Create new database",
-                        "field_order": ["01_new_database_name", "02_cloud_provider", "03_region"],
+                        "field_order": [
+                            "01_new_database_name",
+                            "02_cloud_provider",
+                            "03_region",
+                        ],
                         "template": {
                             "01_new_database_name": StrInput(
                                 name="new_database_name",
@@ -233,7 +237,10 @@ class AstraDBBaseComponent(Component):
 
             vectorize_providers_mapping = {}
             # Map the provider display name to the provider key and models
-            for provider_key, provider_data in embedding_providers.embedding_providers.items():
+            for (
+                provider_key,
+                provider_data,
+            ) in embedding_providers.embedding_providers.items():
                 # Get the provider display name and models
                 display_name = provider_data.display_name
                 models = [model.name for model in provider_data.models]

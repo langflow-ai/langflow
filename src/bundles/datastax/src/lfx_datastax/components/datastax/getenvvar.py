@@ -21,7 +21,11 @@ class GetEnvVar(Component):
     ]
 
     outputs = [
-        Output(display_name="Environment Variable Value", name="env_var_value", method="process_inputs"),
+        Output(
+            display_name="Environment Variable Value",
+            name="env_var_value",
+            method="process_inputs",
+        ),
     ]
 
     def process_inputs(self) -> Message:

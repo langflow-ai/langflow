@@ -110,7 +110,19 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
                     "description": "Set the operator for the field. "
                     "https://docs.datastax.com/en/astra-db-serverless/api-reference/documents.html#operators",
                     "default": "$eq",
-                    "options": ["$gt", "$gte", "$lt", "$lte", "$eq", "$ne", "$in", "$nin", "$exists", "$all", "$size"],
+                    "options": [
+                        "$gt",
+                        "$gte",
+                        "$lt",
+                        "$lte",
+                        "$eq",
+                        "$ne",
+                        "$in",
+                        "$nin",
+                        "$exists",
+                        "$all",
+                        "$size",
+                    ],
                     "edit_mode": EditMode.INLINE,
                 },
             ],
@@ -178,7 +190,10 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
             if key.startswith("!"):  # Mandatory
                 args[key[1:]] = (str, Field(description=self.tool_params[key]))
             else:  # Optional
-                args[key] = (str | None, Field(description=self.tool_params[key], default=None))
+                args[key] = (
+                    str | None,
+                    Field(description=self.tool_params[key], default=None),
+                )
 
         if self.use_search_query:
             args["search_query"] = (
@@ -195,9 +210,15 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
 
         for tool_param in self.tools_params_v2:
             if tool_param["mandatory"]:
-                args[tool_param["name"]] = (str, Field(description=tool_param["description"]))
+                args[tool_param["name"]] = (
+                    str,
+                    Field(description=tool_param["description"]),
+                )
             else:
-                args[tool_param["name"]] = (str | None, Field(description=tool_param["description"], default=None))
+                args[tool_param["name"]] = (
+                    str | None,
+                    Field(description=tool_param["description"], default=None),
+                )
 
         if self.use_search_query:
             args["search_query"] = (
@@ -309,7 +330,10 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
                 field_name = filter_setting["attribute_name"] if filter_setting["attribute_name"] else key
                 filter_key = field_name if not filter_setting["metadata"] else f"metadata.{field_name}"
                 if filter_setting["operator"] == "$exists":
-                    filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: True}
+                    filters[filter_key] = {
+                        **filters.get(filter_key, {}),
+                        filter_setting["operator"]: True,
+                    }
                 elif filter_setting["operator"] in ["$in", "$nin", "$all"]:
                     filters[filter_key] = {
                         **filters.get(filter_key, {}),
@@ -326,7 +350,10 @@ class AstraDBToolComponent(AstraDBBaseComponent, LCToolComponent):
                         logger.error(msg)
                         raise ValueError(msg) from e
                 else:
-                    filters[filter_key] = {**filters.get(filter_key, {}), filter_setting["operator"]: value}
+                    filters[filter_key] = {
+                        **filters.get(filter_key, {}),
+                        filter_setting["operator"]: value,
+                    }
         return filters
 
     def run_model(self, **args) -> Data | list[Data]:
