@@ -357,7 +357,6 @@ def docling_worker(
                 prompt=pic_desc_prompt,
             )
 
-
             pdf_format_option = PdfFormatOption(pipeline_options=pipeline_options)
             format_options: dict[InputFormat, FormatOption] = {
                 InputFormat.PDF: pdf_format_option,
