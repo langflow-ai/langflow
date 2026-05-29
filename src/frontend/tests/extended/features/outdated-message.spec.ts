@@ -44,7 +44,7 @@ test("user must be able outdated message on error", async ({ page }) => {
   await droppedCard.click();
 
   // Verify the outdated components banner appears on the canvas
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 });
