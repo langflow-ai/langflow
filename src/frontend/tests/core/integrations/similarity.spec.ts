@@ -255,11 +255,14 @@ test(
 
     await unselectNodes(page);
 
+    // Data to Message, Filter Data, and Text Output are legacy components; their
+    // "Legacy" warning bars can overlap the Text Output inspection button and
+    // intercept the click. Force the click past the overlapping bar.
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)
       .getByTestId("output-inspection-output text-textoutput")
       .first()
-      .click();
+      .click({ force: true });
     const valueSimilarity = await page.getByTestId("textarea").textContent();
 
     expect(valueSimilarity).toContain("cosine_similarity");

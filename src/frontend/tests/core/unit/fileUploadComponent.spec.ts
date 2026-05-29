@@ -934,8 +934,10 @@ test(
       .first();
     await sourceHandle1.waitFor({ state: "visible", timeout: 10000 });
     await targetHandle.waitFor({ state: "visible", timeout: 10000 });
-    await sourceHandle1.click();
-    await targetHandle.click();
+    // Text Input is legacy; its "Legacy" warning bar/body can overlap the Read
+    // File handle and intercept the click, so force the click past the overlay.
+    await sourceHandle1.click({ force: true });
+    await targetHandle.click({ force: true });
 
     // Add second Text Input Component
     await page.getByTestId("sidebar-search-input").click();
@@ -960,8 +962,8 @@ test(
       .getByTestId("handle-textinput-shownode-output text-right")
       .last();
     await sourceHandle2.waitFor({ state: "visible", timeout: 10000 });
-    await sourceHandle2.click();
-    await targetHandle.click();
+    await sourceHandle2.click({ force: true });
+    await targetHandle.click({ force: true });
 
     // Add Chat Output Component
     await page.getByTestId("sidebar-search-input").click();
