@@ -24,6 +24,24 @@ Use the **Language Model** output when you want to use a specific OpenAI model c
 
 For more information, see [Language model components](/components-models).
 
+### Use an OpenAI-compatible endpoint
+
+The **OpenAI** component can also connect to OpenAI-compatible endpoints when
+you set **OpenAI API Base** in the component's advanced parameters.
+
+For example, teams using [Tuning Engines](https://tuningengines.com) as a
+governed AI endpoint can configure the **OpenAI** component with:
+
+| Parameter | Value |
+|------|------|
+| OpenAI API Base | `https://api.tuningengines.com/v1` |
+| OpenAI API Key | Your Tuning Engines inference key, for example `sk-te-...` |
+| Model | Any model enabled for the tenant, for example `gpt-4o` |
+
+Langflow still owns the flow graph and component execution. Tuning Engines
+handles model access, tenant policy checks, audit logs, traces, and usage/cost
+accounting behind the OpenAI-compatible endpoint.
+
 ### OpenAI text generation parameters
 
 <PartialParams />
