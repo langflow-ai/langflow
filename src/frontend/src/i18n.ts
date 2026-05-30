@@ -37,10 +37,10 @@ const LANG_FILE_MAP: Record<string, string> = {
 
 export async function loadLanguage(lang: string): Promise<void> {
   const file = LANG_FILE_MAP[lang] ?? LANG_FILE_MAP[lang.split("-")[0]] ?? "en";
-  console.log(`file ${file}`);
+  // console.log(`file ${file}`);
   if (file === "en") return;
   if (i18n.hasResourceBundle(file, "translation")) return;
-  console.log(`import language ${file}`);
+  // console.log(`import language ${file}`)
   const messages = await import(`./locales/${file}.json`);
   i18n.addResourceBundle(file, "translation", messages.default);
   i18n.changeLanguage(file);
