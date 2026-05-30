@@ -7,6 +7,7 @@
 
 // Import the real i18n instance and loadLanguage (not the mock from jest.setup.js)
 jest.unmock("react-i18next");
+
 import i18n, { loadLanguage } from "./i18n";
 
 describe("loadLanguage", () => {
