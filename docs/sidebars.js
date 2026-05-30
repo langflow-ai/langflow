@@ -460,6 +460,7 @@ module.exports = {
             "Components/bundles-novita",
             "Components/bundles-nvidia",
             "Components/bundles-ollama",
+            "Components/bundles-opengauss",
             "Components/bundles-openai",
             "Components/bundles-openrouter",
             "Components/bundles-perplexity",
