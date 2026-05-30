@@ -280,6 +280,12 @@ def get_flow_events_service():
     return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
 
 
+def get_collaboration_events_service():
+    from langflow.services.collaboration_events.factory import CollaborationEventServiceFactory
+
+    return get_service(ServiceType.COLLABORATION_EVENTS_SERVICE, CollaborationEventServiceFactory())
+
+
 def get_flow_operation_service() -> BaseFlowOperationService:
     """Retrieves the FlowOperationService instance from the service manager."""
     from lfx.services.flow_operations.factory import FlowOperationServiceFactory
