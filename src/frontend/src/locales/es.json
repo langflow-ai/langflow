@@ -1059,6 +1059,8 @@
   "mcp.modal.descriptionFlow": "Añadir y guardar servidores MCP. Gestionar servidores en",
   "mcp.modal.descriptionFlowLink": "configuración",
   "mcp.modal.descriptionSettings": "Añade y guarda servidores MCP para utilizarlos en todos tus flujos.",
+  "mcp.modal.lockedTitle": "La gestión de servidores MCP está bloqueada",
+  "mcp.modal.lockedDescription": "Contacta con un administrador para gestionar servidores MCP externos.",
   "mcp.modal.errorDuplicateEnvKeys": "Se han encontrado claves duplicadas en las variables de entorno.",
   "mcp.modal.errorDuplicateHeaders": "Se han encontrado claves duplicadas en los encabezados.",
   "mcp.modal.errorFailedAdd": "No se ha podido añadir el servidor MCP.",

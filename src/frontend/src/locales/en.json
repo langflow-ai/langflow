@@ -537,6 +537,8 @@
   "mcp.modal.tabJson": "JSON",
   "mcp.modal.tabStdio": "STDIO",
   "mcp.modal.tabStreamableHttp": "Streamable HTTP/SSE",
+  "mcp.modal.lockedTitle": "MCP server management is locked",
+  "mcp.modal.lockedDescription": "Contact an administrator to manage external MCP servers.",
   "mcp.modal.jsonTabLabel": "Paste in JSON config",
   "mcp.modal.jsonPlaceholder": "Paste in JSON config to add server",
   "mcp.modal.fieldName": "Name",

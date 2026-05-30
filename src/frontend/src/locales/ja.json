@@ -1059,6 +1059,8 @@
   "mcp.modal.descriptionFlow": "MCPサーバーを追加して保存します。 サーバーを管理する",
   "mcp.modal.descriptionFlowLink": "設定",
   "mcp.modal.descriptionSettings": "フロー間で共有するMCPサーバーを追加して保存します。",
+  "mcp.modal.lockedTitle": "MCPサーバー管理はロックされています",
+  "mcp.modal.lockedDescription": "外部MCPサーバーを管理するには管理者に連絡してください。",
   "mcp.modal.errorDuplicateEnvKeys": "環境変数に重複するキーが見つかりました。",
   "mcp.modal.errorDuplicateHeaders": "ヘッダーに重複するキーが見つかりました。",
   "mcp.modal.errorFailedAdd": "MCPサーバーの追加に失敗しました。",
