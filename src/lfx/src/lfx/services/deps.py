@@ -135,6 +135,13 @@ def get_tracing_service() -> TracingServiceProtocol | None:
     return get_service(ServiceType.TRACING_SERVICE)
 
 
+def get_flow_operation_service():
+    """Retrieves the flow operation service instance."""
+    from lfx.services.flow_operations.factory import FlowOperationServiceFactory
+
+    return get_service(ServiceType.FLOW_OPERATIONS_SERVICE, FlowOperationServiceFactory())
+
+
 def get_transaction_service() -> TransactionServiceProtocol | None:
     """Retrieves the transaction service instance.
 

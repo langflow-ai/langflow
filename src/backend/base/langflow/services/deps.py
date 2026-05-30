@@ -25,6 +25,7 @@ if TYPE_CHECKING:
 # dependency functions that FastAPI evaluates at module load time.
 from lfx.services.auth.base import BaseAuthService  # noqa: TC002
 from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
+from lfx.services.flow_operations.service import BaseFlowOperationService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
@@ -277,6 +278,13 @@ def get_flow_events_service():
     from langflow.services.flow_events.factory import FlowEventsServiceFactory
 
     return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+
+
+def get_flow_operation_service() -> BaseFlowOperationService:
+    """Retrieves the FlowOperationService instance from the service manager."""
+    from lfx.services.flow_operations.factory import FlowOperationServiceFactory
+
+    return get_service(ServiceType.FLOW_OPERATIONS_SERVICE, FlowOperationServiceFactory())
 
 
 def get_memory_base_service():
