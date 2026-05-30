@@ -15,7 +15,7 @@ import App from "./customization/custom-App";
 
 const detectedLang =
   localStorage.getItem("languagePreference") ||
-  navigator.language.split("-")[0] ||
+  navigator.language ||
   "en";
 
 loadLanguage(detectedLang).then(() => {
