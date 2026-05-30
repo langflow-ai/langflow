@@ -12,7 +12,25 @@ import i18n, { loadLanguage } from "./i18n";
 describe("loadLanguage", () => {
   beforeEach(() => {
     // Clear cached non-English bundles between tests
-    ["fr", "ja", "es", "de", "pt", "zh-Hans", "zh-CN", "zh-TW", "zh-HK", "zh-SG", "en-US", "en-GB", "de-DE", "es-ES", "fr-FR", "ja-JP", "pt-BR"].forEach((lang) => {
+    [
+      "fr",
+      "ja",
+      "es",
+      "de",
+      "pt",
+      "zh-Hans",
+      "zh-CN",
+      "zh-TW",
+      "zh-HK",
+      "zh-SG",
+      "en-US",
+      "en-GB",
+      "de-DE",
+      "es-ES",
+      "fr-FR",
+      "ja-JP",
+      "pt-BR",
+    ].forEach((lang) => {
       if (i18n.hasResourceBundle(lang, "translation")) {
         i18n.removeResourceBundle(lang, "translation");
       }
