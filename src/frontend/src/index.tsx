@@ -14,9 +14,7 @@ import "./style/applies.css";
 import App from "./customization/custom-App";
 
 const detectedLang =
-  localStorage.getItem("languagePreference") ||
-  navigator.language ||
-  "en";
+  localStorage.getItem("languagePreference") || navigator.language || "en";
 
 loadLanguage(detectedLang).then(() => {
   const root = ReactDOM.createRoot(

@@ -40,7 +40,7 @@ export async function loadLanguage(lang: string): Promise<void> {
   console.log(`file ${file}`);
   if (file === "en") return;
   if (i18n.hasResourceBundle(file, "translation")) return;
-  console.log(`import language ${file}`)
+  console.log(`import language ${file}`);
   const messages = await import(`./locales/${file}.json`);
   i18n.addResourceBundle(file, "translation", messages.default);
   i18n.changeLanguage(file);
