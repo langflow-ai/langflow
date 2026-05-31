@@ -154,7 +154,6 @@ export default function Page({
   const edgeUpdateSuccessful = useRef(true);
   const graphBeforeDragRef = useRef<{
     nodes: AllNodeType[];
-    edges: EdgeType[];
     data: Record<string, unknown> | undefined;
   } | null>(null);
 
@@ -615,9 +614,13 @@ export default function Page({
       // 👇 make dragging a node undoable
       takeSnapshot();
       if (collaborationOperationMode && onCollaborationOperations) {
+        const currentNodes = useFlowStore.getState().nodes;
         graphBeforeDragRef.current = {
-          nodes: cloneDeep(useFlowStore.getState().nodes),
-          edges: cloneDeep(useFlowStore.getState().edges),
+          nodes: cloneDeep(
+            currentNodes.filter(
+              (canvasNode) => canvasNode.selected || canvasNode.id === node.id,
+            ),
+          ),
           data: useFlowStore.getState().currentFlow?.data as
             | Record<string, unknown>
             | undefined,
@@ -646,7 +649,7 @@ export default function Page({
                     forwardOps: cloneDeep(operations),
                     inverseOps: buildInverseFlowOperations(
                       previousGraph.nodes,
-                      previousGraph.edges,
+                      [],
                       previousGraph.data,
                       operations,
                     ),
@@ -734,9 +737,9 @@ export default function Page({
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     takeSnapshot();
     if (collaborationOperationMode && onCollaborationOperations) {
+      const currentNodes = useFlowStore.getState().nodes;
       graphBeforeDragRef.current = {
-        nodes: cloneDeep(useFlowStore.getState().nodes),
-        edges: cloneDeep(useFlowStore.getState().edges),
+        nodes: cloneDeep(currentNodes.filter((node) => node.selected)),
         data: useFlowStore.getState().currentFlow?.data as
           | Record<string, unknown>
           | undefined,
