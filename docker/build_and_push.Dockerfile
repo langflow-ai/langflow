@@ -48,7 +48,6 @@ COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 COPY ./pyproject.toml /app/pyproject.toml
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
-COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 COPY ./src/lfx/README.md /app/src/lfx/README.md
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml

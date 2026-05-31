@@ -398,14 +398,13 @@ dcdev_up:
 	$(DOCKER) compose -f docker/dev.docker-compose.yml up --remove-orphans
 
 lock_base:
-	cd src/backend/base && uv lock
+	uv lock
 
 lock_langflow:
 	uv lock
 
 lock: ## lock dependencies
 	@echo 'Locking dependencies'
-	cd src/backend/base && uv lock
 	uv lock
 
 update: ## update dependencies
