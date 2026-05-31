@@ -1,3 +1,4 @@
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../use-debounce";
@@ -11,7 +12,7 @@ const useAutoSaveFlow = () => {
   );
 
   const autoSaveFlow = useDebounce((flow?: FlowType) => {
-    if (autoSaving) {
+    if (autoSaving && !useFlowStore.getState().collaborationOperationMode) {
       saveFlow(flow);
     }
   }, autoSavingInterval);

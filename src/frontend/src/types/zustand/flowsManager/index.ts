@@ -15,6 +15,7 @@ export type FlowsManagerStoreType = {
   undo: () => void;
   redo: () => void;
   takeSnapshot: () => void;
+  clearUndoRedoHistory: (flowId?: string) => void;
   examples: Array<FlowType>;
   setExamples: (examples: FlowType[]) => void;
   setCurrentFlow: (flow?: FlowType) => void;

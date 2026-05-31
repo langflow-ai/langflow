@@ -2,6 +2,8 @@ import type { ReactFlowJsonObject } from "@xyflow/react";
 import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
+import { syncSavedFlowStateFromCanvas } from "@/hooks/flows/flow-operation-adapter";
+import { buildUpdateMetadataOperation } from "@/hooks/flows/flow-operation-diff";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -19,8 +21,42 @@ const useSaveFlow = () => {
   const { mutate } = usePatchUpdateFlow();
 
   const saveFlow = async (flow?: FlowType): Promise<void> => {
-    const currentFlow = useFlowStore.getState().currentFlow;
+    const flowStore = useFlowStore.getState();
+    const currentFlow = flowStore.currentFlow;
     const currentSavedFlow = useFlowsManagerStore.getState().currentFlow;
+
+    if (flowStore.collaborationOperationMode) {
+      setSaveLoading(true);
+      try {
+        const flowToSave = flow ?? currentFlow;
+        const metadataOperation = buildUpdateMetadataOperation(
+          currentSavedFlow?.data as Record<string, unknown> | null | undefined,
+          flowToSave?.data as Record<string, unknown> | null | undefined,
+        );
+        if (metadataOperation) {
+          flowStore.onCollaborationOperations?.([metadataOperation]);
+        }
+        if (flowStore.flushCollaborationSave) {
+          await flowStore.flushCollaborationSave();
+        } else {
+          syncSavedFlowStateFromCanvas();
+        }
+        setSaveLoading(false);
+        return;
+      } catch (error) {
+        setSaveLoading(false);
+        const detail =
+          error instanceof Error
+            ? error.message
+            : "Unknown collaboration save error";
+        setErrorData({
+          title: t("errors.failedToSaveFlow"),
+          list: [detail],
+        });
+        throw error;
+      }
+    }
+
     if (
       customStringify(flow || currentFlow) !== customStringify(currentSavedFlow)
     ) {

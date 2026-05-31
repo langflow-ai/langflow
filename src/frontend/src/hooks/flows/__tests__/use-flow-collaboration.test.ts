@@ -154,6 +154,12 @@ describe("useFlowCollaboration", () => {
     expect(instances).toHaveLength(0);
   });
 
+  it("should not open a socket when enabled is false", async () => {
+    await mountHook({ flowId: "flow-1", enabled: false });
+
+    expect(instances).toHaveLength(0);
+  });
+
   it("should open the socket, send session.start, and become ready on session.ready", async () => {
     const { result } = await mountHook({ flowId: "flow-1" });
 

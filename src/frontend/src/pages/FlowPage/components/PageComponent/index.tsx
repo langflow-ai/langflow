@@ -32,13 +32,19 @@ import { getURL } from "@/controllers/API/helpers/constants";
 import { useGetBuildsQuery } from "@/controllers/API/queries/_builds";
 import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
+import {
+  buildGraphDiffOperations,
+  buildUpdateNodesOperation,
+} from "@/hooks/flows/flow-operation-diff";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import useAutoSaveFlow from "@/hooks/flows/use-autosave-flow";
+import { useFlowCollaborationEditing } from "@/hooks/flows/use-flow-collaboration-editing";
 import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useAuthStore from "@/stores/authStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
@@ -66,6 +72,8 @@ import {
   validateSelection,
 } from "../../../../utils/reactflowUtils";
 import { edgeTypes, nodeTypes } from "../../consts";
+import CollaborationBetaToggle from "../CollaborationBetaToggle";
+import CollaborationPresence from "../CollaborationPresence";
 import ConnectionLineComponent from "../ConnectionLineComponent";
 import FlowBuildingComponent from "../flowBuildingComponent";
 import SelectionMenu from "../SelectionMenuComponent";
@@ -152,6 +160,21 @@ export default function Page({
   const [lastSelection, setLastSelection] =
     useState<OnSelectionChangeParams | null>(null);
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const userData = useAuthStore((state) => state.userData);
+  const collaborationOperationMode = useFlowStore(
+    (state) => state.collaborationOperationMode,
+  );
+  const onCollaborationOperations = useFlowStore(
+    (state) => state.onCollaborationOperations,
+  );
+
+  const {
+    betaEnabled: collaborationBetaEnabled,
+    setBetaEnabled: setCollaborationBetaEnabled,
+    users: collaborationUsers,
+  } = useFlowCollaborationEditing({
+    flowId: currentFlowId || undefined,
+  });
 
   const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
     currentFlowId || undefined,
@@ -468,8 +491,31 @@ export default function Page({
           track("Component Deleted", { componentType: n.data.type });
         });
       }
-      deleteNode(lastSelection.nodes.map((node) => node.id));
-      deleteEdge(lastSelection.edges.map((edge) => edge.id));
+      if (collaborationOperationMode && onCollaborationOperations) {
+        const prevNodes = useFlowStore.getState().nodes;
+        const prevEdges = useFlowStore.getState().edges;
+        deleteNode(
+          lastSelection.nodes.map((node) => node.id),
+          { skipCollaborationEmit: true },
+        );
+        deleteEdge(
+          lastSelection.edges.map((edge) => edge.id),
+          { skipCollaborationEmit: true },
+        );
+        const nextState = useFlowStore.getState();
+        const operations = buildGraphDiffOperations(
+          prevNodes,
+          prevEdges,
+          nextState.nodes,
+          nextState.edges,
+        );
+        if (operations.length > 0) {
+          onCollaborationOperations(operations);
+        }
+      } else {
+        deleteNode(lastSelection.nodes.map((node) => node.id));
+        deleteEdge(lastSelection.edges.map((edge) => edge.id));
+      }
     }
   }
 
@@ -557,20 +603,28 @@ export default function Page({
 
   const onNodeDragStop: OnNodeDrag = useCallback(
     (_, node) => {
-      // 👇 make moving the canvas undoable
-      autoSaveFlow();
+      if (collaborationOperationMode && onCollaborationOperations) {
+        const movedNodes = nodes.filter(
+          (canvasNode) => canvasNode.selected || canvasNode.id === node.id,
+        );
+        if (movedNodes.length > 0) {
+          onCollaborationOperations([buildUpdateNodesOperation(movedNodes)]);
+        }
+      } else {
+        autoSaveFlow();
+      }
       updateCurrentFlow({ nodes });
       setPositionDictionary({});
       setIsDragging(false);
       setHelperLines({});
     },
     [
-      takeSnapshot,
       autoSaveFlow,
+      collaborationOperationMode,
       nodes,
-      edges,
-      reactFlowInstance,
+      onCollaborationOperations,
       setPositionDictionary,
+      updateCurrentFlow,
     ],
   );
 
@@ -863,19 +917,6 @@ export default function Page({
     ? (nodes.find((n) => n.id === selectedNodeId) as AllNodeType)
     : null;
 
-  // Determine if InspectionPanel should be visible
-  const showInspectionPanel = inspectionPanelVisible && !!selectedNode;
-
-  // Handler to close the inspection panel by deselecting all nodes
-  const handleCloseInspectionPanel = useCallback(() => {
-    setNodes((nds) =>
-      nds.map((node) => ({
-        ...node,
-        selected: false,
-      })),
-    );
-  }, [setNodes]);
-
   useEffect(() => {
     if (inspectionPanelVisible) {
       setSelectionMenuVisible(false);
@@ -894,6 +935,23 @@ export default function Page({
                   isAgentWorking={isAgentWorking}
                 />
                 {!isPreviewActive && <FlowToolbar />}
+                {!isPreviewActive && (
+                  <CollaborationBetaToggle
+                    enabled={collaborationBetaEnabled}
+                    disabled={effectiveLocked}
+                    className="absolute right-4 top-16 z-10"
+                    onEnabledChange={(enabled) => {
+                      void setCollaborationBetaEnabled(enabled);
+                    }}
+                  />
+                )}
+                {!isPreviewActive && collaborationBetaEnabled ? (
+                  <CollaborationPresence
+                    users={collaborationUsers}
+                    currentUserId={userData?.id}
+                    className="absolute right-4 top-[7.5rem] z-10 rounded-md border bg-background px-2 py-1 shadow-sm"
+                  />
+                ) : null}
                 {inspectionPanelVisible && (
                   <InspectionPanel selectedNode={selectedNode} />
                 )}

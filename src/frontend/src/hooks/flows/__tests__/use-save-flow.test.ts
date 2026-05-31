@@ -1,4 +1,6 @@
 import { renderHook } from "@testing-library/react";
+import type { FlowType } from "@/types/flow";
+import type { FlowOperation } from "@/types/flow-operations";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -8,8 +10,31 @@ const mockSetCurrentFlow = jest.fn();
 const mockGetFlow = jest.fn();
 const mockMutate = jest.fn();
 
-let flowStoreState: any;
-let flowsManagerState: any;
+type MockFlowStoreState = {
+  collaborationOperationMode: boolean;
+  flushCollaborationSave?: () => Promise<void>;
+  onCollaborationOperations?: (operations: FlowOperation[]) => void;
+  currentFlow: FlowType | null;
+  nodes: FlowType["data"]["nodes"];
+  edges: FlowType["data"]["edges"];
+  reactFlowInstance: {
+    getViewport: jest.Mock;
+  } | null;
+  onFlowPage: boolean;
+  setCurrentFlow: typeof mockSetCurrentFlow;
+};
+
+type MockFlowsManagerState = {
+  currentFlow: FlowType | null;
+  flows: FlowType[];
+  setFlows: typeof mockSetFlows;
+  setSaveLoading: typeof mockSetSaveLoading;
+};
+
+type StoreSelector<T> = (state: T) => unknown;
+
+let flowStoreState: MockFlowStoreState;
+let flowsManagerState: MockFlowsManagerState;
 
 jest.mock("@/controllers/API/queries/flows/use-get-flow", () => ({
   useGetFlow: () => ({ mutate: mockGetFlow }),
@@ -21,14 +46,16 @@ jest.mock("@/controllers/API/queries/flows/use-patch-update-flow", () => ({
 
 jest.mock("@/stores/alertStore", () => ({
   __esModule: true,
-  default: (selector: any) =>
+  default: (
+    selector: StoreSelector<{ setErrorData: typeof mockSetErrorData }>,
+  ) =>
     selector({
       setErrorData: mockSetErrorData,
     }),
 }));
 
 jest.mock("@/stores/flowStore", () => {
-  const useFlowStore = (selector: any) =>
+  const useFlowStore = (selector?: StoreSelector<MockFlowStoreState>) =>
     selector ? selector(flowStoreState) : flowStoreState;
   useFlowStore.getState = () => flowStoreState;
 
@@ -39,8 +66,9 @@ jest.mock("@/stores/flowStore", () => {
 });
 
 jest.mock("@/stores/flowsManagerStore", () => {
-  const useFlowsManagerStore = (selector: any) =>
-    selector ? selector(flowsManagerState) : flowsManagerState;
+  const useFlowsManagerStore = (
+    selector?: StoreSelector<MockFlowsManagerState>,
+  ) => (selector ? selector(flowsManagerState) : flowsManagerState);
   useFlowsManagerStore.getState = () => flowsManagerState;
 
   return {
@@ -65,9 +93,11 @@ describe("useSaveFlow", () => {
       folder_id: "folder-1",
       endpoint_name: "saved-flow",
       locked: false,
-    };
+    } as FlowType;
 
     flowStoreState = {
+      collaborationOperationMode: false,
+      flushCollaborationSave: undefined,
       currentFlow: {
         ...savedFlow,
         data: {
@@ -102,6 +132,68 @@ describe("useSaveFlow", () => {
         },
       });
     });
+  });
+
+  it("flushes collaboration operations instead of PATCH when collaboration mode is active", async () => {
+    const flushCollaborationSave = jest.fn().mockResolvedValue(undefined);
+    flowStoreState = {
+      ...flowStoreState,
+      collaborationOperationMode: true,
+      flushCollaborationSave,
+    };
+
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(flushCollaborationSave).toHaveBeenCalledTimes(1);
+    expect(mockMutate).not.toHaveBeenCalled();
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(true);
+    expect(mockSetSaveLoading).toHaveBeenCalledWith(false);
+  });
+
+  it("emits flow.data metadata updates before flushing collaboration save", async () => {
+    const flushCollaborationSave = jest.fn().mockResolvedValue(undefined);
+    const onCollaborationOperations = jest.fn();
+    flowsManagerState.currentFlow = {
+      ...flowsManagerState.currentFlow,
+      data: {
+        nodes: [],
+        edges: [],
+        viewport: { x: 0, y: 0, zoom: 1 },
+        theme: "old",
+        stale_key: true,
+      },
+    } as FlowType;
+    flowStoreState = {
+      ...flowStoreState,
+      collaborationOperationMode: true,
+      flushCollaborationSave,
+      onCollaborationOperations,
+      currentFlow: {
+        ...flowStoreState.currentFlow,
+        data: {
+          nodes: [],
+          edges: [],
+          viewport: { x: 10, y: 10, zoom: 2 },
+          theme: "new",
+        },
+      } as FlowType,
+    };
+
+    const { result } = renderHook(() => useSaveFlow());
+
+    await expect(result.current()).resolves.toBeUndefined();
+
+    expect(onCollaborationOperations).toHaveBeenCalledWith([
+      {
+        type: "update_metadata",
+        fields: { theme: "new" },
+        delete_keys: ["stale_key"],
+      },
+    ]);
+    expect(flushCollaborationSave).toHaveBeenCalledTimes(1);
+    expect(mockMutate).not.toHaveBeenCalled();
   });
 
   it("persists empty-node flows instead of leaving the save promise pending", async () => {
@@ -142,7 +234,7 @@ describe("useSaveFlow", () => {
       endpoint_name: "saved-flow",
       locked: false,
       is_component: false,
-    };
+    } as FlowType;
 
     flowStoreState = {
       currentFlow: null,
@@ -151,6 +243,7 @@ describe("useSaveFlow", () => {
       reactFlowInstance: null,
       onFlowPage: false,
       setCurrentFlow: mockSetCurrentFlow,
+      collaborationOperationMode: false,
     };
 
     flowsManagerState = {

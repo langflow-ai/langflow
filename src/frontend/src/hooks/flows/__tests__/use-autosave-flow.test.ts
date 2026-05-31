@@ -1,5 +1,7 @@
 import { renderHook } from "@testing-library/react";
+import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { FlowType } from "@/types/flow";
 import { useDebounce } from "../../use-debounce";
 import useAutoSaveFlow from "../use-autosave-flow";
 import useSaveFlow from "../use-save-flow";
@@ -8,6 +10,7 @@ import useSaveFlow from "../use-save-flow";
 jest.mock("../use-save-flow");
 jest.mock("../../use-debounce");
 jest.mock("@/stores/flowsManagerStore");
+jest.mock("@/stores/flowStore");
 
 describe("useAutoSaveFlow", () => {
   const mockSaveFlow = jest.fn();
@@ -21,6 +24,11 @@ describe("useAutoSaveFlow", () => {
       mockDebouncedFn.mockImplementation(fn);
       return mockDebouncedFn;
     });
+    (useFlowStore as unknown as { getState: jest.Mock }).getState = jest.fn(
+      () => ({
+        collaborationOperationMode: false,
+      }),
+    );
   });
 
   it("should return a debounced autosave function", () => {
@@ -54,10 +62,33 @@ describe("useAutoSaveFlow", () => {
     const { result } = renderHook(() => useAutoSaveFlow());
     const autoSaveFlow = result.current;
 
-    const mockFlow = { id: "flow-1", name: "Test Flow" } as any;
+    const mockFlow = { id: "flow-1", name: "Test Flow" } as FlowType;
     autoSaveFlow(mockFlow);
 
     expect(mockSaveFlow).toHaveBeenCalledWith(mockFlow);
+  });
+
+  it("should not call saveFlow when collaboration operation mode is enabled", () => {
+    (useFlowsManagerStore as unknown as jest.Mock).mockImplementation(
+      (selector) => {
+        const state = {
+          autoSaving: true,
+          autoSavingInterval: 3000,
+        };
+        return selector(state);
+      },
+    );
+    (useFlowStore as unknown as jest.Mock).mockImplementation(() => undefined);
+    (useFlowStore as unknown as { getState: jest.Mock }).getState = jest.fn(
+      () => ({
+        collaborationOperationMode: true,
+      }),
+    );
+
+    const { result } = renderHook(() => useAutoSaveFlow());
+    result.current({ id: "flow-1" } as never);
+
+    expect(mockSaveFlow).not.toHaveBeenCalled();
   });
 
   it("should not call saveFlow when autoSaving is disabled", () => {
@@ -74,7 +105,7 @@ describe("useAutoSaveFlow", () => {
     const { result } = renderHook(() => useAutoSaveFlow());
     const autoSaveFlow = result.current;
 
-    const mockFlow = { id: "flow-1", name: "Test Flow" } as any;
+    const mockFlow = { id: "flow-1", name: "Test Flow" } as FlowType;
     autoSaveFlow(mockFlow);
 
     expect(mockSaveFlow).not.toHaveBeenCalled();
@@ -158,7 +189,7 @@ describe("useAutoSaveFlow", () => {
     );
 
     const { result, rerender } = renderHook(() => useAutoSaveFlow());
-    const mockFlow = { id: "flow-1", name: "Test Flow" } as any;
+    const mockFlow = { id: "flow-1", name: "Test Flow" } as FlowType;
 
     // AutoSaving enabled
     result.current(mockFlow);

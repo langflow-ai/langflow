@@ -6,7 +6,12 @@ import type {
   ReactFlowInstance,
   Viewport,
 } from "@xyflow/react";
+import type { groupedObjType } from "@/types/components";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
+import type {
+  FlowMutationOptions,
+  FlowOperation,
+} from "@/types/flow-operations";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
 import type { ChatInputType, ChatOutputType } from "../../chat";
@@ -17,8 +22,8 @@ export type FlowPoolObjectType = {
   valid: boolean;
   messages: Array<ChatOutputType | ChatInputType> | [];
   data: {
-    artifacts: any | ChatOutputType | ChatInputType;
-    results: any | ChatOutputType | ChatInputType;
+    artifacts: unknown | ChatOutputType | ChatInputType;
+    results: unknown | ChatOutputType | ChatInputType;
   };
   duration?: string;
   progress?: number;
@@ -33,8 +38,8 @@ export type FlowPoolObjectTypeNew = {
   timestamp: string;
   valid: boolean;
   data: {
-    outputs?: any | ChatOutputType | ChatInputType;
-    results: any | ChatOutputType | ChatInputType;
+    outputs?: unknown | ChatOutputType | ChatInputType;
+    results: unknown | ChatOutputType | ChatInputType;
   };
   duration?: string;
   progress?: number;
@@ -76,6 +81,12 @@ export type FlowStoreType = {
   }) => void;
   fitViewNode: (nodeId: string) => void;
   autoSaveFlow: ((flow?: FlowType) => void) | undefined;
+  collaborationOperationMode: boolean;
+  isApplyingRemoteOperations: boolean;
+  onCollaborationOperations:
+    | ((operations: FlowOperation[]) => void)
+    | undefined;
+  flushCollaborationSave: (() => Promise<void>) | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (
     update:
@@ -142,31 +153,40 @@ export type FlowStoreType = {
   onEdgesChange: OnEdgesChange<EdgeType>;
   setNodes: (
     update: AllNodeType[] | ((oldState: AllNodeType[]) => AllNodeType[]),
+    options?: FlowMutationOptions,
   ) => void;
   setEdges: (
     update: EdgeType[] | ((oldState: EdgeType[]) => EdgeType[]),
+    options?: FlowMutationOptions,
   ) => void;
   setNode: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
     isUserChange?: boolean,
     callback?: () => void,
+    options?: FlowMutationOptions,
   ) => void;
   getNode: (id: string) => AllNodeType | undefined;
-  deleteNode: (nodeId: string | Array<string>) => void;
-  deleteEdge: (edgeId: string | Array<string>) => void;
+  deleteNode: (
+    nodeId: string | Array<string>,
+    options?: FlowMutationOptions,
+  ) => void;
+  deleteEdge: (
+    edgeId: string | Array<string>,
+    options?: FlowMutationOptions,
+  ) => void;
   paste: (
-    selection: { nodes: any; edges: any },
+    selection: { nodes: AllNodeType[]; edges: EdgeType[] },
     position: { x: number; y: number; paneX?: number; paneY?: number },
   ) => void;
-  lastCopiedSelection: { nodes: any; edges: any } | null;
+  lastCopiedSelection: { nodes: AllNodeType[]; edges: EdgeType[] } | null;
   setLastCopiedSelection: (
-    newSelection: { nodes: any; edges: any } | null,
+    newSelection: { nodes: AllNodeType[]; edges: EdgeType[] } | null,
     isCrop?: boolean,
   ) => void;
   cleanFlow: () => void;
-  setFilterEdge: (newState) => void;
-  getFilterEdge: any[];
+  setFilterEdge: (newState: groupedObjType[]) => void;
+  getFilterEdge: groupedObjType[];
   setFilterComponent: (newState) => void;
   getFilterComponent: string;
   rightClickedNodeId: string | null;

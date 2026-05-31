@@ -42,6 +42,10 @@ export type FlowOperation =
   | DeleteEdgesOp
   | UpdateMetadataOp;
 
+export type FlowMutationOptions = {
+  skipCollaborationEmit?: boolean;
+};
+
 export type FlowOperationSubmitPayload = {
   request_id: string;
   base_revision: number;
