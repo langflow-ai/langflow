@@ -128,6 +128,9 @@ async function connectSession(currentRevision = 0) {
       connection_id: "conn-1",
       flow_id: "flow-1",
       current_revision: currentRevision,
+    });
+    socket.triggerMessage({
+      type: "presence.snapshot",
       users: [
         {
           user_id: "user-1",
@@ -135,6 +138,10 @@ async function connectSession(currentRevision = 0) {
           profile_image: "Space/046-rocket.svg",
         },
       ],
+    });
+    socket.triggerMessage({
+      type: "selection.snapshot",
+      selections: [],
     });
   });
 
@@ -325,21 +332,76 @@ describe("useFlowCollaboration", () => {
     expect(result.current.currentRevision).toBe(12);
   });
 
-  it("should update presence roster on presence.updated", async () => {
+  it("should maintain presence roster from snapshot and incremental events", async () => {
     const { result } = await mountHook({ flowId: "flow-1" });
     await connectSession(0);
 
     await act(async () => {
       latestSocket().triggerMessage({
-        type: "presence.updated",
-        users: [
-          { user_id: "user-1", username: "ana" },
-          { user_id: "user-2", username: "bob", profile_image: null },
-        ],
+        type: "presence.joined",
+        user: { user_id: "user-2", username: "bob", profile_image: null },
       });
     });
 
-    expect(result.current.users).toHaveLength(2);
+    expect(result.current.users).toEqual([
+      {
+        user_id: "user-1",
+        username: "ana",
+        profile_image: "Space/046-rocket.svg",
+      },
+      { user_id: "user-2", username: "bob", profile_image: null },
+    ]);
+
+    await act(async () => {
+      latestSocket().triggerMessage({
+        type: "presence.left",
+        user_id: "user-2",
+      });
+    });
+
+    expect(result.current.users).toHaveLength(1);
+    expect(result.current.users[0]?.user_id).toBe("user-1");
+  });
+
+  it("should maintain selection state from snapshot and incremental updates", async () => {
+    const { result } = await mountHook({ flowId: "flow-1" });
+    await connectSession(0);
+
+    await act(async () => {
+      latestSocket().triggerMessage({
+        type: "selection.updated",
+        user_id: "user-2",
+        selected: { kind: "node", id: "node-1" },
+      });
+    });
+
+    expect(result.current.selections).toEqual([
+      { user_id: "user-2", selected: { kind: "node", id: "node-1" } },
+    ]);
+
+    await act(async () => {
+      latestSocket().triggerMessage({
+        type: "selection.updated",
+        user_id: "user-2",
+        selected: null,
+      });
+    });
+
+    expect(result.current.selections).toEqual([]);
+  });
+
+  it("should send selection.update when sendSelectionUpdate is called", async () => {
+    const { result } = await mountHook({ flowId: "flow-1" });
+    const socket = await connectSession(0);
+
+    await act(async () => {
+      result.current.sendSelectionUpdate({ kind: "edge", id: "edge-1" });
+    });
+
+    expect(JSON.parse(socket.sent.at(-1)!)).toEqual({
+      type: "selection.update",
+      selected: { kind: "edge", id: "edge-1" },
+    });
   });
 
   it("should request reload when the socket closes unexpectedly", async () => {

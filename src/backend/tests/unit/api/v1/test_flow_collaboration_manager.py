@@ -8,7 +8,10 @@ from uuid import uuid4
 import pytest
 from langflow.api.v1 import collaboration_manager as collaboration_manager_module
 from langflow.api.v1.collaboration_manager import CollaborationManager
-from langflow.api.v1.schemas.flow_collaboration import CollaborationPresenceEventPayload
+from langflow.api.v1.schemas.flow_collaboration import (
+    CollaborationPresenceEventPayload,
+    CollaborationSelectionTarget,
+)
 from langflow.services.collaboration_events.schemas import CollaborationEvent
 
 
@@ -58,6 +61,26 @@ async def test_presence_dedupes_same_user_multiple_tabs(manager, flow_id, user_a
     users = manager.local_users(flow_id)
     assert len(users) == 1
     assert users[0].username == "alice"
+
+
+@pytest.mark.asyncio
+async def test_presence_getters_can_return_keyed_rosters(manager, flow_id, user_a, user_b):
+    await _register(manager, flow_id, user_a, "alice")
+    manager.apply_remote_presence(
+        flow_id,
+        CollaborationPresenceEventPayload(
+            worker_id="remote-worker",
+            published_at=9_999_999_999.0,
+            users=[{"user_id": str(user_b), "username": "bob", "profile_image": None}],
+        ),
+    )
+
+    local_users = manager.local_users(flow_id, as_dict=True)
+    all_users = manager.all_users(flow_id, as_dict=True)
+
+    assert set(local_users) == {user_a}
+    assert set(all_users) == {user_a, user_b}
+    assert all_users[user_b].username == "bob"
 
 
 @pytest.mark.asyncio
@@ -183,6 +206,100 @@ async def test_handle_backplane_event_ignores_unknown_type(manager, flow_id, use
 
 
 @pytest.mark.asyncio
+async def test_presence_visibility_diff_detects_join_and_leave(manager, flow_id, user_a, user_b):
+    await _register(manager, flow_id, user_a, "alice")
+    before = manager.all_users(flow_id, as_dict=True)
+    await _register(manager, flow_id, user_b, "bob")
+    after = manager.all_users(flow_id, as_dict=True)
+    joined_users, left_user_ids = manager.presence_visibility_diff(before, after)
+    assert [user.username for user in joined_users] == ["bob"]
+    assert left_user_ids == []
+
+
+@pytest.mark.asyncio
+async def test_presence_snapshot_and_selection_snapshot_messages(manager, flow_id, user_a):
+    await _register(manager, flow_id, user_a, "alice")
+    manager.set_user_selection(
+        flow_id,
+        user_a,
+        CollaborationSelectionTarget(kind="node", id="node-1"),
+    )
+
+    presence = manager.presence_snapshot_message(flow_id)
+    selection = manager.selection_snapshot_message(flow_id)
+
+    assert presence["type"] == "presence.snapshot"
+    assert len(presence["users"]) == 1
+    assert selection["type"] == "selection.snapshot"
+    assert selection["selections"] == [{"user_id": str(user_a), "selected": {"kind": "node", "id": "node-1"}}]
+
+
+@pytest.mark.asyncio
+async def test_clear_user_selection_returns_updated_message(manager, flow_id, user_a):
+    await _register(manager, flow_id, user_a, "alice")
+    manager.set_user_selection(
+        flow_id,
+        user_a,
+        CollaborationSelectionTarget(kind="edge", id="edge-1"),
+    )
+
+    cleared = manager.clear_user_selection(flow_id, user_a)
+
+    assert cleared == {
+        "type": "selection.updated",
+        "user_id": str(user_a),
+        "selected": None,
+    }
+    assert manager.selection_snapshot_message(flow_id)["selections"] == []
+
+
+@pytest.mark.asyncio
+async def test_handle_backplane_presence_broadcasts_incremental_joined(manager, flow_id, user_a, user_b):
+    await _register(manager, flow_id, user_a, "alice")
+    peer_id = await _register(manager, flow_id, user_b, "bob")
+    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_ws.send_json.reset_mock()
+
+    event = CollaborationEvent(
+        id="evt-remote-presence",
+        flow_id=flow_id,
+        created_at=1.0,
+        type="presence.roster",
+        payload={
+            "worker_id": "remote-worker",
+            "published_at": 9_999_999_999.0,
+            "users": [{"user_id": str(user_a), "username": "alice", "profile_image": None}],
+        },
+    )
+
+    await manager.handle_backplane_event(event)
+
+    peer_ws.send_json.assert_not_called()
+
+    event = CollaborationEvent(
+        id="evt-remote-presence-2",
+        flow_id=flow_id,
+        created_at=2.0,
+        type="presence.roster",
+        payload={
+            "worker_id": "remote-worker",
+            "published_at": 9_999_999_999.0,
+            "users": [
+                {"user_id": str(user_a), "username": "alice", "profile_image": None},
+                {"user_id": str(uuid4()), "username": "carol", "profile_image": None},
+            ],
+        },
+    )
+
+    await manager.handle_backplane_event(event)
+
+    peer_ws.send_json.assert_called_once()
+    payload = peer_ws.send_json.call_args.args[0]
+    assert payload["type"] == "presence.joined"
+    assert payload["user"]["username"] == "carol"
+
+
+@pytest.mark.asyncio
 async def test_handle_backplane_presence_ignores_malformed_payload(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
@@ -192,7 +309,7 @@ async def test_handle_backplane_presence_ignores_malformed_payload(manager, flow
         id="evt-bad-presence",
         flow_id=flow_id,
         created_at=1.0,
-        type="presence.updated",
+        type="presence.roster",
         payload={
             "worker_id": "remote-worker",
             "published_at": "not-a-timestamp",
@@ -215,7 +332,7 @@ async def test_handle_backplane_presence_ignores_current_worker_payload(manager,
         id="evt-own-presence",
         flow_id=flow_id,
         created_at=1.0,
-        type="presence.updated",
+        type="presence.roster",
         payload={
             "worker_id": collaboration_manager_module.WORKER_ID,
             "published_at": 9_999_999_999.0,

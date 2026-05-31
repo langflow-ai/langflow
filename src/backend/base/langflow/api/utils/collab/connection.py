@@ -32,6 +32,7 @@ from langflow.api.v1.schemas.flow_collaboration import (
     CollaborationOperationBroadcastMessage,
     CollaborationOperationRejectedMessage,
     CollaborationOperationSubmitMessage,
+    CollaborationSelectionUpdateMessage,
     CollaborationSessionReadyMessage,
     CollaborationSessionStartMessage,
     CollaborationUnknownMessageError,
@@ -99,6 +100,10 @@ class FlowCollaborationConnection:
                 await self._handle_operation_submit(raw)
                 continue
 
+            if msg_type == "selection.update":
+                await self._handle_selection_update(raw)
+                continue
+
             await self.websocket.send_json(CollaborationUnknownMessageError().model_dump(mode="json"))
 
     async def _handle_session_start(self, raw: Any, msg_type: str | None) -> None:
@@ -120,6 +125,8 @@ class FlowCollaborationConnection:
             )
             raise _CollaborationConnectionClosedError from exc
 
+        user_was_already_in_room = self.current_user.id in self.manager.all_users(self.flow_id, as_dict=True)
+
         self.connection_id = await self.manager.register(
             websocket=self.websocket,
             flow_id=self.flow_id,
@@ -135,10 +142,23 @@ class FlowCollaborationConnection:
                 connection_id=self.connection_id,
                 flow_id=self.flow_id,
                 current_revision=self.starting_revision,
-                users=self.manager.all_users(self.flow_id),
             ).model_dump(mode="json")
         )
-        await self._publish_presence(exclude_connection_id=self.connection_id)
+        await self.websocket.send_json(self.manager.presence_snapshot_message(self.flow_id))
+        await self.websocket.send_json(self.manager.selection_snapshot_message(self.flow_id))
+
+        if not user_was_already_in_room:
+            await self.manager.broadcast_json(
+                self.flow_id,
+                self.manager.presence_joined_message(
+                    user_id=self.current_user.id,
+                    username=self.current_user.username,
+                    profile_image=self.current_user.profile_image,
+                ),
+                exclude_connection_id=self.connection_id,
+            )
+
+        self._publish_presence()
 
     async def _handle_operation_submit(self, raw: Any) -> None:
         try:
@@ -262,14 +282,31 @@ class FlowCollaborationConnection:
         }
         get_collaboration_events_service().publish(self.flow_id, "operation.accepted", event_payload)
 
-    async def _publish_presence(self, *, exclude_connection_id: str | None = None) -> None:
-        payload = self.manager.presence_payload(self.flow_id)
-        get_collaboration_events_service().publish(self.flow_id, "presence.updated", payload)
+    async def _handle_selection_update(self, raw: Any) -> None:
+        try:
+            update = CollaborationSelectionUpdateMessage.model_validate(raw)
+        except ValidationError as exc:
+            await self.websocket.send_json(
+                CollaborationUnknownMessageError(
+                    detail=f"Invalid selection.update payload: {exc}",
+                ).model_dump(mode="json")
+            )
+            return
+
+        updated = self.manager.set_user_selection(
+            self.flow_id,
+            self.current_user.id,
+            update.selected,
+        )
         await self.manager.broadcast_json(
             self.flow_id,
-            self.manager.presence_message(self.flow_id),
-            exclude_connection_id=exclude_connection_id,
+            updated,
+            exclude_connection_id=self.connection_id,
         )
+
+    def _publish_presence(self) -> None:
+        payload = self.manager.presence_payload(self.flow_id)
+        get_collaboration_events_service().publish(self.flow_id, "presence.roster", payload)
 
     async def _presence_heartbeat(self) -> None:
         while True:
@@ -282,7 +319,7 @@ class FlowCollaborationConnection:
                 await self._ensure_active_read_access()
             except _CollaborationConnectionClosedError:
                 return
-            await self._publish_presence()
+            self._publish_presence()
 
     async def _cleanup(self) -> None:
         if self._presence_task is not None:
@@ -293,8 +330,20 @@ class FlowCollaborationConnection:
                 pass
 
         if self.connection_id is not None:
-            await self.manager.unregister(self.flow_id, self.connection_id)
+            conn = await self.manager.unregister(self.flow_id, self.connection_id)
+
+            if conn is not None:
+                selection_update = self.manager.clear_user_selection(self.flow_id, conn.user_id)
+                if selection_update is not None:
+                    await self.manager.broadcast_json(self.flow_id, selection_update)
+
+                if conn.user_id not in self.manager.all_users(self.flow_id, as_dict=True):
+                    await self.manager.broadcast_json(
+                        self.flow_id,
+                        self.manager.presence_left_message(conn.user_id),
+                    )
+
             try:
-                await self._publish_presence()
+                self._publish_presence()
             except Exception as exc:  # noqa: BLE001 - cleanup presence publish is best-effort.
                 await logger.adebug("Failed to publish collaboration presence during cleanup: %s", exc)

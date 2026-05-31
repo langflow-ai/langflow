@@ -19,7 +19,6 @@ export type CollaborationSessionReadyMessage = {
   connection_id: string;
   flow_id: string;
   current_revision: number;
-  users: CollaborationPresenceUser[];
 };
 
 export type CollaborationSessionErrorMessage = {
@@ -57,9 +56,45 @@ export type CollaborationOperationBroadcastMessage = {
   created_at: string;
 };
 
-export type CollaborationPresenceUpdatedMessage = {
-  type: "presence.updated";
+export type CollaborationPresenceSnapshotMessage = {
+  type: "presence.snapshot";
   users: CollaborationPresenceUser[];
+};
+
+export type CollaborationPresenceJoinedMessage = {
+  type: "presence.joined";
+  user: CollaborationPresenceUser;
+};
+
+export type CollaborationPresenceLeftMessage = {
+  type: "presence.left";
+  user_id: string;
+};
+
+export type CollaborationSelectionTarget = {
+  kind: "node" | "edge";
+  id: string;
+};
+
+export type CollaborationUserSelection = {
+  user_id: string;
+  selected: CollaborationSelectionTarget | null;
+};
+
+export type CollaborationSelectionUpdateMessage = {
+  type: "selection.update";
+  selected: CollaborationSelectionTarget | null;
+};
+
+export type CollaborationSelectionSnapshotMessage = {
+  type: "selection.snapshot";
+  selections: CollaborationUserSelection[];
+};
+
+export type CollaborationSelectionUpdatedMessage = {
+  type: "selection.updated";
+  user_id: string;
+  selected: CollaborationSelectionTarget | null;
 };
 
 export type CollaborationMessageErrorMessage = {
@@ -73,12 +108,17 @@ export type CollaborationServerMessage =
   | CollaborationOperationAcceptedMessage
   | CollaborationOperationRejectedMessage
   | CollaborationOperationBroadcastMessage
-  | CollaborationPresenceUpdatedMessage
+  | CollaborationPresenceSnapshotMessage
+  | CollaborationPresenceJoinedMessage
+  | CollaborationPresenceLeftMessage
+  | CollaborationSelectionSnapshotMessage
+  | CollaborationSelectionUpdatedMessage
   | CollaborationMessageErrorMessage;
 
 export type CollaborationClientMessage =
   | CollaborationSessionStartMessage
-  | CollaborationOperationSubmitMessage;
+  | CollaborationOperationSubmitMessage
+  | CollaborationSelectionUpdateMessage;
 
 export type CollaborationConnectionStatus =
   | "idle"

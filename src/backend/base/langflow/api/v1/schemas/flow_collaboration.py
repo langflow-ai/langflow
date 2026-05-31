@@ -11,7 +11,7 @@ from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
 
 
 class CollaborationPresenceUser(BaseModel):
-    user_id: str
+    user_id: UUID
     username: str
     profile_image: str | None = None
 
@@ -25,7 +25,6 @@ class CollaborationSessionReadyMessage(BaseModel):
     connection_id: str
     flow_id: UUID
     current_revision: int
-    users: list[CollaborationPresenceUser]
 
 
 class CollaborationSessionErrorMessage(BaseModel):
@@ -60,9 +59,45 @@ class CollaborationOperationRejectedMessage(BaseModel):
     current_revision: int | None = None
 
 
-class CollaborationPresenceUpdatedMessage(BaseModel):
-    type: Literal["presence.updated"] = "presence.updated"
+class CollaborationPresenceSnapshotMessage(BaseModel):
+    type: Literal["presence.snapshot"] = "presence.snapshot"
     users: list[CollaborationPresenceUser]
+
+
+class CollaborationPresenceJoinedMessage(BaseModel):
+    type: Literal["presence.joined"] = "presence.joined"
+    user: CollaborationPresenceUser
+
+
+class CollaborationPresenceLeftMessage(BaseModel):
+    type: Literal["presence.left"] = "presence.left"
+    user_id: UUID
+
+
+class CollaborationSelectionTarget(BaseModel):
+    kind: Literal["node", "edge"]
+    id: str
+
+
+class CollaborationUserSelection(BaseModel):
+    user_id: UUID
+    selected: CollaborationSelectionTarget | None = None
+
+
+class CollaborationSelectionUpdateMessage(BaseModel):
+    type: Literal["selection.update"]
+    selected: CollaborationSelectionTarget | None = None
+
+
+class CollaborationSelectionSnapshotMessage(BaseModel):
+    type: Literal["selection.snapshot"] = "selection.snapshot"
+    selections: list[CollaborationUserSelection]
+
+
+class CollaborationSelectionUpdatedMessage(BaseModel):
+    type: Literal["selection.updated"] = "selection.updated"
+    user_id: UUID
+    selected: CollaborationSelectionTarget | None = None
 
 
 class CollaborationOperationBroadcastMessage(BaseModel):
@@ -107,14 +142,14 @@ class CollaborationOperationAcceptedBackplaneEvent(BaseModel):
     payload: CollaborationOperationAcceptedEventPayload
 
 
-class CollaborationPresenceUpdatedBackplaneEvent(BaseModel):
-    """Typed presence event consumed from the collaboration backplane."""
+class CollaborationPresenceRosterBackplaneEvent(BaseModel):
+    """Typed worker-local presence roster event consumed from the collaboration backplane."""
 
-    type: Literal["presence.updated"]
+    type: Literal["presence.roster"]
     payload: CollaborationPresenceEventPayload
 
 
-CollaborationBackplaneEvent = CollaborationOperationAcceptedBackplaneEvent | CollaborationPresenceUpdatedBackplaneEvent
+CollaborationBackplaneEvent = CollaborationOperationAcceptedBackplaneEvent | CollaborationPresenceRosterBackplaneEvent
 
 
 class UnsupportedCollaborationBackplaneEventError(ValueError):
@@ -126,8 +161,8 @@ def parse_collaboration_backplane_event(event_type: str, payload: dict[str, Any]
     event = {"type": event_type, "payload": payload}
     if event_type == "operation.accepted":
         return CollaborationOperationAcceptedBackplaneEvent.model_validate(event)
-    if event_type == "presence.updated":
-        return CollaborationPresenceUpdatedBackplaneEvent.model_validate(event)
+    if event_type == "presence.roster":
+        return CollaborationPresenceRosterBackplaneEvent.model_validate(event)
     msg = f"Unsupported collaboration backplane event type: {event_type!r}"
     raise UnsupportedCollaborationBackplaneEventError(msg)
 
@@ -137,4 +172,6 @@ class CollaborationUnknownMessageError(BaseModel):
     detail: str = "Unknown message type"
 
 
-CollaborationClientMessage = CollaborationSessionStartMessage | CollaborationOperationSubmitMessage
+CollaborationClientMessage = (
+    CollaborationSessionStartMessage | CollaborationOperationSubmitMessage | CollaborationSelectionUpdateMessage
+)

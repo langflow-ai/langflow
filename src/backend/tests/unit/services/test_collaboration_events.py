@@ -38,13 +38,13 @@ def test_factory_returns_sqlite_implementation():
 
 def test_publish_and_poll_by_flow_id(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.publish(flow_id, "operation.accepted", {"revision": 1, "forward_ops": []})
-    svc.publish(flow_id, "presence.updated", {"users": []})
+    svc.publish(flow_id, "presence.roster", {"users": []})
 
     events, cursor = svc.poll(flow_id)
     assert len(events) == 2
     assert events[0].type == "operation.accepted"
     assert events[0].payload["revision"] == 1
-    assert events[1].type == "presence.updated"
+    assert events[1].type == "presence.roster"
     assert cursor.event_id == events[1].id
     assert cursor.created_at == events[1].created_at
 
@@ -131,7 +131,7 @@ def test_cross_worker_visibility(tmp_path, flow_id: UUID):
     assert len(events) == 1
     assert events[0].payload["revision"] == 1
 
-    worker_b.publish(flow_id, "presence.updated", {"users": []})
+    worker_b.publish(flow_id, "presence.roster", {"users": []})
 
     events, _ = worker_a.poll(flow_id)
     assert len(events) == 2

@@ -17,8 +17,15 @@ from langflow.api.v1.schemas.flow_collaboration import (
     CollaborationOperationAcceptedBackplaneEvent,
     CollaborationOperationBroadcastMessage,
     CollaborationPresenceEventPayload,
-    CollaborationPresenceUpdatedBackplaneEvent,
+    CollaborationPresenceJoinedMessage,
+    CollaborationPresenceLeftMessage,
+    CollaborationPresenceRosterBackplaneEvent,
+    CollaborationPresenceSnapshotMessage,
     CollaborationPresenceUser,
+    CollaborationSelectionSnapshotMessage,
+    CollaborationSelectionTarget,
+    CollaborationSelectionUpdatedMessage,
+    CollaborationUserSelection,
     UnsupportedCollaborationBackplaneEventError,
     parse_collaboration_backplane_event,
 )
@@ -55,6 +62,7 @@ class CollaborationManager:
     def __init__(self) -> None:
         self._rooms: defaultdict[UUID, dict[str, FlowConnection]] = defaultdict(dict)
         self._remote_rosters: defaultdict[UUID, dict[str, _RemotePresenceRoster]] = defaultdict(dict)
+        self._selections: defaultdict[UUID, dict[UUID, CollaborationSelectionTarget | None]] = defaultdict(dict)
         self._fanned_revisions: dict[tuple[UUID, int], float] = {}
         # Protect local room membership while registering/unregistering and snapshotting broadcasts.
         self._lock = asyncio.Lock()
@@ -92,29 +100,67 @@ class CollaborationManager:
             self._rooms[flow_id][connection_id] = conn
         return connection_id
 
-    async def unregister(self, flow_id: UUID, connection_id: str) -> None:
+    async def unregister(self, flow_id: UUID, connection_id: str) -> FlowConnection | None:
         async with self._lock:
             room = self._rooms.get(flow_id)
             if not room:
-                return
-            room.pop(connection_id, None)
+                return None
+            conn = room.pop(connection_id, None)
             if not room:
                 self._rooms.pop(flow_id, None)
                 self._remote_rosters.pop(flow_id, None)
+                self._selections.pop(flow_id, None)
+            return conn
 
     @overload
-    def local_users(self, flow_id: UUID, *, serialize: Literal[False] = False) -> list[CollaborationPresenceUser]: ...
+    def local_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[False] = False,
+        as_dict: Literal[False] = False,
+    ) -> list[CollaborationPresenceUser]: ...
 
     @overload
-    def local_users(self, flow_id: UUID, *, serialize: Literal[True]) -> list[dict[str, Any]]: ...
+    def local_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[False] = False,
+        as_dict: Literal[True] = True,
+    ) -> dict[UUID, CollaborationPresenceUser]: ...
+
+    @overload
+    def local_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[True],
+        as_dict: Literal[False] = False,
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def local_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[True],
+        as_dict: Literal[True] = True,
+    ) -> dict[str, dict[str, Any]]: ...
 
     def local_users(
         self,
         flow_id: UUID,
         *,
         serialize: bool = False,
-    ) -> list[CollaborationPresenceUser] | list[dict[str, Any]]:
-        """Return unique local users, optionally as JSON-ready payloads."""
+        as_dict: bool = False,
+    ) -> (
+        list[CollaborationPresenceUser]
+        | list[dict[str, Any]]
+        | dict[UUID, CollaborationPresenceUser]
+        | dict[str, dict[str, Any]]
+    ):
+        """Return unique local users, optionally as a keyed map or JSON-ready payloads."""
         room = self._rooms.get(flow_id, {})
         if serialize:
             seen: dict[str, dict[str, Any]] = {}
@@ -126,53 +172,85 @@ class CollaborationManager:
                         "username": conn.username,
                         "profile_image": conn.profile_image,
                     }
-            return list(seen.values())
+            return seen if as_dict else list(seen.values())
 
-        seen: dict[str, CollaborationPresenceUser] = {}
+        seen: dict[UUID, CollaborationPresenceUser] = {}
         for conn in room.values():
-            key = str(conn.user_id)
+            key = conn.user_id
             if key not in seen:
                 seen[key] = CollaborationPresenceUser(
-                    user_id=key,
+                    user_id=conn.user_id,
                     username=conn.username,
                     profile_image=conn.profile_image,
                 )
-        return list(seen.values())
+        return seen if as_dict else list(seen.values())
 
     @overload
-    def all_users(self, flow_id: UUID, *, serialize: Literal[False] = False) -> list[CollaborationPresenceUser]: ...
+    def all_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[False] = False,
+        as_dict: Literal[False] = False,
+    ) -> list[CollaborationPresenceUser]: ...
 
     @overload
-    def all_users(self, flow_id: UUID, *, serialize: Literal[True]) -> list[dict[str, Any]]: ...
+    def all_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[False] = False,
+        as_dict: Literal[True] = True,
+    ) -> dict[UUID, CollaborationPresenceUser]: ...
+
+    @overload
+    def all_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[True],
+        as_dict: Literal[False] = False,
+    ) -> list[dict[str, Any]]: ...
+
+    @overload
+    def all_users(
+        self,
+        flow_id: UUID,
+        *,
+        serialize: Literal[True],
+        as_dict: Literal[True] = True,
+    ) -> dict[str, dict[str, Any]]: ...
 
     def all_users(
         self,
         flow_id: UUID,
         *,
         serialize: bool = False,
-    ) -> list[CollaborationPresenceUser] | list[dict[str, Any]]:
-        """Return unique local and remote users, optionally as JSON-ready payloads."""
+        as_dict: bool = False,
+    ) -> (
+        list[CollaborationPresenceUser]
+        | list[dict[str, Any]]
+        | dict[UUID, CollaborationPresenceUser]
+        | dict[str, dict[str, Any]]
+    ):
+        """Return unique local and remote users, optionally as a keyed map or JSON-ready payloads."""
         now = time.time()
         if serialize:
-            seen: dict[str, dict[str, Any]] = {}
-            for user in self.local_users(flow_id, serialize=True):
-                seen[user["user_id"]] = user
+            seen = self.local_users(flow_id, serialize=True, as_dict=True)
             for roster in self._remote_rosters.get(flow_id, {}).values():
                 if now - roster.published_at > PRESENCE_ROSTER_TTL_SECONDS:
                     continue
                 for user in roster.users:
-                    seen[user.user_id] = user.model_dump(mode="json")
-            return list(seen.values())
+                    seen[str(user.user_id)] = user.model_dump(mode="json")
+            return seen if as_dict else list(seen.values())
 
-        seen: dict[str, CollaborationPresenceUser] = {}
-        for user in self.local_users(flow_id):
-            seen[user.user_id] = user
+        seen = self.local_users(flow_id, as_dict=True)
         for roster in self._remote_rosters.get(flow_id, {}).values():
             if now - roster.published_at > PRESENCE_ROSTER_TTL_SECONDS:
                 continue
             for user in roster.users:
                 seen[user.user_id] = user
-        return list(seen.values())
+        return seen if as_dict else list(seen.values())
 
     def presence_payload(self, flow_id: UUID) -> dict[str, Any]:
         return {
@@ -181,11 +259,68 @@ class CollaborationManager:
             "users": self.local_users(flow_id, serialize=True),
         }
 
-    def presence_message(self, flow_id: UUID) -> dict[str, Any]:
-        return {
-            "type": "presence.updated",
-            "users": self.all_users(flow_id, serialize=True),
-        }
+    def presence_snapshot_message(self, flow_id: UUID) -> dict[str, Any]:
+        return CollaborationPresenceSnapshotMessage(users=self.all_users(flow_id)).model_dump(mode="json")
+
+    def presence_joined_message(
+        self,
+        *,
+        user_id: UUID,
+        username: str,
+        profile_image: str | None,
+    ) -> dict[str, Any]:
+        user = CollaborationPresenceUser(user_id=user_id, username=username, profile_image=profile_image)
+        return CollaborationPresenceJoinedMessage(user=user).model_dump(mode="json")
+
+    def presence_left_message(self, user_id: UUID) -> dict[str, Any]:
+        return CollaborationPresenceLeftMessage(user_id=user_id).model_dump(mode="json")
+
+    def selection_snapshot_message(self, flow_id: UUID) -> dict[str, Any]:
+        selections = [
+            CollaborationUserSelection(user_id=user_id, selected=selected)
+            for user_id, selected in self._selections.get(flow_id, {}).items()
+        ]
+        return CollaborationSelectionSnapshotMessage(selections=selections).model_dump(mode="json")
+
+    def selection_updated_message(
+        self,
+        user_id: UUID,
+        selected: CollaborationSelectionTarget | None,
+    ) -> dict[str, Any]:
+        return CollaborationSelectionUpdatedMessage(
+            user_id=user_id,
+            selected=selected,
+        ).model_dump(mode="json")
+
+    def set_user_selection(
+        self,
+        flow_id: UUID,
+        user_id: UUID,
+        selected: CollaborationSelectionTarget | None,
+    ) -> dict[str, Any]:
+        flow_selections = self._selections[flow_id]
+        if selected is None:
+            flow_selections.pop(user_id, None)
+        else:
+            flow_selections[user_id] = selected
+        return self.selection_updated_message(user_id, selected)
+
+    def clear_user_selection(self, flow_id: UUID, user_id: UUID) -> dict[str, Any] | None:
+        flow_selections = self._selections.get(flow_id)
+        if not flow_selections or user_id not in flow_selections:
+            return None
+        flow_selections.pop(user_id, None)
+        return self.selection_updated_message(user_id, None)
+
+    def presence_visibility_diff(
+        self,
+        before: dict[UUID, CollaborationPresenceUser],
+        after: dict[UUID, CollaborationPresenceUser],
+    ) -> tuple[list[CollaborationPresenceUser], list[UUID]]:
+        joined_ids = after.keys() - before.keys()
+        left_ids = before.keys() - after.keys()
+        joined_users = [after[user_id] for user_id in sorted(joined_ids, key=str)]
+        return joined_users, sorted(left_ids, key=str)
 
     def apply_remote_presence(self, flow_id: UUID, presence: CollaborationPresenceEventPayload) -> None:
         self._remote_rosters[flow_id][presence.worker_id] = _RemotePresenceRoster(
@@ -244,13 +379,26 @@ class CollaborationManager:
             )
             return
 
-        if isinstance(backplane_event, CollaborationPresenceUpdatedBackplaneEvent):
+        if isinstance(backplane_event, CollaborationPresenceRosterBackplaneEvent):
             payload = backplane_event.payload
             if payload.worker_id == WORKER_ID:
                 return
 
+            before = self.all_users(flow_id, as_dict=True)
             self.apply_remote_presence(flow_id, payload)
-            await self.broadcast_json(flow_id, self.presence_message(flow_id))
+            after = self.all_users(flow_id, as_dict=True)
+            joined_users, left_user_ids = self.presence_visibility_diff(before, after)
+            for user in joined_users:
+                await self.broadcast_json(
+                    flow_id,
+                    self.presence_joined_message(
+                        user_id=user.user_id,
+                        username=user.username,
+                        profile_image=user.profile_image,
+                    ),
+                )
+            for user_id in left_user_ids:
+                await self.broadcast_json(flow_id, self.presence_left_message(user_id))
 
     def _prune_fanned_revisions(self) -> None:
         now = time.time()

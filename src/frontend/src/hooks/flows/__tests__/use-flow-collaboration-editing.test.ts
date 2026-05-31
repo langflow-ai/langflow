@@ -37,8 +37,10 @@ jest.mock("../use-flow-collaboration", () => ({
       connectionId: "conn-1",
       currentRevision: 0,
       users: [],
+      selections: [],
       isReady: true,
       submitOperations: mockSubmitOperations,
+      sendSelectionUpdate: jest.fn(),
       disconnect: mockDisconnect,
     };
   }),

@@ -1,4 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  applyPresenceJoined,
+  applyPresenceLeft,
+  applyPresenceSnapshot,
+  applySelectionSnapshot,
+  applySelectionUpdated,
+} from "@/hooks/flows/flow-collaboration-state";
 import { buildFlowCollaborationWebSocketUrl } from "@/hooks/flows/flow-collaboration-url";
 import type {
   CollaborationConnectionStatus,
@@ -7,8 +14,10 @@ import type {
   CollaborationPresenceUser,
   CollaborationReloadDetail,
   CollaborationReloadReason,
+  CollaborationSelectionTarget,
   CollaborationServerMessage,
   CollaborationSessionErrorMessage,
+  CollaborationUserSelection,
 } from "@/types/flow-collaboration";
 import type { FlowOperation } from "@/types/flow-operations";
 
@@ -34,11 +43,13 @@ export type UseFlowCollaborationReturn = {
   connectionId: string | null;
   currentRevision: number | null;
   users: CollaborationPresenceUser[];
+  selections: CollaborationUserSelection[];
   isReady: boolean;
   submitOperations: (
     operations: FlowOperation[],
     options?: { requestId?: string },
   ) => Promise<CollaborationOperationAcceptedMessage>;
+  sendSelectionUpdate: (selected: CollaborationSelectionTarget | null) => void;
   disconnect: () => void;
 };
 
@@ -68,6 +79,9 @@ export function useFlowCollaboration({
   const [connectionId, setConnectionId] = useState<string | null>(null);
   const [currentRevision, setCurrentRevision] = useState<number | null>(null);
   const [users, setUsers] = useState<CollaborationPresenceUser[]>([]);
+  const [selections, setSelections] = useState<CollaborationUserSelection[]>(
+    [],
+  );
 
   const wsRef = useRef<WebSocket | null>(null);
   const mountedRef = useRef(true);
@@ -132,7 +146,6 @@ export function useFlowCollaboration({
         case "session.ready": {
           setConnectionId(message.connection_id);
           setRevision(message.current_revision);
-          setUsers(message.users);
           setStatus("ready");
           return;
         }
@@ -186,8 +199,43 @@ export function useFlowCollaboration({
           handleRemoteBroadcast(message);
           return;
         }
-        case "presence.updated": {
-          setUsers(message.users);
+        case "presence.snapshot": {
+          setUsers((currentUsers) =>
+            applyPresenceSnapshot(currentUsers, message.users),
+          );
+          return;
+        }
+        case "presence.joined": {
+          setUsers((currentUsers) =>
+            applyPresenceJoined(currentUsers, message.user),
+          );
+          return;
+        }
+        case "presence.left": {
+          setUsers((currentUsers) =>
+            applyPresenceLeft(currentUsers, message.user_id),
+          );
+          setSelections((currentSelections) =>
+            currentSelections.filter(
+              (entry) => entry.user_id !== message.user_id,
+            ),
+          );
+          return;
+        }
+        case "selection.snapshot": {
+          setSelections((currentSelections) =>
+            applySelectionSnapshot(currentSelections, message.selections),
+          );
+          return;
+        }
+        case "selection.updated": {
+          setSelections((currentSelections) =>
+            applySelectionUpdated(
+              currentSelections,
+              message.user_id,
+              message.selected,
+            ),
+          );
           return;
         }
         default:
@@ -210,6 +258,7 @@ export function useFlowCollaboration({
     currentRevisionRef.current = null;
     setCurrentRevision(null);
     setUsers([]);
+    setSelections([]);
     setStatus("idle");
   }, [rejectAllPending]);
 
@@ -225,6 +274,7 @@ export function useFlowCollaboration({
     currentRevisionRef.current = null;
     setCurrentRevision(null);
     setUsers([]);
+    setSelections([]);
 
     const ws = new WebSocket(buildFlowCollaborationWebSocketUrl(flowId));
     wsRef.current = ws;
@@ -298,6 +348,22 @@ export function useFlowCollaboration({
     [],
   );
 
+  const sendSelectionUpdate = useCallback(
+    (selected: CollaborationSelectionTarget | null) => {
+      const ws = wsRef.current;
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        return;
+      }
+      ws.send(
+        JSON.stringify({
+          type: "selection.update",
+          selected,
+        }),
+      );
+    },
+    [],
+  );
+
   useEffect(() => {
     mountedRef.current = true;
 
@@ -326,9 +392,11 @@ export function useFlowCollaboration({
     connectionId,
     currentRevision,
     users,
+    selections,
     isReady:
       status === "ready" && connectionId !== null && currentRevision !== null,
     submitOperations,
+    sendSelectionUpdate,
     disconnect,
   };
 }

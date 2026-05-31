@@ -99,6 +99,13 @@ def _receive_message_type(ws, expected_type: str) -> dict:
             return message
 
 
+def _receive_session_bootstrap(ws) -> tuple[dict, dict, dict]:
+    ready = _receive_message_type(ws, "session.ready")
+    presence = _receive_message_type(ws, "presence.snapshot")
+    selection = _receive_message_type(ws, "selection.snapshot")
+    return ready, presence, selection
+
+
 def _close_websocket_cleanly(ws) -> None:
     ws.close()
     ws.portal.call(anyio.sleep, 0.05)
@@ -252,12 +259,16 @@ async def test_collab_session_ready(client: AsyncClient, logged_in_headers):
 
     def _assert(ws) -> None:
         ws.send_json({"type": "session.start"})
-        ready = ws.receive_json()
+        ready, presence, selection = _receive_session_bootstrap(ws)
         assert ready["type"] == "session.ready"
         assert ready["current_revision"] == 0
         assert ready["flow_id"] == str(flow_id)
-        assert len(ready["users"]) == 1
-        assert ready["users"][0]["username"] == "activeuser"
+        assert "users" not in ready
+        assert presence["type"] == "presence.snapshot"
+        assert len(presence["users"]) == 1
+        assert presence["users"][0]["username"] == "activeuser"
+        assert selection["type"] == "selection.snapshot"
+        assert selection["selections"] == []
 
     await _run_websocket_test(app, flow_id, token, _assert)
 
@@ -269,7 +280,7 @@ async def test_operation_submit_accepted_increments_revision(client: AsyncClient
 
     def _submit(ws) -> None:
         ws.send_json({"type": "session.start"})
-        ready = ws.receive_json()
+        ready, _, _ = _receive_session_bootstrap(ws)
         updated = copy.deepcopy(NODE_A)
         updated["position"] = {"x": 50, "y": 50}
         ws.send_json(
@@ -348,7 +359,7 @@ async def test_stale_revision_rejected(client: AsyncClient, logged_in_headers):
 
     def _submit(ws) -> None:
         ws.send_json({"type": "session.start"})
-        ready = ws.receive_json()
+        ready, _, _ = _receive_session_bootstrap(ws)
         ws.send_json(
             {
                 "type": "operation.submit",
@@ -381,7 +392,7 @@ async def test_delete_nodes_removes_incident_edges(client: AsyncClient, logged_i
 
     def _submit(ws) -> None:
         ws.send_json({"type": "session.start"})
-        ws.receive_json()
+        _receive_session_bootstrap(ws)
         ws.send_json(
             {
                 "type": "operation.submit",
@@ -411,7 +422,7 @@ async def test_invalid_edge_rejected_without_revision_change(client: AsyncClient
 
     def _submit(ws) -> None:
         ws.send_json({"type": "session.start"})
-        ready = ws.receive_json()
+        ready, _, _ = _receive_session_bootstrap(ws)
         ws.send_json(
             {
                 "type": "operation.submit",
@@ -444,9 +455,9 @@ async def test_operation_broadcast_to_peer_socket(client: AsyncClient, logged_in
 
     def _peers(ws_a, ws_b) -> None:
         ws_a.send_json({"type": "session.start"})
-        ready_a = ws_a.receive_json()
+        ready_a, _, _ = _receive_session_bootstrap(ws_a)
         ws_b.send_json({"type": "session.start"})
-        ws_b.receive_json()
+        _receive_session_bootstrap(ws_b)
 
         updated = copy.deepcopy(NODE_B)
         updated["position"] = {"x": 200, "y": 0}
@@ -476,11 +487,67 @@ async def test_presence_shows_each_user_once_with_two_tabs(client: AsyncClient, 
 
     def _peers(ws_a, ws_b) -> None:
         ws_a.send_json({"type": "session.start"})
-        ready_a = ws_a.receive_json()
+        _, presence_a, _ = _receive_session_bootstrap(ws_a)
+        assert len(presence_a["users"]) == 1
+        assert presence_a["users"][0]["username"] == "activeuser"
+
         ws_b.send_json({"type": "session.start"})
-        ready_b = ws_b.receive_json()
-        assert len(ready_a["users"]) == 1
-        assert ready_a["users"][0]["username"] == "activeuser"
-        assert len(ready_b["users"]) == 1
+        _, presence_b, _ = _receive_session_bootstrap(ws_b)
+        assert len(presence_b["users"]) == 1
 
     await _run_dual_websocket_test(app, flow_id, token, _peers)
+
+
+async def test_selection_update_broadcasts_to_peer(client: AsyncClient, logged_in_headers):
+    token = _access_token(logged_in_headers)
+    flow_id = await _create_collab_flow(client, logged_in_headers)
+    app = client._transport.app
+
+    def _peers(ws_a, ws_b) -> None:
+        ws_a.send_json({"type": "session.start"})
+        _receive_session_bootstrap(ws_a)
+        ws_b.send_json({"type": "session.start"})
+        _receive_session_bootstrap(ws_b)
+
+        ws_a.send_json({"type": "selection.update", "selected": {"kind": "node", "id": "a"}})
+        updated = _receive_message_type(ws_b, "selection.updated")
+        assert updated["type"] == "selection.updated"
+        assert updated["selected"] == {"kind": "node", "id": "a"}
+        assert updated["user_id"] is not None
+
+    await _run_dual_websocket_test(app, flow_id, token, _peers)
+
+
+async def test_selection_update_supports_null(client: AsyncClient, logged_in_headers):
+    token = _access_token(logged_in_headers)
+    flow_id = await _create_collab_flow(client, logged_in_headers)
+    app = client._transport.app
+
+    def _peers(ws_a, ws_b) -> None:
+        ws_a.send_json({"type": "session.start"})
+        _receive_session_bootstrap(ws_a)
+        ws_b.send_json({"type": "session.start"})
+        _receive_session_bootstrap(ws_b)
+
+        ws_a.send_json({"type": "selection.update", "selected": {"kind": "edge", "id": "e-ab"}})
+        _receive_message_type(ws_b, "selection.updated")
+        ws_a.send_json({"type": "selection.update", "selected": None})
+        cleared = _receive_message_type(ws_b, "selection.updated")
+        assert cleared["selected"] is None
+
+    await _run_dual_websocket_test(app, flow_id, token, _peers)
+
+
+async def test_selection_update_rejects_malformed_payload(client: AsyncClient, logged_in_headers):
+    token = _access_token(logged_in_headers)
+    flow_id = await _create_collab_flow(client, logged_in_headers)
+    app = client._transport.app
+
+    def _assert(ws) -> None:
+        ws.send_json({"type": "session.start"})
+        _receive_session_bootstrap(ws)
+        ws.send_json({"type": "selection.update", "selected": {"kind": "viewport", "id": "x"}})
+        error = ws.receive_json()
+        assert error["type"] == "message.error"
+
+    await _run_websocket_test(app, flow_id, token, _assert)
