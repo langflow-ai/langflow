@@ -7,7 +7,11 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any
 
-from lfx.services.flow_operations.exceptions import FlowOperationValidationError
+from lfx.services.flow_operations.exceptions import (
+    FlowDataValidationError,
+    FlowOperationError,
+    FlowOperationValidationError,
+)
 from lfx.services.flow_operations.ops import (
     GRAPH_COLLECTION_KEYS,
     AddEdgesOp,
@@ -43,10 +47,10 @@ class GraphState:
     def __post_init__(self) -> None:
         if not isinstance(self.flow_data.get("nodes"), list):
             msg = "flow.data.nodes must be a list"
-            raise FlowOperationValidationError(msg)
+            raise FlowDataValidationError(msg)
         if not isinstance(self.flow_data.get("edges"), list):
             msg = "flow.data.edges must be a list"
-            raise FlowOperationValidationError(msg)
+            raise FlowDataValidationError(msg)
 
     @property
     def nodes(self) -> list[Any]:
@@ -62,17 +66,21 @@ def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
     copied = copy.deepcopy(base_flow)
     state = GraphState(flow_data=copied, edge_ids_by_node_id=defaultdict(set))
     for node in state.nodes:
-        node_id = _require_node_id(node, context="flow.data.nodes")
+        node_id = _require_node_id(node, context="flow.data.nodes", error_cls=FlowDataValidationError)
         if node_id in state.nodes_by_id:
             msg = f"flow.data.nodes: duplicate node id: {node_id!r}"
-            raise FlowOperationValidationError(msg)
+            raise FlowDataValidationError(msg)
         state.nodes_by_id[node_id] = node
 
     for edge in state.edges:
-        edge_id, source, target = _require_edge_endpoints(edge, context="flow.data.edges")
+        edge_id, source, target = _require_edge_endpoints(
+            edge,
+            context="flow.data.edges",
+            error_cls=FlowDataValidationError,
+        )
         if edge_id in state.edges_by_id:
             msg = f"flow.data.edges: duplicate edge id: {edge_id!r}"
-            raise FlowOperationValidationError(msg)
+            raise FlowDataValidationError(msg)
         state.edges_by_id[edge_id] = edge
         state.edge_ids_by_node_id[source].add(edge_id)
         state.edge_ids_by_node_id[target].add(edge_id)
@@ -292,31 +300,41 @@ def _insert_edge(state: GraphState, edge: dict[str, Any]) -> None:
     state.edge_ids_by_node_id[target].add(edge_id)
 
 
-def _require_node_id(node: Any, *, context: str) -> str:
+def _require_node_id(
+    node: Any,
+    *,
+    context: str,
+    error_cls: type[FlowOperationError] = FlowOperationValidationError,
+) -> str:
     if not isinstance(node, dict):
         msg = f"{context}: node must be a dict"
-        raise FlowOperationValidationError(msg)
+        raise error_cls(msg)
     node_id = node.get("id")
     if not isinstance(node_id, str) or not node_id:
         msg = f"{context}: node must have a non-empty string id"
-        raise FlowOperationValidationError(msg)
+        raise error_cls(msg)
     return node_id
 
 
-def _require_edge_endpoints(edge: Any, *, context: str) -> tuple[str, str, str]:
+def _require_edge_endpoints(
+    edge: Any,
+    *,
+    context: str,
+    error_cls: type[FlowOperationError] = FlowOperationValidationError,
+) -> tuple[str, str, str]:
     if not isinstance(edge, dict):
         msg = f"{context}: edge must be a dict"
-        raise FlowOperationValidationError(msg)
+        raise error_cls(msg)
     edge_id = edge.get("id")
     source = edge.get("source")
     target = edge.get("target")
     if not isinstance(edge_id, str) or not edge_id:
         msg = f"{context}: edge must have a non-empty string id"
-        raise FlowOperationValidationError(msg)
+        raise error_cls(msg)
     if not isinstance(source, str) or not source:
         msg = f"{context}: edge must have a non-empty string source"
-        raise FlowOperationValidationError(msg)
+        raise error_cls(msg)
     if not isinstance(target, str) or not target:
         msg = f"{context}: edge must have a non-empty string target"
-        raise FlowOperationValidationError(msg)
+        raise error_cls(msg)
     return edge_id, source, target

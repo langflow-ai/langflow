@@ -7,7 +7,11 @@ from lfx.services.flow_operations.apply import (
     build_graph_state,
     finalize_graph,
 )
-from lfx.services.flow_operations.exceptions import FlowOperationError, FlowOperationValidationError
+from lfx.services.flow_operations.exceptions import (
+    FlowDataValidationError,
+    FlowOperationError,
+    FlowOperationValidationError,
+)
 from lfx.services.flow_operations.ops import (
     AddEdgesOp,
     AddNodesOp,
@@ -31,6 +35,7 @@ __all__ = [
     "BaseFlowOperationService",
     "DeleteEdgesOp",
     "DeleteNodesOp",
+    "FlowDataValidationError",
     "FlowOperation",
     "FlowOperationActorDelegate",
     "FlowOperationError",

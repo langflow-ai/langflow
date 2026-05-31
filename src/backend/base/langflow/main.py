@@ -541,9 +541,15 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 1: Cancelling Background Tasks
                 with shutdown_progress.step(1):
+                    from langflow.api.v1.collaboration_manager import stop_collaboration_poll_loop
                     from langflow.api.v1.mcp import stop_streamable_http_manager
                     from langflow.api.v1.mcp_projects import stop_project_task_group
 
+                    # Stop collaboration event polling before tearing down services it depends on.
+                    try:
+                        await stop_collaboration_poll_loop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop collaboration event poll loop: {e}")
                     # Shutdown MCP project servers
                     try:
                         await stop_project_task_group()

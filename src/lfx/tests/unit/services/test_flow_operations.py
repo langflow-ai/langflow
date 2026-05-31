@@ -9,6 +9,7 @@ from lfx.services.flow_operations import (
     AddNodesOp,
     DeleteEdgesOp,
     DeleteNodesOp,
+    FlowDataValidationError,
     FlowOperationsApplyResult,
     FlowOperationValidationError,
     PythonFlowOperationService,
@@ -22,7 +23,6 @@ from lfx.services.flow_operations import (
     apply_flow_operations as _apply_flow_operations,
 )
 from lfx.services.flow_operations.factory import FlowOperationServiceFactory
-from pydantic import ValidationError
 
 NODE_A = {"id": "a", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
 NODE_B = {"id": "b", "type": "generic", "position": {"x": 100, "y": 0}, "data": {}}
@@ -59,7 +59,7 @@ class TestNormalizeRequestedOps:
         assert isinstance(ops[0], DeleteNodesOp)
 
     def test_parse_flow_operations_rejects_unknown_operation_type(self):
-        with pytest.raises(ValidationError):
+        with pytest.raises(FlowOperationValidationError, match="Unsupported operation type"):
             parse_flow_operations([{"type": "replace_graph", "data": {}}])
 
     def test_normalize_requested_ops_preserves_parsed_models(self):
@@ -226,12 +226,12 @@ class TestApplyFlowOperations:
     def test_rejects_duplicate_ids_in_base_flow_data(self):
         flow_data = _base_flow_data()
         flow_data["nodes"].append(copy.deepcopy(NODE_A))
-        with pytest.raises(FlowOperationValidationError, match=r"flow\.data\.nodes: duplicate node id"):
+        with pytest.raises(FlowDataValidationError, match=r"flow\.data\.nodes: duplicate node id"):
             apply_flow_operations(flow_data, [])
 
         flow_data = _base_flow_data()
         flow_data["edges"].append(copy.deepcopy(EDGE_AB))
-        with pytest.raises(FlowOperationValidationError, match=r"flow\.data\.edges: duplicate edge id"):
+        with pytest.raises(FlowDataValidationError, match=r"flow\.data\.edges: duplicate edge id"):
             apply_flow_operations(flow_data, [])
 
     def test_update_metadata_shallow_updates_and_deletes(self):

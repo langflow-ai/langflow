@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Annotated, Any, Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter
+from pydantic import BaseModel, ConfigDict, Field, ValidationError
+
+from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 
 
 class FlowOperationActorDelegate(StrEnum):
@@ -58,13 +60,7 @@ class UpdateMetadataOp(BaseModel):
     delete_keys: list[str] = Field(default_factory=list)
 
 
-FlowOperation = Annotated[
-    AddNodesOp | UpdateNodesOp | DeleteNodesOp | AddEdgesOp | DeleteEdgesOp | UpdateMetadataOp,
-    Field(discriminator="type"),
-]
-
-_FLOW_OPERATION_ADAPTER = TypeAdapter(FlowOperation)
-_FLOW_OPERATIONS_LIST_ADAPTER = TypeAdapter(list[FlowOperation])
+FlowOperation = AddNodesOp | UpdateNodesOp | DeleteNodesOp | AddEdgesOp | DeleteEdgesOp | UpdateMetadataOp
 
 GRAPH_COLLECTION_KEYS = frozenset({"nodes", "edges"})
 
@@ -76,12 +72,37 @@ def normalize_requested_ops(operations: list[FlowOperation]) -> list[FlowOperati
 
 def parse_flow_operations(operations: list[dict[str, Any]]) -> list[FlowOperation]:
     """Parse raw operation payloads at API/transport boundaries."""
-    return _FLOW_OPERATIONS_LIST_ADAPTER.validate_python(operations)
+    if not isinstance(operations, list):
+        msg = "operations must be a list"
+        raise FlowOperationValidationError(msg)
+    return [parse_flow_operation(operation) for operation in operations]
 
 
 def parse_flow_operation(operation: dict[str, Any]) -> FlowOperation:
     """Parse a single raw operation payload at API/transport boundaries."""
-    return _FLOW_OPERATION_ADAPTER.validate_python(operation)
+    if not isinstance(operation, dict):
+        msg = "operation must be a dict"
+        raise FlowOperationValidationError(msg)
+
+    operation_type = operation.get("type")
+    try:
+        if operation_type == "add_nodes":
+            return AddNodesOp.model_validate(operation)
+        if operation_type == "update_nodes":
+            return UpdateNodesOp.model_validate(operation)
+        if operation_type == "delete_nodes":
+            return DeleteNodesOp.model_validate(operation)
+        if operation_type == "add_edges":
+            return AddEdgesOp.model_validate(operation)
+        if operation_type == "delete_edges":
+            return DeleteEdgesOp.model_validate(operation)
+        if operation_type == "update_metadata":
+            return UpdateMetadataOp.model_validate(operation)
+    except ValidationError as exc:
+        raise FlowOperationValidationError(str(exc)) from exc
+
+    msg = f"Unsupported operation type: {operation_type!r}"
+    raise FlowOperationValidationError(msg)
 
 
 def coalesce_delete_ids(ids: list[str]) -> list[str]:

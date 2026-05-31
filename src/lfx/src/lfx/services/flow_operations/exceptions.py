@@ -7,3 +7,7 @@ class FlowOperationError(Exception):
 
 class FlowOperationValidationError(FlowOperationError):
     """Raised when an operation batch is malformed or violates graph invariants."""
+
+
+class FlowDataValidationError(FlowOperationError):
+    """Raised when persisted flow data is malformed or violates graph invariants."""
