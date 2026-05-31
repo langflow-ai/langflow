@@ -148,6 +148,16 @@ def test_func():
         # With structlog, we expect logger.debug to be called with exc_info=True
         mock_logger.debug.assert_called_with("Error parsing code", exc_info=True)
 
+    def test_malicious_default_argument_not_executed(self, tmp_path):
+        """Validation must never execute default argument expressions."""
+        sentinel = tmp_path / "rce_proof.txt"
+        code = f"""
+def poc(x=open({str(sentinel)!r}, 'w').write('pwned')):
+    return x
+"""
+        validate_code(code)
+        assert not sentinel.exists(), "Default argument expression was executed during validation"
+
 
 class TestCreateLangflowExecutionContext:
     """Test cases for _create_langflow_execution_context function."""
