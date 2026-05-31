@@ -21,11 +21,20 @@ class FakeResponse:
 
 
 class FakeClient:
-    def __init__(self, *, captured: dict, response: FakeResponse, timeout: int, headers: dict):
+    def __init__(
+        self,
+        *,
+        captured: dict,
+        response: FakeResponse,
+        timeout: int,
+        headers: dict,
+        post_error: Exception | None = None,
+    ):
         captured["timeout"] = timeout
         captured["headers"] = headers
         self.captured = captured
         self.response = response
+        self.post_error = post_error
 
     def __enter__(self):
         return self
@@ -34,6 +43,8 @@ class FakeClient:
         return False
 
     def post(self, url: str, json: dict):
+        if self.post_error is not None:
+            raise self.post_error
         self.captured["url"] = url
         self.captured["json"] = json
         return self.response
@@ -201,6 +212,30 @@ def test_component_returns_error_when_http_request_fails(monkeypatch):
     result = component.verify_formula_readback()
 
     assert result.data == {"error": "Bilig WorkPaper formula readback failed: connection refused"}
+    assert component.status == result.data["error"]
+
+
+def test_component_returns_error_when_request_times_out(monkeypatch):
+    def fake_client(*, timeout, headers):
+        return FakeClient(
+            captured={},
+            timeout=timeout,
+            headers=headers,
+            response=FakeResponse({}),
+            post_error=TimeoutError("request timed out"),
+        )
+
+    monkeypatch.setattr("lfx.components.bilig.workpaper_formula_readback.httpx.Client", fake_client)
+    component = BiligWorkPaperFormulaReadbackComponent()
+    component.base_url = "https://bilig.example"
+    component.sheet_name = "Inputs"
+    component.address = "B3"
+    component.value = 0.4
+    component.timeout = 7
+
+    result = component.verify_formula_readback()
+
+    assert result.data == {"error": "Bilig WorkPaper formula readback failed: request timed out"}
     assert component.status == result.data["error"]
 
 
