@@ -8,6 +8,12 @@ import contextlib
 from unittest.mock import MagicMock, patch
 
 
+def _mock_model(model_id: str):
+    model = MagicMock()
+    model.id = model_id
+    return model
+
+
 class TestNVIDIAModelComponentLazyLoading:
     """Ensure NVIDIA model list is fetched lazily, not at import time."""
 
@@ -111,3 +117,85 @@ class TestNVIDIAModelComponentLazyLoading:
 
         assert build_config["model_name"]["options"] == []
         assert build_config["model_name"]["value"] is None
+
+
+class TestNVIDIAComponentModelSelection:
+    def test_rerank_update_preserves_selected_model(self):
+        from lfx.components.nvidia.nvidia_rerank import NvidiaRerankComponent
+        from lfx.schema.dotdict import dotdict
+
+        component = NvidiaRerankComponent()
+        build_config = dotdict(
+            {
+                "model": {
+                    "options": ["nv-rerank-qa-mistral-4b:1"],
+                    "value": "nv-rerank-qa-mistral-4b:1",
+                }
+            }
+        )
+        compressor = MagicMock()
+        compressor.available_models = [
+            _mock_model("nvidia/llama-3.2-nv-rerankqa-1b-v1"),
+            _mock_model("nv-rerank-qa-mistral-4b:1"),
+        ]
+
+        with patch.object(component, "build_compressor", return_value=compressor):
+            result = component.update_build_config(
+                build_config,
+                "https://integrate.api.nvidia.com/v1",
+                field_name="base_url",
+            )
+
+        assert result["model"]["options"] == [
+            "nvidia/llama-3.2-nv-rerankqa-1b-v1",
+            "nv-rerank-qa-mistral-4b:1",
+        ]
+        assert result["model"]["value"] == "nv-rerank-qa-mistral-4b:1"
+
+    def test_embedding_update_preserves_selected_model(self):
+        from lfx.components.nvidia.nvidia_embedding import NVIDIAEmbeddingsComponent
+        from lfx.schema.dotdict import dotdict
+
+        component = NVIDIAEmbeddingsComponent()
+        build_config = dotdict(
+            {
+                "model": {
+                    "options": ["snowflake/arctic-embed-I"],
+                    "value": "snowflake/arctic-embed-I",
+                }
+            }
+        )
+        embeddings = MagicMock()
+        embeddings.available_models = [
+            _mock_model("nvidia/nv-embed-v1"),
+            _mock_model("snowflake/arctic-embed-I"),
+        ]
+
+        with patch.object(component, "build_embeddings", return_value=embeddings):
+            result = component.update_build_config(
+                build_config,
+                "https://integrate.api.nvidia.com/v1",
+                field_name="base_url",
+            )
+
+        assert result["model"]["options"] == ["nvidia/nv-embed-v1", "snowflake/arctic-embed-I"]
+        assert result["model"]["value"] == "snowflake/arctic-embed-I"
+
+    def test_rerank_update_falls_back_when_selected_model_is_unavailable(self):
+        from lfx.components.nvidia.nvidia_rerank import NvidiaRerankComponent
+        from lfx.schema.dotdict import dotdict
+
+        component = NvidiaRerankComponent()
+        build_config = dotdict({"model": {"options": ["removed-model"], "value": "removed-model"}})
+        compressor = MagicMock()
+        compressor.available_models = [_mock_model("model-a"), _mock_model("model-b")]
+
+        with patch.object(component, "build_compressor", return_value=compressor):
+            result = component.update_build_config(
+                build_config,
+                "https://integrate.api.nvidia.com/v1",
+                field_name="base_url",
+            )
+
+        assert result["model"]["options"] == ["model-a", "model-b"]
+        assert result["model"]["value"] == "model-a"

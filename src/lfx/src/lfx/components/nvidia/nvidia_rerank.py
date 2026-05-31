@@ -47,8 +47,12 @@ class NvidiaRerankComponent(LCCompressorComponent):
             try:
                 build_model = self.build_compressor()
                 ids = [model.id for model in build_model.available_models]
+                current_model = build_config["model"].get("value")
                 build_config["model"]["options"] = ids
-                build_config["model"]["value"] = ids[0]
+                if current_model in ids:
+                    build_config["model"]["value"] = current_model
+                else:
+                    build_config["model"]["value"] = ids[0] if ids else None
             except Exception as e:
                 msg = f"Error getting model names: {e}"
                 raise ValueError(msg) from e
