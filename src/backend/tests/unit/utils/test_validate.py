@@ -155,8 +155,49 @@ def test_func():
 def poc(x=open({str(sentinel)!r}, 'w').write('pwned')):
     return x
 """
-        validate_code(code)
+        result = validate_code(code)
+        assert result["imports"]["errors"] == []
+        assert result["function"]["errors"] == []
         assert not sentinel.exists(), "Default argument expression was executed during validation"
+
+    def test_malicious_module_level_expression_not_executed(self, tmp_path):
+        """Validation must never execute module-level expressions."""
+        sentinel = tmp_path / "module_rce.txt"
+        code = f"""
+_ = open({str(sentinel)!r}, 'w').write('pwned')
+
+def safe_function():
+    return 42
+"""
+        result = validate_code(code)
+        assert result["imports"]["errors"] == []
+        assert not sentinel.exists(), "Module-level expression was executed during validation"
+
+    def test_malicious_class_attribute_not_executed(self, tmp_path):
+        """Validation must never execute class-level attribute expressions."""
+        sentinel = tmp_path / "class_rce.txt"
+        code = f"""
+class Example:
+    pwned = open({str(sentinel)!r}, 'w').write('pwned')
+"""
+        result = validate_code(code)
+        assert result["imports"]["errors"] == []
+        assert not sentinel.exists(), "Class attribute expression was executed during validation"
+
+    def test_malicious_decorator_not_executed(self, tmp_path):
+        """Validation must never execute decorator expressions."""
+        sentinel = tmp_path / "decorator_rce.txt"
+        code = f"""
+def side_effect(f):
+    return f
+
+@side_effect(open({str(sentinel)!r}, 'w').write('pwned'))
+def poc():
+    pass
+"""
+        result = validate_code(code)
+        assert result["imports"]["errors"] == []
+        assert not sentinel.exists(), "Decorator expression was executed during validation"
 
 
 class TestCreateLangflowExecutionContext:
