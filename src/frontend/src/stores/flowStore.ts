@@ -20,7 +20,10 @@ import {
   trackFlowBuild,
 } from "@/customization/utils/analytics";
 import type { FlowMutationOptions } from "@/hooks/flows/flow-operation-adapter";
-import { buildGraphDiffOperations } from "@/hooks/flows/flow-operation-diff";
+import {
+  buildGraphDiffOperations,
+  buildInverseFlowOperations,
+} from "@/hooks/flows/flow-operation-diff";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -142,6 +145,8 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   collaborationOperationMode: false,
   isApplyingRemoteOperations: false,
   onCollaborationOperations: undefined,
+  undoCollaborationOperations: undefined,
+  redoCollaborationOperations: undefined,
   flushCollaborationSave: undefined,
   componentsToUpdate: [],
   setComponentsToUpdate: (change) => {
@@ -418,6 +423,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setNodes: (change, options?: FlowMutationOptions) => {
     const prevNodes = get().nodes;
     const prevEdges = get().edges;
+    const prevFlowData = get().currentFlow?.data as
+      | Record<string, unknown>
+      | undefined;
     const newChange =
       typeof change === "function" ? change(get().nodes) : change;
     const { edges: newEdges } = cleanEdges(newChange, get().edges);
@@ -444,7 +452,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newEdges,
       );
       if (operations.length > 0) {
-        get().onCollaborationOperations?.(operations);
+        get().onCollaborationOperations?.(operations, {
+          historyEntry: {
+            forwardOps: cloneDeep(operations),
+            inverseOps: buildInverseFlowOperations(
+              prevNodes,
+              prevEdges,
+              prevFlowData,
+              operations,
+            ),
+          },
+        });
       }
     }
     if (get().autoSaveFlow && !get().collaborationOperationMode) {
@@ -454,6 +472,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   setEdges: (change, options?: FlowMutationOptions) => {
     const prevNodes = get().nodes;
     const prevEdges = get().edges;
+    const prevFlowData = get().currentFlow?.data as
+      | Record<string, unknown>
+      | undefined;
     const newChange =
       typeof change === "function" ? change(get().edges) : change;
     set({
@@ -473,7 +494,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newChange,
       );
       if (operations.length > 0) {
-        get().onCollaborationOperations?.(operations);
+        get().onCollaborationOperations?.(operations, {
+          historyEntry: {
+            forwardOps: cloneDeep(operations),
+            inverseOps: buildInverseFlowOperations(
+              prevNodes,
+              prevEdges,
+              prevFlowData,
+              operations,
+            ),
+          },
+        });
       }
     }
     if (get().autoSaveFlow && !get().collaborationOperationMode) {
@@ -493,6 +524,9 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
 
     const prevNodes = get().nodes;
     const prevEdges = get().edges;
+    const prevFlowData = get().currentFlow?.data as
+      | Record<string, unknown>
+      | undefined;
 
     const newChange =
       typeof change === "function"
@@ -537,7 +571,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         newEdges,
       );
       if (operations.length > 0) {
-        get().onCollaborationOperations?.(operations);
+        get().onCollaborationOperations?.(operations, {
+          historyEntry: {
+            forwardOps: cloneDeep(operations),
+            inverseOps: buildInverseFlowOperations(
+              prevNodes,
+              prevEdges,
+              prevFlowData,
+              operations,
+            ),
+          },
+        });
       }
     }
     if (get().autoSaveFlow && !get().collaborationOperationMode) {
@@ -601,6 +645,11 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
   },
   paste: (selection, position) => {
     if (get().currentFlow?.locked) return;
+    const prevNodes = get().nodes;
+    const prevEdges = get().edges;
+    const prevFlowData = get().currentFlow?.data as
+      | Record<string, unknown>
+      | undefined;
     // Collect IDs of nodes in the selection
     const selectedNodeIds = new Set(selection.nodes.map((node) => node.id));
     // Find existing edges in the flow that connect nodes within the selection
@@ -761,13 +810,26 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       if (addedEdges.length > 0) {
         operations.push({ type: "add_edges", edges: addedEdges });
       }
-      get().onCollaborationOperations?.(operations);
+      get().onCollaborationOperations?.(operations, {
+        historyEntry: {
+          forwardOps: cloneDeep(operations),
+          inverseOps: buildInverseFlowOperations(
+            prevNodes,
+            prevEdges,
+            prevFlowData,
+            operations,
+          ),
+        },
+      });
     }
   },
   setLastCopiedSelection: (newSelection, isCrop = false) => {
     if (isCrop) {
       const prevNodes = get().nodes;
       const prevEdges = get().edges;
+      const prevFlowData = get().currentFlow?.data as
+        | Record<string, unknown>
+        | undefined;
       const nodesIdsSelected = newSelection!.nodes.map((node) => node.id);
       const edgesIdsSelected = newSelection!.edges.map((edge) => edge.id);
 
@@ -795,7 +857,17 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
           newEdges,
         );
         if (operations.length > 0) {
-          get().onCollaborationOperations?.(operations);
+          get().onCollaborationOperations?.(operations, {
+            historyEntry: {
+              forwardOps: cloneDeep(operations),
+              inverseOps: buildInverseFlowOperations(
+                prevNodes,
+                prevEdges,
+                prevFlowData,
+                operations,
+              ),
+            },
+          });
         }
       }
     }
@@ -1385,6 +1457,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       positionDictionary: {},
       componentsToUpdate: [],
       rightClickedNodeId: null,
+      collaborationOperationMode: false,
+      isApplyingRemoteOperations: false,
+      onCollaborationOperations: undefined,
+      undoCollaborationOperations: undefined,
+      redoCollaborationOperations: undefined,
+      flushCollaborationSave: undefined,
     });
   },
   dismissedNodes: [],

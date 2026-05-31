@@ -1,6 +1,9 @@
 import { renderHook } from "@testing-library/react";
 import type { FlowType } from "@/types/flow";
-import type { FlowOperation } from "@/types/flow-operations";
+import type {
+  FlowOperation,
+  FlowOperationEmitOptions,
+} from "@/types/flow-operations";
 import useSaveFlow from "../use-save-flow";
 
 const mockSetFlows = jest.fn();
@@ -13,7 +16,10 @@ const mockMutate = jest.fn();
 type MockFlowStoreState = {
   collaborationOperationMode: boolean;
   flushCollaborationSave?: () => Promise<void>;
-  onCollaborationOperations?: (operations: FlowOperation[]) => void;
+  onCollaborationOperations?: (
+    operations: FlowOperation[],
+    options?: FlowOperationEmitOptions,
+  ) => void;
   currentFlow: FlowType | null;
   nodes: FlowType["data"]["nodes"];
   edges: FlowType["data"]["edges"];
@@ -185,13 +191,33 @@ describe("useSaveFlow", () => {
 
     await expect(result.current()).resolves.toBeUndefined();
 
-    expect(onCollaborationOperations).toHaveBeenCalledWith([
+    expect(onCollaborationOperations).toHaveBeenCalledWith(
+      [
+        {
+          type: "update_metadata",
+          fields: { theme: "new" },
+          delete_keys: ["stale_key"],
+        },
+      ],
       {
-        type: "update_metadata",
-        fields: { theme: "new" },
-        delete_keys: ["stale_key"],
+        historyEntry: {
+          forwardOps: [
+            {
+              type: "update_metadata",
+              fields: { theme: "new" },
+              delete_keys: ["stale_key"],
+            },
+          ],
+          inverseOps: [
+            {
+              type: "update_metadata",
+              fields: { theme: "old", stale_key: true },
+              delete_keys: [],
+            },
+          ],
+        },
       },
-    ]);
+    );
     expect(flushCollaborationSave).toHaveBeenCalledTimes(1);
     expect(mockMutate).not.toHaveBeenCalled();
   });

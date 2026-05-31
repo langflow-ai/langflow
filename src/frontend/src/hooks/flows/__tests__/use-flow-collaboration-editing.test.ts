@@ -1,32 +1,47 @@
 import { act, renderHook, waitFor } from "@testing-library/react";
 
 import useFlowStore from "@/stores/flowStore";
+import type { AllNodeType } from "@/types/flow";
+import type { FlowOperation } from "@/types/flow-operations";
 
 import {
   readCollaborationOperationBetaEnabled,
   writeCollaborationOperationBetaEnabled,
 } from "../collaboration-operation-beta";
+import type { UseFlowCollaborationOptions } from "../use-flow-collaboration";
 import { useFlowCollaborationEditing } from "../use-flow-collaboration-editing";
 
-const mockSubmitOperations = jest.fn().mockResolvedValue({
-  type: "operation.accepted",
-  revision: 1,
-});
+const mockSubmitOperations = jest.fn((operations: FlowOperation[]) =>
+  Promise.resolve({
+    type: "operation.accepted",
+    request_id: "req-1",
+    flow_id: "flow-1",
+    revision: 1,
+    actor_user_id: "user-1",
+    actor_delegate: "self",
+    forward_ops: operations,
+    created_at: "2026-05-30T00:00:00Z",
+  }),
+);
 const mockDisconnect = jest.fn();
 const mockGetFlow = jest.fn();
 const mockApplyFlowToCanvas = jest.fn();
 const mockClearUndoRedoHistory = jest.fn();
+let mockCollaborationOptions: UseFlowCollaborationOptions | null = null;
 
 jest.mock("../use-flow-collaboration", () => ({
-  useFlowCollaboration: jest.fn(() => ({
-    status: "ready",
-    connectionId: "conn-1",
-    currentRevision: 0,
-    users: [],
-    isReady: true,
-    submitOperations: mockSubmitOperations,
-    disconnect: mockDisconnect,
-  })),
+  useFlowCollaboration: jest.fn((options: UseFlowCollaborationOptions) => {
+    mockCollaborationOptions = options;
+    return {
+      status: "ready",
+      connectionId: "conn-1",
+      currentRevision: 0,
+      users: [],
+      isReady: true,
+      submitOperations: mockSubmitOperations,
+      disconnect: mockDisconnect,
+    };
+  }),
 }));
 
 jest.mock("@/controllers/API/queries/flows/use-get-flow", () => ({
@@ -55,10 +70,19 @@ jest.mock("@/stores/flowsManagerStore", () => {
 describe("useFlowCollaborationEditing", () => {
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSubmitOperations.mockResolvedValue({
-      type: "operation.accepted",
-      revision: 1,
-    });
+    mockCollaborationOptions = null;
+    mockSubmitOperations.mockImplementation((operations: FlowOperation[]) =>
+      Promise.resolve({
+        type: "operation.accepted",
+        request_id: "req-1",
+        flow_id: "flow-1",
+        revision: 1,
+        actor_user_id: "user-1",
+        actor_delegate: "self",
+        forward_ops: operations,
+        created_at: "2026-05-30T00:00:00Z",
+      }),
+    );
     writeCollaborationOperationBetaEnabled(false);
     useFlowStore.setState({
       collaborationOperationMode: false,
@@ -164,5 +188,113 @@ describe("useFlowCollaborationEditing", () => {
     await waitFor(() => {
       expect(mockGetFlow).toHaveBeenCalledWith({ id: "flow-1" });
     });
+  });
+
+  it("submits inverse operations when collaboration undo is invoked", async () => {
+    writeCollaborationOperationBetaEnabled(true);
+    const originalNode = {
+      id: "node-1",
+      position: { x: 0, y: 0 },
+      data: { id: "node-1" },
+    } as AllNodeType;
+    const movedNode = {
+      ...originalNode,
+      position: { x: 25, y: 25 },
+    } as AllNodeType;
+
+    renderHook(() =>
+      useFlowCollaborationEditing({
+        flowId: "flow-1",
+      }),
+    );
+
+    await act(async () => {});
+    await act(async () => {
+      useFlowStore
+        .getState()
+        .onCollaborationOperations?.(
+          [{ type: "update_nodes", nodes: [movedNode] }],
+          {
+            historyEntry: {
+              forwardOps: [{ type: "update_nodes", nodes: [movedNode] }],
+              inverseOps: [{ type: "update_nodes", nodes: [originalNode] }],
+            },
+          },
+        );
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledWith([
+        { type: "update_nodes", nodes: [movedNode] },
+      ]);
+    });
+    mockSubmitOperations.mockClear();
+
+    await act(async () => {
+      useFlowStore.getState().undoCollaborationOperations?.();
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledWith([
+        { type: "update_nodes", nodes: [originalNode] },
+      ]);
+    });
+  });
+
+  it("does not undo a local history entry invalidated by remote operations", async () => {
+    writeCollaborationOperationBetaEnabled(true);
+    const nodeA = {
+      id: "a",
+      position: { x: 0, y: 0 },
+      data: { id: "a" },
+    } as AllNodeType;
+    useFlowStore.setState({
+      nodes: [nodeA],
+      edges: [],
+      currentFlow: {
+        id: "flow-1",
+        name: "Flow",
+        description: "",
+        data: { nodes: [nodeA], edges: [] },
+      },
+    });
+
+    renderHook(() =>
+      useFlowCollaborationEditing({
+        flowId: "flow-1",
+      }),
+    );
+
+    await act(async () => {});
+    await act(async () => {
+      useFlowStore
+        .getState()
+        .onCollaborationOperations?.([{ type: "add_nodes", nodes: [nodeA] }], {
+          historyEntry: {
+            forwardOps: [{ type: "add_nodes", nodes: [nodeA] }],
+            inverseOps: [{ type: "delete_nodes", ids: ["a"] }],
+          },
+        });
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledTimes(1);
+    });
+    mockSubmitOperations.mockClear();
+
+    await act(async () => {
+      mockCollaborationOptions?.onRemoteOperation?.({
+        type: "operation.broadcast",
+        flow_id: "flow-1",
+        revision: 2,
+        actor_user_id: "user-2",
+        actor_delegate: "self",
+        forward_ops: [{ type: "delete_nodes", ids: ["a"] }],
+        created_at: "2026-05-30T00:00:00Z",
+      });
+      useFlowStore.getState().undoCollaborationOperations?.();
+    });
+
+    expect(mockSubmitOperations).not.toHaveBeenCalled();
   });
 });

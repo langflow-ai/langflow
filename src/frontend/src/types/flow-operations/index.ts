@@ -46,6 +46,15 @@ export type FlowMutationOptions = {
   skipCollaborationEmit?: boolean;
 };
 
+export type CollaborationHistoryEntry = {
+  forwardOps: FlowOperation[];
+  inverseOps: FlowOperation[];
+};
+
+export type FlowOperationEmitOptions = {
+  historyEntry?: CollaborationHistoryEntry;
+};
+
 export type FlowOperationSubmitPayload = {
   request_id: string;
   base_revision: number;

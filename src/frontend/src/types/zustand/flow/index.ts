@@ -11,6 +11,7 @@ import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type {
   FlowMutationOptions,
   FlowOperation,
+  FlowOperationEmitOptions,
 } from "@/types/flow-operations";
 import type { BuildStatus, EventDeliveryType } from "../../../constants/enums";
 import type { LogsLogType, VertexBuildTypeAPI } from "../../api";
@@ -84,8 +85,13 @@ export type FlowStoreType = {
   collaborationOperationMode: boolean;
   isApplyingRemoteOperations: boolean;
   onCollaborationOperations:
-    | ((operations: FlowOperation[]) => void)
+    | ((
+        operations: FlowOperation[],
+        options?: FlowOperationEmitOptions,
+      ) => void)
     | undefined;
+  undoCollaborationOperations: (() => void) | undefined;
+  redoCollaborationOperations: (() => void) | undefined;
   flushCollaborationSave: (() => Promise<void>) | undefined;
   componentsToUpdate: ComponentsToUpdateType[];
   setComponentsToUpdate: (

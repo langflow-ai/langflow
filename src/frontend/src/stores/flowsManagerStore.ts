@@ -1,7 +1,6 @@
 import { cloneDeep } from "lodash";
 import { create } from "zustand";
 import { SAVE_DEBOUNCE_TIME } from "@/constants/constants";
-import { buildGraphDiffOperations } from "@/hooks/flows/flow-operation-diff";
 import type { AllNodeType, EdgeType, FlowType } from "../types/flow";
 import type {
   FlowsManagerStoreType,
@@ -70,6 +69,9 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
     const currentFlowId = get().currentFlowId;
     // push the current graph to the past state
     const flowStore = useFlowStore.getState();
+    if (flowStore.collaborationOperationMode) {
+      return;
+    }
     const newState = {
       nodes: cloneDeep(flowStore.nodes),
       edges: cloneDeep(flowStore.edges),
@@ -102,6 +104,10 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
   },
   undo: () => {
     const newState = useFlowStore.getState();
+    if (newState.collaborationOperationMode) {
+      newState.undoCollaborationOperations?.();
+      return;
+    }
     const currentFlowId = get().currentFlowId;
     const pastLength = past[currentFlowId]?.length ?? 0;
     const pastState = past[currentFlowId]?.[pastLength - 1] ?? null;
@@ -117,22 +123,14 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
 
       newState.setNodes(pastState.nodes, { skipCollaborationEmit: true });
       newState.setEdges(pastState.edges, { skipCollaborationEmit: true });
-
-      if (newState.collaborationOperationMode) {
-        const operations = buildGraphDiffOperations(
-          newState.nodes,
-          newState.edges,
-          pastState.nodes,
-          pastState.edges,
-        );
-        if (operations.length > 0) {
-          newState.onCollaborationOperations?.(operations);
-        }
-      }
     }
   },
   redo: () => {
     const newState = useFlowStore.getState();
+    if (newState.collaborationOperationMode) {
+      newState.redoCollaborationOperations?.();
+      return;
+    }
     const currentFlowId = get().currentFlowId;
     const futureLength = future[currentFlowId]?.length ?? 0;
     const futureState = future[currentFlowId]?.[futureLength - 1] ?? null;
@@ -148,18 +146,6 @@ const useFlowsManagerStore = create<FlowsManagerStoreType>((set, get) => ({
 
       newState.setNodes(futureState.nodes, { skipCollaborationEmit: true });
       newState.setEdges(futureState.edges, { skipCollaborationEmit: true });
-
-      if (newState.collaborationOperationMode) {
-        const operations = buildGraphDiffOperations(
-          newState.nodes,
-          newState.edges,
-          futureState.nodes,
-          futureState.edges,
-        );
-        if (operations.length > 0) {
-          newState.onCollaborationOperations?.(operations);
-        }
-      }
     }
   },
   searchFlowsComponents: "",

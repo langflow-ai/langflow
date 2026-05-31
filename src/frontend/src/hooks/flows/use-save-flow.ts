@@ -3,7 +3,10 @@ import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { syncSavedFlowStateFromCanvas } from "@/hooks/flows/flow-operation-adapter";
-import { buildUpdateMetadataOperation } from "@/hooks/flows/flow-operation-diff";
+import {
+  buildInverseFlowOperations,
+  buildUpdateMetadataOperation,
+} from "@/hooks/flows/flow-operation-diff";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -34,7 +37,21 @@ const useSaveFlow = () => {
           flowToSave?.data as Record<string, unknown> | null | undefined,
         );
         if (metadataOperation) {
-          flowStore.onCollaborationOperations?.([metadataOperation]);
+          const operations = [metadataOperation];
+          flowStore.onCollaborationOperations?.(operations, {
+            historyEntry: {
+              forwardOps: operations,
+              inverseOps: buildInverseFlowOperations(
+                flowStore.nodes,
+                flowStore.edges,
+                currentSavedFlow?.data as
+                  | Record<string, unknown>
+                  | null
+                  | undefined,
+                operations,
+              ),
+            },
+          });
         }
         if (flowStore.flushCollaborationSave) {
           await flowStore.flushCollaborationSave();

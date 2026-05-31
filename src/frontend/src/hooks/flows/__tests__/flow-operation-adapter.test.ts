@@ -4,9 +4,14 @@ import type { AllNodeType, EdgeType } from "@/types/flow";
 import {
   applyFlowOperationsLocally,
   applyRemoteFlowOperations,
-  buildGraphDiffOperations,
-  buildUpdateMetadataOperation,
 } from "../flow-operation-adapter";
+import {
+  buildGraphDiffOperations,
+  buildInverseFlowOperations,
+  buildUpdateMetadataOperation,
+  collectFlowOperationTouches,
+  flowOperationTouchesIntersect,
+} from "../flow-operation-diff";
 
 const nodeA = {
   id: "a",
@@ -109,6 +114,87 @@ describe("flow-operation-adapter", () => {
       fields: { theme: "new" },
       delete_keys: ["removed"],
     });
+  });
+
+  it("buildInverseFlowOperations restores deleted nodes with incident edges", () => {
+    const inverse = buildInverseFlowOperations(
+      [nodeA, nodeB],
+      [edgeAb],
+      { nodes: [nodeA, nodeB], edges: [edgeAb] },
+      [{ type: "delete_nodes", ids: ["a"] }],
+    );
+
+    expect(inverse).toEqual([
+      { type: "add_nodes", nodes: [nodeA] },
+      { type: "add_edges", edges: [edgeAb] },
+    ]);
+  });
+
+  it("buildInverseFlowOperations reverses edge reconnect order", () => {
+    const replacementEdge = {
+      ...edgeAb,
+      id: "e-ba",
+      source: "b",
+      target: "a",
+    } as EdgeType;
+
+    const inverse = buildInverseFlowOperations(
+      [nodeA, nodeB],
+      [edgeAb],
+      { nodes: [nodeA, nodeB], edges: [edgeAb] },
+      [
+        { type: "delete_edges", ids: ["e-ab"] },
+        { type: "add_edges", edges: [replacementEdge] },
+      ],
+    );
+
+    expect(inverse).toEqual([
+      { type: "delete_edges", ids: ["e-ba"] },
+      { type: "add_edges", edges: [edgeAb] },
+    ]);
+  });
+
+  it("buildInverseFlowOperations restores metadata keys and deletes new keys", () => {
+    const inverse = buildInverseFlowOperations(
+      [nodeA, nodeB],
+      [edgeAb],
+      { theme: "old", stale_key: true },
+      [
+        {
+          type: "update_metadata",
+          fields: { theme: "new", created_key: "value" },
+          delete_keys: ["stale_key"],
+        },
+      ],
+    );
+
+    expect(inverse).toEqual([
+      {
+        type: "update_metadata",
+        fields: { theme: "old", stale_key: true },
+        delete_keys: ["created_key"],
+      },
+    ]);
+  });
+
+  it("flow operation touch helpers detect overlapping graph and metadata changes", () => {
+    const localTouches = collectFlowOperationTouches([
+      { type: "add_edges", edges: [edgeAb] },
+      { type: "update_metadata", fields: { theme: "dark" } },
+    ]);
+    const remoteTouches = collectFlowOperationTouches([
+      { type: "delete_nodes", ids: ["a"] },
+    ]);
+    const unrelatedTouches = collectFlowOperationTouches([
+      { type: "update_metadata", fields: { another_key: true } },
+    ]);
+
+    expect(flowOperationTouchesIntersect(remoteTouches, localTouches)).toBe(
+      true,
+    );
+    expect(flowOperationTouchesIntersect(unrelatedTouches, localTouches)).toBe(
+      false,
+    );
   });
 
   it("applyFlowOperationsLocally applies delete_nodes with incident edges", () => {

@@ -12,13 +12,13 @@ const setNodes = jest.fn();
 const setEdges = jest.fn();
 const setCurrentFlow = jest.fn();
 const saveFlow = jest.fn().mockResolvedValue(undefined);
-
-let currentFlow: unknown;
+const onCollaborationOperations = jest.fn();
+let flowStoreState: Record<string, unknown>;
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: jest.fn((selector?: (state: unknown) => unknown) => {
-    const state = { setNodes, setEdges, setCurrentFlow, currentFlow };
+    const state = { setNodes, setEdges, setCurrentFlow, currentFlow: flowStoreState.currentFlow };
     return selector ? selector(state) : state;
   }),
 }));
@@ -27,6 +27,13 @@ jest.mock("@/hooks/flows/use-save-flow", () => ({
   __esModule: true,
   default: () => saveFlow,
 }));
+
+const mockedFlowStore = jest.requireMock("@/stores/flowStore")
+  .default as jest.Mock & {
+  getState: () => typeof flowStoreState;
+};
+
+mockedFlowStore.getState = () => flowStoreState;
 
 const fullExamples = [
   {
@@ -80,14 +87,23 @@ describe("useApplyTemplateToCurrentFlow", () => {
     setEdges.mockClear();
     setCurrentFlow.mockClear();
     saveFlow.mockClear();
-    currentFlow = {
-      id: "flow-1",
-      name: "New Flow",
-      folder_id: "folder-A",
-      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+    onCollaborationOperations.mockClear();
+    flowStoreState = {
+      setNodes,
+      setEdges,
+      setCurrentFlow,
+      nodes: [],
+      edges: [],
+      currentFlow: {
+        id: "flow-1",
+        name: "New Flow",
+        folder_id: "folder-A",
+        data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
+      },
+      collaborationOperationMode: false,
+      onCollaborationOperations,
     };
-    setStores(fullExamples);
-  });
+    setStores(fullExamples);  });
 
   it("should_call_setNodes_and_setEdges_with_template_data_when_template_is_applied", () => {
     const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
@@ -100,6 +116,43 @@ describe("useApplyTemplateToCurrentFlow", () => {
     expect(didApply).toBe(true);
     expect(setNodes).toHaveBeenCalledWith([{ id: "n1" }]);
     expect(setEdges).toHaveBeenCalledWith([{ id: "e1" }]);
+  });
+
+  it("should_emit_one_collaboration_batch_with_history_when_operation_mode_is_active", () => {
+    flowStoreState = {
+      ...flowStoreState,
+      collaborationOperationMode: true,
+    };
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent");
+    });
+
+    expect(setNodes).toHaveBeenCalledWith([{ id: "n1" }], {
+      skipCollaborationEmit: true,
+    });
+    expect(setEdges).toHaveBeenCalledWith([{ id: "e1" }], {
+      skipCollaborationEmit: true,
+    });
+    expect(onCollaborationOperations).toHaveBeenCalledWith(
+      [
+        { type: "add_nodes", nodes: [{ id: "n1" }] },
+        { type: "add_edges", edges: [{ id: "e1" }] },
+      ],
+      {
+        historyEntry: {
+          forwardOps: [
+            { type: "add_nodes", nodes: [{ id: "n1" }] },
+            { type: "add_edges", edges: [{ id: "e1" }] },
+          ],
+          inverseOps: [
+            { type: "delete_edges", ids: ["e1"] },
+            { type: "delete_nodes", ids: ["n1"] },
+          ],
+        },
+      },
+    );
   });
 
   it("should_pick_the_correct_template_when_a_different_name_key_is_passed", () => {
@@ -185,7 +238,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     // The rename is applied optimistically to flowStore, then persisted. If the
     // save fails, the optimistic flowStore state must roll back so it does not
     // diverge from the flows list / backend (which still hold "New Flow").
-    const original = currentFlow;
+    const original = flowStoreState.currentFlow;
     saveFlow.mockRejectedValueOnce(new Error("persist failed"));
     const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
 
@@ -202,7 +255,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
   });
 
   it("should_not_rename_or_persist_when_there_is_no_current_flow", () => {
-    currentFlow = undefined;
+    flowStoreState.currentFlow = undefined;
     const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
 
     act(() => {

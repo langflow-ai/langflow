@@ -17,11 +17,6 @@ const nodeB = {
   data: { id: "b", type: "TextOutput", node: {} },
 } as AllNodeType;
 
-const movedNodeA = {
-  ...nodeA,
-  position: { x: 25, y: 25 },
-} as AllNodeType;
-
 const edgeAb = {
   id: "e-ab",
   source: "a",
@@ -71,44 +66,40 @@ describe("collaboration edge-case store wiring", () => {
     );
 
     expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith([
-      { type: "delete_nodes", ids: ["a"] },
-      { type: "delete_edges", ids: ["e-ab"] },
-    ]);
+    expect(emit).toHaveBeenCalledWith(
+      [
+        { type: "delete_nodes", ids: ["a"] },
+        { type: "delete_edges", ids: ["e-ab"] },
+      ],
+      expect.objectContaining({
+        historyEntry: expect.objectContaining({
+          inverseOps: [
+            { type: "add_nodes", nodes: [nodeA] },
+            { type: "add_edges", edges: [edgeAb] },
+          ],
+        }),
+      }),
+    );
   });
 
-  it("undo emits the resulting graph delta once", () => {
-    const emit = seedFlow("undo-flow");
-    useFlowsManagerStore.getState().takeSnapshot();
-    useFlowStore.setState({
-      nodes: [movedNodeA, nodeB],
-      edges: [edgeAb],
-    });
+  it("undo delegates to collaboration operation history when enabled", () => {
+    seedFlow("undo-flow");
+    const undoCollaborationOperations = jest.fn();
+    useFlowStore.setState({ undoCollaborationOperations });
 
     useFlowsManagerStore.getState().undo();
 
-    expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith([
-      { type: "update_nodes", nodes: [expect.objectContaining({ id: "a" })] },
-    ]);
+    expect(undoCollaborationOperations).toHaveBeenCalledTimes(1);
   });
 
-  it("redo emits the resulting graph delta once", () => {
-    const emit = seedFlow("redo-flow");
-    useFlowsManagerStore.getState().takeSnapshot();
-    useFlowStore.setState({
-      nodes: [movedNodeA, nodeB],
-      edges: [edgeAb],
-    });
-    useFlowsManagerStore.getState().undo();
-    emit.mockClear();
+  it("redo delegates to collaboration operation history when enabled", () => {
+    seedFlow("redo-flow");
+    const redoCollaborationOperations = jest.fn();
+    useFlowStore.setState({ redoCollaborationOperations });
 
     useFlowsManagerStore.getState().redo();
 
-    expect(emit).toHaveBeenCalledTimes(1);
-    expect(emit).toHaveBeenCalledWith([
-      { type: "update_nodes", nodes: [expect.objectContaining({ id: "a" })] },
-    ]);
+    expect(redoCollaborationOperations).toHaveBeenCalledTimes(1);
   });
 
   it("remote operations clear stale undo history so undo does not resurrect remote deletes", () => {

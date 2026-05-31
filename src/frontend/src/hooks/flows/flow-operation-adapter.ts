@@ -10,8 +10,11 @@ import { coalesceDeleteIds } from "./flow-operation-diff";
 export type { FlowMutationOptions } from "@/types/flow-operations";
 export {
   buildGraphDiffOperations,
+  buildInverseFlowOperations,
   buildUpdateMetadataOperation,
   buildUpdateNodesOperation,
+  collectFlowOperationTouches,
+  flowOperationTouchesIntersect,
 } from "./flow-operation-diff";
 
 function applyDeleteNodes(
@@ -93,7 +96,7 @@ export function applyFlowOperationsLocally(
   return { nodes: nextNodes, edges: cleaned.edges };
 }
 
-export function applyRemoteFlowOperations(operations: FlowOperation[]): void {
+export function applyFlowOperationsToStore(operations: FlowOperation[]): void {
   const store = useFlowStore.getState();
   const metadataOps = operations.filter(
     (operation) => operation.type === "update_metadata",
@@ -153,6 +156,10 @@ export function applyRemoteFlowOperations(operations: FlowOperation[]): void {
   } finally {
     useFlowStore.setState({ isApplyingRemoteOperations: false });
   }
+}
+
+export function applyRemoteFlowOperations(operations: FlowOperation[]): void {
+  applyFlowOperationsToStore(operations);
   useFlowsManagerStore.getState().clearUndoRedoHistory?.();
 }
 

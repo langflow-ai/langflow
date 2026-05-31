@@ -34,6 +34,7 @@ import CustomLoader from "@/customization/components/custom-loader";
 import { track } from "@/customization/utils/analytics";
 import {
   buildGraphDiffOperations,
+  buildInverseFlowOperations,
   buildUpdateNodesOperation,
 } from "@/hooks/flows/flow-operation-diff";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
@@ -151,6 +152,11 @@ export default function Page({
   const [selectionMenuVisible, setSelectionMenuVisible] = useState(false);
   const [openExportModal, setOpenExportModal] = useState(false);
   const edgeUpdateSuccessful = useRef(true);
+  const graphBeforeDragRef = useRef<{
+    nodes: AllNodeType[];
+    edges: EdgeType[];
+    data: Record<string, unknown> | undefined;
+  } | null>(null);
 
   const isLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -494,6 +500,9 @@ export default function Page({
       if (collaborationOperationMode && onCollaborationOperations) {
         const prevNodes = useFlowStore.getState().nodes;
         const prevEdges = useFlowStore.getState().edges;
+        const prevFlowData = useFlowStore.getState().currentFlow?.data as
+          | Record<string, unknown>
+          | undefined;
         deleteNode(
           lastSelection.nodes.map((node) => node.id),
           { skipCollaborationEmit: true },
@@ -510,7 +519,17 @@ export default function Page({
           nextState.edges,
         );
         if (operations.length > 0) {
-          onCollaborationOperations(operations);
+          onCollaborationOperations(operations, {
+            historyEntry: {
+              forwardOps: cloneDeep(operations),
+              inverseOps: buildInverseFlowOperations(
+                prevNodes,
+                prevEdges,
+                prevFlowData,
+                operations,
+              ),
+            },
+          });
         }
       } else {
         deleteNode(lastSelection.nodes.map((node) => node.id));
@@ -595,10 +614,19 @@ export default function Page({
     (_, node) => {
       // 👇 make dragging a node undoable
       takeSnapshot();
+      if (collaborationOperationMode && onCollaborationOperations) {
+        graphBeforeDragRef.current = {
+          nodes: cloneDeep(useFlowStore.getState().nodes),
+          edges: cloneDeep(useFlowStore.getState().edges),
+          data: useFlowStore.getState().currentFlow?.data as
+            | Record<string, unknown>
+            | undefined,
+        };
+      }
       setIsDragging(true);
       // 👉 you can place your event handlers here
     },
-    [takeSnapshot],
+    [collaborationOperationMode, onCollaborationOperations, takeSnapshot],
   );
 
   const onNodeDragStop: OnNodeDrag = useCallback(
@@ -608,11 +636,29 @@ export default function Page({
           (canvasNode) => canvasNode.selected || canvasNode.id === node.id,
         );
         if (movedNodes.length > 0) {
-          onCollaborationOperations([buildUpdateNodesOperation(movedNodes)]);
+          const operations = [buildUpdateNodesOperation(movedNodes)];
+          const previousGraph = graphBeforeDragRef.current;
+          onCollaborationOperations(
+            operations,
+            previousGraph
+              ? {
+                  historyEntry: {
+                    forwardOps: cloneDeep(operations),
+                    inverseOps: buildInverseFlowOperations(
+                      previousGraph.nodes,
+                      previousGraph.edges,
+                      previousGraph.data,
+                      operations,
+                    ),
+                  },
+                }
+              : undefined,
+          );
         }
       } else {
         autoSaveFlow();
       }
+      graphBeforeDragRef.current = null;
       updateCurrentFlow({ nodes });
       setPositionDictionary({});
       setIsDragging(false);
@@ -687,7 +733,16 @@ export default function Page({
 
   const onSelectionDragStart: SelectionDragHandler = useCallback(() => {
     takeSnapshot();
-  }, [takeSnapshot]);
+    if (collaborationOperationMode && onCollaborationOperations) {
+      graphBeforeDragRef.current = {
+        nodes: cloneDeep(useFlowStore.getState().nodes),
+        edges: cloneDeep(useFlowStore.getState().edges),
+        data: useFlowStore.getState().currentFlow?.data as
+          | Record<string, unknown>
+          | undefined,
+      };
+    }
+  }, [collaborationOperationMode, onCollaborationOperations, takeSnapshot]);
 
   const onDragOver = useCallback((event: React.DragEvent) => {
     event.preventDefault();
