@@ -160,7 +160,12 @@ jobs:
           else
             uv pip install "langflow-nightly"
           fi
-          INSTALLED=$(pip show langflow-nightly | awk '/^Version:/ {print $2}')
+          # `uv venv` without --seed doesn't install pip in the venv, so a bare
+          # `pip show ...` here would resolve via PATH to setup-python's base pip
+          # (which can't see what uv installed in the venv). Reading the version
+          # through python -m + importlib.metadata uses the venv's interpreter
+          # and its site-packages — same pattern as db-migration-validation.yml.
+          INSTALLED=$(python -c 'from importlib.metadata import version; print(version("langflow-nightly"))')
           echo "Installed version: $INSTALLED"
           echo "INSTALLED_VERSION=$INSTALLED" >> "$GITHUB_ENV"
 
@@ -278,7 +283,10 @@ jobs:
           else
             uv pip install "langflow-nightly==${PIN}"
           fi
-          INSTALLED=$(pip show langflow-nightly | awk '/^Version:/ {print $2}')
+          # See note in the unpinned job: read the installed version through the
+          # venv's interpreter rather than `pip show`, since `uv venv` doesn't
+          # seed pip and the bare `pip` falls through to setup-python's base pip.
+          INSTALLED=$(python -c 'from importlib.metadata import version; print(version("langflow-nightly"))')
           if [ "$INSTALLED" != "$PIN" ]; then
             echo "::error::Pinned install resolved to $INSTALLED instead of $PIN"
             exit 1
@@ -355,16 +363,23 @@ jobs:
         if: matrix.database == 'postgres'
         run: |
           set -euo pipefail
+          PG_PASS=langflow_test_pass  # pragma: allowlist secret
           docker network create lftest
           docker run -d --name lf-pg --network lftest \
             -e POSTGRES_DB=langflow_test \
             -e POSTGRES_USER=langflow \
-            -e POSTGRES_PASSWORD=langflow_test_pass \
+            -e POSTGRES_PASSWORD="$PG_PASS" \
             postgres:16
           for i in $(seq 1 30); do
-            if docker exec lf-pg pg_isready -U langflow >/dev/null 2>&1; then break; fi
+            if docker exec lf-pg pg_isready -U langflow >/dev/null 2>&1; then
+              echo "postgres ready after $((i*2))s"
+              exit 0
+            fi
             sleep 2
           done
+          echo "::error::Postgres did not become ready in 60s"
+          docker logs lf-pg 2>&1 | tail -100
+          exit 1
 
       - name: docker run langflow-nightly
         env:
@@ -450,7 +465,7 @@ jobs:
               environment:
                 POSTGRES_DB: langflow_test
                 POSTGRES_USER: langflow
-                POSTGRES_PASSWORD: langflow_test_pass
+                POSTGRES_PASSWORD: langflow_test_pass  # pragma: allowlist secret
               healthcheck:
                 test: ["CMD", "pg_isready", "-U", "langflow"]
                 interval: 5s
