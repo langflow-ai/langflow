@@ -387,12 +387,12 @@ jobs:
         run: |
           set -euo pipefail
           if [ "${{ matrix.database }}" = "postgres" ]; then
-            docker run -d --name lf --network lftest -p ${LANGFLOW_PORT}:7860 \
+            docker run -d --name lf --network lftest -p "${LANGFLOW_PORT}:7860" \
               -e LANGFLOW_DATABASE_URL=postgresql://langflow:langflow_test_pass@lf-pg:5432/langflow_test \
               -e LANGFLOW_AUTO_LOGIN=true \
               "${NIGHTLY_TAG}"
           else
-            docker run -d --name lf -p ${LANGFLOW_PORT}:7860 \
+            docker run -d --name lf -p "${LANGFLOW_PORT}:7860" \
               -e LANGFLOW_AUTO_LOGIN=true \
               "${NIGHTLY_TAG}"
           fi
