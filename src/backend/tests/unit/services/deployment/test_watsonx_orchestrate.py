@@ -60,7 +60,6 @@ payloads_module = importlib.import_module("langflow.services.adapters.deployment
 client_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.client")
 types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
 deployment_context_module = importlib.import_module("langflow.services.adapters.deployment.context")
-utils_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.utils")
 WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials
@@ -2517,7 +2516,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
         return ["created-tool-1"]
 
     _attach_provider_clients(service, fake_clients)
-    monkeypatch.setattr(utils_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
+    monkeypatch.setattr(payloads_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
     monkeypatch.setattr(
         create_core_module,
         "create_and_upload_wxo_flow_tools_with_bindings",
@@ -5542,7 +5541,7 @@ async def test_update_deployment_display_name_and_description_renames_technical_
         return fake_clients
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-    monkeypatch.setattr(utils_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
+    monkeypatch.setattr(payloads_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
 
     update_data = DeploymentUpdate(
         spec=BaseDeploymentDataUpdate(description="new desc"),
@@ -5675,7 +5674,7 @@ def test_build_update_payload_rejects_empty_core_update_fields(core_update, fiel
 
 
 def test_build_update_payload_uses_resource_fallback_for_symbol_only_display_name(monkeypatch):
-    monkeypatch.setattr(utils_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
+    monkeypatch.setattr(payloads_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
     core_update = WatsonxDeploymentUpdatePayload(display_name="!!!")
 
     payload = update_core_module.build_update_payload_from_spec(None, core_update=core_update)
