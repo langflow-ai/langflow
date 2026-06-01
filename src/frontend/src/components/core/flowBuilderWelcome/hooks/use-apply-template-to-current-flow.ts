@@ -1,6 +1,9 @@
 import { useCallback } from "react";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import type { FlowType } from "@/types/flow";
+import { addVersionToDuplicates } from "@/utils/reactflowUtils";
 import {
   findStarterTemplate,
   type StarterTemplateNameKey,
@@ -20,8 +23,12 @@ import {
 export function useApplyTemplateToCurrentFlow() {
   const setNodes = useFlowStore((state) => state.setNodes);
   const setEdges = useFlowStore((state) => state.setEdges);
+  const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
   const reactFlowInstance = useFlowStore((state) => state.reactFlowInstance);
   const examples = useFlowsManagerStore((state) => state.examples);
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const saveFlow = useSaveFlow();
 
   return useCallback(
     (nameKey: StarterTemplateNameKey, onFitted?: () => void): boolean => {
@@ -29,6 +36,30 @@ export function useApplyTemplateToCurrentFlow() {
       if (!template?.data) return false;
       setNodes(template.data.nodes ?? []);
       setEdges(template.data.edges ?? []);
+
+      // The welcome eagerly created this flow empty, so it still carries the
+      // generic "New Flow" placeholder title. Adopt the template's name in
+      // place (deduping like ``addFlow`` does, so a name already taken by a
+      // seeded starter project becomes "Simple Agent (1)") and persist the
+      // rename together with the template data so the user is left with a
+      // single, properly named flow instead of an orphaned "New Flow".
+      if (currentFlow) {
+        const renamedFlow: FlowType = {
+          ...currentFlow,
+          name: addVersionToDuplicates(
+            { ...currentFlow, name: template.name },
+            flows ?? [],
+          ),
+          data: {
+            nodes: template.data.nodes ?? [],
+            edges: template.data.edges ?? [],
+            viewport: currentFlow.data?.viewport ?? { x: 0, y: 0, zoom: 1 },
+          },
+        };
+        setCurrentFlow(renamedFlow);
+        // Fire-and-forget: a failed persist must not block the canvas handoff.
+        void saveFlow(renamedFlow).catch(() => {});
+      }
       // Why this dance:
       //   1. ReactFlow can only compute the correct viewport AFTER the new
       //      nodes have rendered AND been measured — node widths/heights are
@@ -51,6 +82,15 @@ export function useApplyTemplateToCurrentFlow() {
       });
       return true;
     },
-    [examples, setNodes, setEdges, reactFlowInstance],
+    [
+      examples,
+      flows,
+      currentFlow,
+      setNodes,
+      setEdges,
+      setCurrentFlow,
+      saveFlow,
+      reactFlowInstance,
+    ],
   );
 }
