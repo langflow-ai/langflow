@@ -252,6 +252,7 @@ class TestFolderIngest:
         logged_in_headers,
         active_user,
         tmp_path,
+        monkeypatch,
     ):
         """Regression: the route must read a *declared* Settings field.
 
@@ -263,6 +264,12 @@ class TestFolderIngest:
         ``FolderSource.validate_config()`` and returns an actionable 400 — exactly like
         the sibling ``/ingest/connector`` route — instead of a 500.
         """
+        # The regression depends on an *empty* allow-list (the default). Clear any
+        # ``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS`` a developer may have exported so the
+        # test deterministically hits the empty-allow-list gate rather than the
+        # "outside the configured allow-list" branch.
+        monkeypatch.delenv("LANGFLOW_KB_ALLOWED_FOLDER_ROOTS", raising=False)
+
         mock_root.return_value = tmp_path
         kb_dir = tmp_path / active_user.username / "folder_kb_real_settings"
         kb_dir.mkdir(parents=True)
@@ -281,7 +288,10 @@ class TestFolderIngest:
         )
 
         assert response.status_code == 400, response.text
-        assert "allow-list" in response.json()["detail"]
+        # Assert the *specific* empty-allow-list message so the test pins the
+        # regression path (real Settings → empty default → actionable 400) rather
+        # than the generic substring shared with the "outside the allow-list" branch.
+        assert "Configure LANGFLOW_KB_ALLOWED_FOLDER_ROOTS" in response.json()["detail"]
 
     async def test_folder_ingest_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
