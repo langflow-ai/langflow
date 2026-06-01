@@ -141,17 +141,17 @@ describe("Create mode — basic state", () => {
       {
         flow_version_id: "ver-1",
         app_ids: ["conn-1"],
-        tool_name: "Flow One v1",
+        tool_display_name: "Flow One v1",
       },
       {
         flow_version_id: "ver-2",
         app_ids: ["conn-2"],
-        tool_name: "Flow One v2",
+        tool_display_name: "Flow One v2",
       },
     ]);
   });
 
-  it("defaults tool names to flow name plus truncated id", () => {
+  it("defaults tool display names to the flow name", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -174,23 +174,10 @@ describe("Create mode — basic state", () => {
           ],
         ]),
       );
-      result.current.setToolNameByFlow(
-        new Map([
-          [
-            getSelectedFlowVersionKey(
-              "flow-1",
-              "12345678-aaaa-bbbb-cccc-deadbeefcafe",
-            ),
-            "Original Flow deadbeef",
-          ],
-        ]),
-      );
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toBe(
-      "Original Flow deadbeef",
-    );
+    expect(payload.provider_data.add_flows[0].tool_display_name).toBe("Flow");
   });
 });
 
@@ -313,7 +300,7 @@ describe("Create mode — canGoNext validation", () => {
       expect(result.current.canGoNext).toBe(true);
     });
 
-    it("blocks when trimmed name does not start with a letter", () => {
+    it("allows display names that do not start with a letter", () => {
       const { result } = renderCreateHook({
         initialProvider: mockProvider,
         initialInstance: mockInstance,
@@ -326,9 +313,9 @@ describe("Create mode — canGoNext validation", () => {
         result.current.setSelectedLlm("gpt-4");
       });
 
-      expect(result.current.canGoNext).toBe(false);
-      expect(result.current.isDeploymentNameValid).toBe(false);
-      expect(result.current.hasDeploymentNameFormatError).toBe(true);
+      expect(result.current.canGoNext).toBe(true);
+      expect(result.current.isDeploymentNameValid).toBe(true);
+      expect(result.current.hasDeploymentNameFormatError).toBe(false);
     });
 
     it("allows when trimmed name starts with a unicode letter", () => {
@@ -347,23 +334,6 @@ describe("Create mode — canGoNext validation", () => {
       expect(result.current.canGoNext).toBe(true);
       expect(result.current.isDeploymentNameValid).toBe(true);
       expect(result.current.hasDeploymentNameFormatError).toBe(false);
-    });
-
-    it("blocks while agent name validation is still pending", () => {
-      const { result } = renderCreateHook({
-        initialProvider: mockProvider,
-        initialInstance: mockInstance,
-      });
-
-      act(() => result.current.handleNext()); // → step 2
-
-      act(() => {
-        result.current.setDeploymentName("My Agent");
-        result.current.setSelectedLlm("gpt-4");
-        result.current.setIsAgentNameValidationPending(true);
-      });
-
-      expect(result.current.canGoNext).toBe(false);
     });
   });
 
@@ -895,7 +865,7 @@ describe("Create mode — buildDeploymentPayload", () => {
     expect(payload).not.toHaveProperty("project_id");
   });
 
-  it("builds correct spec with name, description, and type", () => {
+  it("builds correct spec with display name, description, and type", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -913,7 +883,8 @@ describe("Create mode — buildDeploymentPayload", () => {
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     expect(payload.provider_id).toBe("provider-1");
-    expect(payload.name).toBe("Test Agent");
+    expect(payload).not.toHaveProperty("name");
+    expect(payload.provider_data.display_name).toBe("Test Agent");
     expect(payload.description).toBe("Agent description");
     expect(payload.type).toBe("agent");
   });
@@ -1209,15 +1180,15 @@ describe("Create mode — multi-flow scenarios", () => {
     expect(addFlows).toHaveLength(3);
 
     const flow1Op = addFlows.find((o) => o.flow_version_id === "ver-1");
-    expect(flow1Op?.tool_name).toBe("Tool Alpha");
+    expect(flow1Op?.tool_display_name).toBe("Tool Alpha");
     expect(flow1Op?.app_ids).toEqual(["conn-a"]);
 
     const flow2Op = addFlows.find((o) => o.flow_version_id === "ver-2");
-    expect(flow2Op?.tool_name).toBe("Tool Beta");
+    expect(flow2Op?.tool_display_name).toBe("Tool Beta");
     expect(flow2Op?.app_ids).toEqual(["conn-b"]);
 
     const flow3Op = addFlows.find((o) => o.flow_version_id === "ver-3");
-    expect(flow3Op?.tool_name).toMatch(/^Flow [a-f0-9]{6}-3$/);
+    expect(flow3Op?.tool_display_name).toBe("Flow");
     expect(flow3Op?.app_ids).toEqual(["conn-a", "conn-b"]);
 
     // Both connections are new, so both appear in connections

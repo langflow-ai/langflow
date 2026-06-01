@@ -544,11 +544,10 @@ def register_all_service_factories() -> None:
 
 
 def register_builtin_adapters() -> None:
-    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
+    """Import built-in adapter registration modules.
 
     Mirrors ``register_all_service_factories()`` for the adapter registry system.
-    Each import triggers the ``@register_adapter`` decorator at module scope,
-    registering the adapter class on the AdapterRegistry singleton.
+    Each import registers the adapter class on the AdapterRegistry singleton.
 
     TODO: Watsonx risks are documented here because registration is runtime-optional:
     missing ``ibm_*`` modules should skip adapter registration, but broad
@@ -563,7 +562,7 @@ def register_builtin_adapters() -> None:
         return
 
     try:
-        import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
+        import_module("langflow.services.adapters.deployment.watsonx_orchestrate.register")
     except ModuleNotFoundError as exc:
         logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 
