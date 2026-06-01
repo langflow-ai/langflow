@@ -1172,6 +1172,11 @@ export function scapeJSONParse(json: string): any {
 const TYPE_MIGRATIONS: Record<string, string> = {
   Data: "JSON",
   DataFrame: "Table",
+  // Lowercase scalar output types bridge to the capitalized pluggable handle types.
+  number: "Number",
+  int: "Number",
+  float: "Number",
+  bool: "Bool",
 };
 
 /**

@@ -62,6 +62,10 @@ def get_type(payload):
         case str():
             result = LogType.TEXT
 
+        # bool is listed explicitly since it is a subclass of int.
+        case bool() | int() | float():
+            result = LogType.TEXT
+
     if result == LogType.UNKNOWN and (
         (payload and isinstance(payload, Generator))
         or (isinstance(payload, Message) and isinstance(payload.text, Generator))
@@ -121,6 +125,10 @@ def build_output_logs(vertex, result) -> dict:
 
             case LogType.UNKNOWN:
                 message = ""
+
+            case LogType.TEXT:
+                # Stringify so falsy scalars (False/0/0.0) still render a non-empty preview.
+                message = "" if message is None else str(message)
 
             case LogType.ARRAY:
                 if message is None:

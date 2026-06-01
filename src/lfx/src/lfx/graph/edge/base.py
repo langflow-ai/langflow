@@ -14,6 +14,11 @@ if TYPE_CHECKING:
 TYPE_MIGRATIONS: dict[str, str] = {
     "Data": "JSON",
     "DataFrame": "Table",
+    # Keep in sync with the frontend TYPE_MIGRATIONS (reactflowUtils.ts).
+    "number": "Number",
+    "int": "Number",
+    "float": "Number",
+    "bool": "Bool",
 }
 
 

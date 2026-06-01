@@ -40,8 +40,21 @@ class TestTypeMigrationsConstant:
     def test_should_map_dataframe_to_table(self):
         assert TYPE_MIGRATIONS[OLD_DATAFRAME_TYPE] == NEW_TABLE_TYPE
 
-    def test_should_contain_exactly_two_entries(self):
-        assert len(TYPE_MIGRATIONS) == 2
+    def test_should_map_lowercase_primitives_to_pluggable_handle_types(self):
+        assert TYPE_MIGRATIONS["number"] == "Number"
+        assert TYPE_MIGRATIONS["int"] == "Number"
+        assert TYPE_MIGRATIONS["float"] == "Number"
+        assert TYPE_MIGRATIONS["bool"] == "Bool"
+
+    def test_should_contain_expected_entries(self):
+        assert TYPE_MIGRATIONS == {
+            "Data": "JSON",
+            "DataFrame": "Table",
+            "number": "Number",
+            "int": "Number",
+            "float": "Number",
+            "bool": "Bool",
+        }
 
 
 class TestTypesCompatibleSuccessCases:

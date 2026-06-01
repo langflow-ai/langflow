@@ -10,7 +10,9 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { FloatComponentType, InputProps } from "../../types";
+import { ReceivingInputField } from "../receivingInputField";
 
 export default function FloatComponent({
   value,
@@ -90,6 +92,10 @@ export default function FloatComponent({
     return null;
   }
 
+  if (disabled) {
+    return <ReceivingInputField id={id} editNode={editNode} />;
+  }
+
   return (
     <div className="w-full">
       <NumberInput
@@ -98,7 +104,7 @@ export default function FloatComponent({
         min={min}
         max={max}
         onChange={handleNumberChange}
-        value={localValue ?? ""}
+        value={disabled ? "" : (localValue ?? "")}
         onBlur={handleBlur}
       >
         <NumberInputField
@@ -107,9 +113,10 @@ export default function FloatComponent({
           onKeyDown={(event) => handleKeyDown(event, localValue, "")}
           onInput={handleInputChange}
           disabled={disabled}
-          placeholder={
-            editNode ? t("input.floatNumberShort") : t("input.floatNumberFull")
-          }
+          placeholder={getPlaceholder(
+            disabled,
+            editNode ? t("input.floatNumberShort") : t("input.floatNumberFull"),
+          )}
           data-testid={id}
           ref={inputRef}
           onBlur={handleBlur}

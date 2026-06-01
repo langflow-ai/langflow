@@ -176,6 +176,9 @@
     --datatype-emerald: 161.4 93.5% 30.4%;
     --datatype-emerald-foreground: 149.3 80.4% 90%;
 
+    --datatype-green: 142.1 70.6% 35.3%;
+    --datatype-green-foreground: 138.5 76.5% 90%;
+
     --datatype-fuchsia: 293.4 69.5% 48.8%;
     --datatype-fuchsia-foreground: 287 100% 95.5%;
 
@@ -457,6 +460,9 @@
 
     --datatype-emerald: 156.2 71.6% 66.9%;
     --datatype-emerald-foreground: 161.4 93.5% 30.4%;
+
+    --datatype-green: 141.7 76.6% 73.1%;
+    --datatype-green-foreground: 142.1 70.6% 35.3%;
 
     --datatype-fuchsia: 291.1 93.1% 82.9%;
     --datatype-fuchsia-foreground: 293.4 69.5% 48.8%;

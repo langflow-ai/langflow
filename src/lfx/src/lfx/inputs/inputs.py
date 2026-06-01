@@ -560,6 +560,7 @@ class IntInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.INTEGER
+    input_types: list[str] = ["Number"]
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     value: Any = 0
@@ -619,6 +620,7 @@ class FloatInput(BaseInputMixin, ListableInputMixin, RangeMixin, MetadataTraceMi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FLOAT
+    input_types: list[str] = ["Number"]
     track_in_telemetry: CoalesceBool = True  # Safe numeric parameter
 
     @field_validator("value")
@@ -673,6 +675,7 @@ class BoolInput(BaseInputMixin, ListableInputMixin, MetadataTraceMixin, ToolMode
     """
 
     field_type: SerializableFieldTypes = FieldTypes.BOOLEAN
+    input_types: list[str] = ["Bool"]
     value: CoalesceBool = False
     track_in_telemetry: CoalesceBool = True  # Safe boolean flag
 
@@ -951,6 +954,7 @@ class FileInput(BaseInputMixin, ListableInputMixin, FileMixin, MetadataTraceMixi
     """
 
     field_type: SerializableFieldTypes = FieldTypes.FILE
+    input_types: list[str] = ["File"]
     track_in_telemetry: CoalesceBool = False  # Never track file paths (may contain PII)
 
 
@@ -975,6 +979,7 @@ class LinkInput(BaseInputMixin, LinkMixin):
 
 class SliderInput(BaseInputMixin, RangeMixin, SliderMixin, ToolModeMixin):
     field_type: SerializableFieldTypes = FieldTypes.SLIDER
+    input_types: list[str] = ["Number"]
 
 
 DEFAULT_PROMPT_INTUT_TYPES = ["Message"]

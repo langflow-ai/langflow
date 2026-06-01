@@ -72,6 +72,30 @@ describe("computeDisplayHandle", () => {
     });
   });
 
+  describe("pluggable primitive inputs (Number/Bool/File)", () => {
+    it.each([
+      ["int", ["Number"]],
+      ["float", ["Number"]],
+      ["slider", ["Number"]],
+      ["bool", ["Bool"]],
+      ["file", ["File"]],
+    ])(
+      "should show a handle for %s when input_types is %j",
+      (type, input_types) => {
+        expect(computeDisplayHandle({ type, input_types }, false)).toBe(true);
+      },
+    );
+
+    it("should still hide the handle in tool mode even with input_types", () => {
+      expect(
+        computeDisplayHandle(
+          { type: "int", input_types: ["Number"], tool_mode: true },
+          true,
+        ),
+      ).toBe(false);
+    });
+  });
+
   describe("tool mode handling", () => {
     it("should return false only when both isToolMode and template.tool_mode are true", () => {
       expect(

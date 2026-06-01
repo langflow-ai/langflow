@@ -11,7 +11,9 @@ import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { cn } from "@/utils/utils";
 import { handleKeyDown } from "../../../../../utils/reactflowUtils";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, IntComponentType } from "../../types";
+import { ReceivingInputField } from "../receivingInputField";
 
 export default function IntComponent({
   value,
@@ -147,6 +149,10 @@ export default function IntComponent({
     return null;
   }
 
+  if (disabled) {
+    return <ReceivingInputField id={id} editNode={editNode} />;
+  }
+
   return (
     <div className="w-full">
       <NumberInput
@@ -157,9 +163,11 @@ export default function IntComponent({
         onChange={handleNumberChange}
         isDisabled={disabled || readonly}
         value={
-          name === "max_tokens" && (value === 0 || value === null)
+          disabled
             ? ""
-            : (value ?? "")
+            : name === "max_tokens" && (value === 0 || value === null)
+              ? ""
+              : (value ?? "")
         }
       >
         <NumberInputField
@@ -170,11 +178,12 @@ export default function IntComponent({
           onKeyDown={(event) => handleKeyDown(event, value, "")}
           onInput={handleInputChange}
           disabled={disabled || readonly}
-          placeholder={
+          placeholder={getPlaceholder(
+            disabled,
             editNode
               ? t("editNode.integerPlaceholder")
-              : t("editNode.integerPlaceholderFull")
-          }
+              : t("editNode.integerPlaceholderFull"),
+          )}
           data-testid={id}
           ref={inputRef}
         />

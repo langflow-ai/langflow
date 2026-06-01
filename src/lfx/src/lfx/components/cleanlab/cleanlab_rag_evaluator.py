@@ -138,7 +138,7 @@ class CleanlabRAGEvaluator(Component):
 
     outputs = [
         Output(display_name="Response", name="response_passthrough", method="pass_response", types=["Message"]),
-        Output(display_name="Trust Score", name="trust_score", method="get_trust_score", types=["number"]),
+        Output(display_name="Trust Score", name="trust_score", method="get_trust_score", types=["Number"]),
         Output(display_name="Explanation", name="trust_explanation", method="get_trust_explanation", types=["Message"]),
         Output(display_name="Other Evals", name="other_scores", method="get_other_scores", types=["Data"]),
         Output(

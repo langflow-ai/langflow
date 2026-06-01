@@ -312,7 +312,11 @@ export default function InputFileComponent({
                     !value && "text-placeholder-foreground",
                     editNode && "h-6",
                   )}
-                  value={value || "Upload a file..."}
+                  value={
+                    disabled
+                      ? getPlaceholder(disabled, placeholder)
+                      : value || "Upload a file..."
+                  }
                   readOnly
                   disabled={isDisabled}
                   onClick={handleButtonClick}

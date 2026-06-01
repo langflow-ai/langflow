@@ -1,4 +1,6 @@
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Switch } from "../../../../ui/switch";
+import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
 import type { InputProps, ToggleComponentType } from "../../types";
 
 export default function ToggleShadComponent({
@@ -40,7 +42,7 @@ export default function ToggleShadComponent({
     return null;
   }
 
-  return (
+  const toggle = (
     <div onClick={(e) => e.stopPropagation()}>
       <Switch
         id={id}
@@ -60,4 +62,14 @@ export default function ToggleShadComponent({
       />
     </div>
   );
+
+  if (disabled) {
+    return (
+      <ShadTooltip content={getPlaceholder(true)} side="left">
+        {toggle}
+      </ShadTooltip>
+    );
+  }
+
+  return toggle;
 }

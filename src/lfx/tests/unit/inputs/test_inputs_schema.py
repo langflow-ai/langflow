@@ -3,7 +3,17 @@ from types import NoneType
 from typing import Union
 
 import pytest
-from lfx.inputs.inputs import BoolInput, DictInput, FloatInput, InputTypes, IntInput, MessageTextInput, NestedDictInput
+from lfx.inputs.inputs import (
+    BoolInput,
+    DictInput,
+    FileInput,
+    FloatInput,
+    InputTypes,
+    IntInput,
+    MessageTextInput,
+    NestedDictInput,
+    SliderInput,
+)
 from lfx.io.schema import schema_to_langflow_inputs
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
@@ -335,6 +345,23 @@ def test_float_input_allows_range_spec_minimum_for_non_negative_values():
     assert input_field.range_spec.min == 0.0
     assert input_field.range_spec.max == 3600.0
     assert input_field.range_spec.step == 0.01
+
+
+@pytest.mark.parametrize(
+    ("input_cls", "expected_input_types"),
+    [
+        (IntInput, ["Number"]),
+        (FloatInput, ["Number"]),
+        (SliderInput, ["Number"]),
+        (BoolInput, ["Bool"]),
+        (FileInput, ["File"]),
+    ],
+)
+def test_primitive_inputs_declare_connectable_handles(input_cls, expected_input_types):
+    """Int/Float/Slider/Bool/File expose a pluggable handle via input_types (Number groups the numerics)."""
+    field = input_cls(name="x")
+    assert field.input_types == expected_input_types
+    assert field.to_dict()["input_types"] == expected_input_types
 
 
 def test_schema_to_langflow_inputs_invalid_type():

@@ -8,6 +8,7 @@ import { Case } from "@/shared/components/caseComponent";
 import { useDarkStore } from "@/stores/darkStore";
 import type { SliderComponentType } from "@/types/components";
 import { cn } from "@/utils/utils";
+import { ReceivingInputField } from "../receivingInputField";
 import { SliderLabels } from "./components/slider-labels";
 import { buildColorByName } from "./helpers/build-color-by-name";
 
@@ -51,6 +52,7 @@ export default function SliderComponent({
   sliderButtonsOptions = DEFAULT_SLIDER_BUTTONS_OPTIONS,
   handleOnNewValue,
   showParameter = true,
+  id,
 }: InputProps<string[] | number[], SliderComponentType>): JSX.Element | null {
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
@@ -218,6 +220,10 @@ export default function SliderComponent({
 
   if (!showParameter) {
     return null;
+  }
+
+  if (disabled) {
+    return <ReceivingInputField id={id} editNode={editNode} />;
   }
 
   return (
