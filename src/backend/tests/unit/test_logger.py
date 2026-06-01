@@ -1581,3 +1581,107 @@ class TestBufferWriterBytesSerializationFix:
         finally:
             # Restore buffer state
             log_buffer.max = original_max
+
+
+class TestFileModeStdlibUnification:
+    """JSON file mode must route third-party stdlib logs through structlog too.
+
+    Regression coverage for the bug where ``LANGFLOW_LOG_ENV=container`` plus
+    ``LANGFLOW_LOG_FILE`` skipped the stdlib path entirely: uvicorn, sqlalchemy,
+    httpx, asyncio wrote plain text straight to the file, bypassing both JSON
+    rendering and PII redaction.
+    """
+
+    def teardown_method(self):
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.handlers.RotatingFileHandler):
+                logging.root.removeHandler(handler)
+                handler.close()
+        structlog.reset_defaults()
+        structlog.configure()
+
+    @staticmethod
+    def _read_records(log_file_path):
+        for handler in logging.root.handlers:
+            if hasattr(handler, "flush"):
+                handler.flush()
+        lines = [ln for ln in log_file_path.read_text().splitlines() if ln.strip()]
+        # Every line must be valid JSON. Plain-text stdlib output raises here.
+        return [json.loads(ln) for ln in lines]
+
+    def test_container_file_mode_stdlib_logs_are_json_with_logger_name(self):
+        """A third-party stdlib log lands in the file as JSON carrying its logger name."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            logging.getLogger("sqlalchemy.engine").warning("connecting to pool")
+
+            records = self._read_records(log_file_path)
+            assert records, "expected at least one JSON log line"
+            sa = [r for r in records if r.get("logger") == "sqlalchemy.engine"]
+            assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert sa[0]["event"] == "connecting to pool"
+            assert sa[0]["level"] == "warning"
+            # Service metadata is attached to stdlib records too.
+            assert sa[0]["service"] == "langflow"
+
+    def test_container_file_mode_redacts_stdlib_extra(self):
+        """PII redaction applies to structured fields on stdlib records in file mode."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            logging.getLogger("httpx").warning(
+                "request sent",
+                extra={"authorization": "Bearer xyz"},  # pragma: allowlist secret
+            )
+
+            records = self._read_records(log_file_path)
+            hx = [r for r in records if r.get("logger") == "httpx"]
+            assert hx, f"httpx record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert hx[0].get("authorization") == "***"
+
+    def test_container_file_mode_app_logs_still_json_and_redacted(self):
+        """Application logs keep their JSON + redaction in file mode (structlog path)."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            structlog.get_logger("langflow.api").info(
+                "incoming",
+                api_key="sk-do-not-leak",  # pragma: allowlist secret
+            )
+
+            records = self._read_records(log_file_path)
+            app = [r for r in records if r.get("logger") == "langflow.api"]
+            assert app, f"app record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert app[0]["event"] == "incoming"
+            assert app[0].get("api_key") == "***"
+
+
+class TestInterceptExtraForwarding:
+    """The stdout InterceptHandler forwards stdlib `extra` fields and redacts them."""
+
+    def teardown_method(self):
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, InterceptHandler):
+                logging.root.removeHandler(handler)
+        structlog.reset_defaults()
+        structlog.configure()
+
+    def test_intercept_forwards_and_redacts_stdlib_extra(self, capsys):
+        """A stdlib `extra` lands as a structured field; sensitive keys are redacted, others kept."""
+        configure(log_env="container", log_level="INFO", cache=False)
+
+        logging.getLogger("sqlalchemy.engine").warning(
+            "checking out connection",
+            extra={"password": "hunter2", "pool_size": 5},  # pragma: allowlist secret
+        )
+
+        lines = [ln for ln in capsys.readouterr().out.strip().splitlines() if ln.strip().startswith("{")]
+        records = [json.loads(ln) for ln in lines]
+        sa = [r for r in records if r.get("logger") == "sqlalchemy.engine"]
+        assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
+        assert sa[0]["password"] == "***"  # noqa: S105 - sensitive extra redacted
+        assert sa[0]["pool_size"] == 5  # non-sensitive extra preserved

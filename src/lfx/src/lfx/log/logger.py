@@ -389,8 +389,14 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
-def setup_log_file(log_file: Path, *, max_bytes: int) -> None:
-    """Set up Langflow's rotating file handler."""
+def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
+    """Set up Langflow's rotating file handler.
+
+    ``formatter`` lets JSON modes attach a ``structlog.stdlib.ProcessorFormatter``
+    so third-party stdlib records (uvicorn, sqlalchemy, httpx, ...) are rendered
+    as JSON through the same processor chain as application logs. When omitted,
+    the handler writes the message verbatim (structlog has already rendered it).
+    """
     global _file_handler  # noqa: PLW0603
 
     if _file_handler is not None:
@@ -402,7 +408,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int) -> None:
         maxBytes=max_bytes,
         backupCount=5,
     )
-    _file_handler.setFormatter(logging.Formatter("%(message)s"))
+    _file_handler.setFormatter(formatter if formatter is not None else logging.Formatter("%(message)s"))
     logging.root.addHandler(_file_handler)
 
 
@@ -512,9 +518,45 @@ def configure(
     json_traceback = structlog.processors.ExceptionRenderer(
         structlog.tracebacks.ExceptionDictTransformer(show_locals=show_locals, max_frames=50)
     )
-    if log_env.lower() == "container" or log_env.lower() == "container_json":
-        processors.append(json_traceback)
-        processors.append(structlog.processors.JSONRenderer())
+
+    # When JSON output is written to a file, render through a stdlib
+    # ProcessorFormatter on the rotating handler instead of an inline
+    # JSONRenderer. That routes foreign stdlib records (uvicorn, sqlalchemy,
+    # httpx, asyncio) through the same renderer and the same redaction, so the
+    # file is a single JSON stream and PII redaction is not bypassed -- while the
+    # stdlib RotatingFileHandler keeps log rotation. Foreign records are enriched
+    # by ``foreign_pre_chain``; structlog records carry the context built above
+    # and are handed off via ``wrap_for_formatter``.
+    file_json_formatter: logging.Formatter | None = None
+
+    def _append_json_tail() -> None:
+        nonlocal file_json_formatter
+        if log_file:
+            processors.append(structlog.stdlib.ProcessorFormatter.wrap_for_formatter)
+            foreign_pre_chain = [
+                structlog.contextvars.merge_contextvars,
+                structlog.stdlib.ExtraAdder(),
+                structlog.stdlib.add_log_level,
+                structlog.stdlib.add_logger_name,
+                add_otel_trace_context,
+                structlog.processors.TimeStamper(fmt="iso", utc=True),
+                _add_service_info,
+                redact_processor,
+            ]
+            file_json_formatter = structlog.stdlib.ProcessorFormatter(
+                foreign_pre_chain=foreign_pre_chain,
+                processors=[
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    json_traceback,
+                    structlog.processors.JSONRenderer(),
+                ],
+            )
+        else:
+            processors.append(json_traceback)
+            processors.append(structlog.processors.JSONRenderer())
+
+    if log_env.lower() in ("container", "container_json"):
+        _append_json_tail()
     elif log_env.lower() == "container_csv":
         processors.append(structlog.processors.format_exc_info)
         # Include callsite fields in key order when DEV is enabled
@@ -534,8 +576,7 @@ def configure(
             else:
                 processors.append(structlog.dev.ConsoleRenderer(colors=True))
         else:
-            processors.append(json_traceback)
-            processors.append(structlog.processors.JSONRenderer())
+            _append_json_tail()
 
     # Get numeric log level
     numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
@@ -588,8 +629,9 @@ def configure(
         else:
             max_bytes = 10 * 1024 * 1024  # Default 10MB
 
-        # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output
-        setup_log_file(log_file, max_bytes=max_bytes)
+        # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output.
+        # In JSON file mode the formatter renders both structlog and foreign stdlib records as JSON.
+        setup_log_file(log_file, max_bytes=max_bytes, formatter=file_json_formatter)
         logging.root.setLevel(numeric_level)
 
     # Set up interceptors for uvicorn and gunicorn
@@ -647,6 +689,12 @@ _STDLIB_LEVEL_TO_STRUCTLOG = (
     (logging.INFO, "info"),
 )
 
+# Attributes present on a vanilla LogRecord. Anything else in record.__dict__ was
+# attached via ``logging.*(..., extra={...})`` and is forwarded to structlog so it
+# lands as a structured field (and is therefore subject to PII redaction), mirroring
+# the ExtraAdder used on the file-mode ProcessorFormatter path.
+_RESERVED_LOGRECORD_ATTRS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
+
 
 class InterceptHandler(logging.Handler):
     """Route stdlib logging records into structlog.
@@ -672,6 +720,9 @@ class InterceptHandler(logging.Handler):
                 # the rendered ``stack`` field directly so it survives without
                 # needing StackInfoRenderer to recompute from a different frame.
                 kwargs["stack"] = record.stack_info
+            for key, value in record.__dict__.items():
+                if key not in _RESERVED_LOGRECORD_ATTRS and not key.startswith("_") and key not in kwargs:
+                    kwargs[key] = value
             method_name = "debug"
             for threshold, name in _STDLIB_LEVEL_TO_STRUCTLOG:
                 if record.levelno >= threshold:

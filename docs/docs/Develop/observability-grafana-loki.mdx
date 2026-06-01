@@ -80,9 +80,7 @@ Frame locals are intentionally absent unless `LANGFLOW_LOG_TRACE_LOCALS=true`.
 
 ## Stdlib loggers
 
-Third-party libraries that use Python's standard logging module (`uvicorn`, `sqlalchemy`, `httpx`, `langchain`, `asyncio`) are routed through the same JSON stream in container mode, **as long as logs go to stdout**. Their original logger name is preserved on the `logger` field, so the same Grafana queries that work for application loggers also work for library output.
-
-The intercept that does this is only installed on the stdout path. If you set `LANGFLOW_LOG_FILE`, application logs are still JSON but these library loggers write plain text to the file. For a single JSON stream in a file, log to stdout and redirect it (`langflow run > langflow.log`) instead of setting `LANGFLOW_LOG_FILE`.
+Third-party libraries that use Python's standard logging module (`uvicorn`, `sqlalchemy`, `httpx`, `langchain`, `asyncio`) are routed through the same JSON stream in container mode, whether you log to stdout or to `LANGFLOW_LOG_FILE`. Their original logger name is preserved on the `logger` field, so the same Grafana queries that work for application loggers also work for library output, and the same PII redaction is applied to their structured fields.
 
 ## OpenTelemetry trace correlation
 
