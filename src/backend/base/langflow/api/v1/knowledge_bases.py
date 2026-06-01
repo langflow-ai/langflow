@@ -1327,7 +1327,7 @@ async def list_knowledge_bases(
         knowledge_bases: list[KnowledgeBaseInfo] = []
         kb_ids_to_fetch: list[uuid.UUID] = []
 
-        rows = await knowledge_base_service.list_by_user(current_user.id)
+        original_rows = await knowledge_base_service.list_by_user(current_user.id)
         # List-level authz: narrow to the KB rows the user may read once an
         # authorization plugin is active. No-op in OSS (AUTHZ disabled) and
         # owner rows are always visible; this wires the per-row hook the
@@ -1335,7 +1335,7 @@ async def list_knowledge_bases(
         rows = await filter_visible_resources(
             current_user,
             resource_type="knowledge_base",
-            candidates=list(rows),
+            candidates=list(original_rows),
             owner_extractor=lambda row: row.user_id,
             act=KnowledgeBaseAction.READ,
         )
@@ -1356,9 +1356,11 @@ async def list_knowledge_bases(
                         size=row.size_bytes,
                     )
                 )
-        elif kb_path.exists():
-            # Recovery-only fallback for legacy/exported KB directories
-            # that have not been reconciled into the DB yet.
+        elif not original_rows and kb_path.exists():
+            # Recovery-only fallback for legacy/exported KB directories that have
+            # not been reconciled into the DB yet. Gate on the *raw* DB result so
+            # authorization-filtered rows never trigger a disk re-scan that would
+            # re-surface a KB the plugin just hid.
             for kb_dir in kb_path.iterdir():
                 if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                     continue
