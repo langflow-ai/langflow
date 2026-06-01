@@ -49,6 +49,7 @@ from langflow.schema.knowledge_base import (
 from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
+    filter_visible_resources,
 )
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
@@ -1327,6 +1328,17 @@ async def list_knowledge_bases(
         kb_ids_to_fetch: list[uuid.UUID] = []
 
         rows = await knowledge_base_service.list_by_user(current_user.id)
+        # List-level authz: narrow to the KB rows the user may read once an
+        # authorization plugin is active. No-op in OSS (AUTHZ disabled) and
+        # owner rows are always visible; this wires the per-row hook the
+        # plugin uses, matching the flows/deployments/projects list convention.
+        rows = await filter_visible_resources(
+            current_user,
+            resource_type="knowledge_base",
+            candidates=list(rows),
+            owner_extractor=lambda row: row.user_id,
+            act=KnowledgeBaseAction.READ,
+        )
 
         if rows:
             for row in rows:

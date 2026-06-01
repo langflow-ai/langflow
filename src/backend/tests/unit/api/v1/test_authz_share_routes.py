@@ -54,6 +54,8 @@ class _StubAuthz:
         self._enabled = enabled
         self._allow = allow
         self.enforce_calls: list[dict] = []
+        self.invalidated_users: list[UUID] = []
+        self.invalidate_all_calls = 0
 
     async def supports_cross_user_fetch(self) -> bool:
         return self._cross_user
@@ -68,11 +70,11 @@ class _StubAuthz:
     async def batch_enforce(self, **kwargs) -> list[bool]:
         return [self._allow] * len(kwargs.get("requests", []))
 
-    async def invalidate_user(self, *_args, **_kwargs) -> None:
-        return None
+    async def invalidate_user(self, user_id: UUID, *_args, **_kwargs) -> None:
+        self.invalidated_users.append(user_id)
 
     async def invalidate_all(self, *_args, **_kwargs) -> None:
-        return None
+        self.invalidate_all_calls += 1
 
 
 @pytest.fixture
@@ -481,3 +483,210 @@ async def test_delete_share_denied_when_plugin_denies_share_creator(patch_authz,
 
     assert excinfo.value.status_code == 403
     assert session.deleted == []
+
+
+# --------------------------------------------------------------------------- #
+# Visibility predicate — owner / creator / PUBLIC / USER / TEAM / PRIVATE
+# --------------------------------------------------------------------------- #
+
+
+def _share(*, scope: str, target_id: UUID | None, created_by: UUID) -> AuthzShare:
+    return AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=uuid4(),
+        scope=scope,
+        target_id=target_id,
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=created_by,
+    )
+
+
+def test_share_visible_owner_and_creator_always_see():
+    """Resource owner and the share creator see the row regardless of scope."""
+    owner = uuid4()
+    creator = uuid4()
+    # PRIVATE row owned by `owner`, created by `creator`.
+    row = _share(scope=ShareScope.PRIVATE.value, target_id=None, created_by=creator)
+    assert shares_module._share_visible(row=row, user_id=owner, resource_owner_id=owner, is_team_member=False)
+    assert shares_module._share_visible(row=row, user_id=creator, resource_owner_id=owner, is_team_member=False)
+
+
+def test_share_visible_public_is_visible_to_anyone():
+    row = _share(scope=ShareScope.PUBLIC.value, target_id=None, created_by=uuid4())
+    assert shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=False)
+
+
+def test_share_visible_user_scope_matches_target_only():
+    target = uuid4()
+    row = _share(scope=ShareScope.USER.value, target_id=target, created_by=uuid4())
+    assert shares_module._share_visible(row=row, user_id=target, resource_owner_id=uuid4(), is_team_member=False)
+    # A different user (not owner/creator/target) cannot see it.
+    assert not shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=False)
+
+
+def test_share_visible_team_scope_follows_membership_flag():
+    row = _share(scope=ShareScope.TEAM.value, target_id=uuid4(), created_by=uuid4())
+    assert shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=True)
+    assert not shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=False)
+
+
+def test_share_visible_private_hidden_from_non_owner():
+    row = _share(scope=ShareScope.PRIVATE.value, target_id=None, created_by=uuid4())
+    assert not shares_module._share_visible(row=row, user_id=uuid4(), resource_owner_id=uuid4(), is_team_member=True)
+
+
+# --------------------------------------------------------------------------- #
+# Cache invalidation contract — USER scope targets the user; others drop all
+# --------------------------------------------------------------------------- #
+
+
+@pytest.mark.asyncio
+async def test_invalidate_for_share_user_scope_targets_user(patch_authz):
+    stub = patch_authz(cross_user=False, enabled=False)
+    target = uuid4()
+    await shares_module._invalidate_for_share(ShareScope.USER.value, target)
+    assert stub.invalidated_users == [target]
+    assert stub.invalidate_all_calls == 0
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("scope", "target_id"),
+    [
+        (ShareScope.PUBLIC.value, None),
+        (ShareScope.TEAM.value, "team"),
+        (ShareScope.PRIVATE.value, None),
+    ],
+)
+async def test_invalidate_for_share_non_user_scope_invalidates_all(patch_authz, scope, target_id):
+    stub = patch_authz(cross_user=False, enabled=False)
+    resolved = uuid4() if target_id == "team" else None
+    await shares_module._invalidate_for_share(scope, resolved)
+    assert stub.invalidate_all_calls == 1
+    assert stub.invalidated_users == []
+
+
+# --------------------------------------------------------------------------- #
+# TEAM-scope reachability through get_share / list_shares
+# --------------------------------------------------------------------------- #
+
+
+class _ExecResult:
+    """Result wrapper supporting the .first()/iteration shapes the routes use."""
+
+    def __init__(self, rows: list[Any]) -> None:
+        self._rows = list(rows)
+
+    def first(self) -> Any:
+        return self._rows[0] if self._rows else None
+
+    def all(self) -> list[Any]:
+        return list(self._rows)
+
+    def __iter__(self):
+        return iter(self._rows)
+
+
+class _QueueSession(_FakeAsyncSession):
+    """``_FakeAsyncSession`` whose exec() returns queued result-sets in order."""
+
+    def __init__(self, get_by_type: dict[tuple[type, UUID], Any] | None = None, *, exec_queue=None) -> None:
+        super().__init__(get_by_type)
+        self._exec_queue = [list(rows) for rows in (exec_queue or [])]
+
+    async def exec(self, _stmt: Any) -> _ExecResult:
+        rows = self._exec_queue.pop(0) if self._exec_queue else []
+        return _ExecResult(rows)
+
+
+@pytest.mark.asyncio
+async def test_get_share_team_member_can_see(patch_authz, silence_audit):  # noqa: ARG001
+    """A team member (neither owner nor creator) can read a TEAM-scope share."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    creator = _make_user()
+    viewer = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.TEAM.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=creator.id,
+    )
+    # Membership query returns one row → viewer is a team member.
+    session = _QueueSession({(AuthzShare, share.id): share, (Flow, flow.id): flow}, exec_queue=[[SimpleNamespace()]])
+
+    result = await shares_module.get_share(share_id=share.id, current_user=viewer, session=session)
+    assert result.id == share.id
+
+
+@pytest.mark.asyncio
+async def test_get_share_team_non_member_gets_404(patch_authz, silence_audit):  # noqa: ARG001
+    """A non-member sees 404 (not 403) for a TEAM-scope share — UUID privacy."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    owner = _make_user()
+    creator = _make_user()
+    outsider = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    share = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.TEAM.value,
+        target_id=uuid4(),
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=creator.id,
+    )
+    # Empty membership query → outsider is not a member.
+    session = _QueueSession({(AuthzShare, share.id): share, (Flow, flow.id): flow}, exec_queue=[[]])
+
+    with pytest.raises(HTTPException) as excinfo:
+        await shares_module.get_share(share_id=share.id, current_user=outsider, session=session)
+    assert excinfo.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_list_shares_filters_by_visibility_for_non_superuser(patch_authz, silence_audit):  # noqa: ARG001
+    """list_shares returns only rows the (non-superuser) caller may see."""
+    from langflow.services.database.models.flow.model import Flow
+
+    patch_authz(cross_user=False, enabled=False)
+
+    caller = _make_user()
+    owner = _make_user()
+    flow = SimpleNamespace(id=uuid4(), user_id=owner.id)
+    visible = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.USER.value,
+        target_id=caller.id,  # targets the caller → visible
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=owner.id,
+    )
+    hidden = AuthzShare(
+        id=uuid4(),
+        resource_type="flow",
+        resource_id=flow.id,
+        scope=ShareScope.USER.value,
+        target_id=uuid4(),  # targets someone else → hidden
+        permission_level=SharePermissionLevel.READ.value,
+        created_by=owner.id,
+    )
+    # First exec → the share rows; second exec → caller's (empty) team ids.
+    session = _QueueSession({(Flow, flow.id): flow}, exec_queue=[[visible, hidden], []])
+
+    results = await shares_module.list_shares(current_user=caller, session=session)
+    ids = {r.id for r in results}
+    assert visible.id in ids
+    assert hidden.id not in ids
