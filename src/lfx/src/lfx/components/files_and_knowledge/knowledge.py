@@ -147,6 +147,10 @@ class KnowledgeComponent(Component):
     description = "Ingest into or retrieve from a Langflow knowledge base."
     icon = "database"
     name = "Knowledge"
+    # Knowledge bases live in a local on-disk database, so this component and its
+    # legacy subclasses (``KnowledgeBaseComponent``, ``KnowledgeIngestionComponent``)
+    # are hidden from the palette when Cloud Mode is enabled.
+    cloud_compatible = False
 
     # ------ Mode → visible-fields wiring ---------------------------------
     # ``default_keys`` are inputs always visible regardless of mode.

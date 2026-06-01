@@ -45,7 +45,6 @@ class KnowledgeBaseComponent(KnowledgeComponent):
     description = "Search and retrieve data from knowledge."
     icon = "download"
     name = "KnowledgeBase"
-    cloud_compatible = False
     # Hidden from the default palette — surfaces only when a saved flow
     # already references it. New flows should pick ``Knowledge`` instead.
     legacy = True
