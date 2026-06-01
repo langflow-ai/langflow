@@ -1,0 +1,35 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: langflow
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: langflow
+          __path__: /var/log/langflow/*.log
+    pipeline_stages:
+      # Parse the structlog JSON line and promote useful fields to labels.
+      # Keep this set small; high-cardinality fields (user_id, flow_id,
+      # trace_id) should stay in the log body and be queried with `| json`.
+      - json:
+          expressions:
+            level: level
+            service: service
+            environment: environment
+            version: version
+            logger: logger
+      - labels:
+          level:
+          service:
+          environment:
+          version:
+          logger:
