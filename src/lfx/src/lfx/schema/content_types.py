@@ -75,6 +75,19 @@ class BaseContent(BaseModel):
         ),
     )
 
+    def __init__(self, **data: Any) -> None:
+        super().__init__(**data)
+        # Mark only the discriminator as "set" so partial-update callers using
+        # ``model_dump(exclude_unset=True)`` (notably ``aupdate_messages``)
+        # keep the ``type`` tag. Without it, ``TextContent(text="x")`` would
+        # dump to ``{"text": "x"}`` and the next read-back through
+        # ``MessageRead``'s discriminated union would fail with
+        # ``union_tag_not_found``. Other defaulted fields stay unset so true
+        # exclude_unset semantics survive: a patch like ``ContentBlock(title=
+        # "...")`` no longer overwrites an existing block's ``duration`` /
+        # ``header`` / ``contents`` with their defaults on merge.
+        self.model_fields_set.add("type")
+
     def to_dict(self) -> dict[str, Any]:
         return self.model_dump()
 
@@ -260,17 +273,10 @@ class ContentBlock(BaseContent):
     allow_markdown: bool = Field(default=True)
     media_url: list[str] | None = None
 
-    def __init__(self, **data) -> None:
-        super().__init__(**data)
-        # Mark only the discriminator as "set" so partial-update callers
-        # using ``model_dump(exclude_unset=True)`` (notably
-        # ``aupdate_messages``) still carry the ``type="group"`` field
-        # downstream. Other defaulted fields stay unset so true
-        # exclude_unset semantics survive: a patch like
-        # ``ContentBlock(title="...")`` no longer overwrites an existing
-        # block's ``duration`` / ``header`` / ``contents`` with their
-        # defaults on merge.
-        self.model_fields_set.add("type")
+    # ``__init__`` is inherited from ``BaseContent``: it marks only the
+    # ``type`` discriminator as set, so ``model_dump(exclude_unset=True)``
+    # preserves ``type="group"`` while leaving ``allow_markdown`` and the
+    # other defaulted fields out of partial-update merges.
 
     @field_validator("contents", mode="before")
     @classmethod

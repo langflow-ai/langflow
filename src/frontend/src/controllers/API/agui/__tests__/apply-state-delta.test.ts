@@ -282,4 +282,208 @@ describe("applyStateDelta", () => {
       ]);
     });
   });
+
+  describe("build_duration stamping on output-node success", () => {
+    // The AG-UI translator drops the backend's per-vertex duration, so the
+    // bridge has to derive ``build_duration`` client-side and stamp it onto
+    // the last bot message. These pin the gates (output-type only, success
+    // only, buildStartTime required) so a regression would surface here
+    // instead of in a playwright run.
+
+    const OUTPUT_NODE_ID = "ChatOutput-XYZ";
+    const NON_OUTPUT_NODE_ID = "LanguageModelComponent-ABC";
+
+    const seedFlow = (nodes: Array<{ id: string; type: string }>) => {
+      useFlowStore.setState({
+        nodes: nodes.map((n) => ({
+          id: n.id,
+          // Only ``data.type`` matters here; the rest of the node shape is
+          // surplus for the helper but required by AllNodeType typing.
+          data: { type: n.type },
+        })) as unknown as ReturnType<typeof useFlowStore.getState>["nodes"],
+      });
+    };
+
+    const seedBotMessage = (msg: {
+      id: string;
+      properties?: Record<string, unknown>;
+    }) => {
+      // Stamping reads ``useMessagesStore`` when React Query returns nothing
+      // (the shareable-playground / IOModal path), so seed it there.
+      const { useMessagesStore } = require("@/stores/messagesStore");
+      useMessagesStore.setState({
+        messages: [
+          {
+            id: msg.id,
+            sender: "Machine",
+            sender_name: "AI",
+            session_id: "s1",
+            flow_id: "f1",
+            text: "Hi",
+            files: [],
+            timestamp: "2026-05-28T00:00:00Z",
+            properties: msg.properties ?? {},
+            content_blocks: [],
+            category: "message",
+          },
+        ],
+      });
+    };
+
+    beforeEach(() => {
+      const { useMessagesStore } = require("@/stores/messagesStore");
+      const { queryClient } = require("@/contexts");
+      useMessagesStore.setState({ messages: [] });
+      useFlowStore.setState({ nodes: [], buildStartTime: null });
+      // Clear the React Query messages cache so the scoping test below
+      // doesn't leak seeded sessions into the Zustand-fallback tests.
+      queryClient.clear();
+    });
+
+    it("stamps build_duration on the last bot message when an output node finishes successfully", () => {
+      seedFlow([{ id: OUTPUT_NODE_ID, type: "ChatOutput" }]);
+      seedBotMessage({ id: "m1" });
+      useFlowStore.setState({ buildStartTime: Date.now() - 1500 });
+
+      applyStateDelta(
+        [
+          {
+            op: "add",
+            path: `/nodes/${OUTPUT_NODE_ID}`,
+            value: { status: "success", output: { results: {} } },
+          },
+        ],
+        "run-1",
+        new Set<string>(),
+      );
+
+      const { useMessagesStore } = require("@/stores/messagesStore");
+      const stamped = useMessagesStore.getState().messages[0];
+      expect(stamped.properties.build_duration).toBeGreaterThanOrEqual(1500);
+      // Resets so the next segment is measured fresh.
+      expect(useFlowStore.getState().buildStartTime).not.toBeNull();
+    });
+
+    it("does not stamp when the finishing node is not an output type", () => {
+      seedFlow([{ id: NON_OUTPUT_NODE_ID, type: "LanguageModelComponent" }]);
+      seedBotMessage({ id: "m1" });
+      useFlowStore.setState({ buildStartTime: Date.now() - 500 });
+
+      applyStateDelta(
+        [
+          {
+            op: "add",
+            path: `/nodes/${NON_OUTPUT_NODE_ID}`,
+            value: { status: "success", output: { results: {} } },
+          },
+        ],
+        "run-1",
+        new Set<string>(),
+      );
+
+      const { useMessagesStore } = require("@/stores/messagesStore");
+      const msg = useMessagesStore.getState().messages[0];
+      expect(msg.properties.build_duration).toBeUndefined();
+    });
+
+    it("does not stamp when buildStartTime is missing", () => {
+      seedFlow([{ id: OUTPUT_NODE_ID, type: "ChatOutput" }]);
+      seedBotMessage({ id: "m1" });
+      useFlowStore.setState({ buildStartTime: null });
+
+      applyStateDelta(
+        [
+          {
+            op: "add",
+            path: `/nodes/${OUTPUT_NODE_ID}`,
+            value: { status: "success", output: { results: {} } },
+          },
+        ],
+        "run-1",
+        new Set<string>(),
+      );
+
+      const { useMessagesStore } = require("@/stores/messagesStore");
+      const msg = useMessagesStore.getState().messages[0];
+      expect(msg.properties.build_duration).toBeUndefined();
+    });
+
+    it("does not overwrite a build_duration already on the message (nested-segment guard)", () => {
+      seedFlow([{ id: OUTPUT_NODE_ID, type: "ChatOutput" }]);
+      seedBotMessage({ id: "m1", properties: { build_duration: 999 } });
+      useFlowStore.setState({ buildStartTime: Date.now() - 5000 });
+
+      applyStateDelta(
+        [
+          {
+            op: "add",
+            path: `/nodes/${OUTPUT_NODE_ID}`,
+            value: { status: "success", output: { results: {} } },
+          },
+        ],
+        "run-1",
+        new Set<string>(),
+      );
+
+      const { useMessagesStore } = require("@/stores/messagesStore");
+      const msg = useMessagesStore.getState().messages[0];
+      expect(msg.properties.build_duration).toBe(999);
+    });
+
+    it("scopes the stamp to the running session, not another session's cache", () => {
+      // D1 regression: the bot-message lookup must be scoped to the running
+      // flow/session. The unscoped form walked every messages cache and could
+      // stamp build_duration onto a bot message from a different session the
+      // user had open in the same tab.
+      const { queryClient } = require("@/contexts");
+      const MESSAGES_QUERY_KEY = "useGetMessagesQuery";
+      const botMsg = (id: string) => ({
+        id,
+        sender: "Machine",
+        sender_name: "AI",
+        text: "hi",
+        files: [],
+        timestamp: "2026-05-28T00:00:00Z",
+        properties: {} as Record<string, unknown>,
+        content_blocks: [],
+        category: "message",
+      });
+      const otherKey = [
+        MESSAGES_QUERY_KEY,
+        { id: "f1", session_id: "other-session" },
+      ];
+      const runningKey = [
+        MESSAGES_QUERY_KEY,
+        { id: "f1", session_id: "running-session" },
+      ];
+      queryClient.setQueryData(otherKey, [botMsg("other-msg")]);
+      queryClient.setQueryData(runningKey, [botMsg("running-msg")]);
+
+      seedFlow([{ id: OUTPUT_NODE_ID, type: "ChatOutput" }]);
+      useFlowStore.setState({ buildStartTime: Date.now() - 1500 });
+
+      applyStateDelta(
+        [
+          {
+            op: "add",
+            path: `/nodes/${OUTPUT_NODE_ID}`,
+            value: { status: "success", output: { results: {} } },
+          },
+        ],
+        "run-1",
+        new Set<string>(),
+        "f1",
+        "running-session",
+      );
+
+      const running = queryClient.getQueryData(runningKey) as Array<{
+        properties: { build_duration?: number };
+      }>;
+      const other = queryClient.getQueryData(otherKey) as Array<{
+        properties: { build_duration?: number };
+      }>;
+      expect(running[0].properties.build_duration).toBeGreaterThanOrEqual(1500);
+      expect(other[0].properties.build_duration).toBeUndefined();
+    });
+  });
 });

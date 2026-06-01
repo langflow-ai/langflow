@@ -743,7 +743,15 @@ class MessageResponse(DefaultModel):
 
     properties: Properties | None = None
     category: str | None = None
-    content_blocks: list[ContentType | ContentBlock] | None = None
+    # ContentBlock joined the ContentType discriminated union as tag "group",
+    # so list[ContentType] alone covers both flat ContentType (text, image,
+    # tool_use, ...) and the wrapping ContentBlock shape. The previous
+    # `list[ContentType | ContentBlock]` union confused Pydantic's
+    # discriminator: any dict with a `contents` field (which every backend
+    # BaseContent now serializes by default, even as []) was routed to
+    # ContentBlock and rejected with `type: literal_error` for non-group
+    # types like text.
+    content_blocks: list[ContentType] | None = None
     session_metadata: dict | None = None
 
     @field_validator("content_blocks", mode="before")
@@ -754,10 +762,11 @@ class MessageResponse(DefaultModel):
         if isinstance(v, list):
             return [cls.validate_content_blocks(block) for block in v]
         if isinstance(v, dict):
-            # Flat ContentType (has "type" but no "contents") vs grouped ContentBlock
-            if "type" in v and "contents" not in v:
-                return _CONTENT_TYPE_ADAPTER.validate_python(v)
-            return ContentBlock.model_validate(v)
+            # The discriminator on `type` handles flat ContentType vs grouped
+            # ContentBlock uniformly. The old "type and not contents"
+            # heuristic broke once BaseContent started serializing
+            # `contents: []` on every leaf.
+            return _CONTENT_TYPE_ADAPTER.validate_python(v)
         return v
 
     @field_validator("properties", mode="before")

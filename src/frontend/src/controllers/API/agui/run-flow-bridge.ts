@@ -10,15 +10,22 @@
 
 import { type BaseEvent, EventType } from "@ag-ui/client";
 import { handleMessageEvent } from "@/components/core/playgroundComponent/chat-view/utils/message-event-handler";
+import {
+  findLastBotMessage,
+  updateMessageProperties,
+} from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import { BuildStatus } from "@/constants/enums";
+import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { useMessagesStore } from "@/stores/messagesStore";
 import type {
   ChatInputType,
   ChatOutputType,
   VertexBuildTypeAPI,
   VertexDataTypeAPI,
 } from "@/types/api";
+import { isOutputType } from "@/utils/reactflowUtils";
 import {
   buildWorkflowRunRequest,
   createWorkflowAgent,
@@ -112,6 +119,8 @@ export function applyStateDelta(
   ops: JsonPatchOp[],
   runId: string,
   nodeIds: Set<string>,
+  flowId?: string,
+  sessionId?: string,
 ): void {
   const flowStore = useFlowStore.getState();
   for (const op of ops) {
@@ -155,8 +164,97 @@ export function applyStateDelta(
         artifacts: null,
       };
       flowStore.addDataToFlowPool(entry, nodeId);
+
+      // When a ChatOutput (or other output type) finishes, stamp the
+      // elapsed segment duration onto the bot message it just produced.
+      // Mirrors the v1 ``end_vertex`` callback in ``buildUtils.ts`` so
+      // the playground header can render the "Finished in" pill and
+      // MessageMetadata can show its duration. The AG-UI translator
+      // does not propagate ``build_duration`` from the backend, so this
+      // is the only path that sets it for v2 runs.
+      if (value.status === "success") {
+        stampSegmentDurationForOutputNode(nodeId, flowId, sessionId);
+      }
     }
   }
+}
+
+/**
+ * If ``nodeId`` is an output-type node, compute the time since the
+ * flow's ``buildStartTime`` and persist it as ``build_duration`` on the
+ * last bot message in the matching React Query cache (and the Zustand
+ * fallback used by the shareable playground). ``flowId``/``sessionId`` scope
+ * the lookup to the running session so the duration can't land on a bot
+ * message from a different session's cache. Resets ``buildStartTime`` so the
+ * next segment is measured fresh.
+ *
+ * Mirrors the per-vertex segment logic in ``buildUtils.ts`` so the v2
+ * AG-UI bridge produces the same on-message metadata the v1 build
+ * callbacks do.
+ */
+function stampSegmentDurationForOutputNode(
+  nodeId: string,
+  flowId?: string,
+  sessionId?: string,
+): void {
+  const flowState = useFlowStore.getState();
+  const node = flowState.nodes.find((n) => n.id === nodeId);
+  const nodeType = node?.data?.type as string | undefined;
+  if (!nodeType || !isOutputType(nodeType) || !flowState.buildStartTime) {
+    return;
+  }
+  const segmentDurationMs = Date.now() - flowState.buildStartTime;
+
+  const found = findLastBotMessage(flowId, sessionId);
+  if (found && !found.message.properties?.build_duration) {
+    updateMessageProperties(found.message.id!, found.queryKey, {
+      build_duration: segmentDurationMs,
+    });
+
+    const storeMsg = useMessagesStore
+      .getState()
+      .messages.find((m) => m.id === found.message.id);
+    if (storeMsg) {
+      useMessagesStore.getState().updateMessage({
+        ...storeMsg,
+        properties: {
+          ...storeMsg.properties,
+          build_duration: segmentDurationMs,
+        },
+      });
+    }
+
+    persistMessageProperties(found.message.id!, {
+      ...found.message,
+      properties: {
+        ...found.message.properties,
+        build_duration: segmentDurationMs,
+      },
+    });
+  } else if (!found) {
+    // Shareable-playground fallback: React Query cache is empty, so look
+    // for the last bot message in the Zustand store and stamp there.
+    const storeMessages = useMessagesStore.getState().messages;
+    for (let i = storeMessages.length - 1; i >= 0; i--) {
+      const msg = storeMessages[i];
+      if (msg.sender === "Machine" && !msg.properties?.build_duration) {
+        const updatedProperties = {
+          ...msg.properties,
+          build_duration: segmentDurationMs,
+        };
+        useMessagesStore.getState().updateMessage({
+          ...msg,
+          properties: updatedProperties,
+        });
+        if (msg.id) {
+          persistMessageProperties(msg.id, { properties: updatedProperties });
+        }
+        break;
+      }
+    }
+  }
+
+  flowState.setBuildStartTime(Date.now());
 }
 
 /**
@@ -203,6 +301,11 @@ export async function runFlowAGUI(
   const flowStore = useFlowStore.getState();
   const setErrorData = useAlertStore.getState().setErrorData;
   const touchedNodeIds = new Set<string>();
+  // ``setIsBuilding(true)`` (called upstream by ``buildFlow``) clears
+  // ``buildStartTime``. Initialise it here so the segment duration the
+  // per-vertex success handler stamps onto bot messages is measured
+  // from the actual moment the run started, not from a stale tick.
+  flowStore.setBuildStartTime(Date.now());
   // Server derives run_id from session_id/flow_id and announces it via
   // RUN_STARTED. Until that arrives we have no id to stamp on flow-pool
   // entries, so we fall back to an empty string (matches the legacy
@@ -237,7 +340,8 @@ export async function runFlowAGUI(
     setRunId: (r) => {
       runId = r;
     },
-    applyDelta: (ops) => applyStateDelta(ops, runId, touchedNodeIds),
+    applyDelta: (ops) =>
+      applyStateDelta(ops, runId, touchedNodeIds, opts.flowId, opts.threadId),
     handleCustomEvent: (eventType, data) => handleMessageEvent(eventType, data),
     onFinished: () => {
       terminalEventSeen = true;

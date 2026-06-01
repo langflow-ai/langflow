@@ -18,7 +18,7 @@ from lfx.schema.content_types import (
     ToolContent,
 )
 from lfx.schema.data import Data
-from lfx.schema.message import ErrorMessage, Message
+from lfx.schema.message import ErrorMessage, Message, MessageResponse
 from lfx.schema.properties import Source
 from lfx.utils.constants import (
     MESSAGE_SENDER_AI,
@@ -544,3 +544,149 @@ class TestContentBlockExcludeUnset:
         # ``header``, ``media_url`` must stay out of the dump so they
         # don't clobber existing values on merge.
         assert dump.keys() <= {"type", "title", "allow_markdown"}
+
+
+class TestMessageResponseContentBlocksValidation:
+    """Regression: MessageResponse must accept every ContentType in content_blocks.
+
+    The agent now appends flat items (TextContent, ToolContent, etc.) to
+    ``content_blocks`` instead of nesting them inside a ContentBlock
+    group. The serialized form lands on the API as
+    ``{"type": "text", ...}`` etc. If MessageResponse only validates
+    ContentBlock, the API errors out with
+    ``content_blocks.type: Input should be 'group'`` and the entire
+    chat response fails to render.
+    """
+
+    _BASE_KWARGS = {
+        "sender": "Machine",
+        "sender_name": "AI",
+        "session_id": "s",
+        "text": "Doing well, thanks!",
+        "edit": False,
+    }
+
+    def test_flat_text_content_validates(self):
+        # The exact shape the agent's setter appends after `message.text =`.
+        payload = {
+            **self._BASE_KWARGS,
+            "content_blocks": [
+                {
+                    "type": "text",
+                    "id": None,
+                    "duration": None,
+                    "header": {},
+                    "contents": [],
+                    "text": "Doing well, thanks!",
+                },
+            ],
+        }
+        resp = MessageResponse.model_validate(payload)
+        assert resp.content_blocks is not None
+        assert len(resp.content_blocks) == 1
+        assert resp.content_blocks[0].type == "text"
+        assert resp.content_blocks[0].text == "Doing well, thanks!"
+
+    def test_flat_tool_content_validates(self):
+        payload = {
+            **self._BASE_KWARGS,
+            "content_blocks": [
+                {
+                    "type": "tool_use",
+                    "name": "search",
+                    "tool_input": {"q": "x"},
+                    "contents": [],
+                },
+            ],
+        }
+        resp = MessageResponse.model_validate(payload)
+        assert resp.content_blocks[0].type == "tool_use"
+        assert resp.content_blocks[0].name == "search"
+
+    def test_mixed_flat_and_grouped_validates(self):
+        # Chronological-events shape: a tool call, then a grouped block
+        # (legacy), then the setter-appended text. All three must round-trip.
+        payload = {
+            **self._BASE_KWARGS,
+            "content_blocks": [
+                {"type": "tool_use", "name": "calc", "contents": []},
+                {
+                    "type": "group",
+                    "title": "Agent Steps",
+                    "contents": [],
+                    "allow_markdown": True,
+                },
+                {"type": "text", "text": "done", "contents": []},
+            ],
+        }
+        resp = MessageResponse.model_validate(payload)
+        types = [b.type for b in resp.content_blocks]
+        assert types == ["tool_use", "group", "text"]
+
+    def test_validates_agent_setter_emitted_content_blocks(self):
+        # End-to-end: the agent's setter path. process_agent_events calls
+        # `message.text = "..."` post-construction and the setter appends
+        # a TextContent to content_blocks. The serialized payload from
+        # that Message must validate as a MessageResponse without the
+        # discriminated-union rejecting the flat TextContent shape.
+        message = Message(
+            text="",
+            sender="Machine",
+            sender_name="AI",
+            session_id="s",
+        )
+        # Trigger the setter; this is what handle_on_chain_end does.
+        message.text = "Doing well, thanks!"
+        assert any(isinstance(b, TextContent) for b in message.content_blocks)
+
+        # Round-trip the model_dump payload, which is what the API sends
+        # over the wire.
+        payload = {**self._BASE_KWARGS, "content_blocks": [b.model_dump() for b in message.content_blocks]}
+        resp = MessageResponse.model_validate(payload)
+        assert resp.content_blocks is not None
+        assert resp.content_blocks[0].type == "text"
+        assert resp.content_blocks[0].text == "Doing well, thanks!"
+
+
+class TestContentTypeExcludeUnsetPreservesDiscriminator:
+    """Regression: ContentType.model_dump(exclude_unset=True) must keep type.
+
+    aupdate_messages applies a partial-update via:
+        msg.sqlmodel_update(message.model_dump(exclude_unset=True, exclude_none=True))
+
+    If TextContent dumps to ``{"text": "..."}`` (stripping the defaulted
+    ``type`` field), the stored row's content_blocks entry has no
+    discriminator. The next read-back through MessageRead's discriminated
+    union fails with ``union_tag_not_found``, aupdate_messages raises
+    ValueError, astore_message silently falls through to aadd_messages,
+    and a duplicate row gets inserted with a new id — which the chat
+    view renders as a duplicate bubble.
+
+    The fix is in BaseContent.__init__: mark every field as set so
+    exclude_unset keeps the discriminator.
+    """
+
+    def test_text_content_keeps_type(self):
+        dump = TextContent(text="hi").model_dump(exclude_unset=True, exclude_none=True)
+        assert dump.get("type") == "text", f"missing discriminator: {dump}"
+        assert dump.get("text") == "hi"
+
+    def test_tool_content_keeps_type(self):
+        dump = ToolContent(name="search").model_dump(exclude_unset=True, exclude_none=True)
+        assert dump.get("type") == "tool_use", f"missing discriminator: {dump}"
+
+    def test_error_content_keeps_type(self):
+        dump = ErrorContent(reason="boom").model_dump(exclude_unset=True, exclude_none=True)
+        assert dump.get("type") == "error", f"missing discriminator: {dump}"
+
+    def test_content_block_group_keeps_type(self):
+        dump = ContentBlock(title="Agent Steps", contents=[]).model_dump(
+            exclude_unset=True,
+            exclude_none=True,
+        )
+        assert dump.get("type") == "group", f"missing discriminator: {dump}"
+        assert dump.get("title") == "Agent Steps"
+
+    def test_image_content_keeps_type(self):
+        dump = ImageContent(urls=["x"]).model_dump(exclude_unset=True, exclude_none=True)
+        assert dump.get("type") == "image", f"missing discriminator: {dump}"
