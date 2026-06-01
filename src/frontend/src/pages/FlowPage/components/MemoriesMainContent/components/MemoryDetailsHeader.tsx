@@ -44,10 +44,12 @@ export function MemoryDetailsHeader({
     setIsRefreshing(true);
     try {
       await onRefresh();
-      setSuccessData({ title: `Memory "${memory.name}" refreshed` });
+      setSuccessData({
+        title: t("memory.refreshedSuccess", { name: memory.name }),
+      });
     } catch (error) {
       setErrorData({
-        title: "Failed to refresh memory",
+        title: t("memory.refreshedError"),
         list: extractApiErrorMessages(error),
       });
     } finally {
@@ -174,7 +176,7 @@ export function MemoryDetailsHeader({
                   {isFetchingNextSessionsPage && (
                     <div className="py-1 text-center">
                       <span className="text-xs text-muted-foreground">
-                        Loading…
+                        {t("memory.loadingSessions")}
                       </span>
                     </div>
                   )}
@@ -198,7 +200,7 @@ export function MemoryDetailsHeader({
         </Button>
 
         <DeleteConfirmationModal
-          description={`memory "${memory.name}"`}
+          description={t("memory.deleteDescription", { name: memory.name })}
           onConfirm={(e) => {
             e.stopPropagation();
             deleteMutation.mutate({ memoryId: memory.id });

@@ -63,7 +63,7 @@ export default function UpdateComponentModal({
   const columnDefs: ColDef[] = [
     { field: "id", hide: true },
     {
-      headerName: "Component",
+      headerName: t("updateComponent.componentHeader"),
       field: "display_name",
       headerClass: "!text-mmd !font-normal",
       flex: 1,
@@ -85,7 +85,7 @@ export default function UpdateComponentModal({
       },
     },
     {
-      headerName: "Update Type",
+      headerName: t("updateComponent.updateTypeHeader"),
       field: "breakingChange",
       headerClass: "!text-mmd !font-normal",
       resizable: false,
@@ -94,7 +94,7 @@ export default function UpdateComponentModal({
       cellRenderer: (params) => {
         return params.value ? (
           <span className="font-semibold text-accent-amber-foreground">
-            Breaking
+            {t("updateComponent.breaking")}
           </span>
         ) : (
           <span>{t("updateComponent.standard")}</span>
@@ -135,8 +135,11 @@ export default function UpdateComponentModal({
       <BaseModal.Trigger asChild>{children ?? <span />}</BaseModal.Trigger>
       <BaseModal.Header>
         <span className="">
-          Update{" "}
-          {isMultiple ? "components" : (components?.[0]?.display_name ?? "")}
+          {isMultiple
+            ? t("updateComponent.updateMultipleTitle")
+            : t("updateComponent.updateSingleTitle", {
+                name: components?.[0]?.display_name ?? "",
+              })}
         </span>
       </BaseModal.Header>
       <BaseModal.Content overflowHidden>

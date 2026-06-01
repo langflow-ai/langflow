@@ -4,29 +4,25 @@ from __future__ import annotations
 
 from collections import Counter
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import TYPE_CHECKING, Annotated, Any, Literal
 from uuid import UUID
 
 from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import (
+    AfterValidator,
     BaseModel,
     Field,
     StringConstraints,
+    ValidationInfo,
     field_validator,
     model_validator,
 )
 
-from langflow.api.v1.mappers.deployments.contracts import CreateFlowArtifactProviderData
 from langflow.api.v1.schemas.deployments import ValidatedUrl
 from langflow.services.database.models.deployment_provider_account.utils import validate_provider_url
 
-WatsonxApiLlmName = Annotated[
-    str,
-    StringConstraints(
-        strip_whitespace=True,
-        min_length=1,
-    ),
-]
+if TYPE_CHECKING:
+    from langflow.api.v1.schemas.deployments import DeploymentCreateRequest
 
 # Keep API-boundary scalar normalization local to this module instead of
 # importing adapter-layer aliases, so mapper contracts can evolve independently.
@@ -37,6 +33,16 @@ NormalizedStr = Annotated[
         min_length=1,
     ),
 ]
+
+
+def _validate_non_empty_string(value: str) -> str:
+    if not value.strip():
+        msg = "String must not be empty."
+        raise ValueError(msg)
+    return value
+
+
+NonEmptyString = Annotated[str, AfterValidator(_validate_non_empty_string)]
 
 
 class WatsonxApiProviderAccountCreate(BaseModel):
@@ -82,28 +88,22 @@ class WatsonxApiProviderAccountResponse(BaseModel):
         return value
 
 
-class WatsonxApiFlowArtifactProviderData(CreateFlowArtifactProviderData):
-    """Watsonx create-time flow artifact provider_data contract."""
-
-    project_id: str = Field(min_length=1)
-
-
 class WatsonxApiAddFlowItem(BaseModel):
     """Create-time flow item (tool is created/attached if absent)."""
 
     model_config = {"extra": "forbid"}
 
     flow_version_id: UUID
-    app_ids: list[str] = Field(
+    app_ids: list[NormalizedStr] = Field(
         default_factory=list,
         description=(
             "Connection app ids to bind. Use an empty list to create/attach "
             "the flow version as a tool with no connection bindings."
         ),
     )
-    tool_name: str | None = Field(
+    tool_display_name: NormalizedStr | None = Field(
         default=None,
-        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
+        description=("Optional user-provided tool label. When omitted, the label is derived from the flow name."),
     )
 
 
@@ -113,17 +113,17 @@ class WatsonxApiUpsertFlowItem(BaseModel):
     model_config = {"extra": "forbid"}
 
     flow_version_id: UUID
-    add_app_ids: list[str] = Field(
+    add_app_ids: list[NormalizedStr] = Field(
         default_factory=list,
         description=("Connection app ids to bind. Use an empty list to avoid adding new bindings."),
     )
-    remove_app_ids: list[str] = Field(
+    remove_app_ids: list[NormalizedStr] = Field(
         default_factory=list,
         description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
     )
-    tool_name: str | None = Field(
+    tool_display_name: NormalizedStr | None = Field(
         default=None,
-        description=("Optional user-provided tool name. When omitted, the tool name is derived from the flow name."),
+        description=("Optional user-provided tool label. When omitted, the label is derived from the flow name."),
     )
 
 
@@ -132,8 +132,8 @@ class WatsonxApiCreateUpsertToolItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
-    add_app_ids: list[str] = Field(
+    tool_id: NormalizedStr = Field(description="Provider-owned tool identifier.")
+    add_app_ids: list[NormalizedStr] = Field(
         default_factory=list,
         description=("Connection app ids to bind. Use an empty list to attach the tool without connection bindings."),
     )
@@ -144,12 +144,12 @@ class WatsonxApiUpsertToolItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
-    add_app_ids: list[str] = Field(
+    tool_id: NormalizedStr = Field(description="Provider-owned tool identifier.")
+    add_app_ids: list[NormalizedStr] = Field(
         default_factory=list,
         description=("Connection app ids to bind. Use an empty list to avoid adding new bindings."),
     )
-    remove_app_ids: list[str] = Field(
+    remove_app_ids: list[NormalizedStr] = Field(
         default_factory=list,
         description=("Connection app ids to unbind. Use an empty list to avoid removing bindings."),
     )
@@ -176,7 +176,7 @@ class WatsonxApiKeyValueConnectionPayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    app_id: str = Field(min_length=1)
+    app_id: NormalizedStr
     credentials: list[WatsonxApiConnectionCredentialItem] | None = None
 
     @field_validator("credentials")
@@ -274,7 +274,11 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    llm: WatsonxApiLlmName | None = Field(
+    display_name: NormalizedStr | None = Field(
+        default=None,
+        description="Optional user-facing label to set on the wxO agent.",
+    )
+    llm: NormalizedStr | None = Field(
         default=None,
         description=(
             "Optional provider model identifier to use for the deployment agent. "
@@ -285,7 +289,15 @@ class WatsonxApiDeploymentUpdatePayload(BaseModel):
     upsert_flows: list[WatsonxApiUpsertFlowItem] = Field(default_factory=list)
     upsert_tools: list[WatsonxApiUpsertToolItem] = Field(default_factory=list)
     remove_flows: list[UUID] = Field(default_factory=list)
-    remove_tools: list[str] = Field(default_factory=list)
+    remove_tools: list[NormalizedStr] = Field(default_factory=list)
+
+    @field_validator("display_name", "llm", mode="before")
+    @classmethod
+    def reject_null_optional_strings(cls, value: Any, info: ValidationInfo) -> Any:
+        if value is None:
+            msg = f"{info.field_name} cannot be set to null."
+            raise ValueError(msg)
+        return value
 
     @model_validator(mode="after")
     def validate_operation_references(self) -> WatsonxApiDeploymentUpdatePayload:
@@ -328,33 +340,52 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    llm: WatsonxApiLlmName = Field(description="Provider model identifier to use for the deployment agent.")
+    display_name: NormalizedStr | None = Field(
+        default=None,
+        description=(
+            "User-facing label to set on a new wxO agent. "
+            "Required unless tracking an existing wxO agent in Langflow (via ``existing_agent_id`` field)."
+        ),
+    )
+    llm: NormalizedStr | None = Field(
+        default=None,
+        description=(
+            "Provider model identifier to use for a new wxO agent."
+            "Required unless tracking an existing wxO agent in Langflow (via ``existing_agent_id`` field)."
+        ),
+    )
     connections: list[WatsonxApiKeyValueConnectionPayload] = Field(default_factory=list)
     add_flows: list[WatsonxApiAddFlowItem] = Field(default_factory=list)
     upsert_tools: list[WatsonxApiCreateUpsertToolItem] = Field(default_factory=list)
-    existing_agent_id: str | None = Field(
+    existing_agent_id: NormalizedStr | None = Field(
         default=None,
         description=(
-            "Provider-owned agent id to update/reuse instead of creating a new agent. "
-            "When provided, add_flows/upsert_tools are optional and may be empty for DB-only onboarding."
+            "Provider-owned agent id to track in Langflow instead of creating a new wxO agent. "
+            "When provided, the request must not include fields that would update the wxO agent."
         ),
     )
 
-    @field_validator("existing_agent_id")
-    @classmethod
-    def validate_existing_agent_id(cls, value: str | None) -> str | None:
-        if value is None:
-            return None
-        normalized = value.strip()
-        if not normalized:
-            msg = "existing_agent_id must not be empty or whitespace."
-            raise ValueError(msg)
-        return normalized
-
     @model_validator(mode="after")
     def validate_create_operation_requirements(self) -> WatsonxApiDeploymentCreatePayload:
-        has_operations = bool(self.add_flows or self.upsert_tools)
-        if self.existing_agent_id is None and not has_operations:
+        if "existing_agent_id" in self.model_fields_set:
+            if self.existing_agent_id is None:
+                msg = "provider_data.existing_agent_id cannot be set to null."
+                raise ValueError(msg)
+            if len(self.model_fields_set) > 1:
+                msg = (
+                    "existing_agent_id is only for tracking existing wxO agents in Langflow and cannot include "
+                    "fields that update the wxO agent. Update the deployment after it is tracked."
+                )
+                raise ValueError(msg)
+            return self
+        if self.display_name is None:
+            msg = "provider_data.display_name is required for new agent creation."
+            raise ValueError(msg)
+        if self.llm is None:
+            msg = "provider_data.llm is required for new agent creation."
+            raise ValueError(msg)
+        # TODO: Allow wxO agent creation without initial flows/tools once the adapter create path supports it.
+        if not (self.add_flows or self.upsert_tools):
             msg = "provider_data must include at least one add_flows or upsert_tools item for new agent creation."
             raise ValueError(msg)
         _validate_api_unique_connection_app_ids(connections=self.connections)
@@ -364,6 +395,12 @@ class WatsonxApiDeploymentCreatePayload(BaseModel):
         _validate_api_unused_raw_app_ids(raw_app_ids=raw_app_ids, referenced_app_ids=referenced_app_ids)
         return self
 
+    def validate_with_outer_fields(self, outer_payload: DeploymentCreateRequest) -> None:
+        if self.existing_agent_id is None or "description" not in outer_payload.model_fields_set:
+            return
+        msg = "When existing_agent_id is provided, Langflow uses the description already set for the agent in wxO."
+        raise ValueError(msg)
+
 
 class WatsonxApiCreatedTool(BaseModel):
     """API response shape for a tool created from a Langflow flow version."""
@@ -371,7 +408,7 @@ class WatsonxApiCreatedTool(BaseModel):
     model_config = {"extra": "forbid"}
 
     flow_version_id: UUID
-    tool_id: str = Field(min_length=1, description="Provider-owned tool identifier.")
+    tool_id: NonEmptyString = Field(description="Provider-owned tool identifier.")
 
     @field_validator("flow_version_id", mode="before")
     @classmethod
@@ -389,57 +426,33 @@ class WatsonxApiCreatedTool(BaseModel):
 
 
 class WatsonxApiDeploymentCreateResultData(BaseModel):
-    """Normalized provider-result payload used by Watsonx mapper create shapers."""
+    """Provider-result payload used by Watsonx mapper create shapers."""
 
     model_config = {"extra": "ignore"}
 
-    created_app_ids: list[str] = Field(default_factory=list)
+    name: NonEmptyString = Field(description="Provider technical agent name.")
+    display_name: NonEmptyString
+    created_app_ids: list[NonEmptyString] = Field(default_factory=list)
     created_tools: list[WatsonxApiCreatedTool] = Field(default_factory=list)
-
-    @field_validator("created_app_ids", mode="before")
-    @classmethod
-    def normalize_created_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [normalized for app_id in value if (normalized := str(app_id).strip())]
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentCreateResultData:
-        if not isinstance(provider_result, dict):
-            return cls()
         return cls.model_validate(provider_result)
-
-    def to_api_provider_data(self) -> dict[str, Any] | None:
-        """Return API-safe provider_data subset for deployment create responses."""
-        payload = self.model_dump(mode="json", include={"created_app_ids", "created_tools"}, exclude_none=True)
-        return payload or None
 
 
 class WatsonxApiDeploymentUpdateResultData(BaseModel):
-    """Normalized provider-result payload used by Watsonx mapper update shapers."""
+    """Provider-result payload used by Watsonx mapper update shapers."""
 
     model_config = {"extra": "ignore"}
 
-    created_app_ids: list[str] = Field(default_factory=list)
+    name: NonEmptyString = Field(description="Provider technical agent name.")
+    display_name: NonEmptyString
+    created_app_ids: list[NonEmptyString] = Field(default_factory=list)
     created_tools: list[WatsonxApiCreatedTool] = Field(default_factory=list)
-
-    @field_validator("created_app_ids", mode="before")
-    @classmethod
-    def normalize_created_app_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [normalized for app_id in value if (normalized := str(app_id).strip())]
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> WatsonxApiDeploymentUpdateResultData:
-        if not isinstance(provider_result, dict):
-            return cls()
         return cls.model_validate(provider_result)
-
-    def to_api_provider_data(self) -> dict[str, Any] | None:
-        """Return API-safe provider_data subset for deployment update responses."""
-        payload = self.model_dump(mode="json", include={"created_app_ids", "created_tools"}, exclude_none=True)
-        return payload or None
 
 
 class WatsonxApiModelOut(BaseModel):
@@ -447,16 +460,7 @@ class WatsonxApiModelOut(BaseModel):
 
     model_config = {"extra": "ignore"}
 
-    model_name: str = Field(min_length=1)
-
-    @field_validator("model_name")
-    @classmethod
-    def normalize_model_name(cls, value: str) -> str:
-        normalized = value.strip()
-        if not normalized:
-            msg = "model_name must not be empty."
-            raise ValueError(msg)
-        return normalized
+    model_name: NonEmptyString
 
 
 class WatsonxApiDeploymentLlmListResultData(BaseModel):
@@ -472,21 +476,16 @@ class WatsonxApiProviderDeploymentListItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    id: str = Field(min_length=1, description="Provider-owned deployment identifier.")
-    name: str
+    id: NonEmptyString = Field(description="Provider-owned deployment identifier.")
+    name: NonEmptyString
+    display_name: NonEmptyString
     type: DeploymentType
-    description: str | None = None
-    created_at: datetime | None = None
-    updated_at: datetime | None = None
-    tool_ids: list[str] = Field(default_factory=list)
-    environments: list[str] = Field(default_factory=list)
-
-    @field_validator("tool_ids", mode="before")
-    @classmethod
-    def normalize_tool_ids(cls, value: Any) -> list[str]:
-        if value is None:
-            return []
-        return [normalized for tool_id in value if (normalized := str(tool_id).strip())]
+    description: str
+    created_at: datetime
+    updated_at: datetime
+    tool_ids: list[NonEmptyString] = Field(default_factory=list)
+    llm: NonEmptyString
+    environments: list[NonEmptyString] = Field(default_factory=list)
 
 
 class WatsonxApiDeploymentListItemProviderData(BaseModel):
@@ -494,7 +493,21 @@ class WatsonxApiDeploymentListItemProviderData(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    environments: list[str]
+    name: NonEmptyString
+    display_name: NonEmptyString
+    llm: NonEmptyString
+    environments: list[NonEmptyString]
+
+
+class WatsonxApiDeploymentGetProviderData(BaseModel):
+    """Provider_data surfaced on wxO deployment detail responses."""
+
+    model_config = {"extra": "forbid"}
+
+    llm: NonEmptyString
+    name: NonEmptyString
+    display_name: NonEmptyString
+    environments: list[NonEmptyString]
 
 
 class WatsonxApiDeploymentListProviderData(BaseModel):
@@ -508,10 +521,10 @@ class WatsonxApiConfigListItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    connection_id: NormalizedStr
-    app_id: NormalizedStr
-    type: NormalizedStr
-    environment: NormalizedStr
+    connection_id: NonEmptyString
+    app_id: NonEmptyString
+    type: NonEmptyString
+    environment: NonEmptyString
 
 
 class WatsonxApiConfigListProviderData(BaseModel):
@@ -530,18 +543,10 @@ class WatsonxApiSnapshotListItem(BaseModel):
 
     model_config = {"extra": "forbid"}
 
-    id: str = Field(min_length=1)
-    name: str = Field(min_length=1)
-    connections: dict[str, str] = Field(default_factory=dict)
-
-    @field_validator("id", "name", mode="before")
-    @classmethod
-    def normalize_required_strings(cls, value: Any) -> str:
-        normalized = str(value or "").strip()
-        if not normalized:
-            msg = "Snapshot list item fields 'id' and 'name' must be non-empty strings."
-            raise ValueError(msg)
-        return normalized
+    id: NonEmptyString
+    name: NonEmptyString
+    display_name: NonEmptyString
+    connections: dict[NonEmptyString, NonEmptyString] = Field(default_factory=dict)
 
 
 class WatsonxApiSnapshotListProviderData(BaseModel):
@@ -558,25 +563,17 @@ class WatsonxApiSnapshotListProviderData(BaseModel):
 class WatsonxApiDeploymentFlowVersionItemData(BaseModel):
     """API-facing provider_data contract for deployment flow-version list items.
 
-    ``tool_name`` is required (non-empty) because wxO snapshots always carry a
-    name.  Missing or blank names indicate corrupt provider data and the mapper
-    intentionally rejects them with a 500 so the issue surfaces immediately.
+    ``tool_name`` is the provider technical name, while ``tool_display_name`` is
+    the user-facing label. Missing or blank values indicate corrupt provider
+    data and the mapper intentionally rejects them with a 500 so the issue
+    surfaces immediately.
     """
 
     model_config = {"extra": "forbid"}
 
-    app_ids: list[NormalizedStr] = Field(default_factory=list)
-    tool_name: NormalizedStr
-
-
-class WatsonxApiRenameToolOperation(BaseModel):
-    """API-facing rename-tool operation payload."""
-
-    model_config = {"extra": "forbid"}
-
-    op: Literal["rename_tool"]
-    flow_version_id: str = Field(min_length=1)
-    tool_name: NormalizedStr = Field(min_length=1)
+    app_ids: list[NonEmptyString] = Field(default_factory=list)
+    tool_name: NonEmptyString
+    tool_display_name: NonEmptyString
 
 
 class WatsonxApiExecutionInput(BaseModel):
@@ -609,9 +606,9 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
 
     model_config = {"extra": "allow"}
 
-    id: str | None = None
-    agent_id: str | None = None
-    thread_id: str | None = None
+    id: NonEmptyString | None = None
+    agent_id: NonEmptyString | None = None
+    thread_id: NonEmptyString | None = None
     status: str | None = None
     result: Any | None = None
     started_at: str | None = None
@@ -619,12 +616,6 @@ class _WatsonxApiAgentExecutionResultBase(BaseModel):
     failed_at: str | None = None
     cancelled_at: str | None = None
     last_error: str | None = None
-
-    @field_validator("id", "agent_id", mode="before")
-    @classmethod
-    def normalize_optional_id(cls, value: Any) -> str | None:
-        normalized = str(value or "").strip()
-        return normalized or None
 
     @classmethod
     def from_provider_result(cls, provider_result: Any) -> _WatsonxApiAgentExecutionResultBase:

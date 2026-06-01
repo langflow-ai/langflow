@@ -14,7 +14,34 @@ DANGEROUS_CALLS: dict[str, str] = {
     "compile": "Use of compile() is forbidden in components",
     "__import__": "Use of __import__() is forbidden in components",
     "globals": "Use of globals() is forbidden in components",
+    # Raw file access — components must use Langflow's File components,
+    # not open arbitrary paths (e.g. /etc/passwd, SSH keys).
+    "open": "Use of open() is forbidden in components — use Langflow's File components",
+    "breakpoint": "Use of breakpoint() is forbidden in components",
 }
+
+# Attribute names that are sandbox-escape vectors regardless of the
+# object they're read from (e.g. ``().__class__.__bases__[0]
+# .__subclasses__()``, ``func.__globals__``). Near-zero legitimate use
+# in a component; deliberately tight to avoid false positives (NOT
+# flagging benign dunders like ``__class__`` / ``__dict__`` / ``__name__``).
+DANGEROUS_DUNDER_ATTRS: set[str] = {
+    "__subclasses__",
+    "__globals__",
+    "__builtins__",
+    "__bases__",
+    "__mro__",
+    "__code__",
+    "__closure__",
+    "__subclasshook__",
+}
+
+# Non-call attribute *reads* that are forbidden: (module, attr, message).
+# Secret/env exfiltration is the concrete threat — components must use
+# Langflow's variable/secret service, never raw process env.
+DANGEROUS_ATTRIBUTE_READS: list[tuple[str, str, str]] = [
+    ("os", "environ", "os.environ is forbidden — use Langflow's variable/secret service"),
+]
 
 # Dangerous attribute calls: (module, method, violation_message)
 DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
@@ -37,6 +64,8 @@ DANGEROUS_ATTR_CALLS: list[tuple[str, str, str]] = [
     ("subprocess", "Popen", "subprocess.Popen() is forbidden"),
     ("subprocess", "check_output", "subprocess.check_output() is forbidden"),
     ("subprocess", "check_call", "subprocess.check_call() is forbidden"),
+    ("os", "getenv", "os.getenv() is forbidden — use Langflow's variable/secret service"),
+    ("os", "putenv", "os.putenv() is forbidden in components"),
     ("shutil", "rmtree", "shutil.rmtree() is forbidden"),
     ("shutil", "move", "shutil.move() is forbidden in components"),
     ("sys", "exit", "sys.exit() is forbidden in components"),
@@ -111,6 +140,17 @@ class _SecurityChecker(ast.NodeVisitor):
                     self.violations.append(f"Import of '{root_module}.{alias.name}' is forbidden in components")
 
         return self.generic_visit(node)
+
+    def visit_Attribute(self, node: ast.Attribute):
+        """Check attribute READS like func.__globals__ or os.environ."""
+        if node.attr in DANGEROUS_DUNDER_ATTRS:
+            self.violations.append(f"Access to '{node.attr}' is forbidden in components (sandbox escape)")
+        elif isinstance(node.value, ast.Name):
+            for mod, attr, message in DANGEROUS_ATTRIBUTE_READS:
+                if node.value.id == mod and node.attr == attr:
+                    self.violations.append(message)
+                    break
+        self.generic_visit(node)
 
     def visit_Call(self, node: ast.Call):
         self._check_name_call(node)

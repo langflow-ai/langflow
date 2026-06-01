@@ -36,7 +36,8 @@ function renderCreateHook(
 
 const mockDeployment: Deployment = {
   id: "deploy-1",
-  name: "My Agent",
+  provider_id: "prov-1",
+  provider_data: { display_name: "My Agent", name: "my_agent" },
   description: "A test agent",
   type: "agent",
   created_at: "2025-01-01T00:00:00Z",
@@ -418,7 +419,7 @@ describe("buildDeploymentUpdatePayload", () => {
             flow_version_id: string;
             add_app_ids: string[];
             remove_app_ids: string[];
-            tool_name?: string;
+            tool_display_name?: string;
           }>;
         }
       )?.upsert_flows ?? [];
@@ -429,27 +430,33 @@ describe("buildDeploymentUpdatePayload", () => {
     const flowA = upsertFlows.find((f) => f.flow_version_id === "ver-new-a");
     expect(flowA).toBeDefined();
     expect(flowA!.add_app_ids).toEqual(["app-10"]);
-    expect(flowA!.tool_name).toBe("New Tool A");
+    expect(flowA!.tool_display_name).toBe("New Tool A");
 
     const flowB = upsertFlows.find((f) => f.flow_version_id === "ver-new-b");
     expect(flowB).toBeDefined();
     expect(flowB!.add_app_ids).toEqual([]);
-    expect(flowB!.tool_name).toMatch(/^Flow [a-f0-9]{1,6}-b$/);
+    expect(flowB!.tool_display_name).toBe("Flow");
   });
 
-  it("sends fallback description when no changes detected", () => {
-    // When absolutely nothing changes, the backend still needs at least one field.
-    // With LLM pre-filled, provider_data is always present, so fallback goes to description.
+  it("omits description when no changes detected", () => {
     const { result } = renderEditHook({ initialLlm: "" });
-
-    // LLM is empty string, no flows changed, no description changed
     const payload = result.current.buildDeploymentUpdatePayload();
-    // The fallback logic ensures at least description is sent
-    expect(payload.deployment_id).toBe("deploy-1");
-    // Either description or provider_data must be present
-    const hasAtLeastOneField =
-      payload.description !== undefined || payload.provider_data !== undefined;
-    expect(hasAtLeastOneField).toBe(true);
+    expect(payload).toEqual({ deployment_id: "deploy-1" });
+  });
+
+  it("detects empty update payloads", async () => {
+    const { isDeploymentUpdatePayloadEmpty } = await import(
+      "../helpers/deployment-payload-builders"
+    );
+    expect(isDeploymentUpdatePayloadEmpty({ deployment_id: "deploy-1" })).toBe(
+      true,
+    );
+    expect(
+      isDeploymentUpdatePayloadEmpty({
+        deployment_id: "deploy-1",
+        description: "updated",
+      }),
+    ).toBe(false);
   });
 
   it("includes description change when description differs from initial", () => {
@@ -461,10 +468,11 @@ describe("buildDeploymentUpdatePayload", () => {
     expect(payload.description).toBe("Brand new description");
   });
 
-  it("does not include description when it matches the initial deployment", () => {
+  it("omits description when description is unchanged", () => {
     const { result } = renderEditHook();
-    // Description is "A test agent" from mockDeployment — no change
+
     const payload = result.current.buildDeploymentUpdatePayload();
+    expect(payload.provider_data).toBeUndefined();
     expect(payload.description).toBeUndefined();
   });
 });
@@ -474,7 +482,7 @@ describe("buildDeploymentUpdatePayload", () => {
 // ---------------------------------------------------------------------------
 
 describe("buildDeploymentPayload", () => {
-  it("includes provider_id, name, type, description, connections", () => {
+  it("includes provider_id, display name, type, description, connections", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -492,10 +500,10 @@ describe("buildDeploymentPayload", () => {
 
     const payload = result.current.buildDeploymentPayload("provider-abc");
     expect(payload.provider_id).toBe("provider-abc");
-    expect(payload.name).toBe("Test Agent");
     expect(payload.type).toBe("agent");
     expect(payload.description).toBe("A test description");
     expect(payload.provider_data).toBeDefined();
+    expect(payload.provider_data.display_name).toBe("Test Agent");
     expect(payload.provider_data.connections).toBeDefined();
     expect(payload.provider_data.add_flows).toBeDefined();
     expect(payload.provider_data.llm).toBe("gpt-4");
@@ -539,12 +547,12 @@ describe("buildDeploymentPayload", () => {
 
     const flowA = addFlows.find((f) => f.flow_version_id === "ver-a");
     expect(flowA).toBeDefined();
-    expect(flowA!.tool_name).toBe("Alpha Tool");
+    expect(flowA!.tool_display_name).toBe("Alpha Tool");
     expect(flowA!.app_ids).toEqual(["conn-1"]);
 
     const flowB = addFlows.find((f) => f.flow_version_id === "ver-b");
     expect(flowB).toBeDefined();
-    expect(flowB!.tool_name).toBe("Beta Tool");
+    expect(flowB!.tool_display_name).toBe("Beta Tool");
     expect(flowB!.app_ids).toEqual(["conn-2", "conn-3"]);
   });
 
@@ -620,7 +628,7 @@ describe("buildDeploymentPayload", () => {
     expect(versionIds).toEqual(["ver-1", "ver-2", "ver-3"]);
   });
 
-  it("omits tool_name when not set for a flow", () => {
+  it("uses a default tool display name when not set for a flow", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -636,12 +644,10 @@ describe("buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toMatch(
-      /^Flow [a-f0-9]{6}-1$/,
-    );
+    expect(payload.provider_data.add_flows[0].tool_display_name).toBe("Flow");
   });
 
-  it("omits tool_name when tool name is whitespace-only", () => {
+  it("uses a default tool display name when custom value is whitespace-only", () => {
     const { result } = renderCreateHook();
 
     act(() => {
@@ -657,9 +663,7 @@ describe("buildDeploymentPayload", () => {
     });
 
     const payload = result.current.buildDeploymentPayload("p-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toMatch(
-      /^Flow [a-f0-9]{6}-1$/,
-    );
+    expect(payload.provider_data.add_flows[0].tool_display_name).toBe("Flow");
   });
 });
 
