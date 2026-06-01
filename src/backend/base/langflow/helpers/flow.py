@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
 
+    from langflow.services.database.models.user.model import User
+
 from langflow.schema.data import Data
 
 INPUT_TYPE_MAP = {
@@ -163,14 +165,34 @@ async def get_flow_by_id_or_name(
         raise ValueError(msg) from e
 
 
+async def _build_graph_from_authorized_flow(
+    *,
+    caller: User,  # noqa: ARG001
+    flow: Flow,
+    flow_id: str,
+    user_id: str,
+    tweaks: dict | None,
+) -> Graph:
+    """Build a Graph from an already-loaded flow row (permission enforced by decorator)."""
+    from lfx.graph.graph.base import Graph
+
+    from langflow.processing.process import process_tweaks
+
+    graph_data = flow.data
+    if not graph_data:
+        msg = f"Flow {flow_id} not found"
+        raise ValueError(msg)
+    if tweaks:
+        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+
+
 async def load_flow(
     user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
 ) -> Graph:
     """Load a flow graph after authorizing EXECUTE for the caller."""
-    from lfx.graph.graph.base import Graph
-
-    from langflow.processing.process import process_tweaks
-    from langflow.services.authorization import FlowAction, ensure_flow_permission
+    from langflow.services.authorization import FlowAction
+    from langflow.services.authorization.decorators import requires_flow_permission
     from langflow.services.authorization.fetch import authorized_or_owner_scoped
     from langflow.services.database.models.user.model import User
 
@@ -199,36 +221,26 @@ async def load_flow(
             msg = f"Flow {flow_id} not found"
             raise ValueError(msg)
 
-        # Map plugin deny (403) to ValueError for existing callers.
         caller = await session.get(User, uuid_user_id)
         if caller is None:
             msg = "Session is invalid"
             raise ValueError(msg)
-        try:
-            await ensure_flow_permission(
-                caller,
-                FlowAction.EXECUTE,
-                flow_id=flow.id,
-                flow_user_id=flow.user_id,
-                workspace_id=flow.workspace_id,
-                folder_id=flow.folder_id,
-            )
-        except HTTPException as exc:
-            from fastapi import status as http_status
 
-            if exc.status_code == http_status.HTTP_403_FORBIDDEN:
-                msg = f"Flow {flow_id} not found"
-                raise ValueError(msg) from exc
-            raise
+    build_graph = requires_flow_permission(
+        FlowAction.EXECUTE,
+        user_param="caller",
+        flow_param="flow",
+        forbidden_as_not_found=True,
+        not_found_template=f"Flow {flow_id} not found",
+    )(_build_graph_from_authorized_flow)
 
-        graph_data = flow.data
-
-    if not graph_data:
-        msg = f"Flow {flow_id} not found"
-        raise ValueError(msg)
-    if tweaks:
-        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+    return await build_graph(
+        caller=caller,
+        flow=flow,
+        flow_id=flow_id,
+        user_id=user_id,
+        tweaks=tweaks,
+    )
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:

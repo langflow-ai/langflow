@@ -146,6 +146,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -292,6 +293,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy with multiple workers",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -355,6 +361,7 @@ module.exports = {
               items: [
                 "Components/file-system",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]

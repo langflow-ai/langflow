@@ -1,8 +1,6 @@
-import { keepPreviousData } from "@tanstack/react-query";
 import { useEffect, useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
-import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import { useDeploymentStepper } from "../contexts/deployment-stepper-context";
@@ -10,11 +8,7 @@ import { UNKNOWN_FLOW_NAME } from "../types";
 import { ReviewDetachingSection } from "./step-review/review-detaching-section";
 import { ReviewFlowConfigCard } from "./step-review/review-flow-config-card";
 import { ReviewSummaryCard } from "./step-review/review-summary-card";
-import {
-  buildReviewFlows,
-  buildToolNameErrors,
-  buildToolNamesToCheck,
-} from "./step-review/utils";
+import { buildReviewFlows } from "./step-review/utils";
 
 export default function StepReview() {
   const {
@@ -26,12 +20,8 @@ export default function StepReview() {
     selectedVersionByFlow,
     toolNameByFlow,
     setToolNameByFlow,
-    defaultToolNameScopeId,
     attachedConnectionByFlow,
     removedFlowIds,
-    selectedInstance,
-    preExistingFlowIds,
-    initialToolNameByFlow,
     setHasToolNameErrors,
   } = useDeploymentStepper();
 
@@ -61,7 +51,6 @@ export default function StepReview() {
         allFlows,
         attachedConnectionByFlow,
         connections,
-        defaultToolNameScopeId,
         removedFlowIds,
         selectedVersionByFlow,
         toolNameByFlow,
@@ -70,7 +59,6 @@ export default function StepReview() {
       allFlows,
       attachedConnectionByFlow,
       connections,
-      defaultToolNameScopeId,
       removedFlowIds,
       selectedVersionByFlow,
       toolNameByFlow,
@@ -97,51 +85,9 @@ export default function StepReview() {
     [allFlows, removedFlowIds, selectedVersionByFlow],
   );
 
-  const toolNamesToCheck = useMemo(
-    () =>
-      buildToolNamesToCheck({
-        initialToolNameByFlow,
-        isEditMode,
-        preExistingFlowIds,
-        reviewFlows,
-      }),
-    [initialToolNameByFlow, isEditMode, preExistingFlowIds, reviewFlows],
-  );
-
-  const { data: checkNamesData } = useCheckToolNames(
-    { providerId: selectedInstance?.id ?? "", names: toolNamesToCheck },
-    {
-      enabled: !!selectedInstance?.id && toolNamesToCheck.length > 0,
-      placeholderData: keepPreviousData,
-    },
-  );
-
-  const existingToolNames = useMemo(() => {
-    if (!checkNamesData?.existing_names) return new Set<string>();
-    return new Set(checkNamesData.existing_names.map((n) => n.toLowerCase()));
-  }, [checkNamesData]);
-
-  const toolNameErrors = useMemo(
-    () =>
-      buildToolNameErrors({
-        existingToolNames,
-        initialToolNameByFlow,
-        isEditMode,
-        preExistingFlowIds,
-        reviewFlows,
-      }),
-    [
-      existingToolNames,
-      initialToolNameByFlow,
-      isEditMode,
-      preExistingFlowIds,
-      reviewFlows,
-    ],
-  );
-
   useEffect(() => {
-    setHasToolNameErrors(toolNameErrors.size > 0);
-  }, [toolNameErrors, setHasToolNameErrors]);
+    setHasToolNameErrors(false);
+  }, [setHasToolNameErrors]);
 
   useEffect(() => {
     return () => setHasToolNameErrors(false);
@@ -172,7 +118,6 @@ export default function StepReview() {
               <ReviewFlowConfigCard
                 key={item.attachmentKey}
                 item={item}
-                toolError={toolNameErrors.get(item.attachmentKey)}
                 toolNameValue={
                   toolNameByFlow.get(item.attachmentKey)?.trim() ?? ""
                 }

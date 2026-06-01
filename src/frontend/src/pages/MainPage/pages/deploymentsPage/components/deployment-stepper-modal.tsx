@@ -12,17 +12,20 @@ import { useGetDeployment } from "@/controllers/API/queries/deployments/use-get-
 import { useGetDeploymentAttachments } from "@/controllers/API/queries/deployments/use-get-deployment-attachments";
 import { usePatchDeployment } from "@/controllers/API/queries/deployments/use-patch-deployment";
 import { usePostDeployment } from "@/controllers/API/queries/deployments/use-post-deployment";
+import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useFolderStore } from "@/stores/foldersStore";
 import {
   DeploymentStepperProvider,
   useDeploymentStepper,
 } from "../contexts/deployment-stepper-context";
+import { isDeploymentUpdatePayloadEmpty } from "../helpers/deployment-payload-builders";
 import { useErrorAlert } from "../hooks/use-error-alert";
 import {
   DEFAULT_FLOW_NAME,
   type Deployment,
   type DeploymentProvider,
+  getDeploymentDisplayName,
   getSelectedFlowVersionKey,
   type ProviderAccount,
   type SelectedFlowVersion,
@@ -113,7 +116,7 @@ export default function DeploymentStepperModal({
         versionTag: `v${fv.version_number}`,
       });
       // Pre-populate tool names from the provider (may differ from flow name).
-      const providerToolName = fv.provider_data?.tool_name;
+      const providerToolName = fv.provider_data?.tool_display_name;
       if (providerToolName) {
         toolNames.set(key, providerToolName);
       }
@@ -227,6 +230,7 @@ function DeploymentStepperModalContent({
 
   const { t } = useTranslation();
   const showError = useErrorAlert();
+  const setNoticeData = useAlertStore((state) => state.setNoticeData);
 
   const { mutateAsync: createProviderAccount } = usePostProviderAccount();
   const { mutateAsync: createDeployment } = usePostDeployment();
@@ -270,6 +274,12 @@ function DeploymentStepperModalContent({
 
       if (isEditMode) {
         const payload = buildDeploymentUpdatePayload();
+        if (isDeploymentUpdatePayloadEmpty(payload)) {
+          onDeployingChange(false);
+          setDeploymentPhase("idle");
+          setNoticeData({ title: t("deployments.noChangesToSave") });
+          return;
+        }
         await updateDeployment(payload);
         onDeployingChange(false);
         setOpen(false);
@@ -284,15 +294,11 @@ function DeploymentStepperModalContent({
 
       const payload = buildDeploymentPayload(providerId);
       const result = await createDeployment(payload);
-      if (
-        result &&
-        typeof result === "object" &&
-        "id" in result &&
-        "name" in result
-      ) {
+      if (result && typeof result === "object" && "id" in result) {
+        const deployment = result as Deployment;
         setCreatedDeployment({
           id: String(result.id),
-          name: String(result.name),
+          name: getDeploymentDisplayName(deployment),
         });
       }
       setDeploymentPhase("deployed");

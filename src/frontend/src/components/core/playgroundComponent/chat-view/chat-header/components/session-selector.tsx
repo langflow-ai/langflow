@@ -127,7 +127,7 @@ export function SessionSelector({
                 e.stopPropagation();
                 onToggleSelect();
               }}
-              className="cursor-pointer flex items-center justify-center w-4 h-4 flex-shrink-0"
+              className="cursor-pointer flex items-center justify-center w-4 h-8 flex-shrink-0"
               data-testid={`session-${session}-checkbox`}
             >
               {/* The 16x16 column is always reserved so the row layout

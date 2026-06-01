@@ -4,6 +4,7 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { Button } from "@/components/ui/button";
 import { useFolderStore } from "@/stores/foldersStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import useFileDrop from "../../hooks/use-on-file-drop";
 
 type EmptyPageProps = {
@@ -14,6 +15,7 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
   const { t } = useTranslation();
   const folders = useFolderStore((state) => state.folders);
   const handleFileDrop = useFileDrop(undefined);
+  const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
 
   return (
     <CardsWrapComponent
@@ -38,21 +40,23 @@ export const EmptyPage = ({ setOpenModal }: EmptyPageProps) => {
             >
               {t("emptyPage.description")}
             </p>
-            <Button
-              variant="default"
-              onClick={() => setOpenModal(true)}
-              id="new-project-btn"
-              data-testid="new_project_btn_empty_page"
-            >
-              <ForwardedIconComponent
-                name="Plus"
-                aria-hidden="true"
-                className="h-4 w-4"
-              />
-              <span className="hidden whitespace-nowrap font-semibold md:inline">
-                {t("emptyPage.newFlow")}
-              </span>
-            </Button>
+            {!hideNewFlowButton && (
+              <Button
+                variant="default"
+                onClick={() => setOpenModal(true)}
+                id="new-project-btn"
+                data-testid="new_project_btn_empty_page"
+              >
+                <ForwardedIconComponent
+                  name="Plus"
+                  aria-hidden="true"
+                  className="h-4 w-4"
+                />
+                <span className="hidden whitespace-nowrap font-semibold md:inline">
+                  {t("emptyPage.newFlow")}
+                </span>
+              </Button>
+            )}
           </div>
         </div>
         <div className="gradient-bg">

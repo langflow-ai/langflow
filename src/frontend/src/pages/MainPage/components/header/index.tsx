@@ -24,6 +24,13 @@ interface HeaderComponentProps {
   view: "list" | "grid";
   setView: (view: "list" | "grid") => void;
   setNewProjectModal: (newProjectModal: boolean) => void;
+  /**
+   * Primary "New Flow" handler. Preferred when defined — bypasses the
+   * templates modal and routes the user straight to a freshly-created
+   * empty flow with the welcome overlay primed. Falls back to opening the
+   * templates modal when not provided so legacy call sites still work.
+   */
+  onNewFlow?: () => void;
   folderName?: string;
   setSearch: (search: string) => void;
   isEmptyFolder: boolean;
@@ -37,6 +44,7 @@ const HeaderComponent = ({
   view,
   setView,
   setNewProjectModal,
+  onNewFlow,
   setSearch,
   isEmptyFolder,
   selectedFlows,
@@ -82,6 +90,7 @@ const HeaderComponent = ({
   const isDeploymentsEnabled = useUtilityStore(
     (s) => s.featureFlags.wxo_deployments === true,
   );
+  const hideNewFlowButton = useUtilityStore((s) => s.hideNewFlowButton);
 
   // Determine which tabs to show based on feature flags
   const tabTypes = [
@@ -267,25 +276,29 @@ const HeaderComponent = ({
                     </Button>
                   </DeleteConfirmationModal>
                 </div>
-                <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
-                  <Button
-                    variant="default"
-                    size="iconMd"
-                    className="z-50 px-2.5 !text-mmd"
-                    onClick={() => setNewProjectModal(true)}
-                    id="new-project-btn"
-                    data-testid="new-project-btn"
-                  >
-                    <ForwardedIconComponent
-                      name="Plus"
-                      aria-hidden="true"
-                      className="h-4 w-4"
-                    />
-                    <span className="hidden whitespace-nowrap font-semibold md:inline">
-                      {t("mainPage.newFlow")}
-                    </span>
-                  </Button>
-                </ShadTooltip>
+                {!hideNewFlowButton && (
+                  <ShadTooltip content={t("mainPage.newFlow")} side="bottom">
+                    <Button
+                      variant="default"
+                      size="iconMd"
+                      className="z-50 px-2.5 !text-mmd"
+                      onClick={() =>
+                        onNewFlow ? onNewFlow() : setNewProjectModal(true)
+                      }
+                      id="new-project-btn"
+                      data-testid="new-project-btn"
+                    >
+                      <ForwardedIconComponent
+                        name="Plus"
+                        aria-hidden="true"
+                        className="h-4 w-4"
+                      />
+                      <span className="hidden whitespace-nowrap font-semibold md:inline">
+                        {t("mainPage.newFlow")}
+                      </span>
+                    </Button>
+                  </ShadTooltip>
+                )}
               </div>
             </div>
           )}

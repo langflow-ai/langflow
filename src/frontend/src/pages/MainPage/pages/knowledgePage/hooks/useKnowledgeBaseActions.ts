@@ -46,7 +46,7 @@ export const useKnowledgeBaseActions = ({
         list: [
           error?.response?.data?.detail ||
             error?.message ||
-            "An unknown error occurred",
+            t("knowledge.unknownError"),
         ],
       });
     },
@@ -64,7 +64,7 @@ export const useKnowledgeBaseActions = ({
         list: [
           error?.response?.data?.detail ||
             error?.message ||
-            "An unknown error occurred",
+            t("knowledge.unknownError"),
         ],
       });
       refetch();
@@ -83,7 +83,7 @@ export const useKnowledgeBaseActions = ({
         list: [
           error?.response?.data?.detail ||
             error?.message ||
-            "An unknown error occurred",
+            t("knowledge.unknownError"),
         ],
       });
       refetch();

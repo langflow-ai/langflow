@@ -5,9 +5,11 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 test("user must be able to update outdated components by update all button", async ({
   page,
 }) => {
-  await awaitBootstrapTest(page);
-
-  await page.locator("span").filter({ hasText: "Close" }).first().click();
+  // `skipModal: true` keeps us on the home page (cards-wrapper lives here).
+  // Without it, openTemplatesModal navigates to a fresh canvas + FlowBuilderWelcome
+  // overlay, so closing the modal leaves the user on the canvas and the
+  // drag-and-drop target below never appears.
+  await awaitBootstrapTest(page, { skipModal: true });
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   // Read the asset and rename the flow uniquely so we can wait for THIS
@@ -45,7 +47,7 @@ test("user must be able to update outdated components by update all button", asy
   await droppedCard.waitFor({ state: "visible", timeout: 30000 });
   await droppedCard.click();
 
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
@@ -96,9 +98,11 @@ test("user must be able to update outdated components by update all button", asy
 test("user must be able to update outdated components by each outdated component", async ({
   page,
 }) => {
-  await awaitBootstrapTest(page);
-
-  await page.locator("span").filter({ hasText: "Close" }).first().click();
+  // `skipModal: true` keeps us on the home page (cards-wrapper lives here).
+  // Without it, openTemplatesModal navigates to a fresh canvas + FlowBuilderWelcome
+  // overlay, so closing the modal leaves the user on the canvas and the
+  // drag-and-drop target below never appears.
+  await awaitBootstrapTest(page, { skipModal: true });
 
   await page.locator("span").filter({ hasText: "My Collection" }).isVisible();
   // Read the asset and rename the flow uniquely so we can wait for THIS
@@ -136,7 +140,7 @@ test("user must be able to update outdated components by each outdated component
   await droppedCard.waitFor({ state: "visible", timeout: 30000 });
   await droppedCard.click();
 
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
@@ -168,7 +172,7 @@ test("user must be able to update outdated components by each outdated component
     timeout: 5000,
   });
 
-  await expect(page.getByText("Updates are available for 4")).toBeVisible({
+  await expect(page.getByText("4 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
