@@ -26,6 +26,7 @@ import {
   COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
+  NOTE_PLACEMENT_CURSOR_OFFSET,
 } from "@/constants/constants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -782,7 +783,7 @@ export default function Page({
         }
         const position = reactFlowInstance?.screenToFlowPosition({
           x: event.clientX - shadowBoxWidth / 2,
-          y: event.clientY - shadowBoxHeight / 2,
+          y: event.clientY - shadowBoxHeight - NOTE_PLACEMENT_CURSOR_OFFSET,
         });
         const data = {
           node: {
@@ -849,7 +850,7 @@ export default function Page({
         if (shadowBox) {
           shadowBox.style.display = "block";
           shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
-          shadowBox.style.top = `${event.clientY - shadowBoxHeight / 2}px`;
+          shadowBox.style.top = `${event.clientY - shadowBoxHeight - NOTE_PLACEMENT_CURSOR_OFFSET}px`;
         }
       }
     };
@@ -869,7 +870,7 @@ export default function Page({
       if (shadowBox) {
         shadowBox.style.display = "block";
         shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
-        shadowBox.style.top = `${position.current.y - shadowBoxHeight / 2}px`;
+        shadowBox.style.top = `${position.current.y - shadowBoxHeight - NOTE_PLACEMENT_CURSOR_OFFSET}px`;
       }
     };
 
