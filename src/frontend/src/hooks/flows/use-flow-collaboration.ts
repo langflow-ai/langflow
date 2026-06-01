@@ -304,7 +304,7 @@ export function useFlowCollaboration({
       setStatus("error");
     };
 
-    ws.onclose = () => {
+    ws.onclose = (event: CloseEvent) => {
       if (!mountedRef.current || wsRef.current !== ws) {
         return;
       }
@@ -314,6 +314,16 @@ export function useFlowCollaboration({
       setConnectionId(null);
 
       if (!intentionalCloseRef.current) {
+        if (event.code === 1008) {
+          const detail = event.reason || "Collaboration session closed";
+          onSessionErrorRef.current?.({
+            type: "session.error",
+            code: String(event.code),
+            detail,
+          });
+          requestReload("session_error", { detail });
+          return;
+        }
         requestReload("socket_closed");
       }
     };

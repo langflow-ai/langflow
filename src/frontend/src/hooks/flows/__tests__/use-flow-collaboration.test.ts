@@ -13,12 +13,12 @@ type MockWebSocketInstance = {
   onopen: (() => void) | null;
   onmessage: ((event: MessageEvent) => void) | null;
   onerror: (() => void) | null;
-  onclose: (() => void) | null;
+  onclose: ((event: CloseEvent) => void) | null;
   sent: string[];
   close: jest.Mock;
   triggerOpen: () => void;
   triggerMessage: (payload: unknown) => void;
-  triggerClose: () => void;
+  triggerClose: (event?: Partial<CloseEvent>) => void;
 };
 
 const instances: MockWebSocketInstance[] = [];
@@ -34,11 +34,11 @@ class MockWebSocket {
   onopen: (() => void) | null = null;
   onmessage: ((event: MessageEvent) => void) | null = null;
   onerror: (() => void) | null = null;
-  onclose: (() => void) | null = null;
+  onclose: ((event: CloseEvent) => void) | null = null;
   sent: string[] = [];
   close = jest.fn(() => {
     this.readyState = MockWebSocket.CLOSED;
-    this.onclose?.();
+    this.onclose?.({ code: 1000, reason: "" } as CloseEvent);
   });
 
   constructor(url: string) {
@@ -61,8 +61,12 @@ class MockWebSocket {
           data: JSON.stringify(payload),
         } as MessageEvent);
       },
-      triggerClose: () => {
-        this.close();
+      triggerClose: (event?: Partial<CloseEvent>) => {
+        this.readyState = MockWebSocket.CLOSED;
+        this.onclose?.({
+          code: event?.code ?? 1000,
+          reason: event?.reason ?? "",
+        } as CloseEvent);
       },
     };
     instances.push(instance);
@@ -414,6 +418,28 @@ describe("useFlowCollaboration", () => {
 
     await waitFor(() => {
       expect(onReloadRequired).toHaveBeenCalledWith("socket_closed", undefined);
+    });
+  });
+
+  it("should report policy violation close reason as a session error", async () => {
+    const { onReloadRequired, onSessionError } = await mountHook({
+      flowId: "flow-1",
+    });
+    const socket = await connectSession(2);
+
+    await act(async () => {
+      socket.triggerClose({ code: 1008, reason: "Flow not found" });
+    });
+
+    await waitFor(() => {
+      expect(onSessionError).toHaveBeenCalledWith({
+        type: "session.error",
+        code: "1008",
+        detail: "Flow not found",
+      });
+      expect(onReloadRequired).toHaveBeenCalledWith("session_error", {
+        detail: "Flow not found",
+      });
     });
   });
 

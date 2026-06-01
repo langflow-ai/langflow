@@ -6,6 +6,7 @@ import asyncio
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
+from fastapi import status
 from lfx.log.logger import logger
 from lfx.services.deps import session_scope_readonly
 from pydantic import ValidationError
@@ -16,13 +17,13 @@ from langflow.api.utils.collab.access import (
     ensure_operation_write_permission,
     validate_flow_access,
 )
-from langflow.api.utils.collab.helpers import close_with_session_error
 from langflow.api.utils.collab.operations import (
     AcceptedFlowOperation,
     FlowOperationApplyError,
     apply_flow_operation_batch,
 )
 from langflow.api.v1.collaboration_manager import (
+    WORKER_ID,
     CollaborationManager,
     ensure_collaboration_poll_loop,
     get_collaboration_manager,
@@ -36,6 +37,10 @@ from langflow.api.v1.schemas.flow_collaboration import (
     CollaborationSessionReadyMessage,
     CollaborationSessionStartMessage,
     CollaborationUnknownMessageError,
+)
+from langflow.services.collaboration_events.schemas import (
+    CollaborationPresenceChange,
+    CollaborationSelectionTarget,
 )
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_collaboration_events_service, session_scope
@@ -74,6 +79,7 @@ class FlowCollaborationConnection:
         self.manager = manager or get_collaboration_manager()
         self.connection_id: str | None = None
         self._presence_task: asyncio.Task | None = None
+        self._event_service = get_collaboration_events_service()
 
     async def run(self) -> None:
         try:
@@ -108,24 +114,20 @@ class FlowCollaborationConnection:
 
     async def _handle_session_start(self, raw: Any, msg_type: str | None) -> None:
         if msg_type != "session.start":
-            await close_with_session_error(
-                self.websocket,
-                code="invalid_session",
-                detail="First message must be session.start",
+            await self.websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="First message must be session.start",
             )
             raise _CollaborationConnectionClosedError
 
         try:
             CollaborationSessionStartMessage.model_validate(raw)
         except ValidationError as exc:
-            await close_with_session_error(
-                self.websocket,
-                code="invalid_session",
-                detail="Invalid session.start payload",
+            await self.websocket.close(
+                code=status.WS_1008_POLICY_VIOLATION,
+                reason="Invalid session.start payload",
             )
             raise _CollaborationConnectionClosedError from exc
-
-        user_was_already_in_room = self.current_user.id in self.manager.all_users(self.flow_id, as_dict=True)
 
         self.connection_id = await self.manager.register(
             websocket=self.websocket,
@@ -137,6 +139,15 @@ class FlowCollaborationConnection:
         await ensure_collaboration_poll_loop()
         self._presence_task = asyncio.create_task(self._presence_heartbeat())
 
+        presence_change = self._event_service.add_connection(
+            flow_id=self.flow_id,
+            user_id=self.current_user.id,
+            connection_id=self.connection_id,
+            username=self.current_user.username,
+            profile_image=self.current_user.profile_image,
+        )
+        snapshot = self._event_service.list_users(self.flow_id)
+
         await self.websocket.send_json(
             CollaborationSessionReadyMessage(
                 connection_id=self.connection_id,
@@ -144,21 +155,10 @@ class FlowCollaborationConnection:
                 current_revision=self.starting_revision,
             ).model_dump(mode="json")
         )
-        await self.websocket.send_json(self.manager.presence_snapshot_message(self.flow_id))
-        await self.websocket.send_json(self.manager.selection_snapshot_message(self.flow_id))
+        await self.websocket.send_json(self.manager.presence_snapshot_message(snapshot))
+        await self.websocket.send_json(self.manager.selection_snapshot_message(snapshot))
 
-        if not user_was_already_in_room:
-            await self.manager.broadcast_json(
-                self.flow_id,
-                self.manager.presence_joined_message(
-                    user_id=self.current_user.id,
-                    username=self.current_user.username,
-                    profile_image=self.current_user.profile_image,
-                ),
-                exclude_connection_id=self.connection_id,
-            )
-
-        self._publish_presence()
+        await self._emit_presence_change(presence_change, exclude_connection_id=self.connection_id)
 
     async def _handle_operation_submit(self, raw: Any) -> None:
         try:
@@ -197,18 +197,14 @@ class FlowCollaborationConnection:
                 self.current_user,
             )
 
-            try:
-                return await apply_flow_operation_batch(
-                    operation_session,
-                    flow_id=self.flow_id,
-                    actor_user_id=self.current_user.id,
-                    base_revision=submit.base_revision,
-                    operations=submit.operations,
-                    storage_service=self.storage_service,
-                )
-            except FlowOperationApplyError:
-                await operation_session.rollback()
-                raise
+            return await apply_flow_operation_batch(
+                operation_session,
+                flow_id=self.flow_id,
+                actor_user_id=self.current_user.id,
+                base_revision=submit.base_revision,
+                operations=submit.operations,
+                storage_service=self.storage_service,
+            )
 
     async def _ensure_active_read_access(self) -> None:
         try:
@@ -219,7 +215,7 @@ class FlowCollaborationConnection:
                     self.current_user,
                 )
         except FlowCollaborationAccessError as exc:
-            await close_with_session_error(self.websocket, code=exc.code, detail=exc.detail)
+            await self.websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=exc.detail)
             raise _CollaborationConnectionClosedError from exc
 
     async def _send_operation_accepted(
@@ -280,7 +276,7 @@ class FlowCollaborationConnection:
             "created_at": accepted.created_at.isoformat(),
             "origin_connection_id": self.connection_id,
         }
-        get_collaboration_events_service().publish(self.flow_id, "operation.accepted", event_payload)
+        self._event_service.publish(self.flow_id, "operation.accepted", event_payload)
 
     async def _handle_selection_update(self, raw: Any) -> None:
         try:
@@ -293,20 +289,15 @@ class FlowCollaborationConnection:
             )
             return
 
-        updated = self.manager.set_user_selection(
-            self.flow_id,
-            self.current_user.id,
-            update.selected,
-        )
-        await self.manager.broadcast_json(
-            self.flow_id,
-            updated,
-            exclude_connection_id=self.connection_id,
-        )
+        if self.connection_id is None:
+            return
 
-    def _publish_presence(self) -> None:
-        payload = self.manager.presence_payload(self.flow_id)
-        get_collaboration_events_service().publish(self.flow_id, "presence.roster", payload)
+        change = self._event_service.update_connection(
+            flow_id=self.flow_id,
+            connection_id=self.connection_id,
+            selected=update.selected,
+        )
+        await self._emit_selection_change(change, exclude_connection_id=self.connection_id)
 
     async def _presence_heartbeat(self) -> None:
         while True:
@@ -319,7 +310,10 @@ class FlowCollaborationConnection:
                 await self._ensure_active_read_access()
             except _CollaborationConnectionClosedError:
                 return
-            self._publish_presence()
+            self._event_service.update_connection(
+                flow_id=self.flow_id,
+                connection_id=self.connection_id,
+            )
 
     async def _cleanup(self) -> None:
         if self._presence_task is not None:
@@ -330,20 +324,89 @@ class FlowCollaborationConnection:
                 pass
 
         if self.connection_id is not None:
-            conn = await self.manager.unregister(self.flow_id, self.connection_id)
+            await self.manager.unregister(self.flow_id, self.connection_id)
+            change = self._event_service.remove_connection(
+                flow_id=self.flow_id,
+                connection_id=self.connection_id,
+            )
+            await self._emit_presence_change(change)
 
-            if conn is not None:
-                selection_update = self.manager.clear_user_selection(self.flow_id, conn.user_id)
-                if selection_update is not None:
-                    await self.manager.broadcast_json(self.flow_id, selection_update)
+    async def _emit_presence_change(
+        self,
+        change: CollaborationPresenceChange | None,
+        *,
+        exclude_connection_id: str | None = None,
+    ) -> None:
+        if change is None:
+            return
 
-                if conn.user_id not in self.manager.all_users(self.flow_id, as_dict=True):
-                    await self.manager.broadcast_json(
-                        self.flow_id,
-                        self.manager.presence_left_message(conn.user_id),
-                    )
+        if change.joined:
+            message = self.manager.presence_joined_message(
+                user_id=change.joined.user_id,
+                username=change.joined.username,
+                profile_image=change.joined.profile_image,
+            )
+            await self.manager.broadcast_json(
+                self.flow_id,
+                message,
+                exclude_connection_id=exclude_connection_id,
+            )
+            self._publish_presence_joined(change.joined)
 
-            try:
-                self._publish_presence()
-            except Exception as exc:  # noqa: BLE001 - cleanup presence publish is best-effort.
-                await logger.adebug("Failed to publish collaboration presence during cleanup: %s", exc)
+        if change.left_user_id:
+            message = self.manager.presence_left_message(change.left_user_id)
+            await self.manager.broadcast_json(self.flow_id, message)
+            self._publish_presence_left(change.left_user_id)
+
+        await self._emit_selection_change(change)
+
+    async def _emit_selection_change(
+        self,
+        change: CollaborationPresenceChange | None,
+        *,
+        exclude_connection_id: str | None = None,
+    ) -> None:
+        if change is None or change.selection_updated is None:
+            return
+
+        selected = change.selection_updated.selected
+        message = self.manager.selection_updated_message(change.selection_updated.user_id, selected)
+        await self.manager.broadcast_json(
+            self.flow_id,
+            message,
+            exclude_connection_id=exclude_connection_id,
+        )
+        self._publish_selection_updated(change.selection_updated.user_id, selected)
+
+    def _publish_presence_joined(self, joined: object) -> None:
+        self._event_service.publish(
+            self.flow_id,
+            "presence.joined",
+            {
+                "worker_id": WORKER_ID,
+                "user": {
+                    "user_id": str(joined.user_id),
+                    "username": joined.username,
+                    "profile_image": joined.profile_image,
+                },
+            },
+        )
+
+    def _publish_presence_left(self, user_id: UUID) -> None:
+        self._event_service.publish(
+            self.flow_id,
+            "presence.left",
+            {"worker_id": WORKER_ID, "user_id": str(user_id)},
+        )
+
+    def _publish_selection_updated(
+        self,
+        user_id: UUID,
+        selected: CollaborationSelectionTarget | None,
+    ) -> None:
+        payload: dict[str, object] = {
+            "worker_id": WORKER_ID,
+            "user_id": str(user_id),
+            "selected": {"kind": selected.kind, "id": selected.id} if selected is not None else None,
+        }
+        self._event_service.publish(self.flow_id, "selection.updated", payload)

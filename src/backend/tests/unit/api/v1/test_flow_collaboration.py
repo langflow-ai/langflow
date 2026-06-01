@@ -117,12 +117,14 @@ class _FakeWebSocket:
     def __init__(self) -> None:
         self.sent_messages: list[dict[str, object]] = []
         self.closed_code: int | None = None
+        self.closed_reason: str | None = None
 
     async def send_json(self, message: dict[str, object]) -> None:
         self.sent_messages.append(message)
 
-    async def close(self, code: int) -> None:
+    async def close(self, code: int, reason: str | None = None) -> None:
         self.closed_code = code
+        self.closed_reason = reason
         self.client_state = WebSocketState.DISCONNECTED
 
 
@@ -190,8 +192,9 @@ async def test_active_session_closes_when_read_access_is_revoked(active_user, mo
 
     with pytest.raises(connection_module._CollaborationConnectionClosedError):
         await connection._ensure_active_read_access()
-    assert websocket.sent_messages == [{"type": "session.error", "code": "unauthorized", "detail": "Flow not found"}]
+    assert websocket.sent_messages == []
     assert websocket.closed_code == status.WS_1008_POLICY_VIOLATION
+    assert websocket.closed_reason == "Flow not found"
 
 
 async def test_operation_submit_handler_raises_rejection_for_invalid_payload(active_user):

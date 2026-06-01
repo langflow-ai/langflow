@@ -4,11 +4,17 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 from langflow.services.base import Service
+from langflow.services.collaboration_events.schemas import UNSET, CollaborationSelectionTarget
 
 if TYPE_CHECKING:
     from uuid import UUID
 
-    from langflow.services.collaboration_events.schemas import CollaborationEvent, CollaborationPollCursor
+    from langflow.services.collaboration_events.schemas import (
+        CollaborationEvent,
+        CollaborationPollCursor,
+        CollaborationPresenceChange,
+        CollaborationPresenceSnapshot,
+    )
 
 
 class CollaborationEventService(Service, ABC):
@@ -16,13 +22,16 @@ class CollaborationEventService(Service, ABC):
 
     Publishes opaque events scoped by ``flow_id``. Workers poll events for flows
     they are actively serving and fan them out to local WebSocket rooms.
+
+    Ephemeral presence and per-connection selection state live in the same store
+    and are authoritative for bootstrap/resync snapshots.
     """
 
     name = "collaboration_events_service"
 
     @abstractmethod
     def publish(self, flow_id: UUID, event_type: str, payload: dict) -> CollaborationEvent:
-        """Persist an event for cross-worker fanout."""
+        """Push an event for cross-worker fanout."""
 
     @abstractmethod
     def poll(
@@ -36,4 +45,39 @@ class CollaborationEventService(Service, ABC):
 
     @abstractmethod
     def cleanup(self) -> None:
-        """Force-evict expired events. Useful for tests and ops scripts."""
+        """Force-evict expired events and presence rows. Useful for tests and ops scripts."""
+
+    @abstractmethod
+    def add_connection(
+        self,
+        *,
+        flow_id: UUID,
+        user_id: UUID,
+        connection_id: str,
+        username: str,
+        profile_image: str | None,
+    ) -> CollaborationPresenceChange | None:
+        """Create or replace one active connection row."""
+
+    @abstractmethod
+    def update_connection(
+        self,
+        *,
+        flow_id: UUID,
+        connection_id: str,
+        selected: CollaborationSelectionTarget | None | object = UNSET,
+    ) -> CollaborationPresenceChange | None:
+        """Refresh the connection TTL and optionally update its selection columns."""
+
+    @abstractmethod
+    def remove_connection(
+        self,
+        *,
+        flow_id: UUID,
+        connection_id: str,
+    ) -> CollaborationPresenceChange | None:
+        """Remove one active connection row."""
+
+    @abstractmethod
+    def list_users(self, flow_id: UUID) -> CollaborationPresenceSnapshot:
+        """Return active deduped users plus effective per-user selections."""

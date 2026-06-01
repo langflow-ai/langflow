@@ -12,7 +12,6 @@ from langflow.api.utils.collab.access import (
     validate_flow_collaboration_access,
 )
 from langflow.api.utils.collab.connection import FlowCollaborationConnection
-from langflow.api.utils.collab.helpers import close_with_session_error
 from langflow.services.deps import get_storage_service
 from langflow.services.storage.service import StorageService
 
@@ -34,7 +33,7 @@ async def flow_collaboration_websocket(
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
         return
     except FlowCollaborationAccessError as exc:
-        await close_with_session_error(websocket, code=exc.code, detail=exc.detail)
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason=exc.detail)
         return
 
     await FlowCollaborationConnection(

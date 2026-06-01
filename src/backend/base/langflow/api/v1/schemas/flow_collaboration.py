@@ -7,7 +7,9 @@ from typing import Any, Literal
 from uuid import UUID
 
 from lfx.services.flow_operations.ops import FlowOperationActorDelegate
-from pydantic import BaseModel, ConfigDict, Field, StrictFloat, StrictInt
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
+
+from langflow.services.collaboration_events.schemas import CollaborationSelectionTarget
 
 
 class CollaborationPresenceUser(BaseModel):
@@ -25,12 +27,6 @@ class CollaborationSessionReadyMessage(BaseModel):
     connection_id: str
     flow_id: UUID
     current_revision: int
-
-
-class CollaborationSessionErrorMessage(BaseModel):
-    type: Literal["session.error"] = "session.error"
-    code: str
-    detail: str
 
 
 class CollaborationOperationSubmitMessage(BaseModel):
@@ -74,12 +70,9 @@ class CollaborationPresenceLeftMessage(BaseModel):
     user_id: UUID
 
 
-class CollaborationSelectionTarget(BaseModel):
-    kind: Literal["node", "edge"]
-    id: str
-
-
 class CollaborationUserSelection(BaseModel):
+    # Use the collaboration event service schema as the shared selection contract.
+    # If the websocket API diverges later, introduce a dedicated API model here.
     user_id: UUID
     selected: CollaborationSelectionTarget | None = None
 
@@ -125,14 +118,32 @@ class CollaborationOperationAcceptedEventPayload(BaseModel):
     origin_connection_id: str | None = None
 
 
-class CollaborationPresenceEventPayload(BaseModel):
-    """Typed presence roster payload stored in the collaboration event backplane."""
+class CollaborationPresenceJoinedEventPayload(BaseModel):
+    """Typed presence.joined payload stored in the collaboration event backplane."""
 
     model_config = ConfigDict(extra="forbid")
 
     worker_id: str
-    published_at: StrictFloat
-    users: list[CollaborationPresenceUser] = Field(default_factory=list)
+    user: CollaborationPresenceUser
+
+
+class CollaborationPresenceLeftEventPayload(BaseModel):
+    """Typed presence.left payload stored in the collaboration event backplane."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    worker_id: str
+    user_id: UUID
+
+
+class CollaborationSelectionUpdatedEventPayload(BaseModel):
+    """Typed selection.updated payload stored in the collaboration event backplane."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    worker_id: str
+    user_id: UUID
+    selected: CollaborationSelectionTarget | None = None
 
 
 class CollaborationOperationAcceptedBackplaneEvent(BaseModel):
@@ -142,14 +153,27 @@ class CollaborationOperationAcceptedBackplaneEvent(BaseModel):
     payload: CollaborationOperationAcceptedEventPayload
 
 
-class CollaborationPresenceRosterBackplaneEvent(BaseModel):
-    """Typed worker-local presence roster event consumed from the collaboration backplane."""
-
-    type: Literal["presence.roster"]
-    payload: CollaborationPresenceEventPayload
+class CollaborationPresenceJoinedBackplaneEvent(BaseModel):
+    type: Literal["presence.joined"]
+    payload: CollaborationPresenceJoinedEventPayload
 
 
-CollaborationBackplaneEvent = CollaborationOperationAcceptedBackplaneEvent | CollaborationPresenceRosterBackplaneEvent
+class CollaborationPresenceLeftBackplaneEvent(BaseModel):
+    type: Literal["presence.left"]
+    payload: CollaborationPresenceLeftEventPayload
+
+
+class CollaborationSelectionUpdatedBackplaneEvent(BaseModel):
+    type: Literal["selection.updated"]
+    payload: CollaborationSelectionUpdatedEventPayload
+
+
+CollaborationBackplaneEvent = (
+    CollaborationOperationAcceptedBackplaneEvent
+    | CollaborationPresenceJoinedBackplaneEvent
+    | CollaborationPresenceLeftBackplaneEvent
+    | CollaborationSelectionUpdatedBackplaneEvent
+)
 
 
 class UnsupportedCollaborationBackplaneEventError(ValueError):
@@ -161,8 +185,12 @@ def parse_collaboration_backplane_event(event_type: str, payload: dict[str, Any]
     event = {"type": event_type, "payload": payload}
     if event_type == "operation.accepted":
         return CollaborationOperationAcceptedBackplaneEvent.model_validate(event)
-    if event_type == "presence.roster":
-        return CollaborationPresenceRosterBackplaneEvent.model_validate(event)
+    if event_type == "presence.joined":
+        return CollaborationPresenceJoinedBackplaneEvent.model_validate(event)
+    if event_type == "presence.left":
+        return CollaborationPresenceLeftBackplaneEvent.model_validate(event)
+    if event_type == "selection.updated":
+        return CollaborationSelectionUpdatedBackplaneEvent.model_validate(event)
     msg = f"Unsupported collaboration backplane event type: {event_type!r}"
     raise UnsupportedCollaborationBackplaneEventError(msg)
 

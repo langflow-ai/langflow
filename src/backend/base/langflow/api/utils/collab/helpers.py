@@ -6,25 +6,18 @@ from dataclasses import dataclass
 from typing import TYPE_CHECKING
 
 import aiofiles
-from fastapi import status
 from lfx.log.logger import logger
 
 from langflow.api.v1.flows_helpers import _get_safe_flow_path
-from langflow.api.v1.schemas.flow_collaboration import CollaborationSessionErrorMessage
 
 if TYPE_CHECKING:
     from uuid import UUID
 
     from anyio import Path
     from sqlmodel.ext.asyncio.session import AsyncSession
-    from starlette.websockets import WebSocket
 
     from langflow.services.database.models.flow.model import Flow
     from langflow.services.storage.service import StorageService
-
-
-class FlowFilesystemRestoreError(Exception):
-    """Raised when a flow filesystem mirror cannot be restored after DB rollback."""
 
 
 @dataclass(frozen=True)
@@ -33,15 +26,13 @@ class FlowFilesystemSnapshot:
     existed: bool
     contents: bytes | None = None
 
-
-async def close_with_session_error(
-    websocket: WebSocket,
-    *,
-    code: str,
-    detail: str,
-) -> None:
-    await websocket.send_json(CollaborationSessionErrorMessage(code=code, detail=detail).model_dump(mode="json"))
-    await websocket.close(code=status.WS_1008_POLICY_VIOLATION)
+    def __post_init__(self) -> None:
+        if self.path is None and self.existed:
+            msg = "Flow filesystem snapshot cannot exist without a path"
+            raise ValueError(msg)
+        if self.existed and self.contents is None:
+            msg = "Existing flow filesystem snapshot is missing contents"
+            raise ValueError(msg)
 
 
 async def snapshot_flow_filesystem(
@@ -66,9 +57,6 @@ async def restore_flow_filesystem(snapshot: FlowFilesystemSnapshot) -> None:
         return
 
     if snapshot.existed:
-        if snapshot.contents is None:
-            msg = "Existing flow filesystem snapshot is missing contents"
-            raise FlowFilesystemRestoreError(msg)
         await snapshot.path.parent.mkdir(parents=True, exist_ok=True)
         async with aiofiles.open(str(snapshot.path), "wb") as file:
             await file.write(snapshot.contents)
