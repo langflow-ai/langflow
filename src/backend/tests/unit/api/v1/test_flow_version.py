@@ -882,7 +882,7 @@ async def _create_deployment_row(session, *, user_id, project_id, provider_accou
         project_id=project_id,
         deployment_provider_account_id=provider_account_id,
         resource_key=resource_key,
-        name=name,
+        display_name=name,
         deployment_type=DeploymentType.AGENT,
     )
 

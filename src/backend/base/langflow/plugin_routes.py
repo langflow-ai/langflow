@@ -99,7 +99,7 @@ class _PluginAppWrapper:
 
 
 def load_plugin_routes(app: FastAPI) -> None:
-    """Discover and register additional routers from enterprise plugins.
+    """Discover and register additional routers from authorization plugins.
 
     Plugins register themselves via the ``langflow.plugins`` entry-point group.
     Each entry point must expose a callable with the signature::

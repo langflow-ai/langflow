@@ -1,6 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -12,12 +12,7 @@ test(
   "ToggleComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Open the sidebar options dropdown
     await page.getByTestId("sidebar-options-trigger").click();
@@ -108,7 +103,7 @@ test(
     ).toBeTruthy();
 
     await page.locator('//*[@id="showpath"]').click();
-    expect(await page.locator('//*[@id="showpath"]').isChecked()).toBeFalsy();
+    await expect(page.locator('//*[@id="showpath"]')).not.toBeChecked();
 
     await page.locator('//*[@id="showrecursive"]').click();
     expect(
@@ -131,7 +126,7 @@ test(
     ).toBeFalsy();
 
     await page.locator('//*[@id="showpath"]').click();
-    expect(await page.locator('//*[@id="showpath"]').isChecked()).toBeTruthy();
+    await expect(page.locator('//*[@id="showpath"]')).toBeChecked();
 
     await page.locator('//*[@id="showrecursive"]').click();
     expect(

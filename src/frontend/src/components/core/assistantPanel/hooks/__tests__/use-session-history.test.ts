@@ -183,6 +183,76 @@ describe("useSessionHistory", () => {
     });
   });
 
+  describe("auto-persist (WS-6 / RC-7)", () => {
+    // Report #5: sessions were lost because saveCurrentSession only ran on
+    // the explicit New session click. A session with completed turns must
+    // persist as soon as a turn settles, so a panel close / page reload
+    // never loses it.
+
+    it("should_auto_persist_session_when_a_turn_settles", () => {
+      const messages = [
+        createMessage({ content: "Create a flow" }),
+        createMessage({ id: "m2", role: "assistant", content: "Built it." }),
+      ];
+
+      const { result } = renderHook(() =>
+        useSessionHistory("s1", messages, mockLoadSession),
+      );
+
+      // No manual saveCurrentSession() call — the hook persists on its own.
+      expect(result.current.sessions).toHaveLength(1);
+      expect(result.current.sessions[0].sessionId).toBe("s1");
+      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
+      expect(stored).toHaveLength(1);
+    });
+
+    it("should_update_persisted_session_in_place_on_each_settled_turn", () => {
+      const first = [createMessage({ content: "turn 1" })];
+      const { result, rerender } = renderHook(
+        ({ msgs }) => useSessionHistory("s1", msgs, mockLoadSession),
+        { initialProps: { msgs: first } },
+      );
+      expect(result.current.sessions[0].messageCount).toBe(1);
+
+      rerender({
+        msgs: [
+          createMessage({ content: "turn 1" }),
+          createMessage({ id: "m2", role: "assistant", content: "ok" }),
+          createMessage({ id: "m3", content: "turn 2" }),
+        ],
+      });
+
+      expect(result.current.sessions).toHaveLength(1);
+      expect(result.current.sessions[0].messageCount).toBe(3);
+    });
+
+    it("should_not_auto_persist_while_a_message_is_streaming", () => {
+      const messages = [
+        createMessage({ content: "Create a flow" }),
+        createMessage({
+          id: "m2",
+          role: "assistant",
+          content: "",
+          status: "streaming",
+        }),
+      ];
+
+      renderHook(() => useSessionHistory("s1", messages, mockLoadSession));
+
+      const stored = JSON.parse(localStorageMock.getItem(STORAGE_KEY) || "[]");
+      expect(stored).toEqual([]);
+    });
+
+    it("should_not_auto_persist_when_messages_empty", () => {
+      const { result } = renderHook(() =>
+        useSessionHistory("s1", [], mockLoadSession),
+      );
+
+      expect(result.current.sessions).toEqual([]);
+      expect(localStorageMock.getItem(STORAGE_KEY)).toBeNull();
+    });
+  });
+
   describe("switchSession", () => {
     it("should_call_loadSession_with_deserialized_messages", () => {
       const entry = {

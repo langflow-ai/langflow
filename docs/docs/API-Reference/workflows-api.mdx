@@ -118,6 +118,7 @@ The asynchronous request contains `stream` parameter, but streaming is not yet s
 | `flow_version` | `string` | No | - | Optional version hash to pin to a specific flow version. |
 | `background` | `boolean` | No | `false` | Must be `false` for synchronous execution. |
 | `inputs` | `object` | No | `{}` | Inputs for the workflow execution. Uses component identifiers with dot notation (e.g., `ChatInput-abc.input_value`). See [Component identifiers and input structure](#component-identifiers-and-input-structure) for detailed information. |
+| `globals` | `object` | No | `{}` | Request-level global variables available to workflow components. Use this body field for arbitrary strings, including Unicode values. Keys are limited to 256 characters and values to 64 KB. See [Migrating from `X-LANGFLOW-GLOBAL-VAR-*` headers](#migrating-from-x-langflow-global-var--headers). |
 
 ### Example response
 
@@ -133,6 +134,10 @@ The asynchronous request contains `stream` parameter, but streaming is not yet s
     "ChatInput-abc.input_type": "chat",
     "ChatInput-abc.input_value": "what is 2+2",
     "ChatInput-abc.session_id": "session-123"
+  },
+  "globals": {
+    "FILENAME": "relatório—final.pdf",
+    "OWNER_NAME": "José"
   },
   "outputs": {
     "ChatOutput-xyz": {
@@ -273,6 +278,44 @@ The response includes a `status` field that indicates the current state of the w
   "message": "Job job_id_1234567890 cancelled successfully."
 }
 ```
+
+## Migrating from `X-LANGFLOW-GLOBAL-VAR-*` headers
+
+Earlier preview releases of the Workflow API accepted request-level global variables via `X-LANGFLOW-GLOBAL-VAR-*` HTTP headers. HTTP headers cannot reliably carry arbitrary Unicode values, so the v2 Workflow API now accepts globals as a typed `globals` field in the JSON request body.
+
+For backwards compatibility, the previous header transport is still honored for one release:
+
+- Body globals always win when the same key is sent both ways.
+- A deprecation warning is logged on every request that carries `X-LANGFLOW-GLOBAL-VAR-*` headers.
+- Header-based globals will be **removed in a future Langflow release**. Migrate to the `globals` body field at your earliest convenience.
+
+**Before (deprecated):**
+
+```bash
+curl -X POST "$LANGFLOW_URL/api/v2/workflows" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  -H "X-LANGFLOW-GLOBAL-VAR-FILENAME: relatorio-final.pdf" \
+  -H "X-LANGFLOW-GLOBAL-VAR-OWNER_NAME: Jose" \
+  --data '{"flow_id": "..."}'
+```
+
+**After:**
+
+```bash
+curl -X POST "$LANGFLOW_URL/api/v2/workflows" \
+  -H "x-api-key: $LANGFLOW_API_KEY" \
+  -H "Content-Type: application/json" \
+  --data '{
+    "flow_id": "...",
+    "globals": {
+      "FILENAME": "relatório—final.pdf",
+      "OWNER_NAME": "José"
+    }
+  }'
+```
+
+Keys may use the same characters supported by the global variables panel in the Langflow UI; they are bounded to 256 characters, and values are bounded to 64 KB.
 
 ## Component identifiers and input structure
 

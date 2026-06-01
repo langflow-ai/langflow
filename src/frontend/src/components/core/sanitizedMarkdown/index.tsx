@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import rehypeMathjax from "rehype-mathjax/browser";
 import rehypeRaw from "rehype-raw";
@@ -27,7 +26,6 @@ export const SanitizedMarkdown = ({
   emptyMessage,
   className,
 }: SanitizedMarkdownProps) => {
-  const { t } = useTranslation();
   const markdownRef = useRef<HTMLDivElement>(null);
   const [showWarning, setShowWarning] = useState(false);
 
@@ -103,7 +101,7 @@ export const SanitizedMarkdown = ({
             },
             table: ({ node, ...props }) => {
               return (
-                <div className="max-w-full overflow-hidden rounded-md border bg-muted">
+                <div className="max-w-full overflow-hidden rounded-xl border border-border/70 bg-primary-foreground shadow-sm">
                   <div className="max-h-[600px] w-full overflow-auto p-4">
                     <table className="!my-0 w-full">{props.children}</table>
                   </div>

@@ -12,7 +12,7 @@ let mockData: {
     version_number: number;
     attached_at: string | null;
     provider_snapshot_id: string | null;
-    provider_data: { app_ids?: string[]; tool_name?: string } | null;
+    provider_data: { app_ids?: string[]; tool_display_name?: string } | null;
   }>;
 } | null = null;
 let mockIsLoading = false;

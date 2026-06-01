@@ -190,6 +190,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       title: (i18n as any).t("alerts.buildStopped"),
     });
   },
@@ -1073,8 +1074,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
         );
         if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
           setErrorData({
-            title:
-              "There are blocked or outdated components in the flow. The error could be related to them.",
+            title: i18n.t("errors.blockedComponents"),
           });
         get().updateEdgesRunningByNodes(
           get().nodes.map((n) => n.id),
@@ -1426,19 +1426,33 @@ export function syncNodeTranslations(): void {
       node.data.node!.description,
     );
 
-    // Update input field display_names, info (tooltips), and placeholders
+    // Update input field display_names, info (tooltips), and placeholders.
+    // Before overwriting a field's display_name, verify that the currently
+    // saved value is a known translatable string for that field (i.e. it
+    // matches one of the locale translations we collected at startup).
+    // If the saved value is not in the known set it was user-customized in
+    // the component code and must not be overwritten.
     const updatedTemplate = { ...node.data.node!.template };
+    const knownFields = componentDisplayNames[normKey]?.fields ?? {};
     for (const fieldName of Object.keys(updatedTemplate)) {
       const freshField = freshDef.template?.[fieldName];
       if (freshField?.display_name !== undefined) {
-        updatedTemplate[fieldName] = {
-          ...updatedTemplate[fieldName],
-          display_name: freshField.display_name,
-          ...(freshField.info !== undefined && { info: freshField.info }),
-          ...(freshField.placeholder !== undefined && {
-            placeholder: freshField.placeholder,
-          }),
-        };
+        const currentDisplayName = updatedTemplate[fieldName]?.display_name;
+        const knownFieldDisplayNames =
+          knownFields[fieldName]?.display_name ?? [];
+        const isKnownTranslation =
+          knownFieldDisplayNames.length === 0 ||
+          knownFieldDisplayNames.includes(currentDisplayName);
+        if (isKnownTranslation) {
+          updatedTemplate[fieldName] = {
+            ...updatedTemplate[fieldName],
+            display_name: freshField.display_name,
+            ...(freshField.info !== undefined && { info: freshField.info }),
+            ...(freshField.placeholder !== undefined && {
+              placeholder: freshField.placeholder,
+            }),
+          };
+        }
       }
     }
 

@@ -116,7 +116,7 @@ However, the description mentions it's for "Emily's resume" not Alex's. I don't 
 
 ### Configure tool execution timeouts
 
-There are three ways to set tool execution timeouts: the MCP Tools component timeout setting, a global environment variable, and Langflow's minimum enforced timeout. How you configure these determines their effect in resolving the actual timeout limit for each tool call.
+There are three ways to set tool execution timeouts: the MCP Tools component timeout setting, a global environment variable, and Langflow's default fallback. How you configure these determines their effect in resolving the actual timeout limit for each tool call.
 
 Langflow times are evaluated in the following order:
 
@@ -124,9 +124,11 @@ Langflow times are evaluated in the following order:
 
 2. Global timeout is set with the `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` environment variable. The default is 180 seconds.
 
-3. Langflow enforces a minimum of 180 seconds for tool execution, regardless of lower values set at the component or global level.
+3. If neither `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` or `LANGFLOW_MCP_SERVER_TIMEOUT` is configured, Langflow defaults to 180 seconds.
 
 To support tool calls that take longer than 180 seconds, set `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` to a value greater than `180` to raise the global limit, or set the **Tool Execution Timeout (seconds)** field on a specific MCP Tools component to a value greater than `180` to raise the limit for that component only.
+
+If `LANGFLOW_MCP_SERVER_TIMEOUT` is set to a value greater than `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT`, the server timeout takes precedence and becomes the actual limit for tool calls.
 
 {/* The anchor on this section (connect-clients-to-use-the-servers-actions) is currently a link target in the Langflow UI. Do not change. */}
 ## Connect clients to your Langflow MCP server {#connect-clients-to-use-the-servers-actions}
@@ -402,6 +404,15 @@ The default address is `http://localhost:6274`.
 
 5. To quit MCP Inspector, press <kbd>Control+C</kbd> in the same terminal window where you started it.
 
+## Restrict MCP server management to superusers {#restrict-mcp-server-management}
+
+To prevent non-superusers from editing MCP server connections, set `LANGFLOW_MCP_SERVERS_LOCKED=true`.
+
+When set to `true`, non-superusers can use existing MCP servers that are already configured, but they cannot configure MCP server connections in the UI or API.
+Superusers retain full access to MCP server configuration.
+
+Locking the MCP server configuration for users does not disable Langflow's built-in MCP server for serving flows as MCP tools.
+
 ## MCP server environment variables
 
 The following environment variables set behaviors related to your Langflow projects' MCP servers:
@@ -414,6 +425,7 @@ The following environment variables set behaviors related to your Langflow proje
 | `LANGFLOW_MCP_TOOL_EXECUTION_TIMEOUT` | Integer | `180` | Global timeout in seconds for MCP tool calls. See [Configure tool execution timeouts](#configure-tool-execution-timeouts). |
 | `LANGFLOW_MCP_MAX_SESSIONS_PER_SERVER` | Integer | `10` | Maximum number of MCP sessions to keep per unique server. |
 | `LANGFLOW_ADD_PROJECTS_TO_MCP_SERVERS` | Boolean | `True` | Whether to automatically add newly created projects to the user's MCP servers configuration. If `false`, projects must be manually added to MCP servers. |
+| `LANGFLOW_MCP_SERVERS_LOCKED` | Boolean | `False` | If `true`, non-superusers cannot add, edit, or remove MCP server connections through the UI or API. Superusers retain full access. For more information, see [Restrict MCP server management to superusers](#restrict-mcp-server-management). |
 
 ## Troubleshoot Langflow MCP servers {#troubleshooting-mcp-server}
 

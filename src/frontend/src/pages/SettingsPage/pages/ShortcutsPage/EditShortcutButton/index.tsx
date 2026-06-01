@@ -86,7 +86,7 @@ export default function EditShortcutButton({
     if (!key) {
       setErrorData({
         title: t("errors.errorSavingKeyCombination"),
-        list: ["No key combination recorded."],
+        list: [t("shortcuts.noKeyCombination")],
       });
       return;
     }
@@ -94,13 +94,17 @@ export default function EditShortcutButton({
     if (isDuplicateCombination(shortcuts, shortcut[0], normalizedCombination)) {
       setErrorData({
         title: t("errors.errorSavingKeyCombination"),
-        list: ["This combination already exists!"],
+        list: [t("shortcuts.combinationExists")],
       });
       return;
     }
     applyShortcutUpdate(
       normalizedCombination,
-      `${shortcut[0]} shortcut successfully changed`,
+      t("shortcuts.successChanged", {
+        name: t(`shortcuts.name.${toCamelCase(shortcut[0])}`, {
+          defaultValue: shortcut[0],
+        }),
+      }),
     );
   }
 
@@ -119,20 +123,24 @@ export default function EditShortcutButton({
     if (!defaultShortcut) {
       setErrorData({
         title: t("errors.errorResettingShortcut"),
-        list: ["Default shortcut not found."],
+        list: [t("shortcuts.defaultNotFound")],
       });
       return;
     }
     if (isDuplicateCombination(shortcuts, shortcut[0], defaultShortcut)) {
       setErrorData({
         title: t("errors.errorResettingShortcut"),
-        list: ["This combination already exists!"],
+        list: [t("shortcuts.combinationExists")],
       });
       return;
     }
     applyShortcutUpdate(
       defaultShortcut,
-      `${shortcut[0]} shortcut reset to default`,
+      t("shortcuts.successReset", {
+        name: t(`shortcuts.name.${toCamelCase(shortcut[0])}`, {
+          defaultValue: shortcut[0],
+        }),
+      }),
     );
   }
 
@@ -184,14 +192,14 @@ export default function EditShortcutButton({
       </BaseModal.Content>
       <BaseModal.Footer>
         <Button variant={"default"} onClick={editCombination}>
-          Apply
+          {t("shortcuts.applyButton")}
         </Button>
         <Button
           className="mr-5"
           variant={"destructive"}
           onClick={handleResetToDefault}
         >
-          Reset
+          {t("shortcuts.resetButton")}
         </Button>
       </BaseModal.Footer>
     </BaseModal>

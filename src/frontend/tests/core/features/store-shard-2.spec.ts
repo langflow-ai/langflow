@@ -1,7 +1,8 @@
 import * as dotenv from "dotenv";
 import path from "path";
-import { test } from "../../fixtures";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -28,14 +29,13 @@ test(
     });
 
     await page
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await page.getByTestId("api-key-save-button-store").click();
 
     await page.waitForTimeout(1000);
-    await page.getByText("Success! Your API Key has been saved.").isVisible();
-
+    await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
     await page.getByTestId("button-store").click();
     await page.waitForTimeout(1000);
 
@@ -66,7 +66,7 @@ test(
     await safeClick("tag-selector-Vector Store");
     await safeClick("tag-selector-Memory");
 
-    await page.getByText("Basic RAG").isVisible();
+    await expect(page.getByText(TEXTS.templateBasicRag)).toBeVisible();
   },
 );
 
@@ -91,14 +91,13 @@ test("should share component with share button", async ({ page }) => {
   });
 
   await page
-    .getByPlaceholder("Insert your API Key")
+    .getByPlaceholder(TEXTS.placeholderApiKey)
     .fill(process.env.STORE_API_KEY ?? "");
 
   await page.getByTestId("api-key-save-button-store").click();
 
   await page.waitForTimeout(1000);
-  await page.getByText("Success! Your API Key has been saved.").isVisible();
-
+  await expect(page.getByText(TEXTS.toastApiKeySaved)).toBeVisible();
   await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
@@ -114,7 +113,9 @@ test("should share component with share button", async ({ page }) => {
   const randomName = Math.random().toString(36).substring(2);
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
 
   await renameFlow(page, { flowName: randomName });
 
@@ -123,33 +124,32 @@ test("should share component with share button", async ({ page }) => {
   });
 
   await page.getByTestId("shared-button-flow").first().click();
-  await page.getByText("Name:").isVisible();
-  await page.getByText("Description:").isVisible();
-  await page.getByText("Set workflow status to public").isVisible();
+  await expect(page.getByText("Name:")).toBeVisible();
+  await expect(page.getByText("Description:")).toBeVisible();
+  await expect(page.getByText("Set workflow status to public")).toBeVisible();
   await page
     .getByText(
       "Attention: API keys in specified fields are automatically removed upon sharing.",
     )
     .isVisible();
-  await page.getByText("Export").first().isVisible();
-  await page.getByText("Share Flow").first().isVisible();
-
+  await expect(page.getByText("Export").first()).toBeVisible();
+  await expect(page.getByText("Share Flow").first()).toBeVisible();
   await page.waitForTimeout(3000);
 
-  await page.getByText("Agent").first().isVisible();
-  await page.getByText("Memory").first().isVisible();
-  await page.getByText("Chain").first().isVisible();
-  await page.getByText("Vector Store").first().isVisible();
-  await page.getByText("Prompt").last().isVisible();
+  await expect(page.getByText("Agent").first()).toBeVisible();
+  await expect(page.getByText("Memory").first()).toBeVisible();
+  await expect(page.getByText("Chain").first()).toBeVisible();
+  await expect(page.getByText("Vector Store").first()).toBeVisible();
+  await expect(page.getByText("Prompt").last()).toBeVisible();
   await page.getByTestId("public-checkbox").isChecked();
 
   const flowName = await page.getByTestId("input-flow-name").inputValue();
   const flowDescription = await page
     .getByPlaceholder("Flow description")
     .inputValue();
-  await page.getByText(flowName).last().isVisible();
-  await page.getByText(flowDescription).last().isVisible();
+  await expect(page.getByText(flowName).last()).toBeVisible();
+  await expect(page.getByText(flowDescription).last()).toBeVisible();
   await page.waitForTimeout(1000);
 
-  await page.getByText("Flow shared successfully").last().isVisible();
+  await expect(page.getByText("Flow shared successfully").last()).toBeVisible();
 });

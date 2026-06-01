@@ -10,6 +10,7 @@ import {
   TextDecoder as NodeTextDecoder,
   TextEncoder as NodeTextEncoder,
 } from "util";
+
 global.TextEncoder = NodeTextEncoder as unknown as typeof TextEncoder;
 global.TextDecoder = NodeTextDecoder as unknown as typeof TextDecoder;
 
@@ -17,6 +18,7 @@ import type {
   AgenticCancelledEvent,
   AgenticCompleteEvent,
   AgenticErrorEvent,
+  AgenticFlowUpdateEvent,
   AgenticProgressEvent,
   AgenticSSEEvent,
   AgenticTokenEvent,
@@ -202,6 +204,29 @@ describe("event dispatch", () => {
     expect(onError).toHaveBeenCalledWith(errorEvent);
   });
 
+  it("should dispatch onError when the stream ends without a terminal event", async () => {
+    // Bug: a dropped connection / server crash mid-build ends the reader
+    // with no complete/error/cancelled. postAssistStream then resolved
+    // normally, so the caller never flipped isProcessing off → spinner
+    // stuck forever + ambiguous partial canvas.
+    const progressOnly: AgenticSSEEvent = {
+      event: "progress",
+      step: "building_flow",
+    } as unknown as AgenticSSEEvent;
+    mockFetch.mockResolvedValue(createSSEResponse(progressOnly));
+
+    const onError = jest.fn();
+    const onComplete = jest.fn();
+    await postAssistStream(
+      { flow_id: "f1", input_value: "" },
+      { onError, onComplete },
+    );
+
+    expect(onComplete).not.toHaveBeenCalled();
+    expect(onError).toHaveBeenCalledTimes(1);
+    expect(onError.mock.calls[0][0].event).toBe("error");
+  });
+
   it("should dispatch onCancelled", async () => {
     const cancelledEvent: AgenticCancelledEvent = {
       event: "cancelled",
@@ -213,6 +238,32 @@ describe("event dispatch", () => {
     await postAssistStream({ flow_id: "f1", input_value: "" }, { onCancelled });
 
     expect(onCancelled).toHaveBeenCalledWith(cancelledEvent);
+  });
+
+  it("should dispatch onFlowUpdate for flow_update events with action propose_plan", async () => {
+    // Plan proposal arrives as a flow_update event carrying markdown.
+    // The SSE parser is generic — it forwards by event.event, not by action —
+    // so the test fixes the contract that "propose_plan" is a valid action
+    // and that the typed payload reaches onFlowUpdate intact.
+    const planEvent: AgenticFlowUpdateEvent = {
+      event: "flow_update",
+      action: "propose_plan",
+      markdown: "## Plan\n\n- Add ChatInput\n- Add Agent\n- Add ChatOutput",
+    };
+    mockFetch.mockResolvedValue(
+      createSSEResponse(planEvent, {
+        event: "complete",
+        data: { result: "", validated: true },
+      }),
+    );
+
+    const onFlowUpdate = jest.fn();
+    await postAssistStream(
+      { flow_id: "f1", input_value: "" },
+      { onFlowUpdate },
+    );
+
+    expect(onFlowUpdate).toHaveBeenCalledWith(planEvent);
   });
 
   it("should stop processing after terminal event", async () => {

@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from lfx.log.logger import logger
-from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH
+from sqlalchemy import column, values
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import col, delete, func, select
+from sqlmodel import col, delete, func, select, update
 
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment.orm_guards import ensure_deployment_immutable_fields
@@ -17,10 +18,30 @@ from langflow.services.database.models.flow_version_deployment_attachment.model 
 from langflow.services.database.utils import parse_uuid
 
 if TYPE_CHECKING:
+    from collections.abc import Sequence
     from uuid import UUID
 
     from lfx.services.adapters.deployment.schema import DeploymentType
+    from sqlalchemy.sql.selectable import CTE
     from sqlmodel.ext.asyncio.session import AsyncSession
+
+
+@dataclass(frozen=True, slots=True)
+class DeploymentMetadataUpdate:
+    langflow_db_row: Deployment
+    display_name: str
+    description: str | None
+
+    def __post_init__(self) -> None:
+        _raise_if_blank(self.display_name, "display_name")
+
+
+def _raise_if_blank(value: str, field_name: str) -> str:
+    """Return *value* unchanged, or raise if it is blank."""
+    if not value.strip():
+        msg = f"{field_name} must not be empty"
+        raise ValueError(msg)
+    return value
 
 
 def _strip_or_raise(value: str, field_name: str) -> str:
@@ -32,14 +53,6 @@ def _strip_or_raise(value: str, field_name: str) -> str:
     return stripped
 
 
-def _validate_description_max_length(description: str | None) -> str | None:
-    """Reject descriptions that exceed the deployment max length."""
-    if description is not None and len(description) > DEPLOYMENT_DESCRIPTION_MAX_LENGTH:
-        msg = f"description must be at most {DEPLOYMENT_DESCRIPTION_MAX_LENGTH} characters"
-        raise ValueError(msg)
-    return description
-
-
 async def create_deployment(
     db: AsyncSession,
     *,
@@ -47,22 +60,21 @@ async def create_deployment(
     project_id: UUID,
     deployment_provider_account_id: UUID,
     resource_key: str,
-    name: str,
     deployment_type: DeploymentType,
+    display_name: str,
     description: str | None = None,
 ) -> Deployment:
     resource_key_s = _strip_or_raise(resource_key, "resource_key")
-    name_s = _strip_or_raise(name, "name")
-    description_s = _validate_description_max_length(description)
+    display_name_s = _raise_if_blank(display_name, "display_name")
 
     row = Deployment(
         user_id=user_id,
         project_id=project_id,
         deployment_provider_account_id=deployment_provider_account_id,
         resource_key=resource_key_s,
-        name=name_s,
+        display_name=display_name_s,
         deployment_type=deployment_type,
-        description=description_s,
+        description=description,
     )
     db.add(row)
     try:
@@ -70,25 +82,30 @@ async def create_deployment(
     except IntegrityError as exc:
         await db.rollback()
         await logger.aerror("IntegrityError creating deployment: %s", exc)
-        msg = f"Deployment conflicts with an existing record (resource_key={resource_key!r}, name={name!r})"
+        msg = (
+            "Deployment conflicts with an existing record "
+            f"(resource_key={resource_key!r}, display_name={display_name_s!r})"
+        )
         raise ValueError(msg) from exc
     await db.refresh(row)
     return row
 
 
-async def deployment_name_exists(
+async def create_deployment_from_model(
     db: AsyncSession,
     *,
-    user_id: UUID,
-    deployment_provider_account_id: UUID,
-    name: str,
-) -> bool:
-    stmt = select(Deployment.id).where(
-        Deployment.user_id == user_id,
-        Deployment.deployment_provider_account_id == deployment_provider_account_id,
-        Deployment.name == name.strip(),
+    deployment: Deployment,
+) -> Deployment:
+    return await create_deployment(
+        db,
+        user_id=deployment.user_id,
+        project_id=deployment.project_id,
+        deployment_provider_account_id=deployment.deployment_provider_account_id,
+        resource_key=deployment.resource_key,
+        display_name=deployment.display_name,
+        deployment_type=deployment.deployment_type,
+        description=deployment.description,
     )
-    return (await db.exec(stmt)).first() is not None
 
 
 async def get_deployment_by_resource_key(
@@ -112,12 +129,25 @@ async def get_deployment(
     user_id: UUID,
     deployment_id: UUID | str,
 ) -> Deployment | None:
+    """Load a deployment by id, with share-aware fetch when supported.
+
+    When the registered authorization service supports cross-user fetch
+    (authorization plugin), the deployment is loaded by id alone and the route's
+    ``ensure_deployment_permission`` decides whether the caller may see it.
+    Otherwise the query stays owner-scoped so the OSS pass-through default
+    cannot widen visibility.
+    """
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+
     deployment_uuid = parse_uuid(deployment_id, field_name="deployment_id")
-    stmt = select(Deployment).where(
-        Deployment.user_id == user_id,
-        Deployment.id == deployment_uuid,
+    return await authorized_or_owner_scoped(
+        db,
+        Deployment,
+        id_column=Deployment.id,
+        resource_id=deployment_uuid,
+        owner_column=Deployment.user_id,
+        owner_id=user_id,
     )
-    return (await db.exec(stmt)).first()
 
 
 _UNSET = object()
@@ -127,7 +157,7 @@ async def update_deployment(
     db: AsyncSession,
     *,
     deployment: Deployment,
-    name: str | None = None,
+    display_name: str | None = None,
     project_id: UUID | None = None,
     deployment_type: DeploymentType | object = _UNSET,
     description: str | None | object = _UNSET,
@@ -145,14 +175,14 @@ async def update_deployment(
         new_provider_account_id=deployment.deployment_provider_account_id,
     )
 
-    if name is not None:
-        deployment.name = _strip_or_raise(name, "name")
+    if display_name is not None:
+        deployment.display_name = _raise_if_blank(display_name, "display_name")
     if project_id is not None:
         deployment.project_id = project_id
     if deployment_type is not _UNSET:
         deployment.deployment_type = deployment_type  # type: ignore[assignment]
     if description is not _UNSET:
-        deployment.description = _validate_description_max_length(description)  # type: ignore[assignment]
+        deployment.description = description  # type: ignore[assignment]
     deployment.updated_at = datetime.now(timezone.utc)
     db.add(deployment)
     try:
@@ -166,6 +196,127 @@ async def update_deployment(
     return deployment
 
 
+async def update_deployment_metadata(
+    db: AsyncSession,
+    *,
+    user_id: UUID,
+    deployment: Deployment,
+    display_name: str,
+    description: str | None,
+) -> Deployment:
+    """Update provider-owned metadata without changing local audit fields."""
+    owner_id = deployment.user_id
+    if user_id != owner_id:
+        msg = f"user_id must match the deployment owner for provider metadata sync (expected {owner_id}, got {user_id})"
+        raise ValueError(msg)
+
+    update_item = DeploymentMetadataUpdate(
+        langflow_db_row=deployment,
+        display_name=_raise_if_blank(display_name, "display_name"),
+        description=description,
+    )
+    if not _deployment_metadata_has_changed(update_item):
+        return deployment
+
+    stmt = (
+        update(Deployment)
+        .where(
+            Deployment.user_id == owner_id,
+            Deployment.id == deployment.id,
+        )
+        .values(
+            display_name=update_item.display_name,
+            description=update_item.description,
+            # Provider metadata sync should not look like a local edit.
+            updated_at=Deployment.updated_at,
+        )
+        .returning(Deployment)
+        .execution_options(populate_existing=True)
+    )
+    # Consume RETURNING rows so populate_existing refreshes the loaded Deployment instance.
+    if (await db.exec(stmt)).first() is None:
+        msg = f"Deployment not found. (id={deployment.id})"
+        raise ValueError(msg)
+    return deployment
+
+
+def _deployment_metadata_changed_fields(update_item: DeploymentMetadataUpdate) -> list[str]:
+    langflow_data = update_item.langflow_db_row
+    changed_fields: list[str] = []
+    if update_item.display_name != langflow_data.display_name:
+        changed_fields.append("display_name")
+    if update_item.description != langflow_data.description:
+        changed_fields.append("description")
+    return changed_fields
+
+
+def _deployment_metadata_has_changed(update_item: DeploymentMetadataUpdate) -> bool:
+    return bool(_deployment_metadata_changed_fields(update_item))
+
+
+def _deployment_metadata_updates_cte(
+    updates: Sequence[DeploymentMetadataUpdate],
+) -> CTE:
+    return (
+        values(
+            column("id", Deployment.__table__.c.id.type),
+            column("user_id", Deployment.__table__.c.user_id.type),
+            column("display_name", Deployment.__table__.c.display_name.type),
+            column("description", Deployment.__table__.c.description.type),
+        )
+        .data(
+            [
+                (
+                    item.langflow_db_row.id,
+                    item.langflow_db_row.user_id,
+                    item.display_name,
+                    item.description,
+                )
+                for item in updates
+            ],
+        )
+        .cte("metadata_updates")
+    )
+
+
+async def update_deployment_metadata_batch(
+    db: AsyncSession,
+    *,
+    deployment_updates: Sequence[DeploymentMetadataUpdate],
+) -> None:
+    """Update provider-owned metadata for multiple deployment rows in one statement.
+
+    Each update row is matched on ``(id, user_id)`` so shared-deployment list/get
+    sync writes in the deployment owner's namespace, not the actor's.
+    """
+    updates = [item for item in deployment_updates if _deployment_metadata_has_changed(item)]
+    if not updates:
+        return
+
+    metadata_updates = _deployment_metadata_updates_cte(updates)
+    stmt = (
+        update(Deployment)
+        .where(
+            Deployment.id == metadata_updates.c.id,
+            Deployment.user_id == metadata_updates.c.user_id,
+        )
+        .values(
+            display_name=metadata_updates.c.display_name,
+            description=metadata_updates.c.description,
+            # TODO: add a new synced_at column
+            # to differentiate between provider metadata sync and local updates.
+            # For now, explicitly preserve original updated_at value
+            # so that onupdate does not replace it.
+            updated_at=Deployment.updated_at,
+        )
+        .returning(Deployment)
+        .execution_options(populate_existing=True)
+    )
+    # Consume RETURNING rows so populate_existing refreshes loaded Deployment instances
+    # and callers see the updated values when re-reading the orm objects in the same session.
+    (await db.exec(stmt)).all()
+
+
 async def list_deployments_page(
     db: AsyncSession,
     *,
@@ -175,7 +326,6 @@ async def list_deployments_page(
     limit: int,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
-    names: list[str] | None = None,
 ) -> list[tuple[Deployment, int, list[tuple[UUID, str | None]]]]:
     """Return a page of deployments with attachment counts and matched attachments.
 
@@ -189,7 +339,6 @@ async def list_deployments_page(
     if limit <= 0:
         msg = "limit must be greater than 0"
         raise ValueError(msg)
-
     attachment_counts_subquery = (
         select(
             col(FlowVersionDeploymentAttachment.deployment_id).label("deployment_id"),
@@ -218,8 +367,6 @@ async def list_deployments_page(
     )
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
-    if names:
-        stmt = stmt.where(col(Deployment.name).in_(names))
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)
@@ -356,7 +503,6 @@ async def count_deployments_by_provider(
     deployment_provider_account_id: UUID,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
-    names: list[str] | None = None,
 ) -> int:
     stmt = select(func.count(Deployment.id)).where(
         Deployment.user_id == user_id,
@@ -364,8 +510,6 @@ async def count_deployments_by_provider(
     )
     if project_id is not None:
         stmt = stmt.where(Deployment.project_id == project_id)
-    if names:
-        stmt = stmt.where(col(Deployment.name).in_(names))
     if flow_version_ids:
         matched_deployments_subquery = (
             select(FlowVersionDeploymentAttachment.deployment_id)

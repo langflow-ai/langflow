@@ -72,6 +72,7 @@ class AuthService(BaseAuthService):
         username: str,
         password: str,
         db: Any,
+        request: Any | None = None,
     ) -> Any | None:
         logger.debug("Auth: authenticate_user (no-op)")
         return None

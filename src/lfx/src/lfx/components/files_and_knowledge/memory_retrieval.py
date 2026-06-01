@@ -20,6 +20,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
 from sqlmodel import select
 
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.files_and_knowledge._kb_paths import (
     get_knowledge_bases_root_path,
     load_kb_metadata,
@@ -234,6 +235,7 @@ class MemoryBaseComponent(Component):
             persist_directory=str(kb_path),
             embedding_function=embedding_function,
             collection_name=kb_name,
+            **chroma_langchain_collection_kwargs(),
         )
 
     def _format_results(self, results: list[tuple]) -> DataFrame:

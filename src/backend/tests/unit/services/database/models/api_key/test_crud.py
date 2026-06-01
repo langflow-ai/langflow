@@ -244,3 +244,149 @@ async def test_check_key_duplicate_hash_fails_closed(async_session, mock_setting
 
     result = await _check_key_from_db(async_session, "sk-shared", mock_settings)
     assert result is None
+
+
+@pytest.mark.anyio
+async def test_inactive_key_is_rejected(async_session, mock_settings):
+    """Keys with is_active=False must not authenticate."""
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+
+    plaintext = "sk-inactive-key"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-inactive",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="inactive",
+        user_id=user.id,
+        is_active=False,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_key)
+    await async_session.flush()
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_expired_key_is_rejected(async_session, mock_settings):
+    """Keys with expires_at in the past must not authenticate."""
+    from datetime import timedelta
+
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+
+    plaintext = "sk-expired-key"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-expired",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="expired",
+        user_id=user.id,
+        expires_at=datetime.now(timezone.utc) - timedelta(seconds=1),
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_key)
+    await async_session.flush()
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+    assert result is None
+
+
+@pytest.mark.anyio
+async def test_valid_key_expiry_passes(async_session, mock_settings):
+    """Keys with expires_at in the future must still authenticate."""
+    from datetime import timedelta
+
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+
+    plaintext = "sk-future-expiry"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-future",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="future-expiry",
+        user_id=user.id,
+        expires_at=datetime.now(timezone.utc) + timedelta(days=30),
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_key)
+    await async_session.flush()
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+    assert result is not None
+    assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_no_expiry_key_passes(async_session, mock_settings):
+    """Keys with expires_at=None (no expiry) must authenticate indefinitely."""
+    user = _make_user()
+    async_session.add(user)
+    await async_session.flush()
+
+    plaintext = "sk-no-expiry"  # pragma: allowlist secret
+    api_key = ApiKey(
+        api_key="encrypted-no-expiry",  # pragma: allowlist secret
+        api_key_hash=hash_api_key(plaintext),
+        name="no-expiry",
+        user_id=user.id,
+        expires_at=None,
+        created_at=datetime.now(timezone.utc),
+    )
+    async_session.add(api_key)
+    await async_session.flush()
+
+    result = await _check_key_from_db(async_session, plaintext, mock_settings)
+    assert result is not None
+    assert result.id == user.id
+
+
+@pytest.mark.anyio
+async def test_create_api_key_stores_expires_at(async_session, mock_settings, monkeypatch):  # noqa: ARG001
+    """create_api_key must persist expires_at when provided."""
+    from datetime import timedelta
+
+    from sqlmodel import select
+
+    user = _make_user()
+    async_session.add(user)
+    await async_session.commit()
+
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.auth_utils.encrypt_api_key",
+        lambda key, **_kwargs: f"encrypted-{key}",
+    )
+
+    expiry = datetime.now(timezone.utc) + timedelta(days=30)
+    result = await create_api_key(async_session, ApiKeyCreate(name="test", expires_at=expiry), user.id)
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.user_id == user.id))).first()
+    assert row is not None
+    assert row.expires_at is not None
+    assert abs((row.expires_at.replace(tzinfo=timezone.utc) - expiry).total_seconds()) < 2
+    assert result.expires_at is not None
+
+
+@pytest.mark.anyio
+async def test_create_api_key_no_expires_at_is_none(async_session, mock_settings, monkeypatch):  # noqa: ARG001
+    """create_api_key must store expires_at=None when not provided."""
+    from sqlmodel import select
+
+    user = _make_user()
+    async_session.add(user)
+    await async_session.commit()
+
+    monkeypatch.setattr(
+        "langflow.services.database.models.api_key.crud.auth_utils.encrypt_api_key",
+        lambda key, **_kwargs: f"encrypted-{key}",
+    )
+
+    result = await create_api_key(async_session, ApiKeyCreate(name="no-expiry"), user.id)
+
+    row = (await async_session.exec(select(ApiKey).where(ApiKey.user_id == user.id))).first()
+    assert row is not None
+    assert row.expires_at is None
+    assert result.expires_at is None
