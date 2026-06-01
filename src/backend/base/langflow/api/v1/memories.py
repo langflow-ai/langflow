@@ -92,7 +92,7 @@ class RegenerateResponse(BaseModel):
 @router.post("/", status_code=HTTPStatus.CREATED)
 async def create_memory_base(
     current_user: CurrentActiveUser,
-    payload: Annotated[MemoryBaseCreate, Body(embed=False)] = ...,
+    payload: Annotated[MemoryBaseCreate, Body(embed=False)],
 ) -> MemoryBaseRead:
     """Create a new Memory Base.
 
@@ -258,7 +258,7 @@ async def list_memory_base_messages(
 async def update_memory_base(
     memory_base_id: uuid.UUID,
     current_user: CurrentActiveUser,
-    patch: Annotated[MemoryBaseUpdate, Body(embed=False)] = ...,
+    patch: Annotated[MemoryBaseUpdate, Body(embed=False)],
 ) -> MemoryBaseRead:
     """Update mutable parameters (name, threshold, auto_capture).
 
@@ -301,7 +301,7 @@ async def delete_memory_base(
 async def flush_memory_base(
     memory_base_id: uuid.UUID,
     current_user: CurrentActiveUser,
-    body: Annotated[FlushRequest, Body(embed=False)] = ...,
+    body: Annotated[FlushRequest, Body(embed=False)],
 ) -> dict:
     """Manually trigger an ingestion / sync job regardless of the threshold.
 
