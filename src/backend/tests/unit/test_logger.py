@@ -1685,3 +1685,24 @@ class TestInterceptExtraForwarding:
         assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
         assert sa[0]["password"] == "***"  # noqa: S105 - sensitive extra redacted
         assert sa[0]["pool_size"] == 5  # non-sensitive extra preserved
+
+
+class TestRetrievalBufferMessage:
+    """The /logs retrieval buffer must capture the actual message text, not an empty string."""
+
+    def teardown_method(self):
+        log_buffer.max = 0
+        structlog.reset_defaults()
+        structlog.configure()
+
+    def test_buffer_captures_message_text(self):
+        """add_serialized writes the message under `message`; the buffer must read it back."""
+        log_buffer.max = 100
+        try:
+            configure(log_env="container", log_level="INFO", cache=False)
+            structlog.get_logger("demo").info("hello buffer world")
+            values = list(log_buffer.get_last_n(5).values())
+            assert values, "expected a buffered entry"
+            assert "hello buffer world" in values
+        finally:
+            log_buffer.max = 0
