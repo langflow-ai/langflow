@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import re
 
-
 # ---------------------------------------------------------------------------
 # Helpers — mirror the Makefile one-liners exactly
 # ---------------------------------------------------------------------------
@@ -62,7 +61,7 @@ class TestLangflowBasePinSubstitution:
         assert '"langflow-base[complete]>=0.11.0"' in _patch_main_pyproject(txt, self.V, self.B)
 
     def test_does_not_touch_workspace_line(self):
-        txt = 'langflow-base = { workspace = true }'
+        txt = "langflow-base = { workspace = true }"
         assert _patch_main_pyproject(txt, self.V, self.B) == txt
 
     def test_updates_version_field(self):
@@ -106,7 +105,7 @@ class TestLfxPinSubstitution:
         assert '"lfx~=1.11.0"' in _patch_langflow_base_pyproject(txt, self.B, self.V)
 
     def test_does_not_touch_workspace_line(self):
-        txt = 'lfx = { workspace = true }'
+        txt = "lfx = { workspace = true }"
         assert _patch_langflow_base_pyproject(txt, self.B, self.V) == txt
 
     def test_updates_version_field(self):
