@@ -16,11 +16,23 @@ The dashboard expects Langflow to be running in JSON mode with service metadata 
 
 ```bash
 LANGFLOW_LOG_ENV=container
-LANGFLOW_LOG_FILE=/var/log/langflow/langflow.log
 LANGFLOW_SERVICE_NAME=langflow
 LANGFLOW_VERSION=1.10.0
 LANGFLOW_ENVIRONMENT=production
 ```
+
+Log to **stdout**, not `LANGFLOW_LOG_FILE`. The stdlib intercept that routes `uvicorn`,
+`sqlalchemy`, `httpx`, and `langchain` into the JSON stream is only installed on the stdout
+path, so logging straight to a file leaves those library lines as plain text (the `json`
+parse stage and the **Stdlib intercept routing** panel won't see them). Capture stdout into
+the directory Promtail scrapes:
+
+```bash
+langflow run > /var/log/langflow/langflow.log
+```
+
+In Docker or Kubernetes you can instead point Promtail at the container's stdout and skip the
+redirect entirely.
 
 See [Logs and observability](../../../docs/docs/Develop/observability-grafana-loki.mdx) for the full list of environment variables (per-logger overrides, extra PII redaction keys, trace correlation, etc.).
 
