@@ -11,11 +11,13 @@ historical schema fixtures to validate against.
 """
 
 import importlib.util
+import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.embeddings import Embeddings
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx_ibm.components.ibm.db2_vector import DB2VectorStoreComponent
@@ -29,6 +31,19 @@ requires_ibm_db = pytest.mark.skipif(
     importlib.util.find_spec("ibm_db_dbi") is None,
     reason="ibm-db (ibm_db_dbi) not installed on this platform (e.g. linux/aarch64)",
 )
+
+
+class FakeEmbeddings(Embeddings):
+    """Small Embeddings test double that follows the LangChain contract."""
+
+    def __init__(self, vector: list[float] | None = None):
+        self.vector = vector or [0.1, 0.2, 0.3]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self.vector.copy() for _ in texts]
+
+    def embed_query(self, _text: str) -> list[float]:
+        return self.vector.copy()
 
 
 @requires_ibm_db
@@ -54,11 +69,8 @@ class TestDB2VectorStoreComponent:
 
     @pytest.fixture
     def mock_embedding(self):
-        """Create a mock embedding model."""
-        embedding = Mock()
-        embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
-        embedding.embed_query = Mock(return_value=[0.1, 0.2, 0.3])
-        return embedding
+        """Create an embedding model test double."""
+        return FakeEmbeddings()
 
     def test_component_metadata(self):
         """Test component metadata is correctly set."""
@@ -891,9 +903,6 @@ class TestDB2VectorStoreComponent:
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value = mock_cursor
 
-        # Mock embedding to return proper dimensions
-        mock_embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
-
         # Mock table operations
         with (
             patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
@@ -931,9 +940,6 @@ class TestDB2VectorStoreComponent:
         mock_connection = MagicMock()
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value = mock_cursor
-
-        # Mock embedding to return proper dimensions
-        mock_embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
 
         # Mock table operations
         with (
@@ -1005,9 +1011,6 @@ class TestDB2VectorStoreComponent:
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value = mock_cursor
 
-        # Mock embedding to return proper dimensions
-        mock_embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
-
         # Mock table operations
         with (
             patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
@@ -1062,9 +1065,6 @@ class TestDB2VectorStoreComponent:
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value = mock_cursor
 
-        # Mock embedding to return proper dimensions
-        mock_embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
-
         # Mock table operations
         with (
             patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
@@ -1085,19 +1085,17 @@ class TestDB2VectorStoreComponent:
             result = vector_store.add_texts([])
 
             # Verify no database calls were made
+            mock_connection.cursor.assert_not_called()
             assert not mock_cursor.executemany.called
             assert result == []
 
     def test_bulk_insert_with_special_characters(self, mock_embedding):
-        """Test bulk insert properly sanitizes special characters."""
+        """Test bulk insert preserves special characters in bound parameters."""
         from lfx_ibm.components.ibm.db2vs import DB2VS
 
         mock_connection = MagicMock()
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value = mock_cursor
-
-        # Mock embedding to return proper dimensions
-        mock_embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
 
         # Mock table operations
         with (
@@ -1122,14 +1120,27 @@ class TestDB2VectorStoreComponent:
                 "Document with \n newlines \t tabs",
                 "Document with SQL injection'; DROP TABLE users;--",
             ]
+            metadatas = [
+                {"source": "O'Brien"},
+                {"source": 'double "quote"'},
+                {"source": "line\nbreak"},
+                {"source": "payload'; DROP TABLE users;--"},
+            ]
+            ids = ["id'1", 'id"2', "id\n3", "id;4"]
 
-            vector_store.add_texts(texts)
+            vector_store.add_texts(texts, metadatas=metadatas, ids=ids)
 
             # Verify executemany was called (documents were processed)
             assert mock_cursor.executemany.called
-            # Verify data was sanitized (check call arguments)
+            # Bound parameters should stay raw; the DB driver handles escaping.
             call_args = mock_cursor.executemany.call_args[0]
             assert len(call_args) == 2  # SQL statement and data tuples
+            insert_data = call_args[1]
+            assert insert_data[0][0] == ids[0]
+            assert insert_data[0][2] == json.dumps(metadatas[0])
+            assert insert_data[0][3] == texts[0]
+            assert "O''Brien" not in insert_data[0][2]
+            assert "''single quotes''" not in insert_data[0][3]
 
     def test_bulk_insert_logging(self, component, mock_embedding):
         """Test that bulk insert mode is logged correctly."""
@@ -1145,22 +1156,11 @@ class TestDB2VectorStoreComponent:
 
             from lfx_ibm.components.ibm.db2vs import DB2VS
 
-            with patch.object(DB2VS, "__init__", return_value=None):
-                # Capture log output
-                import io
-                import sys
+            with patch.object(DB2VS, "__init__", return_value=None), patch.object(component, "log") as mock_log:
+                component.build_vector_store()
 
-                captured_output = io.StringIO()
-                old_stdout = sys.stdout
-                sys.stdout = captured_output
-
-                try:
-                    component.build_vector_store()
-                    output = captured_output.getvalue()
-                    # The component logs "Insert mode: bulk insert (executemany)"
-                    assert "bulk insert" in output.lower() or "executemany" in output.lower()
-                finally:
-                    sys.stdout = old_stdout
+                messages = [str(call.args[0]).lower() for call in mock_log.call_args_list]
+                assert any("bulk insert" in message or "executemany" in message for message in messages)
 
     def test_row_by_row_insert_logging(self, component, mock_embedding):
         """Test that row-by-row insert mode is logged correctly."""
@@ -1176,22 +1176,11 @@ class TestDB2VectorStoreComponent:
 
             from lfx_ibm.components.ibm.db2vs import DB2VS
 
-            with patch.object(DB2VS, "__init__", return_value=None):
-                # Capture log output
-                import io
-                import sys
+            with patch.object(DB2VS, "__init__", return_value=None), patch.object(component, "log") as mock_log:
+                component.build_vector_store()
 
-                captured_output = io.StringIO()
-                old_stdout = sys.stdout
-                sys.stdout = captured_output
-
-                try:
-                    component.build_vector_store()
-                    output = captured_output.getvalue()
-                    # The component logs "Insert mode: row-by-row insert (execute)"
-                    assert "row-by-row" in output.lower() or "execute" in output.lower()
-                finally:
-                    sys.stdout = old_stdout
+                messages = [str(call.args[0]).lower() for call in mock_log.call_args_list]
+                assert any("row-by-row" in message or "execute" in message for message in messages)
 
     def test_bulk_insert_error_handling(self, mock_embedding):
         """Test that bulk insert handles errors gracefully with rollback."""
@@ -1200,9 +1189,6 @@ class TestDB2VectorStoreComponent:
         mock_connection = MagicMock()
         mock_cursor = MagicMock()
         mock_connection.cursor.return_value = mock_cursor
-
-        # Mock embedding to return proper dimensions
-        mock_embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
 
         # Make executemany raise an error
         mock_cursor.executemany.side_effect = Exception("Database error")

@@ -535,6 +535,9 @@ class DB2VS(VectorStore):
             generated_ids = [str(uuid.uuid4()) for _ in texts]
             processed_ids = [hashlib.sha256(_id.encode()).hexdigest()[:16].upper() for _id in generated_ids]
 
+        if not texts:
+            return []
+
         # Generate embeddings
         embeddings = self._embed_documents(texts)
 
@@ -569,17 +572,9 @@ class DB2VS(VectorStore):
                     # Format as string for VECTOR() function
                     vector_str = str(embedding_list)
 
-                    # SECURITY: Properly sanitize text using SQL-safe escaping
-                    text_sanitized = sanitize_sql_string(text) if text else ""
-
-                    # SECURITY: Sanitize metadata JSON
                     metadata_json = json.dumps(metadata)
-                    metadata_sanitized = sanitize_sql_string(metadata_json)
 
-                    # SECURITY: Sanitize ID (already limited to 100 chars)
-                    id_sanitized = sanitize_sql_string(id_)
-
-                    insert_data.append((id_sanitized, vector_str, metadata_sanitized, text_sanitized))
+                    insert_data.append((id_, vector_str, metadata_json, text or ""))
 
                 # Use executemany for bulk insert - much more efficient
                 cursor.executemany(sql_insert, insert_data)
