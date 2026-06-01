@@ -48,7 +48,13 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         ModelInput(
             name="embedding_model",
             display_name="Embedding Model",
-            info="Select an embedding model provider, or connect an Embeddings component (e.g. watsonx.ai).",
+            info=(
+                "Select an embedding model provider, or connect an Embeddings component (e.g. watsonx.ai). "
+                "Note: with langchain-db2 1.0.0, very high-dimension embeddings (roughly 1,500+ dimensions, "
+                "e.g. OpenAI text-embedding-3-large at 3072) can exceed Db2's VARCHAR bind limit during "
+                "insert. Prefer models around 1,024 dimensions or fewer until a newer langchain-db2 release "
+                "(with the CLOB fix from langchain-ai/langchain-ibm#155) is available."
+            ),
             model_type="embedding",
             input_types=["Embeddings"],
             required=True,
@@ -173,17 +179,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             value="COSINE",
             advanced=True,
             info="Distance calculation strategy",
-        ),
-        BoolInput(
-            name="use_bulk_insert",
-            display_name="Use Bulk Insert",
-            value=True,
-            advanced=True,
-            info=(
-                "Enable bulk insert using executemany() for better performance. "
-                "When enabled, all documents are inserted in a single batch (unlimited chunk size). "
-                "When disabled, uses row-by-row insert with execute() (chunk size: 1 document per call)."
-            ),
         ),
     ]
 
@@ -417,19 +412,18 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 api_key=getattr(self, "api_key", None),
             )
 
-            # Log bulk insert mode
-            bulk_insert_enabled = getattr(self, "use_bulk_insert", True)
-            insert_mode = "bulk insert (executemany)" if bulk_insert_enabled else "row-by-row insert (execute)"
-            self.log(f"Insert mode: {insert_mode}")
-
-            # Build vector store (will automatically generate embeddings for existing empty rows)
+            # Build vector store (will automatically generate embeddings for existing empty rows).
+            # NOTE: langchain-db2's DB2VS always bulk-inserts via executemany (add_texts); there is no
+            # toggle for it. add_texts binds the serialized vector as a parameter, so very large
+            # embeddings can exceed Db2's ~32KB VARCHAR limit. The fix (a CLOB cast in
+            # langchain-ai/langchain-ibm#155) is merged upstream but unreleased as of langchain-db2
+            # 1.0.0 — see the Embedding Model input note above.
             self.log(f"Connecting to DB2 table: {validated_table_name}")
             vector_store = DB2VS(
                 client=connection,
                 embedding_function=embeddings,
                 table_name=validated_table_name,
                 distance_strategy=distance_strategy_map.get(self.distance_strategy, DistanceStrategy.COSINE),
-                use_bulk_insert=bulk_insert_enabled,
             )
 
             self.log(f"Connected to DB2 table: {validated_table_name}")
