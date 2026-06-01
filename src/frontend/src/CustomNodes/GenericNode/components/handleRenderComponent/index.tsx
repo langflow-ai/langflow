@@ -156,20 +156,24 @@ const HandleContent = memo(function HandleContent({
 
   const contentStyle = useMemo(() => {
     const dotSize = isCollapsed ? COLLAPSED_HANDLE_SIZE : EXPANDED_HANDLE_SIZE;
+    // A collapsed input handle wears the same colorless (gray) look as a
+    // null/incompatible handle — only revealed handles show their datatype
+    // color and glow.
+    const usesInactiveAppearance = isNullHandle || isCollapsed;
     return {
-      background: isNullHandle ? "hsl(var(--border))" : handleColor,
+      background: usesInactiveAppearance ? "hsl(var(--border))" : handleColor,
       width: dotSize,
       height: dotSize,
       transition: "all 0.2s",
       opacity: 1,
-      boxShadow: isCollapsed
+      boxShadow: usesInactiveAppearance
         ? "none"
         : getNeonShadow(accentForegroundColorName, isHovered || openHandle),
       animation:
         (isHovered || openHandle) && !isNullHandle
           ? `pulseNeon-${nodeId} 1.1s ease-in-out infinite`
           : "none",
-      border: isNullHandle ? "2px solid hsl(var(--muted))" : "none",
+      border: usesInactiveAppearance ? "2px solid hsl(var(--muted))" : "none",
     };
   }, [
     isNullHandle,

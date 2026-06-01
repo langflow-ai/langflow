@@ -46,30 +46,45 @@ test(
 
     await inputDot.waitFor({ state: "attached", timeout: 30000 });
 
-    const COLLAPSED_SIZE = "5px";
-    const EXPANDED_SIZE = "10px";
-    const widthOf = () => inputDot.evaluate((el) => getComputedStyle(el).width);
+    const COLLAPSED_WIDTH = 5;
+    const EXPANDED_WIDTH = 10;
+    // offsetWidth is the border-box width, robust to box-sizing/border.
+    const widthOf = () =>
+      inputDot.evaluate((el) => (el as HTMLElement).offsetWidth);
+    const shadowOf = () =>
+      inputDot.evaluate((el) => getComputedStyle(el).boxShadow);
+    const backgroundOf = () =>
+      inputDot.evaluate((el) => getComputedStyle(el).backgroundColor);
 
     // Deselect the freshly-dropped node by clicking empty canvas.
     await page
       .locator(".react-flow__pane")
       .click({ position: { x: 50, y: 50 } });
 
-    // Default: input handle dot is small (collapsed) but still visible.
-    await expect.poll(widthOf, { timeout: 10000 }).toBe(COLLAPSED_SIZE);
+    // Default: small, colorless (gray) and without the neon ring/glow.
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(COLLAPSED_WIDTH);
+    await expect.poll(shadowOf, { timeout: 10000 }).toBe("none");
+    const collapsedBackground = await backgroundOf();
 
-    // Selecting the node grows the input handle to full size.
+    // Selecting the node grows it to full size, gives it the datatype color
+    // and the neon ring.
     await page.getByTestId("title-Chat Output").first().click();
-    await expect.poll(widthOf, { timeout: 10000 }).toBe(EXPANDED_SIZE);
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(EXPANDED_WIDTH);
+    await expect.poll(shadowOf, { timeout: 10000 }).not.toBe("none");
+    expect(await backgroundOf()).not.toBe(collapsedBackground);
 
-    // Deselect again — back to the small collapsed size.
+    // Deselect again — back to the small colorless collapsed state.
     await page
       .locator(".react-flow__pane")
       .click({ position: { x: 50, y: 50 } });
-    await expect.poll(widthOf, { timeout: 10000 }).toBe(COLLAPSED_SIZE);
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(COLLAPSED_WIDTH);
+    await expect
+      .poll(backgroundOf, { timeout: 10000 })
+      .toBe(collapsedBackground);
 
-    // Hovering the handle hitbox grows the dot to full size.
+    // Hovering the handle hitbox grows it and brings back its color/glow.
     await inputHandle.hover();
-    await expect.poll(widthOf, { timeout: 10000 }).toBe(EXPANDED_SIZE);
+    await expect.poll(widthOf, { timeout: 10000 }).toBe(EXPANDED_WIDTH);
+    await expect.poll(shadowOf, { timeout: 10000 }).not.toBe("none");
   },
 );
