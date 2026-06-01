@@ -19,6 +19,12 @@ To give **Langflow Assistant** context for a different flow, switch to that flow
 ## Prerequisites
 
 * Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
+* Custom component creation must be enabled and permitted for your user role:
+  * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must not be set to `false` The default setting is `true`.
+  * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must not be set to `true` unless you are a superuser.
+  The default setting is `false`.
+
+  For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components).
 
 ## Create a custom component with Langflow Assistant
 
