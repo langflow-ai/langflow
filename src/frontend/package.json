@@ -1,6 +1,6 @@
 {
   "name": "langflow",
-  "version": "1.9.3",
+  "version": "1.9.5",
   "private": true,
   "engines": {
     "node": ">=20.19.0"
