@@ -717,6 +717,18 @@ class TestSizedLogBufferIntegration:
         entries = buffer.get_last_n(1)
         assert "Test msg message" in entries.values()
 
+    def test_write_with_message_field_fallback(self):
+        """Test write() falls back to message field when other content fields are absent."""
+        buffer = SizedLogBuffer()
+        buffer.max = 5
+
+        message = json.dumps({"message": "Test message fallback", "timestamp": "2021-07-01T12:00:00Z"})
+
+        buffer.write(message)
+        assert len(buffer) == 1
+        entries = buffer.get_last_n(1)
+        assert "Test message fallback" in entries.values()
+
     def test_write_with_numeric_timestamp(self):
         """Test write() with numeric timestamp."""
         buffer = SizedLogBuffer()

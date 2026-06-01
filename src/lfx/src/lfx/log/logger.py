@@ -56,7 +56,7 @@ class SizedLogBuffer:
     def write(self, message: str) -> None:
         """Write a message to the buffer."""
         record = json.loads(message)
-        log_entry = record.get("event", record.get("msg", record.get("text", "")))
+        log_entry = record.get("event", record.get("msg", record.get("text", record.get("message", ""))))
 
         # Extract timestamp - support both direct timestamp and nested record.time.timestamp
         timestamp = record.get("timestamp", 0)
