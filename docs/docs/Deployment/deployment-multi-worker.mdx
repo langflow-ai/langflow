@@ -32,6 +32,13 @@ If you use a managed Redis service with auth or TLS, you must use `LANGFLOW_REDI
 
 ## Example: multi-worker Docker Compose
 
+This example runs three Langflow workers sharing a Redis job queue and a PostgreSQL database.
+
+To run this example you need:
+
+- [Docker](https://docs.docker.com/get-started/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (or [Podman Desktop](https://podman-desktop.io/))
+- At least 4 GB of memory and 2 CPUs available to the container runtime
+
 :::tip
 If you are using Podman Desktop, the default machine might not have enough resources to run this stack. Before starting, increase the machine's CPU and memory allocation:
 
@@ -41,13 +48,6 @@ podman machine set --cpus 4 --memory 4096
 podman machine start
 ```
 :::
-
-This example runs three Langflow workers sharing a Redis job queue and a PostgreSQL database.
-
-To run this example you need:
-
-- [Docker](https://docs.docker.com/get-started/get-docker/) and [Docker Compose](https://docs.docker.com/compose/install/) (or [Podman Desktop](https://podman-desktop.io/))
-- At least 4 GB of memory and 2 CPUs available to the container runtime
 
 1. Paste the following example into a Docker Compose file named `docker-compose.yml`:
    ```yaml
