@@ -10,7 +10,6 @@ from typing import TYPE_CHECKING
 
 from lfx.graph.graph.base import Graph
 from lfx.graph.schema import ResultData, RunOutputs
-from lfx.schema.workflow import WorkflowExecutionRequest
 
 from langflow.api.v1.schemas import RunResponse
 from langflow.api.v2.converters import run_response_to_workflow_response
@@ -69,12 +68,11 @@ async def reconstruct_workflow_response_from_job_id(
 
     # Create RunResponse and convert to WorkflowExecutionResponse
     run_response = RunResponse(outputs=run_outputs_list, session_id=None)
-    workflow_request = WorkflowExecutionRequest(flow_id=flow_id_str, inputs={})
 
     return run_response_to_workflow_response(
         run_response=run_response,
         flow_id=flow_id_str,
         job_id=job_id,
-        workflow_request=workflow_request,
+        inputs={},
         graph=graph,
     )

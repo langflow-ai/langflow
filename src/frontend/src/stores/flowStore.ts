@@ -6,19 +6,13 @@ import {
   type Node,
   type NodeChange,
 } from "@xyflow/react";
-import { cloneDeep, zip } from "lodash";
+import { cloneDeep } from "lodash";
 import { create } from "zustand";
 import { checkCodeValidity } from "@/CustomNodes/helpers/check-code-validity";
 import { queryClient } from "@/contexts";
-import {
-  ENABLE_DATASTAX_LANGFLOW,
-  ENABLE_INSPECTION_PANEL,
-} from "@/customization/feature-flags";
-import {
-  track,
-  trackDataLoaded,
-  trackFlowBuild,
-} from "@/customization/utils/analytics";
+import { runFlowAGUI } from "@/controllers/API/agui/run-flow-bridge";
+import { ENABLE_INSPECTION_PANEL } from "@/customization/feature-flags";
+import { track, trackFlowBuild } from "@/customization/utils/analytics";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import i18n from "../i18n";
@@ -36,7 +30,6 @@ import type {
   FlowStoreType,
   VertexLayerElementType,
 } from "../types/zustand/flow";
-import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
 import {
   buildPositionDictionary,
   checkChatInput,
@@ -190,8 +183,7 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
     set({ isBuilding: false });
     get().revertBuiltStatusFromBuilding();
     useAlertStore.getState().setErrorData({
-      // biome-ignore lint/suspicious/noExplicitAny: legacy
-      title: (i18n as any).t("alerts.buildStopped"),
+      title: i18n.t("alerts.buildStopped"),
     });
   },
   isPending: true,
@@ -819,7 +811,6 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       },
       buildInfo: null,
     });
-    const playgroundPage = get().playgroundPage;
     get().setIsBuilding(true);
     set({ flowBuildStatus: {} });
     const currentFlow = useFlowsManagerStore.getState().currentFlow;
@@ -926,201 +917,48 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       );
     }
 
-    function validateSubgraph() {}
-    function handleBuildUpdate(
-      vertexBuildData: VertexBuildTypeAPI,
-      status: BuildStatus,
-      runId: string,
-    ) {
-      if (vertexBuildData && vertexBuildData.inactivated_vertices) {
-        get().removeFromVerticesBuild(vertexBuildData.inactivated_vertices);
-        if (vertexBuildData.inactivated_vertices.length > 0) {
-          get().updateBuildStatus(
-            vertexBuildData.inactivated_vertices,
-            BuildStatus.INACTIVE,
-          );
-        }
-      }
+    // Each build gets its own AbortController so ``stopBuilding`` cancels
+    // only the in-flight run (re-using a controller across runs would leave
+    // it in the aborted state for the next call). The signal is passed to
+    // ``runFlowAGUI`` so Stop aborts the actual SSE request, not just the
+    // local build state.
+    const buildController = new AbortController();
+    get().setBuildController(buildController);
 
-      if (vertexBuildData.next_vertices_ids) {
-        // next_vertices_ids is a list of vertices that are going to be built next
-        // verticesLayers is a list of list of vertices ids, where each list is a layer of vertices
-        // we want to add a new layer (next_vertices_ids) to the list of layers (verticesLayers)
-        // and the values of next_vertices_ids to the list of vertices ids (verticesIds)
-
-        // const nextVertices will be the zip of vertexBuildData.next_vertices_ids and
-        // vertexBuildData.top_level_vertices
-        // the VertexLayerElementType as {id: next_vertices_id, layer: top_level_vertex}
-
-        // next_vertices_ids should be next_vertices_ids without the inactivated vertices
-        const next_vertices_ids = vertexBuildData.next_vertices_ids.filter(
-          (id) => !vertexBuildData.inactivated_vertices?.includes(id),
-        );
-        const top_level_vertices = vertexBuildData.top_level_vertices.filter(
-          (vertex) => !vertexBuildData.inactivated_vertices?.includes(vertex),
-        );
-        let nextVertices: VertexLayerElementType[] = zip(
-          next_vertices_ids,
-          top_level_vertices,
-        ).map(([id, reference]) => ({ id: id!, reference }));
-
-        // Now we filter nextVertices to remove any vertices that are in verticesLayers
-        // because they are already being built
-        // each layer is a list of vertexlayerelementtypes
-        const lastLayer =
-          get().verticesBuild!.verticesLayers[
-            get().verticesBuild!.verticesLayers.length - 1
-          ];
-
-        nextVertices = nextVertices.filter(
-          (vertexElement) =>
-            !lastLayer.some(
-              (layerElement) =>
-                layerElement.id === vertexElement.id &&
-                layerElement.reference === vertexElement.reference,
-            ),
-        );
-        const newLayers = [
-          ...get().verticesBuild!.verticesLayers,
-          nextVertices,
-        ];
-        const newIds = [
-          ...get().verticesBuild!.verticesIds,
-          ...next_vertices_ids,
-        ];
-        if (
-          ENABLE_DATASTAX_LANGFLOW &&
-          vertexBuildData?.id?.includes("AstraDB")
-        ) {
-          const search_results: LogsLogType[] = Object.values(
-            vertexBuildData?.data?.logs?.search_results,
-          );
-          search_results.forEach((log) => {
-            if (
-              log.message.includes("Adding") &&
-              log.message.includes("documents") &&
-              log.message.includes("Vector Store")
-            ) {
-              trackDataLoaded(
-                get().currentFlow?.id,
-                get().currentFlow?.name,
-                "AstraDB Vector Store",
-                vertexBuildData?.id,
-              );
-            }
-          });
-        }
-        get().updateVerticesBuild({
-          verticesIds: newIds,
-          verticesLayers: newLayers,
-          runId: runId,
-          verticesToRun: get().verticesBuild!.verticesToRun,
-        });
-
-        get().updateBuildStatus(top_level_vertices, BuildStatus.TO_BUILD);
-      }
-
-      get().addDataToFlowPool(
-        { ...vertexBuildData, run_id: runId },
-        vertexBuildData.id,
-      );
-      if (status !== BuildStatus.ERROR) {
-        get().updateBuildStatus([vertexBuildData.id], status);
-      }
-    }
-
-    await buildFlowVerticesWithFallback({
-      session,
-      input_value,
-      files,
+    // Always run through the v2 workflows endpoint. Current frontend nodes
+    // + edges are sent so unsaved tweaks (dropdowns, text inputs) run as
+    // the user sees them.
+    await runFlowAGUI({
       flowId: currentFlow!.id,
-      startNodeId,
-      stopNodeId,
-      onGetOrderSuccess: () => {},
-      onBuildComplete: (allNodesValid) => {
-        if (!silent) {
-          if (allNodesValid) {
-            get().setBuildInfo({ success: true });
-          }
-        }
-        get().updateEdgesRunningByNodes(
-          get().nodes.map((n) => n.id),
-          false,
-        );
-        get().setIsBuilding(false);
-        // Invalidate KB-related caches so any KnowledgeIngestion node
-        // that ran inside this build surfaces its updated stats / runs
-        // the next time the user opens the assets/knowledge-bases tab.
-        // Cheap when no subscribers are mounted; the queries only
-        // refetch if a component is actively reading them.
-        queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
-        queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
-        queryClient.invalidateQueries({
-          queryKey: ["useGetKnowledgeBaseChunks"],
-        });
-        trackFlowBuild(get().currentFlow?.name ?? "Unknown", false, {
-          flowId: get().currentFlow?.id,
-        });
-      },
-      onBuildUpdate: handleBuildUpdate,
-      onBuildError: (title: string, list: string[], elementList) => {
-        const idList =
-          (elementList
-            ?.map((element) => element.id)
-            .filter(Boolean) as string[]) ?? get().nodes.map((n) => n.id);
-        useFlowStore.getState().updateBuildStatus(idList, BuildStatus.ERROR);
-        const isCustomComponentBlocked = list.some((msg) =>
-          msg.toLowerCase().includes("custom components are not allowed"),
-        );
-        if (!isCustomComponentBlocked && get().componentsToUpdate.length > 0)
-          setErrorData({
-            title: i18n.t("errors.blockedComponents"),
-          });
-        get().updateEdgesRunningByNodes(
-          get().nodes.map((n) => n.id),
-          false,
-        );
-        get().setBuildInfo({ error: list, success: false });
-        useAlertStore.getState().addNotificationToHistory({
-          title: title,
-          type: "error",
-          list: list,
-        });
-        get().setIsBuilding(false);
-        get().buildController.abort();
-        trackFlowBuild(get().currentFlow?.name ?? "Unknown", true, {
-          flowId: get().currentFlow?.id,
-          error: list,
-        });
-      },
-      onBuildStart: (elementList) => {
-        const idList = elementList
-          // reference is the id of the vertex or the id of the parent in a group node
-          .map((element) => element.reference)
-          .filter(Boolean) as string[];
-        get().updateBuildStatus(idList, BuildStatus.BUILDING);
-
-        const edges = get().edges;
-        const newEdges = edges.map((edge) => {
-          if (
-            edge.data?.targetHandle &&
-            idList.includes(edge.data.targetHandle.id ?? "")
-          ) {
-            edge.className = "ran";
-          }
-          return edge;
-        });
-        set({ edges: newEdges });
-      },
-      onValidateNodes: validateSubgraph,
-      nodes: get().nodes || undefined,
-      edges: get().edges || undefined,
-      logBuilds: get().onFlowPage,
-      playgroundPage,
-      eventDelivery,
+      message: input_value,
+      threadId: session,
+      startComponentId: startNodeId,
+      stopComponentId: stopNodeId,
+      flowData: { nodes: get().nodes, edges: get().edges },
+      files,
+      signal: buildController.signal,
     });
-    get().setIsBuilding(false);
-    get().revertBuiltStatusFromBuilding();
+
+    // Invalidate KB-related caches so any KnowledgeIngestion node that ran
+    // inside this build surfaces its updated stats / runs the next time the
+    // user opens the assets/knowledge-bases tab. Cheap when no subscribers are
+    // mounted; the queries only refetch if a component is actively reading them.
+    queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBases"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetIngestionRuns"] });
+    queryClient.invalidateQueries({ queryKey: ["useGetKnowledgeBaseChunks"] });
+
+    // Mirror the v1 build callbacks' analytics: every actual build attempt
+    // logs a flow-build event with success/error and (on failure) the error
+    // list. `runFlowAGUI` always resolves and writes the outcome into
+    // `buildInfo`, so reading it back is the cleanest success/error signal.
+    const finalBuildInfo = get().buildInfo;
+    const hasError = finalBuildInfo?.success === false;
+    trackFlowBuild(currentFlow?.name ?? "Unknown", hasError, {
+      flowId: currentFlow?.id,
+      ...(hasError && finalBuildInfo?.error
+        ? { error: finalBuildInfo.error }
+        : {}),
+    });
   },
   getFlow: () => {
     return {

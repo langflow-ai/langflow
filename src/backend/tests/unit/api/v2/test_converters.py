@@ -4,7 +4,7 @@ This test module provides extensive coverage of the converter functions that
 transform between V2 workflow schemas and V1 schemas. Tests include:
 
 Test Coverage:
-    - Input parsing and transformation (parse_flat_inputs)
+    - Native body parsing (parse_workflow_run_request)
     - Nested value extraction from various data structures
     - Text extraction from different message formats
     - Model source and file path extraction
@@ -37,13 +37,11 @@ from langflow.api.v2.converters import (
     _simplify_output_content,
     create_error_response,
     create_job_response,
-    parse_flat_inputs,
     run_response_to_workflow_response,
 )
 from lfx.schema.workflow import (
     ErrorDetail,
     JobStatus,
-    WorkflowExecutionRequest,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
 )
@@ -58,194 +56,6 @@ def _setup_graph_get_vertex(graph: Mock, vertices: list[Mock]) -> None:
     """
     vertex_map = {v.id: v for v in vertices}
     graph.get_vertex = Mock(side_effect=lambda vid: vertex_map.get(vid))
-
-
-class TestParseFlatInputs:
-    """Test suite for parse_flat_inputs function."""
-
-    def test_parse_flat_inputs_basic(self):
-        """Test basic flat input parsing with component_id.param format."""
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "LLM-xyz.temperature": 0.7,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
-            "LLM-xyz": {"temperature": 0.7},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_with_session_id(self):
-        """Test parsing with session_id extraction."""
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "ChatInput-abc.session_id": "session-123",
-            "LLM-xyz.temperature": 0.7,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello", "session_id": "session-123"},
-            "LLM-xyz": {"temperature": 0.7},
-        }
-        assert session_id == "session-123"
-
-    def test_parse_flat_inputs_multiple_session_ids(self):
-        """Test that first session_id is used when multiple are provided."""
-        inputs = {
-            "ChatInput-abc.session_id": "session-first",
-            "ChatInput-xyz.session_id": "session-second",
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert session_id == "session-first"
-        assert tweaks == {
-            "ChatInput-abc": {"session_id": "session-first"},
-            "ChatInput-xyz": {"session_id": "session-second"},
-        }
-
-    def test_parse_flat_inputs_dict_values(self):
-        """Test backward compatibility with dict values (no dot notation)."""
-        inputs = {
-            "ChatInput-abc": {"input_value": "hello", "temperature": 0.5},
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {"ChatInput-abc": {"input_value": "hello", "temperature": 0.5}}
-        assert session_id is None
-
-    def test_parse_flat_inputs_mixed_formats(self):
-        """Test mixed flat and dict formats."""
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "LLM-xyz": {"temperature": 0.7, "max_tokens": 100},
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
-            "LLM-xyz": {"temperature": 0.7, "max_tokens": 100},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_empty(self):
-        """Test with empty inputs."""
-        tweaks, session_id = parse_flat_inputs({})
-
-        assert tweaks == {}
-        assert session_id is None
-
-    def test_parse_flat_inputs_multiple_params_same_component(self):
-        """Test multiple parameters for the same component."""
-        inputs = {
-            "LLM-xyz.temperature": 0.7,
-            "LLM-xyz.max_tokens": 100,
-            "LLM-xyz.top_p": 0.9,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "LLM-xyz": {
-                "temperature": 0.7,
-                "max_tokens": 100,
-                "top_p": 0.9,
-            }
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_malformed_key_no_dot(self):
-        """Test handling of non-dict value without dot notation (edge case)."""
-        # Non-dict values without dots are ignored (not valid component.param format)
-        inputs = {
-            "ChatInput-abc.input_value": "hello",
-            "invalid_key_no_dot": "should be ignored",
-            "LLM-xyz.temperature": 0.7,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # Only valid dot-notation keys should be parsed
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": "hello"},
-            "LLM-xyz": {"temperature": 0.7},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_null_values(self):
-        """Test handling of None/null values in inputs."""
-        inputs = {
-            "ChatInput-abc.input_value": None,
-            "LLM-xyz.temperature": 0.7,
-            "DataNode-123.data": None,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # None values should be preserved
-        assert tweaks == {
-            "ChatInput-abc": {"input_value": None},
-            "LLM-xyz": {"temperature": 0.7},
-            "DataNode-123": {"data": None},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_deeply_nested_dict(self):
-        """Test handling of deeply nested dict structures (backward compatibility)."""
-        inputs = {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # Deeply nested dicts should be preserved as-is
-        assert tweaks == {"Component-abc": {"level1": {"level2": {"level3": {"value": "deeply nested"}}}}}
-        assert session_id is None
-
-    def test_parse_flat_inputs_empty_collections(self):
-        """Test handling of empty lists and dicts as values."""
-        inputs = {
-            "Component-1.list_param": [],
-            "Component-2.dict_param": {},
-            "Component-3.string_param": "",
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "Component-1": {"list_param": []},
-            "Component-2": {"dict_param": {}},
-            "Component-3": {"string_param": ""},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_explicit_none_values(self):
-        """Test explicit None checks - None should be preserved, not treated as missing."""
-        inputs = {
-            "Component-1.optional_param": None,
-            "Component-2.required_param": "value",
-            "Component-3.another_none": None,
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        # None values should be explicitly preserved
-        assert tweaks == {
-            "Component-1": {"optional_param": None},
-            "Component-2": {"required_param": "value"},
-            "Component-3": {"another_none": None},
-        }
-        assert session_id is None
-
-    def test_parse_flat_inputs_special_characters_in_keys(self):
-        """Test handling of special characters (dashes, underscores) in component IDs and parameter names."""
-        inputs = {
-            "Component-with-dashes.param_with_underscores": "value1",
-            "Component_123.param-456": "value2",
-            "Component_With_Underscores.param_name": "value3",
-        }
-        tweaks, session_id = parse_flat_inputs(inputs)
-
-        assert tweaks == {
-            "Component-with-dashes": {"param_with_underscores": "value1"},
-            "Component_123": {"param-456": "value2"},
-            "Component_With_Underscores": {"param_name": "value3"},
-        }
-        assert session_id is None
 
 
 class TestExtractNestedValue:
@@ -863,10 +673,10 @@ class TestCreateErrorResponse:
         """Test error response structure."""
         flow_id = "flow-123"
         job_id = uuid4()
-        request = WorkflowExecutionRequest(flow_id=flow_id, inputs={"test": "input"})
+        request_inputs = {"test": "input"}
         error = ValueError("Test error message")
 
-        response = create_error_response(flow_id, str(job_id), request, error)
+        response = create_error_response(flow_id, str(job_id), request_inputs, error)
 
         assert isinstance(response, WorkflowExecutionResponse)
         assert response.flow_id == flow_id
@@ -879,7 +689,7 @@ class TestCreateErrorResponse:
         """Test error details in response."""
         error = RuntimeError("Runtime error occurred")
         job_id = str(uuid4())
-        response = create_error_response("flow-1", job_id, WorkflowExecutionRequest(flow_id="flow-1", inputs={}), error)
+        response = create_error_response("flow-1", job_id, {}, error)
 
         error_detail = response.errors[0]
         assert isinstance(error_detail, ErrorDetail)
@@ -891,19 +701,18 @@ class TestCreateErrorResponse:
     def test_create_error_response_preserves_inputs(self):
         """Test that original inputs are preserved in error response."""
         inputs = {"component.param": "value"}
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
+        request_inputs = inputs
         error = Exception("Error")
 
-        response = create_error_response("flow-1", str(uuid4()), request, error)
+        response = create_error_response("flow-1", str(uuid4()), request_inputs, error)
         assert response.inputs == inputs
 
     def test_create_error_response_preserves_globals(self):
         """Test that body globals are preserved in error response."""
         globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={}, globals=globals_)
         error = Exception("Error")
 
-        response = create_error_response("flow-1", str(uuid4()), request, error)
+        response = create_error_response("flow-1", str(uuid4()), {}, error, effective_globals=globals_)
         assert response.globals == globals_
 
 
@@ -937,11 +746,11 @@ class TestRunResponseToWorkflowResponse:
         run_response.outputs = [run_output]
 
         # Create request
-        request = WorkflowExecutionRequest(flow_id="flow-123", inputs={"test": "input"})
+        request_inputs = {"test": "input"}
 
         # Convert
         job_id = uuid4()
-        response = run_response_to_workflow_response(run_response, "flow-123", str(job_id), request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-123", str(job_id), request_inputs, graph)
 
         assert isinstance(response, WorkflowExecutionResponse)
         assert response.flow_id == "flow-123"
@@ -960,9 +769,10 @@ class TestRunResponseToWorkflowResponse:
         run_response.outputs = []
 
         globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
-        request = WorkflowExecutionRequest(flow_id="flow-123", inputs={}, globals=globals_)
 
-        response = run_response_to_workflow_response(run_response, "flow-123", str(uuid4()), request, graph)
+        response = run_response_to_workflow_response(
+            run_response, "flow-123", str(uuid4()), {}, graph, effective_globals=globals_
+        )
 
         assert response.globals == globals_
 
@@ -992,10 +802,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         assert "llm-123" in response.outputs
         output = response.outputs["llm-123"]
@@ -1028,10 +838,10 @@ class TestRunResponseToWorkflowResponse:
         run_response = Mock()
         run_response.outputs = []
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Should use IDs instead of duplicate display names
         assert "output-1" in response.outputs
@@ -1065,10 +875,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Data type non-output nodes should show content
         assert response.outputs["data-123"].content == {"result": "42"}
@@ -1092,10 +902,10 @@ class TestRunResponseToWorkflowResponse:
         run_response = Mock()
         run_response.outputs = []
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         assert "output-123" in response.outputs
 
@@ -1110,10 +920,10 @@ class TestRunResponseToWorkflowResponse:
         run_response.outputs = []
 
         inputs = {"component.param": "value"}
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs=inputs)
+        request_inputs = inputs
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
         assert response.inputs == inputs
 
     def test_run_response_vector_store_terminal(self):
@@ -1140,10 +950,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Data type non-output nodes should show content
         assert "pinecone-123" in response.outputs
@@ -1176,10 +986,10 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Should include content and metadata
         assert "retriever-456" in response.outputs
@@ -1201,10 +1011,10 @@ class TestRunResponseToWorkflowResponse:
         run_response = Mock()
         run_response.outputs = None
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         assert response.outputs == {}
         assert response.status == JobStatus.COMPLETED
@@ -1228,11 +1038,11 @@ class TestRunResponseToWorkflowResponse:
         run_response = Mock()
         run_response.outputs = []
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         # Should handle gracefully without crashing
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Should use ID as fallback when display_name is None
         assert "corrupted-123" in response.outputs
@@ -1263,15 +1073,76 @@ class TestRunResponseToWorkflowResponse:
         run_output.outputs = [result_data]
         run_response.outputs = [run_output]
 
-        request = WorkflowExecutionRequest(flow_id="flow-1", inputs={})
+        request_inputs = {}
 
         # Should handle gracefully - vertex won't match result_data
         job_id = str(uuid4())
-        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request, graph)
+        response = run_response_to_workflow_response(run_response, "flow-1", job_id, request_inputs, graph)
 
         # Output should exist but with no content (no matching result_data)
         assert "output-123" in response.outputs
         assert response.outputs["output-123"].content is None
+
+
+_VALID_UUID = "67ccd2be-17f0-8190-81ff-3bb2cf6508e6"
+
+
+class TestParseWorkflowRunRequest:
+    """``parse_workflow_run_request`` projects ``WorkflowRunRequest`` onto ``ParsedWorkflowRun``."""
+
+    def test_minimal_body_round_trips_with_defaults(self):
+        from langflow.api.v2.converters import parse_workflow_run_request
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
+
+        assert parsed.flow_id == _VALID_UUID
+        assert parsed.tweaks == {}
+        assert parsed.input_value == ""
+        assert parsed.session_id is None
+        assert parsed.run_id is None
+        assert parsed.mode == "sync"
+        assert parsed.start_component_id is None
+        assert parsed.stop_component_id is None
+        assert parsed.data is None
+        assert parsed.files is None
+
+    def test_full_body_round_trip(self):
+        from langflow.api.v2.converters import parse_workflow_run_request
+        from lfx.schema.workflow import WorkflowMode, WorkflowRunRequest
+
+        request = WorkflowRunRequest(
+            flow_id=_VALID_UUID,
+            input_value="hello",
+            tweaks={"ChatInput-abc": {"some_param": "v"}},
+            session_id="session-123",
+            mode=WorkflowMode.STREAM,
+            stream_protocol="agui",
+            data={"nodes": [], "edges": []},
+            files=["a.txt", "b.png"],
+            start_component_id="ChatInput-abc",
+            stop_component_id="ChatOutput-xyz",
+        )
+
+        parsed = parse_workflow_run_request(request)
+
+        assert parsed.flow_id == _VALID_UUID
+        assert parsed.tweaks == {"ChatInput-abc": {"some_param": "v"}}
+        assert parsed.input_value == "hello"
+        assert parsed.session_id == "session-123"
+        assert parsed.mode == "stream"
+        assert parsed.start_component_id == "ChatInput-abc"
+        assert parsed.stop_component_id == "ChatOutput-xyz"
+        assert parsed.data == {"nodes": [], "edges": []}
+        assert parsed.files == ["a.txt", "b.png"]
+
+    def test_run_id_is_always_none_on_the_parsed_record(self):
+        """The endpoint generates run_id; callers cannot supply it via the body."""
+        from langflow.api.v2.converters import parse_workflow_run_request
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
+        assert parsed.run_id is None
 
 
 if __name__ == "__main__":
