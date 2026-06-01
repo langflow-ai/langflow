@@ -8000,7 +8000,7 @@ requires-dist = [
     { name = "onnxruntime", marker = "python_full_version >= '3.14'", specifier = ">=1.26" },
     { name = "openai", marker = "extra == 'openai'", specifier = ">=1.68.2,<3.0.0" },
     { name = "openinference-instrumentation-langchain", marker = "extra == 'openinference'", specifier = ">=0.1.29" },
-    { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.9.0,<1.0.0" },
+    { name = "openlayer", marker = "extra == 'openlayer'", specifier = ">=0.20.1,<1.0.0" },
     { name = "opensearch-py", marker = "extra == 'opensearch'", specifier = "==2.8.0" },
     { name = "opentelemetry-api", specifier = ">=1.30.0,<2.0.0" },
     { name = "opentelemetry-exporter-otlp", specifier = ">=1.30.0,<2.0.0" },
