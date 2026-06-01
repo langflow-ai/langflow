@@ -61,7 +61,7 @@ def mock_mapper():
             "id": str(uuid4()),
             "provider_id": str(uuid4()),
             "provider_key": "watsonx-orchestrate",
-            "name": "Test",
+            "display_name": "Test",
             "type": "agent",
             "resource_key": "res-1",
         }
@@ -69,7 +69,7 @@ def mock_mapper():
             "id": str(uuid4()),
             "provider_id": str(uuid4()),
             "provider_key": "watsonx-orchestrate",
-            "name": "Test",
+            "display_name": "Test",
             "type": "agent",
             "resource_key": "res-1",
         }
@@ -87,7 +87,6 @@ def mock_db_crud(mock_mapper):
         mock_get_owned = stack.enter_context(patch("langflow.api.v1.deployments.get_owned_provider_account_or_404"))
         _mock_del_prov = stack.enter_context(patch("langflow.api.v1.deployments.delete_provider_account_row"))
         _mock_upd_prov = stack.enter_context(patch("langflow.api.v1.deployments.update_provider_account_row"))
-        mock_name_exists = stack.enter_context(patch("langflow.api.v1.deployments.deployment_name_exists"))
         mock_proj_id = stack.enter_context(
             patch("langflow.api.v1.deployments.resolve_project_id_for_deployment_create")
         )
@@ -109,7 +108,9 @@ def mock_db_crud(mock_mapper):
         _mock_del_dep = stack.enter_context(
             patch("langflow.api.v1.deployments._delete_local_deployment_row_with_commit_retry")
         )
-        mock_get_att = stack.enter_context(patch("langflow.api.v1.deployments.get_attachment_by_provider_snapshot_id"))
+        mock_list_att_by_snapshot = stack.enter_context(
+            patch("langflow.api.v1.deployments.list_attachments_by_provider_snapshot_id")
+        )
         mock_get_dep_row = stack.enter_context(
             patch("langflow.services.database.models.deployment.crud.get_deployment")
         )
@@ -129,7 +130,6 @@ def mock_db_crud(mock_mapper):
         mock_get_owned.return_value = AsyncMock(
             id=uuid4(), provider_key="watsonx-orchestrate", provider_tenant_id="tenant-test"
         )
-        mock_name_exists.return_value = False
         mock_proj_id.return_value = uuid4()
         mock_create_dep.return_value = AsyncMock(id=uuid4())
 
@@ -149,8 +149,25 @@ def mock_db_crud(mock_mapper):
             "watsonx-orchestrate",
             "tenant-test",
         )
-        mock_get_att.return_value = AsyncMock(deployment_id=uuid4(), flow_version_id=uuid4())
-        mock_get_dep_row.return_value = AsyncMock(deployment_provider_account_id=uuid4())
+        # ``update_snapshot`` now enumerates every attachment with the
+        # given provider_snapshot_id and authorizes each one's deployment.
+        # The fake deployment row carries a stable user_id so the candidate
+        # filter keeps it under the OSS pass-through path.
+        snapshot_deployment_id = uuid4()
+        snapshot_owner_id = uuid4()
+        mock_list_att_by_snapshot.return_value = [
+            AsyncMock(
+                deployment_id=snapshot_deployment_id,
+                flow_version_id=uuid4(),
+                user_id=snapshot_owner_id,
+                provider_snapshot_id="tool-1",
+            )
+        ]
+        mock_get_dep_row.return_value = AsyncMock(
+            id=snapshot_deployment_id,
+            user_id=snapshot_owner_id,
+            deployment_provider_account_id=uuid4(),
+        )
         mock_get_fv.return_value = AsyncMock(flow_id=uuid4(), data={})
         mock_upd_fv.return_value = 1
         mock_count_deps.return_value = 0
@@ -214,7 +231,7 @@ async def test_create_deployment_telemetry(
 ):
     response = await client.post(
         "api/v1/deployments",
-        json={"provider_id": str(uuid4()), "name": "Test", "type": "agent", "provider_data": {}},
+        json={"provider_id": str(uuid4()), "display_name": "Test", "type": "agent", "provider_data": {}},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_201_CREATED, response.json()
@@ -230,7 +247,11 @@ async def test_create_deployment_telemetry(
 async def test_update_deployment_telemetry(
     client: AsyncClient, mock_telemetry_service, mock_adapter, mock_mapper, mock_db_crud, logged_in_headers
 ):
-    response = await client.patch(f"api/v1/deployments/{uuid4()}", json={"name": "Test"}, headers=logged_in_headers)
+    response = await client.patch(
+        f"api/v1/deployments/{uuid4()}",
+        json={"display_name": "Test"},
+        headers=logged_in_headers,
+    )
     assert response.status_code == status.HTTP_200_OK
     mock_telemetry_service.log_package_deployment.assert_awaited_once()
     payload = mock_telemetry_service.log_package_deployment.call_args[0][0]
@@ -315,7 +336,7 @@ async def test_cross_route_smoke_exception_after_provider_set(
     mock_adapter.create.side_effect = RuntimeError("Something went wrong")
     response = await client.post(
         "api/v1/deployments",
-        json={"provider_id": str(uuid4()), "name": "Test", "type": "agent", "provider_data": {}},
+        json={"provider_id": str(uuid4()), "display_name": "Test", "type": "agent", "provider_data": {}},
         headers=logged_in_headers,
     )
     assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR

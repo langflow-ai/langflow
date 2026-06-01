@@ -17,6 +17,7 @@ describe("resolveDefaultSessionId", () => {
         last_sync_at: "2026-04-01T00:00:00.000Z",
         pending_count: 0,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     ] as any;
 
     expect(resolveDefaultSessionId(sessions)).toBe("s2");
@@ -40,6 +41,7 @@ describe("resolveDefaultSessionId", () => {
         last_sync_at: sameTime,
         pending_count: 2,
       },
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     ] as any;
 
     expect(resolveDefaultSessionId(sessions)).toBe("c");

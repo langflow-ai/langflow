@@ -536,6 +536,62 @@ def test_get_embeddings_openai_basic(mock_get_class, mock_get_api_key):
     assert kwargs["api_key"] == "sk-test"  # pragma: allowlist secret
 
 
+@pytest.mark.parametrize(
+    ("env_values", "expected_base_url"),
+    [
+        ({"OPENAI_EMBEDDINGS_API_BASE": "http://embeddings.example/v1"}, "http://embeddings.example/v1"),
+        ({"OPENAI_API_BASE": "http://openai-compatible.example/v1"}, "http://openai-compatible.example/v1"),
+        (
+            {
+                "OPENAI_EMBEDDINGS_API_BASE": "http://embeddings.example/v1",
+                "OPENAI_API_BASE": "http://openai-compatible.example/v1",
+            },
+            "http://embeddings.example/v1",
+        ),
+    ],
+)
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_api_base_env_fallback(
+    mock_get_class,
+    mock_get_api_key,
+    monkeypatch,
+    env_values,
+    expected_base_url,
+):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.delenv("OPENAI_EMBEDDINGS_API_BASE", raising=False)
+    monkeypatch.delenv("OPENAI_API_BASE", raising=False)
+    for name, value in env_values.items():
+        monkeypatch.setenv(name, value)
+
+    get_embeddings([_make_openai_embedding_model()], api_key="sk-test")
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs["base_url"] == expected_base_url
+
+
+@patch("lfx.base.models.unified_models.get_api_key_for_provider")
+@patch("lfx.base.models.unified_models.get_embedding_class")
+def test_get_embeddings_openai_explicit_api_base_overrides_env(mock_get_class, mock_get_api_key, monkeypatch):
+    mock_get_api_key.return_value = "sk-test"
+    mock_embedding_class = MagicMock()
+    mock_get_class.return_value = mock_embedding_class
+    monkeypatch.setenv("OPENAI_EMBEDDINGS_API_BASE", "http://embeddings.example/v1")
+    monkeypatch.setenv("OPENAI_API_BASE", "http://openai-compatible.example/v1")
+
+    get_embeddings(
+        [_make_openai_embedding_model()],
+        api_key="sk-test",  # pragma: allowlist secret
+        api_base="http://component.example/v1",
+    )
+
+    kwargs = mock_embedding_class.call_args.kwargs
+    assert kwargs["base_url"] == "http://component.example/v1"
+
+
 @patch("lfx.base.models.unified_models.get_api_key_for_provider")
 @patch("lfx.base.models.unified_models.get_embedding_class")
 def test_get_embeddings_optional_params_only_added_when_mapped(mock_get_class, mock_get_api_key):

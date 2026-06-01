@@ -91,6 +91,7 @@ const useHandleOnNewValue = ({
     [nodeId, setNode, updateNodeInternals],
   );
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const debouncedMutateRef = useRef<any>(null);
 
   const handleOnNewValue: handleOnNewValueType = useCallback(

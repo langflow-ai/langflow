@@ -1,6 +1,5 @@
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
 import { useCallback, useRef } from "react";
-import i18n from "../i18n";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useAlertStore from "@/stores/alertStore";
@@ -17,6 +16,7 @@ import {
   isCustomComponentBlockError,
   isNodeOutdated,
 } from "@/utils/customComponentGuards";
+import i18n from "../i18n";
 
 export interface RefreshOptions {
   silent?: boolean;
@@ -35,6 +35,7 @@ export function isModelNode(node: AllNodeType): boolean {
   const template = node.data?.node?.template;
   if (!template) return false;
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   return Object.values(template).some((field: any) => field?.type === "model");
 }
 
@@ -50,6 +51,7 @@ export function buildRefreshPayload(
   template: APITemplateType,
   flowId: string | undefined,
   folderId: string | undefined,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
 ): Record<string, any> {
   return {
     ...template,
@@ -112,6 +114,7 @@ export async function refreshAllModelInputs(
 
     if (nodesWithModelFields.length === 0) {
       if (showNotifications) {
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         setSuccessData({ title: (i18n as any).t("errors.noModelsToRefresh") });
       }
       return;
@@ -128,6 +131,7 @@ export async function refreshAllModelInputs(
     if (showNotifications) {
       const count = nodesWithModelFields.length;
       setSuccessData({
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         title: (i18n as any).t("alerts.modelsRefreshed", { count }),
       });
     }
@@ -135,6 +139,7 @@ export async function refreshAllModelInputs(
     console.error("Error refreshing model inputs:", error);
     if (showNotifications) {
       setErrorData({
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         title: (i18n as any).t("errors.refreshingModels"),
         list: [(error as Error)?.message || "An unexpected error occurred"],
       });
@@ -260,6 +265,7 @@ async function refreshSingleNode(
           tool_mode: nodeData.tool_mode,
         },
       );
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (e: any) {
       // Suppress 403 specifically from custom component blocking — fallback
       // for race conditions where guards above couldn't detect the outdated

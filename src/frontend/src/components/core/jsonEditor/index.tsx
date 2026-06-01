@@ -16,6 +16,7 @@ interface JsonEditorProps {
   data?: Content;
   onChange?: (data: Content) => void;
   readOnly?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   options?: any;
   jsonRef?: React.MutableRefObject<VanillaJsonEditor | null>;
   width?: string;
@@ -60,6 +61,7 @@ const JsonEditor = ({
     }
   }, [initialFilter, newRef.current]);
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const isValidResult = (result: any): boolean => {
     // Only allow objects and arrays
     return (
@@ -69,6 +71,7 @@ const JsonEditor = ({
     );
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const applyFilter = (filtered: { json: any }, query: string) => {
     onChange?.(filtered);
     setFilter?.(query.trim());
@@ -229,7 +232,7 @@ const JsonEditor = ({
       } else {
         setErrorData({
           title: t("jsonEditor.invalidResult"),
-          list: ["Transform resulted in undefined value"],
+          list: [t("errors.transformUndefined")],
         });
       }
     } catch (error) {
@@ -259,8 +262,10 @@ const JsonEditor = ({
   };
 
   const getFilteredContent = (
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     sourceJson: any,
     query: string,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
   ): { json: any } | undefined => {
     // Try JSONQuery first
     try {

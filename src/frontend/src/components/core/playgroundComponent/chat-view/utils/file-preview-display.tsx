@@ -86,7 +86,7 @@ export default function FilePreviewDisplay({
     return (
       <div
         className={cn(
-          "relative flex h-16 w-16 items-center justify-center rounded-md border bg-muted",
+          "relative flex h-16 w-16 items-center justify-center overflow-hidden rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
           error && "border-error",
           className,
         )}
@@ -97,7 +97,7 @@ export default function FilePreviewDisplay({
           <img
             src={previewUrl}
             alt={fileInfo.name}
-            className="h-full w-full rounded-md object-cover"
+            className="h-full w-full rounded-xl object-cover p-1"
             crossOrigin={file instanceof File ? undefined : "use-credentials"}
             onError={() => {
               setImageError(true);
@@ -105,7 +105,9 @@ export default function FilePreviewDisplay({
             }}
           />
         ) : (
-          <ForwardedIconComponent name="File" className="h-6 w-6" />
+          <div className="p-3">
+            <ForwardedIconComponent name="File" className="h-6 w-6" />
+          </div>
         )}
 
         {showDelete && onDelete && (
@@ -126,7 +128,7 @@ export default function FilePreviewDisplay({
   return (
     <div
       className={cn(
-        "relative flex w-full lg:w-1/2 items-center justify-center rounded-md border bg-muted",
+        "relative flex w-full overflow-hidden lg:w-1/2 items-center justify-center rounded-xl border border-border/70 bg-primary-foreground shadow-sm",
         error && "border-error",
         className,
       )}
@@ -137,7 +139,7 @@ export default function FilePreviewDisplay({
         <img
           src={previewUrl}
           alt={fileInfo.name}
-          className="h-full w-full rounded-md object-cover"
+          className="h-full w-full rounded-xl object-cover p-1"
           crossOrigin={file instanceof File ? undefined : "use-credentials"}
           onError={() => {
             setImageError(true);
@@ -145,7 +147,7 @@ export default function FilePreviewDisplay({
           }}
         />
       ) : (
-        <div className="flex flex-col items-center gap-1">
+        <div className="flex flex-col items-center gap-2 px-4 py-3 text-center">
           <ForwardedIconComponent name="File" className="h-6 w-6" />
           <span className="text-xs text-muted-foreground">
             {formatFileName(fileInfo.name, 10)}

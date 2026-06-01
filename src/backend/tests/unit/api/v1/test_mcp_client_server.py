@@ -400,7 +400,9 @@ edges:
   D.component_as_tool -> B.tools
   B.response -> C.input_value
 """
-        result = await mcp_server_module.create_flow_from_spec(spec)
+        # validate=False because Agent requires a model + API key to build;
+        # this test only exercises tool_mode wiring (URLComponent -> Agent.tools).
+        result = await mcp_server_module.create_flow_from_spec(spec, validate=False)
         assert result["node_count"] == 4
         assert result["edge_count"] == 3
         # URLComponent should have tool_mode enabled
@@ -434,6 +436,7 @@ edges:
         with pytest.raises(ValueError, match="unknown target 'Z'"):
             await mcp_server_module.create_flow_from_spec(spec)
 
+    @pytest.mark.api_key_required
     async def test_create_flow_from_spec_prompt_template_variables(self):
         """Prompt Template with {var} in template creates dynamic input fields."""
         spec = """\
@@ -481,6 +484,12 @@ config:
         assert "language" in prompt_info["params"]
 
     async def test_create_flow_from_spec_coerces_numeric_config(self):
+        # YAML naturally parses `42` as int. ChatInput.input_value is a
+        # str-typed MultilineInput field, so the spec layer must coerce the
+        # int into the declared type before the build step runs (otherwise
+        # ChatInput chokes constructing a Message with text=42 and the whole
+        # create_flow_from_spec call rolls back). Once coerced, the round-trip
+        # surfaces "42" — the string form of the original numeric input.
         spec = """\
 name: CoerceTest
 
@@ -498,7 +507,7 @@ config:
         info = await mcp_server_module.get_component_info(
             result["id"], result["node_id_map"]["A"], field_name="input_value"
         )
-        assert info["value"] == 42
+        assert info["value"] == "42"
 
 
 @pytest.mark.usefixtures("mcp_client")

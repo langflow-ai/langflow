@@ -108,6 +108,7 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "duplicate-bundle-name": "error[duplicate-bundle-name]: Bundle name 'content' is provided by two installed distributions; the second is dropped to prevent collision.",  # noqa: E501 — kept on one line for snapshot diff readability
     "multi-bundle-unsupported": "error[multi-bundle-unsupported]: Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension.",  # noqa: E501
     "extension-reload-disabled": "error[extension-reload-disabled]: Extension reload is disabled on this server.  Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A).",  # noqa: E501
+    "extension-events-keyspace-forbidden": "error[extension-events-keyspace-forbidden]: The loc query parameter is not accepted; events are scoped server-side to the authenticated user (rejected value: 'content').",  # noqa: E501
 }
 
 

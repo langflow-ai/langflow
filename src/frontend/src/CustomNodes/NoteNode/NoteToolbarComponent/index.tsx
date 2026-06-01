@@ -54,7 +54,7 @@ const NoteToolbarComponent = memo(function NoteToolbarComponent({
     if (data.node?.documentation) {
       return customOpenNewTab(data.node.documentation);
     }
-    setNoticeData({ title: `${data.id} docs is not available at the moment.` });
+    setNoticeData({ title: t("node.docsUnavailable", { id: data.id }) });
   }, [data.node?.documentation, data.id, setNoticeData]);
 
   /** Handles toolbar menu actions: copy, duplicate, delete, documentation */

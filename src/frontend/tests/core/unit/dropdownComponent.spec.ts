@@ -1,5 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { TEXTS } from "../../utils/constants/texts";
+
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -7,9 +10,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "dropDownComponent",
   { tag: ["@release", "@workspace"] },

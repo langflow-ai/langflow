@@ -2,9 +2,9 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
-import { TEXTS } from "../../utils/constants/texts";
 test.describe("Token Usage Tracking", () => {
   test(
     "node badge should show token count after running an LLM flow",

@@ -224,6 +224,7 @@ def reload_bundle(
     *,
     source_path: Path | str | None = None,
     slot: Literal["official", "extra"] | None = None,
+    user_id: str | None = None,
 ) -> ReloadResult:
     """Reload one Bundle into ``registry`` via the five-stage atomic swap.
 
@@ -241,6 +242,11 @@ def reload_bundle(
             the existing :class:`BundleRecord` was loaded from.
         slot: Which slot to load into.  Defaults to the existing record's
             slot, or ``official`` for a fresh install.
+        user_id: ID of the user who triggered the reload.  Routes the
+            ``bundle_reloaded`` / ``bundle_reload_failed`` event to the
+            ``user:<id>`` keyspace so polling clients only see events
+            their own user triggered.  ``None`` (the CLI / authless dev
+            path) emits to ``"global"``.
 
     Raises:
         :class:`ReloadInProgressError` -- a second reload for the same
@@ -312,6 +318,7 @@ def reload_bundle(
             effective_slot=effective_slot,
             reload_id=reload_id,
             previous=live,
+            user_id=user_id,
         )
 
 
@@ -328,6 +335,7 @@ def _run_pipeline(
     effective_slot: Literal["official", "extra"],
     reload_id: str,
     previous: BundleRecord | None,
+    user_id: str | None = None,
 ) -> ReloadResult:
     """Run Stages 1-5 with the in-progress guard already held."""
     staging_namespace = f"__reload_staging__.{reload_id}"
@@ -340,6 +348,7 @@ def _run_pipeline(
             reload_id=reload_id,
             previous=previous,
             staging_namespace=staging_namespace,
+            user_id=user_id,
         )
     finally:
         # Belt-and-braces: every controlled return path already drops the
@@ -360,6 +369,7 @@ def _run_pipeline_body(
     reload_id: str,
     previous: BundleRecord | None,
     staging_namespace: str,
+    user_id: str | None = None,
 ) -> ReloadResult:
     """Pipeline body wrapped by :func:`_run_pipeline` for guaranteed cleanup."""
     # ---------- Stage 1: parallel load into staging namespace ----------
@@ -425,7 +435,7 @@ def _run_pipeline_body(
             warnings=tuple(staging.warnings),
             previous=previous,
         )
-        _emit_bundle_reload_event(result)
+        _emit_bundle_reload_event(result, user_id=user_id)
         return result
 
     if staging.bundle != bundle:
@@ -450,7 +460,7 @@ def _run_pipeline_body(
             ),
             previous=previous,
         )
-        _emit_bundle_reload_event(result)
+        _emit_bundle_reload_event(result, user_id=user_id)
         return result
 
     # ---------- Stage 3: atomic swap under the registry write lock ----------
@@ -505,7 +515,7 @@ def _run_pipeline_body(
         warnings=tuple(staging.warnings) + tuple(swap_warnings) + hook_warnings,
         reload_id=reload_id,
     )
-    _emit_bundle_reload_event(result)
+    _emit_bundle_reload_event(result, user_id=user_id)
     return result
 
 
@@ -586,20 +596,8 @@ def _failure(
 # ---------------------------------------------------------------------------
 
 
-# TODO: replace this stub with a call to ExtensionEventsService.emit(...)
-# once the events pipeline lands.  The shape of the payload below is what
-# the events service will consume: the ReloadResult is serializable and
-# carries everything needed for the bundle_reloaded / bundle_reload_failed
-# discriminants.
-def _emit_bundle_reload_event(result: ReloadResult) -> None:
-    """Stub for the extension events pipeline.
-
-    Currently logs a structured event; a future ``ExtensionEventsService``
-    will swap the body to ``.emit("bundle_reloaded" |
-    "bundle_reload_failed", payload)``.  Tests can monkey-patch this
-    symbol to capture emissions without waiting for the events service
-    to land.
-    """
+def _log_bundle_reload_event(result: ReloadResult) -> None:
+    """Structured-log fallback used when ExtensionEventsService is unavailable."""
     if result.ok:
         logger.info(
             "extension.bundle_reloaded",
@@ -622,6 +620,37 @@ def _emit_bundle_reload_event(result: ReloadResult) -> None:
                 "errors": [e.to_dict() for e in result.errors],
             },
         )
+
+
+def _emit_bundle_reload_event(result: ReloadResult, *, user_id: str | None = None) -> None:
+    """Emit a bundle_reloaded or bundle_reload_failed event via ExtensionEventsService.
+
+    Falls back to structured logging when the service is unavailable.
+    Tests can monkey-patch this symbol to capture emissions without
+    instantiating the full service stack.
+
+    The emitted payload is exactly ``result.to_dict()`` so polling clients
+    see the same envelope the HTTP route returns. When ``user_id`` is
+    provided, events go to the per-user keyspace so other authenticated
+    users cannot observe them; otherwise they fall back to ``"global"``.
+    """
+    try:
+        from lfx.services.deps import get_extension_events_service
+
+        svc = get_extension_events_service()
+        if svc is None:
+            msg = "ExtensionEventsService not available"
+            raise RuntimeError(msg)
+        keyspace = f"user:{user_id}" if user_id else "global"
+        event_type = "bundle_reloaded" if result.ok else "bundle_reload_failed"
+        svc.emit(event_type, result.to_dict(), keyspace=keyspace)
+    except Exception:  # noqa: BLE001 -- intentionally fall back to structured log on any emit failure
+        logger.warning(
+            "extension.event_emit_failed: failed to emit bundle reload event via "
+            "ExtensionEventsService; falling back to structured log.",
+            exc_info=True,
+        )
+        _log_bundle_reload_event(result)
 
 
 # Re-export for caller convenience.
