@@ -849,3 +849,39 @@ async def test_update_variable_cross_user_denied_with_plugin(
     response = await client.patch(f"api/v1/variables/{saved['id']}", json=generic_variable, headers=delegate_headers)
 
     assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_delete_variable_cross_user_allowed_with_plugin(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    """When a plugin enables cross-user fetch and allows, a non-owner DELETE removes the owner's row."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_del_ok_{uuid4().hex[:8]}")
+
+    patch_variable_authz(cross_user=True, enabled=True, allow=True)
+
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=delegate_headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # The owner-scoped delete actually removed the owner's row.
+    owner_vars = (await client.get("api/v1/variables/", headers=logged_in_headers)).json()
+    assert all(v["id"] != saved["id"] for v in owner_vars)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_delete_variable_cross_user_denied_with_plugin(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    """When the plugin denies, the non-owner DELETE is 404 (deny_to_404) and the owner's row survives."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_del_no_{uuid4().hex[:8]}")
+
+    patch_variable_authz(cross_user=True, enabled=True, allow=False)
+
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=delegate_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    # The deny short-circuited before the delete — the owner's row is intact.
+    owner_vars = (await client.get("api/v1/variables/", headers=logged_in_headers)).json()
+    assert any(v["id"] == saved["id"] for v in owner_vars)
