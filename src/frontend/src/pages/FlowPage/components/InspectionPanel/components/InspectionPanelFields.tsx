@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import {
   isCodeField,
@@ -12,9 +13,9 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import type { NodeDataType, targetHandleType } from "@/types/flow";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 import InspectionPanelEditField from "./InspectionPanelEditField";
 import InspectionPanelField from "./InspectionPanelField";
-import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;
@@ -25,6 +26,7 @@ export default function InspectionPanelFields({
   data,
   isEditingFields = false,
 }: InspectionPanelFieldsProps) {
+  const { t } = useTranslation();
   const isToolMode = data.node?.tool_mode;
 
   const connectedFieldNames = useFlowStore(
@@ -116,7 +118,7 @@ export default function InspectionPanelFields({
     if (allEditableFields.length === 0) {
       return (
         <div className="flex items-center justify-center p-8 text-sm text-muted-foreground">
-          No editable fields
+          {t("inspectionPanel.noEditableFields")}
         </div>
       );
     }
@@ -150,7 +152,7 @@ export default function InspectionPanelFields({
           name="Settings2"
           className="text-input w-6 h-6"
         />
-        No advanced settings
+        {t("inspectionPanel.noAdvancedSettings")}
       </div>
     );
   }

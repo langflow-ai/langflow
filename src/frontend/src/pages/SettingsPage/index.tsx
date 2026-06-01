@@ -51,7 +51,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "Langflow MCP Client",
+      title: t("settings.nav.mcpClient"),
       href: "/settings/mcp-client",
       icon: (
         <ForwardedIconComponent
@@ -75,13 +75,13 @@ export default function SettingsPage(): JSX.Element {
       href: "/settings/model-providers",
       icon: (
         <ForwardedIconComponent
-          name="Brain"
+          name="BrainCircuit"
           className="w-4 flex-shrink-0 justify-start stroke-[1.5]"
         />
       ),
     },
     {
-      title: "DB Providers",
+      title: t("settings.nav.dbProviders"),
       href: "/settings/db-providers",
       icon: (
         <ForwardedIconComponent

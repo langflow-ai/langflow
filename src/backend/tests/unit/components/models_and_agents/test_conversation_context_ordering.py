@@ -5,6 +5,14 @@ This test ensures that conversation context maintains proper chronological order
 SPARC tool validation and conversation flow understanding.
 """
 
+import pytest
+
+try:
+    import altk  # noqa: F401
+except ImportError:
+    # agent-lifecycle-toolkit is gated to python_version<'3.14' upstream.
+    pytest.skip("altk (agent-lifecycle-toolkit) not available", allow_module_level=True)
+
 from langchain_core.messages import AIMessage, HumanMessage
 from lfx.base.agents.altk_base_agent import ALTKBaseAgentComponent
 from lfx.schema.message import Message

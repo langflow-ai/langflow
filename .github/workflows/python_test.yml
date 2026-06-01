@@ -14,7 +14,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12', '3.13']"
+        default: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       ref:
         description: "(Optional) ref to checkout"
         required: false
@@ -35,7 +35,7 @@ on:
         description: "(Optional) Python versions to test"
         required: true
         type: string
-        default: "['3.10', '3.11', '3.12', '3.13']"
+        default: "['3.10', '3.11', '3.12', '3.13', '3.14']"
       runs-on:
         description: "Runner to use for the tests"
         required: false
@@ -58,7 +58,7 @@ jobs:
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
         splitCount: [5]
         group: [1, 2, 3, 4, 5]
     steps:
@@ -93,7 +93,7 @@ jobs:
       - name: Run unit tests
         uses: nick-fields/retry@v3
         with:
-          timeout_minutes: 30
+          timeout_minutes: 40
           max_attempts: 2
           command: make unit_tests args="-x -vv --splits ${{ matrix.splitCount }} --group ${{ matrix.group }} --reruns 5 --cov --cov-config=src/backend/.coveragerc --cov-report=xml --cov-report=html"
 
@@ -123,7 +123,7 @@ jobs:
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -148,7 +148,7 @@ jobs:
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]' ) }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -191,7 +191,7 @@ jobs:
     runs-on: ${{ (inputs['runs-on'] && startsWith(format('{0}', inputs['runs-on']), '[') && fromJSON(inputs['runs-on'])) || inputs['runs-on'] || github.event.inputs['runs-on'] || 'ubuntu-latest' }}
     strategy:
       matrix:
-        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13"]') }}
+        python-version: ${{ fromJson(inputs.python-versions || '["3.10", "3.11", "3.12", "3.13", "3.14"]') }}
     steps:
       - name: Check out the code at a specific ref
         uses: actions/checkout@v6

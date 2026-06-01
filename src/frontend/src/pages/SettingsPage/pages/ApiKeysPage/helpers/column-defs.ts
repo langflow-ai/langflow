@@ -1,4 +1,5 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import ExpiryDateCellRender from "../components/ExpiryDateCellRender";
 
 export const getColumnDefs = (t: (key: string) => string) => {
   return [
@@ -27,6 +28,12 @@ export const getColumnDefs = (t: (key: string) => string) => {
       headerName: t("settings.apiKeys.columnLastUsed"),
       field: "last_used_at",
       cellRenderer: TableAutoCellRender,
+      flex: 1,
+    },
+    {
+      headerName: t("settings.apiKeys.columnExpires"),
+      field: "expires_at",
+      cellRenderer: ExpiryDateCellRender,
       flex: 1,
     },
     {

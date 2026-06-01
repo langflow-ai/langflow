@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -19,6 +20,7 @@ const KnowledgeBaseDrawer = ({
   onClose,
   knowledgeBase,
 }: KnowledgeBaseDrawerProps) => {
+  const { t } = useTranslation();
   if (!isOpen || !knowledgeBase) {
     return null;
   }
@@ -42,28 +44,34 @@ const KnowledgeBaseDrawer = ({
         <div className="flex flex-col gap-4">
           <div className="px-4">
             <div className="text-sm text-muted-foreground">
-              No description available.
+              {t("knowledge.noDescription")}
             </div>
           </div>
 
           <Separator />
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">Embedding Provider</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.embeddingProviderLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
-              {knowledgeBase.embedding_provider || "Unknown"}
+              {knowledgeBase.embedding_provider || t("knowledge.unknown")}
             </div>
           </div>
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">Embedding Model</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.embeddingModelLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
-              {knowledgeBase.embedding_model || "Unknown"}
+              {knowledgeBase.embedding_model || t("knowledge.unknown")}
             </div>
           </div>
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">Vector Store</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.vectorStoreLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
               {backendLabel}
             </div>
@@ -71,7 +79,9 @@ const KnowledgeBaseDrawer = ({
 
           {backendTarget && (
             <div className="space-y-2 px-4">
-              <label className="text-sm font-medium">Target</label>
+              <label className="text-sm font-medium">
+                {t("knowledge.targetLabel")}
+              </label>
               <div className="text-sm font-medium text-muted-foreground">
                 {backendTarget}
               </div>
@@ -79,9 +89,11 @@ const KnowledgeBaseDrawer = ({
           )}
 
           <div className="space-y-2 px-4">
-            <label className="text-sm font-medium">Status</label>
+            <label className="text-sm font-medium">
+              {t("knowledge.statusLabel")}
+            </label>
             <div className="text-sm font-medium text-muted-foreground">
-              {knowledgeBase.status || "Unknown"}
+              {knowledgeBase.status || t("knowledge.unknown")}
             </div>
           </div>
 

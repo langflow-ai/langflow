@@ -6,6 +6,7 @@ import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
 import ModalsComponent from "@/pages/MainPage/components/modalsComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { Users } from "@/types/api";
 import { cn } from "@/utils/utils";
 
@@ -20,6 +21,7 @@ export const GetStartedProgress: FC<{
   const [isDiscordJoinedChild, setIsDiscordJoinedChild] =
     useState(isDiscordJoined);
   const [newProjectModal, setNewProjectModal] = useState(false);
+  const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
 
   const flows = useFlowsManagerStore((state) => state.flows);
 
@@ -207,32 +209,34 @@ export const GetStartedProgress: FC<{
           </div>
         </Button>
 
-        <Button
-          unstyled
-          className={cn("w-full", hasFlows && "pointer-events-none")}
-          onClick={() => setNewProjectModal(true)}
-        >
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
-              hasFlows && "pointer-events-none text-muted-foreground",
-            )}
-            data-testid="create_flow_btn_get_started"
+        {!hideNewFlowButton && (
+          <Button
+            unstyled
+            className={cn("w-full", hasFlows && "pointer-events-none")}
+            onClick={() => setNewProjectModal(true)}
           >
-            <span data-testid="create_flow_icon_get_started">
-              <IconComponent
-                name={hasFlows ? "Check" : "Plus"}
-                className={cn(
-                  "h-4 w-4 text-primary",
-                  hasFlows && "text-accent-emerald-foreground",
-                )}
-              />
-            </span>
-            <span className={cn("text-sm", hasFlows && "line-through")}>
-              Create a flow
-            </span>
-          </div>
-        </Button>
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
+                hasFlows && "pointer-events-none text-muted-foreground",
+              )}
+              data-testid="create_flow_btn_get_started"
+            >
+              <span data-testid="create_flow_icon_get_started">
+                <IconComponent
+                  name={hasFlows ? "Check" : "Plus"}
+                  className={cn(
+                    "h-4 w-4 text-primary",
+                    hasFlows && "text-accent-emerald-foreground",
+                  )}
+                />
+              </span>
+              <span className={cn("text-sm", hasFlows && "line-through")}>
+                Create a flow
+              </span>
+            </div>
+          </Button>
+        )}
       </div>
 
       <ModalsComponent

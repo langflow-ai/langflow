@@ -84,11 +84,18 @@ class TraceContext:
         user_id: str | None,
         session_id: str | None,
         flow_id: str | None = None,
+        tracing_user_id: str | None = None,
     ):
         self.run_id: UUID | None = run_id
         self.run_name: str | None = run_name
         self.project_name: str | None = project_name
+        # ``user_id`` is the authenticated Langflow user (e.g. API-key owner)
+        # and drives ``trace.userId`` for tracing providers. ``tracing_user_id``
+        # is an optional caller-supplied label that providers surface separately
+        # (e.g. LangFuseTracer stamps it into trace metadata as
+        # ``langflow.tracing_user_id``).
         self.user_id: str | None = user_id
+        self.tracing_user_id: str | None = tracing_user_id
         self.session_id: str | None = session_id
         self.flow_id: str | None = flow_id
         self.tracers: dict[str, BaseTracer] = {}
@@ -188,6 +195,10 @@ class TracingService(Service):
         if self.deactivated:
             return
         langfuse_tracer = _get_langfuse_tracer()
+        # ``user_id`` carries the authenticated Langflow user and drives
+        # ``trace.userId`` (unchanged from pre-#9505 behavior for backwards
+        # compatibility). ``tracing_user_id`` is the optional caller-supplied
+        # label that LangFuseTracer stamps into trace metadata.
         trace_context.tracers["langfuse"] = langfuse_tracer(
             trace_name=trace_context.run_name,
             trace_type="chain",
@@ -195,6 +206,7 @@ class TracingService(Service):
             trace_id=trace_context.run_id,
             user_id=trace_context.user_id,
             session_id=trace_context.session_id,
+            tracing_user_id=trace_context.tracing_user_id,
         )
 
     def _initialize_arize_phoenix_tracer(self, trace_context: TraceContext) -> None:
@@ -269,18 +281,33 @@ class TracingService(Service):
         session_id: str | None,
         project_name: str | None = None,
         flow_id: str | None = None,
+        tracing_user_id: str | None = None,
     ) -> None:
         """Start a trace for a graph run.
 
         - create a trace context
         - start a worker for this trace context
         - initialize the tracers
+
+        ``user_id`` is the authenticated Langflow user (e.g. API-key owner)
+        and drives ``trace.userId`` for tracing providers. ``tracing_user_id``
+        is an optional caller-supplied label forwarded to providers, which
+        surface it separately (e.g. LangFuseTracer stamps it into trace metadata
+        as ``langflow.tracing_user_id``).
         """
         if self.deactivated:
             return
         try:
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
-            trace_context = TraceContext(run_id, run_name, project_name, user_id, session_id, flow_id)
+            trace_context = TraceContext(
+                run_id,
+                run_name,
+                project_name,
+                user_id,
+                session_id,
+                flow_id,
+                tracing_user_id=tracing_user_id,
+            )
             trace_context_var.set(trace_context)
             await self._start(trace_context)
             self._initialize_langsmith_tracer(trace_context)

@@ -34,7 +34,7 @@ class KeyedWorkerLockManager:
     """A manager for acquiring locks between workers based on a key."""
 
     def __init__(self) -> None:
-        self.locks_dir = Path(user_cache_dir("langflow"), ensure_exists=True) / "worker_locks"
+        self.locks_dir = Path(user_cache_dir("langflow", ensure_exists=True)) / "worker_locks"
 
     @staticmethod
     def _validate_key(key: str) -> bool:

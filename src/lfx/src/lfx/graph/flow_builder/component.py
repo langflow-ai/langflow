@@ -10,17 +10,55 @@ All functions are pure — no I/O, no network, no global state.
 from __future__ import annotations
 
 import copy
+import json
 import secrets
 import string
 from typing import Any
 
+import yaml
+
 from lfx.graph.flow_builder._utils import node_id as _node_id
+
+# Canvas type for user-authored code components. The frontend resolves this in
+# its global template list and exempts it from the "Update available" check
+# (componentsToIgnoreUpdate). User overlay entries are keyed by class name in
+# the registry so the agent can reference them, but their canvas node must wear
+# this type or the frontend flags them as a missing/outdated component.
+_CUSTOM_COMPONENT_TYPE = "CustomComponent"
 
 
 def _generate_id(component_type: str) -> str:
     """Generate a component ID like 'ChatInput-a1B2c'."""
     suffix = "".join(secrets.choice(string.ascii_letters + string.digits) for _ in range(5))
     return f"{component_type}-{suffix}"
+
+
+def _normalize_outputs(node_data: dict) -> None:
+    """Backfill required Output fields the bundled registry sometimes omits.
+
+    The local registry index (``_assets/component_index.json``) was built from
+    component definitions that didn't always serialize every Output field.
+    Downstream consumers — the canvas serializer, the ``/custom_component/update``
+    endpoint, the LFX dataclass deserializer — expect the full 13-field Output
+    shape (see ``lfx.template.field.base.Output``). Partial entries crash with
+    ``string indices must be integers, not 'str'`` when a serializer tries to
+    walk what it thinks is a dict but the deserializer left as a string.
+
+    Fills the missing fields with the safe defaults real saved outputs use, so
+    flows built via ``build_flow_from_spec`` load on the canvas without the
+    "Error while updating the Component" toast.
+
+    Idempotent.
+    """
+    outputs = node_data.get("outputs")
+    if not isinstance(outputs, list):
+        return
+    for output in outputs:
+        if not isinstance(output, dict):
+            continue
+        output.setdefault("hidden", False)
+        output.setdefault("options", None)
+        output.setdefault("required_inputs", None)
 
 
 def _make_node(
@@ -43,6 +81,14 @@ def _make_node(
         raise ValueError(msg)
 
     node_data = copy.deepcopy(registry[component_type])
+    _normalize_outputs(node_data)
+
+    # User-overlay (assistant-generated) entries are tagged ``custom``. Strip
+    # the internal marker and label the canvas node as CustomComponent so the
+    # frontend treats it like any user-authored component (no spurious
+    # "Update available" badge). Built-ins keep their own type.
+    is_custom = bool(node_data.pop("custom", False))
+    node_type = _CUSTOM_COMPONENT_TYPE if is_custom else component_type
 
     return {
         "id": cid,
@@ -51,7 +97,7 @@ def _make_node(
         "selected": False,
         "data": {
             "id": cid,
-            "type": component_type,
+            "type": node_type,
             "node": node_data,
             "showNode": True,
         },
@@ -86,12 +132,95 @@ def remove_component(flow: dict, component_id: str) -> None:
     flow["data"]["edges"] = [e for e in edges if e.get("source") != component_id and e.get("target") != component_id]
 
 
+def _parse_serialized_model_text(text: str) -> dict | list | None:
+    """Try JSON then YAML; return ``None`` when the input is a bare name.
+
+    Only fires on text that looks structured (starts with ``{``, ``[``, or
+    ``- ``, or contains an inline ``key: value`` pair) so a bare model name
+    like ``"gpt-4o"`` is never silently transformed.
+    """
+    stripped = (text or "").strip()
+    if not stripped:
+        return None
+    looks_structured = stripped.startswith(("{", "[", "- ")) or (": " in stripped and "\n" in stripped)
+    if not looks_structured:
+        return None
+    try:
+        parsed = json.loads(stripped)
+        if isinstance(parsed, (dict, list)):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+    try:
+        parsed = yaml.safe_load(stripped)
+    except yaml.YAMLError:
+        return None
+    if isinstance(parsed, (dict, list)):
+        return parsed
+    return None
+
+
+def _coerce_single_model_entry(item: Any) -> Any:
+    """Unwrap a nested serialized spec stuffed into ``item['name']``.
+
+    Pattern observed in QA: ``[{"name": "[{...JSON spec...}]", "provider":
+    "Unknown"}]``. The outer wrapper is preserved by the catalog fallback,
+    but the real provider/name is buried in the inner name string.
+    """
+    if not isinstance(item, dict):
+        return item
+    name = item.get("name")
+    if not isinstance(name, str):
+        return item
+    parsed = _parse_serialized_model_text(name)
+    if isinstance(parsed, list) and parsed and isinstance(parsed[0], dict):
+        return parsed[0]
+    if isinstance(parsed, dict):
+        return parsed
+    return item
+
+
+def _coerce_model_value(value: Any) -> Any:
+    """Normalize a model-field value to canonical ``list[dict]``.
+
+    Accepts:
+      - serialized JSON / YAML string of a list or dict
+      - already-canonical ``list[dict]`` (each entry still checked for a
+        nested serialized spec in ``name``)
+      - a bare name string (left untouched so the catalog path runs)
+    """
+    if isinstance(value, list):
+        return [_coerce_single_model_entry(item) for item in value]
+    if isinstance(value, dict):
+        return [_coerce_single_model_entry(value)]
+    if isinstance(value, str):
+        parsed = _parse_serialized_model_text(value)
+        if isinstance(parsed, dict):
+            return [_coerce_single_model_entry(parsed)]
+        if isinstance(parsed, list):
+            return [_coerce_single_model_entry(item) for item in parsed]
+    return value
+
+
 def configure_component(
     flow: dict,
     component_id: str,
     params: dict[str, Any],
 ) -> None:
-    """Set parameters on a component (pure version — no server calls)."""
+    """Set parameters on a component (pure version — no server calls).
+
+    Model-typed fields (``template[field].type == "model"``) accept the
+    canonical ``[{"provider": X, "name": Y}]`` shape. Some flow-builder
+    callers (the agent's ``BuildFlowFromSpec`` and ``ConfigureComponent``
+    tools) sometimes emit the spec as a JSON or YAML *string* instead.
+    Without normalization, that raw string lands in
+    ``template['model'].value``, the catalog falls back to
+    ``provider="Unknown"``, and ``get_llm`` raises ``ValueError: missing
+    a provider``. Normalize at this single choke point so every caller
+    path is covered. ``params`` is mutated in place so post-configure
+    helpers (e.g. ``_mirror_model_value_into_options``) read the
+    canonical value.
+    """
     node = _find_node(flow, component_id)
     if node is None:
         msg = f"Component not found: {component_id}"
@@ -103,10 +232,24 @@ def configure_component(
             available = [k for k in template if isinstance(template[k], dict)]
             msg = f"Unknown parameter '{key}' on component '{component_id}'. Available: {available}"
             raise ValueError(msg)
-        if isinstance(template[key], dict):
-            template[key]["value"] = value
+        if not isinstance(template[key], dict):
+            # Reserved non-field entries (e.g. "_type", metadata strings) are not
+            # configurable; wrapping them would corrupt the node. Reject instead.
+            available = [k for k in template if isinstance(template[k], dict)]
+            msg = (
+                f"Parameter '{key}' on component '{component_id}' is not a configurable "
+                f"field (reserved template entry). Available: {available}"
+            )
+            # Why: this function's contract raises ValueError for every config
+            # error (see sibling check + test_configure_unknown_field_raises);
+            # callers catch ValueError. TypeError would break that contract.
+            raise ValueError(msg)  # noqa: TRY004
+        if template[key].get("type") == "model":
+            coerced = _coerce_model_value(value)
+            params[key] = coerced
+            template[key]["value"] = coerced
         else:
-            template[key] = {"value": value}
+            template[key]["value"] = value
 
 
 def get_component(flow: dict, component_id: str) -> dict:

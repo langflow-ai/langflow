@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -11,9 +12,10 @@ export const SearchConfigTrigger = ({
   showConfig,
   setShowConfig,
 }: SearchConfigTriggerProps) => {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center justify-center">
-      <ShadTooltip content="Component settings" styleClasses="z-50">
+      <ShadTooltip content={t("sidebar.componentSettings")} styleClasses="z-50">
         <Button
           variant={showConfig ? "ghostActive" : "ghost"}
           size="iconMd"

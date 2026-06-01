@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -16,7 +17,7 @@ test(
 
     await page.getByTestId("blank-flow").click();
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
 
     await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,

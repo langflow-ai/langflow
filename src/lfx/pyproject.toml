@@ -6,7 +6,7 @@ readme = "README.md"
 authors = [
     { name = "Gabriel Luiz Freitas Almeida", email = "gabriel@langflow.org" }
 ]
-requires-python = ">=3.10,<3.14"
+requires-python = ">=3.10,<3.15"
 dependencies = [
     "langchain-core>=1.2.28,<2.0.0",
     "pandas>=2.0.0,<3.0.0",
@@ -39,7 +39,7 @@ dependencies = [
     "structlog>=25.4.0,<26.0.0",
     "loguru>=0.7.3,<1.0.0",
     "langchain~=1.2.0",
-    "langchain-classic~=1.0.0",
+    "langchain-classic~=1.0.7",
     "validators>=0.34.0,<1.0.0",
     "filelock>=3.20.1,<4.0.0",
     "pypdf>=6.10.0,<7.0.0",
@@ -50,7 +50,7 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
-    "OpenDsStar==1.0.26; python_version >= '3.11' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
+    "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 
 [project.scripts]
@@ -89,7 +89,7 @@ dev = [
     "blockbuster>=1.5.25",
     "coverage>=7.9.2",
     "hypothesis>=6.136.3",
-    "pytest>=8.4.1",
+    "pytest>=9.0.3",
     "pytest-asyncio>=0.26.0",
     "pytest-cov>=7.0.0",
     "ruff>=0.9.10",
@@ -98,6 +98,10 @@ integration = [
     # Dependencies for running Simple Agent and other integration tests
     "langchain-openai>=1.1.12,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
+    "langchain-mongodb>=0.11.0",
+    "langchain-perplexity>=1.0.0,<2.0.0",
+    "langchain-qdrant>=1.1.0",
+    "langchain-weaviate>=0.0.6",
     "beautifulsoup4>=4.12.0",
     "lxml>=5.0.0",
 ]

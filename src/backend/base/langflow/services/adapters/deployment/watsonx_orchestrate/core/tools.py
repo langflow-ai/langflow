@@ -28,10 +28,10 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.core.retry import
 from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxFlowArtifactProviderData,
     WatsonxToolRefBinding,
+    normalize_wxo_name,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     dedupe_list,
-    normalize_wxo_name,
     raise_as_deployment_error,
     require_tool_id,
 )
@@ -275,23 +275,29 @@ def create_wxo_flow_tool(
     """
     # provider_data might break tool runtime expectations with unexpected top-level keys
     flow_definition = flow_payload.model_dump(exclude={"provider_data"})
-    logger.debug(
-        "create_wxo_flow_tool: flow name='%s', id='%s', connections=%s",
-        flow_definition.get("name"),
-        flow_definition.get("id"),
-        connections,
-    )
-
     flow_provider_data = flow_payload.provider_data
     if not isinstance(flow_provider_data, WatsonxFlowArtifactProviderData):
         msg = "Flow payload provider_data must be a WatsonxFlowArtifactProviderData model instance."
         raise InvalidContentError(message=msg)
     project_id = str(flow_provider_data.project_id).strip()
 
+    tool_display_name = flow_provider_data.tool_display_name
+    technical_tool_name = flow_provider_data.tool_name
+    flow_id = flow_definition["id"]
+    flow_name = flow_definition["name"]
+    logger.debug(
+        "create_wxo_flow_tool",
+        langflow_flow_name=flow_name,
+        flow_id=flow_id,
+        tool_name=technical_tool_name,
+        tool_display_name=tool_display_name,
+        connection_app_ids=sorted(connections),
+    )
+
     flow_definition.update(
         {
-            "name": normalize_wxo_name(flow_definition.get("name") or ""),
-            "id": str(flow_definition.get("id")),
+            "name": technical_tool_name,
+            "id": str(flow_id),
         }
     )
 
@@ -316,16 +322,16 @@ def create_wxo_flow_tool(
         by_alias=True,
     )
 
-    current_name = str(tool_payload.get("name") or "").strip()
-    if current_name:
-        tool_payload["name"] = normalize_wxo_name(current_name)
+    tool_payload["name"] = technical_tool_name
+    tool_payload["display_name"] = tool_display_name
 
     (tool_payload.setdefault("binding", {}).setdefault("langflow", {})["project_id"]) = project_id
     logger.debug(
-        "create_wxo_flow_tool: tool name='%s', project_id='%s', binding=%s",
-        tool_payload.get("name"),
-        project_id,
-        tool_payload.get("binding", {}).get("langflow"),
+        "create_wxo_flow_tool_payload",
+        tool_name=tool_payload["name"],
+        tool_display_name=tool_payload["display_name"],
+        project_id=project_id,
+        binding=tool_payload.get("binding", {}).get("langflow"),
     )
 
     artifacts: bytes = build_langflow_artifact_bytes(
@@ -547,27 +553,19 @@ async def verify_tools_by_ids(
         if not isinstance(tool, dict) or not tool.get("id"):
             continue
         connections = extract_langflow_connections_binding(tool)
-        normalized_connections: dict[str, str] = {
-            key: value
-            for raw_key, raw_value in connections.items()
-            if isinstance(raw_key, str)
-            and isinstance(raw_value, str)
-            and (key := raw_key.strip())
-            and (value := raw_value.strip())
-        }
 
-        if len(normalized_connections) < len(connections):
-            logger.warning(
-                "Tool %s returned malformed langflow connection bindings; defaulting to empty mapping",
-                tool["id"],
-            )
-            provider_data: dict[str, dict[str, str]] = {"connections": {}}
-        else:
-            provider_data = {"connections": normalized_connections}
+        technical_name = tool["name"]
+        display_name = tool["display_name"]
+
+        provider_data: dict[str, Any] = {
+            "name": technical_name,
+            "display_name": display_name,
+            "connections": connections,
+        }
         snapshots.append(
             SnapshotItem(
                 id=tool["id"],
-                name=tool.get("name") or tool["id"],
+                name=technical_name,
                 provider_data=provider_data,
             )
         )

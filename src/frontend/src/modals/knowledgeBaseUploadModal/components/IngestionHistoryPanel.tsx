@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetIngestionRuns } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
 import { cn } from "@/utils/utils";
@@ -8,22 +9,24 @@ interface IngestionHistoryPanelProps {
 }
 
 const STATUS_STYLES: Record<string, string> = {
-  succeeded: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  partial: "bg-amber-50 text-amber-700 border-amber-200",
-  failed: "bg-rose-50 text-rose-700 border-rose-200",
-  cancelled: "bg-slate-50 text-slate-600 border-slate-200",
-  running: "bg-sky-50 text-sky-700 border-sky-200",
-  pending: "bg-slate-50 text-slate-600 border-slate-200",
+  succeeded:
+    "bg-accent-emerald text-accent-emerald-foreground border-accent-emerald",
+  partial: "bg-warning text-warning-foreground border-warning",
+  failed: "bg-error-red text-accent-red-foreground border-error-red-border",
+  cancelled: "bg-muted text-muted-foreground border-border",
+  running:
+    "bg-accent-indigo text-accent-indigo-foreground border-accent-indigo",
+  pending: "bg-muted text-muted-foreground border-border",
 };
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
-  file_upload: "File Upload",
-  folder: "Folder",
-  template: "Flow Template",
-  google_drive: "Google Drive",
-  s3: "AWS S3",
-  onedrive: "OneDrive",
-  sharepoint: "SharePoint",
+  file_upload: "knowledge.ingestionSourceFileUpload",
+  folder: "knowledge.ingestionSourceFolder",
+  template: "knowledge.ingestionSourceTemplate",
+  google_drive: "knowledge.ingestionSourceGoogleDrive",
+  s3: "knowledge.ingestionSourceS3",
+  onedrive: "knowledge.ingestionSourceOneDrive",
+  sharepoint: "knowledge.ingestionSourceSharePoint",
 };
 
 const HISTORY_LIMIT = 10;
@@ -39,6 +42,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const { data, isLoading, isError } = useGetIngestionRuns(
     { kb_name: kbName, page: 1, limit: HISTORY_LIMIT },
@@ -64,7 +68,9 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
             name="History"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="text-sm font-medium">Previously ingested</span>
+          <span className="text-sm font-medium">
+            {t("knowledge.previouslyIngested")}
+          </span>
           {total > 0 && (
             <span className="text-xs text-muted-foreground">({total})</span>
           )}
@@ -91,7 +97,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
             </div>
           )}
           {isError && !isLoading && (
-            <div className="text-xs text-rose-600">
+            <div className="text-xs text-destructive">
               Unable to load ingestion history.
             </div>
           )}
@@ -106,8 +112,9 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
           {runs.map((run) => {
             const statusClass =
               STATUS_STYLES[run.status] ?? STATUS_STYLES.pending;
-            const typeLabel =
-              SOURCE_TYPE_LABELS[run.source_type] ?? run.source_type;
+            const typeLabel = SOURCE_TYPE_LABELS[run.source_type]
+              ? t(SOURCE_TYPE_LABELS[run.source_type])
+              : run.source_type;
             const trimmedName = run.source_name?.trim();
             const primaryLabel = trimmedName || typeLabel;
             const showTypeSubtitle = !!trimmedName;
@@ -147,7 +154,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
                   <span className="flex items-center gap-1">
                     <ForwardedIconComponent
                       name="CircleCheck"
-                      className="h-3 w-3 text-emerald-600"
+                      className="h-3 w-3 text-accent-emerald-foreground"
                     />
                     {run.succeeded}
                   </span>
@@ -155,7 +162,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
                     <span className="flex items-center gap-1">
                       <ForwardedIconComponent
                         name="CircleAlert"
-                        className="h-3 w-3 text-rose-600"
+                        className="h-3 w-3 text-destructive"
                       />
                       {run.failed}
                     </span>
@@ -164,7 +171,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
                     <span className="flex items-center gap-1">
                       <ForwardedIconComponent
                         name="CircleMinus"
-                        className="h-3 w-3 text-slate-500"
+                        className="h-3 w-3 text-muted-foreground"
                       />
                       {run.skipped}
                     </span>

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetIngestionRun } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-run";
@@ -9,9 +10,9 @@ interface IngestionRunDetailModalProps {
 }
 
 const ITEM_STATUS_STYLES: Record<string, string> = {
-  succeeded: "text-emerald-700",
-  failed: "text-rose-700",
-  skipped: "text-slate-500",
+  succeeded: "text-accent-emerald-foreground",
+  failed: "text-accent-red-foreground",
+  skipped: "text-muted-foreground",
 };
 
 const ITEM_STATUS_ICON: Record<string, string> = {
@@ -25,6 +26,7 @@ const IngestionRunDetailModal = ({
   runId,
   onClose,
 }: IngestionRunDetailModalProps) => {
+  const { t } = useTranslation();
   const { data, isLoading, isError } = useGetIngestionRun({
     kb_name: kbName,
     run_id: runId,
@@ -43,7 +45,9 @@ const IngestionRunDetailModal = ({
       >
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div>
-            <div className="text-sm font-semibold">Ingestion run detail</div>
+            <div className="text-sm font-semibold">
+              {t("knowledge.ingestionRunDetail")}
+            </div>
             {data && (
               <div className="text-xs text-muted-foreground">
                 {kbName} · {data.source_type} ·{" "}
@@ -58,11 +62,13 @@ const IngestionRunDetailModal = ({
 
         <div className="flex-1 overflow-y-auto px-4 py-3">
           {isLoading && (
-            <div className="text-sm text-muted-foreground">Loading run…</div>
+            <div className="text-sm text-muted-foreground">
+              {t("knowledge.loadingRun")}
+            </div>
           )}
           {isError && (
-            <div className="text-sm text-rose-600">
-              Unable to load run detail.
+            <div className="text-sm text-destructive">
+              {t("knowledge.unableToLoadRunDetail")}
             </div>
           )}
 
@@ -70,25 +76,38 @@ const IngestionRunDetailModal = ({
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-4 gap-3">
                 <Metric
-                  label="Succeeded"
+                  label={t("knowledge.metricSucceeded")}
                   value={data.succeeded}
                   tone="success"
                 />
-                <Metric label="Failed" value={data.failed} tone="error" />
-                <Metric label="Skipped" value={data.skipped} tone="muted" />
-                <Metric label="Chunks" value={data.chunks_created} />
+                <Metric
+                  label={t("knowledge.metricFailed")}
+                  value={data.failed}
+                  tone="error"
+                />
+                <Metric
+                  label={t("knowledge.metricSkipped")}
+                  value={data.skipped}
+                  tone="muted"
+                />
+                <Metric
+                  label={t("knowledge.metricChunks")}
+                  value={data.chunks_created}
+                />
               </div>
 
               {data.error_message && (
-                <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700">
-                  <span className="font-medium">Error:</span>{" "}
+                <div className="rounded-md border border-error-red-border bg-error-red p-3 text-xs text-accent-red-foreground">
+                  <span className="font-medium">
+                    {t("knowledge.errorLabel")}
+                  </span>{" "}
                   {data.error_message}
                 </div>
               )}
 
               <div className="grid grid-cols-1 gap-2 rounded-md border border-border bg-card p-3 text-xs sm:grid-cols-2">
-                <IdField label="Run ID" value={data.id} />
-                <IdField label="Job ID" value={data.job_id} />
+                <IdField label={t("knowledge.runId")} value={data.id} />
+                <IdField label={t("knowledge.jobId")} value={data.job_id} />
               </div>
 
               <div>
@@ -121,7 +140,7 @@ const IngestionRunDetailModal = ({
                           </span>
                         </div>
                         {item.error_message && (
-                          <div className="rounded-sm bg-rose-50 px-2 py-1 text-rose-700">
+                          <div className="rounded-sm bg-error-red px-2 py-1 text-accent-red-foreground">
                             {item.error_message}
                           </div>
                         )}
@@ -147,11 +166,11 @@ interface MetricProps {
 function Metric({ label, value, tone }: MetricProps) {
   const toneClass =
     tone === "success"
-      ? "text-emerald-700"
+      ? "text-accent-emerald-foreground"
       : tone === "error"
-        ? "text-rose-700"
+        ? "text-accent-red-foreground"
         : tone === "muted"
-          ? "text-slate-500"
+          ? "text-muted-foreground"
           : "text-foreground";
   return (
     <div className="flex flex-col gap-1 rounded-md border border-border bg-card p-2">
