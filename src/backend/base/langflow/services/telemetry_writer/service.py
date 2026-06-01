@@ -339,45 +339,44 @@ class TelemetryWriterService(Service):
             self._shutdown_event.set()
 
         drain_timeout = float(getattr(self.settings_service.settings, "telemetry_writer_shutdown_drain_s", 5.0))
-        if self._writer_task is not None:
-            try:
-                await asyncio.wait_for(self._writer_task, timeout=drain_timeout)
-            except asyncio.TimeoutError:
-                # Drain budget exceeded. Whatever's still in the in-memory
-                # buffer survives via the disk spill below; rows that were
-                # popped into the in-flight batch are pushed back by the
-                # writer's CancelledError handler before it exits.
-                pending = len(self._tx_buffer) + len(self._vb_buffer)
-                logger.warning(
-                    f"telemetry_writer: shutdown drain exceeded {drain_timeout}s with "
-                    f"{pending} rows still pending — spilling to disk. Consider raising "
-                    f"telemetry_writer_shutdown_drain_s."
-                )
-                self._writer_task.cancel()
+        # The sweeper cancel, disk spill, and engine dispose live in ``finally`` so
+        # they still run when teardown() is itself cancelled (e.g. the outer lifespan
+        # task is killed). On that cancelled path ``wait_for`` cancels and awaits the
+        # writer task before re-raising, so the writer's CancelledError handler has
+        # already pushed in-flight rows back into the buffer by the time we spill.
+        try:
+            if self._writer_task is not None:
+                try:
+                    await asyncio.wait_for(self._writer_task, timeout=drain_timeout)
+                except asyncio.TimeoutError:
+                    # Drain budget exceeded. Whatever's still in the in-memory
+                    # buffer survives via the disk spill below; rows that were
+                    # popped into the in-flight batch are pushed back by the
+                    # writer's CancelledError handler before it exits.
+                    pending = len(self._tx_buffer) + len(self._vb_buffer)
+                    logger.warning(
+                        f"telemetry_writer: shutdown drain exceeded {drain_timeout}s with "
+                        f"{pending} rows still pending — spilling to disk. Consider raising "
+                        f"telemetry_writer_shutdown_drain_s."
+                    )
+                    self._writer_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await self._writer_task
+        finally:
+            if self._sweeper_task is not None:
+                self._sweeper_task.cancel()
                 with suppress(asyncio.CancelledError):
-                    await self._writer_task
-            except asyncio.CancelledError:
-                # teardown() itself was cancelled (e.g. outer lifespan task killed).
-                # Await the writer's own cancellation so it can put in-flight rows
-                # back in the buffer, then re-raise so the cancellation propagates
-                # up the task tree — swallowing it here breaks asyncio's cancel chain.
-                with suppress(asyncio.CancelledError):
-                    await self._writer_task
-                raise
-        if self._sweeper_task is not None:
-            self._sweeper_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await self._sweeper_task
+                    await self._sweeper_task
 
-        # Spill anything still in memory to disk so a future process picks it up.
-        if self._own_outbox_dir is not None:
-            self._spill_to_disk(self._own_outbox_dir, kind="transactions", buffer=self._tx_buffer)
-            self._spill_to_disk(self._own_outbox_dir, kind="vertex_builds", buffer=self._vb_buffer)
+            # Spill anything still in memory to disk so a future process picks it up.
+            if self._own_outbox_dir is not None:
+                self._spill_to_disk(self._own_outbox_dir, kind="transactions", buffer=self._tx_buffer)
+                self._spill_to_disk(self._own_outbox_dir, kind="vertex_builds", buffer=self._vb_buffer)
 
-        if self._engine is not None:
-            await self._engine.dispose()
-            self._engine = None
-        logger.info("telemetry_writer stopped")
+            if self._engine is not None:
+                await self._engine.dispose()
+                self._engine = None
+            logger.info("telemetry_writer stopped")
 
     # ------------------------------------------------------------------ internals
 
