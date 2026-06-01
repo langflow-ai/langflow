@@ -45,7 +45,7 @@ describe("usePatchDeployment", () => {
     const mutation = usePatchDeployment();
     await mutation.mutate({
       deployment_id: "dep-42",
-      name: "Updated Agent",
+      description: "Updated Agent",
     });
 
     expect(mockApiPatch).toHaveBeenCalledWith(
@@ -64,26 +64,29 @@ describe("usePatchDeployment", () => {
     const mutation = usePatchDeployment();
     await mutation.mutate({
       deployment_id: "dep-1",
-      name: "Renamed",
       description: "New description",
+      provider_data: { display_name: "Renamed" },
     });
 
     const sentBody = mockApiPatch.mock.calls[0][1];
     expect(sentBody).not.toHaveProperty("deployment_id");
     expect(sentBody).toEqual({
-      name: "Renamed",
       description: "New description",
+      provider_data: { display_name: "Renamed" },
     });
   });
 
-  it("sends only name when only name is provided", async () => {
+  it("sends only provider display name when only display name is provided", async () => {
     mockApiPatch.mockResolvedValue({ data: {} });
 
     const mutation = usePatchDeployment();
-    await mutation.mutate({ deployment_id: "dep-1", name: "Solo Name" });
+    await mutation.mutate({
+      deployment_id: "dep-1",
+      provider_data: { display_name: "Solo Name" },
+    });
 
     const sentBody = mockApiPatch.mock.calls[0][1];
-    expect(sentBody).toEqual({ name: "Solo Name" });
+    expect(sentBody).toEqual({ provider_data: { display_name: "Solo Name" } });
   });
 
   it("sends only description when only description is provided", async () => {
@@ -115,7 +118,7 @@ describe("usePatchDeployment", () => {
             flow_version_id: "fv-1",
             add_app_ids: ["app-1"],
             remove_app_ids: [],
-            tool_name: "my_tool",
+            tool_display_name: "My Tool",
           },
         ],
       },
@@ -131,7 +134,7 @@ describe("usePatchDeployment", () => {
       flow_version_id: "fv-1",
       add_app_ids: ["app-1"],
       remove_app_ids: [],
-      tool_name: "my_tool",
+      tool_display_name: "My Tool",
     });
   });
 
@@ -221,7 +224,7 @@ describe("usePatchDeployment", () => {
     mockApiPatch.mockResolvedValue({ data: { id: "dep-1" } });
 
     const mutation = usePatchDeployment();
-    await mutation.mutate({ deployment_id: "dep-1", name: "X" });
+    await mutation.mutate({ deployment_id: "dep-1", description: "X" });
 
     expect(mockQueryClient.refetchQueries).toHaveBeenCalledWith({
       queryKey: ["useGetDeployments"],
@@ -232,7 +235,7 @@ describe("usePatchDeployment", () => {
     mockApiPatch.mockResolvedValue({ data: { id: "dep-1" } });
 
     const mutation = usePatchDeployment();
-    await mutation.mutate({ deployment_id: "dep-1", name: "X" });
+    await mutation.mutate({ deployment_id: "dep-1", description: "X" });
 
     expect(mockQueryClient.removeQueries).toHaveBeenCalledWith({
       queryKey: ["useGetDeploymentAttachments"],
@@ -243,7 +246,7 @@ describe("usePatchDeployment", () => {
     mockApiPatch.mockResolvedValue({ data: { id: "dep-1" } });
 
     const mutation = usePatchDeployment();
-    await mutation.mutate({ deployment_id: "dep-1", name: "X" });
+    await mutation.mutate({ deployment_id: "dep-1", description: "X" });
 
     expect(mockQueryClient.removeQueries).toHaveBeenCalledWith({
       queryKey: ["useGetDeployment"],
@@ -254,7 +257,7 @@ describe("usePatchDeployment", () => {
     mockApiPatch.mockResolvedValue({ data: { id: "dep-1" } });
 
     const mutation = usePatchDeployment();
-    await mutation.mutate({ deployment_id: "dep-1", name: "Y" });
+    await mutation.mutate({ deployment_id: "dep-1", description: "Y" });
 
     expect(mockQueryClient.refetchQueries).toHaveBeenCalledTimes(1);
     expect(mockQueryClient.removeQueries).toHaveBeenCalledTimes(2);
@@ -267,16 +270,15 @@ describe("usePatchDeployment", () => {
   it("returns the response data from the API", async () => {
     const responseData = {
       id: "dep-1",
-      name: "Updated",
       description: "Fresh",
-      provider_data: { agent_id: "agent-xyz" },
+      provider_data: { display_name: "Updated", agent_id: "agent-xyz" },
     };
     mockApiPatch.mockResolvedValue({ data: responseData });
 
     const mutation = usePatchDeployment();
     const result = await mutation.mutate({
       deployment_id: "dep-1",
-      name: "Updated",
+      provider_data: { display_name: "Updated" },
     });
 
     expect(result).toEqual(responseData);
@@ -292,7 +294,10 @@ describe("usePatchDeployment", () => {
 
     const mutation = usePatchDeployment();
     await expect(
-      mutation.mutate({ deployment_id: "dep-1", name: "Bad" }),
+      mutation.mutate({
+        deployment_id: "dep-1",
+        provider_data: { display_name: "Bad" },
+      }),
     ).rejects.toThrow("422 Validation Error");
 
     expect(mockQueryClient.refetchQueries).not.toHaveBeenCalled();
@@ -300,17 +305,17 @@ describe("usePatchDeployment", () => {
   });
 
   // ---------------------------------------------------------------------------
-  // Combined update (name + description + provider_data)
+  // Combined update (description + provider_data)
   // ---------------------------------------------------------------------------
 
-  it("sends a full update with name, description, and provider_data together", async () => {
+  it("sends a full update with description and provider_data together", async () => {
     mockApiPatch.mockResolvedValue({ data: {} });
 
     const payload: DeploymentUpdateRequest = {
       deployment_id: "dep-full",
-      name: "Full Update Agent",
       description: "Complete update test",
       provider_data: {
+        display_name: "Full Update Agent",
         llm: "meta-llama/llama-3-3-70b-instruct",
         connections: [
           {
@@ -325,7 +330,7 @@ describe("usePatchDeployment", () => {
             flow_version_id: "fv-new",
             add_app_ids: ["conn-new"],
             remove_app_ids: ["conn-old"],
-            tool_name: "updated_tool",
+            tool_display_name: "Updated Tool",
           },
         ],
         remove_flows: ["fv-removed"],
@@ -337,8 +342,8 @@ describe("usePatchDeployment", () => {
 
     const sentBody = mockApiPatch.mock.calls[0][1];
     expect(sentBody).not.toHaveProperty("deployment_id");
-    expect(sentBody.name).toBe("Full Update Agent");
     expect(sentBody.description).toBe("Complete update test");
+    expect(sentBody.provider_data.display_name).toBe("Full Update Agent");
     expect(sentBody.provider_data.llm).toBe(
       "meta-llama/llama-3-3-70b-instruct",
     );

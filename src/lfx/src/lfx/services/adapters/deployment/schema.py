@@ -47,7 +47,6 @@ DeploymentProviderName = Annotated[
 NormalizedId = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 NormalizedStr = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 IdLike = UUID | NormalizedId
-DEPLOYMENT_DESCRIPTION_MAX_LENGTH = 500
 
 
 class DeploymentType(str, Enum):
@@ -341,10 +340,9 @@ class ProviderResultModel(BaseModel, Generic[T_ProviderResult]):
 class BaseDeploymentData(BaseModel):
     """Model representing a data for a deployment."""
 
-    name: str = Field(description="The name of the deployment")
+    name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
     description: str = Field(
         default="",
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="The description of the deployment",
     )
     type: DeploymentType = Field(description="The type of the deployment")
@@ -354,13 +352,11 @@ class DeploymentCreateResult(ProviderResultModel[T_DeploymentCreateResult]):
     """Model representing a result for a deployment creation operation."""
 
     id: IdLike = Field(description="The id of the created deployment")
-    config_id: IdLike | None = Field(
+    type: DeploymentType = Field(description="The type of the deployment")
+    name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
+    description: str | None = Field(
         default=None,
-        description="Config id produced or bound during deployment creation.",
-    )
-    snapshot_ids: list[IdLike] = Field(
-        default_factory=list,
-        description="Snapshot ids produced or bound during deployment creation.",
+        description="The description of the deployment",
     )
 
 
@@ -378,7 +374,7 @@ class ItemResult(ProviderDataModel[T_DeploymentItemData]):
     """Model representing a result for a deployment list item."""
 
     id: IdLike = Field(description="The id of the deployment")
-    name: str = Field(description="The name of the deployment")
+    name: NormalizedStr = Field(description="Technical name of the deployment")
     type: DeploymentType = Field(description="The type of the deployment")
     created_at: datetime.datetime | None = Field(None, description="The created timestamp of the deployment")
     updated_at: datetime.datetime | None = Field(None, description="The last updated timestamp of the deployment")
@@ -472,11 +468,6 @@ class DeploymentListParams(_BaseListParams[T_DeploymentListParams]):
         None,
         description="Config ids to filter by.",
     )
-    deployment_names: list[NormalizedStr] | None = Field(
-        None,
-        min_length=1,
-        description="Deployment names to filter by.",
-    )
 
     @field_validator("deployment_types")
     @classmethod
@@ -513,11 +504,6 @@ class SnapshotListParams(_BaseListParams[T_SnapshotListParams]):
         None,
         description="Snapshot ids to filter by.",
     )
-    snapshot_names: list[NormalizedStr] | None = Field(
-        None,
-        min_length=1,
-        description="Snapshot names to filter by.",
-    )
 
     @field_validator("snapshot_ids")
     @classmethod
@@ -546,16 +532,18 @@ def get_deployment_create_schema() -> str:
 class BaseDeploymentDataUpdate(BaseModel):
     """Deployment base update payload."""
 
-    name: str | None = Field(None, description="The name of the deployment")
+    name: NormalizedStr | None = Field(None, description="Technical name of the deployment")
     description: str | None = Field(
         None,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="The description of the deployment",
     )
 
     @model_validator(mode="after")
     def validate_has_changes(self) -> "BaseDeploymentDataUpdate":
-        if self.name is None and self.description is None:
+        if "name" in self.model_fields_set and self.name is None:
+            msg = "'name' cannot be set to null."
+            raise ValueError(msg)
+        if "description" not in self.model_fields_set and self.name is None:
             msg = "At least one of 'name' or 'description' must be provided."
             raise ValueError(msg)
         return self

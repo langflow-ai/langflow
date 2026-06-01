@@ -33,7 +33,7 @@ from datetime import datetime
 from typing import Annotated, Any
 from uuid import UUID
 
-from lfx.services.adapters.deployment.schema import DEPLOYMENT_DESCRIPTION_MAX_LENGTH, DeploymentType
+from lfx.services.adapters.deployment.schema import DeploymentType
 from pydantic import AfterValidator, BaseModel, Field, ValidationInfo, model_validator
 
 from langflow.services.database.models.deployment_provider_account.schemas import (
@@ -146,9 +146,8 @@ class DeploymentProviderAccountCreateRequest(BaseModel):
         min_length=1,
         description=(
             "Provider-specific credential/metadata payload. "
-            "Contents are opaque to the API schema; the deployment mapper "
-            "for the target provider_key validates and extracts credentials "
-            "and provider metadata (for example URL/region and tenant/account identifiers)."
+            "Contents are provider-defined and may include credentials "
+            "and metadata such as URL/region and tenant/account identifiers."
         ),
     )
 
@@ -222,7 +221,6 @@ class _DeploymentResponseCommon(BaseModel):
     id: UUID = Field(description="Langflow DB deployment UUID.")
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
     provider_key: str = Field(description="Provider identifier (e.g. 'watsonx-orchestrate').")
-    name: str
     description: str | None = None
     type: DeploymentType
     created_at: datetime | None = None
@@ -324,15 +322,16 @@ class DeploymentFlowVersionListItem(BaseModel):
     distinguishes the following cases:
 
     * **Tool renamed in provider** — Same ``provider_snapshot_id``, different
-      ``provider_data.tool_name``.  Langflow picks up the new name on the next fetch.
+      ``provider_data.tool_display_name``. Langflow picks up the new label on the next fetch.
     * **Tool deleted in provider** — ``provider_snapshot_id`` no longer
-      resolves.  ``provider_data.tool_name`` may be missing/``None``.
+      resolves. ``provider_data.tool_display_name`` may be missing/``None``.
     * **Tool deleted + new tool created with same name** — The new tool has
       a different ID.  Langflow's attachment still points to the old
       (missing) ID.  The new tool is invisible to Langflow until explicitly
       attached via an update operation.
 
-    Frontends should use ``provider_data.tool_name`` for display and
+    Frontends should use ``provider_data.tool_display_name`` for display,
+    ``provider_data.tool_name`` for provider technical metadata, and
     ``provider_snapshot_id`` for identity / operations.
     """
 
@@ -373,10 +372,6 @@ class DeploymentUpdateResponse(_DeploymentResponseWithProviderData):
     resource_key: str = Field(description="Langflow-persisted stable provider resource identifier.")
 
 
-class DeploymentStatusResponse(_DeploymentResponseWithProviderData):
-    """API response for deployment status/health."""
-
-
 # ---------------------------------------------------------------------------
 # Deployment create / update request schemas
 # ---------------------------------------------------------------------------
@@ -386,10 +381,8 @@ class DeploymentCreateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
     provider_id: UUID = Field(description="Langflow DB provider-account UUID (`deployment_provider_account.id`).")
-    name: NonEmptyStr = Field(description="Deployment display name.")
     description: str = Field(
         default="",
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="Deployment description.",
     )
     type: DeploymentType = Field(description="Deployment type.")
@@ -406,10 +399,8 @@ class DeploymentCreateRequest(BaseModel):
 class DeploymentUpdateRequest(BaseModel):
     model_config = {"extra": "forbid"}
 
-    name: NonEmptyStr | None = Field(default=None, description="Updated deployment display name.")
     description: str | None = Field(
         default=None,
-        max_length=DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
         description="Updated deployment description.",
     )
     provider_data: dict[str, Any] | None = Field(
@@ -420,10 +411,7 @@ class DeploymentUpdateRequest(BaseModel):
     @model_validator(mode="after")
     def ensure_any_field_provided(self) -> DeploymentUpdateRequest:
         if not self.model_fields_set:
-            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
-            raise ValueError(msg)
-        if self.name is None and self.description is None and self.provider_data is None:
-            msg = "At least one of 'name', 'description', or 'provider_data' must be provided."
+            msg = "At least one of 'description' or 'provider_data' must be provided."
             raise ValueError(msg)
         return self
 

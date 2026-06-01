@@ -59,17 +59,23 @@ To follow along with this example, download [`customer-orders.csv`](/files/custo
 2. To create a new knowledge base, click <Icon name="Plus" aria-hidden="true"/>**Add Knowledge**.
 3. In the **Create Knowledge Base** pane, enter a name for your knowledge base, select an embedding model, and select a **DB Provider**.
     <PartialGlobalModelProviders />
-    The **DB Provider** determines where embeddings are stored. It defaults to the provider configured in **Settings → DB Providers**. Existing knowledge bases keep their original backend — changing the global DB Provider only affects new knowledge bases.
-4. To configure sources for your knowledge base, click **Configure Sources**.
+    The **DB Provider** determines where embeddings are stored. It defaults to the provider configured in **Settings → DB Providers**. Existing knowledge bases keep their original backend, so changing the global DB Provider only affects new knowledge bases.
+
+    Once you create a knowledge base, you cannot change its embedding model or DB provider. If you need to change either, you must delete and recreate the knowledge base.
+
+4. Optional: Add **Custom Metadata Fields** to tag every chunk with additional context. For example, if you're ingesting files from multiple teams, add a field `team` with a value of `support`. When the **Knowledge Base** component searches, you can then filter results to only return chunks where `team` equals `support` to keep results scoped to the support team's content.
+
+5. To configure sources for your knowledge base, click **Configure Sources**.
 Optionally, to create an empty knowledge base, click **Create**.
-5. In the **Configure Sources** pane, configure the sources for your knowledge base's data, and also how the embedded data will be chunked for vector search retrieval.
+6. In the **Configure Sources** pane, configure the sources for your knowledge base's data, and also how the embedded data will be chunked for vector search retrieval.
     For this example, click <Icon name="Upload" aria-hidden="true"/>**Add Sources**, and then select the downloaded [`customer-orders.csv`](/files/customer_orders.csv) file from your local machine.
     The default settings for **Chunk Size**, **Chunk Overlap**, and **Separator** are fine.
     To continue, click **Next Step**.
-6. The **Review & Build** pane allows you to preview your first chunk before you commit to spending tokens to embed all of the data into the knowledge base.
+7. The **Review & Build** pane allows you to preview your first chunk before you commit to spending tokens to embed all of the data into the knowledge base.
+    A typical chunk size is 512–1000 characters. Smaller chunks support more granular retrieval but they can lose context across chunks.
     If the chunk isn't what you want to embed, click **Back** to configure your chunking strategy.
     To embed this data, click **Create**.
-7. Your data is embedded as a **Knowledge**.
+8. Your data is embedded as a **Knowledge**.
     When it is available to use, the **Status** changes to **Ready**.
 
 To use the new knowledge base in a flow, see [Use the Knowledge Base component in a flow](/knowledge-base).
@@ -138,6 +144,27 @@ To change the default `knowledge_bases` directory path, set the `LANGFLOW_KNOWLE
 export LANGFLOW_KNOWLEDGE_BASES_DIR="/path/to/parent/directory"
 ```
 
+#### Chroma Cloud
+
+To use [Chroma Cloud](https://docs.trychroma.com/docs/overview/introduction) as a database provider, you need a Chroma Cloud account and an API key from Chroma Cloud.
+
+1. From your Chroma Cloud dashboard, copy your **API Key**, **Tenant**, and **Database** names.
+2. To connect Chroma Cloud to Langflow, click **Settings**, and then click **DB Providers**.
+3. Select **Chroma Cloud**.
+4. Enter the following values:
+
+    - **API Key**: Enter your Chroma Cloud API key.
+    - **Tenant**: Optionally, enter your tenant name. If blank, defaults to the tenant associated with your API key.
+    - **Database**: Optionally, enter your database name. If blank, defaults to `default_database`.
+    - **Region**: Optionally, enter your cloud region.
+
+5. Click **Save and Use Chroma Cloud**.
+
+    Optionally, click **Test Connection** to verify that Langflow can reach your Chroma Cloud instance before saving.
+
+    The Chroma Cloud database is now connected to Langflow as a knowledge base provider.
+    To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
+
 #### OpenSearch
 
 To use OpenSearch as a database provider, you need a running OpenSearch cluster that is accessible to your Langflow instance.
@@ -199,31 +226,17 @@ This example uses an OpenSearch container running locally, but you can also use 
     - **Use TLS (HTTPS)**: Turn off. Enable if your cluster uses HTTPS.
     - **Verify TLS certificate**: Turn off. Enable if your cluster uses CA-signed certificates.
 
+    :::tip
+    The knowledge base name doesn't need to match the OpenSearch index name — it is the internal label used to scope searches within the shared OpenSearch index.
+    :::
+
 6. Click **Save and Use OpenSearch**.
 
     Optionally, click **Test Connection** to verify that Langflow can reach your OpenSearch cluster before saving.
 
-    The OpenSearch database is now connected to Langflow as a knowledge base, so you can create a knowledge base that stores its embeddings in OpenSearch.
+    The OpenSearch database is now connected to Langflow as a knowledge base provider.
 
-7. Click <Icon name="Library" aria-hidden="true"/> **Knowledge**, and then click <Icon name="Plus" aria-hidden="true"/> **Add Knowledge**.
-
-8. Enter a name for this knowledge base. The name can be anything, and doesn't need to match the OpenSearch index name.
-The name becomes the internal label used to scope searches to this knowledge base within the shared OpenSearch index.
-
-9. Select an embedding model.
-When you create a knowledge base in Langflow, you can choose one of your configured embedding model providers. Once you create a knowledge base, you cannot change its provider unless you recreate the knowledge base. For more information, see [Embedding Model](/components-embedding-models).
-
-10. Optional: Add **Custom Metadata Fields** to tag every chunk with additional context. For example, if you're ingesting files from multiple teams, add a field `team` with a value of `support`. When the **Knowledge Base** component searches, you can then filter results to only return chunks where `team` equals `support` to keep results scoped to the support team's content.
-
-11. Click **Next Step**.
-
-12. Add your source files and configure chunking settings, then click **Next Step**.
-
-13. In the **Review & Build** pane, preview the first chunk of your data and confirm the chunk size is appropriate for your use case. A typical chunk size is 512–1000 characters. Smaller chunks support more granular retrieval but they can lose context across chunks.
-
-14. Click **Create**.
-
-The knowledge base is now available to use in a flow with the **Knowledge Base** component.
+To create a knowledge base using this provider, see [Create a knowledge base](#create-a-knowledge-base).
 
 ## See also
 

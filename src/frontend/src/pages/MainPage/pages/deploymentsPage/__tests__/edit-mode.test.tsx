@@ -28,7 +28,8 @@ const initialConnections = new Map([
 
 const mockDeployment: Deployment = {
   id: "deploy-1",
-  name: "My Agent",
+  provider_id: "prov-1",
+  provider_data: { display_name: "My Agent", name: "my_agent" },
   description: "A test agent",
   type: "agent",
   created_at: "2025-01-01T00:00:00Z",
@@ -59,24 +60,20 @@ const initialVersions = new Map([
 ]);
 
 const flow1Key = getSelectedFlowVersionKey("flow-1", "ver-1");
-const flow2Key = getSelectedFlowVersionKey("flow-2", "ver-2");
 const flowNewKey = getSelectedFlowVersionKey("flow-new", "ver-new");
 
 function renderEditHook() {
   const wrapper = ({ children }: { children: React.ReactNode }) =>
-    React.createElement(
-      DeploymentStepperProvider,
-      {
-        initialState: {
-          editingDeployment: mockDeployment,
-          selectedVersionByFlow: initialVersions,
-          initialLlm: "test-model",
-          initialToolNameByFlow: initialToolNames,
-          initialConnectionsByFlow: initialConnections,
-        },
+    React.createElement(DeploymentStepperProvider, {
+      initialState: {
+        editingDeployment: mockDeployment,
+        selectedVersionByFlow: initialVersions,
+        initialLlm: "test-model",
+        initialToolNameByFlow: initialToolNames,
+        initialConnectionsByFlow: initialConnections,
       },
       children,
-    );
+    });
   const hook = renderHook(() => useDeploymentStepper(), { wrapper });
   hook.rerender();
   return hook;
@@ -108,12 +105,15 @@ describe("Edit mode — basic state", () => {
     expect(result.current.canGoNext).toBe(true);
   });
 
-  it("blocks update flow when existing name does not start with a letter", () => {
-    const invalidDeployment = { ...mockDeployment, name: "1 Agent" };
+  it("allows update flow when existing display name does not start with a letter", () => {
+    const deployment = {
+      ...mockDeployment,
+      provider_data: { display_name: "1 Agent", name: "agent_1" },
+    };
     const wrapper = ({ children }: { children: React.ReactNode }) => (
       <DeploymentStepperProvider
         initialState={{
-          editingDeployment: invalidDeployment,
+          editingDeployment: deployment,
           selectedVersionByFlow: initialVersions,
           initialLlm: "test-model",
           initialToolNameByFlow: initialToolNames,
@@ -125,11 +125,11 @@ describe("Edit mode — basic state", () => {
     );
     const { result } = renderHook(() => useDeploymentStepper(), { wrapper });
 
-    expect(result.current.canGoNext).toBe(false);
-    expect(result.current.isDeploymentNameValid).toBe(false);
-    expect(result.current.hasDeploymentNameFormatError).toBe(true);
-    expect(() => result.current.buildDeploymentUpdatePayload()).toThrow(
-      "Deployment name must start with a letter",
+    expect(result.current.canGoNext).toBe(true);
+    expect(result.current.isDeploymentNameValid).toBe(true);
+    expect(result.current.hasDeploymentNameFormatError).toBe(false);
+    expect(result.current.buildDeploymentUpdatePayload().deployment_id).toBe(
+      "deploy-1",
     );
   });
 
@@ -184,17 +184,25 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(payload.description).toBe("Updated description");
   });
 
-  it("does NOT include name on update payload", () => {
+  it("does NOT include top-level name on update payload", () => {
     const { result } = renderEditHook();
     act(() => result.current.setDeploymentDescription("Updated"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.name).toBeUndefined();
+    expect(payload).not.toHaveProperty("name");
   });
 
-  it("sends LLM in provider_data", () => {
+  it("sends display name changes in provider_data", () => {
     const { result } = renderEditHook();
+    act(() => result.current.setDeploymentName("Updated Agent"));
     const payload = result.current.buildDeploymentUpdatePayload();
-    expect(payload.provider_data?.llm).toBe("test-model");
+    expect(payload.provider_data?.display_name).toBe("Updated Agent");
+  });
+
+  it("sends LLM in provider_data when changed", () => {
+    const { result } = renderEditHook();
+    act(() => result.current.setSelectedLlm("new-model"));
+    const payload = result.current.buildDeploymentUpdatePayload();
+    expect(payload.provider_data?.llm).toBe("new-model");
   });
 
   it("sends upsert_flows for newly attached flows", () => {
@@ -237,14 +245,14 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
     expect(removeFlows).toHaveLength(0);
   });
 
-  it("sends fallback description when nothing changed", () => {
+  it("omits description when description is unchanged", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    // LLM is set so provider_data exists, but also check spec fallback logic
-    expect(payload.provider_data).toBeDefined();
+    expect(payload.provider_data).toBeUndefined();
+    expect(payload.description).toBeUndefined();
   });
 
-  it("includes tool_name on newly attached flow upsert", () => {
+  it("includes tool_display_name on newly attached flow upsert", () => {
     const { result } = renderEditHook();
 
     act(() => {
@@ -266,13 +274,13 @@ describe("Edit mode — buildDeploymentUpdatePayload", () => {
           | {
               upsert_flows?: Array<{
                 flow_version_id?: string;
-                tool_name?: string;
+                tool_display_name?: string;
               }>;
             }
           | undefined
       )?.upsert_flows ?? [];
     expect(upsertFlows[0].flow_version_id).toBe("ver-new");
-    expect(upsertFlows[0].tool_name).toBe("Custom Tool Name");
+    expect(upsertFlows[0].tool_display_name).toBe("Custom Tool Name");
   });
 
   it("handles attach + detach in same update", () => {
@@ -312,13 +320,10 @@ describe("Edit mode — throws outside edit mode", () => {
 });
 
 describe("Edit mode — no-op and partial update payloads", () => {
-  it("sends fallback spec when nothing changed at all", () => {
+  it("sends only deployment_id when nothing changed", () => {
     const { result } = renderEditHook();
     const payload = result.current.buildDeploymentUpdatePayload();
-    // LLM is pre-filled so provider_data always has llm
-    expect(payload.deployment_id).toBe("deploy-1");
-    expect(payload.provider_data?.llm).toBe("test-model");
-    // No spec change → no spec field (or fallback if no provider_data either)
+    expect(payload).toEqual({ deployment_id: "deploy-1" });
   });
 
   it("sends only description in spec when only description changed", () => {
@@ -389,7 +394,17 @@ describe("Edit mode — newly attached flow connections", () => {
 
     const payload = result.current.buildDeploymentUpdatePayload();
     const upsertFlows =
-      (payload.provider_data as typeof upsertFlowType)?.upsert_flows ?? [];
+      (
+        payload.provider_data as
+          | {
+              upsert_flows?: Array<{
+                flow_version_id?: string;
+                add_app_ids?: string[];
+                remove_app_ids?: string[];
+              }>;
+            }
+          | undefined
+      )?.upsert_flows ?? [];
     const newFlowEntry = upsertFlows.find(
       (o) => o.flow_version_id === "ver-new",
     );
