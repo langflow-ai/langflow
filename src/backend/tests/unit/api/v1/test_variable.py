@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
+pytestmark = pytest.mark.no_blockbuster
+
 
 @pytest.fixture
 def generic_variable():

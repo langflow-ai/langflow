@@ -12,6 +12,8 @@ from langflow.api.v1 import authz_shares as shares_module
 from langflow.api.v1.schemas.authz_shares import ShareCreate, ShareUpdate
 from langflow.services.database.models.auth import AuthzShare, SharePermissionLevel, ShareScope
 
+pytestmark = pytest.mark.no_blockbuster
+
 
 class _FakeAsyncSession:
     """Minimal async-session stand-in: stores get() results and records writes."""
