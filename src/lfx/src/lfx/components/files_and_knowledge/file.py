@@ -48,7 +48,7 @@ class FileComponent(BaseFileComponent):
 
     display_name = "Read File"
     # description is now a dynamic property - see get_tool_description()
-    _base_description = "Loads content from one or more files."
+    _base_description = "Loads and returns the content from uploaded files."
     documentation: str = "https://docs.langflow.org/read-file"
     icon = "file-text"
     name = "File"
@@ -272,7 +272,7 @@ class FileComponent(BaseFileComponent):
 
         This helps the Agent understand which files are available to read.
         """
-        base_description = "Loads and returns the content from uploaded files."
+        base_description = type(self)._base_description  # noqa: SLF001
 
         # Get the list of uploaded file paths
         file_paths = getattr(self, "path", None)

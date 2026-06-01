@@ -47,6 +47,9 @@ This component has two modes, depending on the type of server you want to access
     You can use [global variables](/configuration-global-variables) in header values by entering the global variable name as the header value.
     For more information, see [Use global variables in MCP server headers](#use-global-variables-in-mcp-server-headers).
 
+    If this server is nested inside a Langflow flow that runs as an MCP server, you can propagate the incoming request's `x-api-key` or `Authorization` header directly to this server at runtime.
+    For more information, see [Propagate x-api-key to nested MCP servers](#propagate-x-api-key).
+
 6. To use environment variables in your server command, enter each variable in the **Env** fields as key-value pairs.
 
 7. In the **Tool** field, select a tool that you want this component to use, or leave the field blank to allow access to all tools provided by the MCP server.
@@ -121,6 +124,8 @@ To manage MCP server connections for use in flows, open the <McpIcon /> **MCP** 
 To add a new MCP server, click <Icon name="Plus" aria-hidden="true"/> **Add MCP Server**, register the server, and then select the server on the **MCP Tools** component as described in [Connect to a non-Langflow MCP server](#mcp-stdio-mode).
 
 Click <Icon name="Ellipsis" aria-hidden="true"/> **More** to edit or delete an MCP server connection.
+
+If your Langflow server administrator has locked MCP server management, you will receive a locked message when you try to add or modify servers. For more information, see [Lock MCP server management](/mcp-server#restrict-mcp-server-management).
 
 ## Modify MCP server environment variables with the API {#mcp-api-tweaks}
 
@@ -282,6 +287,15 @@ The MCP server configuration already includes the headers you configured earlier
 12. Test your flow to make sure the agent uses your server to respond to queries. Open the **Playground**, and then enter a prompt that uses a tool that you connected through the **MCP Tools** component.
 
     Langflow automatically resolves `TEST_BEARER_TOKEN` to its actual value before sending the request to the MCP server. When your MCP server receives the request, the `Authorization` header contains the resolved token value.
+
+## Propagate `x-api-key` to nested MCP servers {#propagate-x-api-key}
+
+When Langflow runs as an MCP server and a flow contains an [**MCP Tools** component](/mcp-tools) that calls an external server, you can forward the outer client's `x-api-key` or `Authorization` header at runtime.
+
+In the nested server's **Headers** config, set the key and value to the same header name, such as `x-api-key` and `x-api-key`.
+Langflow reads the matching header from the incoming request and substitutes it before calling the nested server.
+
+If the incoming request does not include the configured header, the literal string is passed through unchanged.
 
 ## See also
 

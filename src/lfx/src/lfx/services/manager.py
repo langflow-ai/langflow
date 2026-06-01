@@ -390,17 +390,44 @@ class ServiceManager:
             )
             return
 
+        # Map of service_type → expected base class. Used to reject malformed
+        # entry-point plugins before they take over an authorization-critical
+        # service. Without this check an arbitrary class from an unrelated
+        # PyPI package that happened to register the same entry-point name
+        # would silently replace the OSS implementation.
+        expected_bases: dict[ServiceType, type] = {}
+        try:
+            from lfx.services.authorization.base import BaseAuthorizationService
+
+            expected_bases[ServiceType.AUTHORIZATION_SERVICE] = BaseAuthorizationService
+        except Exception as exc:  # noqa: BLE001 — optional import, validation just skipped
+            logger.debug(f"BaseAuthorizationService unavailable; entry-point validation skipped: {exc}")
+
         for ep in eps:
             try:
                 service_class = ep.load()
                 # Entry point name should match ServiceType enum value
                 service_type = ServiceType(ep.name)
+                expected_base = expected_bases.get(service_type)
+                if expected_base is not None and not (
+                    isinstance(service_class, type) and issubclass(service_class, expected_base)
+                ):
+                    logger.warning(
+                        f"Entry point {ep.name} resolved to {service_class!r}, "
+                        f"which is not a subclass of {expected_base.__name__}. "
+                        f"Skipping registration to avoid silently replacing the "
+                        f"built-in service with an incompatible plugin."
+                    )
+                    continue
                 self.register_service_class(service_type, service_class, override=False)
                 logger.debug(f"Loaded service from entry point: {ep.name}")
             except (ValueError, AttributeError) as exc:
                 logger.warning(f"Failed to load entry point {ep.name}: {exc}")
             except Exception as exc:  # noqa: BLE001
-                logger.debug(f"Error loading entry point {ep.name}: {exc}")
+                # Authz plugin failures are operator-visible — silent
+                # degradation to the OSS pass-through is exactly the kind
+                # of behavior change we want noisy.
+                logger.warning(f"Error loading entry point {ep.name}: {exc}")
 
     def _discover_from_config(self, config_dir: Path) -> None:
         """Discover services from config files (lfx.toml / pyproject.toml)."""

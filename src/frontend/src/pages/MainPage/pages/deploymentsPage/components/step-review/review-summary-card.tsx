@@ -27,7 +27,7 @@ export function ReviewSummaryCard({
           </span>
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2">
-              <span className="w-10 text-xs text-muted-foreground">
+              <span className="w-24 text-xs text-muted-foreground">
                 {t("deployments.labelType")}
               </span>
               <div className="flex items-center gap-1.5">
@@ -41,7 +41,7 @@ export function ReviewSummaryCard({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <span className="w-10 text-xs text-muted-foreground">
+              <span className="w-24 text-xs text-muted-foreground">
                 {t("deployments.labelName")}
               </span>
               <span className="text-sm text-foreground">
@@ -50,7 +50,7 @@ export function ReviewSummaryCard({
             </div>
             {selectedLlm && (
               <div className="flex items-center gap-2">
-                <span className="w-10 text-xs text-muted-foreground">
+                <span className="w-24 text-xs text-muted-foreground">
                   {t("deployments.labelModel")}
                 </span>
                 <span className="text-sm text-foreground">{selectedLlm}</span>

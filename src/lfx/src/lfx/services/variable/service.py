@@ -1,5 +1,6 @@
 """Minimal variable service for lfx package with in-memory storage and environment fallback."""
 
+import json
 import os
 
 from lfx.log.logger import logger
@@ -11,6 +12,7 @@ class VariableService(Service):
 
     This is a lightweight implementation for LFX that maintains in-memory
     variables and falls back to environment variables for reads. No database storage.
+
     """
 
     name = "variable_service"
@@ -22,10 +24,31 @@ class VariableService(Service):
         self.set_ready()
         logger.debug("Variable service initialized (env vars only)")
 
+    @staticmethod
+    def _normalize_global_var_key(name: str) -> str:
+        return f"x-langflow-global-var-{name.lower().replace('_', '-')}"
+
+    @staticmethod
+    def _get_request_variables() -> dict[str, str]:
+        """Parse request-scoped variables from LANGFLOW_REQUEST_VARIABLES when available."""
+        raw = os.getenv("LANGFLOW_REQUEST_VARIABLES")
+        if not raw:
+            return {}
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            logger.debug("Invalid LANGFLOW_REQUEST_VARIABLES JSON; skipping request-scoped lookup")
+            return {}
+        if not isinstance(parsed, dict):
+            logger.debug("LANGFLOW_REQUEST_VARIABLES must be a JSON object; skipping request-scoped lookup")
+            return {}
+        return {str(key): str(value) for key, value in parsed.items()}
+
     async def get_variable(self, name: str, **kwargs) -> str | None:  # noqa: ARG002
         """Get a variable value.
 
-        First checks in-memory cache, then environment variables.
+        First checks in-memory cache, then LANGFLOW_REQUEST_VARIABLES, then
+        environment variables, then ``x-langflow-global-var-*`` normalized keys.
 
         Async to match the call signature in custom_component.get_variable
         (`await variable_service.get_variable(...)`), which is the path used
@@ -47,11 +70,26 @@ class VariableService(Service):
         if name in self._variables:
             return self._variables[name]
 
+        # Contract-first: prefer request-scoped variables injected by runtime.
+        request_variables = self._get_request_variables()
+        if name in request_variables:
+            logger.debug(f"Variable '{name}' loaded from LANGFLOW_REQUEST_VARIABLES")
+            return request_variables[name]
+
         # Fall back to environment variable
         value = os.getenv(name)
         if value:
             logger.debug(f"Variable '{name}' loaded from environment")
-        return value
+            return value
+
+        # Fall back to x-langflow-global-var-* aliases
+        global_alias = self._normalize_global_var_key(name)
+        value = os.getenv(global_alias)
+        if value:
+            logger.debug(f"Variable '{name}' loaded from global alias '{global_alias}'")
+            return value
+
+        return None
 
     def set_variable(self, name: str, value: str, **kwargs) -> None:  # noqa: ARG002
         """Set a variable value (in-memory only).

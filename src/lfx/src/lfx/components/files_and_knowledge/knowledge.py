@@ -39,6 +39,7 @@ from lfx.base.knowledge_bases.ingestion_sources.base import (
 from lfx.base.knowledge_bases.ingestion_sources.flow_component import FlowComponentSource
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.files_and_knowledge._kb_paths import (
     get_knowledge_bases_root_path as _get_knowledge_bases_root_path,
 )
@@ -1030,6 +1031,7 @@ class KnowledgeComponent(Component):
             chroma = Chroma(
                 persist_directory=str(kb_path),
                 collection_name=self.knowledge_base,
+                **chroma_langchain_collection_kwargs(),
             )
 
             all_docs = chroma.get()

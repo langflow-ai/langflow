@@ -46,7 +46,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
             "max_iterations": 10,
             "system_prompt": "You are a helpful assistant.",
             "tools": [],
-            "verbose": True,
             "n_messages": 100,
             "format_instructions": "You are an AI that extracts structured JSON objects from unstructured text.",
             "output_schema": [],
@@ -462,6 +461,59 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
 
         assert "stream" in input_names, "stream input field should be present on the Agent component"
         assert hasattr(component, "stream"), "Component should have a stream attribute"
+
+    async def test_should_default_stream_input_value_to_true_when_agent_loaded(self, component_class, default_kwargs):
+        """Regression guard for PR #13358: the ``stream`` BoolInput default MUST be True.
+
+        If a future refactor flips the default back to False (as it was between PR #13155
+        and PR #13358), new flows created from the bare AgentComponent will save
+        ``stream=False`` and silently lose Playground live-typing. The fix in
+        ``_get_llm`` hard-codes stream=True regardless of the toggle, but the
+        UI-facing default must STILL be True so users don't see a misleading
+        OFF state in the inspector.
+        """
+        component = await self.component_setup(component_class, default_kwargs)
+
+        stream_input = next((inp for inp in component.inputs if getattr(inp, "name", None) == "stream"), None)
+        assert stream_input is not None, "stream BoolInput must exist on AgentComponent"
+        assert getattr(stream_input, "value", None) is True, (
+            "AgentComponent.inputs[stream].value must default to True. "
+            "Flipping this default reintroduces the regression that PR #13358 fixed."
+        )
+        assert getattr(stream_input, "advanced", False) is True, (
+            "stream toggle is hidden under Advanced so users don't accidentally disable it."
+        )
+
+    @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
+    @patch("lfx.components.models_and_agents.agent.get_llm")
+    async def test_should_force_stream_true_to_get_llm_even_when_toggle_is_false(
+        self, mock_get_llm, mock_get_memory_data, component_class, default_kwargs
+    ):
+        """Streaming is mandatory: even if a saved flow has ``stream=False``, the LLM must stream.
+
+        Belt-and-suspenders against the PR-#13155 regression: even if a future change
+        accidentally re-wires ``_get_llm`` to read ``self.stream`` (and the saved value
+        is False), the contract is that ``get_llm`` MUST receive ``stream=True`` so the
+        chat model is built with ``streaming=True``. Mirror of the lfx-side test
+        ``test_should_pass_stream_true_to_get_llm_when_self_stream_toggle_is_false``.
+        """
+        from unittest.mock import AsyncMock, MagicMock
+
+        mock_get_memory_data.return_value = AsyncMock(return_value=[])
+        mock_get_llm.return_value = MagicMock()
+
+        default_kwargs["stream"] = False
+        component = await self.component_setup(component_class, default_kwargs)
+        component.model = [{"name": "gpt-4o", "provider": "OpenAI", "metadata": {}}]
+
+        await component.get_agent_requirements()
+
+        mock_get_llm.assert_called_once()
+        call_kwargs = mock_get_llm.call_args.kwargs
+        assert call_kwargs.get("stream") is True, (
+            "Agent must call get_llm with stream=True regardless of the BoolInput value. "
+            f"Got stream={call_kwargs.get('stream')!r}. The Agent has no opt-out from streaming."
+        )
 
     @patch("lfx.components.models_and_agents.agent.AgentComponent.get_memory_data")
     @patch("lfx.components.models_and_agents.agent.get_llm")

@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 
 test(
@@ -15,7 +16,7 @@ test(
     });
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("prompt");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchPrompt);
 
     await page
       .getByTestId("models_and_agentsPrompt Template")

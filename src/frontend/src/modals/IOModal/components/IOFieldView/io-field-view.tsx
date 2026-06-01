@@ -23,7 +23,6 @@ import {
   hasDuplicateKeys,
 } from "../../../../utils/reactflowUtils";
 import CsvSelect from "./components/csv-selected";
-import IOFileInput from "./components/file-input";
 import IoJsonInput from "./components/json-input";
 import IOKeyPairInput from "./components/key-pair-input";
 
@@ -65,7 +64,8 @@ export default function IOFieldView({
         nodeId: node.id,
         name: "input_value",
       })
-    : { handleOnNewValue: (value: any, options?: any) => {} };
+    : // biome-ignore lint/suspicious/noExplicitAny: legacy
+      { handleOnNewValue: (value: any, options?: any) => {} };
 
   function handleOutputType() {
     if (!node) return <>{t("io.noNodeFound")}</>;
@@ -277,7 +277,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Empty"}
+                placeholder={t("common.empty")}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[

@@ -6,6 +6,7 @@ export const useCustomHandleBulkFilesDownload = () => {
   const { mutate: downloadFiles } = useGetDownloadFilesV2();
 
   const handleBulkDownload = async (
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     selectedFiles: any,
     setSuccessData: (data: { title: string }) => void,
     setErrorData: (data: { title: string; list: string[] }) => void,
@@ -24,9 +25,7 @@ export const useCustomHandleBulkFilesDownload = () => {
         onError: (error) => {
           setErrorData({
             title: t("errors.errorDownloadingFiles"),
-            list: [
-              error.message || "An error occurred while downloading the files",
-            ],
+            list: [error.message || t("errors.downloadFilesDefault")],
           });
           setIsDownloading(false);
         },

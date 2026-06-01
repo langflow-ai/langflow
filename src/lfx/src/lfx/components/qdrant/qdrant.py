@@ -1,8 +1,8 @@
 import json
 import uuid
 
-from langchain_community.vectorstores import Qdrant
 from langchain_core.embeddings import Embeddings
+from langchain_qdrant import QdrantVectorStore
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -52,7 +52,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> Qdrant:
+    def build_vector_store(self) -> QdrantVectorStore:
         qdrant_kwargs = {
             "collection_name": self.collection_name,
             "content_payload_key": self.content_payload_key,
@@ -97,19 +97,19 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 )
                 for doc in documents
             ]
-            qdrant = Qdrant.from_documents(
+            qdrant = QdrantVectorStore.from_documents(
                 documents, embedding=self.embedding, ids=ids, **qdrant_kwargs, **server_kwargs
             )
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
+            qdrant = QdrantVectorStore(embedding=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
     def search_documents(self) -> list[Data]:
-        vector_store = self.build_vector_store()
+        vector_store: QdrantVectorStore = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(
