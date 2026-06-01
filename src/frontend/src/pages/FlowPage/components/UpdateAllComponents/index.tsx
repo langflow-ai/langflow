@@ -2,6 +2,7 @@ import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep } from "lodash";
 import { AnimatePresence, motion } from "framer-motion";
 import { useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { processNodeAdvancedFields } from "@/CustomNodes/helpers/process-node-advanced-fields";
 import useUpdateAllNodes, {
   type UpdateNodesType,
@@ -20,14 +21,6 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import type { NodeDataType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 
-const ERROR_MESSAGE_UPDATING_COMPONENTS = "Error updating components";
-const ERROR_MESSAGE_UPDATING_COMPONENTS_LIST = [
-  "There was an error updating the components.",
-  "If the error persists, please report it on our Discord or GitHub.",
-];
-const ERROR_MESSAGE_EDGES_LOST =
-  "Some edges were lost after updating the components. Please review the flow and reconnect them.";
-
 const CONTAINER_VARIANTS = {
   hidden: { opacity: 0, y: 20 },
   visible: { opacity: 1, y: 0 },
@@ -35,6 +28,7 @@ const CONTAINER_VARIANTS = {
 };
 
 export default function UpdateAllComponents() {
+  const { t } = useTranslation();
   const { componentsToUpdate, nodes, edges, setNodes } = useFlowStore();
   const templates = useTypesStore((state) => state.templates);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -103,7 +97,7 @@ export default function UpdateAllComponents() {
       edgesUpdateRef.current.updateComponent
     ) {
       useAlertStore.getState().setNoticeData({
-        title: ERROR_MESSAGE_EDGES_LOST,
+        title: t("errors.edgesLost"),
       });
 
       resetEdgesUpdateRef();
@@ -112,9 +106,7 @@ export default function UpdateAllComponents() {
 
   const getSuccessTitle = (updatedCount: number) => {
     resetEdgesUpdateRef();
-    return `Successfully updated ${updatedCount} component${
-      updatedCount > 1 ? "s" : ""
-    }`;
+    return t("updateComponents.successCount", { count: updatedCount });
   };
 
   const breakingChanges = updatableComponents.filter(
@@ -208,8 +200,11 @@ export default function UpdateAllComponents() {
       })
       .catch((error) => {
         setErrorData({
-          title: ERROR_MESSAGE_UPDATING_COMPONENTS,
-          list: ERROR_MESSAGE_UPDATING_COMPONENTS_LIST,
+          title: t("errors.updateComponents"),
+          list: [
+            t("errors.updateComponentsList"),
+            t("errors.updateComponentsContact"),
+          ],
         });
         console.error(error);
       })
@@ -263,17 +258,6 @@ export default function UpdateAllComponents() {
     buildInfo?.success;
 
   const showDismissedWarning = !allowCustomComponents && allDismissed;
-  const summaryMessage = showDismissedWarning
-    ? blockedComponents.length > 0
-      ? "Custom components are disabled"
-      : "Upgrade is required to execute flow"
-    : !allowCustomComponents
-      ? blockedComponents.length > 0 && updatableComponents.length > 0
-        ? `${blockedComponents.length} custom component${blockedComponents.length > 1 ? "s cannot" : " cannot"} run and ${updatableComponents.length} component${updatableComponents.length > 1 ? "s must" : " must"} be updated before this flow can run`
-        : blockedComponents.length > 0
-          ? `${blockedComponents.length} custom component${blockedComponents.length > 1 ? "s cannot" : " cannot"} run while custom components are disabled`
-          : `${updatableComponents.length} component${updatableComponents.length > 1 ? "s must" : " must"} be updated before this flow can run`
-      : `Update${updatableComponents.length > 1 ? "s are" : " is"} available for ${updatableComponents.length} component${updatableComponents.length > 1 ? "s" : ""}`;
 
   return (
     <AnimatePresence mode="wait">
@@ -286,7 +270,7 @@ export default function UpdateAllComponents() {
             variants={CONTAINER_VARIANTS}
             transition={{ duration: 0.2, ease: "easeOut" }}
             className={cn(
-              "flex items-center justify-between gap-8 rounded-lg border bg-background px-4 py-2 text-sm font-medium shadow-md",
+              "flex items-start justify-between gap-6 rounded-lg border bg-background px-4 py-3 text-sm shadow-md",
               (showDismissedWarning ||
                 !allowCustomComponents ||
                 updatableComponents.some(
@@ -295,18 +279,44 @@ export default function UpdateAllComponents() {
                 "border-accent-amber-foreground",
             )}
           >
-            <div className="flex items-center gap-3">
-              <span>{summaryMessage}</span>
+            <div className="flex flex-col gap-1">
+              <span className="font-semibold">
+                {showDismissedWarning
+                  ? blockedComponents.length > 0
+                    ? t("updateComponents.customComponentsDisabled")
+                    : t("updateComponents.upgradeRequired")
+                  : t("updateComponents.flowNeedsReview")}
+              </span>
+              {!showDismissedWarning && (
+                <div className="flex flex-col font-normal text-muted-foreground">
+                  {blockedComponents.length > 0 && (
+                    <span>
+                      {t("updateComponents.blockedCannotRun", {
+                        count: blockedComponents.length,
+                      })}
+                    </span>
+                  )}
+                  {updatableComponents.length > 0 && (
+                    <span>
+                      {t("updateComponents.updatableCount", {
+                        count: updatableComponents.length,
+                      })}
+                    </span>
+                  )}
+                </div>
+              )}
             </div>
-            <div className="flex items-center gap-4">
+            <div className="flex shrink-0 items-center gap-3">
               {!allDismissed && (
                 <Button
-                  variant="link"
-                  size="icon"
-                  className="shrink-0 text-sm"
+                  variant="outline"
+                  size="sm"
+                  className="shrink-0"
                   onClick={handleDismissAllComponents}
                 >
-                  Dismiss {componentsToUpdateFiltered.length > 1 ? "All" : ""}
+                  {componentsToUpdateFiltered.length > 1
+                    ? t("updateComponents.dismissAll")
+                    : t("updateComponents.dismiss")}
                 </Button>
               )}
               {updatableComponents.length > 0 && (
@@ -317,7 +327,9 @@ export default function UpdateAllComponents() {
                   loading={loadingUpdate}
                   data-testid="update-all-button"
                 >
-                  {breakingChanges.length > 0 ? "Review All" : "Update All"}
+                  {breakingChanges.length > 0
+                    ? t("updateComponents.reviewAll")
+                    : t("updateComponents.updateAll")}
                 </Button>
               )}
             </div>

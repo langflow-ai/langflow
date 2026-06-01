@@ -65,9 +65,9 @@ jobs:
           done
           echo "bundles-found=1" >> $GITHUB_OUTPUT
           ls -la bundles-dist/
-      # Bundles pin lfx (e.g. lfx>=0.5.0,<0.6.0). The smoke test below
+      # Bundles floor lfx at >=0.5.0 (no upper bound). The smoke test below
       # installs the bundles in a fresh venv, so it needs an lfx wheel that
-      # satisfies the pin available locally — PyPI may not yet have a
+      # satisfies the floor available locally — PyPI may not yet have a
       # matching lfx published when bundles are released ahead of a main
       # release. We build the lfx wheel from the current ref so the smoke
       # test resolves against it; this artifact is not published.

@@ -173,6 +173,131 @@ describe("useExtensionEvents", () => {
     });
   });
 
+  it("should surface payload.warnings on bundle_reloaded (parity with click path)", async () => {
+    // Regression guard: previously the hook ignored payload.warnings, so a
+    // tab that picked up a warning-bearing reload via the 30s mount-lookback
+    // saw only the green success toast while the clicking tab saw green +
+    // blue. The hook must mirror bundleHeaderActions.onSuccess and emit
+    // both setSuccessData (with the diagnostics inline) and setNoticeData.
+    await mountHook();
+
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          {
+            type: "bundle_reloaded",
+            timestamp: Date.now() / 1000,
+            payload: {
+              bundle: "a",
+              components_added: [],
+              components_removed: [],
+              components_changed: [],
+              warnings: [
+                {
+                  code: "reload-post-swap-hook-failed",
+                  message: "Component cache rebuild raised",
+                  hint: "Restart the worker if the palette looks stale",
+                  location: null,
+                  content: null,
+                  ref_url: null,
+                },
+              ],
+            },
+          },
+        ],
+        settled: false,
+      },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    const successCall = setSuccessDataMock.mock.calls[0]?.[0];
+    expect(successCall.title).toContain("Reloaded a");
+    // Diagnostics must be inlined on the success toast so a user who only
+    // glances at the green toast still sees the warning.
+    expect(successCall.list).toEqual(
+      expect.arrayContaining([
+        "[reload-post-swap-hook-failed] Component cache rebuild raised",
+        "  Restart the worker if the palette looks stale",
+      ]),
+    );
+
+    // And the separate blue notice must fire so the warning lands in the
+    // notification center -- the click path emits both, and the polled
+    // path now matches.
+    expect(setNoticeDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: "Reloaded a with warnings",
+        list: expect.arrayContaining([
+          "[reload-post-swap-hook-failed] Component cache rebuild raised",
+        ]),
+      }),
+    );
+  });
+
+  it("should NOT emit a warnings notice when payload.warnings is empty or missing", async () => {
+    // Negative case: a clean reload (no warnings) must not produce a blue
+    // notice -- otherwise the user gets a spurious second toast on every
+    // successful reload picked up via polling.
+    await mountHook();
+
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          {
+            type: "bundle_reloaded",
+            timestamp: Date.now() / 1000,
+            payload: { bundle: "a", warnings: [] },
+          },
+        ],
+        settled: false,
+      },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    const successCall = setSuccessDataMock.mock.calls[0]?.[0];
+    expect(successCall.title).toContain("Reloaded a");
+    expect(successCall.list).toBeUndefined();
+    expect(setNoticeDataMock).not.toHaveBeenCalled();
+  });
+
+  it("should tolerate malformed payload.warnings without crashing", async () => {
+    // Defensive: an older server (or a payload that drifted from the typed
+    // shape) must not be able to break the toast pipeline for every other
+    // event in the batch.
+    await mountHook();
+
+    apiGetMock.mockResolvedValueOnce({
+      data: {
+        events: [
+          {
+            type: "bundle_reloaded",
+            timestamp: Date.now() / 1000,
+            payload: {
+              bundle: "a",
+              warnings: ["not-an-object", { code: 42 }, null],
+            },
+          },
+        ],
+        settled: false,
+      },
+    });
+
+    await act(async () => {
+      jest.advanceTimersByTime(5000);
+    });
+
+    expect(setSuccessDataMock).toHaveBeenCalled();
+    // None of the malformed entries pass the {code: string, message: string}
+    // gate, so no notice fires.
+    expect(setNoticeDataMock).not.toHaveBeenCalled();
+  });
+
   it("should clear typesStore on bundle_reloaded (match UI Reload onSuccess)", async () => {
     await mountHook();
 

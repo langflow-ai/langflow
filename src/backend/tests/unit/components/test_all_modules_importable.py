@@ -49,10 +49,11 @@ class TestAllModulesImportable:
         # Components whose underlying packages are gated to python_version<'3.14'
         # in pyproject.toml because upstream pins exclude 3.14. These are expected
         # to fail import on 3.14 until the upstreams adapt.
+        # NOTE: ibm.* moved to the lfx-ibm bundle (src/bundles/ibm) and is no
+        # longer iterated through ``langflow.components``; the watsonx
+        # 3.14-gating moved with them.
         gated_on_py314 = {
             "altk.ALTKAgentComponent",
-            "ibm.WatsonxAIComponent",
-            "ibm.WatsonxEmbeddingsComponent",
         }
         on_py314 = sys.version_info >= (3, 14)
 

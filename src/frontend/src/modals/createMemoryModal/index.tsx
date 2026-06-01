@@ -59,13 +59,15 @@ export default function CreateMemoryModal({
       size="x-small"
       onSubmit={handleSubmit}
     >
-      <BaseModal.Header description={`Create a memory for "${flowName}"`}>
+      <BaseModal.Header
+        description={t("memory.createModalDescription", { flowName })}
+      >
         <ForwardedIconComponent
           name="BrainCog"
           className="h-6 w-6 pr-1 text-primary"
           aria-hidden="true"
         />
-        Create Memory
+        {t("memory.createModalTitle")}
       </BaseModal.Header>
       <BaseModal.Content className="-mr-6 pr-3 [&::-webkit-scrollbar]:w-1 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border hover:[&::-webkit-scrollbar-thumb]:bg-muted-foreground">
         <div className="flex h-full w-full flex-col gap-4 pr-3">
@@ -103,7 +105,9 @@ export default function CreateMemoryModal({
             </div>
             {selectedEmbeddingModel[0]?.provider && (
               <div className="text-xs text-muted-foreground">
-                Provider: {selectedEmbeddingModel[0].provider}
+                {t("memory.providerValue", {
+                  provider: selectedEmbeddingModel[0].provider,
+                })}
               </div>
             )}
           </div>
@@ -114,14 +118,11 @@ export default function CreateMemoryModal({
                 {t("memory.batchSize")}{" "}
                 <span className="text-destructive">*</span>
               </Label>
-              <ShadTooltip
-                content="Number of messages to accumulate before syncing to memory. Use 1 to sync after every message, or a higher value to reduce ingestion frequency and group related context together."
-                side="right"
-              >
+              <ShadTooltip content={t("memory.batchSizeTooltip")} side="right">
                 <button
                   type="button"
                   tabIndex={0}
-                  aria-label="Batch size help"
+                  aria-label={t("memory.batchSizeHelp")}
                   className="cursor-help rounded focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
                 >
                   <ForwardedIconComponent
@@ -151,10 +152,10 @@ export default function CreateMemoryModal({
           <div className="flex items-center justify-between rounded-lg border border-border p-3">
             <div className="space-y-0.5">
               <Label className="text-sm" htmlFor="llm-preprocessing-switch">
-                LLM Preprocessing
+                {t("memory.llmPreprocessingLabel")}
               </Label>
               <div className="text-xs text-muted-foreground">
-                Summarize messages with an LLM before ingestion
+                {t("memory.llmPreprocessingDescription")}
               </div>
             </div>
             <Switch
@@ -198,7 +199,23 @@ export default function CreateMemoryModal({
                     <span className="text-destructive">*</span>
                   </Label>
                   <ShadTooltip
-                    content={t("memory.preprocessingInstructionsHint")}
+                    content={
+                      <span>
+                        {t("memory.preprocessingInstructionsHint")}{" "}
+                        <a
+                          href="https://docs.langflow.org/memory-bases#preprocessing-prompt-examples"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-0.5 text-tooltip-foreground underline opacity-80 hover:opacity-100"
+                        >
+                          {t("memory.seePromptExamples")}
+                          <ForwardedIconComponent
+                            name="ExternalLink"
+                            className="h-3 w-3"
+                          />
+                        </a>
+                      </span>
+                    }
                     side="right"
                   >
                     <button
@@ -227,7 +244,7 @@ export default function CreateMemoryModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Create Memory",
+          label: t("memory.createModalTitle"),
           icon: <ForwardedIconComponent name="Plus" className="h-4 w-4" />,
           loading: createMemoryMutation.isPending,
           disabled:

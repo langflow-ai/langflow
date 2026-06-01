@@ -232,7 +232,7 @@ const JsonEditor = ({
       } else {
         setErrorData({
           title: t("jsonEditor.invalidResult"),
-          list: ["Transform resulted in undefined value"],
+          list: [t("errors.transformUndefined")],
         });
       }
     } catch (error) {

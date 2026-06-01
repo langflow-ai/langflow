@@ -21,6 +21,7 @@ import { useHotkeys } from "react-hotkeys-hook";
 import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
   COLOR_OPTIONS,
@@ -39,6 +40,8 @@ import { useFlowEvents } from "@/hooks/flows/use-flow-events";
 import useUploadFlow from "@/hooks/flows/use-upload-flow";
 import { useAddComponent } from "@/hooks/use-add-component";
 import InspectionPanel from "@/pages/FlowPage/components/InspectionPanel";
+import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { nodeColorsName } from "@/utils/styleUtils";
 import { isSupportedNodeTypes } from "@/utils/utils";
 import ExportModal from "../../../../modals/exportModal";
@@ -115,6 +118,7 @@ export default function Page({
 
   const previewLabel = useVersionPreviewStore((s) => s.previewLabel);
   const isPreviewActive = previewLabel !== null;
+  const isWelcomeOpen = useFlowBuilderWelcomeStore((state) => state.isOpen);
   const onNodesChange = useFlowStore((state) => state.onNodesChange);
   const onEdgesChange = useFlowStore((state) => state.onEdgesChange);
   const setNodes = useFlowStore((state) => state.setNodes);
@@ -153,7 +157,10 @@ export default function Page({
   const { isAgentWorking, events, lastSettledAt, clearEvents } = useFlowEvents(
     currentFlowId || undefined,
   );
-  const effectiveLocked = isLocked || isAgentWorking;
+  const isAssistantProcessing = useAssistantManagerStore(
+    (state) => state.isAssistantProcessing,
+  );
+  const effectiveLocked = isLocked || isAgentWorking || isAssistantProcessing;
 
   // Keep banner mounted during exit animation, preserve last text
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -929,7 +936,7 @@ export default function Page({
       {showCanvas ? (
         <>
           <div id="react-flow-id" className="h-full w-full bg-canvas relative">
-            {!view && (
+            {!view && !isWelcomeOpen && (
               <>
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
@@ -944,7 +951,7 @@ export default function Page({
                 )}
               </>
             )}
-            <MemoizedSidebarTrigger />
+            {!isWelcomeOpen && <MemoizedSidebarTrigger />}
             <SelectionMenu
               lastSelection={lastSelection}
               isVisible={selectionMenuVisible}
@@ -1037,6 +1044,11 @@ export default function Page({
               </div>
             )}
             {isPreviewActive && <VersionPreviewOverlay />}
+            {/* Welcome overlay surfaces on freshly-created empty flows —
+                its visibility is driven entirely by the
+                ``flowBuilderWelcomeStore`` which is primed by the
+                "New Flow" button on the home page. */}
+            <FlowBuilderWelcomeMount />
           </div>
           <div
             id="shadow-box"
@@ -1055,7 +1067,7 @@ export default function Page({
         </>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <CustomLoader remSize={30} />
+          <CustomLoader remSize={20} />
         </div>
       )}
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />

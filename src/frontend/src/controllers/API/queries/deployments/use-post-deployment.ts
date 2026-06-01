@@ -17,7 +17,7 @@ export interface DeploymentConnectionPayload {
 export interface DeploymentCreateFlowItem {
   flow_version_id: string;
   app_ids: string[];
-  tool_name?: string;
+  tool_display_name?: string;
 }
 
 export interface DeploymentCreateUpsertToolItem {
@@ -26,6 +26,7 @@ export interface DeploymentCreateUpsertToolItem {
 }
 
 export interface DeploymentCreateProviderData {
+  display_name: string;
   llm: string;
   connections: DeploymentConnectionPayload[];
   add_flows: DeploymentCreateFlowItem[];
@@ -36,7 +37,6 @@ export interface DeploymentCreateProviderData {
 export interface DeploymentCreateRequest {
   provider_id: string;
   project_id?: string;
-  name: string;
   description: string;
   type: string;
   provider_data: DeploymentCreateProviderData;
