@@ -107,6 +107,8 @@ export const lazyIconsMapping = {
   Azure: () =>
     import("@/icons/Azure").then((mod) => ({ default: mod.AzureIcon })),
   Bing: () => import("@/icons/Bing").then((mod) => ({ default: mod.BingIcon })),
+  Bocha: () =>
+    import("@/icons/Bocha").then((mod) => ({ default: mod.BochaIcon })),
   Bolna: () =>
     import("@/icons/Bolna").then((mod) => ({ default: mod.BolnaIcon })),
   BotMessageSquareIcon: () =>
