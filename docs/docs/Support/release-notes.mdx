@@ -69,6 +69,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Redis-backed job queue for multi-worker deployments
+
+    Langflow now supports a Redis-backed job queue that allows flow build events to be shared across multiple Gunicorn/Uvicorn workers and across multiple replicas behind a load balancer.
+
+    Single-process deployments are unaffected. The default `asyncio` in-memory queue is unchanged.
+
+    For setup instructions and configuration details, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
 - Memory bases
 
     Memory bases are per-flow vector stores that automatically ingest conversation messages.

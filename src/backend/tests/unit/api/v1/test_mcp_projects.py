@@ -18,6 +18,7 @@ from langflow.api.v1.mcp_projects import (
     project_mcp_servers,
     project_sse_transports,
 )
+from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
@@ -27,6 +28,7 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.services.deps import session_scope
 from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
+from lfx.services.settings.base import Settings
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -889,6 +891,97 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     return config_path
 
 
+async def test_is_mcp_servers_locked_does_not_fire_for_magicmock_settings():
+    settings = MagicMock()
+    # Simulate test fixtures where unknown attrs return truthy MagicMock placeholders.
+    assert is_mcp_servers_locked(settings) is False
+
+
+async def test_is_mcp_servers_locked_respects_explicit_true_flag():
+    settings = SimpleNamespace(mcp_servers_locked=True)
+    assert is_mcp_servers_locked(settings) is True
+
+
+async def test_settings_model_declares_mcp_servers_locked_field(monkeypatch):
+    """Regression guard: mcp lock must be configurable via Settings/env vars."""
+    assert "mcp_servers_locked" in Settings.model_fields
+    monkeypatch.setenv("LANGFLOW_MCP_SERVERS_LOCKED", "true")
+    assert Settings().mcp_servers_locked is True
+
+
+async def test_v2_mcp_servers_locked_blocks_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    server_name = f"lf-lock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
+    client: AsyncClient,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    username = f"super_lock_{uuid4().hex[:8]}"
+    login_password = f"lfx-{uuid4().hex[:12]}"
+    async with session_scope() as session:
+        super_user = User(
+            username=username,
+            password=get_password_hash(login_password),
+            is_active=True,
+            is_superuser=True,
+        )
+        session.add(super_user)
+
+    login_response = await client.post("api/v1/login", data={"username": username, "password": login_password})
+    assert login_response.status_code == status.HTTP_200_OK
+    access_token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    server_name = f"lf-lock-super-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(
+        f"/api/v2/mcp/servers/{server_name}",
+        json=server_config,
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
 async def test_install_mcp_config_defaults_to_sse_transport(
     client: AsyncClient,
     user_test_project,
@@ -1550,6 +1643,7 @@ async def test_should_report_available_true_when_config_file_has_corrupt_json(
 
     for entry in results:
         assert entry["available"] is True, f"{entry['name']} should be available (directory exists)"
+        assert entry["installed"] is False, f"{entry['name']} should not be installed (JSON is corrupt)"
 
 
 async def test_handle_list_tools_filters_by_user_id_for_defense_in_depth(
@@ -1661,3 +1755,32 @@ async def test_handle_list_tools_filters_by_user_id_for_defense_in_depth(
             if other_user_flow:
                 await session.delete(other_user_flow)
             await session.commit()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_v2_mcp_servers_unlocked_allows_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """When is_mcp_servers_locked returns False the gate must not block normal users."""
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: False)
+
+    server_name = f"lf-unlock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK

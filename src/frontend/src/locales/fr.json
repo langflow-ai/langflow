@@ -1059,6 +1059,8 @@
   "mcp.modal.descriptionFlow": "Ajouter et enregistrer des serveurs MCP. Gérer les serveurs dans",
   "mcp.modal.descriptionFlowLink": "paramètres",
   "mcp.modal.descriptionSettings": "Ajoutez et enregistrez des serveurs MCP pour les utiliser dans tous vos flux.",
+  "mcp.modal.lockedTitle": "La gestion des serveurs MCP est verrouillée",
+  "mcp.modal.lockedDescription": "Contactez un administrateur pour gérer les serveurs MCP externes.",
   "mcp.modal.errorDuplicateEnvKeys": "Des clés en double ont été détectées dans les variables d'environnement.",
   "mcp.modal.errorDuplicateHeaders": "Des clés en double ont été détectées dans les en-têtes.",
   "mcp.modal.errorFailedAdd": "Échec de l'ajout du serveur MCP.",
