@@ -658,34 +658,6 @@ class TestKnowledgeBaseAPI:
         )
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
-    async def test_list_knowledge_bases_no_disk_fallback_when_authz_hides_all_rows(
-        self, mock_root, client: AsyncClient, logged_in_headers, tmp_path
-    ):
-        """Regression: when authz filtering removes every DB row, the disk fallback must NOT fire.
-
-        The fallback is gated on the *raw* DB result, not the filtered one, so a
-        KB an authorization plugin hid is never re-surfaced from disk.
-        """
-        mock_root.return_value = tmp_path
-        # A KB exists on disk; the buggy fallback would surface it.
-        kb_user_path = tmp_path / "activeuser"
-        kb_user_path.mkdir(parents=True, exist_ok=True)
-        disk_kb = kb_user_path / "Hidden_KB"
-        disk_kb.mkdir(exist_ok=True)
-        (disk_kb / "embedding_metadata.json").write_text(json.dumps({"id": str(uuid.uuid4()), "size": 1}))
-
-        # The user HAS a DB row, but authz filtering removes it (simulating a plugin).
-        with (
-            patch.object(knowledge_base_service, "list_by_user", new=AsyncMock(return_value=[MagicMock()])),
-            patch("langflow.api.v1.knowledge_bases.filter_visible_resources", new=AsyncMock(return_value=[])),
-        ):
-            response = await client.get("api/v1/knowledge_bases", headers=logged_in_headers)
-
-        assert response.status_code == 200
-        # original_rows was non-empty, so no disk re-scan: the hidden KB is absent.
-        assert all(kb.get("name") != "Hidden KB" for kb in response.json())
-
-    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_get_knowledge_base_detail(self, mock_root, client: AsyncClient, logged_in_headers, tmp_path):
         mock_root.return_value = tmp_path
         kb_path = tmp_path / "activeuser" / "Detail_KB"

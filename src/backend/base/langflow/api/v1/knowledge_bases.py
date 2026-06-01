@@ -49,7 +49,6 @@ from langflow.schema.knowledge_base import (
 from langflow.services.authorization import (
     KnowledgeBaseAction,
     ensure_knowledge_base_permission,
-    filter_visible_resources,
 )
 from langflow.services.database.models.jobs.model import JobStatus, JobType
 from langflow.services.database.models.knowledge_base.model import KnowledgeBaseRecord
@@ -1327,18 +1326,7 @@ async def list_knowledge_bases(
         knowledge_bases: list[KnowledgeBaseInfo] = []
         kb_ids_to_fetch: list[uuid.UUID] = []
 
-        original_rows = await knowledge_base_service.list_by_user(current_user.id)
-        # List-level authz: narrow to the KB rows the user may read once an
-        # authorization plugin is active. No-op in OSS (AUTHZ disabled) and
-        # owner rows are always visible; this wires the per-row hook the
-        # plugin uses, matching the flows/deployments/projects list convention.
-        rows = await filter_visible_resources(
-            current_user,
-            resource_type="knowledge_base",
-            candidates=list(original_rows),
-            owner_extractor=lambda row: row.user_id,
-            act=KnowledgeBaseAction.READ,
-        )
+        rows = await knowledge_base_service.list_by_user(current_user.id)
 
         if rows:
             for row in rows:
@@ -1356,11 +1344,9 @@ async def list_knowledge_bases(
                         size=row.size_bytes,
                     )
                 )
-        elif not original_rows and kb_path.exists():
-            # Recovery-only fallback for legacy/exported KB directories that have
-            # not been reconciled into the DB yet. Gate on the *raw* DB result so
-            # authorization-filtered rows never trigger a disk re-scan that would
-            # re-surface a KB the plugin just hid.
+        elif kb_path.exists():
+            # Recovery-only fallback for legacy/exported KB directories
+            # that have not been reconciled into the DB yet.
             for kb_dir in kb_path.iterdir():
                 if not kb_dir.is_dir() or kb_dir.name.startswith("."):
                     continue
