@@ -535,6 +535,46 @@ async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
 # =============================================================================
 
 
+class TestMessageBaseFromMessageAgentInit:
+    """Regression: in-flight agent Message must survive the no_content check.
+
+    The agent now initializes with flat ``content_blocks=[]`` (the wrapping
+    ``ContentBlock('Agent Steps', ...)`` is gone) and uses ``text=""`` as
+    the "intentionally created, content will arrive" sentinel. If either
+    side regresses, the build dies with "The message does not have the
+    required fields (text, sender, sender_name)." before any agent event
+    can populate the content_blocks list.
+    """
+
+    def test_from_message_accepts_in_flight_agent_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # Mirrors what AgentComponent / LCToolsAgentComponent / altk build.
+        message = Message(
+            text="",
+            sender="Machine",
+            sender_name="Agent",
+            content_blocks=[],
+            session_id="test-session",
+            properties={"icon": "Bot", "state": "partial"},
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.sender == "Machine"
+        assert result.sender_name == "Agent"
+        assert result.text == ""
+
+    def test_from_message_rejects_truly_empty_message(self):
+        from langflow.services.database.models.message.model import MessageTable
+
+        # No text, no text_stream, no content_blocks -- not intentional.
+        message = Message(sender="Machine", sender_name="Agent", content_blocks=[])
+
+        with pytest.raises(ValueError, match="required fields"):
+            MessageTable.from_message(message, flow_id=uuid4())
+
+
 class TestMessageBaseFromMessageFilePaths:
     """Tests for the file path handling in MessageBase.from_message."""
 

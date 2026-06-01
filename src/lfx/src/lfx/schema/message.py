@@ -153,6 +153,12 @@ class Message(Data):
         text last.
         """
         if isinstance(value, AsyncIterator | Iterator):
+            # Drop any existing TextContent (and the data["text"] mirror) so the
+            # getter doesn't return stale prior-round text while the stream sits
+            # unconsumed. Non-text blocks keep their position.
+            non_text = [b for b in self.content_blocks if not isinstance(b, TextContent)]
+            object.__setattr__(self, "content_blocks", non_text)
+            self.data[self.text_key] = ""
             object.__setattr__(self, "_text_stream", value)
             return
         # Clear any pending/exhausted stream
@@ -359,7 +365,7 @@ class Message(Data):
             sender = lc_message.type
             sender_name = lc_message.type
 
-        from lfx.schema.content_types import ImageContent
+        from lfx.schema.content_types import ImageContent, ToolContent
 
         blocks: list[Any] = []
         content = lc_message.content
@@ -390,6 +396,20 @@ class Message(Data):
                             blocks.append(ImageContent(base64=b64, mime_type=mime))
                         elif url:
                             blocks.append(ImageContent(urls=[url]))
+                    elif item_type == "tool_use":
+                        # Anthropic raw content carries tool calls inline as
+                        # ``{"type":"tool_use","id","name","input"}``. LangChain
+                        # leaves ``.tool_calls`` empty for raw-content messages,
+                        # so the tool_calls fallback below won't fire — capture
+                        # them here so chat-history round-trips don't drop the
+                        # call.
+                        blocks.append(
+                            ToolContent(
+                                name=item.get("name", ""),
+                                tool_input=item.get("input", {}),
+                                id=item.get("id"),
+                            )
+                        )
                     else:
                         logger.debug(f"from_lc_message: skipping unsupported content type '{item_type}'")
 
@@ -397,14 +417,18 @@ class Message(Data):
         # ``content``. Tool-calling agents typically emit ``content=""`` with
         # only ``tool_calls`` set, so this must run regardless of content shape.
         if hasattr(lc_message, "tool_calls") and lc_message.tool_calls:
-            from lfx.schema.content_types import ToolContent
-
+            # The content walk above may have already captured tool_use blocks
+            # (Anthropic raw content). Skip ids already present so a message
+            # carrying both inline tool_use and a populated ``.tool_calls``
+            # doesn't double the same logical call.
+            seen_tool_ids = {b.id for b in blocks if isinstance(b, ToolContent) and b.id}
             # ``tc["id"]`` is LangChain's stable ``tool_call_id``: same value
             # at start, during args streaming, and on the result, so the same
             # logical tool call dedups to one ``ToolContent`` across re-fires.
             blocks.extend(
                 ToolContent(name=tc.get("name", ""), tool_input=tc.get("args", {}), id=tc.get("id"))
                 for tc in lc_message.tool_calls
+                if tc.get("id") not in seen_tool_ids
             )
 
         if hasattr(lc_message, "usage_metadata") and lc_message.usage_metadata:

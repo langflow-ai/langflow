@@ -269,6 +269,28 @@ class TestTextSetter:
         # Non-text block stays at its original position
         assert isinstance(msg.content_blocks[0], ToolContent)
 
+    def test_set_text_to_iterator_drops_stale_text_content(self):
+        """Setting text to a stream drops existing TextContent.
+
+        Otherwise the getter (which reads content_blocks first) returns the
+        prior round's answer while the stream sits unconsumed. Non-text blocks
+        are preserved and the data mirror is cleared.
+        """
+
+        def gen():
+            yield "streamed"
+
+        tool_block = ToolContent(name="search", tool_input={"q": "x"})
+        msg = Message(content_blocks=[TextContent(text="old"), tool_block])
+        msg.text = gen()
+        # The stale prior text must not leak through the getter.
+        assert msg.text == ""
+        # Non-text blocks stay.
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        # The stream is stashed for later consumption.
+        assert msg.text_stream is not None
+
 
 class TestSerialization:
     """Tests for model_dump / model_validate round-trip behavior."""
@@ -489,6 +511,45 @@ class TestFromLcMessageToolCallId:
         tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
         assert [b.text for b in text_blocks] == ["I'll search for that."]
         assert [b.id for b in tool_blocks] == ["call_abc"]
+
+    def test_raw_tool_use_block_in_content_is_captured(self):
+        """Capture an inline Anthropic ``tool_use`` content block.
+
+        LangChain leaves ``.tool_calls`` empty for raw-content messages, so the
+        content walk must capture it or the call is dropped on round-trips.
+        """
+        lc_msg = AIMessage(
+            content=[
+                {"type": "text", "text": "Let me check"},
+                {"type": "tool_use", "id": "tu_1", "name": "search", "input": {"q": "x"}},
+            ],
+        )
+        # Raw-content AIMessages leave tool_calls empty — the fallback below
+        # the content walk won't fire, so the content walk must capture it.
+        assert lc_msg.tool_calls == []
+        msg = Message.from_lc_message(lc_msg)
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        assert tool_blocks[0].name == "search"
+        assert tool_blocks[0].id == "tu_1"
+        assert tool_blocks[0].tool_input == {"q": "x"}
+
+    def test_tool_use_in_content_and_tool_calls_not_doubled(self):
+        """Inline tool_use plus a matching ``.tool_calls`` entry yield one block.
+
+        The same logical call (same id) must not be doubled across the content
+        walk and the tool_calls fallback.
+        """
+        lc_msg = AIMessage(
+            content=[
+                {"type": "tool_use", "id": "tu_1", "name": "search", "input": {"q": "x"}},
+            ],
+            tool_calls=[{"name": "search", "args": {"q": "x"}, "id": "tu_1", "type": "tool_call"}],
+        )
+        msg = Message.from_lc_message(lc_msg)
+        tool_blocks = [b for b in msg.content_blocks if isinstance(b, ToolContent)]
+        assert len(tool_blocks) == 1
+        assert tool_blocks[0].id == "tu_1"
 
 
 class TestMessageResponseFromMessage:

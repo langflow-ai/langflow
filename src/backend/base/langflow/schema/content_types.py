@@ -15,6 +15,7 @@ separate "wrapper" shape; the wrapper *is* a ContentType.
 
 from __future__ import annotations
 
+import json
 from typing import Annotated, Any, Literal
 
 from fastapi.encoders import jsonable_encoder
@@ -164,6 +165,24 @@ class ToolContent(BaseContent):
     output: Any | None = None
     error: Any | None = None
     duration: int | None = None
+
+    @field_validator("tool_input", mode="before")
+    @classmethod
+    def _coerce_tool_input(cls, v: Any) -> dict[str, Any]:
+        # LangChain ``AgentAction.tool_input`` is ``str | dict`` during
+        # streaming, and ``event["data"].get("input") or {}`` passes a
+        # non-empty string straight through. The dict-typed field used to
+        # raise ValidationError on it. Parse JSON objects; wrap any other
+        # string under an ``input`` key so the field always validates.
+        if isinstance(v, str):
+            try:
+                parsed = json.loads(v)
+            except (ValueError, TypeError):
+                return {"input": v}
+            return parsed if isinstance(parsed, dict) else {"input": parsed}
+        if v is None:
+            return {}
+        return v
 
 
 class _MediaContentMixin:

@@ -4,7 +4,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 from langchain_core.agents import AgentFinish
-from langchain_core.messages import AIMessageChunk
+from langchain_core.messages import AIMessage, AIMessageChunk
 from lfx.base.agents.events import (
     _extract_output_text,
     handle_on_chain_end,
@@ -15,7 +15,6 @@ from lfx.base.agents.events import (
     handle_on_tool_start,
     process_agent_events,
 )
-from lfx.schema.content_block import ContentBlock
 from lfx.schema.content_types import ToolContent
 from lfx.schema.message import Message
 from lfx.utils.constants import MESSAGE_SENDER_AI
@@ -59,15 +58,17 @@ async def test_chain_start_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
 
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.icon == "Bot"
-    assert len(result.content_blocks) == 1
-    assert result.content_blocks[0].title == "Agent Steps"
+    # handle_on_chain_start is a no-op in the flat content_blocks design --
+    # the user's input is already rendered above the agent reply, so we no
+    # longer echo it as a synthetic "Input" TextContent.
+    assert result.content_blocks == []
 
 
 @pytest.mark.asyncio
@@ -85,7 +86,7 @@ async def test_chain_end_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
 
@@ -124,16 +125,15 @@ async def test_tool_start_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.icon == "Bot"
+    # Flat content_blocks: the ToolContent is the only entry, at index 0.
     assert len(result.content_blocks) == 1
-    assert result.content_blocks[0].title == "Agent Steps"
-    assert len(result.content_blocks[0].contents) > 0
-    tool_content = result.content_blocks[0].contents[-1]
+    tool_content = result.content_blocks[-1]
     assert isinstance(tool_content, ToolContent)
     assert tool_content.name == "test_tool"
     assert tool_content.tool_input == {"query": "tool input"}, tool_content
@@ -164,13 +164,13 @@ async def test_tool_end_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert len(result.content_blocks) == 1
-    tool_content = result.content_blocks[0].contents[-1]
+    tool_content = result.content_blocks[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.output == "tool output"
 
@@ -200,13 +200,13 @@ async def test_tool_error_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
 
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
-    tool_content = result.content_blocks[0].contents[-1]
+    tool_content = result.content_blocks[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.error == "error message"
     assert tool_content.header["title"] == "Error using **test_tool**"
@@ -222,7 +222,7 @@ async def test_chain_stream_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
@@ -263,14 +263,22 @@ async def test_multiple_events():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
 
     result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
 
     assert result.properties.state == "complete"
     assert result.properties.icon == "Bot"
+    # No on_chat_model_end in the stream, so the interleaved-text path
+    # doesn't fire; we get just the ToolContent that on_tool_start
+    # appended (via its fallback path) and that on_tool_end filled in.
+    # handle_on_chain_end stashes the final text in data["text"] but
+    # doesn't append a synthetic TextContent — Message.text's getter
+    # falls back to data["text"] when content_blocks has no TextContent.
     assert len(result.content_blocks) == 1
+    assert isinstance(result.content_blocks[0], ToolContent)
+    assert result.content_blocks[0].output == "tool output"
     assert result.text == "final output"
 
 
@@ -282,7 +290,7 @@ async def test_unknown_event():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],  # Initialize with empty content block
+        content_blocks=[],  # Initialize with empty content block
     )
 
     events = [{"event": "unknown_event", "data": {"some": "data"}, "start_time": 0}]
@@ -291,9 +299,8 @@ async def test_unknown_event():
 
     # Should complete without error and maintain default state
     assert result.properties.state == "complete"
-    # Content blocks should be empty but present
-    assert len(result.content_blocks) == 1
-    assert len(result.content_blocks[0].contents) == 0
+    # Unknown events should not touch content_blocks.
+    assert result.content_blocks == []
 
 
 # Additional tests for individual handler functions
@@ -307,15 +314,15 @@ async def test_handle_on_chain_start_with_input():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
     event = {"event": "on_chain_start", "data": {"input": {"input": "test input", "chat_history": []}}, "start_time": 0}
 
     updated_message, start_time = await handle_on_chain_start(event, agent_message, send_message, None, 0.0)
 
     assert updated_message.properties.icon == "Bot"
-    assert len(updated_message.content_blocks) == 1
-    assert updated_message.content_blocks[0].title == "Agent Steps"
+    # No-op handler: content_blocks stays untouched.
+    assert updated_message.content_blocks == []
     assert isinstance(start_time, float)
 
 
@@ -327,15 +334,15 @@ async def test_handle_on_chain_start_no_input():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
     event = {"event": "on_chain_start", "data": {}, "start_time": 0}
 
     updated_message, start_time = await handle_on_chain_start(event, agent_message, send_message, None, 0.0)
 
     assert updated_message.properties.icon == "Bot"
-    assert len(updated_message.content_blocks) == 1
-    assert len(updated_message.content_blocks[0].contents) == 0
+    # No-op handler: content_blocks stays untouched.
+    assert updated_message.content_blocks == []
     assert isinstance(start_time, float)
 
 
@@ -347,7 +354,7 @@ async def test_handle_on_chain_end_with_output():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
 
     output = AgentFinish(return_values={"output": "final output"}, log="test log")
@@ -369,7 +376,7 @@ async def test_handle_on_chain_end_no_output():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
     event = {"event": "on_chain_end", "data": {}, "start_time": 0}
 
@@ -389,7 +396,7 @@ async def test_handle_on_chain_end_empty_data():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
     event = {"event": "on_chain_end", "data": {"output": None}, "start_time": 0}
 
@@ -409,7 +416,7 @@ async def test_handle_on_chain_end_with_empty_return_values():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
 
     class MockOutputEmptyReturnValues:
@@ -435,7 +442,7 @@ async def test_handle_on_tool_start():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
     event = {
         "event": "on_tool_start",
@@ -448,9 +455,9 @@ async def test_handle_on_tool_start():
     updated_message, start_time = await handle_on_tool_start(event, agent_message, tool_blocks_map, send_message, 0.0)
 
     assert len(updated_message.content_blocks) == 1
-    assert len(updated_message.content_blocks[0].contents) > 0
+    assert len(updated_message.content_blocks) > 0
     tool_key = f"{event['name']}_{event['run_id']}"
-    tool_content = updated_message.content_blocks[0].contents[-1]
+    tool_content = updated_message.content_blocks[-1]
     assert tool_content == tool_blocks_map.get(tool_key)
     assert isinstance(tool_content, ToolContent)
     assert tool_content.name == "test_tool"
@@ -468,7 +475,7 @@ async def test_handle_on_tool_end():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
 
     start_event = {
@@ -490,7 +497,7 @@ async def test_handle_on_tool_end():
     updated_message, start_time = await handle_on_tool_end(end_event, agent_message, tool_blocks_map, send_message, 0.0)
 
     f"{end_event['name']}_{end_event['run_id']}"
-    tool_content = updated_message.content_blocks[0].contents[-1]
+    tool_content = updated_message.content_blocks[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.output == "tool output"
     assert isinstance(tool_content.duration, int)
@@ -506,7 +513,7 @@ async def test_handle_on_tool_error():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
 
     start_event = {
@@ -529,7 +536,7 @@ async def test_handle_on_tool_error():
         error_event, agent_message, tool_blocks_map, send_message, 0.0
     )
 
-    tool_content = updated_message.content_blocks[0].contents[-1]
+    tool_content = updated_message.content_blocks[-1]
     assert tool_content.name == "test_tool"
     assert tool_content.error == "error message"
     assert tool_content.header["title"] == "Error using **test_tool**"
@@ -545,7 +552,7 @@ async def test_handle_on_chain_stream_with_output():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
     )
     event = {
         "event": "on_chain_stream",
@@ -567,7 +574,7 @@ async def test_handle_on_chain_stream_no_output():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
     event = {
@@ -793,7 +800,7 @@ async def test_agent_streaming_no_text_accumulation():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
     # Add an ID to the message (normally set when persisted to DB)
@@ -863,7 +870,7 @@ async def test_agent_streaming_without_event_manager():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
 
@@ -909,7 +916,7 @@ async def test_agent_streaming_skips_empty_chunks():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
     # Add an ID to the message (normally set when persisted to DB)
@@ -973,7 +980,7 @@ async def test_agent_streaming_preserves_message_id():
         sender=MESSAGE_SENDER_AI,
         sender_name="Agent",
         properties={"icon": "Bot", "state": "partial"},
-        content_blocks=[ContentBlock(title="Agent Steps", contents=[])],
+        content_blocks=[],
         session_id="test_session_id",
     )
 
@@ -1002,3 +1009,331 @@ async def test_agent_streaming_preserves_message_id():
     assert token_events[1]["id"] == "test-persisted-id"
     assert result.properties.state == "complete"
     assert result.text == "Hello world"
+
+
+# ---------------------------------------------------------------------------
+# Flat-emission design tests
+#
+# These pin the chronological "stream of events" shape the new design calls
+# for: tool calls land flat in content_blocks in the order they fire, and
+# message.text triggers the setter to append a TextContent at the end. No
+# wrapping ContentBlock("Agent Steps", ...) is emitted.
+# ---------------------------------------------------------------------------
+
+
+@pytest.mark.asyncio
+async def test_no_wrapper_group_for_tool_then_text():
+    """Two tools fired in order, then a final text -- everything stays flat.
+
+    With the on_chat_model_end-driven interleaving, the final text
+    arrives through that handler (an AIMessage whose .content holds
+    just the text). on_chain_end stashes the same string in
+    data["text"] but doesn't append a TextContent — the model-end
+    handler is the source of truth for the text blocks.
+    """
+    send_message = create_mock_send_message()
+
+    final_ai_message = AIMessage(content=[{"type": "text", "text": "all done"}])
+    output = AgentFinish(return_values={"output": "all done"}, log="")
+
+    events = [
+        {
+            "event": "on_tool_start",
+            "name": "tool_a",
+            "run_id": "run-a",
+            "data": {"input": {"q": "1"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "tool_a",
+            "run_id": "run-a",
+            "data": {"output": "a result"},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_start",
+            "name": "tool_b",
+            "run_id": "run-b",
+            "data": {"input": {"q": "2"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "tool_b",
+            "run_id": "run-b",
+            "data": {"output": "b result"},
+            "start_time": 0,
+        },
+        {"event": "on_chat_model_end", "data": {"output": final_ai_message}, "start_time": 0},
+        {"event": "on_chain_end", "data": {"output": output}, "start_time": 0},
+    ]
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[],
+        session_id="s",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
+
+    # No wrapping group; tools appear flat in fire order; final text last.
+    types = [c.type for c in result.content_blocks]
+    assert types == ["tool_use", "tool_use", "text"], types
+    assert result.content_blocks[0].name == "tool_a"
+    assert result.content_blocks[0].output == "a result"
+    assert result.content_blocks[1].name == "tool_b"
+    assert result.content_blocks[1].output == "b result"
+    assert result.content_blocks[-1].text == "all done"
+
+
+@pytest.mark.asyncio
+async def test_tool_end_updates_matching_pending_tool_only():
+    """Two identical tool invocations: tool_end must update the right one."""
+    send_message = create_mock_send_message()
+
+    events = [
+        {
+            "event": "on_tool_start",
+            "name": "search",
+            "run_id": "run-1",
+            "data": {"input": {"q": "shared"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "search",
+            "run_id": "run-1",
+            "data": {"output": "first"},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_start",
+            "name": "search",
+            "run_id": "run-2",
+            "data": {"input": {"q": "shared"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "search",
+            "run_id": "run-2",
+            "data": {"output": "second"},
+            "start_time": 0,
+        },
+    ]
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[],
+        session_id="s",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
+
+    # Two distinct ToolContents, each with the right output -- the
+    # `output is None` filter in handle_on_tool_end prevents the second
+    # tool_end from clobbering the first tool's completed output.
+    assert len(result.content_blocks) == 2
+    assert [c.output for c in result.content_blocks] == ["first", "second"]
+
+
+@pytest.mark.asyncio
+async def test_chain_start_is_a_noop_for_content_blocks():
+    """Synthetic 'Input' TextContent is gone -- chain_start touches nothing."""
+    send_message = create_mock_send_message()
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[],
+        session_id="s",
+    )
+    events = [
+        {
+            "event": "on_chain_start",
+            "data": {"input": {"input": "hello there", "chat_history": []}},
+            "start_time": 0,
+        },
+    ]
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
+    assert result.content_blocks == []
+
+
+@pytest.mark.asyncio
+async def test_chain_end_does_not_append_text_block():
+    """chain_end stashes the final string in data["text"] but does NOT append a TextContent.
+
+    The on_chat_model_end handler is the source of truth for text
+    blocks -- it walks each AIMessage.content list and appends text +
+    tool_use in producer order so interleaved narration sits between
+    the tool calls instead of being collapsed to one block at the end.
+    chain_end appending its own TextContent would either duplicate the
+    final round's text (already added by chat_model_end) or clobber
+    the interleaved layout via the Message.text setter, which drops
+    every existing TextContent and writes one at the end.
+
+    Message.text still returns "answer" because the getter falls back
+    to data[text_key] when content_blocks holds no TextContent.
+    """
+    send_message = create_mock_send_message()
+
+    output = AgentFinish(return_values={"output": "answer"}, log="")
+    events = [{"event": "on_chain_end", "data": {"output": output}, "start_time": 0}]
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[],
+        session_id="s",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
+
+    assert result.content_blocks == []
+    assert result.text == "answer"
+
+
+@pytest.mark.asyncio
+async def test_chat_model_end_appends_interleaved_text_and_tool_blocks():
+    """on_chat_model_end walks AIMessage.content and appends each text and tool_use item in order.
+
+    Two model rounds:
+      Round 1: [text "I'll fetch the date", tool_use get_date]
+        -> on_chat_model_end appends both, in that order.
+        -> on_tool_start finds the existing ToolContent (by name +
+           output is None + not yet bound), overwrites its empty
+           tool_input with the real input, no fallback append.
+        -> on_tool_end fills .output.
+      Round 2: [text "Got it -- summary"]
+        -> on_chat_model_end appends one TextContent.
+        -> on_chain_end stashes the same string in data["text"] but
+           appends nothing.
+
+    Expected interleaved shape:
+      [text "I'll fetch the date", tool_use get_date(output set),
+       text "Got it -- summary"]
+    """
+    send_message = create_mock_send_message()
+
+    round1 = AIMessage(
+        content=[
+            {"type": "text", "text": "I'll fetch the date"},
+            # input_json_delta chunks haven't been merged yet at this
+            # point in the real stream; the tool_use snapshot has {}.
+            {"type": "tool_use", "name": "get_date", "input": {}, "id": "tu_1"},
+        ]
+    )
+    round2 = AIMessage(content=[{"type": "text", "text": "Got it -- summary"}])
+    final = AgentFinish(return_values={"output": "Got it -- summary"}, log="")
+
+    events = [
+        {"event": "on_chat_model_end", "data": {"output": round1}, "start_time": 0},
+        # Real input arrives now via on_tool_start; the dedupe should
+        # overwrite the empty {} on the existing ToolContent.
+        {
+            "event": "on_tool_start",
+            "name": "get_date",
+            "run_id": "run-1",
+            "data": {"input": {"tz": "UTC"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "get_date",
+            "run_id": "run-1",
+            "data": {"output": "2026-05-28 14:00 UTC"},
+            "start_time": 0,
+        },
+        {"event": "on_chat_model_end", "data": {"output": round2}, "start_time": 0},
+        {"event": "on_chain_end", "data": {"output": final}, "start_time": 0},
+    ]
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[],
+        session_id="s",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
+
+    types = [c.type for c in result.content_blocks]
+    assert types == ["text", "tool_use", "text"], types
+    assert result.content_blocks[0].text == "I'll fetch the date"
+    assert result.content_blocks[1].name == "get_date"
+    # tool_input was overwritten by on_tool_start with the real value.
+    assert result.content_blocks[1].tool_input == {"tz": "UTC"}
+    assert result.content_blocks[1].output == "2026-05-28 14:00 UTC"
+    assert result.content_blocks[2].text == "Got it -- summary"
+    # Message.text concatenates every TextContent.
+    assert result.text == "I'll fetch the dateGot it -- summary"
+
+
+@pytest.mark.asyncio
+async def test_chat_model_end_parallel_same_tool_keeps_order():
+    """Two parallel calls to the same tool: outputs land on the right block via order-based binding.
+
+    Each on_tool_start binds to the next unbound ToolContent in
+    declaration order, so even when inputs are identical the
+    name + output-is-None + not-yet-bound match keeps the bindings
+    distinct.
+    """
+    send_message = create_mock_send_message()
+
+    ai = AIMessage(
+        content=[
+            {"type": "tool_use", "name": "fetch", "input": {}, "id": "tu_a"},
+            {"type": "tool_use", "name": "fetch", "input": {}, "id": "tu_b"},
+        ]
+    )
+
+    events = [
+        {"event": "on_chat_model_end", "data": {"output": ai}, "start_time": 0},
+        {
+            "event": "on_tool_start",
+            "name": "fetch",
+            "run_id": "run-a",
+            "data": {"input": {"url": "a"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_start",
+            "name": "fetch",
+            "run_id": "run-b",
+            "data": {"input": {"url": "b"}},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "fetch",
+            "run_id": "run-a",
+            "data": {"output": "result a"},
+            "start_time": 0,
+        },
+        {
+            "event": "on_tool_end",
+            "name": "fetch",
+            "run_id": "run-b",
+            "data": {"output": "result b"},
+            "start_time": 0,
+        },
+    ]
+
+    agent_message = Message(
+        sender=MESSAGE_SENDER_AI,
+        sender_name="Agent",
+        properties={"icon": "Bot", "state": "partial"},
+        content_blocks=[],
+        session_id="s",
+    )
+    result = await process_agent_events(create_event_iterator(events), agent_message, send_message)
+
+    assert len(result.content_blocks) == 2
+    assert result.content_blocks[0].tool_input == {"url": "a"}
+    assert result.content_blocks[0].output == "result a"
+    assert result.content_blocks[1].tool_input == {"url": "b"}
+    assert result.content_blocks[1].output == "result b"

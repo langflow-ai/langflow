@@ -282,9 +282,11 @@ describe("ContentDisplay", () => {
       expect(container.querySelector(".max-h-96")).toBeNull();
     });
 
-    it("keeps the JSON block when output has extra fields beyond ToolMessage", () => {
-      // Don't unwrap if the producer added fields the user might need —
-      // could be tool-specific data the renderer shouldn't drop silently.
+    it("renders a tabbed view when output is an envelope with extra metadata", () => {
+      // Tool-specific data (anything beyond {content, name, id,
+      // tool_call_id, status}) gets surfaced under a Metadata tab so the
+      // user can inspect it without burying the readable content. The
+      // default-selected Content tab shows the inner `content` value.
       const tool = {
         type: "tool_use",
         name: "fetch_content",
@@ -294,9 +296,16 @@ describe("ContentDisplay", () => {
           custom_field: 42,
         },
       } as unknown as ContentBlockItem;
-      render(<ContentDisplay content={tool} chatId="t-t-no-unwrap" />);
-      // Falls through to the JSON code block (mocked as code-tabs).
-      expect(screen.getByTestId("code-tabs")).toBeInTheDocument();
+      render(<ContentDisplay content={tool} chatId="t-t-tabs" />);
+      const tabs = screen.getAllByRole("tab");
+      expect(tabs).toHaveLength(2);
+      expect(tabs[0]).toHaveTextContent("Result");
+      expect(tabs[1]).toHaveTextContent("Metadata");
+      // Result tab is the default selection.
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true");
+      expect(tabs[1]).toHaveAttribute("aria-selected", "false");
+      // Body of the Result tab renders the inner string, not a JSON dump.
+      expect(screen.getByText("the body")).toBeInTheDocument();
     });
 
     it("renders the error body in a destructive-toned panel", () => {
