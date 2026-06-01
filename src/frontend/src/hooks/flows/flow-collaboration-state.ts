@@ -8,22 +8,23 @@ export function applyPresenceSnapshot(
   _currentUsers: CollaborationPresenceUser[],
   users: CollaborationPresenceUser[],
 ): CollaborationPresenceUser[] {
-  return users.map((user) => ({ ...user }));
+  return users.map(({ selected: _selected, ...user }) => ({ ...user }));
 }
 
 export function applyPresenceJoined(
   currentUsers: CollaborationPresenceUser[],
   user: CollaborationPresenceUser,
 ): CollaborationPresenceUser[] {
+  const { selected: _selected, ...presenceUser } = user;
   const existingIndex = currentUsers.findIndex(
-    (entry) => entry.user_id === user.user_id,
+    (entry) => entry.user_id === presenceUser.user_id,
   );
   if (existingIndex === -1) {
-    return [...currentUsers, { ...user }];
+    return [...currentUsers, { ...presenceUser }];
   }
 
   const nextUsers = [...currentUsers];
-  nextUsers[existingIndex] = { ...user };
+  nextUsers[existingIndex] = { ...presenceUser };
   return nextUsers;
 }
 
@@ -34,14 +35,15 @@ export function applyPresenceLeft(
   return currentUsers.filter((user) => user.user_id !== userId);
 }
 
-export function applySelectionSnapshot(
-  _currentSelections: CollaborationUserSelection[],
-  selections: CollaborationUserSelection[],
+export function selectionsFromPresenceSnapshot(
+  users: CollaborationPresenceUser[],
 ): CollaborationUserSelection[] {
-  return selections.map((selection) => ({
-    user_id: selection.user_id,
-    selected: selection.selected ? { ...selection.selected } : null,
-  }));
+  return users
+    .filter((user) => user.selected != null)
+    .map((user) => ({
+      user_id: user.user_id,
+      selected: user.selected ? { ...user.selected } : null,
+    }));
 }
 
 export function applySelectionUpdated(

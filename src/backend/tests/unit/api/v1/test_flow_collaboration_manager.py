@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
@@ -10,6 +10,7 @@ from langflow.api.v1 import collaboration_manager as collaboration_manager_modul
 from langflow.api.v1.collaboration_manager import CollaborationManager
 from langflow.services.collaboration_events.schemas import (
     CollaborationEvent,
+    CollaborationPresenceChange,
     CollaborationPresenceConnectionUser,
     CollaborationPresenceSnapshot,
 )
@@ -166,7 +167,7 @@ async def test_handle_backplane_event_ignores_unknown_type(manager, flow_id, use
 
 
 @pytest.mark.asyncio
-async def test_presence_snapshot_and_selection_snapshot_messages(manager, user_a):
+async def test_presence_snapshot_includes_selection(manager, user_a):
     snapshot = _snapshot(
         CollaborationPresenceConnectionUser(
             user_id=user_a,
@@ -177,12 +178,36 @@ async def test_presence_snapshot_and_selection_snapshot_messages(manager, user_a
     )
 
     presence = manager.presence_snapshot_message(snapshot)
-    selection = manager.selection_snapshot_message(snapshot)
 
     assert presence["type"] == "presence.snapshot"
-    assert len(presence["users"]) == 1
-    assert selection["type"] == "selection.snapshot"
-    assert selection["selections"] == [{"user_id": str(user_a), "selected": {"kind": "node", "id": "node-1"}}]
+    assert presence["users"] == [
+        {
+            "user_id": str(user_a),
+            "username": "alice",
+            "profile_image": None,
+            "selected": {"kind": "node", "id": "node-1"},
+        }
+    ]
+
+
+@pytest.mark.asyncio
+async def test_emit_presence_change_broadcasts_and_publishes_left(manager, flow_id, user_a, user_b):
+    await _register(manager, flow_id, user_a, "alice")
+    peer_id = await _register(manager, flow_id, user_b, "bob")
+    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    event_service = Mock()
+
+    await manager.emit_presence_change(flow_id, CollaborationPresenceChange(left_user_id=user_a), event_service)
+
+    peer_ws.send_json.assert_called_once()
+    payload = peer_ws.send_json.call_args.args[0]
+    assert payload["type"] == "presence.left"
+    assert payload["user_id"] == str(user_a)
+    event_service.publish.assert_called_once_with(
+        flow_id,
+        "presence.left",
+        {"worker_id": collaboration_manager_module.WORKER_ID, "user_id": str(user_a)},
+    )
 
 
 @pytest.mark.asyncio

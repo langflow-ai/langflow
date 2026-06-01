@@ -23,14 +23,17 @@ from langflow.api.v1.schemas.flow_collaboration import (
     CollaborationPresenceLeftMessage,
     CollaborationPresenceSnapshotMessage,
     CollaborationPresenceUser,
-    CollaborationSelectionSnapshotMessage,
     CollaborationSelectionUpdatedBackplaneEvent,
     CollaborationSelectionUpdatedMessage,
-    CollaborationUserSelection,
     UnsupportedCollaborationBackplaneEventError,
     parse_collaboration_backplane_event,
 )
-from langflow.services.collaboration_events.schemas import CollaborationPresenceSnapshot, CollaborationSelectionTarget
+from langflow.services.collaboration_events import CollaborationEventService
+from langflow.services.collaboration_events.schemas import (
+    CollaborationPresenceChange,
+    CollaborationPresenceSnapshot,
+    CollaborationSelectionTarget,
+)
 
 if TYPE_CHECKING:
     from starlette.websockets import WebSocket
@@ -42,6 +45,7 @@ BackplaneEventType = Literal["operation.accepted", "presence.joined", "presence.
 
 WORKER_ID = str(uuid.uuid4())
 FANNED_REVISION_TTL_SECONDS = 120.0
+PRESENCE_RECONCILE_INTERVAL_SECONDS = 30.0
 
 
 @dataclass
@@ -117,6 +121,7 @@ class CollaborationManager:
                 user_id=user.user_id,
                 username=user.username,
                 profile_image=user.profile_image,
+                selected=user.selected,
             )
             for user in snapshot.users
         ]
@@ -134,14 +139,6 @@ class CollaborationManager:
 
     def presence_left_message(self, user_id: UUID) -> dict[str, Any]:
         return CollaborationPresenceLeftMessage(user_id=user_id).model_dump(mode="json")
-
-    def selection_snapshot_message(self, snapshot: CollaborationPresenceSnapshot) -> dict[str, Any]:
-        selections = [
-            CollaborationUserSelection(user_id=user.user_id, selected=user.selected)
-            for user in snapshot.users
-            if user.selected is not None
-        ]
-        return CollaborationSelectionSnapshotMessage(selections=selections).model_dump(mode="json")
 
     def selection_updated_message(
         self,
@@ -190,6 +187,82 @@ class CollaborationManager:
         if handler is None:
             return
         await handler(flow_id, backplane_event)
+
+    async def emit_presence_change(
+        self,
+        flow_id: UUID,
+        change: CollaborationPresenceChange | None,
+        event_service: CollaborationEventService,
+        *,
+        exclude_connection_id: str | None = None,
+    ) -> None:
+        if change is None:
+            return
+
+        if change.joined:
+            message = self.presence_joined_message(
+                user_id=change.joined.user_id,
+                username=change.joined.username,
+                profile_image=change.joined.profile_image,
+            )
+            await self.broadcast_json(
+                flow_id,
+                message,
+                exclude_connection_id=exclude_connection_id,
+            )
+            event_service.publish(
+                flow_id,
+                "presence.joined",
+                {
+                    "worker_id": WORKER_ID,
+                    "user": {
+                        "user_id": str(change.joined.user_id),
+                        "username": change.joined.username,
+                        "profile_image": change.joined.profile_image,
+                    },
+                },
+            )
+
+        if change.left_user_id:
+            message = self.presence_left_message(change.left_user_id)
+            await self.broadcast_json(flow_id, message)
+            event_service.publish(
+                flow_id,
+                "presence.left",
+                {"worker_id": WORKER_ID, "user_id": str(change.left_user_id)},
+            )
+
+        await self.emit_selection_change(
+            flow_id,
+            change,
+            event_service,
+            exclude_connection_id=exclude_connection_id,
+        )
+
+    async def emit_selection_change(
+        self,
+        flow_id: UUID,
+        change: CollaborationPresenceChange | None,
+        event_service: CollaborationEventService,
+        *,
+        exclude_connection_id: str | None = None,
+    ) -> None:
+        if change is None or change.selection_updated is None:
+            return
+
+        selected = change.selection_updated.selected
+        message = self.selection_updated_message(change.selection_updated.user_id, selected)
+        await self.broadcast_json(
+            flow_id,
+            message,
+            exclude_connection_id=exclude_connection_id,
+        )
+        payload: dict[str, object] = {
+            "worker_id": WORKER_ID,
+            "user_id": str(change.selection_updated.user_id),
+            "selected": {"kind": selected.kind, "id": selected.id} if selected is not None else None,
+        }
+        event_service.publish(flow_id, "selection.updated", payload)
 
     async def _handle_operation_accepted_backplane_event(
         self,
@@ -299,14 +372,24 @@ async def _poll_collaboration_events() -> None:
     from langflow.services.deps import get_collaboration_events_service
 
     manager = get_collaboration_manager()
-    event_service = get_collaboration_events_service()
+    event_service: CollaborationEventService = get_collaboration_events_service()
     cursors: dict[UUID, CollaborationPollCursor] = {}
+    next_presence_reconcile_at = time.monotonic()
 
     while True:
         flow_ids = manager.active_flow_ids()
         if not flow_ids:
             await asyncio.sleep(0.5)
             continue
+
+        now = time.monotonic()
+        should_reconcile_presence = now >= next_presence_reconcile_at
+        if should_reconcile_presence:
+            next_presence_reconcile_at = now + PRESENCE_RECONCILE_INTERVAL_SECONDS
+
+            snapshots = event_service.list_users(list(flow_ids))
+            for flow_id, snapshot in snapshots.items():
+                await manager.broadcast_json(flow_id, manager.presence_snapshot_message(snapshot))
 
         for flow_id in flow_ids:
             cursor = cursors.get(flow_id)

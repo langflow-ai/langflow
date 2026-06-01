@@ -180,6 +180,11 @@ def test_presence_change_fields_are_mutually_exclusive():
         CollaborationPresenceChange(left_user_id=user_id, selection_updated=selection)
 
 
+def test_list_users_requires_flow_ids(svc: SQLiteCollaborationEventService):
+    with pytest.raises(ValueError, match="flow_ids"):
+        svc.list_users([])
+
+
 def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
     conn_a = "conn-a"
@@ -196,7 +201,7 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
     assert joined.joined is not None
     assert joined.joined.username == "alice"
 
-    snapshot = svc.list_users(flow_id)
+    snapshot = svc.list_users([flow_id])[flow_id]
     assert len(snapshot.users) == 1
 
     second = svc.add_connection(
@@ -207,7 +212,7 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
         profile_image=None,
     )
     assert second is None
-    assert len(svc.list_users(flow_id).users) == 1
+    assert len(svc.list_users([flow_id])[flow_id].users) == 1
 
     change = svc.update_connection(
         flow_id=flow_id,
@@ -218,20 +223,20 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
     assert change.selection_updated is not None
     assert change.selection_updated.selected == CollaborationSelectionTarget(kind="node", id="node-1")
 
-    snapshot = svc.list_users(flow_id)
+    snapshot = svc.list_users([flow_id])[flow_id]
     assert snapshot.users[0].selected == CollaborationSelectionTarget(kind="node", id="node-1")
 
     left = svc.remove_connection(flow_id=flow_id, connection_id=conn_a)
     assert left is not None
     assert left.left_user_id is None
     assert left.selection_updated == CollaborationUserSelection(user_id=user_id, selected=None)
-    assert len(svc.list_users(flow_id).users) == 1
+    assert len(svc.list_users([flow_id])[flow_id].users) == 1
 
     final = svc.remove_connection(flow_id=flow_id, connection_id=conn_b)
     assert final is not None
     assert final.left_user_id == user_id
     assert final.selection_updated is None
-    assert svc.list_users(flow_id).users == []
+    assert svc.list_users([flow_id])[flow_id].users == []
 
 
 def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUID):
@@ -244,12 +249,84 @@ def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUI
         username="alice",
         profile_image=None,
     )
-    assert len(svc.list_users(flow_id).users) == 1
+    assert len(svc.list_users([flow_id])[flow_id].users) == 1
 
     time.sleep(0.15)
     svc.cleanup()
 
-    assert svc.list_users(flow_id).users == []
+    assert svc.list_users([flow_id])[flow_id].users == []
+
+
+def test_list_users_removes_expired_connections(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    svc.PRESENCE_TTL_SECONDS = 0.1
+    user_id = uuid4()
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=user_id,
+        connection_id="conn-1",
+        username="alice",
+        profile_image=None,
+    )
+
+    time.sleep(0.15)
+
+    snapshots = svc.list_users([flow_id])
+    assert snapshots[flow_id].users == []
+    assert svc.list_users([flow_id])[flow_id].users == []
+
+
+def test_poll_does_not_consume_expired_presence_before_list_users(
+    svc: SQLiteCollaborationEventService,
+    flow_id: UUID,
+):
+    svc.PRESENCE_TTL_SECONDS = 0.1
+    user_id = uuid4()
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=user_id,
+        connection_id="conn-1",
+        username="alice",
+        profile_image=None,
+    )
+
+    time.sleep(0.15)
+    svc.publish(flow_id, "operation.accepted", {"revision": 1})
+    svc.poll(flow_id)
+
+    snapshots = svc.list_users([flow_id])
+    assert snapshots[flow_id].users == []
+
+
+def test_list_users_batches_flow_snapshots(
+    svc: SQLiteCollaborationEventService,
+    flow_id: UUID,
+    other_flow_id: UUID,
+):
+    svc.PRESENCE_TTL_SECONDS = 0.1
+    expired_user_id = uuid4()
+    active_user_id = uuid4()
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=expired_user_id,
+        connection_id="expired-conn",
+        username="expired",
+        profile_image=None,
+    )
+    svc.PRESENCE_TTL_SECONDS = 30.0
+    svc.add_connection(
+        flow_id=other_flow_id,
+        user_id=active_user_id,
+        connection_id="active-conn",
+        username="active",
+        profile_image=None,
+    )
+
+    time.sleep(0.15)
+
+    snapshots = svc.list_users([flow_id, other_flow_id])
+    assert snapshots[flow_id].users == []
+    assert len(snapshots[other_flow_id].users) == 1
+    assert snapshots[other_flow_id].users[0].user_id == active_user_id
 
 
 def test_effective_selection_uses_latest_connection(svc: SQLiteCollaborationEventService, flow_id: UUID):
@@ -280,8 +357,35 @@ def test_effective_selection_uses_latest_connection(svc: SQLiteCollaborationEven
         selected=CollaborationSelectionTarget(kind="edge", id="new"),
     )
 
-    snapshot = svc.list_users(flow_id)
+    snapshot = svc.list_users([flow_id])[flow_id]
     assert snapshot.users[0].selected == CollaborationSelectionTarget(kind="edge", id="new")
+
+
+def test_initial_connection_counts_as_currently_unselected(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    user_id = uuid4()
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=user_id,
+        connection_id="conn-a",
+        username="alice",
+        profile_image=None,
+    )
+    svc.update_connection(
+        flow_id=flow_id,
+        connection_id="conn-a",
+        selected=CollaborationSelectionTarget(kind="node", id="old"),
+    )
+    time.sleep(0.01)
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=user_id,
+        connection_id="conn-b",
+        username="alice",
+        profile_image=None,
+    )
+
+    snapshot = svc.list_users([flow_id])[flow_id]
+    assert snapshot.users[0].selected is None
 
 
 def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
@@ -299,6 +403,6 @@ def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
         profile_image=None,
     )
 
-    snapshot = worker_b.list_users(flow_id)
+    snapshot = worker_b.list_users([flow_id])[flow_id]
     assert len(snapshot.users) == 1
     assert snapshot.users[0].username == "bob"

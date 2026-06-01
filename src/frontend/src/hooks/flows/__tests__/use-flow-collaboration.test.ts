@@ -140,12 +140,9 @@ async function connectSession(currentRevision = 0) {
           user_id: "user-1",
           username: "ana",
           profile_image: "Space/046-rocket.svg",
+          selected: null,
         },
       ],
-    });
-    socket.triggerMessage({
-      type: "selection.snapshot",
-      selections: [],
     });
   });
 
@@ -373,6 +370,26 @@ describe("useFlowCollaboration", () => {
 
     await act(async () => {
       latestSocket().triggerMessage({
+        type: "presence.snapshot",
+        users: [
+          {
+            user_id: "user-1",
+            username: "ana",
+            selected: { kind: "edge", id: "edge-1" },
+          },
+        ],
+      });
+    });
+
+    expect(result.current.users).toEqual([
+      { user_id: "user-1", username: "ana" },
+    ]);
+    expect(result.current.selections).toEqual([
+      { user_id: "user-1", selected: { kind: "edge", id: "edge-1" } },
+    ]);
+
+    await act(async () => {
+      latestSocket().triggerMessage({
         type: "selection.updated",
         user_id: "user-2",
         selected: { kind: "node", id: "node-1" },
@@ -380,6 +397,7 @@ describe("useFlowCollaboration", () => {
     });
 
     expect(result.current.selections).toEqual([
+      { user_id: "user-1", selected: { kind: "edge", id: "edge-1" } },
       { user_id: "user-2", selected: { kind: "node", id: "node-1" } },
     ]);
 
@@ -391,7 +409,9 @@ describe("useFlowCollaboration", () => {
       });
     });
 
-    expect(result.current.selections).toEqual([]);
+    expect(result.current.selections).toEqual([
+      { user_id: "user-1", selected: { kind: "edge", id: "edge-1" } },
+    ]);
   });
 
   it("should send selection.update when sendSelectionUpdate is called", async () => {

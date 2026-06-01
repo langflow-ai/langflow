@@ -23,7 +23,6 @@ from langflow.api.utils.collab.operations import (
     apply_flow_operation_batch,
 )
 from langflow.api.v1.collaboration_manager import (
-    WORKER_ID,
     CollaborationManager,
     ensure_collaboration_poll_loop,
     get_collaboration_manager,
@@ -40,7 +39,6 @@ from langflow.api.v1.schemas.flow_collaboration import (
 )
 from langflow.services.collaboration_events.schemas import (
     CollaborationPresenceChange,
-    CollaborationSelectionTarget,
 )
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_collaboration_events_service, session_scope
@@ -146,7 +144,7 @@ class FlowCollaborationConnection:
             username=self.current_user.username,
             profile_image=self.current_user.profile_image,
         )
-        snapshot = self._event_service.list_users(self.flow_id)
+        snapshot = self._event_service.list_users([self.flow_id])[self.flow_id]
 
         await self.websocket.send_json(
             CollaborationSessionReadyMessage(
@@ -156,7 +154,6 @@ class FlowCollaborationConnection:
             ).model_dump(mode="json")
         )
         await self.websocket.send_json(self.manager.presence_snapshot_message(snapshot))
-        await self.websocket.send_json(self.manager.selection_snapshot_message(snapshot))
 
         await self._emit_presence_change(presence_change, exclude_connection_id=self.connection_id)
 
@@ -337,28 +334,12 @@ class FlowCollaborationConnection:
         *,
         exclude_connection_id: str | None = None,
     ) -> None:
-        if change is None:
-            return
-
-        if change.joined:
-            message = self.manager.presence_joined_message(
-                user_id=change.joined.user_id,
-                username=change.joined.username,
-                profile_image=change.joined.profile_image,
-            )
-            await self.manager.broadcast_json(
-                self.flow_id,
-                message,
-                exclude_connection_id=exclude_connection_id,
-            )
-            self._publish_presence_joined(change.joined)
-
-        if change.left_user_id:
-            message = self.manager.presence_left_message(change.left_user_id)
-            await self.manager.broadcast_json(self.flow_id, message)
-            self._publish_presence_left(change.left_user_id)
-
-        await self._emit_selection_change(change)
+        await self.manager.emit_presence_change(
+            self.flow_id,
+            change,
+            self._event_service,
+            exclude_connection_id=exclude_connection_id,
+        )
 
     async def _emit_selection_change(
         self,
@@ -366,47 +347,9 @@ class FlowCollaborationConnection:
         *,
         exclude_connection_id: str | None = None,
     ) -> None:
-        if change is None or change.selection_updated is None:
-            return
-
-        selected = change.selection_updated.selected
-        message = self.manager.selection_updated_message(change.selection_updated.user_id, selected)
-        await self.manager.broadcast_json(
+        await self.manager.emit_selection_change(
             self.flow_id,
-            message,
+            change,
+            self._event_service,
             exclude_connection_id=exclude_connection_id,
         )
-        self._publish_selection_updated(change.selection_updated.user_id, selected)
-
-    def _publish_presence_joined(self, joined: object) -> None:
-        self._event_service.publish(
-            self.flow_id,
-            "presence.joined",
-            {
-                "worker_id": WORKER_ID,
-                "user": {
-                    "user_id": str(joined.user_id),
-                    "username": joined.username,
-                    "profile_image": joined.profile_image,
-                },
-            },
-        )
-
-    def _publish_presence_left(self, user_id: UUID) -> None:
-        self._event_service.publish(
-            self.flow_id,
-            "presence.left",
-            {"worker_id": WORKER_ID, "user_id": str(user_id)},
-        )
-
-    def _publish_selection_updated(
-        self,
-        user_id: UUID,
-        selected: CollaborationSelectionTarget | None,
-    ) -> None:
-        payload: dict[str, object] = {
-            "worker_id": WORKER_ID,
-            "user_id": str(user_id),
-            "selected": {"kind": selected.kind, "id": selected.id} if selected is not None else None,
-        }
-        self._event_service.publish(self.flow_id, "selection.updated", payload)

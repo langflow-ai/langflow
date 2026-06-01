@@ -16,6 +16,7 @@ class CollaborationPresenceUser(BaseModel):
     user_id: UUID
     username: str
     profile_image: str | None = None
+    selected: CollaborationSelectionTarget | None = None
 
 
 class CollaborationSessionStartMessage(BaseModel):
@@ -80,11 +81,6 @@ class CollaborationUserSelection(BaseModel):
 class CollaborationSelectionUpdateMessage(BaseModel):
     type: Literal["selection.update"]
     selected: CollaborationSelectionTarget | None = None
-
-
-class CollaborationSelectionSnapshotMessage(BaseModel):
-    type: Literal["selection.snapshot"] = "selection.snapshot"
-    selections: list[CollaborationUserSelection]
 
 
 class CollaborationSelectionUpdatedMessage(BaseModel):

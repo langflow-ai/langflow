@@ -2,8 +2,8 @@ import {
   applyPresenceJoined,
   applyPresenceLeft,
   applyPresenceSnapshot,
-  applySelectionSnapshot,
   applySelectionUpdated,
+  selectionsFromPresenceSnapshot,
 } from "@/hooks/flows/flow-collaboration-state";
 
 describe("flow-collaboration-state", () => {
@@ -11,7 +11,13 @@ describe("flow-collaboration-state", () => {
     expect(
       applyPresenceSnapshot(
         [{ user_id: "old", username: "old-user" }],
-        [{ user_id: "new", username: "new-user" }],
+        [
+          {
+            user_id: "new",
+            username: "new-user",
+            selected: { kind: "node", id: "n1" },
+          },
+        ],
       ),
     ).toEqual([{ user_id: "new", username: "new-user" }]);
   });
@@ -51,12 +57,16 @@ describe("flow-collaboration-state", () => {
     ).toEqual([{ user_id: "user-2", username: "bob" }]);
   });
 
-  it("should replace selections on selection.snapshot", () => {
+  it("should derive selections from presence.snapshot users", () => {
     expect(
-      applySelectionSnapshot(
-        [{ user_id: "user-1", selected: { kind: "node", id: "n1" } }],
-        [{ user_id: "user-2", selected: { kind: "edge", id: "e1" } }],
-      ),
+      selectionsFromPresenceSnapshot([
+        { user_id: "user-1", username: "ana", selected: null },
+        {
+          user_id: "user-2",
+          username: "bob",
+          selected: { kind: "edge", id: "e1" },
+        },
+      ]),
     ).toEqual([{ user_id: "user-2", selected: { kind: "edge", id: "e1" } }]);
   });
 

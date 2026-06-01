@@ -3,8 +3,8 @@ import {
   applyPresenceJoined,
   applyPresenceLeft,
   applyPresenceSnapshot,
-  applySelectionSnapshot,
   applySelectionUpdated,
+  selectionsFromPresenceSnapshot,
 } from "@/hooks/flows/flow-collaboration-state";
 import { buildFlowCollaborationWebSocketUrl } from "@/hooks/flows/flow-collaboration-url";
 import type {
@@ -203,6 +203,7 @@ export function useFlowCollaboration({
           setUsers((currentUsers) =>
             applyPresenceSnapshot(currentUsers, message.users),
           );
+          setSelections(selectionsFromPresenceSnapshot(message.users));
           return;
         }
         case "presence.joined": {
@@ -219,12 +220,6 @@ export function useFlowCollaboration({
             currentSelections.filter(
               (entry) => entry.user_id !== message.user_id,
             ),
-          );
-          return;
-        }
-        case "selection.snapshot": {
-          setSelections((currentSelections) =>
-            applySelectionSnapshot(currentSelections, message.selections),
           );
           return;
         }

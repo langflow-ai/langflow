@@ -79,5 +79,5 @@ class CollaborationEventService(Service, ABC):
         """Remove one active connection row."""
 
     @abstractmethod
-    def list_users(self, flow_id: UUID) -> CollaborationPresenceSnapshot:
-        """Return active deduped users plus effective per-user selections."""
+    def list_users(self, flow_ids: list[UUID]) -> dict[UUID, CollaborationPresenceSnapshot]:
+        """Return active deduped users plus effective per-user selections keyed by flow id."""

@@ -8,6 +8,7 @@ export type CollaborationPresenceUser = {
   user_id: string;
   username: string;
   profile_image?: string | null;
+  selected?: CollaborationSelectionTarget | null;
 };
 
 export type CollaborationSessionStartMessage = {
@@ -86,11 +87,6 @@ export type CollaborationSelectionUpdateMessage = {
   selected: CollaborationSelectionTarget | null;
 };
 
-export type CollaborationSelectionSnapshotMessage = {
-  type: "selection.snapshot";
-  selections: CollaborationUserSelection[];
-};
-
 export type CollaborationSelectionUpdatedMessage = {
   type: "selection.updated";
   user_id: string;
@@ -111,7 +107,6 @@ export type CollaborationServerMessage =
   | CollaborationPresenceSnapshotMessage
   | CollaborationPresenceJoinedMessage
   | CollaborationPresenceLeftMessage
-  | CollaborationSelectionSnapshotMessage
   | CollaborationSelectionUpdatedMessage
   | CollaborationMessageErrorMessage;
 
