@@ -17,7 +17,8 @@ The bundle is installed with Langflow in the 1.10 workspace. The base package in
 uv pip install "lfx-docling[local]"
 ```
 
-Chunking and picture-description support use separate optional extras:
+Chunking and picture-description support use separate optional extras. Chunking
+does not install the full local converter/OCR stack:
 
 ```bash
 uv pip install "lfx-docling[chunking]"

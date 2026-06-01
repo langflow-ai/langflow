@@ -9099,16 +9099,8 @@ all = [
     { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
 ]
 chunking = [
-    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "docling-core", extra = ["chunking"] },
-    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
-    { name = "rapidocr-onnxruntime" },
-    { name = "tesserocr" },
     { name = "tiktoken" },
-    { name = "torch", version = "2.12.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.12.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.27.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
 ]
 image-description = [
     { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
@@ -9140,7 +9132,6 @@ requires-dist = [
     { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
     { name = "langchain-docling", marker = "extra == 'image-description'", specifier = ">=1.1.0" },
     { name = "lfx", editable = "src/lfx" },
-    { name = "lfx-docling", extras = ["local"], marker = "extra == 'chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local", "chunking", "image-description"], marker = "extra == 'all'", editable = "src/bundles/docling" },
     { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'local'", specifier = ">=1.0.0" },

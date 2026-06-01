@@ -107,6 +107,7 @@ class DoclingRemoteComponent(BaseFileComponent):
     ]
 
     def build(self) -> DataFrame:
+        # Static bundle validation cannot see BaseFileComponent's inherited output method.
         return self.load_files()
 
     def process_files(self, file_list: list[BaseFileComponent.BaseFile]) -> list[BaseFileComponent.BaseFile]:

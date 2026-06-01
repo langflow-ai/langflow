@@ -29,7 +29,6 @@ local = [
     "torchvision>=0.21.0",
 ]
 chunking = [
-    "lfx-docling[local]",
     "docling-core[chunking]>=2.36.1,<3.0.0",
     "tiktoken>=0.7.0",
 ]

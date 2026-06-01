@@ -95,6 +95,7 @@ class DoclingInlineComponent(BaseFileComponent):
     ]
 
     def build(self) -> DataFrame:
+        # Static bundle validation cannot see BaseFileComponent's inherited output method.
         return self.load_files()
 
     # ------------------------------------------------------------------ #
