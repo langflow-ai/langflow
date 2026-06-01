@@ -671,6 +671,41 @@ If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and componen
 
 If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
 
+## Multi-worker deployments
+
+### Workers report `JobQueueNotFoundError`
+
+The load balancer is routing poll or stream requests to a different worker than the one that started the build.
+
+To resolve this issue:
+
+- Ensure `LANGFLOW_JOB_QUEUE_TYPE=redis` is set on **all** workers, not just some. Mixed-mode deployments (some workers using `asyncio`, others using `redis`) are not supported.
+- Verify all workers can reach the same Redis instance.
+
+For setup instructions, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
+### Redis connection refused or auth errors
+
+If your Redis instance requires a password or TLS, you must use `LANGFLOW_REDIS_QUEUE_URL` (for example, `rediss://user:password@host:6380/1`). The individual `LANGFLOW_REDIS_QUEUE_HOST` and `LANGFLOW_REDIS_QUEUE_PORT` settings construct a plain unauthenticated connection and do not support auth or TLS. Managed Redis services such as AWS ElastiCache with AUTH, Google MemoryStore with TLS, and Upstash all require the URL form.
+
+### Cache and queue keys colliding
+
+If `LANGFLOW_REDIS_QUEUE_DB` is set to the same database index used by the Langflow cache, keys from both systems will mix and produce unpredictable behavior.
+
+The cache defaults to DB `0` and the job queue defaults to DB `1`. Verify both settings point to different database indices.
+
+### Server refuses to start with multiple workers and `LANGFLOW_JOB_QUEUE_TYPE=asyncio`
+
+Startup fails with a `RuntimeError` that explains the in-memory job queue is worker-local.
+
+Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/events` request after the initial build POST, and the load balancer can route those requests to different workers, which produces intermittent "Job not found" errors.
+
+Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
+
+### Builds are cancelled unexpectedly
+
+The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
+
 ## Intel Mac issues {#intel-mac-issues}
 
 The following issues can occur when running Langflow on Intel-based Macs.

@@ -11,6 +11,12 @@ import { useAssistantChat } from "../use-assistant-chat";
 
 // --- Mocks ---
 
+// useUpdateNodeInternals needs a ReactFlow provider at runtime; mock it out
+// for pure-logic tests of the chat hook.
+jest.mock("@xyflow/react", () => ({
+  useUpdateNodeInternals: () => () => {},
+}));
+
 const mockPostAssistStream = jest.fn();
 jest.mock("@/controllers/API/queries/agentic", () => ({
   postAssistStream: (...args: unknown[]) => mockPostAssistStream(...args),
@@ -27,6 +33,11 @@ jest.mock(
 
 jest.mock("@/hooks/use-add-component", () => ({
   useAddComponent: () => jest.fn(),
+}));
+
+jest.mock("@/hooks/flows/use-save-flow", () => ({
+  __esModule: true,
+  default: () => jest.fn().mockResolvedValue(undefined),
 }));
 
 jest.mock("@/stores/flowsManagerStore", () => {

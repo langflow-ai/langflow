@@ -8,7 +8,7 @@ Langflow is a visual workflow builder for AI-powered agents. It has a Python/Fas
 
 ## Prerequisites
 
-- **Python:** 3.10-3.13
+- **Python:** 3.10-3.14
 - **uv:** >=0.4 (Python package manager)
 - **Node.js:** >=20.19.0 (v22.12 LTS recommended)
 - **npm:** v10.9+

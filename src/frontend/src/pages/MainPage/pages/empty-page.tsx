@@ -113,7 +113,7 @@ export const EmptyPageCommunity = ({
                       </div>
                     </div>
                     <div>
-                      <span className="line-clamp-2 text-base text-secondary-foreground">
+                      <span className="line-clamp-2 text-left text-base text-secondary-foreground">
                         {t("page.githubDescription")}
                       </span>
                     </div>
@@ -143,7 +143,7 @@ export const EmptyPageCommunity = ({
                       </div>
                     </div>
                     <div>
-                      <span className="line-clamp-2 text-base text-secondary-foreground">
+                      <span className="line-clamp-2 text-left text-base text-secondary-foreground">
                         {t("page.discordDescription")}
                       </span>
                     </div>

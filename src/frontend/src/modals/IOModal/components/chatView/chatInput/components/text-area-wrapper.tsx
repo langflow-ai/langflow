@@ -21,7 +21,7 @@ const TextAreaWrapper = ({
     noInput: boolean,
   ): string => {
     if (isDragging) {
-      return "Drop here";
+      return t("ioModal.dropHere");
     } else if (noInput) {
       return CHAT_INPUT_PLACEHOLDER;
     } else {

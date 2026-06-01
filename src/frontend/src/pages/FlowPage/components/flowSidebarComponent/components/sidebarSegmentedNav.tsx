@@ -12,54 +12,10 @@ import {
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
+import { NAV_ITEMS } from "./sidebar-nav-items";
 
 export type { SidebarSection };
-
-interface NavItem {
-  id: SidebarSection;
-  icon: string;
-  label: string;
-  tooltip: string;
-}
-
-export const NAV_ITEMS: NavItem[] = [
-  {
-    id: "components",
-    icon: "component",
-    label: "sidebar.nav.components",
-    tooltip: "sidebar.nav.components",
-  },
-  {
-    id: "mcp",
-    icon: "Mcp",
-    label: "sidebar.nav.mcp",
-    tooltip: "sidebar.nav.mcp",
-  },
-  {
-    id: "bundles",
-    icon: "blocks",
-    label: "sidebar.nav.bundles",
-    tooltip: "sidebar.nav.bundles",
-  },
-  {
-    id: "versions",
-    icon: "History",
-    label: "sidebar.nav.versions",
-    tooltip: "sidebar.nav.versionHistory",
-  },
-  {
-    id: "memories",
-    icon: "BrainCog",
-    label: "Memories",
-    tooltip: "Memories",
-  },
-  {
-    id: "traces",
-    icon: "Activity",
-    label: "sidebar.nav.traces",
-    tooltip: "sidebar.nav.traces",
-  },
-];
+export { NAV_ITEMS };
 
 const SidebarSegmentedNav = () => {
   const { t } = useTranslation();
