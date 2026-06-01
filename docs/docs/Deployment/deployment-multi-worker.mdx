@@ -5,7 +5,7 @@ slug: /deployment-multi-worker
 
 By default, Langflow runs with a single worker process and stores build job state in memory.
 
-A single-worker process is fine for development, but doesn't scale when you run more than one worker.
+A single-worker process is fine for development, but it doesn't scale when you run more than one worker.
 A flow build started on worker A cannot be polled or streamed from worker B because the in-memory job queue is _per-process_.
 
 A Redis-backed job queue stores build events in [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/), so any worker can pick up and serve any job's events.
@@ -33,7 +33,7 @@ If you use a managed Redis service with auth or TLS, you must use `LANGFLOW_REDI
 ## Example: multi-worker Docker Compose
 
 :::tip
-If you are using Podman Desktop, the default machine may not have enough resources to run this stack. Before starting, increase the machine's CPU and memory allocation:
+If you are using Podman Desktop, the default machine might not have enough resources to run this stack. Before starting, increase the machine's CPU and memory allocation:
 
 ```bash
 podman machine stop
@@ -246,7 +246,7 @@ To verify that cancellation works across workers, trigger a build with the API t
 
 ## Troubleshoot
 
-For troubleshooting, see [Multi-worker deployments](./troubleshoot#multi-worker-deployments).
+See [Troubleshoot multi-worker deployments](./troubleshoot#multi-worker-deployments).
 
 ## Configuration reference
 
