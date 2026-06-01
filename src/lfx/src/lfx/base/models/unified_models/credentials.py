@@ -31,11 +31,14 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     # stringification. Unwrap here because provider clients need the raw value.
     api_key = secret_value_to_str(api_key, strip=True)
 
-    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
+    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from
+    # global vars or env. The user's per-user, encrypted DB global variable is
+    # the source of truth (it's what the Agent component resolves via
+    # load_from_db) and MUST win over a process-wide ``.env`` value — otherwise
+    # a stale/revoked .env key silently shadows the key the user configured in
+    # the UI (and, in multi-tenant deploys, every user shares a server-wide env
+    # key). Env is the fallback for the no-user (lfx run) / no-DB-value case.
     def _resolve_var_name(var_name: str) -> str | None:
-        env_value = os.environ.get(var_name)
-        if env_value and env_value.strip():
-            return env_value.strip()
         if user_id and not (isinstance(user_id, str) and user_id == "None"):
 
             async def _get_by_var_name():
@@ -57,6 +60,9 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
             value = secret_value_to_str(value, strip=True)
             if value:
                 return value
+        env_value = os.environ.get(var_name)
+        if env_value and env_value.strip():
+            return env_value.strip()
         return None
 
     if api_key and api_key.strip():

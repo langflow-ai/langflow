@@ -16,6 +16,7 @@ from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.embeddings import Embeddings
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx_ibm.components.ibm.db2_vector import DB2VectorStoreComponent
@@ -29,6 +30,19 @@ requires_ibm_db = pytest.mark.skipif(
     importlib.util.find_spec("ibm_db_dbi") is None,
     reason="ibm-db (ibm_db_dbi) not installed on this platform (e.g. linux/aarch64)",
 )
+
+
+class FakeEmbeddings(Embeddings):
+    """Small Embeddings test double that follows the LangChain contract."""
+
+    def __init__(self, vector: list[float] | None = None):
+        self.vector = vector or [0.1, 0.2, 0.3]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self.vector.copy() for _ in texts]
+
+    def embed_query(self, _text: str) -> list[float]:
+        return self.vector.copy()
 
 
 @requires_ibm_db
@@ -54,23 +68,8 @@ class TestDB2VectorStoreComponent:
 
     @pytest.fixture
     def mock_embedding(self):
-        """Return a real Embeddings instance.
-
-        ``build_vector_store`` resolves the ModelInput via ``get_embeddings``,
-        which passes an already-instantiated ``Embeddings`` straight through
-        (the same path a connected Embeddings handle takes). Using a real
-        subclass here exercises that passthrough without patching.
-        """
-        from langchain_core.embeddings import Embeddings
-
-        class _FakeEmbeddings(Embeddings):
-            def embed_documents(self, texts):
-                return [[0.1, 0.2, 0.3] for _ in texts]
-
-            def embed_query(self, text):  # noqa: ARG002
-                return [0.1, 0.2, 0.3]
-
-        return _FakeEmbeddings()
+        """Create a real Embeddings test double for ModelInput passthrough."""
+        return FakeEmbeddings()
 
     def test_component_metadata(self):
         """Test component metadata is correctly set."""
@@ -832,6 +831,153 @@ class TestDB2VectorStoreComponent:
                 pytest.raises(TypeError, match="Vector Store Inputs must be Data objects"),
             ):
                 component._add_documents_to_vector_store(mock_vector_store)
+
+    def test_bulk_insert_enabled_by_default(self, component, mock_embedding):
+        """Test that bulk insert is enabled by default."""
+        component.embedding_model = mock_embedding
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from langchain_db2 import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None) as mock_init:
+                component.build_vector_store()
+
+                # Verify use_bulk_insert was passed as True (default)
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["use_bulk_insert"] is True
+
+    def test_bulk_insert_toggle_enabled(self, component, mock_embedding):
+        """Test bulk insert when explicitly enabled."""
+        component.embedding_model = mock_embedding
+        component.use_bulk_insert = True
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from langchain_db2 import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None) as mock_init:
+                component.build_vector_store()
+
+                # Verify use_bulk_insert was passed as True
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["use_bulk_insert"] is True
+
+    def test_bulk_insert_toggle_disabled(self, component, mock_embedding):
+        """Test bulk insert when explicitly disabled."""
+        component.embedding_model = mock_embedding
+        component.use_bulk_insert = False
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from langchain_db2 import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None) as mock_init:
+                component.build_vector_store()
+
+                # Verify use_bulk_insert was passed as False
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["use_bulk_insert"] is False
+
+    def test_bulk_insert_with_multiple_documents(self, component, mock_embedding):
+        """Test bulk insert with multiple documents."""
+        component.embedding_model = mock_embedding
+        component.use_bulk_insert = True
+        component.ingest_data = [
+            Data(text="Document 1"),
+            Data(text="Document 2"),
+            Data(text="Document 3"),
+            Data(text="Document 4"),
+            Data(text="Document 5"),
+        ]
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+        ):
+            mock_connection = MagicMock()
+            mock_cursor = MagicMock()
+            mock_connection.cursor.return_value = mock_cursor
+            mock_connect.return_value = mock_connection
+
+            from langchain_db2 import DB2VS
+
+            with (
+                patch.object(DB2VS, "__init__", return_value=None),
+                patch.object(DB2VS, "add_documents") as mock_add_docs,
+            ):
+                vector_store = component.build_vector_store()
+                component._add_documents_to_vector_store(vector_store)
+
+                # Verify documents were added
+                if mock_add_docs.called:
+                    added_docs = mock_add_docs.call_args[0][0]
+                    assert len(added_docs) == 5, "All 5 documents should be added"
+
+    def test_bulk_insert_logging(self, component, mock_embedding):
+        """Test that bulk insert mode is logged correctly."""
+        component.embedding_model = mock_embedding
+        component.use_bulk_insert = True
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from langchain_db2 import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None), patch.object(component, "log") as mock_log:
+                component.build_vector_store()
+
+                messages = [str(call.args[0]).lower() for call in mock_log.call_args_list]
+                assert any("bulk insert" in message or "executemany" in message for message in messages)
+
+    def test_row_by_row_insert_logging(self, component, mock_embedding):
+        """Test that row-by-row insert mode is logged correctly."""
+        component.embedding_model = mock_embedding
+        component.use_bulk_insert = False
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from langchain_db2 import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None), patch.object(component, "log") as mock_log:
+                component.build_vector_store()
+
+                messages = [str(call.args[0]).lower() for call in mock_log.call_args_list]
+                assert any("row-by-row" in message or "execute" in message for message in messages)
+
+    def test_bulk_insert_input_exists(self, component):
+        """Test that use_bulk_insert input is defined in component."""
+        # Check that the input exists in the component's inputs
+        input_names = [inp.name for inp in component.inputs]
+        assert "use_bulk_insert" in input_names, "use_bulk_insert input should be defined"
+
+        # Find the input and verify its properties
+        bulk_insert_input = next(inp for inp in component.inputs if inp.name == "use_bulk_insert")
+        assert bulk_insert_input.value is True, "Default value should be True"
+        assert bulk_insert_input.advanced is True, "Should be an advanced setting"
 
 
 # Made with Bob

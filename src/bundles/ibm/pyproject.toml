@@ -25,7 +25,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "ibm", "db2", "watsonx", "
 #   the marker stays in lockstep with the langflow-base dep block.
 # * ``langchain-community`` provides the distance-strategy/MMR helpers.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx>=0.5.0",
     "langchain-community>=0.4.1,<1.0.0",
     "langchain-db2>=1.0.0,<2.0.0; sys_platform != 'linux' or platform_machine != 'aarch64'",
     "ibm-db>=3.2.9,<4.0.0; sys_platform != 'linux' or platform_machine != 'aarch64'",

@@ -158,3 +158,89 @@ def test_postgres_url_normalised_to_sync_driver(raw_url: str, expected_url: str)
         pass
 
     create_engine_mock.assert_called_once_with(expected_url)
+
+
+def test_create_db_and_tables_with_lock_holds_advisory_lock_for_postgres():
+    """The locked sync DDL path acquires the lock, runs the DDL, then releases.
+
+    Concurrent workers booting against a fresh PG raced on ``CREATE TYPE``
+    inside ``create_db_and_tables`` because the advisory lock previously only
+    covered ``run_migrations``. This verifies the new path holds the lock
+    around the DDL.
+    """
+    from langflow.services.database.service import DatabaseService
+
+    lock_engine_mock, lock_conn_mock = _engine_with_conn(scalar_returns=True)
+    ddl_engine_mock = MagicMock()
+    ddl_conn_mock = MagicMock()
+    ddl_engine_mock.begin.return_value.__enter__.return_value = ddl_conn_mock
+
+    service = DatabaseService.__new__(DatabaseService)
+    service.database_url = _PG_URL
+
+    create_db_mock = MagicMock()
+    with (
+        patch(_CREATE_ENGINE_PATH, side_effect=[lock_engine_mock, ddl_engine_mock]) as create_engine_mock,
+        patch.object(DatabaseService, "_create_db_and_tables", staticmethod(create_db_mock)),
+    ):
+        service._create_db_and_tables_with_lock()
+
+    # Two sync engines created: one for the lock, one for the DDL.
+    assert create_engine_mock.call_count == 2
+    # The DDL ran while the lock was held: unlock is the last call on the lock conn.
+    lock_sql = _executed_sql(lock_conn_mock)
+    assert lock_sql[0] == f"SELECT pg_try_advisory_lock({_MIGRATION_ADVISORY_LOCK_ID})"
+    assert lock_sql[-1] == f"SELECT pg_advisory_unlock({_MIGRATION_ADVISORY_LOCK_ID})"
+    # The DDL was passed the DDL engine's connection, not the lock connection.
+    create_db_mock.assert_called_once_with(ddl_conn_mock)
+    # Both engines disposed even on the happy path.
+    lock_engine_mock.dispose.assert_called_once()
+    ddl_engine_mock.dispose.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_create_db_and_tables_uses_lock_on_postgres():
+    """``create_db_and_tables`` dispatches to the locked sync path on Postgres."""
+    from langflow.services.database.service import DatabaseService
+
+    service = DatabaseService.__new__(DatabaseService)
+    service.database_url = _PG_URL
+
+    with patch.object(DatabaseService, "_create_db_and_tables_with_lock") as locked_mock:
+        await service.create_db_and_tables()
+
+    locked_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_create_db_and_tables_skips_lock_on_sqlite():
+    """SQLite preserves the original async path; the lock helper is never invoked."""
+    from langflow.services.database.service import DatabaseService
+
+    service = DatabaseService.__new__(DatabaseService)
+    service.database_url = _SQLITE_URL
+
+    async_engine = MagicMock()
+    async_conn = MagicMock()
+
+    class _AsyncCM:
+        async def __aenter__(self):
+            return async_conn
+
+        async def __aexit__(self, *exc):
+            return False
+
+    async_engine.begin.return_value = _AsyncCM()
+    async_conn.run_sync = MagicMock(return_value=None)
+
+    async def _await_none(*_a, **_kw):
+        return None
+
+    async_conn.run_sync = _await_none  # awaited inside create_db_and_tables
+    service.engine = async_engine
+
+    with patch.object(DatabaseService, "_create_db_and_tables_with_lock") as locked_mock:
+        await service.create_db_and_tables()
+
+    locked_mock.assert_not_called()
+    async_engine.begin.assert_called_once()

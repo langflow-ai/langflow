@@ -174,6 +174,17 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             info="Distance calculation strategy",
         ),
+        BoolInput(
+            name="use_bulk_insert",
+            display_name="Use Bulk Insert",
+            value=True,
+            advanced=True,
+            info=(
+                "Enable bulk insert using executemany() for better performance. "
+                "When enabled, all documents are inserted in a single batch (unlimited chunk size). "
+                "When disabled, uses row-by-row insert with execute() (chunk size: 1 document per call)."
+            ),
+        ),
     ]
 
     outputs = [
@@ -406,13 +417,19 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 api_key=getattr(self, "api_key", None),
             )
 
-            # Build vector store
+            # Log bulk insert mode
+            bulk_insert_enabled = getattr(self, "use_bulk_insert", True)
+            insert_mode = "bulk insert (executemany)" if bulk_insert_enabled else "row-by-row insert (execute)"
+            self.log(f"Insert mode: {insert_mode}")
+
+            # Build vector store (will automatically generate embeddings for existing empty rows)
             self.log(f"Connecting to DB2 table: {validated_table_name}")
             vector_store = DB2VS(
                 client=connection,
                 embedding_function=embeddings,
                 table_name=validated_table_name,
                 distance_strategy=distance_strategy_map.get(self.distance_strategy, DistanceStrategy.COSINE),
+                use_bulk_insert=bulk_insert_enabled,
             )
 
             self.log(f"Connected to DB2 table: {validated_table_name}")

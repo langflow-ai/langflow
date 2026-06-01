@@ -30,6 +30,16 @@ router = APIRouter(tags=["MCP"], prefix="/mcp")
 _update_server_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
+def is_mcp_servers_locked(settings: object) -> bool:
+    """Return True only when MCP lock is explicitly enabled.
+
+    Some tests patch settings with MagicMock objects where unknown attributes
+    resolve to truthy placeholders. Using ``is True`` ensures lock enforcement
+    only when the flag is explicitly set to ``True``.
+    """
+    return getattr(settings, "mcp_servers_locked", False) is True
+
+
 async def upload_server_config(
     server_config: dict,
     current_user: CurrentActiveUser,
@@ -335,6 +345,12 @@ async def add_server(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     return await update_server(
         server_name,
         server_config.model_dump(exclude_unset=True),
@@ -356,6 +372,12 @@ async def update_server_endpoint(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     return await update_server(
         server_name,
         server_config.model_dump(exclude_unset=True),
@@ -375,6 +397,12 @@ async def delete_server(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     return await update_server(
         server_name,
         {},
