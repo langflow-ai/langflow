@@ -16,7 +16,7 @@ is unchanged for operators who have not enabled it.
 
 from __future__ import annotations
 
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 
@@ -27,6 +27,12 @@ REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
 
 # Maximum number of redirects to follow before failing (matches requests' default).
 DEFAULT_MAX_REDIRECTS = 30
+
+# Credential-bearing headers that must not be forwarded to a different host on a
+# redirect. ``requests`` strips these in ``Session.rebuild_auth``/``rebuild_proxies``
+# when it follows redirects itself; because we follow redirects manually with
+# ``allow_redirects=False`` we must reproduce that protection. Compared lowercase.
+SENSITIVE_REDIRECT_HEADERS = frozenset({"authorization", "cookie", "proxy-authorization"})
 
 
 def ssrf_safe_get(
@@ -46,7 +52,10 @@ def ssrf_safe_get(
     Args:
         url: The URL to fetch.
         timeout: Timeout passed to ``requests.get`` (seconds, or a (connect, read) tuple).
-        headers: Optional request headers, forwarded on every hop.
+        headers: Optional request headers, forwarded on every hop. Credential-bearing
+            headers (Authorization, Cookie, Proxy-Authorization) are dropped when a
+            redirect crosses to a different host, so they are not leaked to an unrelated
+            origin. The caller's dict is never mutated.
         params: Optional query parameters for the initial request only (redirect targets
             carry their own query string in the ``Location`` header).
         max_redirects: Maximum number of redirects to follow before raising.
@@ -61,6 +70,7 @@ def ssrf_safe_get(
     """
     current_url = url
     current_params = params
+    current_headers = headers
 
     for _ in range(max_redirects + 1):
         # Validate scheme, resolve the host, and check it against the SSRF denylist.
@@ -70,7 +80,7 @@ def ssrf_safe_get(
         response = requests.get(
             current_url,
             timeout=timeout,
-            headers=headers,
+            headers=current_headers,
             params=current_params,
             # Never let requests auto-follow redirects; each hop is validated above.
             allow_redirects=False,
@@ -80,8 +90,18 @@ def ssrf_safe_get(
         if response.status_code in REDIRECT_STATUS_CODES and location:
             # Resolve relative redirects against the current URL. The redirect target
             # carries its own query string, so the initial params are not reused.
+            previous_url = current_url
             current_url = urljoin(current_url, location)
             current_params = None
+            # Drop credential-bearing headers when the redirect crosses to a different
+            # host, so caller-supplied Authorization/Cookie/Proxy-Authorization are not
+            # leaked to an unrelated origin. Build a new dict; never mutate the caller's.
+            if current_headers and urlparse(previous_url).hostname != urlparse(current_url).hostname:
+                current_headers = {
+                    name: value
+                    for name, value in current_headers.items()
+                    if name.lower() not in SENSITIVE_REDIRECT_HEADERS
+                }
             continue
 
         return response

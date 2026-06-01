@@ -143,3 +143,36 @@ class TestSSRFSafeGet:
             response = ssrf_safe_get("http://127.0.0.1:8080/secret", timeout=5)
         assert response.status_code == 200
         assert mock_get.call_count == 1
+
+    def test_cross_host_redirect_strips_credential_headers(self):
+        """Credential-bearing headers are dropped when a redirect crosses to a different host."""
+        responses = [_response(302, location="http://other.example.com/b"), _response(200, body=b"final")]
+        headers = {
+            "Authorization": "Bearer secret-token",
+            "cookie": "session=abc",  # lowercase: stripping must be case-insensitive
+            "Proxy-Authorization": "Basic xyz",
+            "User-Agent": "langflow-test",
+        }
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("requests.get", side_effect=responses) as mock_get,
+        ):
+            ssrf_safe_get("http://feed.example.com/a", timeout=5, headers=headers)
+        # First hop (intended host) keeps all headers; second hop (cross-host) drops the secrets.
+        assert mock_get.call_args_list[0].kwargs["headers"] == headers
+        assert mock_get.call_args_list[1].kwargs["headers"] == {"User-Agent": "langflow-test"}
+        # The caller's dict must not be mutated.
+        assert "Authorization" in headers
+
+    def test_same_host_redirect_keeps_headers(self):
+        """Headers (including credentials) are preserved across a same-host redirect."""
+        responses = [_response(302, location="http://feed.example.com/next"), _response(200, body=b"final")]
+        headers = {"Authorization": "Bearer secret-token", "User-Agent": "langflow-test"}
+        with (
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch("socket.getaddrinfo", side_effect=_resolve_public),
+            patch("requests.get", side_effect=responses) as mock_get,
+        ):
+            ssrf_safe_get("http://feed.example.com/a", timeout=5, headers=headers)
+        assert mock_get.call_args_list[1].kwargs["headers"] == headers
