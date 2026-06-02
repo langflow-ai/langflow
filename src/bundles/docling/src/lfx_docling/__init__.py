@@ -1,10 +1,4 @@
-"""lfx-docling: Docling bundle.
-
-Distribution unit ``lfx-docling``.  At runtime Langflow's loader
-discovers ``extension.json`` shipped alongside this ``__init__.py`` and
-registers the bundle's components under the namespaced IDs
-``ext:docling:<Class>@official``.
-"""
+"""lfx-docling: Docling document processing components."""
 
 from lfx_docling.components.docling.chunk_docling_document import ChunkDoclingDocumentComponent
 from lfx_docling.components.docling.docling_inline import DoclingInlineComponent

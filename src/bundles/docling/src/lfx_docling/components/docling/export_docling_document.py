@@ -1,7 +1,6 @@
 from typing import Any
 
-from docling_core.types.doc import ImageRefMode
-from lfx.base.data.docling_utils import extract_docling_documents
+from lfx.base.data.docling_utils import coerce_docling_document, extract_docling_documents, get_docling_image_ref_mode
 from lfx.custom import Component
 from lfx.io import DropdownInput, HandleInput, MessageTextInput, Output, StrInput
 from lfx.schema import Data, DataFrame
@@ -50,7 +49,7 @@ class ExportDoclingDocumentComponent(Component):
         StrInput(
             name="md_page_break_placeholder",
             display_name="Page break placeholder",
-            info="Add this placeholder betweek pages in the markdown output.",
+            info="Add this placeholder between pages in the markdown output.",
             value="",
             advanced=True,
         ),
@@ -84,6 +83,13 @@ class ExportDoclingDocumentComponent(Component):
 
         return build_config
 
+    def _get_image_mode(self) -> Any:
+        return get_docling_image_ref_mode(self.image_mode)
+
+    @staticmethod
+    def _coerce_exportable_document(doc: Any) -> Any:
+        return coerce_docling_document(doc)
+
     def export_document(self) -> list[Data]:
         documents, warning = extract_docling_documents(self.data_inputs, self.doc_key)
         if warning:
@@ -91,8 +97,9 @@ class ExportDoclingDocumentComponent(Component):
 
         results: list[Data] = []
         try:
-            image_mode = ImageRefMode(self.image_mode)
-            for doc in documents:
+            image_mode = self._get_image_mode()
+            for raw_doc in documents:
+                doc = self._coerce_exportable_document(raw_doc)
                 content = ""
                 if self.export_format == "Markdown":
                     content = doc.export_to_markdown(
@@ -121,7 +128,7 @@ class ExportDoclingDocumentComponent(Component):
 
                 results.append(Data(text=content, data={"text": content, **metadata}))
         except Exception as e:
-            msg = f"Error splitting text: {e}"
+            msg = f"Error exporting document: {e}"
             raise TypeError(msg) from e
 
         return results

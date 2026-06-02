@@ -1,9 +1,5 @@
 """Tests for ExportDoclingDocumentComponent metadata preservation."""
 
-import pytest
-
-pytest.importorskip("docling_core")
-
 from lfx_docling.components.docling.export_docling_document import ExportDoclingDocumentComponent
 
 

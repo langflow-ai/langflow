@@ -3,7 +3,7 @@
   "id": "lfx-docling",
   "version": "0.1.0",
   "name": "Docling",
-  "description": "Docling component(s) as a standalone Langflow Extension Bundle.",
+  "description": "Docling document processing components as a standalone Langflow Extension Bundle.",
   "lfx": {
     "compat": ["1"]
   },

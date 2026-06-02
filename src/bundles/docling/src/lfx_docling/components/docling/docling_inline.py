@@ -7,7 +7,7 @@ import time
 from lfx.base.data import BaseFileComponent
 from lfx.base.data.docling_utils import _serialize_pydantic_model
 from lfx.inputs import BoolInput, DropdownInput, HandleInput, StrInput
-from lfx.schema import Data
+from lfx.schema import Data, DataFrame
 
 
 class DoclingInlineComponent(BaseFileComponent):
@@ -94,6 +94,10 @@ class DoclingInlineComponent(BaseFileComponent):
         *BaseFileComponent.get_base_outputs(),
     ]
 
+    def build(self) -> DataFrame:
+        # Static bundle validation cannot see BaseFileComponent's inherited output method.
+        return self.load_files()
+
     # ------------------------------------------------------------------ #
     # Child script that runs Docling in a separate OS process.            #
     # Uses subprocess.Popen (same pattern as Read File advanced mode)     #
@@ -142,13 +146,13 @@ class DoclingInlineComponent(BaseFileComponent):
                         from pydantic import TypeAdapter
                         try:
                             from langchain_docling.picture_description import PictureDescriptionLangChainOptions
-                        except ImportError as e:
+                        except ImportError:
                             print(json.dumps({
                                 "ok": False,
                                 "error": (
-                                    "langchain-docling is not installed. Please install it with "
-                                    "`pip install langchain-docling` or "
-                                    "`pip install 'langflow[docling-image-description]'`."
+                                    "langchain-docling is not installed. Install it with "
+                                    "`uv pip install 'langflow[docling-image-description]'` or "
+                                    "`uv pip install 'lfx-docling[image-description]'`."
                                 )
                             }))
                             return
@@ -165,7 +169,6 @@ class DoclingInlineComponent(BaseFileComponent):
                     except Exception as e:
                         print(json.dumps({"ok": False, "error": f"Picture description setup failed: {e}"}))
                         return
-
 
                 if pipeline == "vlm":
                     try:
@@ -245,8 +248,8 @@ class DoclingInlineComponent(BaseFileComponent):
 
         if importlib.util.find_spec("docling") is None:
             msg = (
-                "Docling is an optional dependency. Install with `uv pip install 'langflow[docling]'` or refer to the "
-                "documentation on how to install optional dependencies."
+                "Docling is an optional dependency. Install with `uv pip install 'langflow[docling]'` or "
+                "`uv pip install 'lfx-docling[local]'`."
             )
             raise ImportError(msg)
 

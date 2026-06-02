@@ -1,29 +1,33 @@
-# lfx-docling
+# Docling Bundle
 
-Docling component(s) as a standalone Langflow Extension Bundle.
+Docling components for Langflow packaged as a standalone Extension Bundle.
+
+## Components
+
+- Docling
+- Docling Serve
+- Export DoclingDocument
+- Chunk DoclingDocument
 
 ## Install
 
+The bundle is installed with Langflow in the 1.10 workspace. The base package includes `docling-core` for the `DoclingDocument` schema. For standalone local conversion:
+
 ```bash
-pip install lfx-docling
+uv pip install "lfx-docling[local]"
 ```
 
-The bundle is registered automatically via the `langflow.extensions`
-entry-point.  After install, restart your Langflow server; the bundle's
-components will appear in the palette under the `docling` group with
-the namespaced IDs `ext:docling:<Class>@official`.
+Chunking and picture-description support use separate optional extras. Chunking
+does not install the full local converter/OCR stack:
+
+```bash
+uv pip install "lfx-docling[chunking]"
+uv pip install "lfx-docling[image-description]"
+```
 
 ## Develop
 
 ```bash
-cd src/bundles/docling
-pip install -e .
-lfx extension validate src/lfx_docling
+uv run lfx extension validate src/bundles/docling/src/lfx_docling
+uv run pytest src/bundles/docling/tests
 ```
-
-## Migration
-
-Saved flows referencing the legacy class name(s) or the old import paths
-under `lfx.components.docling.*` are rewritten to the new namespaced
-IDs by the migration table in
-`src/lfx/src/lfx/extension/migration/migration_table.json`.
