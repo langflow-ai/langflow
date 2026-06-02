@@ -56,7 +56,7 @@ class JungleGridComponentTestBase(ComponentTestBaseWithoutClient):
     def file_names_mapping(self):
         return []
 
-    async def test_latest_version(self, component_class, default_kwargs) -> None:
+    async def test_component_calls_expected_endpoint(self, component_class, default_kwargs) -> None:
         await self._run_component(component_class, default_kwargs)
 
     def _kwargs_for(self, component_class, default_kwargs: dict[str, Any]) -> dict[str, Any]:
@@ -100,6 +100,13 @@ class JungleGridComponentTestBase(ComponentTestBaseWithoutClient):
         default_kwargs["api_base_url"] = "https://example.test"
         mocked = await self._run_component(component_class, default_kwargs)
         assert mocked.call_args.args[1] == f"https://example.test{self.expected_path}"
+
+    async def test_api_base_url_rejects_paths_and_query_strings(self, component_class, default_kwargs) -> None:
+        default_kwargs["api_base_url"] = "https://api.junglegrid.dev/v1?debug=true"
+        component = component_class(**self._kwargs_for(component_class, default_kwargs))
+        method = getattr(component, component.outputs[0].method)
+        with pytest.raises(ValueError, match="valid HTTPS URL"):
+            await method()
 
     @pytest.mark.parametrize("status_code", [400, 401, 403, 404, 409, 429, 500])
     async def test_http_errors_are_sanitized(self, component_class, default_kwargs, status_code: int) -> None:
@@ -154,6 +161,11 @@ class TestJungleGridEstimateJobComponent(JungleGridComponentTestBase):
         with pytest.raises(ValueError, match="Image is required"):
             await component.estimate_job()
 
+    async def test_empty_args_array_is_preserved(self, component_class, default_kwargs) -> None:
+        default_kwargs["args"] = "[]"
+        mocked = await self._run_component(component_class, default_kwargs)
+        assert mocked.call_args.kwargs["json"]["args"] == []
+
 
 class TestJungleGridSubmitJobComponent(JungleGridComponentTestBase):
     expected_method = "POST"
@@ -173,6 +185,11 @@ class TestJungleGridSubmitJobComponent(JungleGridComponentTestBase):
         assert body["callback_auth_token"] == "callback-secret"  # noqa: S105
         assert body["callback_metadata"] == {"source": "langflow"}
         assert mocked.call_count == 1
+
+    async def test_empty_callback_metadata_is_preserved(self, component_class, default_kwargs) -> None:
+        default_kwargs["callback_metadata"] = "{}"
+        mocked = await self._run_component(component_class, default_kwargs)
+        assert mocked.call_args.kwargs["json"]["callback_metadata"] == {}
 
 
 class TestJungleGridGetJobStatusComponent(JungleGridComponentTestBase):
@@ -259,6 +276,7 @@ class TestJungleGridCreateArtifactDownloadURLComponent(JungleGridComponentTestBa
         with patch("httpx.AsyncClient.request", mocked):
             result = await component.create_artifact_download_url()
         assert result.data["download_url"] == SIGNED_URL
+        assert component.status.data["download_url"] == "[redacted]"
         assert component.log.call_count == 0
 
     async def test_artifact_id_is_url_encoded(self, component_class, default_kwargs) -> None:

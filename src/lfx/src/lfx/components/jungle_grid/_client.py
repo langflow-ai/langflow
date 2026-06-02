@@ -28,7 +28,8 @@ class JungleGridError(ValueError):
 def normalize_base_url(api_base_url: str | None) -> str:
     base_url = (api_base_url or DEFAULT_API_BASE_URL).strip().rstrip("/")
     parsed = urlparse(base_url)
-    if parsed.scheme != "https" or not parsed.netloc:
+    has_path = parsed.path not in ("", "/")
+    if parsed.scheme != "https" or not parsed.netloc or has_path or parsed.params or parsed.query or parsed.fragment:
         msg = "Jungle Grid API base URL must be a valid HTTPS URL."
         raise JungleGridError(msg)
     return base_url
@@ -170,7 +171,8 @@ def build_workload_payload(
     }
     if command_value := optional_text(command):
         payload["command"] = command_value
-    if args_value := parse_json_field(args, "Args", list):
+    args_value = parse_json_field(args, "Args", list)
+    if args_value is not None:
         payload["args"] = args_value
     if optimize_for_value := optional_text(optimize_for):
         payload["optimize_for"] = optimize_for_value

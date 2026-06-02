@@ -54,7 +54,8 @@ class JungleGridSubmitJobComponent(Component):
             payload["callback_url"] = callback_url
         if callback_auth_token := optional_text(self.callback_auth_token):
             payload["callback_auth_token"] = callback_auth_token
-        if callback_metadata := parse_json_field(self.callback_metadata, "Callback Metadata", dict):
+        callback_metadata = parse_json_field(self.callback_metadata, "Callback Metadata", dict)
+        if callback_metadata is not None:
             payload["callback_metadata"] = callback_metadata
 
         client = JungleGridClient(self.api_key, self.api_base_url)

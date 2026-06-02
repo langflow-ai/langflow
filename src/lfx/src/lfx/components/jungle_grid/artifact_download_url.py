@@ -4,7 +4,7 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema.data import Data
 
-from ._client import JungleGridClient, path_segment
+from ._client import JungleGridClient, path_segment, sanitize
 from ._shared import DOCUMENTATION_URL, ICON, auth_inputs
 
 
@@ -31,5 +31,5 @@ class JungleGridCreateArtifactDownloadURLComponent(Component):
         client = JungleGridClient(self.api_key, self.api_base_url)
         result = await client.request("POST", f"/v1/jobs/{job_id}/artifacts/{artifact_id}/download", json_body={})
         data = Data(data=result)
-        self.status = data
+        self.status = Data(data=sanitize(result))
         return data
