@@ -189,6 +189,10 @@ test(
     // Wait for stepper body to render (parallel fetches must complete)
     await expectDeploymentTypeStep(page);
 
+    // Change the name so the update payload is non-empty (no-op saves keep the modal open)
+    const nameInput = page.getByPlaceholder("e.g., Sales Bot");
+    await nameInput.fill("Updated Deployment");
+
     // Navigate through the stepper steps to reach Review
     // Step: Type → click Next
     await page.getByTestId("deployment-stepper-next").click();

@@ -19,6 +19,7 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import { extractApiErrorMessages } from "@/utils/apiError";
 import { cn } from "@/utils/utils";
+import { ALL_SESSIONS_VALUE } from "../hooks/useMemorySessionResolver";
 import type { MemoryDetailsHeaderProps } from "../types";
 
 export function MemoryDetailsHeader({
@@ -43,10 +44,12 @@ export function MemoryDetailsHeader({
     setIsRefreshing(true);
     try {
       await onRefresh();
-      setSuccessData({ title: `Memory "${memory.name}" refreshed` });
+      setSuccessData({
+        title: t("memory.refreshedSuccess", { name: memory.name }),
+      });
     } catch (error) {
       setErrorData({
-        title: "Failed to refresh memory",
+        title: t("memory.refreshedError"),
         list: extractApiErrorMessages(error),
       });
     } finally {
@@ -65,7 +68,11 @@ export function MemoryDetailsHeader({
     }
   };
 
-  const sessionLabel = selectedSession ?? "All Sessions";
+  const isAllSessions =
+    !selectedSession || selectedSession === ALL_SESSIONS_VALUE;
+  const sessionLabel = isAllSessions
+    ? t("memory.allSessions")
+    : selectedSession;
 
   return (
     <div className="flex items-end justify-between border-b border-border bg-background px-6 py-4">
@@ -132,6 +139,20 @@ export function MemoryDetailsHeader({
                   className="max-h-[240px] overflow-y-auto py-1"
                   onScroll={handleSessionsScroll}
                 >
+                  <DropdownMenuItem
+                    className="flex items-center justify-between"
+                    onSelect={() => setSelectedSession(ALL_SESSIONS_VALUE)}
+                  >
+                    <span className="truncate">{t("memory.allSessions")}</span>
+                    <IconComponent
+                      name="Check"
+                      className={
+                        isAllSessions
+                          ? "h-4 w-4 text-primary"
+                          : "h-4 w-4 opacity-0"
+                      }
+                    />
+                  </DropdownMenuItem>
                   {sessions.map((sid) => {
                     const isSelected = sid === selectedSession;
                     return (
@@ -155,7 +176,7 @@ export function MemoryDetailsHeader({
                   {isFetchingNextSessionsPage && (
                     <div className="py-1 text-center">
                       <span className="text-xs text-muted-foreground">
-                        Loading…
+                        {t("memory.loadingSessions")}
                       </span>
                     </div>
                   )}
@@ -179,7 +200,7 @@ export function MemoryDetailsHeader({
         </Button>
 
         <DeleteConfirmationModal
-          description={`memory "${memory.name}"`}
+          description={t("memory.deleteDescription", { name: memory.name })}
           onConfirm={(e) => {
             e.stopPropagation();
             deleteMutation.mutate({ memoryId: memory.id });

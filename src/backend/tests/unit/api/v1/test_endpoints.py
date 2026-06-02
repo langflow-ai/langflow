@@ -100,6 +100,197 @@ async def test_update_component_model_name_options(client: AsyncClient, logged_i
     )
 
 
+async def test_custom_component_update_admin_only_allows_known_template_refresh(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Non-admin users can refresh known server templates in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component = AgentComponent()
+    component_node, _cc_instance = build_custom_component_template(component)
+    template = component_node["template"]
+
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+
+    request = UpdateCustomComponentRequest(
+        code=code,
+        frontend_node=component_node,
+        field="model",
+        field_value=[{"provider": "Anthropic", "name": "claude-3-opus-20240229"}],
+        template=template,
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+async def test_custom_component_update_admin_only_blocks_unknown_custom_code(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """Non-admin users cannot edit truly custom code in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class TestMetadataComponent(Component):
+    display_name = "Test Metadata Component"
+    description = "Test component for metadata"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = UpdateCustomComponentRequest(
+        code=component_code,
+        frontend_node={"outputs": []},
+        field="tool_mode",
+        field_value=False,
+        template={},
+    )
+    response = await client.post("api/v1/custom_component/update", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "restricted to administrators" in response.json().get("detail", "")
+
+
+async def test_custom_component_create_admin_only_allows_known_template_refresh(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Non-admin users can create/refresh known server templates in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    agent_component_file = await asyncio.to_thread(inspect.getsourcefile, AgentComponent)
+    code = await Path(agent_component_file).read_text(encoding="utf-8")
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
+async def test_custom_component_create_admin_only_blocks_unknown_custom_code(
+    client: AsyncClient,
+    logged_in_headers: dict,
+    monkeypatch,
+):
+    """Non-admin users cannot create truly custom code in admin-only mode."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class TestMetadataComponent(Component):
+    display_name = "Test Metadata Component"
+    description = "Test component for metadata"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = CustomComponentRequest(code=component_code)
+    response = await client.post("api/v1/custom_component", json=request.model_dump(), headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert "restricted to administrators" in response.json().get("detail", "")
+
+
+async def test_custom_component_create_admin_only_allows_superuser(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict,
+    monkeypatch,
+):
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    code = """
+from lfx.custom import Component
+
+class SuperUserMetadataComponent(Component):
+    display_name = "SuperUser Metadata Component"
+    description = "Test component for superuser bypass"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = CustomComponentRequest(code=code)
+    response = await client.post(
+        "api/v1/custom_component",
+        json=request.model_dump(),
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+    assert "data" in response.json()
+
+
+async def test_custom_component_update_admin_only_allows_superuser(
+    client: AsyncClient,
+    logged_in_headers_super_user: dict,
+    monkeypatch,
+):
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    admin_only_enabled = True
+    monkeypatch.setitem(settings_service.settings.__dict__, "custom_component_admin_only", admin_only_enabled)
+    monkeypatch.setattr(settings_service.settings, "allow_custom_components", True)
+
+    component_code = """
+from lfx.custom import Component
+
+class SuperUserUpdateMetadataComponent(Component):
+    display_name = "SuperUser Update Metadata Component"
+    description = "Test component update for superuser bypass"
+
+    def run(self) -> str:
+        return "ok"
+"""
+
+    request = UpdateCustomComponentRequest(
+        code=component_code,
+        frontend_node={"outputs": []},
+        field="tool_mode",
+        field_value=False,
+        template={},
+    )
+    response = await client.post(
+        "api/v1/custom_component/update",
+        json=request.model_dump(),
+        headers=logged_in_headers_super_user,
+    )
+
+    assert response.status_code == status.HTTP_200_OK, response.json()
+
+
 async def test_custom_component_endpoint_returns_metadata(client: AsyncClient, logged_in_headers: dict):
     """Test that the /custom_component endpoint returns metadata with module and code_hash."""
     component_code = """
@@ -291,6 +482,78 @@ async def test_get_config_authenticated_returns_full_config(client: AsyncClient,
     assert "auto_saving_interval" in result, "Authenticated response must contain 'auto_saving_interval'"
     assert "health_check_max_retries" in result, "Authenticated response must contain 'health_check_max_retries'"
     assert "feature_flags" in result, "Authenticated response must contain 'feature_flags'"
+
+
+async def test_get_config_embedded_mode_cascades_hide_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Embedded mode should only force UI hide flags, not security lock flags."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "embedded_mode", True)
+    monkeypatch.setattr(settings_service.settings, "hide_logout_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", False)
+    monkeypatch.setattr(settings_service.settings, "mcp_servers_locked", False)
+    monkeypatch.setattr(settings_service.settings, "custom_component_admin_only", False)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["embedded_mode"] is True
+    assert result["hide_logout_button"] is True
+    assert result["hide_new_project_button"] is True
+    assert result["hide_new_flow_button"] is True
+    assert result["hide_starter_projects"] is True
+    # This flag is currently a direct passthrough (not part of embedded_mode cascade).
+    assert result["hide_getting_started_progress"] is False
+    # Security lock flags are explicit opt-ins and do not cascade from embedded_mode.
+    assert result["mcp_servers_locked"] is False
+    assert result["custom_component_admin_only"] is False
+
+
+async def test_get_config_embedded_mode_false_keeps_individual_hide_flags(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    """When embedded mode is disabled, individual hide flags should retain explicit values."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "embedded_mode", False)
+    monkeypatch.setattr(settings_service.settings, "hide_logout_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_project_button", False)
+    monkeypatch.setattr(settings_service.settings, "hide_new_flow_button", True)
+    monkeypatch.setattr(settings_service.settings, "hide_starter_projects", False)
+    monkeypatch.setattr(settings_service.settings, "hide_getting_started_progress", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["embedded_mode"] is False
+    assert result["hide_logout_button"] is False
+    assert result["hide_new_project_button"] is False
+    assert result["hide_new_flow_button"] is True
+    assert result["hide_starter_projects"] is False
+    assert result["hide_getting_started_progress"] is True
+
+
+async def test_get_config_returns_mcp_and_admin_only_flags(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Config response should expose lock/admin feature flags from settings."""
+    from langflow.services.deps import get_settings_service
+
+    settings_service = get_settings_service()
+    monkeypatch.setattr(settings_service.settings, "mcp_servers_locked", True)
+    monkeypatch.setattr(settings_service.settings, "custom_component_admin_only", True)
+
+    response = await client.get("api/v1/config", headers=logged_in_headers)
+    result = response.json()
+
+    assert response.status_code == status.HTTP_200_OK
+    assert result["mcp_servers_locked"] is True
+    assert result["custom_component_admin_only"] is True
 
 
 async def test_get_config_returns_mcp_base_url(client: AsyncClient, logged_in_headers: dict):

@@ -19,15 +19,9 @@ maintainers = [
 dependencies = [
     "langflow-base[complete]>=0.10.0",
     # langflow-extensions:bundle-deps-start
-    # Bundle pilot: lfx-duckduckgo ships the DuckDuckGoSearchComponent
-    # as a standalone Extension distribution.  Listed as a regular dep so
-    # ``pip install langflow`` still pulls the component in -- there must
-    # be no user-visible change at install time.
     "lfx-duckduckgo>=0.1.0",
-    # Second pilot port (validates src/bundles/PORTING.md): lfx-arxiv ships
-    # ArXivComponent as a standalone Bundle.  Same regular-dep rationale --
-    # ``pip install langflow`` keeps shipping the arxiv component as before.
     "lfx-arxiv>=0.1.0",
+    "lfx-ibm>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -87,6 +81,7 @@ langflow-sdk = { workspace = true }
 # langflow-extensions:bundle-sources-start
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
+lfx-ibm = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -101,6 +96,7 @@ members = [
     # langflow-extensions:bundle-members-start
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
+    "src/bundles/ibm",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -286,6 +282,13 @@ external = ["RUF027"]
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
 "scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
+"scripts/ci/test_*.py" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons
     "S101",    # Use of assert (required for pytest)

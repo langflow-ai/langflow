@@ -21,7 +21,7 @@ def _make_deployment_row(**overrides):
     defaults = {
         "id": uuid4(),
         "deployment_provider_account_id": uuid4(),
-        "name": "db-deployment-name",
+        "display_name": "db-deployment-name",
         "description": "db-description",
         "deployment_type": DeploymentType.AGENT,
         "resource_key": "provider-deployment-id",
@@ -44,7 +44,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     deployment_row = SimpleNamespace(
         id=uuid4(),
         deployment_provider_account_id=provider_account_id,
-        name="db-deployment-name",
+        display_name="db-deployment-name",
         description="db-description",
         deployment_type=DeploymentType.AGENT,
         resource_key="provider-deployment-id",
@@ -53,6 +53,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     )
     adapter_result = DeploymentCreateResult(
         id="provider-deployment-id",
+        type=DeploymentType.AGENT,
         provider_result={"snapshot_bindings": [{"source_ref": "fv-1", "snapshot_id": "tool-1"}]},
     )
 
@@ -61,7 +62,6 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
     assert response.id == deployment_row.id
     assert response.provider_id == provider_account_id
     assert response.provider_key == "test-provider"
-    assert response.name == deployment_row.name
     assert response.description == "db-description"
     assert response.created_at == now
     assert response.updated_at == now
@@ -72,7 +72,7 @@ def test_shape_deployment_create_result_maps_db_identity_and_provider_result() -
 def test_shape_deployment_create_result_with_none_provider_result() -> None:
     mapper = BaseDeploymentMapper()
     row = _make_deployment_row()
-    result = DeploymentCreateResult(id="dep-1", provider_result=None)
+    result = DeploymentCreateResult(id="dep-1", type=DeploymentType.AGENT, provider_result=None)
 
     response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
 
@@ -83,7 +83,7 @@ def test_shape_deployment_create_result_with_empty_dict_provider_result() -> Non
     """Empty dict provider_result is passed through as-is."""
     mapper = BaseDeploymentMapper()
     row = _make_deployment_row()
-    result = DeploymentCreateResult(id="dep-1", provider_result={})
+    result = DeploymentCreateResult(id="dep-1", type=DeploymentType.AGENT, provider_result={})
 
     response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
 
@@ -114,7 +114,6 @@ def test_shape_deployment_update_result_maps_db_identity_and_provider_result() -
     assert response.id == row.id
     assert response.provider_id == provider_account_id
     assert response.provider_key == "my-provider"
-    assert response.name == row.name
     assert response.description == row.description
     assert response.type == DeploymentType.AGENT
     assert response.created_at == now
@@ -236,7 +235,7 @@ def test_shape_deployment_list_items_basic() -> None:
         id=dep_id,
         deployment_provider_account_id=prov_id,
         deployment_type=DeploymentType.AGENT,
-        name="My Dep",
+        display_name="My Dep",
         description="desc",
         resource_key="rk-1",
         created_at=now,
@@ -254,7 +253,6 @@ def test_shape_deployment_list_items_basic() -> None:
     assert item.id == dep_id
     assert item.provider_id == prov_id
     assert item.provider_key == "test-provider"
-    assert item.name == "My Dep"
     assert item.attached_count == 3
     assert item.flow_version_ids is None
     assert item.provider_data is None

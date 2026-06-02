@@ -53,4 +53,19 @@ export type UtilityStoreType = {
    */
   enableExtensionReload: boolean;
   setEnableExtensionReload: (enableExtensionReload: boolean) => void;
+  // Embedded mode flags
+  embeddedMode: boolean;
+  setEmbeddedMode: (embeddedMode: boolean) => void;
+  hideLogoutButton: boolean;
+  setHideLogoutButton: (hideLogoutButton: boolean) => void;
+  hideNewProjectButton: boolean;
+  setHideNewProjectButton: (hideNewProjectButton: boolean) => void;
+  hideNewFlowButton: boolean;
+  setHideNewFlowButton: (hideNewFlowButton: boolean) => void;
+  hideStarterProjects: boolean;
+  setHideStarterProjects: (hideStarterProjects: boolean) => void;
+  mcpServersLocked: boolean;
+  setMcpServersLocked: (mcpServersLocked: boolean) => void;
+  customComponentAdminOnly: boolean;
+  setCustomComponentAdminOnly: (customComponentAdminOnly: boolean) => void;
 };

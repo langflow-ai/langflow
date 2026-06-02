@@ -1,6 +1,7 @@
 import { expect, test } from "../../fixtures";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user must not be able to login after logout and refresh the page when auto_login is false",
   { tag: ["@release", "@api"] },

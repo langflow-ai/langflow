@@ -9,7 +9,7 @@ from typing import Any, Literal
 import aiofiles
 import orjson
 import yaml
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -126,8 +126,23 @@ class Settings(BaseSettings):
     the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
-    """The number of seconds to wait before giving up on a lock to released or establishing a connection to the
-    database."""
+    """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
+
+    mcp_tool_execution_timeout: float = 180.0
+    """Maximum seconds to wait for MCP tool execution before timing out.
+    Default is 180 seconds (3 minutes) to support long-running operations.
+    Supports decimal values for sub-second timeouts (e.g., 0.5 for 500ms).
+    Individual components can override this with their own timeout setting.
+    Must be a positive number greater than 0."""
+
+    @field_validator("mcp_tool_execution_timeout")
+    @classmethod
+    def validate_mcp_tool_execution_timeout(cls, v: float) -> float:
+        """Validate that mcp_tool_execution_timeout is positive."""
+        if v <= 0:
+            msg = "mcp_tool_execution_timeout must be greater than 0"
+            raise ValueError(msg)
+        return v
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning
@@ -464,6 +479,9 @@ class Settings(BaseSettings):
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
+    custom_component_admin_only: bool = False
+    """If set to True, only admin users can edit custom component code. Regular editors
+    are blocked from modifying custom component templates."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = True
@@ -481,6 +499,40 @@ class Settings(BaseSettings):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+
+    # Embedded mode flags
+    embedded_mode: bool = False
+    """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
+    standalone installations (logout button, new project/flow buttons, starter projects, etc.).
+
+    This flag does not implicitly enable security controls such as
+    ``mcp_servers_locked`` or ``custom_component_admin_only``. Configure those
+    explicitly based on your deployment hardening requirements.
+    """
+    hide_getting_started_progress: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LANGFLOW_HIDE_GETTING_STARTED_PROGRESS",
+            "HIDE_GETTING_STARTED_PROGRESS",
+        ),
+    )
+    """If set to True, hides the getting-started onboarding progress UI."""
+    hide_logout_button: bool = False
+    """If set to True, hides the Logout button in the account menu."""
+    hide_new_project_button: bool = False
+    """If set to True, hides the ability to create new projects/folders."""
+    hide_new_flow_button: bool = False
+    """If set to True, hides the ability to create new flows."""
+    hide_starter_projects: bool = False
+    """If set to True, hides starter projects from the UI (does not affect database seeding)."""
+
+    # MCP Server management
+    mcp_servers_locked: bool = False
+    """If set to True, users cannot add or modify MCP servers via the UI/API.
+
+    This control is independent from ``embedded_mode`` and must be enabled
+    explicitly when you want to lock MCP server management.
+    """
 
     @field_validator("runtime_port", mode="before")
     @classmethod

@@ -1,15 +1,15 @@
 import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { getAllResponseMessage } from "../../utils/get-all-response-message";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { disableInspectPanel } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
 import { waitForOpenModalWithChatInput } from "../../utils/wait-for-open-modal";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { openStarterProject } from "../../utils/flow/open-starter-project";
 
-import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Market Research",
   { tag: ["@release", "@starter-projects"] },

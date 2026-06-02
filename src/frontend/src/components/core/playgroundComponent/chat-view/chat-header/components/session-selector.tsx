@@ -127,14 +127,24 @@ export function SessionSelector({
                 e.stopPropagation();
                 onToggleSelect();
               }}
-              className="cursor-pointer flex items-center justify-center w-4 h-4 flex-shrink-0"
+              className="cursor-pointer flex items-center justify-center w-4 h-8 flex-shrink-0"
               data-testid={`session-${session}-checkbox`}
             >
+              {/* The 16x16 column is always reserved so the row layout
+                  does not jump. The icon itself is hidden by default and
+                  revealed on row hover (via the row's `group` class).
+                  A checked box stays visible regardless so users can see
+                  their selection without re-hovering each row.
+                  `invisible` (visibility: hidden) also disables pointer
+                  events so stray clicks on the hidden column cannot
+                  toggle selection. */}
               <ForwardedIconComponent
                 name={isSelected ? "SquareCheck" : "Square"}
                 className={cn(
-                  "h-4 w-4",
-                  isSelected ? "text-status-red" : "text-muted-foreground",
+                  "h-4 w-4 transition-opacity",
+                  isSelected
+                    ? "text-status-red"
+                    : "text-muted-foreground invisible group-hover:visible",
                 )}
               />
             </div>

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type {
   MemoryDocumentItem,
   MemoryInfo,
@@ -21,6 +22,7 @@ export function useMemoriesData({
   selectedMemoryId,
   onSelectMemory,
 }: UseMemoriesDataProps) {
+  const { t } = useTranslation();
   const { setErrorData, setSuccessData } = useAlertStore();
 
   const [memoriesSearch, setMemoriesSearch] = useState("");
@@ -99,12 +101,12 @@ export function useMemoriesData({
 
   const deleteMutation = useDeleteMemory({
     onSuccess: () => {
-      setSuccessData({ title: "Memory deleted" });
+      setSuccessData({ title: t("memory.deletedSuccess") });
       onSelectMemory?.(null);
     },
     onError: (error: unknown) =>
       setErrorData({
-        title: "Failed to delete memory",
+        title: t("memory.deleteError"),
         list: extractApiErrorMessages(error),
       }),
   });

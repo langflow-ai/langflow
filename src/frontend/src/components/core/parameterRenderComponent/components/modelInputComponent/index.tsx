@@ -23,6 +23,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
   ModelInputComponentType,
@@ -36,7 +37,7 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = "Setup Provider",
+  placeholder,
   nodeId,
   nodeClass,
   handleNodeClass,
@@ -49,6 +50,7 @@ export default function ModelInputComponent({
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -61,17 +63,21 @@ export default function ModelInputComponent({
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
-  // Connection mode: local state for reactivity, persisted in node data for reload
-  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+  // Connection mode is persisted in node data (for reload + external
+  // mutations like the agentic flow_builder). We subscribe to the live
+  // store value so updates from outside the component (e.g. when the
+  // assistant flips `_connectionMode` after wiring an external model)
+  // re-render the dropdown immediately. Falling back to local-only state
+  // would freeze the UI on the value captured at mount.
+  const isConnectionMode = useFlowStore((state) => {
     if (!nodeId) return false;
-    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    const node = state.nodes.find((n) => n.id === nodeId);
     const data = node?.data as { _connectionMode?: boolean } | undefined;
     return data?._connectionMode === true;
   });
 
   const setConnectionMode = useCallback(
     (enabled: boolean) => {
-      setIsConnectionMode(enabled);
       if (!nodeId) return;
       const store = useFlowStore.getState();
       store.setNode(
@@ -364,7 +370,14 @@ export default function ModelInputComponent({
       } as SelectedModel;
     }
 
-    const currentName = value?.[0]?.name;
+    // Bug 3 [P2] — defensive: sanitize the saved value before reading
+    // `name`. A doubly-encoded payload from the assistant's flow_update
+    // pipeline can leave the entire model list serialized into the
+    // ``name`` field (or wrap the whole structured value into the first
+    // element of the array). Without recovery, the trigger renders the
+    // literal JSON, e.g. ``[{"provider":"OpenAI","name":"gpt-4o",...]``.
+    const saved = recoverModelOption(value?.[0]);
+    const currentName = saved?.name;
     if (!currentName) {
       // Logic to auto-select the first model if none is selected
       // We only do this check if we have options available
@@ -389,7 +402,6 @@ export default function ModelInputComponent({
     // model has been actively deactivated (not missing-because-unconfigured).
     // Fall through to the first available option so the user isn't shown a
     // wrench for a provider that doesn't need configuring.
-    const saved = value?.[0];
     if (saved) {
       const savedProviderConfigured = providersData?.some(
         (p) => p.provider === saved.provider && p.is_configured,
@@ -720,7 +732,7 @@ export default function ModelInputComponent({
               disabled={disabled}
               options={flatOptions}
               selectedModel={selectedModel}
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               hasEnabledProviders={hasEnabledProviders ?? false}
               onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
               id={id}

@@ -23,15 +23,15 @@ from pathlib import Path
 BASE_DIR = Path(__file__).parent.parent.parent
 
 # Matches the lfx dep specifier inside a bundle pyproject's dependencies list.
-# Accepts the bundle default ("lfx>=X.Y.Z,<A.B.C"), legacy ~=/==, and the
-# already-rewritten "lfx-nightly==X.Y.Z" form (idempotent).
+# Accepts the bundle default ("lfx>=X.Y.Z" with an optional upper bound),
+# legacy ~=/==, and the already-rewritten "lfx-nightly==X.Y.Z" form (idempotent).
 _LFX_DEP_PATTERN = re.compile(
     r'"lfx(?:-nightly)?'
     r"(?:"
     r"(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*"
     r"|"
     r">=[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*"
-    r",\s*<[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*"
+    r"(?:,\s*<[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*)?"
     r')"'
 )
 

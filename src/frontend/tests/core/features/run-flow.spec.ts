@@ -1,11 +1,14 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to use Run Flow without any issues",
   { tag: ["@release", "@workspace", "@api"] },
@@ -21,6 +24,8 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
@@ -78,8 +83,8 @@ test(
 
     await page.getByTestId("icon-ChevronLeft").click();
 
-    await expect(page.getByText("New Flow")).toBeVisible();
-    await page.getByTestId("new-project-btn").click();
+    await expect(page.getByTestId(TID.newProjectBtn)).toBeVisible();
+    await openTemplatesModal(page);
 
     await page.getByTestId("blank-flow").click();
 
@@ -109,7 +114,7 @@ test(
       .getByTestId("value-dropdown-dropdown_str_flow_name_selected")
       .click();
 
-    await page.getByTestId("dropdown-option-0-container").click();
+    await page.getByTestId("dropdown-option-1-container").click();
 
     await page.getByTestId(/^textarea_str_chatinput.*/).click();
     await page

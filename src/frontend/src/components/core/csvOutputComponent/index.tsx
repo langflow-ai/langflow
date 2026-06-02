@@ -123,7 +123,7 @@ function CsvOutputComponent({
             columnDefs={colDefs}
             defaultColDef={defaultColDef}
             scrollbarWidth={8}
-            overlayNoRowsTemplate="No data available"
+            overlayNoRowsTemplate={t("csvOutput.noDataAvailable")}
           />
         </div>
       )}

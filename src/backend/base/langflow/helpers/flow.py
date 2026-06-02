@@ -20,6 +20,8 @@ if TYPE_CHECKING:
     from lfx.graph.schema import RunOutputs
     from lfx.graph.vertex.base import Vertex
 
+    from langflow.services.database.models.user.model import User
+
 from langflow.schema.data import Data
 
 INPUT_TYPE_MAP = {
@@ -163,12 +165,36 @@ async def get_flow_by_id_or_name(
         raise ValueError(msg) from e
 
 
-async def load_flow(
-    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
+async def _build_graph_from_authorized_flow(
+    *,
+    caller: User,  # noqa: ARG001
+    flow: Flow,
+    flow_id: str,
+    user_id: str,
+    tweaks: dict | None,
 ) -> Graph:
+    """Build a Graph from an already-loaded flow row (permission enforced by decorator)."""
     from lfx.graph.graph.base import Graph
 
     from langflow.processing.process import process_tweaks
+
+    graph_data = flow.data
+    if not graph_data:
+        msg = f"Flow {flow_id} not found"
+        raise ValueError(msg)
+    if tweaks:
+        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
+    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+
+
+async def load_flow(
+    user_id: str, flow_id: str | None = None, flow_name: str | None = None, tweaks: dict | None = None
+) -> Graph:
+    """Load a flow graph after authorizing EXECUTE for the caller."""
+    from langflow.services.authorization import FlowAction
+    from langflow.services.authorization.decorators import requires_flow_permission
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+    from langflow.services.database.models.user.model import User
 
     if not flow_id and not flow_name:
         msg = "Flow ID or Flow Name is required"
@@ -179,14 +205,42 @@ async def load_flow(
             msg = f"Flow {flow_name} not found"
             raise ValueError(msg)
 
+    uuid_user_id = UUID(user_id) if isinstance(user_id, str) else user_id
+    uuid_flow_id = UUID(flow_id) if isinstance(flow_id, str) else flow_id
+
     async with session_scope() as session:
-        graph_data = flow.data if (flow := await session.get(Flow, flow_id)) else None
-    if not graph_data:
-        msg = f"Flow {flow_id} not found"
-        raise ValueError(msg)
-    if tweaks:
-        graph_data = process_tweaks(graph_data=graph_data, tweaks=tweaks)
-    return Graph.from_payload(graph_data, flow_id=flow_id, user_id=user_id)
+        flow = await authorized_or_owner_scoped(
+            session,
+            Flow,
+            id_column=Flow.id,
+            resource_id=uuid_flow_id,
+            owner_column=Flow.user_id,
+            owner_id=uuid_user_id,
+        )
+        if flow is None:
+            msg = f"Flow {flow_id} not found"
+            raise ValueError(msg)
+
+        caller = await session.get(User, uuid_user_id)
+        if caller is None:
+            msg = "Session is invalid"
+            raise ValueError(msg)
+
+    build_graph = requires_flow_permission(
+        FlowAction.EXECUTE,
+        user_param="caller",
+        flow_param="flow",
+        forbidden_as_not_found=True,
+        not_found_template=f"Flow {flow_id} not found",
+    )(_build_graph_from_authorized_flow)
+
+    return await build_graph(
+        caller=caller,
+        flow=flow,
+        flow_id=flow_id,
+        user_id=user_id,
+        tweaks=tweaks,
+    )
 
 
 async def find_flow(flow_name: str, user_id: str) -> str | None:
@@ -396,7 +450,30 @@ def get_arg_names(inputs: list[Vertex]) -> list[dict[str, str]]:
     ]
 
 
-async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | UUID | None = None) -> FlowRead:
+async def get_flow_by_id_or_endpoint_name(
+    flow_id_or_name: str,
+    user_id: str | UUID | None = None,
+    *,
+    widen_for_shares: bool = False,
+) -> FlowRead:
+    """Resolve a flow by UUID or endpoint_name.
+
+    By default this is owner-scoped (``user_id`` must match the flow owner)
+    even when an authorization plugin is registered.  Callers that
+    immediately follow up with ``ensure_flow_permission(...)`` and therefore
+    *want* the widening — so a shared flow becomes reachable — can opt in by
+    passing ``widen_for_shares=True``.  Helpers that read ``flow.data`` without
+    a subsequent permission check (e.g. agentic MCP tools) must leave the
+    default, otherwise widening leaks graph metadata for another user's flow
+    before any policy decision runs.
+    """
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    # Widening also requires the plugin contract to advertise cross-user fetch
+    # AND AUTHZ_ENABLED to be on, in addition to the opt-in flag above.
+    share_aware = widen_for_shares and await authz.supports_cross_user_fetch() and await authz.is_enabled()
+
     async with session_scope() as session:
         # SECURITY: previously the UUID branch below called
         # ``session.get(Flow, flow_id)`` with no ownership check, so any
@@ -424,12 +501,12 @@ async def get_flow_by_id_or_endpoint_name(flow_id_or_name: str, user_id: str | U
         try:
             flow_id = UUID(flow_id_or_name)
             flow = await session.get(Flow, flow_id)
-            if flow is not None and uuid_user_id is not None and flow.user_id != uuid_user_id:
+            if flow is not None and uuid_user_id is not None and not share_aware and flow.user_id != uuid_user_id:
                 flow = None
         except ValueError:
             endpoint_name = flow_id_or_name
             stmt = select(Flow).where(Flow.endpoint_name == endpoint_name)
-            if uuid_user_id is not None:
+            if uuid_user_id is not None and not share_aware:
                 stmt = stmt.where(Flow.user_id == uuid_user_id)
             flow = (await session.exec(stmt)).first()
         if flow is None:

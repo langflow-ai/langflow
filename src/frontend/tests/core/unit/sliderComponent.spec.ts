@@ -2,6 +2,7 @@ import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -9,7 +10,6 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { extractAndCleanCode } from "../../utils/extract-and-clean-code";
 // TODO: This component doesn't have slider needs updating
 test(
   "user should be able to use slider input",
@@ -76,6 +76,17 @@ test(
     expect(cleanCode).not.toEqual(newCode);
     await setAceEditorValue(page, newCode);
     await page.locator('//*[@id="checkAndSaveBtn"]').click();
+
+    // Wait for the code modal to CLOSE before validating the node. The modal
+    // only closes on a successful save (processDynamicField → setOpen(false));
+    // if validation fails it stays open showing an error. Asserting the close
+    // first (a) confirms the new code actually committed, and (b) makes a save
+    // failure surface here with a clear signal instead of downstream as a
+    // confusing stale-slider value. On a slow Windows runner the node re-render
+    // also lags the click, so this doubles as the settle wait.
+    await expect(page.locator('//*[@id="checkAndSaveBtn"]')).toBeHidden({
+      timeout: 15000,
+    });
     await adjustScreenView(page);
 
     await mutualValidation(page);
@@ -121,16 +132,21 @@ test(
 // and fires the `change` event that react-ace listens to — which is what
 // updates the React `code` state that gets POSTed on save.
 async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
-  const expectedNewlines = (newCode.match(/\n/g) || []).length;
+  // Normalize to LF before filling. A Windows checkout (autocrlf) or the
+  // extract→replace round-trip can introduce CRLF; feeding mixed line endings
+  // through Ace's hidden textarea has produced a saved buffer that diverges
+  // from the asserted code on Windows. LF round-trips identically everywhere.
+  const normalizedCode = newCode.replace(/\r\n/g, "\n");
+  const expectedNewlines = (normalizedCode.match(/\n/g) || []).length;
   if (expectedNewlines < 10) {
     throw new Error(
-      `setAceEditorValue: newCode has only ${expectedNewlines} newlines (length ${newCode.length}); upstream extractAndCleanCode likely lost newlines.`,
+      `setAceEditorValue: newCode has only ${expectedNewlines} newlines (length ${normalizedCode.length}); upstream extractAndCleanCode likely lost newlines.`,
     );
   }
 
   await page.locator("textarea").last().press("ControlOrMeta+a");
   await page.keyboard.press("Backspace");
-  await page.locator("textarea").last().fill(newCode);
+  await page.locator("textarea").last().fill(normalizedCode);
 
   // Wait for the change to propagate into the controlled React state. The
   // `#codeValue` mirror is rendered by `<Input>` (single-line), so browsers
@@ -143,8 +159,13 @@ async function setAceEditorValue(page: Page, newCode: string): Promise<void> {
 }
 
 async function mutualValidation(page: Page) {
+  // Longer timeout on the first post-save assertion: the slider only reflects
+  // the new range_spec (min=3, which clamps the preserved value to 3.00) once
+  // the node has fully re-rendered with the saved code. That re-render lags on
+  // a slow Windows runner; the default 5s poll can read the pre-save value.
   await expect(page.getByTestId("default_slider_display_value")).toHaveText(
     "3.00",
+    { timeout: 15000 },
   );
   await expect(page.getByTestId("min_label")).toHaveText("test");
   await expect(page.getByTestId("max_label")).toHaveText("test2");

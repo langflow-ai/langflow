@@ -37,7 +37,7 @@ from langflow.services.database.models.flow_version_deployment_attachment.schema
 from langflow.services.database.models.folder.model import Folder
 from langflow.services.database.models.user.model import User
 from lfx.services.adapters.deployment.schema import DeploymentType
-from sqlalchemy import event
+from sqlalchemy import event, text
 from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import StaticPool
 from sqlmodel import SQLModel, select
@@ -146,7 +146,7 @@ async def deployment(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="test-deployment",
+        display_name="test-deployment",
         deployment_type=DeploymentType.AGENT,
     )
     db.add(d)
@@ -317,6 +317,45 @@ class TestListDeploymentAttachments:
         results = await list_deployment_attachments(db, user_id=user.id, deployment_id=deployment.id)
         assert results == []
 
+    async def test_list_excludes_orphaned_flow_version_links(
+        self, db: AsyncSession, user: User, flow: Flow, deployment: Deployment
+    ):
+        fv = FlowVersion(flow_id=flow.id, user_id=user.id, version_number=2, data={})
+        db.add(fv)
+        await db.commit()
+        await db.refresh(fv)
+
+        live_attachment = await create_deployment_attachment(
+            db,
+            user_id=user.id,
+            flow_version_id=fv.id,
+            deployment_id=deployment.id,
+            provider_snapshot_id="live-snapshot",
+        )
+        await db.commit()
+
+        orphaned_flow_version_id = uuid4()
+        await db.execute(text("PRAGMA foreign_keys=OFF"))
+        await db.execute(
+            text(
+                "INSERT INTO flow_version_deployment_attachment "
+                "(id, user_id, flow_version_id, deployment_id, provider_snapshot_id) "
+                "VALUES (:id, :user_id, :flow_version_id, :deployment_id, :provider_snapshot_id)"
+            ),
+            {
+                "id": str(uuid4()),
+                "user_id": str(user.id),
+                "flow_version_id": str(orphaned_flow_version_id),
+                "deployment_id": str(deployment.id),
+                "provider_snapshot_id": "orphaned-snapshot",
+            },
+        )
+        await db.commit()
+        await db.execute(text("PRAGMA foreign_keys=ON"))
+
+        results = await list_deployment_attachments(db, user_id=user.id, deployment_id=deployment.id)
+        assert [attachment.id for attachment in results] == [live_attachment.id]
+
 
 @pytest.mark.asyncio
 class TestListDeploymentAttachmentsForFlowVersionIds:
@@ -463,7 +502,7 @@ class TestUpdateFlowVersionByProviderSnapshotId:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="test-deployment-2",
+            display_name="test-deployment-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add_all([flow_version_2, deployment_2])
@@ -560,7 +599,7 @@ class TestDeleteDeploymentAttachmentsByKeys:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-keys-2",
-            name="deploy-keys-2",
+            display_name="deploy-keys-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
@@ -640,7 +679,7 @@ class TestListAttachmentsByDeploymentIds:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
         )
         db.add(d2)
         await db.commit()
@@ -843,7 +882,7 @@ class TestSnapshotFlowVersionConflict:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
@@ -884,7 +923,7 @@ class TestSnapshotFlowVersionConflict:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
@@ -930,7 +969,7 @@ class TestSnapshotFlowVersionConflict:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-2",
-            name="deploy-2",
+            display_name="deploy-2",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
