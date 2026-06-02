@@ -36,6 +36,8 @@ VARIABLES_TO_GET_FROM_ENVIRONMENT = [
     "WATSONX_APIKEY",
     "WATSONX_PROJECT_ID",
     "WATSONX_URL",
+    # Ollama base URL — when set, the Ollama provider is auto-enabled in Model Providers
+    "OLLAMA_BASE_URL",
 ]
 
 # Agentic experience specific variables

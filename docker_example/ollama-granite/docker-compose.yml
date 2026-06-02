@@ -1,0 +1,67 @@
+services:
+  langflow:
+    image: langflowai/langflow:latest
+    pull_policy: always
+    ports:
+      - "7860:7860"
+    depends_on:
+      postgres:
+        condition: service_started
+      ollama-init:
+        condition: service_completed_successfully
+    environment:
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/langflow
+      - LANGFLOW_CONFIG_DIR=/app/langflow
+      # Pre-configures the Ollama provider in Model Providers on first user login.
+      - OLLAMA_BASE_URL=http://ollama:11434
+    volumes:
+      - langflow-data:/app/langflow
+
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: langflow
+      POSTGRES_PASSWORD: langflow
+      POSTGRES_DB: langflow
+    ports:
+      - "5432:5432"
+    volumes:
+      - langflow-postgres:/var/lib/postgresql/data
+
+  ollama:
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list >/dev/null 2>&1 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 24
+    # Uncomment the block below to enable NVIDIA GPU acceleration
+    # (requires the NVIDIA Container Toolkit on the host).
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: all
+    #           capabilities: [gpu]
+
+  ollama-init:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    command: >
+      "ollama pull granite4:350m && echo 'granite4:350m ready'"
+    restart: "no"
+
+volumes:
+  langflow-postgres:
+  langflow-data:
+  ollama-data:
