@@ -318,29 +318,38 @@ export default function ModelInputComponent({
       }
     }
 
-    // Zero-provider import fallback: if the user has no providers configured
-    // locally but an imported flow carries a saved model, inject that saved
-    // selection as the only dropdown entry so the trigger renders the model
-    // (with the Configure wrench) instead of the "Setup Provider" button.
-    // Without this, ``flatOptions`` would be empty and ``ModelTrigger`` would
-    // swap the dropdown for the setup CTA, visually losing the imported
-    // selection.
-    const hasAnyGrouped = Object.keys(grouped).length > 0;
+    // Source of truth is the providers list: re-inject a registry-valid saved
+    // model the filters excluded, so an Assistant-applied model isn't reset.
     const savedValue = value?.[0];
-    if (!hasAnyGrouped && savedValue?.name) {
+    const savedKey = savedValue?.name
+      ? `${savedValue.provider || "Unknown"}::${savedValue.name}`
+      : null;
+    const savedInRegistry =
+      !!savedValue?.name &&
+      (providersData?.some(
+        (p) =>
+          p.provider === savedValue.provider &&
+          (p.models ?? []).some((m) => m.model_name === savedValue.name),
+      ) ??
+        false);
+    const shouldInjectSaved =
+      !!savedValue?.name &&
+      !!savedKey &&
+      !seen.has(savedKey) &&
+      (Object.keys(grouped).length === 0 || savedInRegistry);
+    if (shouldInjectSaved && savedValue) {
       const providerName = savedValue.provider || "Unknown";
-      grouped[providerName] = [
-        {
-          ...(savedValue.id && { id: savedValue.id }),
-          name: savedValue.name,
-          icon: savedValue.icon || "Bot",
-          provider: providerName,
-          metadata: {
-            ...(savedValue.metadata ?? {}),
-            not_enabled_locally: true,
-          },
-        } as ModelOption,
-      ];
+      grouped[providerName] = grouped[providerName] ?? [];
+      grouped[providerName].push({
+        ...(savedValue.id && { id: savedValue.id }),
+        name: savedValue.name,
+        icon: savedValue.icon || "Bot",
+        provider: providerName,
+        metadata: {
+          ...(savedValue.metadata ?? {}),
+          not_enabled_locally: true,
+        },
+      } as ModelOption);
     }
 
     return grouped;
