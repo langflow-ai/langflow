@@ -64,7 +64,7 @@ jest.mock("@/stores/flowsManagerStore", () => ({
 
 function setStores(
   examples: typeof fullExamples,
-  flows: Array<{ id: string; name: string }> = [],
+  flows: Array<{ id: string; name: string; folder_id?: string }> = [],
 ) {
   mockedFlowsManagerStore.mockImplementation(
     (selector?: (state: unknown) => unknown) => {
@@ -83,6 +83,7 @@ describe("useApplyTemplateToCurrentFlow", () => {
     currentFlow = {
       id: "flow-1",
       name: "New Flow",
+      folder_id: "folder-A",
       data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
     };
     setStores(fullExamples);
@@ -145,11 +146,13 @@ describe("useApplyTemplateToCurrentFlow", () => {
     );
   });
 
-  it("should_dedupe_the_template_name_when_a_flow_with_that_name_already_exists", () => {
+  it("should_dedupe_the_template_name_when_a_flow_with_that_name_already_exists_in_the_same_folder", () => {
     // The "Starter Project" folder is seeded with real starter-project flows
     // (one literally named "Simple Agent"). Matching the rest of the app, the
-    // rename version-dedupes against existing flows → "Simple Agent (1)".
-    setStores(fullExamples, [{ id: "seeded", name: "Simple Agent" }]);
+    // rename version-dedupes against sibling flows → "Simple Agent (1)".
+    setStores(fullExamples, [
+      { id: "seeded", name: "Simple Agent", folder_id: "folder-A" },
+    ]);
     const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
 
     act(() => {
@@ -159,6 +162,43 @@ describe("useApplyTemplateToCurrentFlow", () => {
     expect(setCurrentFlow).toHaveBeenCalledWith(
       expect.objectContaining({ name: "Simple Agent (1)" }),
     );
+  });
+
+  it("should_not_dedupe_against_a_same_named_flow_in_a_different_folder", () => {
+    // Dedupe must be folder-scoped, mirroring ``useAddFlow``. A "Simple Agent"
+    // sitting in another folder must not bump this folder's flow to "(1)".
+    setStores(fullExamples, [
+      { id: "other", name: "Simple Agent", folder_id: "folder-B" },
+    ]);
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    act(() => {
+      result.current("simple_agent");
+    });
+
+    expect(setCurrentFlow).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "Simple Agent" }),
+    );
+  });
+
+  it("should_revert_the_optimistic_rename_when_the_persist_fails", async () => {
+    // The rename is applied optimistically to flowStore, then persisted. If the
+    // save fails, the optimistic flowStore state must roll back so it does not
+    // diverge from the flows list / backend (which still hold "New Flow").
+    const original = currentFlow;
+    saveFlow.mockRejectedValueOnce(new Error("persist failed"));
+    const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
+
+    await act(async () => {
+      result.current("simple_agent");
+      await Promise.resolve();
+    });
+
+    expect(setCurrentFlow).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ name: "Simple Agent" }),
+    );
+    expect(setCurrentFlow).toHaveBeenLastCalledWith(original);
   });
 
   it("should_not_rename_or_persist_when_there_is_no_current_flow", () => {
