@@ -5,6 +5,7 @@ from uuid import UUID, uuid4
 
 import pytest
 from lfx.services.adapters.deployment.schema import (
+    BaseDeploymentData,
     BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigDeploymentBindingUpdate,
@@ -25,6 +26,7 @@ from lfx.services.adapters.deployment.schema import (
     ExecutionCreate,
     ExecutionCreateResult,
     ExecutionStatusResult,
+    ItemResult,
     RedeployResult,
     SnapshotDeploymentBindingUpdate,
     SnapshotItem,
@@ -141,12 +143,28 @@ def test_deployment_list_params_rejects_blank_filter_ids() -> None:
         DeploymentListParams(deployment_ids=["   "])
 
 
-def test_deployment_list_params_validates_deployment_names() -> None:
-    params = DeploymentListParams(deployment_names=[" A ", "B"])
-    assert params.deployment_names == ["A", "B"]
+def test_deployment_list_params_validates_entity_filter_ids() -> None:
+    params = DeploymentListParams(snapshot_ids=[" snap-1 ", "snap-1"], config_ids=[" cfg-1 "])
+    assert params.snapshot_ids == ["snap-1"]
+    assert params.config_ids == ["cfg-1"]
 
     with pytest.raises(ValidationError):
-        DeploymentListParams(deployment_names=["A", "  "])
+        DeploymentListParams(snapshot_ids=["snap-1", "  "])
+
+
+def test_item_result_normalizes_name() -> None:
+    item = ItemResult(id="dep_1", name=" Deployment 1 ", type=DeploymentType.AGENT)
+    assert item.name == "Deployment 1"
+
+
+def test_item_result_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        ItemResult(id="dep_1", name="   ", type=DeploymentType.AGENT)
+
+
+def test_item_result_rejects_blank_id() -> None:
+    with pytest.raises(ValidationError):
+        ItemResult(id="   ", name="Deployment 1", type=DeploymentType.AGENT)
 
 
 def test_snapshot_binding_update_add_ids_dedupes() -> None:
@@ -477,6 +495,43 @@ def test_base_deployment_data_update_requires_at_least_one_field() -> None:
         BaseDeploymentDataUpdate()
 
 
+def test_base_deployment_data_update_accepts_explicit_null_description() -> None:
+    payload = BaseDeploymentDataUpdate(description=None)
+
+    assert payload.description is None
+    assert "description" in payload.model_fields_set
+
+
+def test_base_deployment_data_normalizes_name() -> None:
+    payload = BaseDeploymentData(name=" My Deployment ", type=DeploymentType.AGENT)
+    assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_allows_omitted_name() -> None:
+    payload = BaseDeploymentData(type=DeploymentType.AGENT)
+    assert payload.name is None
+
+
+def test_base_deployment_data_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseDeploymentData(name="   ", type=DeploymentType.AGENT)
+
+
+def test_base_deployment_data_update_normalizes_name() -> None:
+    payload = BaseDeploymentDataUpdate(name=" My Deployment ")
+    assert payload.name == "My Deployment"
+
+
+def test_base_deployment_data_update_rejects_blank_name() -> None:
+    with pytest.raises(ValidationError):
+        BaseDeploymentDataUpdate(name="   ")
+
+
+def test_base_deployment_data_update_rejects_explicit_null_name() -> None:
+    with pytest.raises(ValidationError, match="'name' cannot be set to null"):
+        BaseDeploymentDataUpdate(name=None)
+
+
 def test_deployment_update_requires_at_least_one_section() -> None:
     with pytest.raises(ValidationError, match="At least one of"):
         DeploymentUpdate()
@@ -557,9 +612,22 @@ def test_deployment_create_happy_path_with_snapshot_and_config() -> None:
 def test_deployment_create_result_defaults() -> None:
     result = DeploymentCreateResult(
         id="dep_1",
+        type=DeploymentType.AGENT,
     )
-    assert result.snapshot_ids == []
-    assert result.config_id is None
+    assert result.name is None
+    assert result.description is None
+
+
+def test_deployment_create_result_allows_long_provider_description() -> None:
+    description = "x" * 501
+
+    result = DeploymentCreateResult(
+        id="dep_1",
+        type=DeploymentType.AGENT,
+        description=description,
+    )
+
+    assert result.description == description
 
 
 def test_get_deployment_create_schema_returns_valid_json() -> None:

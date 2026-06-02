@@ -12,6 +12,7 @@ import type {
   Deployment,
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getDeploymentDisplayName } from "@/pages/MainPage/pages/deploymentsPage/types";
 
 const NEW_DEPLOYMENT_VALUE = "__new__";
 
@@ -68,28 +69,29 @@ export default function DeploymentPhaseContent({
           value={selectedDeployment}
           onValueChange={onSelectDeployment}
         >
-          {deployments.map((deployment) => (
-            <div
-              key={deployment.id}
-              className="flex items-center gap-3 rounded-lg border p-3"
-            >
-              <RadioGroupItem
-                value={deployment.id}
-                id={`deploy-${deployment.id}`}
-              />
-              <Label
-                htmlFor={`deploy-${deployment.id}`}
-                className="flex flex-1 cursor-pointer flex-col gap-0.5"
+          {deployments.map((deployment) => {
+            const displayName = getDeploymentDisplayName(deployment);
+            return (
+              <div
+                key={deployment.id}
+                className="flex items-center gap-3 rounded-lg border p-3"
               >
-                <span className="text-sm font-medium">{deployment.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {t("deployments.deploymentTypeLabel", {
-                    type: deployment.type,
-                  })}
-                </span>
-              </Label>
-            </div>
-          ))}
+                <RadioGroupItem
+                  value={deployment.id}
+                  id={`deploy-${deployment.id}`}
+                />
+                <Label
+                  htmlFor={`deploy-${deployment.id}`}
+                  className="flex flex-1 cursor-pointer flex-col gap-0.5"
+                >
+                  <span className="text-sm font-medium">{displayName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {deployment.type} deployment
+                  </span>
+                </Label>
+              </div>
+            );
+          })}
 
           <div className="flex items-center gap-3 rounded-lg border p-3">
             <RadioGroupItem value={NEW_DEPLOYMENT_VALUE} id="deploy-new" />

@@ -5,6 +5,7 @@ from langchain_experimental.utilities import PythonREPL
 from lfx.custom.custom_component.component import Component
 from lfx.io import MultilineInput, Output, StrInput
 from lfx.schema.data import Data
+from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
 
 
 class PythonREPLComponent(Component):
@@ -18,7 +19,9 @@ class PythonREPLComponent(Component):
             name="global_imports",
             display_name="Global Imports",
             info="A comma-separated list of modules to import globally, e.g. 'math,numpy,pandas'.",
-            value="math,pandas",
+            # Default kept minimal: powerful modules (e.g. pandas, whose read_pickle/eval
+            # are code-execution sinks) must be opted into explicitly via this field.
+            value="math",
             required=True,
         ),
         MultilineInput(
@@ -67,13 +70,23 @@ class PythonREPLComponent(Component):
             raise
         else:
             self.log(f"Successfully imported modules: {list(global_dict.keys())}")
+            # Restrict builtins so the import allow-list cannot be silently bypassed
+            # (e.g. __import__("subprocess")). Without this, exec() auto-injects the full
+            # builtins module, leaving __import__/open/eval/exec reachable.
+            global_dict["__builtins__"] = safe_builtins()
             return global_dict
 
     def run_python_repl(self) -> Data:
         try:
+            # Validate the exact code that will run: PythonREPL.run() strips a leading
+            # "python"/backticks/whitespace prefix before exec, so validate the sanitized
+            # form. Rejects inline imports and escape gadgets (e.g.
+            # ().__class__.__subclasses__()); combined with restricted builtins in get_globals().
+            code = PythonREPL.sanitize_input(self.python_code)
+            validate_code_safety(code)
             globals_ = self.get_globals(self.global_imports)
             python_repl = PythonREPL(_globals=globals_)
-            result = python_repl.run(self.python_code)
+            result = python_repl.run(code)
             result = result.strip() if result else ""
 
             self.log("Code execution completed successfully")

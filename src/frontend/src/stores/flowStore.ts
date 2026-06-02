@@ -1426,19 +1426,33 @@ export function syncNodeTranslations(): void {
       node.data.node!.description,
     );
 
-    // Update input field display_names, info (tooltips), and placeholders
+    // Update input field display_names, info (tooltips), and placeholders.
+    // Before overwriting a field's display_name, verify that the currently
+    // saved value is a known translatable string for that field (i.e. it
+    // matches one of the locale translations we collected at startup).
+    // If the saved value is not in the known set it was user-customized in
+    // the component code and must not be overwritten.
     const updatedTemplate = { ...node.data.node!.template };
+    const knownFields = componentDisplayNames[normKey]?.fields ?? {};
     for (const fieldName of Object.keys(updatedTemplate)) {
       const freshField = freshDef.template?.[fieldName];
       if (freshField?.display_name !== undefined) {
-        updatedTemplate[fieldName] = {
-          ...updatedTemplate[fieldName],
-          display_name: freshField.display_name,
-          ...(freshField.info !== undefined && { info: freshField.info }),
-          ...(freshField.placeholder !== undefined && {
-            placeholder: freshField.placeholder,
-          }),
-        };
+        const currentDisplayName = updatedTemplate[fieldName]?.display_name;
+        const knownFieldDisplayNames =
+          knownFields[fieldName]?.display_name ?? [];
+        const isKnownTranslation =
+          knownFieldDisplayNames.length === 0 ||
+          knownFieldDisplayNames.includes(currentDisplayName);
+        if (isKnownTranslation) {
+          updatedTemplate[fieldName] = {
+            ...updatedTemplate[fieldName],
+            display_name: freshField.display_name,
+            ...(freshField.info !== undefined && { info: freshField.info }),
+            ...(freshField.placeholder !== undefined && {
+              placeholder: freshField.placeholder,
+            }),
+          };
+        }
       }
     }
 
