@@ -288,7 +288,7 @@ class AgentComponent(ToolCallingAgentComponent):
             name="stream",
             display_name="Stream",
             info=STREAM_INFO_TEXT,
-            value=False,
+            value=True,
             advanced=True,
         ),
         BoolInput(
@@ -358,12 +358,22 @@ class AgentComponent(ToolCallingAgentComponent):
         return val
 
     def _get_llm(self):
-        """Override parent to include max_tokens from the Agent's input field."""
+        """Override parent to include max_tokens from the Agent's input field.
+
+        Streaming is mandatory for AgentComponent: ``runnable.astream_events(v2)`` only
+        emits ``on_chat_model_stream`` chunks when the underlying chat model is
+        instantiated with ``streaming=True``. Unlike the LanguageModel component (where
+        ``stream`` is a user-facing toggle), the Agent has no opt-out — the toggle is
+        kept in the UI for backwards compatibility but is intentionally ignored here.
+        Without ``stream=True``, the chat model accumulates the whole response and
+        only emits ``on_chat_model_end``, silently disabling the Playground's live-
+        typing view and breaking the streaming contract on the /events surface.
+        """
         return get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=getattr(self, "api_key", None),
-            stream=bool(getattr(self, "stream", False)),
+            stream=True,
             max_tokens=self._get_max_tokens_value(),
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),

@@ -22,6 +22,14 @@ _MODEL_CLASS_IMPORTS: dict[str, tuple[str, str, str | None]] = {
         "ChatGoogleGenerativeAIFixed",
         "langchain-google-genai",
     ),
+    # AzureChatOpenAI ships in langchain_openai (already a dependency).
+    "AzureChatOpenAI": ("langchain_openai", "AzureChatOpenAI", None),
+    # ChatGroq needs the optional langchain-groq package — keep the install
+    # hint so an unconfigured environment gets an actionable error instead of
+    # an opaque "Unknown model class: ChatGroq". Both class names appear in
+    # MODEL_PROVIDER_METADATA but were missing here, so selecting a Groq /
+    # Azure model died with "Unknown model class".
+    "ChatGroq": ("langchain_groq", "ChatGroq", "langchain-groq"),
     "ChatOllama": ("langchain_ollama", "ChatOllama", None),
     "ChatWatsonx": ("langchain_ibm", "ChatWatsonx", None),
 }

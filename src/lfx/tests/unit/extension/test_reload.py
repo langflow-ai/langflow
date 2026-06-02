@@ -181,7 +181,11 @@ def test_broken_reload_leaves_live_untouched_and_emits_failure(
     pre_record = registry.get_bundle("pilot")
 
     captured: list[ReloadResult] = []
-    monkeypatch.setattr(reload_mod, "_emit_bundle_reload_event", captured.append)
+
+    def _capture(result: ReloadResult, **_kwargs: object) -> None:
+        captured.append(result)
+
+    monkeypatch.setattr(reload_mod, "_emit_bundle_reload_event", _capture)
 
     # Break the bundle so Stage 1 produces an import error.
     (root / "components" / "thing.py").write_text("raise RuntimeError('boom at import')\n", encoding="utf-8")
@@ -195,6 +199,121 @@ def test_broken_reload_leaves_live_untouched_and_emits_failure(
     # And bundle_reload_failed went to the events sink.
     assert len(captured) == 1
     assert captured[0].ok is False
+
+
+def test_emit_uses_user_keyspace_and_full_payload(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """``reload_bundle(user_id=...)`` emits to ``user:<id>`` with ReloadResult.to_dict().
+
+    Guards both fixes:
+    * P1 -- per-user keyspace prevents leakage on /extensions/events polls.
+    * P2 -- payload is the full ReloadResult envelope so the frontend can read
+      ``components_changed`` and ``errors[0].message`` instead of falling back
+      to the generic "check server logs" copy.
+    """
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    captured: list[tuple[str, dict, str]] = []
+
+    class _FakeSvc:
+        def emit(self, event_type: str, payload: dict, keyspace: str = "global") -> None:
+            captured.append((event_type, payload, keyspace))
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_extension_events_service",
+        lambda: _FakeSvc(),
+    )
+
+    # Body-only edit -> components_changed set, components_added/removed empty.
+    (root / "components" / "thing.py").write_text(
+        _component_source("PilotThing").replace("return None", "return 42"),
+        encoding="utf-8",
+    )
+    result = reload_bundle(registry, "pilot", user_id="alice-id")
+    assert result.ok
+
+    assert len(captured) == 1
+    event_type, payload, keyspace = captured[0]
+    assert event_type == "bundle_reloaded"
+    assert keyspace == "user:alice-id"
+    # Full ReloadResult envelope -- not a hand-rolled subset.
+    assert payload == result.to_dict()
+    assert payload["ok"] is True
+    assert "components_changed" in payload
+    assert payload["components_changed"] == ["PilotThing"]
+    assert payload["components_added"] == []
+    assert payload["components_removed"] == []
+
+
+def test_emit_falls_back_to_global_when_user_id_absent(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Without ``user_id`` (CLI / single-user dev) events still emit, to ``global``."""
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    captured: list[tuple[str, dict, str]] = []
+
+    class _FakeSvc:
+        def emit(self, event_type: str, payload: dict, keyspace: str = "global") -> None:
+            captured.append((event_type, payload, keyspace))
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_extension_events_service",
+        lambda: _FakeSvc(),
+    )
+
+    (root / "components" / "thing.py").write_text(_component_source("Renamed"), encoding="utf-8")
+    reload_bundle(registry, "pilot")
+
+    assert len(captured) == 1
+    _, _, keyspace = captured[0]
+    assert keyspace == "global"
+
+
+def test_emit_failure_payload_carries_errors_with_message(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Failed reload payload contains ``errors[0].message`` for the toast.
+
+    Regression: previously the event only carried ``{bundle, reload_id, errors}``
+    but the frontend read ``payload.message`` -- it never matched, so every
+    failure surfaced as the generic "check server logs" toast.
+    """
+    root = _write_extension(tmp_path, files={"thing.py": _component_source("PilotThing")})
+    registry = BundleRegistry()
+    _initial_install(registry, root)
+
+    captured: list[tuple[str, dict, str]] = []
+
+    class _FakeSvc:
+        def emit(self, event_type: str, payload: dict, keyspace: str = "global") -> None:
+            captured.append((event_type, payload, keyspace))
+
+    monkeypatch.setattr(
+        "lfx.services.deps.get_extension_events_service",
+        lambda: _FakeSvc(),
+    )
+
+    (root / "components" / "thing.py").write_text("raise RuntimeError('boom')\n", encoding="utf-8")
+    result = reload_bundle(registry, "pilot", user_id="bob-id")
+    assert not result.ok
+
+    assert len(captured) == 1
+    event_type, payload, keyspace = captured[0]
+    assert event_type == "bundle_reload_failed"
+    assert keyspace == "user:bob-id"
+    assert payload["ok"] is False
+    assert isinstance(payload["errors"], list)
+    assert payload["errors"]
+    assert payload["errors"][0]["message"]
 
 
 def test_reload_unknown_bundle_returns_typed_error() -> None:

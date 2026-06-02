@@ -1,13 +1,12 @@
 import { type FC, useEffect, useMemo, useState } from "react";
-import { useTranslation } from "react-i18next";
 import { FaDiscord, FaGithub } from "react-icons/fa";
 import IconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
 import ModalsComponent from "@/pages/MainPage/components/modalsComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { Users } from "@/types/api";
 import { cn } from "@/utils/utils";
 
@@ -17,12 +16,12 @@ export const GetStartedProgress: FC<{
   isDiscordJoined: boolean;
   handleDismissDialog: () => void;
 }> = ({ userData, isGithubStarred, isDiscordJoined, handleDismissDialog }) => {
-  const { t } = useTranslation();
   const [isGithubStarredChild, setIsGithubStarredChild] =
     useState(isGithubStarred);
   const [isDiscordJoinedChild, setIsDiscordJoinedChild] =
     useState(isDiscordJoined);
   const [newProjectModal, setNewProjectModal] = useState(false);
+  const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
 
   const flows = useFlowsManagerStore((state) => state.flows);
 
@@ -95,11 +94,10 @@ export const GetStartedProgress: FC<{
         >
           {percentageGetStarted >= 100 ? (
             <>
-              <span>{t("sidebar.allSet")}</span>{" "}
-              <span className="pl-1"> 🎉 </span>
+              <span>All Set</span> <span className="pl-1"> 🎉 </span>
             </>
           ) : (
-            t("sidebar.getStarted")
+            "Get started"
           )}
         </span>
         <button
@@ -158,16 +156,14 @@ export const GetStartedProgress: FC<{
             ) : (
               <FaGithub className="h-4 w-4" />
             )}
-            <ShadTooltip content={t("sidebar.starRepo")} styleClasses="z-50">
-              <span
-                className={cn(
-                  "truncate text-sm",
-                  isGithubStarredChild && "text-muted-foreground line-through",
-                )}
-              >
-                {t("sidebar.starRepo")}
-              </span>
-            </ShadTooltip>
+            <span
+              className={cn(
+                "text-sm",
+                isGithubStarredChild && "text-muted-foreground line-through",
+              )}
+            >
+              Star repo for updates
+            </span>
           </div>
         </Button>
 
@@ -202,52 +198,45 @@ export const GetStartedProgress: FC<{
             ) : (
               <FaDiscord className="h-4 w-4 text-[#5865F2]" />
             )}
-            <ShadTooltip
-              content={t("sidebar.joinCommunity")}
-              styleClasses="z-50"
+            <span
+              className={cn(
+                "text-sm",
+                isDiscordJoinedChild && "text-muted-foreground line-through",
+              )}
             >
-              <span
-                className={cn(
-                  "truncate text-sm",
-                  isDiscordJoinedChild && "text-muted-foreground line-through",
-                )}
-              >
-                {t("sidebar.joinCommunity")}
-              </span>
-            </ShadTooltip>
+              Join the community
+            </span>
           </div>
         </Button>
 
-        <Button
-          unstyled
-          className={cn("w-full", hasFlows && "pointer-events-none")}
-          onClick={() => setNewProjectModal(true)}
-        >
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
-              hasFlows && "pointer-events-none text-muted-foreground",
-            )}
-            data-testid="create_flow_btn_get_started"
+        {!hideNewFlowButton && (
+          <Button
+            unstyled
+            className={cn("w-full", hasFlows && "pointer-events-none")}
+            onClick={() => setNewProjectModal(true)}
           >
-            <span data-testid="create_flow_icon_get_started">
-              <IconComponent
-                name={hasFlows ? "Check" : "Plus"}
-                className={cn(
-                  "h-4 w-4 text-primary",
-                  hasFlows && "text-accent-emerald-foreground",
-                )}
-              />
-            </span>
-            <ShadTooltip content={t("sidebar.createFlow")} styleClasses="z-50">
-              <span
-                className={cn("truncate text-sm", hasFlows && "line-through")}
-              >
-                {t("sidebar.createFlow")}
+            <div
+              className={cn(
+                "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
+                hasFlows && "pointer-events-none text-muted-foreground",
+              )}
+              data-testid="create_flow_btn_get_started"
+            >
+              <span data-testid="create_flow_icon_get_started">
+                <IconComponent
+                  name={hasFlows ? "Check" : "Plus"}
+                  className={cn(
+                    "h-4 w-4 text-primary",
+                    hasFlows && "text-accent-emerald-foreground",
+                  )}
+                />
               </span>
-            </ShadTooltip>
-          </div>
-        </Button>
+              <span className={cn("text-sm", hasFlows && "line-through")}>
+                Create a flow
+              </span>
+            </div>
+          </Button>
+        )}
       </div>
 
       <ModalsComponent

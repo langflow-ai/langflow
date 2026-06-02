@@ -88,7 +88,7 @@ export default function VersionListItem({
                   name="Download"
                   className="mr-2 h-3.5 w-3.5"
                 />
-                Export
+                {t("flow.menu.export")}
               </DropdownMenuItem>
               <DropdownMenuItem
                 onClick={() => onDeleteClick(entry)}
@@ -98,7 +98,7 @@ export default function VersionListItem({
                   name="Trash2"
                   className="mr-2 h-3.5 w-3.5"
                 />
-                Delete
+                {t("flow.menu.delete")}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

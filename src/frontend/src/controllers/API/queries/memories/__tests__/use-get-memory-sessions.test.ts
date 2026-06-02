@@ -7,6 +7,7 @@ type InfiniteQueryOptions = {
   queryKey: readonly unknown[];
   queryFn: QueryFn;
   initialPageParam?: number;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   getNextPageParam?: (lastPage: any) => number | undefined;
 };
 
@@ -131,6 +132,7 @@ describe("useGetMemorySessions", () => {
 
     const opts = useInfiniteQueryMock.mock
       .calls[0]?.[0] as InfiniteQueryOptions;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     const result: any = await opts.queryFn({ pageParam: 1 });
 
     expect(result.items).toEqual([]);

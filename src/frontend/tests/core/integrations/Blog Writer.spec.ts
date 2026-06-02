@@ -1,11 +1,11 @@
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
-import { skipIfMissing } from "../../utils/env/skip-if-missing";
-import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
-import { openStarterProject } from "../../utils/flow/open-starter-project";
 
-import { TEXTS } from "../../utils/constants/texts";
 withEventDeliveryModes(
   "Blog Writer",
   { tag: ["@release", "@starter-projects"] },
@@ -32,10 +32,10 @@ withEventDeliveryModes(
       .nth(0)
       .fill("https://www.originaldiving.com/blog/top-ten-turtle-facts");
 
-    await page.getByText("Instructions", { exact: true }).last().click();
-
+    // "Instructions" was a separate Text Input node; it is now an inlined
+    // field on the Prompt component (Text Input is legacy).
     await page
-      .getByTestId("textarea_str_input_value")
+      .getByTestId("textarea_str_instructions")
       .fill(
         "Use the references above for style to write a new blog/tutorial about turtles. Suggest non-covered topics.",
       );

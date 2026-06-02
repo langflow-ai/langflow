@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -31,6 +32,7 @@ export default function AddProviderModal({
   setOpen,
   provider = null,
 }: AddProviderModalProps) {
+  const { t } = useTranslation();
   const isEditMode = !!provider;
   const [credentials, setCredentials] =
     useState<ProviderCredentials>(EMPTY_CREDENTIALS);
@@ -104,8 +106,8 @@ export default function AddProviderModal({
     } catch (err: unknown) {
       showError(
         provider
-          ? "Failed to update environment"
-          : "Failed to create environment",
+          ? t("deployments.failedToUpdateEnvironment")
+          : t("deployments.failedToCreateEnvironment"),
         err,
       );
     } finally {
@@ -117,7 +119,9 @@ export default function AddProviderModal({
     <Dialog open={open} onOpenChange={(value) => !value && handleClose()}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogTitle data-testid="add-provider-modal-title">
-          {provider ? "Configure Environment" : "Add Environment"}
+          {provider
+            ? t("deployments.configureEnvironment")
+            : t("deployments.addEnvironment")}
         </DialogTitle>
         <DialogDescription className="sr-only">
           {provider
@@ -133,7 +137,9 @@ export default function AddProviderModal({
             onCredentialsChange={setCredentials}
             apiKeyRequired={!provider}
             apiKeyPlaceholder={
-              provider ? "Enter a new API key" : "Enter your API key"
+              provider
+                ? t("deployments.enterNewApiKey")
+                : t("deployments.enterApiKey")
             }
             urlRequired={!provider}
             urlReadOnly={!!provider}
@@ -147,14 +153,18 @@ export default function AddProviderModal({
             disabled={isSaving}
             data-testid="add-provider-cancel"
           >
-            Cancel
+            {t("deployments.cancelButton")}
           </Button>
           <Button
             onClick={handleSave}
             disabled={!canSave || isSaving}
             data-testid="add-provider-save"
           >
-            {isSaving ? "Saving..." : provider ? "Update" : "Save"}
+            {isSaving
+              ? t("deployments.saving")
+              : provider
+                ? t("deployments.updateButton")
+                : t("deployments.saveButton")}
           </Button>
         </div>
       </DialogContent>

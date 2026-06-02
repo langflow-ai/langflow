@@ -13,6 +13,7 @@ from lfx.services.adapters.deployment.exceptions import (
     AuthorizationError,
     CredentialResolutionError,
     DeploymentError,
+    DeploymentNotConfiguredError,
     DeploymentNotFoundError,
     DeploymentSupportError,
     InvalidContentError,
@@ -43,7 +44,7 @@ from lfx.services.adapters.deployment.schema import (
 from pydantic import ValidationError
 
 try:
-    import langflow.services.adapters.deployment.watsonx_orchestrate  # noqa: F401
+    from langflow.services.adapters.deployment.watsonx_orchestrate import WatsonxOrchestrateDeploymentService
 except ModuleNotFoundError:
     pytest.skip(
         "Skipping Watsonx deployment tests: optional IBM SDK dependencies not available.",
@@ -59,10 +60,6 @@ payloads_module = importlib.import_module("langflow.services.adapters.deployment
 client_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.client")
 types_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.types")
 deployment_context_module = importlib.import_module("langflow.services.adapters.deployment.context")
-utils_module = importlib.import_module("langflow.services.adapters.deployment.watsonx_orchestrate.utils")
-WatsonxOrchestrateDeploymentService = importlib.import_module(
-    "langflow.services.adapters.deployment.watsonx_orchestrate"
-).WatsonxOrchestrateDeploymentService
 WxOCredentials = importlib.import_module(
     "langflow.services.adapters.deployment.watsonx_orchestrate.types"
 ).WxOCredentials
@@ -80,7 +77,25 @@ TEST_WXO_LLM = "ibm/granite-3.3-8b"
 
 
 def _normalized_provider_app_id(app_id: str) -> str:
-    return utils_module.validate_wxo_name(app_id)
+    return payloads_module.validate_wxo_name(app_id, field_label="Connection app id")
+
+
+def _assert_langflow_agent_name(agent_name: str, *, display_name: str | None = None) -> None:
+    prefix = "langflow_"
+    assert agent_name.startswith(prefix)
+    if display_name is not None:
+        normalized_display_name = payloads_module.normalize_wxo_name(display_name).strip("_")
+        assert normalized_display_name
+        assert agent_name.startswith(f"{prefix}{normalized_display_name}_")
+    uuid_segment = agent_name.rsplit("_", maxsplit=1)[-1]
+    assert len(uuid_segment) == 8
+    assert all(char in "0123456789abcdef" for char in uuid_segment)
+    assert payloads_module.validate_wxo_name(agent_name, field_label="Agent name") == agent_name
+
+
+def _agent_technical_name(display_name: str = "my deployment") -> str:
+    normalized_display_name = payloads_module.normalize_wxo_name(display_name).strip("_")
+    return f"langflow_{normalized_display_name}_1234abcd"
 
 
 def _reload_wxo_auth_modules():
@@ -107,14 +122,29 @@ class DummySettingsService:
 class FakeAgentClient:
     def __init__(
         self,
-        deployment: dict,
+        deployment: dict | list | None,
         listed_agents: list[dict] | None = None,
         get_payloads: dict[str, dict | list[dict]] | None = None,
         create_response: object | None = None,
         create_exception: Exception | None = None,
+        *,
+        fill_missing_metadata: bool = True,
     ):
-        self._deployment = deployment
-        self._listed_agents = listed_agents or []
+        self._deployment = {**deployment} if isinstance(deployment, dict) else deployment
+        if isinstance(self._deployment, dict) and self._deployment.get("id") and not self._deployment.get("name"):
+            self._deployment["name"] = f"agent-{self._deployment['id']}"
+        if isinstance(self._deployment, dict) and fill_missing_metadata:
+            self._deployment.setdefault("display_name", self._deployment.get("name", "Test Agent"))
+            self._deployment.setdefault("description", "desc")
+            self._deployment.setdefault("llm", TEST_WXO_LLM)
+        self._listed_agents = [dict(agent) for agent in listed_agents] if listed_agents else []
+        if fill_missing_metadata:
+            for agent in self._listed_agents:
+                if agent.get("id") and not agent.get("name"):
+                    agent["name"] = f"agent-{agent['id']}"
+                agent.setdefault("display_name", agent.get("name", "Test Agent"))
+                agent.setdefault("description", "desc")
+                agent.setdefault("llm", TEST_WXO_LLM)
         self._get_payloads = get_payloads or {}
         self._create_response = create_response or SimpleNamespace(id="dep-created")
         self._create_exception = create_exception
@@ -184,8 +214,10 @@ class FakeToolClient:
         self.delete_calls: list[str] = []
         self.update_calls: list[tuple[str, dict]] = []
         self.create_calls: list[dict] = []
+        self.get_drafts_by_ids_calls: list[list[str]] = []
 
     def get_drafts_by_ids(self, tool_ids: list[str]):
+        self.get_drafts_by_ids_calls.append(list(tool_ids))
         return [dict(self._tools_by_id[tool_id]) for tool_id in tool_ids if tool_id in self._tools_by_id]
 
     def get_draft_by_name(self, tool_name: str):
@@ -332,12 +364,14 @@ def _attach_provider_clients(service: WatsonxOrchestrateDeploymentService, clien
 
 def _create_provider_spec(
     *,
+    display_name: str = "my deployment",
     existing_tool_ids: list[str] | None = None,
     existing_app_ids: list[str] | None = None,
 ) -> dict:
     tool_ids = existing_tool_ids or ["tool-existing-1"]
     app_ids = existing_app_ids or ["app-existing-1"]
     return {
+        "display_name": display_name,
         "tools": {},
         "connections": {},
         "llm": TEST_WXO_LLM,
@@ -420,7 +454,7 @@ async def test_create_rejects_legacy_top_level_config_section(monkeypatch):
             db=object(),
             payload=DeploymentCreate(
                 spec=BaseDeploymentData(
-                    name="my deployment",
+                    name=_agent_technical_name(),
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
@@ -443,7 +477,7 @@ async def test_create_rejects_missing_llm():
             db=object(),
             payload=DeploymentCreate(
                 spec=BaseDeploymentData(
-                    name="my deployment",
+                    name=_agent_technical_name(),
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
@@ -459,6 +493,7 @@ def test_create_payload_rejects_empty_work():
     ):
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
+                "display_name": "my deployment",
                 "llm": TEST_WXO_LLM,
             }
         )
@@ -538,7 +573,7 @@ async def test_update_rejects_legacy_top_level_config_section(monkeypatch):
 @pytest.mark.anyio
 async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_agent = FakeAgentClient({"id": "dep-1", "display_name": "Existing Agent", "tools": ["tool-1"]})
     fake_tool = FakeToolClient(
         [
             {"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}},
@@ -585,6 +620,7 @@ async def test_update_provider_data_binds_existing_tool_and_updates_agent_tools(
     assert result.provider_result.created_app_ids == []
     assert result.provider_result.created_snapshot_ids == []
     assert result.provider_result.added_snapshot_ids == ["tool-3"]
+    assert result.provider_result.display_name == "Existing Agent"
     assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-3"]
     _, updated_tool_payload = fake_tool.update_calls[0]
     assert updated_tool_payload["binding"]["langflow"]["connections"]["cfg-new"] == "conn-new"
@@ -642,7 +678,7 @@ async def test_update_provider_data_bind_unbind_and_rename_preserves_connection_
                 "operations": [
                     {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-1")}, "app_ids": ["cfg-add"]},
                     {"op": "unbind", "tool": _tool_ref("tool-1"), "app_ids": ["cfg-remove"]},
-                    {"op": "rename_tool", "tool": _tool_ref("tool-1"), "new_name": "renamed_tool"},
+                    {"op": "rename_tool", "tool": _tool_ref("tool-1"), "tool_display_name": "Renamed Tool"},
                 ],
             }
         ),
@@ -650,11 +686,11 @@ async def test_update_provider_data_bind_unbind_and_rename_preserves_connection_
     )
 
     assert result.provider_result is not None
-    assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-1", "tool-1"]
+    assert [tool_id for tool_id, _payload in fake_tool.update_calls] == ["tool-1"]
 
-    _, rename_payload = fake_tool.update_calls[1]
-    assert rename_payload["name"] == "renamed_tool"
-    assert rename_payload["display_name"] == "renamed_tool"
+    _, rename_payload = fake_tool.update_calls[0]
+    _assert_langflow_agent_name(rename_payload["name"], display_name="Renamed Tool")
+    assert rename_payload["display_name"] == "Renamed Tool"
     assert rename_payload["binding"]["langflow"]["connections"] == {
         "cfg-keep": "conn-keep",
         "cfg-add": "conn-add",
@@ -868,6 +904,7 @@ def test_create_payload_rejects_existing_tool_bind_with_empty_app_ids():
     with pytest.raises(ValidationError):
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
+                "display_name": "my deployment",
                 "llm": TEST_WXO_LLM,
                 "operations": [
                     {
@@ -883,6 +920,7 @@ def test_create_payload_rejects_existing_tool_bind_with_empty_app_ids():
 def test_create_payload_accepts_attach_tool_operation():
     payload = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "llm": TEST_WXO_LLM,
             "operations": [
                 {
@@ -904,6 +942,7 @@ def test_create_payload_rejects_attach_and_bind_for_same_existing_tool():
     ):
         payloads_module.WatsonxDeploymentCreatePayload.model_validate(
             {
+                "display_name": "my deployment",
                 "llm": TEST_WXO_LLM,
                 "operations": [
                     {"op": "attach_tool", "tool": _tool_ref("tool-existing")},
@@ -954,7 +993,7 @@ async def test_update_provider_data_put_tools_with_llm_updates_agent(monkeypatch
 @pytest.mark.anyio
 async def test_update_provider_data_creates_raw_tools_without_operations(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_agent = FakeAgentClient({"id": "dep-1", "display_name": "Existing Agent", "tools": ["tool-1"]})
     fake_tool = FakeToolClient([{"id": "tool-1", "name": "tool-1", "binding": {"langflow": {"connections": {}}}}])
     fake_connections = FakeConnectionsClient()
     fake_clients = SimpleNamespace(
@@ -993,7 +1032,12 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1", "source_ref": "fv-raw-only-1"},
+                            "provider_data": {
+                                "project_id": "project-1",
+                                "source_ref": "fv-raw-only-1",
+                                "tool_name": "snapshot_new_raw_only",
+                                "tool_display_name": "Snapshot New Raw Only",
+                            },
                         }
                     ]
                 },
@@ -1004,6 +1048,7 @@ async def test_update_provider_data_creates_raw_tools_without_operations(monkeyp
 
     assert captured["tool_bindings"][0].connections == {}
     assert result.provider_result is not None
+    assert result.provider_result.display_name == "Existing Agent"
     assert result.provider_result.created_snapshot_ids == ["new-tool-raw-1"]
     assert result.provider_result.added_snapshot_ids == ["new-tool-raw-1"]
     assert fake_connections.create_calls == []
@@ -1064,7 +1109,12 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1", "source_ref": "fv-update-1"},
+                            "provider_data": {
+                                "project_id": "project-1",
+                                "source_ref": "fv-update-1",
+                                "tool_name": "snapshot_new_1",
+                                "tool_display_name": "Snapshot New 1",
+                            },
                         }
                     ]
                 },
@@ -1080,7 +1130,7 @@ async def test_update_provider_data_creates_raw_connection_and_raw_tool(monkeypa
                 "operations": [
                     {
                         "op": "bind",
-                        "tool": {"name_of_raw": "snapshot-new-1"},
+                        "tool": {"name_of_raw": "snapshot_new_1"},
                         "app_ids": ["cfg"],
                     }
                 ],
@@ -1257,7 +1307,12 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-plan-1"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-plan-1",
+                            "tool_name": "snapshot_raw_1",
+                            "tool_display_name": "Snapshot Raw 1",
+                        },
                     }
                 ],
             },
@@ -1277,7 +1332,7 @@ def test_build_provider_update_plan_preserves_operation_encounter_order():
                 {"op": "bind", "tool": {"tool_id_with_ref": _tool_ref("tool-a")}, "app_ids": ["cfg-1"]},
                 {"op": "unbind", "tool": _tool_ref("tool-c"), "app_ids": ["cfg-3", "cfg-3"]},
                 {"op": "remove_tool", "tool": _tool_ref("tool-b")},
-                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
+                {"op": "bind", "tool": {"name_of_raw": "snapshot_raw_1"}, "app_ids": ["cfg-raw-2", "cfg-raw-1"]},
             ],
         }
     )
@@ -1314,7 +1369,12 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-bound"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-bound",
+                            "tool_name": "snapshot_bound",
+                            "tool_display_name": "Snapshot Bound",
+                        },
                     },
                     {
                         "id": str(UUID("00000000-0000-0000-0000-000000000052")),
@@ -1322,7 +1382,12 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-unbound"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-unbound",
+                            "tool_name": "snapshot_unbound",
+                            "tool_display_name": "Snapshot Unbound",
+                        },
                     },
                 ],
             },
@@ -1335,7 +1400,7 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
             "operations": [
                 {
                     "op": "bind",
-                    "tool": {"name_of_raw": "snapshot-bound"},
+                    "tool": {"name_of_raw": "snapshot_bound"},
                     "app_ids": ["cfg"],
                 }
             ],
@@ -1346,7 +1411,7 @@ def test_build_provider_update_plan_creates_unbound_raw_tools_alongside_bound_ra
         provider_update=provider_update,
     )
 
-    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot-bound", "snapshot-unbound"]
+    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot_bound", "snapshot_unbound"]
     assert plan.raw_tools_to_create[0].app_ids == ["cfg"]
     assert plan.raw_tools_to_create[1].app_ids == []
 
@@ -1416,6 +1481,7 @@ def test_build_provider_update_plan_attaches_existing_tool_without_connection_de
 def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_operations():
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "tools": {
                 "raw_payloads": [
                     {
@@ -1424,7 +1490,12 @@ def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_opera
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-unbound"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-unbound",
+                            "tool_name": "snapshot_unbound",
+                            "tool_display_name": "Snapshot Unbound",
+                        },
                     }
                 ]
             },
@@ -1433,19 +1504,202 @@ def test_build_provider_create_plan_creates_unbound_raw_tools_without_bind_opera
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=None,
         provider_create=provider_create,
     )
 
-    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot-unbound"]
+    assert [item.raw_name for item in plan.raw_tools_to_create] == ["snapshot_unbound"]
     assert plan.raw_tools_to_create[0].app_ids == []
     assert plan.selected_operation_app_ids == []
     assert plan.existing_tool_ids == []
+    _assert_langflow_agent_name(plan.deployment_name, display_name="my deployment")
+
+
+@pytest.mark.parametrize("display_name", ["123 starts with digits", "!!!"])
+def test_build_provider_create_plan_keeps_technical_name_separate_from_display_name(display_name):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "display_name": display_name,
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000072")),
+                        "name": "snapshot-edge",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+    technical_name = _agent_technical_name("stable agent")
+
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name=technical_name,
+        provider_create=provider_create,
+    )
+
+    assert plan.deployment_name == technical_name
+    assert plan.display_name == display_name
+
+
+def test_build_provider_create_plan_rejects_invalid_technical_name():
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "display_name": "my deployment",
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000072")),
+                        "name": "snapshot-edge",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+
+    with pytest.raises(
+        InvalidContentError,
+        match="Agent name must start with a letter",
+    ):
+        create_core_module.build_provider_create_plan(
+            deployment_name="123-invalid-technical-name",
+            provider_create=provider_create,
+        )
+
+
+def test_build_provider_create_plan_rejects_unnormalized_explicit_technical_name():
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "display_name": "my deployment",
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000073")),
+                        "name": "snapshot-edge",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+
+    with pytest.raises(
+        InvalidContentError,
+        match="Agent name must only contain letters, numbers, and underscores",
+    ):
+        create_core_module.build_provider_create_plan(
+            deployment_name="agent technical name",
+            provider_create=provider_create,
+        )
+
+
+@pytest.mark.parametrize("display_name", ["123 starts with digits", "a" * 500])
+def test_build_provider_create_plan_generates_technical_name_from_display_name(display_name):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "display_name": display_name,
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000073")),
+                        "name": "snapshot-edge",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name=None,
+        provider_create=provider_create,
+    )
+
+    _assert_langflow_agent_name(plan.deployment_name, display_name=display_name)
+    assert plan.display_name == display_name
+
+
+@pytest.mark.parametrize("display_name", ["!!!", "🔥🔥"])
+def test_build_provider_create_plan_uses_resource_fallback_for_symbol_only_display_name(display_name):
+    provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
+        {
+            "display_name": display_name,
+            "tools": {
+                "raw_payloads": [
+                    {
+                        "id": str(UUID("00000000-0000-0000-0000-000000000074")),
+                        "name": "snapshot-edge",
+                        "description": "desc",
+                        "data": {"nodes": [], "edges": []},
+                        "tags": [],
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-edge",
+                            "tool_name": "snapshot_edge",
+                            "tool_display_name": "Snapshot Edge",
+                        },
+                    }
+                ]
+            },
+            "llm": TEST_WXO_LLM,
+            "operations": [],
+        }
+    )
+
+    plan = create_core_module.build_provider_create_plan(
+        deployment_name=None,
+        provider_create=provider_create,
+    )
+
+    assert plan.deployment_name.startswith("langflow_agent_")
+    assert plan.display_name == display_name
 
 
 def test_build_provider_create_plan_attaches_existing_tool_without_connection_updates():
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "llm": TEST_WXO_LLM,
             "operations": [
                 {
@@ -1456,7 +1710,7 @@ def test_build_provider_create_plan_attaches_existing_tool_without_connection_up
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=_agent_technical_name(),
         provider_create=provider_create,
     )
 
@@ -1472,12 +1726,14 @@ async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors(
     delta.bind.extend(["cfg-missing-first", "cfg-present"])
 
     with pytest.raises(InvalidContentError, match="cfg-missing-first"):
-        await update_core_module._update_existing_tool_connection_deltas(
+        await update_core_module._update_existing_tools(
             clients=clients,
             existing_tool_deltas={"tool-c": delta},
+            tool_renames={},
             resolved_connections={"cfg-present": "conn-present"},
             operation_to_provider_app_id={},
             original_tools={},
+            tool_by_id={"tool-c": fake_tool._tools_by_id["tool-c"]},
         )
 
 
@@ -1485,6 +1741,7 @@ async def test_update_existing_tool_connection_deltas_uses_bind_order_in_errors(
 async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(monkeypatch):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "tools": {
                 "raw_payloads": [
                     {
@@ -1493,7 +1750,12 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
                         "description": "desc",
                         "data": {"nodes": [], "edges": []},
                         "tags": [],
-                        "provider_data": {"project_id": "project-1", "source_ref": "fv-create-1"},
+                        "provider_data": {
+                            "project_id": "project-1",
+                            "source_ref": "fv-create-1",
+                            "tool_name": "snapshot_raw_1",
+                            "tool_display_name": "Snapshot Raw 1",
+                        },
                     }
                 ]
             },
@@ -1504,12 +1766,12 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
             },
             "llm": TEST_WXO_LLM,
             "operations": [
-                {"op": "bind", "tool": {"name_of_raw": "snapshot-raw-1"}, "app_ids": ["cfg"]},
+                {"op": "bind", "tool": {"name_of_raw": "snapshot_raw_1"}, "app_ids": ["cfg"]},
             ],
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=_agent_technical_name(),
         provider_create=provider_create,
     )
 
@@ -1537,8 +1799,8 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
         user_id="user-1",
         db=object(),
         deployment_spec=BaseDeploymentData(
-            name="my deployment",
-            description="desc",
+            name=_agent_technical_name(),
+            description="   ",
             type=DeploymentType.AGENT,
         ),
         plan=plan,
@@ -1547,10 +1809,13 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
     assert fake_clients.agent.create_calls
-    assert fake_clients.agent.create_calls[0]["name"] == "my_deployment"
+    assert fake_clients.agent.create_calls[0]["name"] == _agent_technical_name()
+    assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
+    assert fake_clients.agent.create_calls[0]["description"] == "Langflow deployment my deployment"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
     assert result.agent_id == "dep-created"
+    assert result.description == "Langflow deployment my deployment"
     assert result.app_ids == ["cfg"]
     assert [(binding.tool_id, binding.app_ids) for binding in result.tool_app_bindings] == [("created-tool-1", ["cfg"])]
     assert [(binding.source_ref, binding.tool_id) for binding in result.tools_with_refs] == [
@@ -1562,6 +1827,7 @@ async def test_apply_provider_create_plan_binds_raw_tools_with_provider_app_ids(
 async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with_writable_payload(monkeypatch):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "tools": {},
             "connections": {},
             "llm": TEST_WXO_LLM,
@@ -1569,7 +1835,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=_agent_technical_name(),
         provider_create=provider_create,
     )
     fake_tool = FakeToolClient(
@@ -1596,12 +1862,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
     async def mock_create_agent_deployment(
         *,
         clients,  # noqa: ARG001
-        tool_ids,  # noqa: ARG001
-        agent_name,  # noqa: ARG001
-        agent_display_name,  # noqa: ARG001
-        deployment_name,  # noqa: ARG001
-        description,  # noqa: ARG001
-        llm,  # noqa: ARG001
+        payload,  # noqa: ARG001
     ):
         msg = "create failed"
         raise RuntimeError(msg)
@@ -1615,7 +1876,7 @@ async def test_apply_provider_create_plan_rolls_back_mutated_existing_tools_with
             user_id="user-1",
             db=object(),
             deployment_spec=BaseDeploymentData(
-                name="my deployment",
+                name=_agent_technical_name(),
                 description="desc",
                 type=DeploymentType.AGENT,
             ),
@@ -1756,6 +2017,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
 ):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1774,7 +2036,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=_agent_technical_name(),
         provider_create=provider_create,
     )
     fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
@@ -1814,7 +2076,7 @@ async def test_apply_provider_create_plan_rolls_back_successfully_created_raw_co
             user_id="user-1",
             db=object(),
             deployment_spec=BaseDeploymentData(
-                name="my deployment",
+                name=_agent_technical_name(),
                 description="desc",
                 type=DeploymentType.AGENT,
             ),
@@ -1830,6 +2092,7 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
 ):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1849,7 +2112,7 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=_agent_technical_name(),
         provider_create=provider_create,
     )
     fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
@@ -1889,7 +2152,7 @@ async def test_apply_provider_create_plan_rolls_back_all_journaled_raw_connectio
             user_id="user-1",
             db=object(),
             deployment_spec=BaseDeploymentData(
-                name="my deployment",
+                name=_agent_technical_name(),
                 description="desc",
                 type=DeploymentType.AGENT,
             ),
@@ -1908,6 +2171,7 @@ async def test_apply_provider_create_plan_rolls_back_journaled_app_ids_when_crea
 ):
     provider_create = payloads_module.WatsonxDeploymentCreatePayload.model_validate(
         {
+            "display_name": "my deployment",
             "tools": {},
             "connections": {
                 "raw_payloads": [
@@ -1925,7 +2189,7 @@ async def test_apply_provider_create_plan_rolls_back_journaled_app_ids_when_crea
         }
     )
     plan = create_core_module.build_provider_create_plan(
-        deployment_name="my deployment",
+        deployment_name=_agent_technical_name(),
         provider_create=provider_create,
     )
     fake_clients = SimpleNamespace(connections=FakeConnectionsClient())
@@ -1963,7 +2227,7 @@ async def test_apply_provider_create_plan_rolls_back_journaled_app_ids_when_crea
             user_id="user-1",
             db=object(),
             deployment_spec=BaseDeploymentData(
-                name="my deployment",
+                name=_agent_technical_name(),
                 description="desc",
                 type=DeploymentType.AGENT,
             ),
@@ -2000,9 +2264,16 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
         agent={"id": "dep-1", "tools": ["tool-existing-1"]},
         provider_update=provider_update,
     )
+    agent = {
+        "id": "dep-1",
+        "name": "agent_dep_1",
+        "display_name": "Agent Dep 1",
+        "description": "desc",
+        "tools": ["tool-existing-1"],
+    }
     fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-existing-1"]}),
-        tool=FakeToolClient([]),
+        agent=FakeAgentClient(agent),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {"connections": {}}}}]),
         connections=FakeConnectionsClient(),
     )
     captured: dict[str, Any] = {}
@@ -2045,7 +2316,7 @@ async def test_apply_provider_update_plan_rolls_back_successfully_created_raw_co
             user_id="user-1",
             db=object(),
             agent_id="dep-1",
-            agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+            agent=agent,
             update_payload={},
             plan=plan,
         )
@@ -2081,9 +2352,16 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
         agent={"id": "dep-1", "tools": ["tool-existing-1"]},
         provider_update=provider_update,
     )
+    agent = {
+        "id": "dep-1",
+        "name": "agent_dep_1",
+        "display_name": "Agent Dep 1",
+        "description": "desc",
+        "tools": ["tool-existing-1"],
+    }
     fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-existing-1"]}),
-        tool=FakeToolClient([]),
+        agent=FakeAgentClient(agent),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {"connections": {}}}}]),
         connections=FakeConnectionsClient(),
     )
     captured: dict[str, Any] = {}
@@ -2126,7 +2404,7 @@ async def test_apply_provider_update_plan_rolls_back_all_journaled_raw_connectio
             user_id="user-1",
             db=object(),
             agent_id="dep-1",
-            agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+            agent=agent,
             update_payload={},
             plan=plan,
         )
@@ -2163,9 +2441,16 @@ async def test_apply_provider_update_plan_rolls_back_journaled_app_ids_when_crea
         agent={"id": "dep-1", "tools": ["tool-existing-1"]},
         provider_update=provider_update,
     )
+    agent = {
+        "id": "dep-1",
+        "name": "agent_dep_1",
+        "display_name": "Agent Dep 1",
+        "description": "desc",
+        "tools": ["tool-existing-1"],
+    }
     fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-existing-1"]}),
-        tool=FakeToolClient([]),
+        agent=FakeAgentClient(agent),
+        tool=FakeToolClient([{"id": "tool-existing-1", "binding": {"langflow": {"connections": {}}}}]),
         connections=FakeConnectionsClient(),
     )
     captured: dict[str, Any] = {}
@@ -2206,7 +2491,7 @@ async def test_apply_provider_update_plan_rolls_back_journaled_app_ids_when_crea
             user_id="user-1",
             db=object(),
             agent_id="dep-1",
-            agent={"id": "dep-1", "tools": ["tool-existing-1"]},
+            agent=agent,
             update_payload={},
             plan=plan,
         )
@@ -2231,6 +2516,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
         return ["created-tool-1"]
 
     _attach_provider_clients(service, fake_clients)
+    monkeypatch.setattr(payloads_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
     monkeypatch.setattr(
         create_core_module,
         "create_and_upload_wxo_flow_tools_with_bindings",
@@ -2241,11 +2527,11 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
         user_id="user-1",
         payload=DeploymentCreate(
             spec=BaseDeploymentData(
-                name="my deployment",
                 description="desc",
                 type=DeploymentType.AGENT,
             ),
             provider_data={
+                "display_name": "my deployment",
                 "tools": {
                     "raw_payloads": [
                         {
@@ -2254,7 +2540,12 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                             "description": "desc",
                             "data": {"nodes": [], "edges": []},
                             "tags": [],
-                            "provider_data": {"project_id": "project-1", "source_ref": "fv-create-service-1"},
+                            "provider_data": {
+                                "project_id": "project-1",
+                                "source_ref": "fv-create-service-1",
+                                "tool_name": "snapshot_new_1",
+                                "tool_display_name": "Snapshot New 1",
+                            },
                         }
                     ]
                 },
@@ -2265,7 +2556,7 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
                 },
                 "llm": TEST_WXO_LLM,
                 "operations": [
-                    {"op": "bind", "tool": {"name_of_raw": "snapshot-new-1"}, "app_ids": ["cfg"]},
+                    {"op": "bind", "tool": {"name_of_raw": "snapshot_new_1"}, "app_ids": ["cfg"]},
                 ],
             },
         ),
@@ -2275,20 +2566,23 @@ async def test_create_provider_data_prefixes_tool_and_deployment_names_but_not_c
     assert fake_clients.connections.create_calls == [{"app_id": "cfg"}]
     assert captured["connections"] == {"cfg": "conn-cfg"}
     assert fake_clients.agent.create_calls
-    assert fake_clients.agent.create_calls[0]["name"] == "my_deployment"
+    assert fake_clients.agent.create_calls[0]["name"] == "langflow_my_deployment_abcdef12"
     assert fake_clients.agent.create_calls[0]["display_name"] == "my deployment"
     assert fake_clients.agent.create_calls[0]["description"] == "desc"
     assert fake_clients.agent.create_calls[0]["tools"] == ["created-tool-1"]
     assert fake_clients.agent.create_calls[0]["llm"] == TEST_WXO_LLM
-    assert result.config_id is None
-    assert result.snapshot_ids == []
     assert result.provider_result is not None
     provider_result = (
         result.provider_result.model_dump() if hasattr(result.provider_result, "model_dump") else result.provider_result
     )
     assert provider_result["app_ids"] == ["cfg"]
+    assert "deployment_name" not in provider_result
+    assert "description" not in provider_result
     assert provider_result["tool_app_bindings"] == [{"tool_id": "created-tool-1", "app_ids": ["cfg"]}]
     assert provider_result["tools_with_refs"] == [{"source_ref": "fv-create-service-1", "tool_id": "created-tool-1"}]
+    assert result.type == DeploymentType.AGENT
+    assert result.name == "langflow_my_deployment_abcdef12"
+    assert result.description == "desc"
 
 
 @pytest.mark.anyio
@@ -2299,7 +2593,22 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
         listed_agents=[
             {"id": "dep-1", "name": "deployment-1", "tools": [], "environments": [{"name": "draft"}]},
             {"id": "dep-2", "name": "deployment-2", "tools": [], "environments": [{"name": "prod"}]},
-            {"id": "dep-3", "name": "deployment-3", "tools": [], "environments": [{"name": "draft"}]},
+            {
+                "id": "dep-3",
+                "name": "deployment-3",
+                "display_name": "Deployment Three",
+                "description": "Provider description",
+                "tools": [],
+                "environments": [{"name": "draft"}],
+            },
+            {
+                "id": "dep-4",
+                "name": "deployment-4",
+                "display_name": "Deployment Four",
+                "description": "Provider description",
+                "tools": [],
+                "environments": [{"name": "draft"}, {"name": "live"}],
+            },
         ],
     )
     fake_clients = _with_wxo_wrappers(
@@ -2321,11 +2630,19 @@ async def test_list_deployments_filters_with_provider_draft_filters(monkeypatch)
         db=object(),
         params=DeploymentListParams(
             deployment_types=[DeploymentType.AGENT],
-            provider_params={"ids": ["dep-2"], "names": ["deployment-3"], "environment": "draft"},
+            provider_params={"ids": ["dep-2"], "names": ["deployment-3", "deployment-4"], "environment": "draft"},
         ),
     )
 
     assert sorted(item.id for item in result.deployments) == ["dep-3"]
+    assert fake_agent.last_list_params == {"ids": ["dep-2"], "names": ["deployment-3", "deployment-4"]}
+    assert result.deployments[0].provider_data == {
+        "display_name": "Deployment Three",
+        "description": "Provider description",
+        "tool_ids": [],
+        "llm": TEST_WXO_LLM,
+        "environments": ["draft"],
+    }
 
 
 @pytest.mark.anyio
@@ -2363,7 +2680,12 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-conflict-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-conflict-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2379,7 +2701,7 @@ async def test_update_provider_data_maps_raw_connection_conflict_to_deployment_c
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2418,11 +2740,12 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
             user_id="user-1",
             payload=DeploymentCreate(
                 spec=BaseDeploymentData(
-                    name="my deployment",
+                    name=_agent_technical_name(),
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
                 provider_data={
+                    "display_name": "my deployment",
                     "tools": {
                         "raw_payloads": [
                             {
@@ -2431,7 +2754,12 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-create-conflict-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-create-conflict-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2447,7 +2775,7 @@ async def test_create_provider_data_maps_raw_connection_conflict_to_deployment_c
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2637,7 +2965,12 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-rollback-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-rollback-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2653,7 +2986,7 @@ async def test_update_provider_data_rolls_back_partially_created_raw_tools(monke
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2727,11 +3060,12 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
             user_id="user-1",
             payload=DeploymentCreate(
                 spec=BaseDeploymentData(
-                    name="my deployment",
+                    name=_agent_technical_name(),
                     description="desc",
                     type=DeploymentType.AGENT,
                 ),
                 provider_data={
+                    "display_name": "my deployment",
                     "tools": {
                         "raw_payloads": [
                             {
@@ -2740,7 +3074,12 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                                 "description": "desc",
                                 "data": {"nodes": [], "edges": []},
                                 "tags": [],
-                                "provider_data": {"project_id": "project-1", "source_ref": "fv-create-rollback-1"},
+                                "provider_data": {
+                                    "project_id": "project-1",
+                                    "source_ref": "fv-create-rollback-1",
+                                    "tool_name": "snapshot_new_1",
+                                    "tool_display_name": "Snapshot New 1",
+                                },
                             }
                         ]
                     },
@@ -2756,7 +3095,7 @@ async def test_create_provider_data_rolls_back_partially_created_raw_tools(monke
                     "operations": [
                         {
                             "op": "bind",
-                            "tool": {"name_of_raw": "snapshot-new-1"},
+                            "tool": {"name_of_raw": "snapshot_new_1"},
                             "app_ids": ["cfg"],
                         }
                     ],
@@ -2856,6 +3195,7 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
                 provider_data=payloads_module.WatsonxFlowArtifactProviderData(
                     project_id="project-1",
                     source_ref="fv-1",
+                    tool_display_name="Snapshot One",
                 ),
             ),
             BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
@@ -2867,6 +3207,7 @@ async def test_process_raw_flows_with_app_id_returns_source_ref_bindings(monkeyp
                 provider_data=payloads_module.WatsonxFlowArtifactProviderData(
                     project_id="project-1",
                     source_ref="fv-2",
+                    tool_display_name="Snapshot Two",
                 ),
             ),
         ],
@@ -2933,6 +3274,7 @@ async def test_process_raw_flows_with_app_id_accepts_typed_provider_data(monkeyp
                 provider_data=payloads_module.WatsonxFlowArtifactProviderData(
                     project_id="project-1",
                     source_ref="fv-typed-1",
+                    tool_display_name="Snapshot One",
                 ),
             ),
         ],
@@ -3024,6 +3366,7 @@ def test_create_wxo_flow_tool_keeps_load_from_db_global_values_unprefixed(monkey
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
             source_ref="fv-flow-template-1",
+            tool_display_name="Flow Template",
         ),
     )
 
@@ -3092,6 +3435,7 @@ def test_create_wxo_flow_tool_excludes_provider_data_from_artifact(monkeypatch):
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
             source_ref="src-ref-1",
+            tool_display_name="Flow",
         ),
     )
 
@@ -3157,6 +3501,8 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
         provider_data=payloads_module.WatsonxFlowArtifactProviderData(
             project_id="project-123",
             source_ref="fv-prefix-1",
+            tool_name="basicllmwxo",
+            tool_display_name="Basic LLM wxO",
         ),
     )
 
@@ -3188,6 +3534,46 @@ def test_create_wxo_flow_tool_normalizes_name_for_raw_payload(monkeypatch):
     assert artifact_bytes == b"artifact"
 
 
+def test_create_wxo_flow_tool_uses_provider_data_technical_name(monkeypatch):
+    flow_payload = BaseFlowArtifact[payloads_module.WatsonxFlowArtifactProviderData](
+        id="00000000-0000-0000-0000-000000000001",
+        name="raw-correlation-key",
+        description="desc",
+        data={"nodes": [], "edges": []},
+        tags=[],
+        provider_data=payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-123",
+            source_ref="fv-prefix-1",
+            tool_display_name="Basic LLM wxO",
+        ),
+    )
+
+    fake_tool = SimpleNamespace(
+        __tool_spec__=SimpleNamespace(
+            model_dump=lambda **kwargs: {"name": "raw-correlation-key"},  # noqa: ARG005
+        )
+    )
+    monkeypatch.setattr(
+        tools_module,
+        "create_langflow_tool",
+        lambda **kwargs: fake_tool,  # noqa: ARG005
+    )
+    monkeypatch.setattr(
+        tools_module,
+        "build_langflow_artifact_bytes",
+        lambda **kwargs: b"artifact",  # noqa: ARG005
+    )
+
+    tool_payload, artifact_bytes = tools_module.create_wxo_flow_tool(
+        flow_payload=flow_payload,
+        connections={},
+    )
+
+    _assert_langflow_agent_name(tool_payload["name"], display_name="Basic LLM wxO")
+    assert tool_payload["display_name"] == "Basic LLM wxO"
+    assert artifact_bytes == b"artifact"
+
+
 @pytest.mark.anyio
 async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
@@ -3210,6 +3596,7 @@ async def test_rollback_create_result_cleans_up_agent_tools_and_apps(monkeypatch
         user_id="user-1",
         deployment_id="dep-created",
         provider_result={
+            "display_name": "Agent Display Name",
             "app_ids": ["cfg"],
             "tools_with_refs": [
                 {"source_ref": "fv-1", "tool_id": "tool-1"},
@@ -4038,6 +4425,7 @@ async def test_list_configs_scopes_return_same_normalized_item_shape(monkeypatch
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
                 }
             ]
@@ -4071,8 +4459,8 @@ async def test_list_snapshots_single_deployment_scope(monkeypatch):
         agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "tool-2"]}),
         tool=FakeToolClient(
             [
-                {"id": "tool-1", "name": "Tool One"},
-                {"id": "tool-2", "name": "Tool Two"},
+                {"id": "tool-1", "name": "Tool One", "display_name": "Tool One"},
+                {"id": "tool-2", "name": "Tool Two", "display_name": "Tool Two"},
             ]
         ),
         connections=FakeConnectionsClient(),
@@ -4123,7 +4511,7 @@ async def test_list_snapshots_partial_resolution_logs_stale_ids(monkeypatch, cap
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1", "deleted-tool"]}),
-        tool=FakeToolClient([{"id": "tool-1", "name": "Tool One"}]),
+        tool=FakeToolClient([{"id": "tool-1", "name": "Tool One", "display_name": "Tool One"}]),
         connections=FakeConnectionsClient(),
     )
 
@@ -4156,6 +4544,7 @@ async def test_list_snapshots_single_deployment_scope_extracts_connections(monke
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
                 }
             ]
@@ -4175,7 +4564,11 @@ async def test_list_snapshots_single_deployment_scope_extracts_connections(monke
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
 
 
 @pytest.mark.anyio
@@ -4410,8 +4803,13 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
     fake_base = FakeBaseClient(
         get_payloads={
             "/tools": [
-                {"id": "tool-1", "name": "Tool One", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
-                {"id": "tool-2"},
+                {
+                    "id": "tool-1",
+                    "name": "Tool One",
+                    "display_name": "Tool One",
+                    "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
+                },
+                {"id": "tool-2", "name": "Tool Two", "display_name": "Tool Two"},
             ]
         }
     )
@@ -4431,8 +4829,12 @@ async def test_list_snapshots_without_deployment_id_lists_tenant_scope(monkeypat
 
     result = await service.list_snapshots(user_id="user-1", db=object(), params=None)
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
-    assert result.snapshots[1].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
+    assert result.snapshots[1].provider_data == {"name": "Tool Two", "display_name": "Tool Two", "connections": {}}
     assert result.provider_result == {}
 
 
@@ -4453,8 +4855,12 @@ async def test_list_snapshots_snapshot_ids_returns_verified_provider_data(monkey
             snapshots=[
                 SnapshotItem(
                     id="tool-1",
-                    name="Tool One",
-                    provider_data={"connections": {"cfg-1": "conn-1"}},
+                    name="tool_one",
+                    provider_data={
+                        "name": "tool_one",
+                        "display_name": "Tool One",
+                        "connections": {"cfg-1": "conn-1"},
+                    },
                 )
             ]
         )
@@ -4469,7 +4875,11 @@ async def test_list_snapshots_snapshot_ids_returns_verified_provider_data(monkey
     )
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
+    assert result.snapshots[0].provider_data == {
+        "name": "tool_one",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
 
 
 @pytest.mark.anyio
@@ -4507,166 +4917,22 @@ async def test_list_snapshots_snapshot_ids_trusts_verified_results_without_reval
     assert result.snapshots[0].provider_data == {"unexpected": "value"}
 
 
-def test_snapshot_list_params_snapshot_names_strips_whitespace():
-    params = SnapshotListParams(snapshot_names=["  my_tool  ", "other "])
-    assert params.snapshot_names == ["my_tool", "other"]
-
-
-def test_snapshot_list_params_snapshot_names_rejects_empty_strings():
-    with pytest.raises(ValidationError):
-        SnapshotListParams(snapshot_names=[""])
-
-
-def test_snapshot_list_params_snapshot_names_rejects_whitespace_only():
-    with pytest.raises(ValidationError):
-        SnapshotListParams(snapshot_names=["  "])
-
-
-def test_snapshot_list_params_snapshot_names_rejects_empty_list():
-    with pytest.raises(ValidationError):
-        SnapshotListParams(snapshot_names=[])
-
-
-def test_snapshot_list_params_snapshot_names_none_is_valid():
-    params = SnapshotListParams(snapshot_names=None)
-    assert params.snapshot_names is None
-
-
 @pytest.mark.anyio
-async def test_list_snapshots_snapshot_names_returns_matching_tools(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient(
-            [
-                {"id": "tool-1", "name": "my_tool", "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}}},
-                {"id": "tool-2", "name": "other_tool"},
-            ]
-        ),
-        connections=FakeConnectionsClient(),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.list_snapshots(
-        user_id="user-1",
-        db=object(),
-        params=SnapshotListParams(snapshot_names=["my_tool"]),
-    )
-
-    assert len(result.snapshots) == 1
-    assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].name == "my_tool"
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
-
-
-@pytest.mark.anyio
-async def test_list_snapshots_snapshot_names_returns_empty_when_no_match(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=FakeToolClient(
-            [
-                {"id": "tool-1", "name": "existing_tool"},
-            ]
-        ),
-        connections=FakeConnectionsClient(),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.list_snapshots(
-        user_id="user-1",
-        db=object(),
-        params=SnapshotListParams(snapshot_names=["nonexistent_tool"]),
-    )
-
-    assert len(result.snapshots) == 0
-
-
-@pytest.mark.anyio
-async def test_list_snapshots_snapshot_names_ignored_when_deployment_ids_present(monkeypatch):
-    """When deployment_ids present, snapshot_names should be ignored and deployment-scoped path used."""
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]}),
-        tool=FakeToolClient(
-            [
-                {"id": "tool-1", "name": "agent_tool", "binding": {"langflow": {"connections": {}}}},
-                {"id": "tool-2", "name": "my_tool"},
-            ]
-        ),
-        connections=FakeConnectionsClient(),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.list_snapshots(
-        user_id="user-1",
-        db=object(),
-        params=SnapshotListParams(deployment_ids=["dep-1"], snapshot_names=["my_tool"]),
-    )
-
-    # Should return agent's tools (deployment-scoped), not name-filtered results
-    assert len(result.snapshots) == 1
-    assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].name == "agent_tool"
-
-
-@pytest.mark.anyio
-async def test_list_snapshots_snapshot_names_wraps_provider_error(monkeypatch):
-    """get_drafts_by_names failure is wrapped via raise_as_deployment_error."""
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_tool = FakeToolClient([])
-
-    def get_drafts_by_names_raises(names):  # noqa: ARG001
-        msg = "provider timeout"
-        raise RuntimeError(msg)
-
-    monkeypatch.setattr(fake_tool, "get_drafts_by_names", get_drafts_by_names_raises)
-
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient({"id": "dep-1", "tools": []}),
-        tool=fake_tool,
-        connections=FakeConnectionsClient(),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(DeploymentError, match="listing"):
-        await service.list_snapshots(
-            user_id="user-1",
-            db=object(),
-            params=SnapshotListParams(snapshot_names=["my_tool"]),
-        )
-
-
-@pytest.mark.anyio
-async def test_verify_tools_by_ids_returns_only_connections_provider_data():
+async def test_verify_tools_by_ids_returns_tool_metadata_provider_data():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
             [
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "conn-1"}}},
                     "extra": "ignored",
                 },
                 {
                     "id": "tool-2",
                     "name": "Tool Two",
+                    "display_name": "Tool Two",
                     "binding": {"langflow": {"connections": {}}},
                     "extra": "ignored",
                 },
@@ -4677,8 +4943,12 @@ async def test_verify_tools_by_ids_returns_only_connections_provider_data():
     result = await tools_module.verify_tools_by_ids(fake_clients, ["tool-1", "tool-2"])
 
     assert [snapshot.id for snapshot in result.snapshots] == ["tool-1", "tool-2"]
-    assert result.snapshots[0].provider_data == {"connections": {"cfg-1": "conn-1"}}
-    assert result.snapshots[1].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "conn-1"},
+    }
+    assert result.snapshots[1].provider_data == {"name": "Tool Two", "display_name": "Tool Two", "connections": {}}
 
 
 @pytest.mark.anyio
@@ -4689,6 +4959,7 @@ async def test_verify_tools_by_ids_tolerates_malformed_connections_payload():
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": ["not-a-dict"]}},
                 }
             ]
@@ -4699,17 +4970,18 @@ async def test_verify_tools_by_ids_tolerates_malformed_connections_payload():
 
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {"name": "Tool One", "display_name": "Tool One", "connections": {}}
 
 
 @pytest.mark.anyio
-async def test_verify_tools_by_ids_tolerates_malformed_connection_values():
+async def test_verify_tools_by_ids_preserves_provider_connection_values():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
             [
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {"langflow": {"connections": {"cfg-1": "   "}}},
                 }
             ]
@@ -4720,17 +4992,22 @@ async def test_verify_tools_by_ids_tolerates_malformed_connection_values():
 
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {"cfg-1": "   "},
+    }
 
 
 @pytest.mark.anyio
-async def test_verify_tools_by_ids_rejects_mixed_connections_payload():
+async def test_verify_tools_by_ids_preserves_provider_connection_mapping():
     fake_clients = SimpleNamespace(
         tool=FakeToolClient(
             [
                 {
                     "id": "tool-1",
                     "name": "Tool One",
+                    "display_name": "Tool One",
                     "binding": {
                         "langflow": {
                             "connections": {
@@ -4750,7 +5027,16 @@ async def test_verify_tools_by_ids_rejects_mixed_connections_payload():
 
     assert len(result.snapshots) == 1
     assert result.snapshots[0].id == "tool-1"
-    assert result.snapshots[0].provider_data == {"connections": {}}
+    assert result.snapshots[0].provider_data == {
+        "name": "Tool One",
+        "display_name": "Tool One",
+        "connections": {
+            "cfg-1": "conn-1",
+            "cfg-2": "   ",
+            "   ": "conn-3",
+            "cfg-4": 123,
+        },
+    }
 
 
 # ---------------------------------------------------------------------------
@@ -5000,7 +5286,14 @@ async def test_get_deployment_returns_agent(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient(
-            {"id": "dep-1", "name": "my_agent", "description": "desc"},
+            {
+                "id": "dep-1",
+                "name": "my_agent",
+                "display_name": "My Agent",
+                "description": "desc",
+                "tools": [],
+                "environments": [],
+            },
         ),
     )
 
@@ -5022,6 +5315,7 @@ async def test_get_deployment_includes_tool_ids_and_environment_in_provider_data
             {
                 "id": "dep-1",
                 "name": "my_agent",
+                "display_name": "My Agent",
                 "description": "desc",
                 "tools": ["tool-1", "tool-2"],
                 "environments": [{"name": "draft"}],
@@ -5038,10 +5332,36 @@ async def test_get_deployment_includes_tool_ids_and_environment_in_provider_data
     result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
     assert result.provider_data == {
+        "display_name": "My Agent",
+        "description": "desc",
         "tool_ids": ["tool-1", "tool-2"],
-        "environment": "draft",
+        "environments": ["draft"],
         "llm": "meta-llm",
     }
+
+
+@pytest.mark.anyio
+@pytest.mark.parametrize("missing_field", ["display_name", "description"])
+async def test_get_deployment_requires_provider_display_metadata(monkeypatch, missing_field):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    agent = {
+        "id": "dep-1",
+        "name": "my_agent",
+        "display_name": "My Agent",
+        "description": "desc",
+        "tools": [],
+        "environments": [],
+    }
+    agent.pop(missing_field)
+    fake_clients = SimpleNamespace(agent=FakeAgentClient(agent, fill_missing_metadata=False))
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(KeyError, match=missing_field):
+        await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
 
 @pytest.mark.anyio
@@ -5049,7 +5369,14 @@ async def test_get_deployment_defaults_tool_ids_to_empty_list(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_clients = SimpleNamespace(
         agent=FakeAgentClient(
-            {"id": "dep-1", "name": "my_agent", "description": "desc"},
+            {
+                "id": "dep-1",
+                "name": "my_agent",
+                "display_name": "My Agent",
+                "description": "desc",
+                "tools": [],
+                "environments": [],
+            },
         ),
     )
 
@@ -5061,8 +5388,11 @@ async def test_get_deployment_defaults_tool_ids_to_empty_list(monkeypatch):
     result = await service.get(user_id="user-1", deployment_id="dep-1", db=object())
 
     assert result.provider_data == {
+        "display_name": "My Agent",
+        "description": "desc",
         "tool_ids": [],
-        "environment": "unknown",
+        "llm": TEST_WXO_LLM,
+        "environments": [],
     }
 
 
@@ -5191,45 +5521,16 @@ async def test_delete_only_deletes_agent_not_tools_or_configs(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_get_status_connected(monkeypatch):
+async def test_get_status_not_configured():
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(
-            {"id": "dep-1", "environments": [{"name": "draft", "id": "env-1"}]},
-        ),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    result = await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
-    assert result.id == "dep-1"
-    assert result.provider_data["status"] == "connected"
-    assert result.provider_data["environments"] == ["draft"]
-
-
-@pytest.mark.anyio
-async def test_get_status_not_found(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_clients = SimpleNamespace(
-        agent=FakeAgentClient(None),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(DeploymentNotFoundError, match="dep-1"):
+    with pytest.raises(DeploymentNotConfiguredError, match="Deployment status is not configured"):
         await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
 
 
 @pytest.mark.anyio
-async def test_update_deployment_name_and_description(monkeypatch):
+async def test_update_deployment_display_name_and_description_renames_technical_agent(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": ["tool-1"]})
+    fake_agent = FakeAgentClient({"id": "dep-1", "name": "langflow_old_name_87654321", "tools": ["tool-1"]})
     fake_clients = SimpleNamespace(
         agent=fake_agent,
         tool=FakeToolClient([{"id": "tool-1"}]),
@@ -5240,9 +5541,11 @@ async def test_update_deployment_name_and_description(monkeypatch):
         return fake_clients
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+    monkeypatch.setattr(payloads_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
 
     update_data = DeploymentUpdate(
-        spec=BaseDeploymentDataUpdate(name="new name", description="new desc"),
+        spec=BaseDeploymentDataUpdate(description="new desc"),
+        provider_data={"display_name": "new name"},
     )
 
     result = await service.update(
@@ -5255,9 +5558,128 @@ async def test_update_deployment_name_and_description(monkeypatch):
     assert len(fake_agent.update_calls) == 1
     agent_id, payload = fake_agent.update_calls[0]
     assert agent_id == "dep-1"
-    assert payload["name"] == "new_name"
     assert payload["display_name"] == "new name"
+    assert payload["name"] == "langflow_new_name_abcdef12"
     assert payload["description"] == "new desc"
+    assert result.provider_result is not None
+    assert result.provider_result.name == payload["name"]
+    assert result.provider_result.display_name == "new name"
+    assert result.provider_result.description == "new desc"
+
+
+@pytest.mark.anyio
+async def test_update_deployment_technical_name_still_uses_explicit_spec_name(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_agent = FakeAgentClient(
+        {
+            "id": "dep-1",
+            "name": "provider_agent_name",
+            "display_name": "old label",
+            "description": "provider desc",
+            "tools": [],
+        }
+    )
+    fake_clients = SimpleNamespace(
+        agent=fake_agent,
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    result = await service.update(
+        user_id="user-1",
+        deployment_id="dep-1",
+        payload=DeploymentUpdate(
+            spec=BaseDeploymentDataUpdate(name="new_technical_name"),
+            provider_data={"display_name": "!!!"},
+        ),
+        db=object(),
+    )
+
+    _, payload = fake_agent.update_calls[0]
+    assert payload == {"display_name": "!!!", "name": "new_technical_name"}
+    assert result.provider_result is not None
+    assert result.provider_result.name == "new_technical_name"
+    assert result.provider_result.display_name == "!!!"
+    assert result.provider_result.description == "provider desc"
+
+
+@pytest.mark.anyio
+async def test_update_deployment_rejects_unnormalized_explicit_technical_name(monkeypatch):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    fake_clients = SimpleNamespace(
+        agent=FakeAgentClient({"id": "dep-1", "name": "provider_agent_name", "tools": []}),
+        tool=FakeToolClient([]),
+        connections=FakeConnectionsClient(),
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(InvalidContentError, match="Agent name must only contain letters, numbers, and underscores"):
+        await service.update(
+            user_id="user-1",
+            deployment_id="dep-1",
+            payload=DeploymentUpdate(spec=BaseDeploymentDataUpdate(name="new technical name")),
+            db=object(),
+        )
+
+
+def test_build_update_payload_rejects_explicit_null_technical_name():
+    spec = BaseDeploymentDataUpdate.model_construct(name=None, _fields_set={"name"})
+
+    with pytest.raises(InvalidContentError, match="Agent name cannot be set to null"):
+        update_core_module.build_update_payload_from_spec(spec)
+
+
+@pytest.mark.parametrize("description", ["", "   "])
+def test_build_update_payload_rejects_empty_description(description):
+    spec = BaseDeploymentDataUpdate(description=description)
+
+    with pytest.raises(InvalidContentError, match="Agent description cannot be empty"):
+        update_core_module.build_update_payload_from_spec(spec)
+
+
+@pytest.mark.parametrize(
+    ("core_update", "field_label"),
+    [
+        (WatsonxDeploymentUpdatePayload(llm=None), "Agent llm"),
+        (WatsonxDeploymentUpdatePayload(display_name=None), "Agent display name"),
+    ],
+)
+def test_build_update_payload_rejects_explicit_null_core_update_fields(core_update, field_label):
+    with pytest.raises(InvalidContentError, match=f"{field_label} cannot be set to null"):
+        update_core_module.build_update_payload_from_spec(None, core_update=core_update)
+
+
+@pytest.mark.parametrize(
+    ("core_update", "field_label"),
+    [
+        (WatsonxDeploymentUpdatePayload.model_construct(llm="", _fields_set={"llm"}), "Agent llm"),
+        (
+            WatsonxDeploymentUpdatePayload.model_construct(display_name="   ", _fields_set={"display_name"}),
+            "Agent display name",
+        ),
+    ],
+)
+def test_build_update_payload_rejects_empty_core_update_fields(core_update, field_label):
+    with pytest.raises(InvalidContentError, match=f"{field_label} cannot be empty"):
+        update_core_module.build_update_payload_from_spec(None, core_update=core_update)
+
+
+def test_build_update_payload_uses_resource_fallback_for_symbol_only_display_name(monkeypatch):
+    monkeypatch.setattr(payloads_module, "uuid4", lambda: SimpleNamespace(hex="abcdef1234567890"))
+    core_update = WatsonxDeploymentUpdatePayload(display_name="!!!")
+
+    payload = update_core_module.build_update_payload_from_spec(None, core_update=core_update)
+
+    assert payload == {"display_name": "!!!", "name": "langflow_agent_abcdef12"}
 
 
 @pytest.mark.anyio
@@ -5289,7 +5711,14 @@ async def test_list_deployments_without_params(monkeypatch):
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         listed_agents=[
-            {"id": "dep-1", "name": "agent-1", "tools": [], "environments": [{"name": "draft"}]},
+            {
+                "id": "dep-1",
+                "name": "agent-1",
+                "display_name": "Agent One",
+                "description": "desc",
+                "tools": [],
+                "environments": [{"name": "draft"}],
+            },
         ],
     )
     fake_clients = _with_wxo_wrappers(
@@ -5310,12 +5739,49 @@ async def test_list_deployments_without_params(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_list_deployments_with_names_filter(monkeypatch):
+@pytest.mark.parametrize("missing_field", ["display_name", "description"])
+async def test_list_deployments_requires_provider_display_metadata(monkeypatch, missing_field):
+    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
+    agent = {
+        "id": "dep-1",
+        "name": "agent-1",
+        "display_name": "Agent One",
+        "description": "desc",
+        "tools": [],
+        "environments": [{"name": "draft"}],
+    }
+    agent.pop(missing_field)
+    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []}, listed_agents=[agent], fill_missing_metadata=False)
+    fake_clients = _with_wxo_wrappers(
+        SimpleNamespace(
+            _base=fake_agent,
+            agent=fake_agent,
+        )
+    )
+
+    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
+        return fake_clients
+
+    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
+
+    with pytest.raises(DeploymentError, match="listing deployments"):
+        await service.list(user_id="user-1", db=object(), params=None)
+
+
+@pytest.mark.anyio
+async def test_list_deployments_ignores_removed_names_filter(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
     fake_agent = FakeAgentClient(
         {"id": "dep-1", "tools": []},
         listed_agents=[
-            {"id": "dep-1", "name": "agent-1", "tools": [], "environments": [{"name": "draft"}]},
+            {
+                "id": "dep-1",
+                "name": "agent-1",
+                "display_name": "Agent One",
+                "description": "desc",
+                "tools": [],
+                "environments": [{"name": "draft"}],
+            },
         ],
     )
     fake_clients = _with_wxo_wrappers(
@@ -5330,13 +5796,12 @@ async def test_list_deployments_with_names_filter(monkeypatch):
 
     monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
 
-    params = DeploymentListParams(deployment_names=["agent-1", "agent-2"])
+    params = DeploymentListParams()
     result = await service.list(user_id="user-1", db=object(), params=params)
     assert len(result.deployments) == 1
     assert result.deployments[0].id == "dep-1"
 
-    # Verify the names param was pushed to the underlying WXO client
-    assert fake_agent.last_list_params == {"names": ["agent-1", "agent-2"]}
+    assert fake_agent.last_list_params is None
 
 
 @pytest.mark.anyio
@@ -5443,33 +5908,11 @@ async def test_list_llms_invalid_payload_raises_deployment_error(monkeypatch):
 
 
 @pytest.mark.anyio
-async def test_get_status_handles_client_api_exception(monkeypatch):
-    service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-
-    class FailingAgentClient(FakeAgentClient):
-        def get_draft_by_id(self, deployment_id: str):  # noqa: ARG002
-            resp = SimpleNamespace(status_code=500, text='{"detail": "internal error"}')
-            from ibm_watsonx_orchestrate_clients.tools.tool_client import ClientAPIException
-
-            raise ClientAPIException(response=resp)
-
-    fake_clients = SimpleNamespace(
-        agent=FailingAgentClient(None),
-    )
-
-    async def mock_get_provider_clients(*, user_id, db):  # noqa: ARG001
-        return fake_clients
-
-    monkeypatch.setattr(service, "_get_provider_clients", mock_get_provider_clients)
-
-    with pytest.raises(DeploymentError, match="getting a deployment health"):
-        await service.get_status(user_id="user-1", deployment_id="dep-1", db=object())
-
-
-@pytest.mark.anyio
 async def test_update_spec_only_description_sends_update(monkeypatch):
     service = WatsonxOrchestrateDeploymentService(DummySettingsService())
-    fake_agent = FakeAgentClient({"id": "dep-1", "tools": []})
+    fake_agent = FakeAgentClient(
+        {"id": "dep-1", "name": "existing_agent", "display_name": "Existing Agent", "tools": []}
+    )
     fake_clients = SimpleNamespace(
         agent=fake_agent,
     )
@@ -5490,6 +5933,8 @@ async def test_update_spec_only_description_sends_update(monkeypatch):
     _, payload = fake_agent.update_calls[0]
     assert payload == {"description": "only desc"}
     assert "name" not in payload
+    assert result.provider_result is not None
+    assert result.provider_result.display_name == "Existing Agent"
 
 
 # ---------------------------------------------------------------------------
@@ -5819,7 +6264,7 @@ def test_wxo_client_initializes_subclients_eagerly(monkeypatch):
 
 
 def test_normalize_wxo_name():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import normalize_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import normalize_wxo_name
 
     assert normalize_wxo_name("Hello World!") == "Hello_World"
     assert normalize_wxo_name("test-name-123") == "test_name_123"
@@ -5828,24 +6273,24 @@ def test_normalize_wxo_name():
 
 
 def test_validate_wxo_name_valid():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 
-    assert validate_wxo_name("my_deployment") == "my_deployment"
-    assert validate_wxo_name("My Deployment!") == "My_Deployment"
+    assert validate_wxo_name("my_deployment", field_label="Tool name") == "my_deployment"
+    assert validate_wxo_name("My Deployment!", field_label="Tool name") == "My_Deployment"
 
 
 def test_validate_wxo_name_empty():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 
-    with pytest.raises(InvalidContentError, match="alphanumeric"):
-        validate_wxo_name("!!!")
+    with pytest.raises(InvalidContentError, match="Tool name must include at least one alphanumeric character"):
+        validate_wxo_name("!!!", field_label="Tool name")
 
 
 def test_validate_wxo_name_starts_with_digit():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import validate_wxo_name
+    from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import validate_wxo_name
 
-    with pytest.raises(InvalidContentError, match="start with a letter"):
-        validate_wxo_name("123abc")
+    with pytest.raises(InvalidContentError, match="Tool name must start with a letter"):
+        validate_wxo_name("123abc", field_label="Tool name")
 
 
 @pytest.mark.anyio
@@ -5954,12 +6399,14 @@ async def test_create_agent_deployment_maps_agent_conflict_with_structured_resou
     with pytest.raises(ResourceConflictError) as exc_info:
         await create_core_module.create_agent_deployment(
             clients=fake_clients,
-            tool_ids=["tool-1"],
-            agent_name="my_agent",
-            agent_display_name="My Agent",
-            deployment_name="my deployment",
-            description="desc",
-            llm=TEST_WXO_LLM,
+            payload={
+                "name": "my_agent",
+                "display_name": "My Agent",
+                "description": "desc",
+                "tools": ["tool-1"],
+                "style": "default",
+                "llm": TEST_WXO_LLM,
+            },
         )
 
     assert exc_info.value.resource == "agent"
@@ -6142,7 +6589,6 @@ def test_build_agent_payload_from_values_structure():
     payload = build_agent_payload_from_values(
         agent_name="agent_name",
         agent_display_name="Agent Name",
-        deployment_name="test",
         description="test description",
         tool_ids=["tool-1", "tool-2"],
         llm=TEST_WXO_LLM,
@@ -6154,11 +6600,18 @@ def test_build_agent_payload_from_values_structure():
     assert payload["llm"] == TEST_WXO_LLM
 
 
-def test_extract_agent_tool_ids():
-    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import extract_agent_tool_ids
+def test_build_agent_payload_from_values_uses_display_name_for_default_description():
+    from langflow.services.adapters.deployment.watsonx_orchestrate.utils import build_agent_payload_from_values
 
-    assert extract_agent_tool_ids({"tools": ["t1", "t2", None, ""]}) == ["t1", "t2"]
-    assert extract_agent_tool_ids({}) == []
+    payload = build_agent_payload_from_values(
+        agent_name="agent_name",
+        agent_display_name="Agent Name",
+        description="   ",
+        tool_ids=["tool-1"],
+        llm=TEST_WXO_LLM,
+    )
+
+    assert payload["description"] == "Langflow deployment Agent Name"
 
 
 # ---------------------------------------------------------------------------
@@ -6795,7 +7248,7 @@ async def test_update_rejects_empty_provider_data_with_no_spec_changes(monkeypat
         provider_data=None,
     )
 
-    with pytest.raises(InvalidContentError, match="provider_data is required"):
+    with pytest.raises(InvalidContentError, match="No data was provided for updating the deployment"):
         await service.update(
             user_id="user-1",
             deployment_id="dep-1",
@@ -7343,8 +7796,8 @@ def test_api_execution_schemas_omit_langflow_owned_fields():
         assert not hasattr(schema, "resolved_deployment_id")
 
 
-def test_api_execution_schema_normalizes_id_fields():
-    """Both create and status schemas strip whitespace and blanks from ID fields."""
+def test_api_execution_schema_validates_provider_owned_id_fields_without_rewriting():
+    """Both create and status schemas reject blank provider IDs without stripping valid values."""
     from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import (
         WatsonxApiAgentExecutionCreateResultData,
         WatsonxApiAgentExecutionStatusResultData,
@@ -7355,19 +7808,21 @@ def test_api_execution_schema_normalizes_id_fields():
             {
                 "id": "  e-1  ",
                 "agent_id": "  a-1  ",
+                "thread_id": "  t-1  ",
             }
         )
-        assert parsed.id == "e-1"
-        assert parsed.agent_id == "a-1"
+        assert parsed.id == "  e-1  "
+        assert parsed.agent_id == "  a-1  "
+        assert parsed.thread_id == "  t-1  "
 
-        parsed_blank = schema.model_validate(
-            {
-                "id": "  ",
-                "agent_id": "",
-            }
-        )
-        assert parsed_blank.id is None
-        assert parsed_blank.agent_id is None
+        with pytest.raises(ValidationError):
+            schema.model_validate(
+                {
+                    "id": "  ",
+                    "agent_id": "",
+                    "thread_id": " ",
+                }
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -7719,8 +8174,8 @@ def _make_unbound_tool(tool_id: str) -> dict[str, Any]:
 
 @pytest.mark.anyio
 async def test_update_connection_deltas_rejects_non_langflow_tool():
-    """_update_existing_tool_connection_deltas must refuse to modify tools without binding.langflow."""
-    _update_deltas = update_core_module._update_existing_tool_connection_deltas
+    """_update_existing_tools must refuse to modify tools without binding.langflow."""
+    _update_deltas = update_core_module._update_existing_tools
 
     external_tool = _make_external_tool("ext-1")
     clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
@@ -7730,16 +8185,18 @@ async def test_update_connection_deltas_rejects_non_langflow_tool():
         await _update_deltas(
             clients=clients,
             existing_tool_deltas={"ext-1": ops},
+            tool_renames={},
             resolved_connections={"app-1": "conn-1"},
             operation_to_provider_app_id={"app-1": "app-1"},
             original_tools={},
+            tool_by_id={"ext-1": external_tool},
         )
 
 
 @pytest.mark.anyio
 async def test_update_connection_deltas_accepts_langflow_tool():
-    """_update_existing_tool_connection_deltas succeeds for tools with binding.langflow."""
-    _update_deltas = update_core_module._update_existing_tool_connection_deltas
+    """_update_existing_tools succeeds for tools with binding.langflow."""
+    _update_deltas = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1")
     clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
@@ -7749,9 +8206,11 @@ async def test_update_connection_deltas_accepts_langflow_tool():
     await _update_deltas(
         clients=clients,
         existing_tool_deltas={"lf-1": ops},
+        tool_renames={},
         resolved_connections={"app-1": "conn-1"},
         operation_to_provider_app_id={"app-1": "app-1"},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
     assert "lf-1" in original_tools
     assert clients.tool.update_calls
@@ -7836,8 +8295,8 @@ async def test_update_existing_tool_connection_bindings_rejects_unbound_tool():
 
 @pytest.mark.anyio
 async def test_apply_tool_renames_succeeds_for_langflow_tool():
-    """_apply_tool_renames renames a Langflow-owned tool on the agent."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools renames a Langflow-owned tool on the agent."""
+    _apply_renames = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1")
     clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
@@ -7845,22 +8304,48 @@ async def test_apply_tool_renames_succeeds_for_langflow_tool():
     original_tools: dict[str, dict] = {}
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "new_name"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
     assert clients.tool.update_calls
     tool_id, payload = clients.tool.update_calls[0]
     assert tool_id == "lf-1"
-    assert payload["name"] == "new_name"
-    assert payload["display_name"] == "new_name"
+    _assert_langflow_agent_name(payload["name"], display_name="New Name")
+    assert payload["display_name"] == "New Name"
     assert "lf-1" in original_tools
 
 
 @pytest.mark.anyio
+async def test_apply_tool_renames_uses_loaded_tool_without_fetching():
+    """Rename should reuse the update-apply tool map instead of fetching the tool again."""
+    _apply_renames = update_core_module._update_existing_tools
+
+    lf_tool = _make_langflow_tool("lf-1")
+    fake_tool = FakeToolClient([])
+    clients = FakeWXOClients(tool=fake_tool)
+
+    await _apply_renames(
+        clients=clients,
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
+        original_tools={},
+        tool_by_id={"lf-1": lf_tool},
+    )
+
+    assert fake_tool.get_drafts_by_ids_calls == []
+    assert fake_tool.update_calls
+
+
+@pytest.mark.anyio
 async def test_apply_tool_renames_rejects_non_langflow_tool():
-    """_apply_tool_renames must refuse to rename tools without binding.langflow."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools must refuse to rename tools without binding.langflow."""
+    _apply_renames = update_core_module._update_existing_tools
 
     external_tool = _make_external_tool("ext-1")
     clients = FakeWXOClients(tool=FakeToolClient([external_tool]))
@@ -7868,51 +8353,39 @@ async def test_apply_tool_renames_rejects_non_langflow_tool():
     with pytest.raises(InvalidContentError, match="does not have a Langflow binding"):
         await _apply_renames(
             clients=clients,
-            agent_tool_ids=["ext-1"],
+            existing_tool_deltas={},
             tool_renames={"ext-1": "stolen_name"},
+            resolved_connections={},
+            operation_to_provider_app_id={},
             original_tools={},
-        )
-    assert not clients.tool.update_calls
-
-
-@pytest.mark.anyio
-async def test_apply_tool_renames_rejects_tool_not_on_agent():
-    """_apply_tool_renames must refuse to rename tools not attached to the agent."""
-    _apply_renames = update_core_module._apply_tool_renames
-
-    lf_tool = _make_langflow_tool("lf-1")
-    clients = FakeWXOClients(tool=FakeToolClient([lf_tool]))
-
-    with pytest.raises(InvalidContentError, match="not attached to this agent"):
-        await _apply_renames(
-            clients=clients,
-            agent_tool_ids=["other-tool"],
-            tool_renames={"lf-1": "new_name"},
-            original_tools={},
+            tool_by_id={"ext-1": external_tool},
         )
     assert not clients.tool.update_calls
 
 
 @pytest.mark.anyio
 async def test_apply_tool_renames_rejects_missing_tool():
-    """_apply_tool_renames must fail if tool doesn't exist on provider."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools must fail if tool doesn't exist on provider."""
+    _apply_renames = update_core_module._update_existing_tools
 
     clients = FakeWXOClients(tool=FakeToolClient([]))
 
     with pytest.raises(InvalidContentError, match="not found in provider"):
         await _apply_renames(
             clients=clients,
-            agent_tool_ids=["ghost-1"],
-            tool_renames={"ghost-1": "new_name"},
+            existing_tool_deltas={},
+            tool_renames={"ghost-1": "New Name"},
+            resolved_connections={},
+            operation_to_provider_app_id={},
             original_tools={},
+            tool_by_id={},
         )
 
 
 @pytest.mark.anyio
 async def test_apply_tool_renames_captures_original_for_rollback():
-    """_apply_tool_renames must capture original payload before renaming for rollback."""
-    _apply_renames = update_core_module._apply_tool_renames
+    """_update_existing_tools must capture original payload before renaming for rollback."""
+    _apply_renames = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1")
     lf_tool["name"] = "original_name"
@@ -7922,9 +8395,12 @@ async def test_apply_tool_renames_captures_original_for_rollback():
     original_tools: dict[str, dict] = {}
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "new_name"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
     assert original_tools["lf-1"]["name"] == "original_name"
 
@@ -7932,7 +8408,7 @@ async def test_apply_tool_renames_captures_original_for_rollback():
 @pytest.mark.anyio
 async def test_apply_tool_renames_preserves_latest_connections_when_original_already_captured():
     """Rename should keep connection updates already applied earlier in the transaction."""
-    _apply_renames = update_core_module._apply_tool_renames
+    _apply_renames = update_core_module._update_existing_tools
 
     lf_tool = _make_langflow_tool("lf-1", connections={"app-1": "conn-1", "app-2": "conn-2"})
     lf_tool["name"] = "current_name"
@@ -7950,14 +8426,17 @@ async def test_apply_tool_renames_preserves_latest_connections_when_original_alr
     }
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "new_name"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "New Name"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
 
     _, payload = clients.tool.update_calls[0]
-    assert payload["name"] == "new_name"
-    assert payload["display_name"] == "new_name"
+    _assert_langflow_agent_name(payload["name"], display_name="New Name")
+    assert payload["display_name"] == "New Name"
     assert payload["binding"]["langflow"]["connections"] == {"app-1": "conn-1", "app-2": "conn-2"}
     # Pre-captured rollback state must remain unchanged.
     assert original_tools["lf-1"]["name"] == "pre_delta_name"
@@ -7967,7 +8446,7 @@ async def test_apply_tool_renames_preserves_latest_connections_when_original_alr
 @pytest.mark.anyio
 async def test_apply_tool_renames_preserves_latest_connections_for_add_and_remove_delta():
     """Rename should preserve the latest provider connections after mixed add/remove updates."""
-    _apply_renames = update_core_module._apply_tool_renames
+    _apply_renames = update_core_module._update_existing_tools
 
     # Simulate post-delta provider state (one app removed, one app added).
     lf_tool = _make_langflow_tool("lf-1", connections={"cfg-keep": "conn-keep", "cfg-add": "conn-add"})
@@ -7991,14 +8470,17 @@ async def test_apply_tool_renames_preserves_latest_connections_for_add_and_remov
     }
     await _apply_renames(
         clients=clients,
-        agent_tool_ids=["lf-1"],
-        tool_renames={"lf-1": "renamed_tool"},
+        existing_tool_deltas={},
+        tool_renames={"lf-1": "Renamed Tool"},
+        resolved_connections={},
+        operation_to_provider_app_id={},
         original_tools=original_tools,
+        tool_by_id={"lf-1": lf_tool},
     )
 
     _, payload = clients.tool.update_calls[0]
-    assert payload["name"] == "renamed_tool"
-    assert payload["display_name"] == "renamed_tool"
+    _assert_langflow_agent_name(payload["name"], display_name="Renamed Tool")
+    assert payload["display_name"] == "Renamed Tool"
     assert payload["binding"]["langflow"]["connections"] == {"cfg-keep": "conn-keep", "cfg-add": "conn-add"}
     # Rollback snapshot remains pre-delta.
     assert original_tools["lf-1"]["binding"]["langflow"]["connections"] == {
@@ -8008,44 +8490,77 @@ async def test_apply_tool_renames_preserves_latest_connections_for_add_and_remov
 
 
 # ---------------------------------------------------------------------------
-# Tool name validation
+# Tool technical-name generation
 # ---------------------------------------------------------------------------
 
 
-def test_validate_tool_name_accepts_valid_name():
-    """_validate_tool_name accepts a name that normalizes to a valid wxO identifier."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+def test_flow_artifact_provider_data_generates_provider_technical_name():
+    """WatsonxFlowArtifactProviderData derives a provider-valid technical name from a display label."""
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_display_name="My Flow",
+    )
 
-    assert _validate_tool_name("My Flow") == "My_Flow"
-    assert _validate_tool_name("hello_world") == "hello_world"
-    assert _validate_tool_name("flow-with-dashes") == "flow_with_dashes"
-
-
-def test_validate_tool_name_rejects_empty():
-    """_validate_tool_name rejects names that normalize to empty string."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
-
-    with pytest.raises(HTTPException) as exc_info:
-        _validate_tool_name("!@#$%")
-    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    _assert_langflow_agent_name(provider_data.tool_name, display_name="My Flow")
 
 
-def test_validate_tool_name_rejects_leading_digit():
-    """_validate_tool_name rejects names that start with a digit after normalization."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+def test_flow_artifact_provider_data_uses_resource_fallback_for_symbol_only_label():
+    """Symbol-only display labels still get a provider-valid generated name."""
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_display_name="!@#$%",
+    )
 
-    with pytest.raises(HTTPException) as exc_info:
-        _validate_tool_name("123flow")
-    assert exc_info.value.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+    assert provider_data.tool_name.startswith("langflow_tool_")
+    assert (
+        payloads_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+    )
 
 
-def test_validate_tool_name_is_idempotent():
-    """Running _validate_tool_name twice produces the same result."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.mapper import _validate_tool_name
+def test_flow_artifact_provider_data_accepts_leading_digit_display_label():
+    """Display labels are not validated as provider technical names."""
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_display_name="123flow",
+    )
 
-    first = _validate_tool_name("My Flow!")
-    second = _validate_tool_name(first)
-    assert first == second
+    assert provider_data.tool_name.startswith("langflow_123flow_")
+    assert (
+        payloads_module.validate_wxo_name(provider_data.tool_name, field_label="Tool name") == provider_data.tool_name
+    )
+
+
+def test_flow_artifact_provider_data_validates_explicit_provider_technical_name():
+    provider_data = payloads_module.WatsonxFlowArtifactProviderData(
+        project_id="project-1",
+        source_ref="fv-1",
+        tool_name="explicit_tool_name",
+        tool_display_name="My Flow",
+    )
+
+    assert provider_data.tool_name == "explicit_tool_name"
+
+
+def test_flow_artifact_provider_data_requires_display_name():
+    with pytest.raises(ValidationError, match="tool_display_name"):
+        payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-1",
+            source_ref="fv-1",
+            tool_name="explicit_tool_name",
+        )
+
+
+def test_flow_artifact_provider_data_rejects_invalid_explicit_provider_technical_name():
+    with pytest.raises(ValidationError, match="Tool name must start with a letter"):
+        payloads_module.WatsonxFlowArtifactProviderData(
+            project_id="project-1",
+            source_ref="fv-1",
+            tool_name="123_tool_name",
+            tool_display_name="My Flow",
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -8064,12 +8579,12 @@ def test_build_update_plan_includes_rename():
             {
                 "op": "rename_tool",
                 "tool": {"source_ref": "fv-1", "tool_id": "tool-1"},
-                "new_name": "better_name",
+                "tool_display_name": "Better Name",
             },
         ],
     )
     plan = build_plan(agent=agent, provider_update=payload)
-    assert plan.tool_renames == {"tool-1": "better_name"}
+    assert plan.tool_renames == {"tool-1": "Better Name"}
 
 
 def test_build_update_plan_without_renames_has_empty_dict():
@@ -8114,54 +8629,24 @@ def test_resolve_lfx_requirement_ignores_blank_override(monkeypatch):
     assert result != "   "
 
 
-# ---------------------------------------------------------------------------
-# Rename operation API payload parsing
-# ---------------------------------------------------------------------------
-
-
-def test_rename_tool_api_payload_parses():
-    """WatsonxApiRenameToolOperation parses correctly."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiRenameToolOperation
-
-    op = WatsonxApiRenameToolOperation(
-        op="rename_tool",
-        flow_version_id="00000000-0000-0000-0000-000000000001",
-        tool_name="new_tool_name",
-    )
-    assert op.op == "rename_tool"
-    assert op.tool_name == "new_tool_name"
-
-
-def test_rename_tool_api_payload_rejects_empty_name():
-    """WatsonxApiRenameToolOperation rejects empty tool_name."""
-    from langflow.api.v1.mappers.deployments.watsonx_orchestrate.payloads import WatsonxApiRenameToolOperation
-
-    with pytest.raises(ValidationError):
-        WatsonxApiRenameToolOperation(
-            op="rename_tool",
-            flow_version_id="00000000-0000-0000-0000-000000000001",
-            tool_name="",
-        )
-
-
 def test_rename_tool_provider_payload_parses():
     """WatsonxRenameToolOperation parses correctly at provider level."""
     op = WatsonxRenameToolOperation(
         op="rename_tool",
         tool={"source_ref": "fv-1", "tool_id": "tool-1"},
-        new_name="better_name",
+        tool_display_name="Better Name",
     )
-    assert op.new_name == "better_name"
+    assert op.tool_display_name == "Better Name"
     assert op.tool.tool_id == "tool-1"
 
 
 # ---------------------------------------------------------------------------
-# DeploymentFlowVersionListItem carries provider tool_name under provider_data
+# DeploymentFlowVersionListItem carries provider tool names under provider_data
 # ---------------------------------------------------------------------------
 
 
-def test_flow_version_list_item_includes_tool_name_in_provider_data():
-    """DeploymentFlowVersionListItem serializes provider tool_name under provider_data."""
+def test_flow_version_list_item_includes_tool_names_in_provider_data():
+    """DeploymentFlowVersionListItem serializes provider tool metadata under provider_data."""
     from langflow.api.v1.schemas.deployments import DeploymentFlowVersionListItem
 
     item = DeploymentFlowVersionListItem(
@@ -8169,10 +8654,11 @@ def test_flow_version_list_item_includes_tool_name_in_provider_data():
         flow_id="00000000-0000-0000-0000-000000000002",
         flow_name="My Flow",
         version_number=1,
-        provider_data={"tool_name": "my_custom_tool"},
+        provider_data={"tool_name": "my_custom_tool", "tool_display_name": "My Custom Tool"},
     )
     data = item.model_dump()
     assert data["provider_data"]["tool_name"] == "my_custom_tool"
+    assert data["provider_data"]["tool_display_name"] == "My Custom Tool"
 
 
 def test_flow_version_list_item_provider_data_defaults_to_none():

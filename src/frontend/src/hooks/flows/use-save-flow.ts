@@ -112,6 +112,7 @@ const useSaveFlow = () => {
                   reject(new Error("Flows variable undefined"));
                 }
               },
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               onError: (e: any) => {
                 const detail =
                   e.response?.data?.detail || e.message || "Unknown error";

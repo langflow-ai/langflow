@@ -8,41 +8,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import type {
-  ExtensionErrorPayload,
-  ReloadBundleResponse,
-} from "@/controllers/API/queries/extensions";
+import type { ReloadBundleResponse } from "@/controllers/API/queries/extensions";
 import { useReloadBundle } from "@/controllers/API/queries/extensions";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
+import { markOwnReload } from "@/hooks/extensions/reload-dedup";
+import { renderTypedErrorList } from "@/hooks/extensions/typed-error-formatting";
 import useAlertStore from "@/stores/alertStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
-
-type AlertList = { title: string; list: string[] } | undefined;
-
-/**
- * Render a list of typed errors / warnings into the alert-store list shape.
- *
- * The UI shows the first sentence (code + message) plus the hint indented;
- * keeping the hint in the same alert means the user does not need to dig
- * for the fix when a reload fails.  Returns ``undefined`` when the input
- * list is empty so the alert store does not render an empty bullet list.
- */
-function renderTypedErrorList(
-  payloads: readonly ExtensionErrorPayload[],
-): AlertList {
-  if (payloads.length === 0) {
-    return undefined;
-  }
-  const list = payloads.flatMap((p) => {
-    const lines: string[] = [`[${p.code}] ${p.message}`];
-    if (p.hint) {
-      lines.push(`  ${p.hint}`);
-    }
-    return lines;
-  });
-  return { title: "Reload diagnostics", list };
-}
 
 interface BundleHeaderActionsProps {
   bundleName: string;
@@ -75,6 +48,11 @@ const BundleHeaderActionsInner = ({
   const queryClient = useQueryClient();
   const { mutate: reloadBundle, isPending } = useReloadBundle({
     onSuccess: (data: ReloadBundleResponse) => {
+      // Claim this reload as our own so the events poll suppresses the
+      // mirrored bundle_reloaded / bundle_reload_failed event in this tab.
+      // The API response is the authoritative notification for the clicker;
+      // out-of-band tabs still see the event and refresh normally.
+      markOwnReload(data.reload_id);
       // Two onSuccess body shapes per the reload endpoint contract:
       //   1) HTTP 200 + ok=true: clean reload, components_added/removed/changed
       //      describe the delta.  Show a green toast.
@@ -223,10 +201,11 @@ const BundleHeaderActionsInner = ({
           }
         />
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="bottom" align="end" onClick={stopPropagation}>
+      <DropdownMenuContent side="bottom" align="end">
         <DropdownMenuItem
           disabled={isPending}
           onSelect={handleReload}
+          onClick={stopPropagation}
           data-testid={`bundle-header-reload-${bundleName}`}
         >
           <ForwardedIconComponent name="RefreshCw" className="mr-2 h-4 w-4" />

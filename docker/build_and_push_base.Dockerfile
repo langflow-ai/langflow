@@ -42,7 +42,6 @@ COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 COPY ./pyproject.toml /app/pyproject.toml
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
-COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 # Copy lfx metadata files since it's a workspace member
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
@@ -77,7 +76,7 @@ RUN npm install \
 WORKDIR /app/src/backend/base
 # ``--extra duckduckgo`` pulls ``ddgs`` (the only dep the bundle adds on
 # top of langflow-base[complete]) at the version recorded in
-# ``src/backend/base/uv.lock``.  Routing the dep through the locked sync
+# ``uv.lock``.  Routing the dep through the locked sync
 # instead of an ad-hoc ``uv pip install ddgs`` keeps the base image
 # reproducible across builds and prevents future ``ddgs`` releases from
 # silently drifting from the tested lock state.

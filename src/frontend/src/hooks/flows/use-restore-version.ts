@@ -39,6 +39,7 @@ export default function useRestoreVersion(flowId: string) {
 
         queryClient.invalidateQueries({ queryKey: ["useGetFlowVersions"] });
         applyFlowToCanvas(updatedFlow);
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (err: any) {
         const apiDetail = err?.response?.data?.detail;
         const message = apiDetail ?? err?.message ?? "Unknown error";

@@ -409,6 +409,46 @@ If you are the administrator, sign in with a superuser account, or restart Langf
 
 For more information, see [Start Langflow Server with authentication enabled](/api-keys-and-authentication#start-a-langflow-server-with-authentication-enabled).
 
+### PermissionError on `/app/langflow/secret_key` at startup
+
+The Langflow container runs as a non-root user (`uid=1000`).
+The Langflow image pre-creates `/app/langflow` with that user as the owner, so a new `langflow-data` named volume inherits the correct ownership.
+If you ran an earlier image build that did not pre-create this directory, the named volume was initialized as `root:root` and the non-root container user cannot write `secret_key` into it, and the error `PermissionError: [Errno 13]` on `/app/langflow/secret_key` appears.
+
+This commonly affects rootful Docker daemons such as Docker Desktop.
+Podman with rootless user-namespace mapping does not reproduce the issue.
+
+To preserve the `langflow-postgres` data while resetting only the `langflow-data` volume, do the following:
+
+1. Stop the container and find the exact volume name for `langflow-data`.
+This command lists the volumes, and then searches for `langflow-data`.
+
+    ```sh
+    docker compose down
+    docker compose config --volumes
+    docker volume ls | grep langflow-data
+    ```
+
+2. Once you have confirmed the exact volume name, remove only that volume:
+
+    ```sh
+    docker volume rm LANGFLOW_DATA_VOLUME_NAME
+    docker compose pull
+    docker compose up -d
+    ```
+
+Alternatively, if you don't need to preserve the `langflow-postgres` data volume, you can pull the latest container image instead.
+
+:::danger
+This method removes all data, including the `langflow-postgres` data volume.
+:::
+
+```sh
+docker compose down -v
+docker compose pull
+docker compose up -d
+```
+
 ## Langflow upgrade issues
 
 The following issues can occur when upgrading your Langflow version.
@@ -630,6 +670,76 @@ If you're using the `LANGFLOW_COMPONENTS_PATH` environment variable and componen
     ```
 
 If you continue to experience issues, please [report them on GitHub](https://github.com/langflow-ai/langflow/issues) with details about your directory structure and component setup.
+
+## Multi-worker deployments
+
+### Workers report `JobQueueNotFoundError`
+
+The load balancer is routing poll or stream requests to a different worker than the one that started the build.
+
+To resolve this issue:
+
+- Ensure `LANGFLOW_JOB_QUEUE_TYPE=redis` is set on **all** workers, not just some. Mixed-mode deployments (some workers using `asyncio`, others using `redis`) are not supported.
+- Verify all workers can reach the same Redis instance.
+
+For setup instructions, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
+### Redis connection refused or auth errors
+
+If your Redis instance requires a password or TLS, you must use `LANGFLOW_REDIS_QUEUE_URL` (for example, `rediss://user:password@host:6380/1`). The individual `LANGFLOW_REDIS_QUEUE_HOST` and `LANGFLOW_REDIS_QUEUE_PORT` settings construct a plain unauthenticated connection and do not support auth or TLS. Managed Redis services such as AWS ElastiCache with AUTH, Google MemoryStore with TLS, and Upstash all require the URL form.
+
+### Cache and queue keys colliding
+
+If `LANGFLOW_REDIS_QUEUE_DB` is set to the same database index used by the Langflow cache, keys from both systems will mix and produce unpredictable behavior.
+
+The cache defaults to DB `0` and the job queue defaults to DB `1`. Verify both settings point to different database indices.
+
+### Server refuses to start with multiple workers and `LANGFLOW_JOB_QUEUE_TYPE=asyncio`
+
+Startup fails with a `RuntimeError` that explains the in-memory job queue is worker-local.
+
+Polling and streaming delivery use a follow-up `GET /api/v1/build/<job_id>/events` request after the initial build POST, and the load balancer can route those requests to different workers, which produces intermittent "Job not found" errors.
+
+Set `LANGFLOW_JOB_QUEUE_TYPE=redis` on all workers so queue state is shared. This supports all `LANGFLOW_EVENT_DELIVERY` modes.
+
+### Builds are cancelled unexpectedly
+
+The polling watchdog reclaims builds whose client heartbeat has gone stale. The default threshold is 90 seconds (`LANGFLOW_REDIS_QUEUE_POLLING_STALE_THRESHOLD_S=90`). If legitimate long-running builds are being cancelled, increase this value or set it to `0` to disable the watchdog entirely.
+
+## Intel Mac issues {#intel-mac-issues}
+
+The following issues can occur when running Langflow on Intel-based Macs.
+
+### "No matching distribution found" errors on Intel Mac
+
+If you see errors about missing packages after installing Langflow on an Intel Mac, such as:
+
+```text
+ERROR: Could not find a version that satisfies the requirement torch
+ERROR: No matching distribution found for torch
+```
+
+This is expected behavior. ML packages such as PyTorch are intentionally excluded on Intel Macs because PyTorch dropped support for macOS x86_64 starting with version 2.3.0.
+
+To verify your architecture and understand which features are available, run:
+
+```bash
+python -c "import platform; print(platform.machine())"
+# x86_64 = Intel, arm64 = Apple Silicon
+```
+
+Use core Langflow features or API-based alternatives instead of local ML models.
+For details on which features are available and workarounds, see [macOS support](./macos-support-matrix.mdx).
+
+### Performance issues on Intel Mac
+
+If Langflow feels slow on an Intel Mac:
+
+1. Ensure you are not trying to run ML workloads locally, as these are not supported on Intel Macs.
+2. Use API-based providers for embeddings and completions instead of local models.
+3. Consider upgrading to Apple Silicon for better performance with ML features.
+
+For more information, see [Workarounds for Intel Mac users](./macos-support-matrix.mdx#workarounds-for-intel-mac-users).
 
 ## See also
 

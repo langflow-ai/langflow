@@ -88,7 +88,13 @@ def collect_strings() -> dict[str, str]:
 
             # Tier 1 — component-level
             flat[_component_field_key(norm_key, "display_name", display_name)] = display_name
-            description = getattr(cls, "description", "") or ""
+            # If description is a @property, getattr on the class returns the descriptor
+            # object (not a string).  Fall back to _base_description when that happens.
+            raw_desc = cls.__dict__.get("description")
+            if isinstance(raw_desc, property):
+                description = getattr(cls, "_base_description", "") or ""
+            else:
+                description = getattr(cls, "description", "") or ""
             if isinstance(description, str) and description:
                 flat[_component_field_key(norm_key, "description", description)] = description
 
@@ -171,6 +177,17 @@ def collect_strings() -> dict[str, str]:
             "Run scripts/gp/bake_note_keys.py to assign keys."
         )
     print(f"Found {note_count} note node(s) across starter projects.")
+
+    # Shared tool-mode output — injected dynamically on every component when tool_mode is
+    # enabled, so it's never part of any component's static output list.  Uses the sentinel
+    # norm "_toolmode" so the runtime translator can look it up with a single shared key.
+    # Constants are inlined (not imported from lfx.base) so this script can run without
+    # the full lfx package installed, matching the pattern used in bake_note_keys.py.
+    _tool_output_name = "component_as_tool"
+    _tool_output_display_name = "Toolset"
+    flat[_component_field_key("_toolmode", f"outputs.{_tool_output_name}.display_name", _tool_output_display_name)] = (
+        _tool_output_display_name
+    )
 
     return dict(sorted(flat.items()))
 

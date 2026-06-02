@@ -1,5 +1,7 @@
+import i18n from "@/i18n";
+
 export const formatDate = (dateStr?: string) => {
-  if (!dateStr) return "Never";
+  if (!dateStr) return i18n.t("memory.never");
   const d = new Date(dateStr);
   if (Number.isNaN(d.getTime())) return dateStr;
   return d.toLocaleString(undefined, {
