@@ -19,6 +19,7 @@ import pytest
 from langflow.services.database.models.transactions.model import TransactionBase, TransactionTable
 from langflow.services.database.models.vertex_builds.model import VertexBuildBase, VertexBuildTable
 from langflow.services.telemetry_writer.service import (
+    _FAILURE_ESCALATION_THRESHOLD,
     TelemetryWriterService,
     _write_owner_file,
 )
@@ -803,3 +804,148 @@ async def test_teardown_spills_remaining_buffer(tmp_path: Path) -> None:
     fallback = Path(tempfile.gettempdir()) / "langflow_telemetry_outbox"
     if fallback.exists() and fallback.is_dir() and not any(fallback.iterdir()):
         fallback.rmdir()
+
+
+async def test_retention_sweep_caps_vertex_builds_per_vertex(writer_with_engine) -> None:
+    """Per-vertex cap must prune the oldest builds for a single vertex."""
+    writer, engine = writer_with_engine
+    writer.settings_service.settings.max_vertex_builds_per_vertex = 3
+    writer.settings_service.settings.max_vertex_builds_to_keep = 10_000
+    flow_id = uuid4()
+    # Insert 8 builds for the same vertex — only 3 should survive.
+    vb_batch = [_make_vertex_build_row(flow_id, vertex_id="v1") for _ in range(8)]
+    await writer._flush([], vb_batch)
+    await writer._run_retention_pass()
+
+    async with AsyncSession(engine) as session:
+        count = await session.scalar(select(func.count()).select_from(VertexBuildTable))
+    assert count == 3
+
+
+def test_either_strategy_trips_on_bytes_first(writer_with_engine) -> None:
+    """'either' strategy must enforce the byte cap when it trips before the row cap."""
+    writer, _ = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_size_strategy = "either"
+    writer.settings_service.settings.telemetry_writer_max_queue = 10_000  # high — must not trigger
+    writer.settings_service.settings.telemetry_writer_max_queue_bytes = 200
+    # Each row encodes to ~123 bytes; two rows (246B) exceed the 200B cap.
+    for i in range(3):
+        writer.enqueue_transaction({"payload": "x" * 100, "i": i})
+    # Byte cap trips first — same drop semantics as the bytes-only strategy.
+    assert writer.dropped_transactions >= 1
+    assert writer._tx_bytes <= 200
+
+
+async def test_writer_retries_on_batch_failure(writer_with_engine) -> None:
+    """Failed flush must increment failed_batches, return rows to buffer, then succeed on retry."""
+    writer, engine = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_batch_size = 100
+    writer.settings_service.settings.telemetry_writer_flush_interval_s = 0.01
+    flow_id = uuid4()
+    for _ in range(5):
+        writer.enqueue_transaction(_make_transaction_row(flow_id))
+
+    fail_count = 0
+
+    real_flush = writer._flush.__func__
+
+    async def _fail_twice(self, tx_batch, vb_batch):
+        nonlocal fail_count
+        if fail_count < 2:
+            fail_count += 1
+            msg = "injected failure"
+            raise RuntimeError(msg)
+        return await real_flush(self, tx_batch, vb_batch)
+
+    import types
+
+    writer._flush = types.MethodType(_fail_twice, writer)
+
+    task = asyncio.create_task(writer._run_writer())
+    # The two injected failures each return the batch to the buffer and back off
+    # via _wait_or_shutdown. Setting the shutdown event short-circuits those
+    # backoffs so the writer reaches its successful retry and drains — the
+    # shutdown, not wall-clock waiting, is what lands the rows.
+    writer._shutdown_event.set()
+    await asyncio.wait_for(task, timeout=5)
+
+    assert writer.failed_batches == 2
+    assert writer.flushed_rows == 5
+    async with AsyncSession(engine) as session:
+        final = await session.scalar(select(func.count()).select_from(TransactionTable))
+    assert final == 5
+
+
+async def test_writer_escalates_after_threshold_failures(writer_with_engine) -> None:
+    """Consecutive failures past the threshold must keep retrying (exercises the `>=` branch, not `==`)."""
+    import types
+
+    writer, engine = writer_with_engine
+    writer.settings_service.settings.telemetry_writer_batch_size = 100
+    writer.settings_service.settings.telemetry_writer_flush_interval_s = 0.01
+    flow_id = uuid4()
+    for _ in range(5):
+        writer.enqueue_transaction(_make_transaction_row(flow_id))
+
+    # Fail one more than the threshold so the escalation branch runs at counts
+    # both equal to and greater than the threshold — exactly what `>=` covers
+    # and `==` would not.
+    fail_target = _FAILURE_ESCALATION_THRESHOLD + 1
+    fail_count = 0
+    real_flush = writer._flush.__func__
+
+    async def _fail_n_times(self, tx_batch, vb_batch):
+        nonlocal fail_count
+        if fail_count < fail_target:
+            fail_count += 1
+            msg = "injected failure"
+            raise RuntimeError(msg)
+        return await real_flush(self, tx_batch, vb_batch)
+
+    writer._flush = types.MethodType(_fail_n_times, writer)
+
+    task = asyncio.create_task(writer._run_writer())
+    # Short-circuit every backoff so the failures (and the final success) run fast.
+    writer._shutdown_event.set()
+    await asyncio.wait_for(task, timeout=5)
+
+    # Every injected failure was counted (driving consecutive_failures past the
+    # threshold), then the buffer drained on the success.
+    assert writer.failed_batches == fail_target
+    assert writer.flushed_rows == 5
+    async with AsyncSession(engine) as session:
+        final = await session.scalar(select(func.count()).select_from(TransactionTable))
+    assert final == 5
+
+
+async def test_teardown_cancelled_still_spills_buffer(writer_with_engine, tmp_path: Path) -> None:
+    """If teardown() is itself cancelled, the in-memory buffer must still spill to disk."""
+    writer, _ = writer_with_engine
+    own_dir = tmp_path / "pid"
+    own_dir.mkdir()
+    writer._own_outbox_dir = own_dir
+    # Long drain so teardown blocks in the writer-drain await while we cancel it.
+    writer.settings_service.settings.telemetry_writer_shutdown_drain_s = 30.0
+
+    for i in range(3):
+        writer.enqueue_transaction({"cancelled_spill": i})
+    assert len(writer._tx_buffer) == 3
+
+    # A writer task that never finishes on its own, so teardown stays parked in
+    # the drain await until we cancel it.
+    async def _never() -> None:
+        await asyncio.Event().wait()
+
+    writer._writer_task = asyncio.create_task(_never())
+
+    teardown_task = asyncio.create_task(writer.teardown())
+    await asyncio.sleep(0.05)  # let teardown reach the drain await
+    teardown_task.cancel()
+    with pytest.raises(asyncio.CancelledError):
+        await teardown_task
+
+    # The cancellation must not have dropped the buffer: a fresh reader pointed
+    # at the same outbox sees the spilled rows.
+    reader = _build_writer()
+    reader._restore_from_disk(own_dir, kind="transactions", buffer=reader._tx_buffer)
+    assert [row["cancelled_spill"] for row in reader._tx_buffer] == [0, 1, 2]

@@ -82,7 +82,7 @@ def _host_boot_identity() -> tuple[str, str]:
     except OSError:
         try:
             boot = str(int(time.time() - time.monotonic()))
-        except OSError:
+        except Exception:  # noqa: BLE001
             boot = "unknown"
     return host, boot
 
@@ -304,8 +304,13 @@ class TelemetryWriterService(Service):
         # Stamp host + boot identity so a future process on a different host
         # (or after reboot) will not adopt this PID's spill data if the PID
         # happens to be recycled.
-        with suppress(OSError):
+        try:
             _write_owner_file(own_dir)
+        except OSError as e:
+            logger.error(
+                f"telemetry_writer: failed to write owner file to {own_dir}; "
+                f"disk-spilled rows from this process will not be recoverable on restart: {e}"
+            )
 
         # Drain any rows that were spilled by a previous run of *this* PID and
         # adopt the contents of any orphan (dead-PID) directories.
@@ -334,40 +339,44 @@ class TelemetryWriterService(Service):
             self._shutdown_event.set()
 
         drain_timeout = float(getattr(self.settings_service.settings, "telemetry_writer_shutdown_drain_s", 5.0))
-        if self._writer_task is not None:
-            try:
-                await asyncio.wait_for(self._writer_task, timeout=drain_timeout)
-            except asyncio.TimeoutError:
-                # Drain budget exceeded. Whatever's still in the in-memory
-                # buffer survives via the disk spill below; rows that were
-                # popped into the in-flight batch are pushed back by the
-                # writer's CancelledError handler before it exits.
-                pending = len(self._tx_buffer) + len(self._vb_buffer)
-                logger.warning(
-                    f"telemetry_writer: shutdown drain exceeded {drain_timeout}s with "
-                    f"{pending} rows still pending — spilling to disk. Consider raising "
-                    f"telemetry_writer_shutdown_drain_s."
-                )
-                self._writer_task.cancel()
+        # The sweeper cancel, disk spill, and engine dispose live in ``finally`` so
+        # they still run when teardown() is itself cancelled (e.g. the outer lifespan
+        # task is killed). On that cancelled path ``wait_for`` cancels and awaits the
+        # writer task before re-raising, so the writer's CancelledError handler has
+        # already pushed in-flight rows back into the buffer by the time we spill.
+        try:
+            if self._writer_task is not None:
+                try:
+                    await asyncio.wait_for(self._writer_task, timeout=drain_timeout)
+                except asyncio.TimeoutError:
+                    # Drain budget exceeded. Whatever's still in the in-memory
+                    # buffer survives via the disk spill below; rows that were
+                    # popped into the in-flight batch are pushed back by the
+                    # writer's CancelledError handler before it exits.
+                    pending = len(self._tx_buffer) + len(self._vb_buffer)
+                    logger.warning(
+                        f"telemetry_writer: shutdown drain exceeded {drain_timeout}s with "
+                        f"{pending} rows still pending — spilling to disk. Consider raising "
+                        f"telemetry_writer_shutdown_drain_s."
+                    )
+                    self._writer_task.cancel()
+                    with suppress(asyncio.CancelledError):
+                        await self._writer_task
+        finally:
+            if self._sweeper_task is not None:
+                self._sweeper_task.cancel()
                 with suppress(asyncio.CancelledError):
-                    await self._writer_task
-            except asyncio.CancelledError:
-                with suppress(asyncio.CancelledError):
-                    await self._writer_task
-        if self._sweeper_task is not None:
-            self._sweeper_task.cancel()
-            with suppress(asyncio.CancelledError):
-                await self._sweeper_task
+                    await self._sweeper_task
 
-        # Spill anything still in memory to disk so a future process picks it up.
-        if self._own_outbox_dir is not None:
-            self._spill_to_disk(self._own_outbox_dir, kind="transactions", buffer=self._tx_buffer)
-            self._spill_to_disk(self._own_outbox_dir, kind="vertex_builds", buffer=self._vb_buffer)
+            # Spill anything still in memory to disk so a future process picks it up.
+            if self._own_outbox_dir is not None:
+                self._spill_to_disk(self._own_outbox_dir, kind="transactions", buffer=self._tx_buffer)
+                self._spill_to_disk(self._own_outbox_dir, kind="vertex_builds", buffer=self._vb_buffer)
 
-        if self._engine is not None:
-            await self._engine.dispose()
-            self._engine = None
-        logger.info("telemetry_writer stopped")
+            if self._engine is not None:
+                await self._engine.dispose()
+                self._engine = None
+            logger.info("telemetry_writer stopped")
 
     # ------------------------------------------------------------------ internals
 
@@ -621,13 +630,16 @@ class TelemetryWriterService(Service):
                 if payloads:
                     logger.info(f"telemetry_writer: adopted {len(payloads)} orphan {kind} from pid={pid}")
             # Best-effort cleanup of the dead-PID directory.
-            with suppress(OSError):
+            try:
                 for child in sorted(entry.rglob("*"), reverse=True):
                     if child.is_file():
                         child.unlink(missing_ok=True)
                     elif child.is_dir():
-                        child.rmdir()
+                        with suppress(OSError):
+                            child.rmdir()
                 entry.rmdir()
+            except OSError as e:
+                logger.debug(f"telemetry_writer: could not remove orphan dir {entry}: {e}")
 
     def _prune_stale_foreign_outboxes(self, outbox_root: Path) -> None:
         """Delete cross-host orphan dirs whose owner file has gone stale.
@@ -664,13 +676,16 @@ class TelemetryWriterService(Service):
                 f"telemetry_writer: pruning stale cross-host outbox {entry} "
                 f"(host={owner.get('host')!r}, age={age:.0f}s)"
             )
-            with suppress(OSError):
+            try:
                 for child in sorted(entry.rglob("*"), reverse=True):
                     if child.is_file():
                         child.unlink(missing_ok=True)
                     elif child.is_dir():
-                        child.rmdir()
+                        with suppress(OSError):
+                            child.rmdir()
                 entry.rmdir()
+            except OSError as e:
+                logger.debug(f"telemetry_writer: could not remove stale foreign outbox {entry}: {e}")
 
     def _heartbeat_owner_file(self) -> None:
         """Refresh the owner file's mtime so foreign hosts can age us out cleanly."""
@@ -723,7 +738,7 @@ class TelemetryWriterService(Service):
                 # Exponential-ish backoff capped at 30s. Avoids hot-looping on a
                 # broken DB while still preserving telemetry across the failure.
                 backoff = min(30.0, 0.5 * (2 ** min(consecutive_failures, 6)))
-                if consecutive_failures == _FAILURE_ESCALATION_THRESHOLD:
+                if consecutive_failures >= _FAILURE_ESCALATION_THRESHOLD:
                     logger.error(
                         f"telemetry_writer: {consecutive_failures} consecutive batch failures, "
                         f"buffer depth tx={len(self._tx_buffer)} vb={len(self._vb_buffer)}"
@@ -772,8 +787,6 @@ class TelemetryWriterService(Service):
     async def _run_retention_pass(self) -> None:
         if self._session_maker is None:
             return
-        from uuid import UUID
-
         settings = self.settings_service.settings
         max_transactions = int(getattr(settings, "max_transactions_to_keep", 3000))
         max_vertex_builds = int(getattr(settings, "max_vertex_builds_to_keep", 3000))
