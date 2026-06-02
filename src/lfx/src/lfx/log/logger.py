@@ -436,21 +436,17 @@ def configure(
     output_file=None,
 ) -> None:
     """Configure the logger."""
-    # Early-exit only if structlog is configured AND current min level matches the requested one.
-    cfg = structlog.get_config() if structlog.is_configured() else {}
-    wrapper_class = cfg.get("wrapper_class")
-    current_min_level = getattr(wrapper_class, "min_level", None)
-    if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
+    # Resolve every effective input (env-var fallbacks + level validation) up
+    # front so the early-return below can compare a fingerprint of the *entire*
+    # resulting configuration, not just the log level. The old check compared
+    # only the resolved level, so a second call that changed
+    # log_env / log_file / log_format / output_file / disable at the same level
+    # silently no-opped -- skipping the file handler and renderer switch. That
+    # was both a real footgun and a source of test-isolation flakiness (a prior
+    # same-level configure() made a later file-mode configure() do nothing,
+    # surfacing as FileNotFoundError when a test read the log file).
+    if log_level is None and os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
-
-    log_level_str = os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")
-    if log_level is not None:
-        log_level_str = log_level
-
-    requested_min_level = LOG_LEVEL_MAP.get(log_level_str.upper(), logging.ERROR)
-    if current_min_level == requested_min_level:
-        return
-
     if log_level is None or log_level.upper() not in LOG_LEVEL_MAP:
         log_level = "ERROR"
 
@@ -464,6 +460,28 @@ def configure(
     # Get log format from env if not provided
     if log_format is None:
         log_format = os.getenv("LANGFLOW_LOG_FORMAT")
+
+    numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
+
+    # Fingerprint of every caller-supplied input that changes the resulting
+    # setup. Stored on the wrapper_class (below) so structlog.reset_defaults()
+    # -- used between tests -- invalidates it automatically and the next call
+    # rebuilds from scratch. Env-only toggles (e.g. LANGFLOW_PRETTY_LOGS) are not
+    # part of the fingerprint: the four env-backed args above are already folded
+    # into their resolved values, and the remainder are process-stable.
+    config_fingerprint = (
+        numeric_level,
+        log_env,
+        str(log_file) if log_file is not None else None,
+        log_format,
+        bool(disable),
+        log_rotation,
+        cache if cache is not None else True,
+        output_file,
+    )
+    cfg = structlog.get_config() if structlog.is_configured() else {}
+    if getattr(cfg.get("wrapper_class"), "config_fingerprint", None) == config_fingerprint:
+        return
 
     # Configure processors based on environment
     service_info = _get_service_info()
@@ -583,12 +601,13 @@ def configure(
         else:
             _append_json_tail()
 
-    # Get numeric log level
-    numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
-
-    # Create wrapper class and attach the min level for later comparison
+    # Create the filtering wrapper. ``numeric_level`` was resolved above for the
+    # fingerprint. Attach min_level (kept for back-compat) and the full config
+    # fingerprint so the next configure() call early-returns only when every
+    # effective input is unchanged.
     wrapper_class = structlog.make_filtering_bound_logger(numeric_level)
     wrapper_class.min_level = numeric_level
+    wrapper_class.config_fingerprint = config_fingerprint
 
     # Configure structlog
     # Default to stdout for backward compatibility, unless output_file is specified
