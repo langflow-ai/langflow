@@ -20,9 +20,8 @@ To give **Langflow Assistant** context for a different flow, switch to that flow
 
 * Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
 * Custom component creation must be enabled and permitted for your user role:
-  * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must not be set to `false`. The default setting is `true`.
-  * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must not be set to `true` unless you are a superuser.
-  The default setting is `false`.
+  * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must be `true` (default).
+   * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must be `false` (default) for non-superusers. For superusers, this option is irrelevant.
 
   For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components).
 
@@ -239,7 +238,7 @@ Building a flow reads and writes the entire Langflow graph on every turn, which 
 
 In addition to generating individual components, **Langflow Assistant** can create a flow from a single prompt.
 
-Continuing from the [Create a custom component with Langflow Assistant](#create-a-custom-component-with-langflow-assistant), ask **Langflow Assistant** to build a simple agent flow that uses the **URLTitleExtractor** custom component as a tool.
+Continuing from the [Create a custom component with Langflow Assistant](#create-a-custom-component-with-langflow-assistant) example, ask **Langflow Assistant** to build a simple agent flow that uses the **URLTitleExtractor** custom component as a tool.
 
 1. With the **URLTitleExtractor** component still on the canvas, open **Langflow Assistant** and prompt it to build the agent flow:
     ```
