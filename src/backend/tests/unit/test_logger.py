@@ -1660,6 +1660,90 @@ class TestFileModeStdlibUnification:
             assert app[0].get("api_key") == "***"
 
 
+class TestStdlibLevelNameMutationRobustness:
+    r"""Third-party ``logging.addLevelName`` calls must not corrupt the ``level`` field.
+
+    Libraries such as ``ibm_watsonx_orchestrate_core`` globally rewrite stdlib
+    level names (wrapping them in ANSI color codes) via ``logging.addLevelName``.
+    That mutation persists process-wide. structlog's ProcessorFormatter derives a
+    foreign record's level from ``record.levelname.lower()``, so without care the
+    colored string (e.g. ``\x1b[0;33m[warning]\x1b[0;0m``) lands in the JSON
+    ``level`` field and breaks level filtering in Grafana/Loki. The logger must
+    derive levels from the immutable ``levelno`` on both the file and stdout paths.
+    """
+
+    # The ANSI-wrapped names ibm_watsonx_orchestrate_core.setup_logging installs.
+    _MANGLED = {
+        logging.DEBUG: "\x1b[0;35m[DEBUG]\x1b[0;0m",
+        logging.INFO: "\x1b[0;36m[INFO]\x1b[0;0m",
+        logging.WARNING: "\x1b[0;33m[WARNING]\x1b[0;0m",
+        logging.ERROR: "\x1b[0;31m[ERROR]\x1b[0;0m",
+    }
+    _ORIGINAL = {
+        logging.DEBUG: "DEBUG",
+        logging.INFO: "INFO",
+        logging.WARNING: "WARNING",
+        logging.ERROR: "ERROR",
+        logging.CRITICAL: "CRITICAL",
+    }
+
+    def setup_method(self):
+        # Reset structlog so configure() cannot early-return on a matching level
+        # left over from a prior test, then apply the global name mutation.
+        structlog.reset_defaults()
+        for levelno, name in self._MANGLED.items():
+            logging.addLevelName(levelno, name)
+
+    def teardown_method(self):
+        # Restore the standard names so this test cannot pollute the rest of the
+        # run -- which is exactly the failure mode under test.
+        for levelno, name in self._ORIGINAL.items():
+            logging.addLevelName(levelno, name)
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.handlers.RotatingFileHandler | InterceptHandler):
+                logging.root.removeHandler(handler)
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    handler.close()
+        structlog.reset_defaults()
+        structlog.configure()
+
+    def test_file_mode_level_is_clean_despite_addlevelname(self):
+        """File-mode JSON keeps a plain ``level`` even when stdlib names are mangled."""
+        # Guard: the global mutation is actually in effect for this process.
+        assert logging.getLevelName(logging.WARNING) != "WARNING"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            logging.getLogger("sqlalchemy.engine").warning("connecting to pool")
+
+            for handler in logging.root.handlers:
+                if hasattr(handler, "flush"):
+                    handler.flush()
+            records = [json.loads(ln) for ln in log_file_path.read_text().splitlines() if ln.strip()]
+            sa = [r for r in records if r.get("logger") == "sqlalchemy.engine"]
+            assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert sa[0]["event"] == "connecting to pool"
+            assert sa[0]["level"] == "warning"
+            assert "\x1b" not in sa[0]["level"]
+
+    def test_stdout_mode_level_is_clean_despite_addlevelname(self, capsys):
+        """Stdout-mode intercept keeps a plain ``level`` even when stdlib names are mangled."""
+        assert logging.getLevelName(logging.ERROR) != "ERROR"
+        configure(log_env="container", log_level="INFO", cache=False)
+
+        logging.getLogger("httpx").error("boom")
+
+        lines = [ln for ln in capsys.readouterr().out.strip().splitlines() if ln.strip().startswith("{")]
+        records = [json.loads(ln) for ln in lines]
+        hx = [r for r in records if r.get("logger") == "httpx"]
+        assert hx, f"httpx record missing; loggers seen: {[r.get('logger') for r in records]}"
+        assert hx[0]["event"] == "boom"
+        assert hx[0]["level"] == "error"
+        assert "\x1b" not in hx[0]["level"]
+
+
 class TestInterceptExtraForwarding:
     """The stdout InterceptHandler forwards stdlib `extra` fields and redacts them."""
 

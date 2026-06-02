@@ -538,7 +538,10 @@ def configure(
             foreign_pre_chain = [
                 structlog.contextvars.merge_contextvars,
                 structlog.stdlib.ExtraAdder(),
-                structlog.stdlib.add_log_level,
+                # NB: not ``structlog.stdlib.add_log_level`` -- that trusts
+                # ``record.levelname``, which a third-party ``addLevelName`` call
+                # can corrupt. Derive from the numeric level instead.
+                add_stdlib_log_level_from_record,
                 structlog.stdlib.add_logger_name,
                 add_otel_trace_context,
                 structlog.processors.TimeStamper(fmt="iso", utc=True),
@@ -691,6 +694,45 @@ _STDLIB_LEVEL_TO_STRUCTLOG = (
     (logging.INFO, "info"),
 )
 
+
+def _levelno_to_structlog_name(levelno: int) -> str:
+    """Map a stdlib numeric level to a lowercase structlog level name.
+
+    Derives the name from the immutable ``levelno`` instead of ``levelname``
+    because third-party libraries can rewrite stdlib level names via
+    ``logging.addLevelName`` (e.g. ``ibm_watsonx_orchestrate`` wraps them in ANSI
+    color codes). ``levelno`` is never mutated, so the rendered ``level`` field
+    stays clean and filterable.
+    """
+    for threshold, name in _STDLIB_LEVEL_TO_STRUCTLOG:
+        if levelno >= threshold:
+            return name
+    return "debug"
+
+
+def add_stdlib_log_level_from_record(_logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Set ``level`` from a foreign ``LogRecord``'s numeric level.
+
+    Drop-in replacement for ``structlog.stdlib.add_log_level`` on the
+    ProcessorFormatter ``foreign_pre_chain``. structlog derives a foreign
+    record's level from ``record.levelname.lower()``; when a third-party library
+    has rewritten that name via ``logging.addLevelName`` (e.g. wrapping it in
+    ANSI color codes), the mangled string would otherwise land verbatim in the
+    JSON ``level`` field and break level-based filtering in Grafana/Loki.
+    Deriving from the immutable ``levelno`` keeps the field stable. Mirrors the
+    numeric-level logic the stdout-mode ``InterceptHandler`` already uses.
+    """
+    record = event_dict.get("_record")
+    levelno = getattr(record, "levelno", None)
+    if levelno is None:
+        # No stdlib record on the chain (not expected on the foreign path):
+        # fall back to the method name structlog computed.
+        event_dict.setdefault("level", method_name)
+    else:
+        event_dict["level"] = _levelno_to_structlog_name(levelno)
+    return event_dict
+
+
 # Attributes present on a vanilla LogRecord. Anything else in record.__dict__ was
 # attached via ``logging.*(..., extra={...})`` and is forwarded to structlog so it
 # lands as a structured field (and is therefore subject to PII redaction), mirroring
@@ -725,11 +767,7 @@ class InterceptHandler(logging.Handler):
             for key, value in record.__dict__.items():
                 if key not in _RESERVED_LOGRECORD_ATTRS and not key.startswith("_") and key not in kwargs:
                     kwargs[key] = value
-            method_name = "debug"
-            for threshold, name in _STDLIB_LEVEL_TO_STRUCTLOG:
-                if record.levelno >= threshold:
-                    method_name = name
-                    break
+            method_name = _levelno_to_structlog_name(record.levelno)
             getattr(structlog_logger, method_name)(record.getMessage(), **kwargs)
         except Exception:  # noqa: BLE001 - logging must never break the caller
             self.handleError(record)
