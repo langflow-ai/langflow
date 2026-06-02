@@ -82,9 +82,7 @@ async def test_assist_rejects_cross_user_flow_id(client, active_user, user_two_a
 
     try:
         body = {"flow_id": str(flow_id), "input_value": "what is on my canvas?"}
-        response = await client.post(
-            "api/v1/agentic/assist", json=body, headers={"x-api-key": user_two_api_key}
-        )
+        response = await client.post("api/v1/agentic/assist", json=body, headers={"x-api-key": user_two_api_key})
         assert response.status_code in (403, 404), response.text
     finally:
         async with session_scope() as session:
@@ -98,7 +96,5 @@ async def test_assist_rejects_cross_user_flow_id(client, active_user, user_two_a
 async def test_execute_named_assistant_flow_is_graceful_not_500(client, logged_in_headers):
     """Issue 3: executing the built-in assistant flow must not 500."""
     body = {"flow_id": str(uuid4()), "input_value": "In one short sentence, what is Langflow?"}
-    response = await client.post(
-        "api/v1/agentic/execute/LangflowAssistant", json=body, headers=logged_in_headers
-    )
+    response = await client.post("api/v1/agentic/execute/LangflowAssistant", json=body, headers=logged_in_headers)
     assert response.status_code != 500, response.text
