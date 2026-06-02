@@ -1,10 +1,19 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import SidebarItemsList from "../sidebarItemsList";
 
 // Mock external dependencies
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children, content, side }: any) => (
+  default: ({
+    children,
+    content,
+    side,
+  }: {
+    children?: ReactNode;
+    content?: string;
+    side?: string;
+  }) => (
     <div data-testid="tooltip" data-content={content} data-side={side}>
       {children}
     </div>
@@ -25,7 +34,7 @@ jest.mock("@/stores/flowStore", () => ({
 
 jest.mock("@/utils/componentConstraints", () => ({
   getPresentComponentTypes: jest.fn(
-    (nodes: any[]) =>
+    (nodes: Array<{ data?: { type?: string } }>) =>
       new Set(nodes.map((node) => node?.data?.type).filter(Boolean)),
   ),
 }));
@@ -68,7 +77,21 @@ jest.mock("../sidebarDraggableComponent", () => ({
     legacy,
     disabled,
     disabledTooltip,
-  }: any) => (
+  }: {
+    sectionName?: string;
+    apiClass?: unknown;
+    icon?: string;
+    onDragStart?: (event: unknown, data: unknown) => void;
+    color?: string;
+    itemName?: string;
+    error?: boolean;
+    display_name?: string;
+    official?: boolean;
+    beta?: boolean;
+    legacy?: boolean;
+    disabled?: boolean;
+    disabledTooltip?: string;
+  }) => (
     <div
       data-testid={`draggable-${itemName}`}
       data-section-name={sectionName}
