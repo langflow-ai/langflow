@@ -34,6 +34,18 @@ lfx extension list
 
 Some Docling components require additional dependencies that are not installed by default.
 
+**Local model** (required for the **Docling** local model component):
+
+```bash
+uv pip install "lfx-docling[local]"
+```
+
+Alternatively, if you installed Langflow as a package:
+
+```bash
+uv pip install "langflow[docling]"
+```
+
 **Chunking** (`HybridChunker` and `HierarchicalChunker` support for the **Chunk DoclingDocument** component):
 
 ```bash
