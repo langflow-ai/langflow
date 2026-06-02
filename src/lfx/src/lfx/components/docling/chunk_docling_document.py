@@ -1,13 +1,26 @@
 import json
-
-import tiktoken
-from docling_core.transforms.chunker import BaseChunker, DocMeta
-from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker
+from typing import Any
 
 from lfx.base.data.docling_utils import extract_docling_documents
 from lfx.custom import Component
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextInput, Output, StrInput
 from lfx.schema import Data, DataFrame
+
+_CHUNKING_INSTALL_HINT = (
+    "Install them with `uv pip install 'langflow[docling-chunking]'`, "
+    "`uv pip install 'langflow-base[docling-chunking]'`, or "
+    "`uv pip install 'docling-core[chunking]' tiktoken`."
+)
+
+
+def _load_docling_chunker_dependencies() -> tuple[type[Any], type[Any]]:
+    try:
+        from docling_core.transforms.chunker.doc_chunk import DocMeta as DocMetaCls
+        from docling_core.transforms.chunker.hierarchical_chunker import HierarchicalChunker as HierarchicalChunkerCls
+    except (ImportError, RuntimeError) as e:
+        msg = f"Docling chunking dependencies are not installed. {_CHUNKING_INSTALL_HINT}"
+        raise ImportError(msg) from e
+    return DocMetaCls, HierarchicalChunkerCls
 
 
 class ChunkDoclingDocumentComponent(Component):
@@ -144,25 +157,20 @@ class ChunkDoclingDocumentComponent(Component):
         if warning:
             self.status = warning
 
-        chunker: BaseChunker
+        doc_meta_cls, hierarchical_chunker_cls = _load_docling_chunker_dependencies()
+        chunker: Any
         if self.chunker == "HybridChunker":
             try:
                 from docling_core.transforms.chunker.hybrid_chunker import HybridChunker
-            except ImportError as e:
-                msg = (
-                    "HybridChunker is not installed. Please install it with `uv pip install docling-core[chunking] "
-                    "or `uv pip install transformers`"
-                )
+            except (ImportError, RuntimeError) as e:
+                msg = f"HybridChunker is not installed. {_CHUNKING_INSTALL_HINT}"
                 raise ImportError(msg) from e
             max_tokens: int | None = self.max_tokens if self.max_tokens else None
             if self.provider == "Hugging Face":
                 try:
                     from docling_core.transforms.chunker.tokenizer.huggingface import HuggingFaceTokenizer
-                except ImportError as e:
-                    msg = (
-                        "HuggingFaceTokenizer is not installed."
-                        " Please install it with `uv pip install docling-core[chunking]`"
-                    )
+                except (ImportError, RuntimeError) as e:
+                    msg = f"HuggingFaceTokenizer is not installed. {_CHUNKING_INSTALL_HINT}"
                     raise ImportError(msg) from e
                 tokenizer = HuggingFaceTokenizer.from_pretrained(
                     model_name=self.hf_model_name,
@@ -170,13 +178,10 @@ class ChunkDoclingDocumentComponent(Component):
                 )
             elif self.provider == "OpenAI":
                 try:
+                    import tiktoken
                     from docling_core.transforms.chunker.tokenizer.openai import OpenAITokenizer
-                except ImportError as e:
-                    msg = (
-                        "OpenAITokenizer is not installed."
-                        " Please install it with `uv pip install docling-core[chunking]`"
-                        " or `uv pip install transformers`"
-                    )
+                except (ImportError, RuntimeError) as e:
+                    msg = f"OpenAITokenizer is not installed. {_CHUNKING_INSTALL_HINT}"
                     raise ImportError(msg) from e
                 if max_tokens is None:
                     max_tokens = 128 * 1024  # context window length required for OpenAI tokenizers
@@ -190,7 +195,7 @@ class ChunkDoclingDocumentComponent(Component):
             )
 
         elif self.chunker == "HierarchicalChunker":
-            chunker = HierarchicalChunker()
+            chunker = hierarchical_chunker_cls()
         else:
             msg = f"Unknown chunker: {self.chunker}"
             raise ValueError(msg)
@@ -200,7 +205,7 @@ class ChunkDoclingDocumentComponent(Component):
             for doc in documents:
                 for chunk in chunker.chunk(dl_doc=doc):
                     enriched_text = chunker.contextualize(chunk=chunk)
-                    meta = DocMeta.model_validate(chunk.meta)
+                    meta = doc_meta_cls.model_validate(chunk.meta)
 
                     results.append(
                         Data(
