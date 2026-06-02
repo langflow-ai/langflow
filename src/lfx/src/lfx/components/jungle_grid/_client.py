@@ -8,6 +8,7 @@ import httpx
 
 DEFAULT_API_BASE_URL = "https://api.junglegrid.dev"
 DEFAULT_TIMEOUT_SECONDS = 30.0
+HTTP_BAD_REQUEST = 400
 
 SENSITIVE_KEYS = {
     "authorization",
@@ -121,7 +122,7 @@ class JungleGridClient:
             msg = f"Jungle Grid network error: {safe_message}"
             raise JungleGridError(msg) from exc
 
-        if response.status_code >= 400:
+        if response.status_code >= HTTP_BAD_REQUEST:
             detail = self._safe_error_detail(response)
             msg = f"Jungle Grid API error {response.status_code}: {detail}"
             raise JungleGridError(msg)

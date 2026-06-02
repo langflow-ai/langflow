@@ -17,7 +17,7 @@ from lfx.components.jungle_grid.submit_job import JungleGridSubmitJobComponent
 
 from tests.base import ComponentTestBaseWithoutClient
 
-SECRET = "jg_test_secret_value"
+AUTH_PLACEHOLDER = "jg_test_secret_value"
 SIGNED_URL = "https://api.junglegrid.dev/signed/test-token"
 
 
@@ -28,7 +28,7 @@ def _response(status_code: int = 200, payload: dict[str, Any] | None = None) -> 
 
 def _default_kwargs() -> dict[str, Any]:
     return {
-        "api_key": SECRET,
+        "api_key": AUTH_PLACEHOLDER,
         "api_base_url": "https://api.junglegrid.dev",
         "name": "langflow-test",
         "image": "ghcr.io/junglegrid/hello-world:latest",
@@ -83,8 +83,8 @@ class JungleGridComponentTestBase(ComponentTestBaseWithoutClient):
         expected_base_url = default_kwargs.get("api_base_url", "https://api.junglegrid.dev").rstrip("/")
         assert request_url == (expected_url or f"{expected_base_url}{self.expected_path}")
         headers = mocked.call_args.kwargs["headers"]
-        assert headers["Authorization"] == f"Bearer {SECRET}"
-        assert SECRET not in str(result.data)
+        assert headers["Authorization"] == f"Bearer {AUTH_PLACEHOLDER}"
+        assert AUTH_PLACEHOLDER not in str(result.data)
         return mocked
 
     def test_frontend_node_metadata(self, component_class, default_kwargs) -> None:
@@ -105,32 +105,39 @@ class JungleGridComponentTestBase(ComponentTestBaseWithoutClient):
     async def test_http_errors_are_sanitized(self, component_class, default_kwargs, status_code: int) -> None:
         component = component_class(**self._kwargs_for(component_class, default_kwargs))
         method = getattr(component, component.outputs[0].method)
-        mocked = AsyncMock(return_value=_response(status_code, {"error": SECRET, "url": SIGNED_URL}))
-        with patch("httpx.AsyncClient.request", mocked), pytest.raises(ValueError) as exc_info:
+        mocked = AsyncMock(return_value=_response(status_code, {"error": AUTH_PLACEHOLDER, "url": SIGNED_URL}))
+        with (
+            patch("httpx.AsyncClient.request", mocked),
+            pytest.raises(ValueError, match="Jungle Grid API error") as exc_info,
+        ):
             await method()
         error_text = str(exc_info.value)
         assert f"Jungle Grid API error {status_code}" in error_text
-        assert SECRET not in error_text
+        assert AUTH_PLACEHOLDER not in error_text
         assert SIGNED_URL not in error_text
 
     async def test_timeout_error_is_sanitized(self, component_class, default_kwargs) -> None:
         component = component_class(**self._kwargs_for(component_class, default_kwargs))
         method = getattr(component, component.outputs[0].method)
-        with patch("httpx.AsyncClient.request", AsyncMock(side_effect=httpx.TimeoutException("timeout"))):
-            with pytest.raises(ValueError) as exc_info:
-                await method()
+        with (
+            patch("httpx.AsyncClient.request", AsyncMock(side_effect=httpx.TimeoutException("timeout"))),
+            pytest.raises(ValueError, match="timed out") as exc_info,
+        ):
+            await method()
         assert "timed out" in str(exc_info.value)
-        assert SECRET not in str(exc_info.value)
+        assert AUTH_PLACEHOLDER not in str(exc_info.value)
 
     async def test_network_error_is_sanitized(self, component_class, default_kwargs) -> None:
         component = component_class(**self._kwargs_for(component_class, default_kwargs))
         method = getattr(component, component.outputs[0].method)
-        request = httpx.Request("GET", f"https://api.junglegrid.dev/?token={SECRET}")
-        error = httpx.RequestError(f"network {SECRET}", request=request)
-        with patch("httpx.AsyncClient.request", AsyncMock(side_effect=error)):
-            with pytest.raises(ValueError) as exc_info:
-                await method()
-        assert SECRET not in str(exc_info.value)
+        request = httpx.Request("GET", f"https://api.junglegrid.dev/?token={AUTH_PLACEHOLDER}")
+        error = httpx.RequestError(f"network {AUTH_PLACEHOLDER}", request=request)
+        with (
+            patch("httpx.AsyncClient.request", AsyncMock(side_effect=error)),
+            pytest.raises(ValueError, match="network") as exc_info,
+        ):
+            await method()
+        assert AUTH_PLACEHOLDER not in str(exc_info.value)
 
 
 class TestJungleGridEstimateJobComponent(JungleGridComponentTestBase):
@@ -158,12 +165,12 @@ class TestJungleGridSubmitJobComponent(JungleGridComponentTestBase):
 
     async def test_submit_uses_one_request_and_callback_fields(self, component_class, default_kwargs) -> None:
         default_kwargs["callback_url"] = "https://example.test/callback"
-        default_kwargs["callback_auth_token"] = "callback-secret"
+        default_kwargs["callback_auth_token"] = "callback-secret"  # noqa: S105
         default_kwargs["callback_metadata"] = '{"source":"langflow"}'
         mocked = await self._run_component(component_class, default_kwargs)
         body = mocked.call_args.kwargs["json"]
         assert body["callback_url"] == "https://example.test/callback"
-        assert body["callback_auth_token"] == "callback-secret"
+        assert body["callback_auth_token"] == "callback-secret"  # noqa: S105
         assert body["callback_metadata"] == {"source": "langflow"}
         assert mocked.call_count == 1
 
