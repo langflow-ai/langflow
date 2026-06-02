@@ -174,6 +174,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             variant="outline"
             onClick={onChangeFlow}
             data-testid="connection-change-flow"
+            className="min-w-0 max-w-[11rem] whitespace-normal text-center"
           >
             {t("deployments.changeFlow")}
           </Button>
@@ -181,6 +182,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
             variant="outline"
             onClick={onSkipConnection}
             data-testid="connection-skip"
+            className="min-w-0 max-w-[8rem] whitespace-normal text-center"
           >
             {t("deployments.skip")}
           </Button>
@@ -200,7 +202,7 @@ export const ConnectionPanel = memo(function ConnectionPanel({
               onClick={onCreateConnection}
               data-testid="connection-create"
             >
-              Create Connection
+              {t("deployments.createConnection")}
             </Button>
           )}
         </div>
