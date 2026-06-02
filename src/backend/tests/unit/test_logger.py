@@ -238,6 +238,96 @@ class TestConfigure:
                 if isinstance(handler, logging.handlers.RotatingFileHandler):
                     logging.root.removeHandler(handler)
 
+    @staticmethod
+    def _remove_file_handlers():
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.FileHandler):
+                logging.root.removeHandler(handler)
+                handler.close()
+
+    def test_log_format_console_selects_console_renderer(self):
+        """LANGFLOW_LOG_FORMAT=console uses ConsoleRenderer, not KeyValueRenderer."""
+        with patch.dict(os.environ, {"LANGFLOW_LOG_FORMAT": "console", "LANGFLOW_PRETTY_LOGS": "true"}):
+            structlog.reset_defaults()
+            configure(log_level="INFO", log_env="", cache=False)
+            processors = structlog.get_config()["processors"]
+            assert any(isinstance(p, structlog.dev.ConsoleRenderer) for p in processors)
+            assert not any(isinstance(p, structlog.processors.KeyValueRenderer) for p in processors)
+
+    def test_log_format_key_value_selects_keyvalue_renderer(self):
+        """LANGFLOW_LOG_FORMAT=key_value uses KeyValueRenderer."""
+        with patch.dict(os.environ, {"LANGFLOW_LOG_FORMAT": "key_value", "LANGFLOW_PRETTY_LOGS": "true"}):
+            structlog.reset_defaults()
+            configure(log_level="INFO", log_env="", cache=False)
+            processors = structlog.get_config()["processors"]
+            assert any(isinstance(p, structlog.processors.KeyValueRenderer) for p in processors)
+            assert not any(isinstance(p, structlog.dev.ConsoleRenderer) for p in processors)
+
+    def test_log_rotation_time_based_uses_timed_handler(self):
+        """A time value ("1 day") installs a TimedRotatingFileHandler."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "test.log"
+            self._remove_file_handlers()
+            structlog.reset_defaults()
+            configure(log_file=log_file_path, log_rotation="1 day", cache=False)
+            handlers = [
+                h
+                for h in logging.root.handlers
+                if isinstance(h, logging.handlers.TimedRotatingFileHandler) and h.baseFilename == str(log_file_path)
+            ]
+            assert handlers, "expected a TimedRotatingFileHandler for time-based rotation"
+            assert handlers[0].when == "D"
+            self._remove_file_handlers()
+
+    def test_log_rotation_gb_size_parsed(self):
+        """A GB size value ("1 GB") is parsed instead of falling back to 10MB."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "test.log"
+            self._remove_file_handlers()
+            structlog.reset_defaults()
+            configure(log_file=log_file_path, log_rotation="1 GB", cache=False)
+            handlers = [
+                h
+                for h in logging.root.handlers
+                if isinstance(h, logging.handlers.RotatingFileHandler) and h.baseFilename == str(log_file_path)
+            ]
+            assert handlers
+            assert handlers[0].maxBytes == 1024**3
+            self._remove_file_handlers()
+
+    def test_log_rotation_none_disables_rotation(self):
+        """LANGFLOW_LOG_ROTATION=None installs a non-rotating FileHandler."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "test.log"
+            self._remove_file_handlers()
+            structlog.reset_defaults()
+            configure(log_file=log_file_path, log_rotation="None", cache=False)
+            file_handlers = [
+                h
+                for h in logging.root.handlers
+                if isinstance(h, logging.FileHandler) and h.baseFilename == str(log_file_path)
+            ]
+            assert file_handlers
+            assert not isinstance(file_handlers[0], logging.handlers.BaseRotatingHandler)
+            self._remove_file_handlers()
+
+    def test_log_rotation_env_var_is_honored(self):
+        """LANGFLOW_LOG_ROTATION is read from the environment, not just the CLI flag."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "test.log"
+            self._remove_file_handlers()
+            structlog.reset_defaults()
+            with patch.dict(os.environ, {"LANGFLOW_LOG_ROTATION": "1 GB"}):
+                configure(log_file=log_file_path, cache=False)
+            handlers = [
+                h
+                for h in logging.root.handlers
+                if isinstance(h, logging.handlers.RotatingFileHandler) and h.baseFilename == str(log_file_path)
+            ]
+            assert handlers
+            assert handlers[0].maxBytes == 1024**3
+            self._remove_file_handlers()
+
     @patch.dict(os.environ, {"LANGFLOW_LOG_LEVEL": "WARNING"})
     def test_configure_env_variable_override(self):
         """Test configure() respects LANGFLOW_LOG_LEVEL environment variable."""
