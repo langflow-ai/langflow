@@ -30,7 +30,7 @@ By default, most Langflow API endpoints, such as `/v1/run/$FLOW_ID`, require aut
 Langflow validates API keys against keys stored in the database, but you can configure Langflow to validate API keys against an environment variable instead.
 For more information, see [`LANGFLOW_API_KEY_SOURCE`](#langflow-api-key-source).
 
-To require API key authentication for flow webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhook#require-authentication-for-webhooks) environment variable.
+Webhook endpoints require API key authentication by default. To disable authentication for webhook endpoints, use the [`LANGFLOW_WEBHOOK_AUTH_ENABLE`](/webhook#require-authentication-for-webhooks) environment variable.
 To configure authentication for Langflow MCP servers, see [Use Langflow as an MCP server](/mcp-server).
 
 ### Langflow API key permissions

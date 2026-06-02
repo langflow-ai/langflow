@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import warnings
 from collections.abc import Coroutine
 from datetime import datetime, timedelta, timezone
@@ -662,18 +663,57 @@ class AuthService(BaseAuthService):
                 detail="Invalid refresh token",
             ) from e
 
-    async def authenticate_user(self, username: str, password: str, db: AsyncSession) -> User | None:
+    async def authenticate_user(
+        self, username: str, password: str, db: AsyncSession, request: Request | None = None
+    ) -> User | None:
         user = await get_user_by_username(db, username)
 
         if not user:
+            if request and request.client:
+                # Hash username for correlation without exposing PII
+                username_hash = hashlib.sha256(username.lower().encode()).hexdigest()[:16]
+                logger.warning(
+                    "Login failed: user not found",
+                    auth_event="login_failed",
+                    reason="user_not_found",
+                    username_hash=username_hash,
+                    client_ip=request.client.host,
+                )
             return None
 
         if not user.is_active:
+            if request and request.client:
+                logger.warning(
+                    "Login failed: inactive user",
+                    auth_event="login_failed",
+                    reason="user_inactive",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
+                )
             if not user.last_login_at:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Waiting for approval")
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Inactive user")
 
-        return user if self.verify_password(password, user.password) else None
+        if not self.verify_password(password, user.password):
+            if request and request.client:
+                logger.warning(
+                    "Login failed: incorrect password",
+                    auth_event="login_failed",
+                    reason="incorrect_password",
+                    auth_id=str(user.id),
+                    client_ip=request.client.host,
+                )
+            return None
+
+        # Successful login
+        if request and request.client:
+            logger.info(
+                "Login successful",
+                auth_event="login_success",
+                auth_id=str(user.id),
+                client_ip=request.client.host,
+            )
+        return user
 
     def _get_fernet(self) -> Fernet:
         from langflow.services.auth.utils import ensure_fernet_key

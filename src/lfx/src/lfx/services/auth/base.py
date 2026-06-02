@@ -94,8 +94,19 @@ class BaseAuthService(Service, abc.ABC):
         username: str,
         password: str,
         db: Any,
+        request: Any | None = None,
     ) -> Any | None:
-        """Authenticate with username and password. Returns user or None."""
+        """Authenticate with username and password. Returns user or None.
+
+        Args:
+            username: Username to authenticate
+            password: Password to verify
+            db: Database session
+            request: Optional HTTP request for logging IP address
+
+        Returns:
+            User object if authentication succeeds, None otherwise
+        """
 
     # -------------------------------------------------------------------------
     # User validation

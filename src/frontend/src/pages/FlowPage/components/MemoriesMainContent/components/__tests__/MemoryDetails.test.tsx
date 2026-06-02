@@ -64,8 +64,17 @@ jest.mock("../MemoryKnowledgeBaseSection", () => ({
 }));
 
 jest.mock("../SummaryCard", () => ({
-  SummaryCard: ({ label }: { label: string }) => (
-    <div data-testid="summary-card">{label}</div>
+  SummaryCard: ({
+    label,
+    value,
+  }: {
+    label: string;
+    value: string | number;
+  }) => (
+    <div data-testid="summary-card">
+      <span data-testid="summary-card-label">{label}</span>
+      <span data-testid="summary-card-value">{value}</span>
+    </div>
   ),
 }));
 
@@ -254,5 +263,98 @@ describe("MemoryDetails — Config popover", () => {
     render(<MemoryDetails {...baseProps} />);
     const chevron = screen.getByTestId("icon-ChevronDown");
     expect(chevron.className).not.toContain("rotate-180");
+  });
+});
+
+describe("MemoryDetails — stat cards session filtering", () => {
+  const memoryWithStats: MemoryInfo = {
+    ...baseMemory,
+    total_messages_processed: 42,
+    pending_messages_count: 3,
+    last_generated_at: "2024-06-01T12:00:00Z",
+  };
+
+  function getValueByLabel(label: string) {
+    const cards = screen.getAllByTestId("summary-card");
+    const card = cards.find(
+      (c) =>
+        c.querySelector(`[data-testid="summary-card-label"]`)?.textContent ===
+        label,
+    );
+    return card?.querySelector(`[data-testid="summary-card-value"]`)
+      ?.textContent;
+  }
+
+  it("shows — for all stat cards when selectedSession is null (All Sessions default)", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={memoryWithStats}
+        selectedSession={null}
+      />,
+    );
+    expect(getValueByLabel("Processed Messages")).toBe("—");
+    expect(getValueByLabel("Pending Messages")).toBe("—");
+    expect(getValueByLabel("Last Generated")).toBe("—");
+  });
+
+  it("shows — for all stat cards when selectedSession is ALL_SESSIONS_VALUE", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={memoryWithStats}
+        selectedSession="__all__"
+      />,
+    );
+    expect(getValueByLabel("Processed Messages")).toBe("—");
+    expect(getValueByLabel("Pending Messages")).toBe("—");
+    expect(getValueByLabel("Last Generated")).toBe("—");
+  });
+
+  it("shows actual values when a specific session is selected", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={memoryWithStats}
+        selectedSession="session-abc"
+      />,
+    );
+    expect(getValueByLabel("Processed Messages")).toBe("42");
+    expect(getValueByLabel("Pending Messages")).toBe("3");
+    expect(getValueByLabel("Last Generated")).not.toBe("—");
+    expect(getValueByLabel("Last Generated")).not.toBe("");
+  });
+
+  it("shows 0 for Processed Messages when value is 0 and a session is selected", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={{ ...memoryWithStats, total_messages_processed: 0 }}
+        selectedSession="session-abc"
+      />,
+    );
+    expect(getValueByLabel("Processed Messages")).toBe("0");
+  });
+
+  it("shows 0 for Pending Messages when value is 0 and a session is selected", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={{ ...memoryWithStats, pending_messages_count: 0 }}
+        selectedSession="session-abc"
+      />,
+    );
+    expect(getValueByLabel("Pending Messages")).toBe("0");
+  });
+
+  it("shows Never for Last Generated when date is absent and session is selected", () => {
+    render(
+      <MemoryDetails
+        {...baseProps}
+        memory={{ ...memoryWithStats, last_generated_at: undefined }}
+        selectedSession="session-abc"
+      />,
+    );
+    expect(getValueByLabel("Last Generated")).toBe("Never");
   });
 });

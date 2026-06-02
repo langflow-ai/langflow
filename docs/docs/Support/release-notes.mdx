@@ -69,6 +69,14 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- Redis-backed job queue for multi-worker deployments
+
+    Langflow now supports a Redis-backed job queue that allows flow build events to be shared across multiple Gunicorn/Uvicorn workers and across multiple replicas behind a load balancer.
+
+    Single-process deployments are unaffected. The default `asyncio` in-memory queue is unchanged.
+
+    For setup instructions and configuration details, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
 - Memory bases
 
     Memory bases are per-flow vector stores that automatically ingest conversation messages.
@@ -158,8 +166,9 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Database connectors for knowledge bases
 
     Knowledge bases now support configurable vector database backends through **DB Providers** configured in **Settings → DB Providers**.
+    Available providers include [Chroma (default)](https://docs.trychroma.com/), [Chroma Cloud](https://docs.trychroma.com/cloud/getting-started), and [OpenSearch](https://docs.opensearch.org/latest/about/).
 
-    For setup instructions and configuration details, see [Manage vector data](/knowledge).
+    For more information, see [Manage vector data](/knowledge).
 
 - MCP server management lock
 

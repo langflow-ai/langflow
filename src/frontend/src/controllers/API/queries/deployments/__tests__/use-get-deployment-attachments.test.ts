@@ -60,7 +60,7 @@ describe("useGetDeploymentAttachments", () => {
     );
   });
 
-  it("returns flow versions with provider_snapshot_id and tool_name", async () => {
+  it("returns flow versions with provider_snapshot_id and tool display name", async () => {
     const responseData = {
       flow_versions: [
         {
@@ -70,8 +70,11 @@ describe("useGetDeploymentAttachments", () => {
           version_number: 1,
           attached_at: "2026-01-01T00:00:00Z",
           provider_snapshot_id: "tool-abc",
-          tool_name: "my_flow_tool",
-          provider_data: { app_ids: ["app-1"] },
+          provider_data: {
+            app_ids: ["app-1"],
+            tool_name: "lf_my_flow_tool_12345678",
+            tool_display_name: "My Flow Tool",
+          },
         },
         {
           id: "fv-2",
@@ -80,7 +83,6 @@ describe("useGetDeploymentAttachments", () => {
           version_number: 3,
           attached_at: "2026-01-02T00:00:00Z",
           provider_snapshot_id: "tool-xyz",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -98,7 +100,9 @@ describe("useGetDeploymentAttachments", () => {
     expect(result.data).toEqual(responseData);
     expect(result.data.flow_versions).toHaveLength(2);
     expect(result.data.flow_versions[0].provider_snapshot_id).toBe("tool-abc");
-    expect(result.data.flow_versions[0].tool_name).toBe("my_flow_tool");
-    expect(result.data.flow_versions[1].tool_name).toBeNull();
+    expect(result.data.flow_versions[0].provider_data?.tool_display_name).toBe(
+      "My Flow Tool",
+    );
+    expect(result.data.flow_versions[1].provider_data).toBeNull();
   });
 });

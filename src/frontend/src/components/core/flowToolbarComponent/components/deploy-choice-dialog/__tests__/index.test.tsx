@@ -25,7 +25,7 @@ const mockShowError = jest.fn();
 
 // Simulate react-query caching: data is undefined until the first enabled
 // fetch, then persists even when the query is later disabled.
-let _deploymentsCache: typeof mockDeploymentsData = undefined;
+let _deploymentsCache: { deployments: Deployment[] } | undefined = undefined;
 
 jest.mock("@/controllers/API/queries/deployments/use-get-deployments", () => ({
   useGetDeployments: (_params: unknown, options?: { enabled?: boolean }) => {
@@ -103,24 +103,16 @@ const makeProvider = (
   updated_at: null,
 });
 
-const makeDeployment = (
-  id = "dep-1",
-  name = "My Bot",
-  snapshotId = "snap-1",
-  versionId = "v-1",
-): Deployment => ({
+const makeDeployment = (id = "dep-1", name = "My Bot"): Deployment => ({
   id,
-  name,
+  provider_id: "prov-1",
   description: null,
   type: "agent",
   created_at: "2025-01-01",
   updated_at: "2025-01-01",
-  provider_data: null,
+  provider_data: { display_name: name, name: "my_bot" },
   resource_key: "my_bot",
   attached_count: 1,
-  matched_attachments: [
-    { flow_version_id: versionId, provider_snapshot_id: snapshotId },
-  ],
 });
 
 // ---------------------------------------------------------------------------
@@ -429,7 +421,6 @@ describe("DeployChoiceDialog — deployments phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -451,7 +442,7 @@ describe("DeployChoiceDialog — deployments phase", () => {
   it("advances to review phase when existing attachment selected and continued", async () => {
     const user = userEvent.setup();
     mockDeploymentsData = {
-      deployments: [makeDeployment("dep-1", "My Bot", "snap-1")],
+      deployments: [makeDeployment("dep-1", "My Bot")],
     };
     mockAttachmentsData = {
       flow_versions: [
@@ -462,7 +453,6 @@ describe("DeployChoiceDialog — deployments phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -490,7 +480,7 @@ describe("DeployChoiceDialog — review phase", () => {
 
   beforeEach(async () => {
     mockDeploymentsData = {
-      deployments: [makeDeployment("dep-1", "My Bot", "snap-1", "v-1")],
+      deployments: [makeDeployment("dep-1", "My Bot")],
     };
     mockAttachmentsData = {
       flow_versions: [
@@ -501,7 +491,6 @@ describe("DeployChoiceDialog — review phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -705,7 +694,7 @@ describe("DeployChoiceDialog — update phase", () => {
 
   beforeEach(async () => {
     mockDeploymentsData = {
-      deployments: [makeDeployment("dep-1", "My Bot", "snap-1")],
+      deployments: [makeDeployment("dep-1", "My Bot")],
     };
     mockAttachmentsData = {
       flow_versions: [
@@ -716,7 +705,6 @@ describe("DeployChoiceDialog — update phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
