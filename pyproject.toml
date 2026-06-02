@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.9.5"
+version = "1.9.6"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.9.5",
+    "langflow-base[complete]>=0.9.6",
 ]
 
 
@@ -92,7 +92,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langchain-docling>=1.1.0",
+    "langflow-base[docling]>=0.9.5",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
@@ -102,6 +102,16 @@ docling = [
     "torch>=2.6.0",
     "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
 ]
+
+docling-chunking = [
+    "langflow-base[docling-chunking]>=0.9.5",
+]
+
+docling-image-description = [
+    "langflow-base[docling-image-description]>=0.9.5",
+    "langchain-docling>=1.1.0",
+]
+
 
 audio = [
     "webrtcvad>=2.0.10",
