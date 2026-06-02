@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.interface.components import component_cache
-from lfx.run.base import RunError, output_error, run_flow
+from lfx.run.base import RunError, _materialize_flow_dict, output_error, run_flow
 
 
 class TestRunError:
@@ -1414,6 +1414,85 @@ class TestRunFlowExecutionErrors:
 # ---------------------------------------------------------------------------
 # --upgrade-flow option
 # ---------------------------------------------------------------------------
+
+
+class TestMaterializeFlowDict:
+    """Direct tests for ``_materialize_flow_dict`` — the core outer-envelope unwrap.
+
+    This helper backs ``--upgrade-flow`` input handling.
+    Exported Langflow flows look like ``{"name": ..., "data": {<graph>}}``; the inner graph is
+    ``{"nodes": [...], "edges": [...]}``. This helper must unwrap the envelope, pass a bare graph
+    through unchanged, unwrap exactly one level, and fail loudly (RunError) on bad/missing input.
+    """
+
+    BARE = {"nodes": [{"id": "n1"}], "edges": []}
+
+    def _materialize(self, **kwargs):
+        defaults = {
+            "flow_json": None,
+            "stdin": False,
+            "script_path": None,
+            "upgrade_flow": None,
+            "verbosity": 0,
+            "verbose": False,
+        }
+        defaults.update(kwargs)
+        return _materialize_flow_dict(**defaults)
+
+    def test_inline_envelope_unwrapped(self):
+        env = {"name": "F", "description": "d", "data": self.BARE}
+        assert self._materialize(flow_json=json.dumps(env)) == self.BARE
+
+    def test_inline_bare_passthrough(self):
+        assert self._materialize(flow_json=json.dumps(self.BARE)) == self.BARE
+
+    def test_stdin_envelope_unwrapped(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin", StringIO(json.dumps({"name": "F", "data": self.BARE})))
+        assert self._materialize(stdin=True) == self.BARE
+
+    def test_stdin_bare_passthrough(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin", StringIO(json.dumps(self.BARE)))
+        assert self._materialize(stdin=True) == self.BARE
+
+    def test_file_with_upgrade_envelope_unwrapped(self, tmp_path):
+        f = tmp_path / "flow.json"
+        f.write_text(json.dumps({"name": "F", "data": self.BARE}))
+        assert self._materialize(script_path=f, upgrade_flow="check") == self.BARE
+
+    def test_file_with_upgrade_bare_passthrough(self, tmp_path):
+        f = tmp_path / "flow.json"
+        f.write_text(json.dumps(self.BARE))
+        assert self._materialize(script_path=f, upgrade_flow="check") == self.BARE
+
+    def test_nested_envelope_unwraps_exactly_one_level(self):
+        # Documents behavior: a doubly-nested {"data": {"data": ...}} unwraps a single level.
+        assert self._materialize(flow_json=json.dumps({"data": {"data": self.BARE}})) == {"data": self.BARE}
+
+    def test_plain_file_without_upgrade_returns_none(self, tmp_path):
+        # A plain script path (no --upgrade-flow) is loaded later by path, not materialized here.
+        f = tmp_path / "flow.json"
+        f.write_text(json.dumps(self.BARE))
+        assert self._materialize(script_path=f, upgrade_flow=None) is None
+
+    def test_non_dict_json_raises(self):
+        # A top-level JSON array has no .get(); this surfaces as a RunError (fails loudly).
+        with pytest.raises(RunError):
+            self._materialize(flow_json="[]")
+
+    def test_py_script_with_upgrade_raises(self, tmp_path):
+        f = tmp_path / "flow.py"
+        f.write_text("graph = None\n")
+        with pytest.raises(RunError):
+            self._materialize(script_path=f, upgrade_flow="check")
+
+    def test_upgrade_without_source_raises(self):
+        with pytest.raises(RunError):
+            self._materialize(upgrade_flow="check")
+
+    def test_empty_stdin_raises(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin", StringIO("   "))
+        with pytest.raises(RunError):
+            self._materialize(stdin=True, upgrade_flow="check")
 
 
 class TestUpgradeFlowOption:

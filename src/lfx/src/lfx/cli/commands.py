@@ -26,6 +26,7 @@ from lfx.cli.common import (
     load_graph_from_path,
 )
 from lfx.cli.serve_app import FlowMeta, create_multi_serve_app
+from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
 # Initialize console
 console = Console()
@@ -144,11 +145,15 @@ async def serve_command(
     # ------------------------------------------------------------------
     temp_file_to_cleanup = None
     json_data: dict | None = None
+    # Outer {"name", "description", ..., "data": ...} envelope, kept so it can be restored
+    # when writing the temp file. None when the source was already a bare graph.
+    outer_envelope: dict | None = None
 
     if flow_json is not None:
         logger.info("Processing inline JSON content...")
         try:
             raw = json.loads(flow_json)
+            outer_envelope, json_data = split_flow_envelope(raw)
             logger.info("JSON content is valid")
         except json.JSONDecodeError as e:
             typer.echo(f"Error: Invalid JSON content: {e}", err=True)
@@ -156,7 +161,6 @@ async def serve_command(
         except Exception as e:
             verbose_print(f"Error processing JSON content: {e}")
             raise typer.Exit(1) from e
-        json_data = raw.get("data", raw)  # unwrap outer envelope if present
 
     elif stdin:
         logger.info("Reading JSON content from stdin...")
@@ -166,6 +170,7 @@ async def serve_command(
                 logger.error("No content received from stdin")
                 raise typer.Exit(1)
             raw = json.loads(stdin_content)
+            outer_envelope, json_data = split_flow_envelope(raw)
             logger.info("JSON content from stdin is valid")
         except json.JSONDecodeError as e:
             verbose_print(f"Error: Invalid JSON content from stdin: {e}")
@@ -173,7 +178,6 @@ async def serve_command(
         except Exception as e:
             verbose_print(f"Error reading from stdin: {e}")
             raise typer.Exit(1) from e
-        json_data = raw.get("data", raw)  # unwrap outer envelope if present
 
     elif upgrade_flow and script_path is not None:
         # File-path input with --upgrade-flow: load into json_data so the
@@ -185,7 +189,7 @@ async def serve_command(
             raise typer.Exit(1)
         try:
             raw = json.loads(Path(script_path).read_text(encoding="utf-8"))
-            json_data = raw.get("data", raw)
+            outer_envelope, json_data = split_flow_envelope(raw)
         except Exception as e:
             verbose_print(f"Error: --upgrade-flow: could not read flow file '{script_path}': {e}")
             raise typer.Exit(1) from e
@@ -215,8 +219,13 @@ async def serve_command(
     # This happens after upgrade check so the server sees upgraded content.
     if json_data is not None:
         try:
+            # The graph loader (aload_flow_from_json) requires the outer {"data": ...}
+            # envelope. json_data is the unwrapped inner graph (and may have been upgraded
+            # above), so re-attach the envelope, preserving any outer metadata
+            # (name, description, ...) from the original payload when it was enveloped.
+            output_payload = merge_flow_envelope(outer_envelope, json_data, wrap_bare=True)
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
-                json.dump(json_data, temp_file, indent=2)
+                json.dump(output_payload, temp_file, indent=2)
                 temp_file_to_cleanup = temp_file.name
             script_path = temp_file_to_cleanup
             logger.info(f"Created temporary file: {script_path}")

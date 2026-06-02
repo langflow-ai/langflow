@@ -83,6 +83,18 @@ def test_upgrade_write_updates_file(flow_file):
     assert updated["nodes"][0]["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
 
 
+def test_upgrade_bare_flow_write_keeps_flat_shape(flow_file):
+    """A bare (non-enveloped) flow written with --write stays flat: no spurious {"data": ...} wrapper.
+
+    Only enveloped flows get re-wrapped on write; a flat graph must round-trip as a flat graph.
+    """
+    upgrade_command(flow_file, write=True, registry=_registry())
+    written = json.loads(flow_file.read_text())
+    assert "data" not in written  # still a bare graph, not wrapped in an envelope
+    assert "nodes" in written
+    assert written["nodes"][0]["data"]["node"]["template"]["code"]["value"] == REGISTRY_CODE
+
+
 def test_upgrade_exits_nonzero_when_blocked(tmp_path):
     f = tmp_path / "flow.json"
     f.write_text(

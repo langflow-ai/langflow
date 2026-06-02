@@ -18,6 +18,7 @@ from lfx.cli.validation import validate_global_variables_for_env
 from lfx.log.logger import logger
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars, validate_provided_id
 from lfx.schema.schema import InputValueRequest
+from lfx.utils.flow_envelope import split_flow_envelope
 
 if TYPE_CHECKING:
     from lfx.events.event_manager import EventManager
@@ -71,8 +72,9 @@ def _materialize_flow_dict(
     is loaded later by file path, not here.
 
     Raises:
-        RunError: on malformed JSON, an unreadable upgrade target, a non-JSON ``--upgrade-flow``
-            target, or a missing JSON source when ``--upgrade-flow`` was requested.
+        RunError: on malformed JSON, a non-object payload, an unreadable upgrade target, a
+            non-JSON ``--upgrade-flow`` target, or a missing JSON source when ``--upgrade-flow``
+            was requested.
     """
     flow_dict: dict | None = None
 
@@ -81,7 +83,7 @@ def _materialize_flow_dict(
             sys.stderr.write("Processing inline JSON content...\n")
         try:
             raw = json.loads(flow_json)
-            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+            _, flow_dict = split_flow_envelope(raw)
             if verbosity > 0:
                 sys.stderr.write("JSON content is valid\n")
         except json.JSONDecodeError as e:
@@ -102,7 +104,7 @@ def _materialize_flow_dict(
                 output_error(error_msg, verbose=verbose)
                 raise RunError(error_msg, None)
             raw = json.loads(stdin_content)
-            flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+            _, flow_dict = split_flow_envelope(raw)
             if verbosity > 0:
                 sys.stderr.write("JSON content from stdin is valid\n")
         except json.JSONDecodeError as e:
@@ -121,7 +123,7 @@ def _materialize_flow_dict(
         if script_path.suffix.lower() == ".json":
             try:
                 raw = json.loads(script_path.read_text(encoding="utf-8"))
-                flow_dict = raw.get("data", raw)  # unwrap outer envelope if present
+                _, flow_dict = split_flow_envelope(raw)
             except Exception as e:
                 error_msg = f"--upgrade-flow: could not read flow file '{script_path}': {e}"
                 output_error(error_msg, verbose=verbose)

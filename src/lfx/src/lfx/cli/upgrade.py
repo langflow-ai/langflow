@@ -10,6 +10,7 @@ import typer
 
 from lfx.upgrade.applier import apply_safe_upgrades
 from lfx.upgrade.checker import CompatibilityReport, build_registry_lookup, check_flow_compatibility
+from lfx.utils.flow_envelope import merge_flow_envelope, split_flow_envelope
 
 # ASCII status markers (no Unicode glyphs) so output is safe on Windows cp1252 consoles,
 # where non-ASCII symbols would raise UnicodeEncodeError or render as mojibake.
@@ -74,9 +75,12 @@ def upgrade_command(
 
     # Exported Langflow flows may have an outer envelope:
     # {"name": ..., "data": {"nodes": [...], "edges": [...]}}
-    # Keep a reference to the outer envelope so we can reconstruct it on write.
-    has_envelope = "data" in flow_data and "nodes" in flow_data.get("data", {})
-    inner_data = flow_data["data"] if has_envelope else flow_data
+    # Split it off so the checker sees the inner graph; the envelope is re-attached on write.
+    try:
+        outer_envelope, inner_data = split_flow_envelope(flow_data)
+    except TypeError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
     all_types = registry if registry is not None else load_registry_from_index()
     # Build the registry lookup once and reuse it for both the check and the apply step.
@@ -90,7 +94,8 @@ def upgrade_command(
         updated_inner, count = apply_safe_upgrades(
             inner_data, all_types, report, return_count=True, registry=registry_lookup
         )
-        output = {**flow_data, "data": updated_inner} if has_envelope else updated_inner
+        # Preserve the on-disk shape: keep the envelope (with metadata) when present, else stay flat.
+        output = merge_flow_envelope(outer_envelope, updated_inner, wrap_bare=False)
         flow_path.write_text(json.dumps(output, indent=2, ensure_ascii=False), encoding="utf-8")
         typer.echo(f"Wrote {count} safe upgrade(s) to {flow_path}")
         wrote_safe = True

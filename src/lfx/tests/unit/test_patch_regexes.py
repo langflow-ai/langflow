@@ -16,18 +16,16 @@ import re
 
 def _patch_main_pyproject(txt: str, langflow_version: str, base_version: str) -> str:
     txt = re.sub(r'^version = ".*"', f'version = "{langflow_version}"', txt, flags=re.MULTILINE)
-    txt = re.sub(
+    return re.sub(
         r'"langflow-base(?:\[[^\]]*\])?(?:==|>=|~=)[^"]*"',
         f'"langflow-base[complete]>={base_version}"',
         txt,
     )
-    return txt
 
 
 def _patch_langflow_base_pyproject(txt: str, base_version: str, langflow_version: str) -> str:
     txt = re.sub(r'^version = ".*"', f'version = "{base_version}"', txt, flags=re.MULTILINE)
-    txt = re.sub(r'"lfx(?:~=|>=)[^"]*"', f'"lfx~={langflow_version}"', txt)
-    return txt
+    return re.sub(r'"lfx(?:~=|>=)[^"]*"', f'"lfx~={langflow_version}"', txt)
 
 
 def _patch_lfx_pyproject(txt: str, langflow_version: str) -> str:
@@ -163,3 +161,47 @@ description = "Lightweight executor for Langflow"
         result = _patch_lfx_pyproject(txt, "1.11.0")
         assert 'version = "1.11.0"' in result
         assert "Lightweight executor" in result
+
+
+# ---------------------------------------------------------------------------
+# release.yml: major.minor extraction from the current lfx constraint
+#
+# release.yml computes the next constraint ceiling from the CURRENT pin with:
+#   MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/^[^0-9]*([0-9]+\\.[0-9]+).*/\\1/')
+# It must read the LOWER bound, including when the pin is already in the range form
+# ">=X.Y.Z,<X.(Y+1).dev0" that release.yml itself writes — otherwise the ceiling drifts.
+# ---------------------------------------------------------------------------
+
+
+def _release_yml_major_minor(constraint_line: str) -> str:
+    """Mirror the release.yml sed: anchor to the FIRST version in the line."""
+    return re.sub(r"^[^0-9]*([0-9]+\.[0-9]+).*", r"\1", constraint_line)
+
+
+def _old_greedy_major_minor(constraint_line: str) -> str:
+    r"""The previous (buggy) greedy sed: 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/'."""
+    return re.sub(r".*[~>=<]+([0-9]+\.[0-9]+).*", r"\1", constraint_line)
+
+
+class TestReleaseYmlMajorMinorExtraction:
+    def test_extracts_from_tilde_form(self):
+        assert _release_yml_major_minor('    "lfx~=1.10.0",') == "1.10"
+
+    def test_extracts_lower_bound_from_range_form(self):
+        # The form release.yml writes after a pre-release build. Must read 1.10, not 1.11.
+        assert _release_yml_major_minor('    "lfx>=1.10.0,<1.11.dev0",') == "1.10"
+
+    def test_extracts_from_gte_only_form(self):
+        assert _release_yml_major_minor('    "lfx>=1.10.0",') == "1.10"
+
+    def test_ceiling_is_next_minor_not_drifted(self):
+        # MAJOR.NEXT_MINOR computed from a range-form pin must be 1.11, not 1.12.
+        major_minor = _release_yml_major_minor('    "lfx>=1.10.0,<1.11.dev0",')
+        major, minor = major_minor.split(".")
+        assert f"{major}.{int(minor) + 1}" == "1.11"
+
+    def test_old_greedy_regex_was_wrong_on_range_form(self):
+        # Documents the bug the fix addresses: greedy match grabbed the upper bound (1.11),
+        # so the ceiling drifted upward by one minor each release cycle.
+        assert _old_greedy_major_minor('    "lfx>=1.10.0,<1.11.dev0",') == "1.11"
+        assert _release_yml_major_minor('    "lfx>=1.10.0,<1.11.dev0",') == "1.10"

@@ -398,3 +398,191 @@ def test_serve_upgrade_flow_safe_proceeds_to_serve():
         result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "safe"])
         assert result.exit_code == 0, result.stdout
         assert mock_uvicorn.called
+
+
+def _serve_flow_json_enveloped(code=_NODE_CODE, type_="MyComp"):
+    """An exported-flow envelope wrapping the inner graph: {"name", "description", "data": {...}}."""
+    inner = json.loads(_serve_flow_json(code=code, type_=type_))
+    return json.dumps({"name": "My Flow", "description": "the flow", "data": inner})
+
+
+def _loader_capturing_payload(captured: dict):
+    """Side effect for a patched (async) load_graph_from_path that records the file it loads.
+
+    The real loader (aload_flow_from_json) does ``flow_graph["data"]`` on the file contents,
+    so this lets the test assert serve wrote a loadable, enveloped temp file.
+    """
+
+    def _side_effect(path, *_args, **_kwargs):
+        captured["payload"] = json.loads(Path(path).read_text(encoding="utf-8"))
+        graph = MagicMock()
+        graph.prepare = MagicMock()
+        graph.nodes = {}
+        return graph
+
+    return _side_effect
+
+
+def test_serve_flow_json_envelope_preserved_on_temp_file():
+    """`serve --flow-json <enveloped>` (no --upgrade-flow) must write a loadable enveloped temp file.
+
+    Regression: the inline path unwraps the outer envelope; if the unwrapped inner graph is
+    written to the temp file, the loader's ``flow_graph["data"]`` raises KeyError: 'data'.
+    The temp file must keep the {"data": ...} envelope and preserve outer metadata.
+    """
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_load.side_effect = _loader_capturing_payload(captured)
+        result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json_enveloped()])
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    # Envelope intact so the loader can read flow_graph["data"], with metadata preserved.
+    assert "data" in payload, payload
+    assert "nodes" in payload["data"], payload
+    assert payload["name"] == "My Flow"
+    assert payload["description"] == "the flow"
+
+
+def test_serve_upgrade_safe_writes_loadable_enveloped_temp_file():
+    """`serve --upgrade-flow=safe` writes an enveloped temp file whose inner graph is upgraded."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_cache.all_types_dict = _serve_registry()
+        mock_load.side_effect = _loader_capturing_payload(captured)
+        args = ["--flow-json", _serve_flow_json_enveloped(), "--upgrade-flow", "safe"]
+        result = CliRunner().invoke(_serve_app(), args)
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    assert "data" in payload, payload
+    assert payload["name"] == "My Flow"  # outer metadata preserved through the upgrade
+    # The safe upgrade replaced the node's v1 code with the registry's v2 code, under data.nodes.
+    upgraded_code = payload["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert upgraded_code == _REGISTRY_CODE
+
+
+def test_serve_inline_bare_wrapped_on_temp_file():
+    """`serve --flow-json <bare graph>` wraps it as {"data": ...} so the loader can read it."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_load.side_effect = _loader_capturing_payload(captured)
+        result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json()])  # bare, no envelope
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    assert "data" in payload, payload  # bare graph wrapped so flow_graph["data"] works
+    assert "nodes" in payload["data"]
+
+
+def test_serve_stdin_envelope_preserved_on_temp_file():
+    """`serve --stdin <enveloped>` writes a loadable enveloped temp file with metadata preserved."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_load.side_effect = _loader_capturing_payload(captured)
+        result = CliRunner().invoke(_serve_app(), ["--stdin"], input=_serve_flow_json_enveloped())
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    assert "data" in payload, payload
+    assert "nodes" in payload["data"], payload
+    assert payload["name"] == "My Flow"
+
+
+def test_serve_stdin_bare_wrapped_on_temp_file():
+    """`serve --stdin <bare graph>` wraps it as {"data": ...} so the loader can read it."""
+    from typer.testing import CliRunner
+
+    captured: dict = {}
+    with (
+        patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+        patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+        patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+    ):
+        mock_load.side_effect = _loader_capturing_payload(captured)
+        result = CliRunner().invoke(_serve_app(), ["--stdin"], input=_serve_flow_json())  # bare
+        assert result.exit_code == 0, result.stdout
+        assert mock_uvicorn.called
+
+    payload = captured["payload"]
+    assert "data" in payload, payload
+    assert "nodes" in payload["data"], payload
+
+
+def test_serve_file_upgrade_safe_writes_enveloped_temp_file():
+    """`serve <file.json> --upgrade-flow=safe` unwraps the file, upgrades, and writes a loadable file."""
+    from typer.testing import CliRunner
+
+    envelope = json.loads(_serve_flow_json_enveloped())
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+        json.dump(envelope, f)
+        flow_path = f.name
+
+    captured: dict = {}
+    try:
+        with (
+            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.cli.commands.load_graph_from_path") as mock_load,
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            mock_cache.all_types_dict = _serve_registry()
+            mock_load.side_effect = _loader_capturing_payload(captured)
+            result = CliRunner().invoke(_serve_app(), [flow_path, "--upgrade-flow", "safe"])
+            assert result.exit_code == 0, result.stdout
+            assert mock_uvicorn.called
+    finally:
+        Path(flow_path).unlink(missing_ok=True)
+
+    payload = captured["payload"]
+    assert payload["name"] == "My Flow"  # outer metadata preserved
+    assert payload["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == _REGISTRY_CODE
+
+
+def test_serve_file_upgrade_rejects_py_script():
+    """`serve <file.py> --upgrade-flow=...` is rejected — only JSON flows can be upgrade-checked."""
+    from typer.testing import CliRunner
+
+    with tempfile.NamedTemporaryFile(mode="w", suffix=".py", delete=False) as f:
+        f.write("graph = None\n")
+        py_path = f.name
+
+    try:
+        with (
+            patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
+            patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
+        ):
+            result = CliRunner().invoke(_serve_app(), [py_path, "--upgrade-flow", "check"])
+            assert result.exit_code != 0
+            assert not mock_uvicorn.called
+    finally:
+        Path(py_path).unlink(missing_ok=True)
