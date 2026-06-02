@@ -12,8 +12,12 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
+from langflow.services.rate_limit import get_rate_limit_string, get_rate_limiter
 
 router = APIRouter(tags=["Login"])
+
+# Initialize rate limiter
+limiter = get_rate_limiter()
 
 
 class SessionResponse(BaseModel):
@@ -25,6 +29,7 @@ class SessionResponse(BaseModel):
 
 
 @router.post("/login", response_model=Token, include_in_schema=False)
+@limiter.limit(lambda: get_rate_limit_string())  # Configurable rate limit per IP
 async def login_to_get_access_token(
     request: Request,
     response: Response,
