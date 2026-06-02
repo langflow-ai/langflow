@@ -8,6 +8,7 @@ from .flow_version import FlowVersion
 from .flow_version_deployment_attachment import FlowVersionDeploymentAttachment
 from .folder import Folder
 from .jobs import Job
+from .lothal_project import CodeFile, Message, Project
 from .message import MessageTable
 from .traces.model import SpanTable, TraceTable
 from .transactions import TransactionTable
@@ -16,6 +17,7 @@ from .variable import Variable
 
 __all__ = [
     "ApiKey",
+    "CodeFile",
     "Deployment",
     "DeploymentProviderAccount",
     "File",
@@ -24,7 +26,9 @@ __all__ = [
     "FlowVersionDeploymentAttachment",
     "Folder",
     "Job",
+    "Message",
     "MessageTable",
+    "Project",
     "SSOConfig",
     "SSOUserProfile",
     "SpanTable",
