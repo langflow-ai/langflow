@@ -671,8 +671,16 @@ def configure(
 
     # Set up file logging if needed
     if log_file:
-        if not log_file.parent.exists():
+        # Honor the configured path by creating its parent directory. The documented
+        # container setup (LANGFLOW_LOG_FILE=/var/log/langflow/langflow.log) points at
+        # a directory that may not exist on first run; create it instead of silently
+        # redirecting. Fall back to the per-user cache dir only when the requested
+        # location can't be created (e.g. permission denied).
+        try:
+            log_file.parent.mkdir(parents=True, exist_ok=True)
+        except OSError:
             cache_dir = Path(user_cache_dir("langflow"))
+            cache_dir.mkdir(parents=True, exist_ok=True)
             log_file = cache_dir / "langflow.log"
 
         # Read LANGFLOW_LOG_ROTATION here so a value set purely in the environment

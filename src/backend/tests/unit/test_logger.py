@@ -328,6 +328,23 @@ class TestConfigure:
             assert handlers[0].maxBytes == 1024**3
             self._remove_file_handlers()
 
+    def test_log_file_parent_directory_is_created(self):
+        """A LANGFLOW_LOG_FILE whose parent doesn't exist yet is created, not silently redirected."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "newsub" / "nested" / "langflow.log"
+            assert not log_file_path.parent.exists()
+            self._remove_file_handlers()
+            structlog.reset_defaults()
+            configure(log_file=log_file_path, cache=False)
+            assert log_file_path.parent.exists(), "configure() should create the log file's parent directory"
+            handlers = [
+                h
+                for h in logging.root.handlers
+                if isinstance(h, logging.FileHandler) and h.baseFilename == str(log_file_path)
+            ]
+            assert handlers, "the file handler should point at the requested path, not a fallback location"
+            self._remove_file_handlers()
+
     @patch.dict(os.environ, {"LANGFLOW_LOG_LEVEL": "WARNING"})
     def test_configure_env_variable_override(self):
         """Test configure() respects LANGFLOW_LOG_LEVEL environment variable."""
