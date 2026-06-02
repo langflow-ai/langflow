@@ -34,34 +34,6 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-385NK",
-            "name": "text",
-            "output_types": [
-              "Message"
-            ]
-          },
-          "targetHandle": {
-            "fieldName": "system_message",
-            "id": "LanguageModelComponent-FtHFF",
-            "inputTypes": [
-              "Message"
-            ],
-            "type": "str"
-          }
-        },
-        "id": "reactflow__edge-TextInput-385NK{œdataTypeœ:œTextInputœ,œidœ:œTextInput-385NKœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-LanguageModelComponent-FtHFF{œfieldNameœ:œsystem_messageœ,œidœ:œLanguageModelComponent-FtHFFœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "selected": false,
-        "source": "TextInput-385NK",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-385NKœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
-        "target": "LanguageModelComponent-FtHFF",
-        "targetHandle": "{œfieldNameœ: œsystem_messageœ, œidœ: œLanguageModelComponent-FtHFFœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
-      },
-      {
-        "animated": false,
-        "className": "",
-        "data": {
-          "sourceHandle": {
             "dataType": "LanguageModelComponent",
             "id": "LanguageModelComponent-FtHFF",
             "name": "text_output",
@@ -150,148 +122,6 @@
       }
     ],
     "nodes": [
-      {
-        "data": {
-          "id": "TextInput-385NK",
-          "node": {
-            "base_classes": [
-              "Message"
-            ],
-            "beta": false,
-            "category": "inputs",
-            "conditional_paths": [],
-            "custom_fields": {},
-            "description": "Get user text inputs.",
-            "display_name": "Text Input",
-            "documentation": "",
-            "edited": false,
-            "field_order": [
-              "input_value",
-              "use_global_variable"
-            ],
-            "frozen": false,
-            "icon": "type",
-            "key": "TextInput",
-            "legacy": false,
-            "lf_version": "1.6.0",
-            "metadata": {
-              "code_hash": "518f16485886",
-              "dependencies": {
-                "dependencies": [
-                  {
-                    "name": "lfx",
-                    "version": null
-                  }
-                ],
-                "total_dependencies": 1
-              },
-              "module": "lfx.components.input_output.text.TextInputComponent"
-            },
-            "minimized": false,
-            "output_types": [],
-            "outputs": [
-              {
-                "allows_loop": false,
-                "cache": true,
-                "display_name": "Output Text",
-                "group_outputs": false,
-                "method": "text_response",
-                "name": "text",
-                "selected": "Message",
-                "tool_mode": true,
-                "types": [
-                  "Message"
-                ],
-                "value": "__UNDEFINED__"
-              }
-            ],
-            "pinned": false,
-            "score": 0.0020353564437605998,
-            "template": {
-              "_type": "Component",
-              "code": {
-                "advanced": true,
-                "dynamic": true,
-                "fileTypes": [],
-                "file_path": "",
-                "info": "",
-                "list": false,
-                "load_from_db": false,
-                "multiline": true,
-                "name": "code",
-                "password": false,
-                "placeholder": "",
-                "required": true,
-                "show": true,
-                "title_case": false,
-                "type": "code",
-                "value": "from typing import Any\n\nfrom lfx.base.io.text import TextComponent\nfrom lfx.io import BoolInput, MultilineInput, Output\nfrom lfx.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get user text inputs.\"\n    documentation: str = \"https://docs.langflow.org/text-input-and-output\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"use_global_variable\",\n            display_name=\"Use Global Variable\",\n            info=\"Enable to select from global variables (shows globe icon). Disables multiline editing.\",\n            value=False,\n            advanced=True,\n            real_time_refresh=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name == \"use_global_variable\":\n            if field_value:\n                # Enable global variable mode: single-line with password masking and globe dropdown\n                build_config[\"input_value\"][\"multiline\"] = False\n                build_config[\"input_value\"][\"password\"] = True\n            else:\n                # Default mode: multiline text editing\n                build_config[\"input_value\"][\"multiline\"] = True\n                build_config[\"input_value\"][\"password\"] = False\n        return build_config\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
-              },
-              "input_value": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "display_name": "Text",
-                "dynamic": false,
-                "info": "Text to be passed as input.",
-                "input_types": [
-                  "Message"
-                ],
-                "list": false,
-                "list_add_label": "Add More",
-                "load_from_db": false,
-                "multiline": true,
-                "name": "input_value",
-                "placeholder": "",
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_input": true,
-                "trace_as_metadata": true,
-                "type": "str",
-                "value": "Generate a single-page portfolio website using HTML and CSS that takes a resume in JSON format as input and dynamically renders the following sections with a well-structured and aesthetic layout:\n\n📌 Sections & Content Requirements:\n\t1.\tHeader:\n\t•\tDisplay the person’s name, job title, and a professional tagline prominently.\n\t•\tEnsure the name is bold and eye-catching, with subtle emphasis on the job title.\n\t2.\tAbout Me:\n\t•\tExtract and enhance the personal summary from the resume, making it engaging, concise, and readable.\n\t•\tUse short, well-structured sentences to improve clarity.\n\t3.\tExperience:\n\t•\tList past job roles with company names, durations, and a refined description of responsibilities.\n\t•\tEnsure descriptions are professionally formatted, with key contributions highlighted.\n\t4.\tProjects:\n\t•\tDisplay projects as a neatly styled list.\n\t•\tEach project includes a title, refined description, technologies used, and rounded buttons linking to GitHub or live demo (if available).\n\t5.\tSkills:\n\t•\tDisplay skills as aesthetic pill-style badges below the Skills section title. Display all skills mentioned\n\t•\tArrange in a well-balanced, ensuring readability and consistent spacing.\n\t6.\tEducation:\n\t•\tList degrees, institutions, and years attended in a clean and professional format.\n\t•\tMaintain uniformity in typography and spacing.\n\t7.\tAwards & Publications  (if any):\n\t•\tIf the resume contains awards or publications, display them in a separate section.\n\t•\tEach entry includes the title, organization, and year, ensuring clean alignment.\n\t8.\tContact:\n\t•\tDisplay email, social media links, and an optional contact button.\n\t•\tEnsure social media links are clearly visible, with modern and accessible icon buttons.\n\n🎨 Styling & Aesthetic Requirements:\n\n✅ Minimalist & Elegant:\n\t•\tClean layout with ample whitespace for breathing room.\n\t•\tConsistent spacing across all sections.\n\n✅ Fast & Lightweight:\n\t•\tUse only HTML & CSS (no JavaScript required).\n\t•\tEnsure a smooth, fast-loading experience.\n\n✅ Beautiful Typography:\n\t•\tUse a modern, professional Google Font that complements the design.\n\t•\tEnsure text readability with proper size, weight, and contrast.\n\n✅ Visually Harmonious Colors & Themes:\n\t•\tFollow a cohesive color palette that ensures a modern, professional feel.\n\t•\tEnsure background colors, text colors, and section dividers are consistent and complementary.\n\t•\tAvoid hard-to-read combinations (e.g., light text on a light background).\n\n✅ Responsive & Readable Design:\n\t•\tMobile-first approach, adapting to desktop, tablet, and mobile views.\n\t•\tMaintain consistency in padding, margins, and alignment.\n\n✅ Dark Mode Support:\n\t•\tAuto-detect system settings and adjust the theme accordingly.\n\t•\tEnsure clear contrasts and readability in both light and dark modes.\n\n✅ Embedded CSS:\n\t•\tEnsure CSS is written directly in the HTML file within <style> tags for easy integration.\n\n🚀 Key Enhancements for a Superior First Impression:\n\t•\tEnsure the color scheme is visually cohesive and all text is legible against the background.\n\t•\tMaintain uniform padding and spacing for a professional, structured appearance.\n\t•\tImprove text formatting, ensuring sections are balanced and visually engaging.\n\t•\tFollow aesthetically pleasing, simple yet modern design principles.\n\n🌟 End Goal:\n\nThe final output should be a well-balanced, visually stunning, and highly readable portfolio website that immediately impresses viewers. The design must be polished, with an intuitive layout, ensuring consistency, clarity, and elegance.\nEnsuring all details in resume are well displayed in portfolio website.\nInclude all experiences, projects and education details from resume in the html code generated.\n"
-              },
-              "use_global_variable": {
-                "_input_type": "BoolInput",
-                "advanced": true,
-                "display_name": "Use Global Variable",
-                "dynamic": false,
-                "info": "Enable to select from global variables (shows globe icon). Disables multiline editing.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_global_variable",
-                "override_skip": false,
-                "placeholder": "",
-                "real_time_refresh": true,
-                "required": false,
-                "show": true,
-                "title_case": false,
-                "tool_mode": false,
-                "trace_as_metadata": true,
-                "track_in_telemetry": true,
-                "type": "bool",
-                "value": false
-              }
-            },
-            "tool_mode": false
-          },
-          "selected_output": "text",
-          "showNode": true,
-          "type": "TextInput"
-        },
-        "dragging": false,
-        "id": "TextInput-385NK",
-        "measured": {
-          "height": 179,
-          "width": 320
-        },
-        "position": {
-          "x": 1750.5165749650018,
-          "y": 1018.4979290286542
-        },
-        "selected": false,
-        "type": "genericNode"
-      },
       {
         "data": {
           "id": "ChatOutput-ZuZUq",
@@ -1906,7 +1736,7 @@
                 "trace_as_metadata": true,
                 "track_in_telemetry": false,
                 "type": "str",
-                "value": ""
+                "value": "Generate a single-page portfolio website using HTML and CSS that takes a resume in JSON format as input and dynamically renders the following sections with a well-structured and aesthetic layout:\n\n📌 Sections & Content Requirements:\n\t1.\tHeader:\n\t•\tDisplay the person’s name, job title, and a professional tagline prominently.\n\t•\tEnsure the name is bold and eye-catching, with subtle emphasis on the job title.\n\t2.\tAbout Me:\n\t•\tExtract and enhance the personal summary from the resume, making it engaging, concise, and readable.\n\t•\tUse short, well-structured sentences to improve clarity.\n\t3.\tExperience:\n\t•\tList past job roles with company names, durations, and a refined description of responsibilities.\n\t•\tEnsure descriptions are professionally formatted, with key contributions highlighted.\n\t4.\tProjects:\n\t•\tDisplay projects as a neatly styled list.\n\t•\tEach project includes a title, refined description, technologies used, and rounded buttons linking to GitHub or live demo (if available).\n\t5.\tSkills:\n\t•\tDisplay skills as aesthetic pill-style badges below the Skills section title. Display all skills mentioned\n\t•\tArrange in a well-balanced, ensuring readability and consistent spacing.\n\t6.\tEducation:\n\t•\tList degrees, institutions, and years attended in a clean and professional format.\n\t•\tMaintain uniformity in typography and spacing.\n\t7.\tAwards & Publications  (if any):\n\t•\tIf the resume contains awards or publications, display them in a separate section.\n\t•\tEach entry includes the title, organization, and year, ensuring clean alignment.\n\t8.\tContact:\n\t•\tDisplay email, social media links, and an optional contact button.\n\t•\tEnsure social media links are clearly visible, with modern and accessible icon buttons.\n\n🎨 Styling & Aesthetic Requirements:\n\n✅ Minimalist & Elegant:\n\t•\tClean layout with ample whitespace for breathing room.\n\t•\tConsistent spacing across all sections.\n\n✅ Fast & Lightweight:\n\t•\tUse only HTML & CSS (no JavaScript required).\n\t•\tEnsure a smooth, fast-loading experience.\n\n✅ Beautiful Typography:\n\t•\tUse a modern, professional Google Font that complements the design.\n\t•\tEnsure text readability with proper size, weight, and contrast.\n\n✅ Visually Harmonious Colors & Themes:\n\t•\tFollow a cohesive color palette that ensures a modern, professional feel.\n\t•\tEnsure background colors, text colors, and section dividers are consistent and complementary.\n\t•\tAvoid hard-to-read combinations (e.g., light text on a light background).\n\n✅ Responsive & Readable Design:\n\t•\tMobile-first approach, adapting to desktop, tablet, and mobile views.\n\t•\tMaintain consistency in padding, margins, and alignment.\n\n✅ Dark Mode Support:\n\t•\tAuto-detect system settings and adjust the theme accordingly.\n\t•\tEnsure clear contrasts and readability in both light and dark modes.\n\n✅ Embedded CSS:\n\t•\tEnsure CSS is written directly in the HTML file within <style> tags for easy integration.\n\n🚀 Key Enhancements for a Superior First Impression:\n\t•\tEnsure the color scheme is visually cohesive and all text is legible against the background.\n\t•\tMaintain uniform padding and spacing for a professional, structured appearance.\n\t•\tImprove text formatting, ensuring sections are balanced and visually engaging.\n\t•\tFollow aesthetically pleasing, simple yet modern design principles.\n\n🌟 End Goal:\n\nThe final output should be a well-balanced, visually stunning, and highly readable portfolio website that immediately impresses viewers. The design must be polished, with an intuitive layout, ensuring consistency, clarity, and elegance.\nEnsuring all details in resume are well displayed in portfolio website.\nInclude all experiences, projects and education details from resume in the html code generated.\n"
               },
               "temperature": {
                 "_input_type": "SliderInput",
