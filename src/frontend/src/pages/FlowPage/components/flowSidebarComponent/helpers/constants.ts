@@ -1,12 +1,15 @@
-// Component name constants
-export const CHAT_INPUT_COMPONENT = "ChatInput";
-export const WEBHOOK_COMPONENT = "Webhook";
+import {
+  CHAT_INPUT_COMPONENT,
+  MUTUALLY_EXCLUSIVE_COMPONENTS,
+  WEBHOOK_COMPONENT,
+} from "@/constants/constants";
 
-// Exclusivity rules: components that cannot coexist
-export const EXCLUSIVITY_RULES = {
-  [CHAT_INPUT_COMPONENT]: [WEBHOOK_COMPONENT],
-  [WEBHOOK_COMPONENT]: [CHAT_INPUT_COMPONENT],
-} as const;
+// Component name constants (re-exported from the shared source of truth).
+export { CHAT_INPUT_COMPONENT, WEBHOOK_COMPONENT };
+
+// Exclusivity rules: components that cannot coexist. Aliased to the shared
+// constant so the sidebar and the canvas paste flow stay in sync.
+export const EXCLUSIVITY_RULES = MUTUALLY_EXCLUSIVE_COMPONENTS;
 
 // Tooltip messages
 export const TOOLTIP_MESSAGES = {

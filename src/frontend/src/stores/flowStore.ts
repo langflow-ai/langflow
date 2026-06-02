@@ -57,6 +57,7 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
+import { filterMutuallyExclusiveComponents } from "./helpers/filter-mutually-exclusive-components";
 import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
@@ -570,6 +571,10 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       checkWebhookInput(get().nodes),
       "You can only have one Webhook component in a flow.",
     );
+
+    // Enforce mutual-exclusivity (e.g. Chat Input vs Webhook) on paste so the
+    // constraint cannot be bypassed by copy/paste, matching the sidebar.
+    filterMutuallyExclusiveComponents(selection, get().nodes);
 
     let minimumX = Infinity;
     let minimumY = Infinity;

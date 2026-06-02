@@ -134,6 +134,7 @@
   "flow.runTimestampPrefix": "Last Run: ",
   "flow.noCompatibleComponents": "No compatible components found.",
   "flow.brokenEdgesWarning": "Some connections were removed because they were invalid:",
+  "flow.exclusiveComponentsNotPasted": "Some components were not pasted because they cannot be used together with components already in the flow.",
   "flow.unsavedChangesTitle": "{{name}} has unsaved changes",
   "flow.savingChanges": "Saving your changes...",
   "flow.lastSaved": "Last saved: {{time}}",

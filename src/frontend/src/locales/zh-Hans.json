@@ -702,6 +702,7 @@
   "files.uploadedSuccessfully": "文件已成功上传",
   "flow.addDescription": "添加描述...",
   "flow.brokenEdgesWarning": "某些连接已被移除，因为它们无效：",
+  "flow.exclusiveComponentsNotPasted": "部分组件未被粘贴，因为它们无法与流程中已有的组件一起使用。",
   "flow.buildStatus": "构建以验证状态。",
   "flow.buildSuccess": "已成功构建 ✨",
   "flow.characterLimitReached": "已达到字符限制",

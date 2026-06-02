@@ -1011,6 +1011,20 @@ export const BUG_REPORT_URL = "https://github.com/langflow-ai/langflow/issues";
 
 export const UUID_PARSING_ERROR = "uuid_parsing";
 
+// Component type identifiers used for mutual-exclusivity constraints.
+export const CHAT_INPUT_COMPONENT = "ChatInput";
+export const WEBHOOK_COMPONENT = "Webhook";
+
+// Components that cannot coexist in the same flow. Keyed by component type; the
+// value lists the types it is mutually exclusive with. This is the single
+// source of truth shared by the sidebar (which disables conflicting items) and
+// the canvas paste flow (which filters conflicting pasted nodes).
+export const MUTUALLY_EXCLUSIVE_COMPONENTS: Record<string, readonly string[]> =
+  {
+    [CHAT_INPUT_COMPONENT]: [WEBHOOK_COMPONENT],
+    [WEBHOOK_COMPONENT]: [CHAT_INPUT_COMPONENT],
+  };
+
 // Variable categories
 export const CATEGORY_GLOBAL = "Global";
 export const CATEGORY_LLM = "LLM";
