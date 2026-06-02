@@ -219,6 +219,11 @@ module.exports = {
           label: "Deploy Langflow with Nginx and SSL"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-wxo",
+          label: "Deploy flows on watsonx Orchestrate"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -274,11 +279,6 @@ module.exports = {
               type: "doc",
               id: "Deployment/deployment-hugging-face-spaces",
               label: "Hugging Face Spaces"
-            },
-            {
-              type: "doc",
-              id: "Deployment/deployment-wxo",
-              label: "IBM watsonx Orchestrate"
             },
             {
               type: "doc",
