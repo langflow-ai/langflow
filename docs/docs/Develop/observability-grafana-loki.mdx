@@ -1,0 +1,102 @@
+---
+title: Grafana and Loki
+slug: /observability-grafana-loki
+---
+
+Langflow emits structured JSON logs designed to be ingested by [Grafana Loki](https://grafana.com/oss/loki/) or any other log aggregator that understands one JSON object per line. This page covers the environment variables that control the JSON output and the reference Grafana dashboard shipped with the repository.
+
+## Enable JSON mode
+
+Set `LANGFLOW_LOG_ENV=container` (or `container_json`). Every line written to stdout becomes a JSON object that includes the event message, level, timestamp, logger name, exception structure, and the service metadata listed below.
+
+```bash
+LANGFLOW_LOG_ENV=container
+LANGFLOW_LOG_LEVEL=INFO
+LANGFLOW_SERVICE_NAME=langflow
+LANGFLOW_VERSION=1.10.0
+LANGFLOW_ENVIRONMENT=production
+```
+
+## Environment variables
+
+The variables below are evaluated once at startup. They are read by `lfx.log.logger.configure()` and apply to both `langflow` and `lfx` log output.
+
+| Variable | Format | Default | Description |
+|---|---|---|---|
+| `LANGFLOW_SERVICE_NAME` | String | `langflow` | Value of the `service` field on every log record. Surfaces as a Loki label for filtering. |
+| `LANGFLOW_VERSION` | String | unset | Adds a `version` field when set. Omitted otherwise. |
+| `LANGFLOW_ENVIRONMENT` | String | unset | Adds an `environment` field when set (`staging`, `production`, etc.). Omitted otherwise. |
+| `LANGFLOW_LOG_LEVELS` | String | unset | Per-logger level overrides as `name=LEVEL,name=LEVEL`. Used to quiet noisy libraries in production without changing global defaults. Example: `LANGFLOW_LOG_LEVELS=sqlalchemy.engine=WARNING,httpx=INFO`. Malformed entries raise a `UserWarning` at startup so typos like `WARN` surface instead of being silently dropped. |
+| `LANGFLOW_LOG_REDACT_KEYS` | String | unset | Comma-separated extra keys to scrub before serialization. Added on top of the default set: `password`, `passwd`, `secret`, `api_key`, `apikey`, `token`, `access_token`, `refresh_token`, `authorization`, `auth`, `cookie`, `set-cookie`, `x-api-key`, `x-auth-token`. Matching is case-insensitive and walks nested dicts, lists, and tuples up to depth 4. |
+| `LANGFLOW_LOG_TRACE_LOCALS` | Boolean | `false` | If `true`, includes frame locals in structured tracebacks. Off by default because locals can contain API keys, request bodies, and environment values. Enable only for local debugging. |
+
+## What the JSON looks like
+
+A typical record in JSON mode:
+
+```json
+{
+  "event": "incoming request",
+  "level": "info",
+  "logger": "langflow.api.run",
+  "timestamp": "2026-05-17T18:18:29.100798Z",
+  "service": "langflow",
+  "version": "1.10.0",
+  "environment": "production",
+  "user_id": "user-4823",
+  "flow_id": "flow-718",
+  "authorization": "***",
+  "cookie": "***",
+  "request_body": {
+    "input": "Tell me a joke",
+    "api_key": "***",
+    "session_id": "***"
+  }
+}
+```
+
+Errors include the full structured exception:
+
+```json
+{
+  "event": "flow run failed",
+  "level": "error",
+  "logger": "langflow.api.run",
+  "timestamp": "2026-05-17T18:18:32.412Z",
+  "service": "langflow",
+  "exception": [
+    {
+      "exc_type": "ConnectionError",
+      "exc_value": "upstream returned 503",
+      "frames": [
+        {"filename": "/app/.../runner.py", "lineno": 142, "name": "run_flow"}
+      ]
+    }
+  ]
+}
+```
+
+Frame locals are intentionally absent unless `LANGFLOW_LOG_TRACE_LOCALS=true`.
+
+## Stdlib loggers
+
+Third-party libraries that use Python's standard logging module (`uvicorn`, `sqlalchemy`, `httpx`, `langchain`, `asyncio`) are routed through the same JSON stream in container mode, whether you log to stdout or to `LANGFLOW_LOG_FILE`. Their original logger name is preserved on the `logger` field, so the same Grafana queries that work for application loggers also work for library output, and the same PII redaction is applied to their structured fields.
+
+## OpenTelemetry trace correlation
+
+If `opentelemetry-api` is installed and an active span is present, every log record automatically picks up `trace_id` and `span_id`. Use those fields to jump between logs and traces in Grafana. OpenTelemetry is not a hard dependency; if it is not installed, the processor is a no-op and nothing else changes.
+
+## Other backends
+
+The JSON format is not Loki-specific. It is one JSON object per line with standard fields (`timestamp`, `level`, `logger`, `service`, structured `exception`, optional `trace_id`/`span_id`), so any backend that ingests JSON logs works: Elasticsearch, Splunk, Datadog, and IBM Instana among them. Only the scrape side (Promtail, here) changes.
+
+For IBM Instana, point the Instana host agent or an OTLP log exporter at the same stdout stream. Trace correlation works through the OpenTelemetry hook above: Instana's Python tracer is OpenTelemetry-based from version 3.0, so when it is active the `trace_id` and `span_id` on each record line up with the traces Instana already collects.
+
+## Reference Grafana stack
+
+A pre-provisioned Loki + Promtail + Grafana stack lives in `deploy/observability/grafana-loki/`. It includes the dashboard `Langflow Logs` with panels for structured tracebacks, PII redaction proof, the stdlib intercept path, and service/environment/version coverage. See the [README in that directory](https://github.com/langflow-ai/langflow/tree/main/deploy/observability/grafana-loki) for run instructions.
+
+## See also
+
+* [Logs](/logging)
+* [Logs endpoints](/api-logs)

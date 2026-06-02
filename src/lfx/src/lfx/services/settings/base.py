@@ -9,7 +9,7 @@ from typing import Any, Literal
 import aiofiles
 import orjson
 import yaml
-from pydantic import Field, field_validator
+from pydantic import AliasChoices, Field, field_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -479,6 +479,9 @@ class Settings(BaseSettings):
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
+    custom_component_admin_only: bool = False
+    """If set to True, only admin users can edit custom component code. Regular editors
+    are blocked from modifying custom component templates."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = True
@@ -496,6 +499,40 @@ class Settings(BaseSettings):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+
+    # Embedded mode flags
+    embedded_mode: bool = False
+    """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
+    standalone installations (logout button, new project/flow buttons, starter projects, etc.).
+
+    This flag does not implicitly enable security controls such as
+    ``mcp_servers_locked`` or ``custom_component_admin_only``. Configure those
+    explicitly based on your deployment hardening requirements.
+    """
+    hide_getting_started_progress: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LANGFLOW_HIDE_GETTING_STARTED_PROGRESS",
+            "HIDE_GETTING_STARTED_PROGRESS",
+        ),
+    )
+    """If set to True, hides the getting-started onboarding progress UI."""
+    hide_logout_button: bool = False
+    """If set to True, hides the Logout button in the account menu."""
+    hide_new_project_button: bool = False
+    """If set to True, hides the ability to create new projects/folders."""
+    hide_new_flow_button: bool = False
+    """If set to True, hides the ability to create new flows."""
+    hide_starter_projects: bool = False
+    """If set to True, hides starter projects from the UI (does not affect database seeding)."""
+
+    # MCP Server management
+    mcp_servers_locked: bool = False
+    """If set to True, users cannot add or modify MCP servers via the UI/API.
+
+    This control is independent from ``embedded_mode`` and must be enabled
+    explicitly when you want to lock MCP server management.
+    """
 
     @field_validator("runtime_port", mode="before")
     @classmethod

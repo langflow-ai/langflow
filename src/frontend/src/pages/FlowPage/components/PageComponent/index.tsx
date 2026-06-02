@@ -1066,7 +1066,7 @@ export default function Page({
         </>
       ) : (
         <div className="flex h-full w-full items-center justify-center">
-          <CustomLoader remSize={30} />
+          <CustomLoader remSize={20} />
         </div>
       )}
       <ExportModal open={openExportModal} setOpen={setOpenExportModal} />

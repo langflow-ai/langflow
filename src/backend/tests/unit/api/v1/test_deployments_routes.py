@@ -78,15 +78,13 @@ def test_snapshot_patch_path_matches_update_endpoint(deployment_routes: list[API
     )
 
 
-def test_deployment_status_path_matches_status_endpoint(deployment_routes: list[APIRoute]) -> None:
+def test_deployment_status_path_is_not_registered(deployment_routes: list[APIRoute]) -> None:
     deployment_id = uuid4()
-    assert (
+    with pytest.raises(AssertionError, match="No matching route"):
         _resolve_endpoint_name(
             deployment_routes,
             path=f"/deployments/{deployment_id}/status",
         )
-        == "get_deployment_status"
-    )
 
 
 def test_deployment_flows_path_matches_flow_versions_endpoint(deployment_routes: list[APIRoute]) -> None:

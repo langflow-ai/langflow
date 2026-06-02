@@ -393,6 +393,10 @@ See [Configure log options](/logging#log-storage).
 
 See [Use Langflow as an MCP server](/mcp-server).
 
+### Multi-worker deployments
+
+For multi-worker job queue environment variables, including Redis connection settings, TTLs, and cancellation configuration, see [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference).
+
 ### Monitoring and metrics
 
 For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
@@ -411,9 +415,8 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
-| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. Can reduce per-worker startup cost; behavior and compatibility may change. |
-| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. |
-| `LANGFLOW_REDIS_QUEUE_DB` | Integer | `1` | Redis database index used by the Redis job queue backend. |
+| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. See [Multi-worker deployments](#multi-worker-deployments). |
+| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. See [Multi-worker deployments](#multi-worker-deployments). |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
@@ -433,21 +436,6 @@ GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"
 Here is what these arguments do:
 - `--max-requests 100`: Automatically restarts a worker after it has processed 100 requests. This helps prevent memory leaks from accumulating over time.
 - `--max-requests-jitter 20`: Adds a random jitter of up to 20 requests to the `--max-requests` value. This ensures that all workers don't restart simultaneously, which could cause a brief downtime or spikes in latency.
-
-#### High-load and multi-worker environments
-
-For high-concurrency deployments (such as when increasing `LANGFLOW_WORKERS`), consider the following best practices:
-- **Enable Gunicorn preload (experimental):**
-  Set `LANGFLOW_GUNICORN_PRELOAD=true` to enable Gunicorn’s `preload_app` mode, which can reduce per-worker startup overhead (non-Windows only).
-- **Use Redis-backed job queue:**
-  Set `LANGFLOW_JOB_QUEUE_TYPE=redis` to share queue events across workers.
-  **Note:** Always configure a dedicated Redis database for the job queue, separate from the cache database.
-- **Disable tracing:**
-  Set `LANGFLOW_DEACTIVATE_TRACING=True` to turn off tracing, which may cause concurrency bottlenecks under high load or in multi-worker environments.
-- **Use PostgreSQL instead of SQLite:**
-  SQLite can experience database locks and deadlocks with concurrent, write-heavy usage. For production or multi-worker environments, configure Langflow to use PostgreSQL by setting the `LANGFLOW_DATABASE_URL` environment variable (see [Memory management options](/memory#configure-external-memory)). This is strongly recommended to avoid operational issues.
-
-For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
 ### Storage
 
