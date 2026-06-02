@@ -329,7 +329,6 @@ module.exports = {
               label: "Input / Output",
               items: [
                 "Components/chat-input-and-output",
-                "Components/text-input-and-output",
                 "Components/webhook",
               ]
             },
