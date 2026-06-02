@@ -7,6 +7,8 @@ from fastapi import HTTPException, status
 from httpx import AsyncClient
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 
+pytestmark = pytest.mark.no_blockbuster
+
 
 @pytest.fixture
 def generic_variable():
@@ -221,12 +223,14 @@ async def test_delete_variable(client: AsyncClient, generic_variable, logged_in_
 
 
 @pytest.mark.usefixtures("active_user")
-async def test_delete_variable__exception(client: AsyncClient, logged_in_headers):
+async def test_delete_variable__not_found(client: AsyncClient, logged_in_headers):
+    # A missing variable is a 404 (UUID privacy), consistent with PATCH and with
+    # the share-aware deny_to_404 path — not a 500.
     wrong_id = uuid4()
 
     response = await client.delete(f"api/v1/variables/{wrong_id}", headers=logged_in_headers)
 
-    assert response.status_code == status.HTTP_500_INTERNAL_SERVER_ERROR
+    assert response.status_code == status.HTTP_404_NOT_FOUND
 
 
 @pytest.mark.usefixtures("active_user")
@@ -696,3 +700,190 @@ async def test_detect_env_vars_endpoint__rejects_missing_nodes(client: AsyncClie
 
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
     assert "must be a JSON object with a 'nodes' list" in response.json()["detail"]
+
+
+# --------------------------------------------------------------------------- #
+# Share-aware fetch for variable PATCH/DELETE (Phase 3 authz_share)
+# --------------------------------------------------------------------------- #
+
+
+class _VarStubAuthz:
+    """Authz stand-in that lets tests flip cross-user fetch and the enforce verdict."""
+
+    def __init__(self, *, cross_user: bool = False, enabled: bool = False, allow: bool = True) -> None:
+        self._cross_user = cross_user
+        self._enabled = enabled
+        self._allow = allow
+
+    async def supports_cross_user_fetch(self) -> bool:
+        return self._cross_user
+
+    async def is_enabled(self) -> bool:
+        return self._enabled
+
+    async def enforce(self, **_kwargs) -> bool:
+        return self._allow
+
+    async def batch_enforce(self, **kwargs) -> list[bool]:
+        return [self._allow] * len(kwargs.get("requests", []))
+
+    async def invalidate_user(self, *_args, **_kwargs) -> None:
+        return None
+
+    async def invalidate_all(self, *_args, **_kwargs) -> None:
+        return None
+
+
+@pytest.fixture
+def patch_variable_authz(monkeypatch):
+    """Install a stub authz service into the modules the variable routes consult.
+
+    Patches the share-aware fetch helper (``fetch``) and the permission guard
+    (``guards``) plus the guard's settings probe, and silences audit writes so
+    no background DB task is spawned.
+    """
+    from langflow.services.authorization import audit as authz_audit
+    from langflow.services.authorization import fetch as authz_fetch
+    from langflow.services.authorization import guards as authz_guards
+
+    async def _noop_audit(**_kwargs):
+        return None
+
+    def _apply(*, cross_user: bool = False, enabled: bool = False, allow: bool = True) -> _VarStubAuthz:
+        stub = _VarStubAuthz(cross_user=cross_user, enabled=enabled, allow=allow)
+        for module in (authz_fetch, authz_guards):
+            monkeypatch.setattr(module, "get_authorization_service", lambda s=stub: s)
+        settings = SimpleNamespace(
+            auth_settings=SimpleNamespace(AUTHZ_ENABLED=enabled, AUTHZ_AUDIT_ENABLED=False),
+        )
+        monkeypatch.setattr(authz_guards, "get_settings_service", lambda s=settings: s)
+        monkeypatch.setattr(authz_audit, "audit_decision", _noop_audit)
+        return stub
+
+    return _apply
+
+
+async def _create_user_and_headers(client: AsyncClient, username: str) -> dict[str, str]:
+    """Create a second active user and return its bearer-auth headers."""
+    from langflow.services.auth.utils import get_password_hash
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import session_scope
+
+    login_data = {"username": username, "password": "testpassword"}  # pragma: allowlist secret
+    async with session_scope() as session:
+        session.add(
+            User(
+                id=uuid4(),
+                username=username,
+                password=get_password_hash(login_data["password"]),
+                is_active=True,
+                is_superuser=False,
+            )
+        )
+        await session.commit()
+    login = await client.post("api/v1/login", data=login_data)
+    assert login.status_code == status.HTTP_200_OK
+    return {"Authorization": f"Bearer {login.json()['access_token']}"}
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_variable_non_owner_returns_404_under_oss(
+    client: AsyncClient, generic_variable, logged_in_headers
+):
+    """Under OSS (no plugin), a non-owner PATCH 404s — no accidental widening."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    other_headers = await _create_user_and_headers(client, f"var_other_{uuid4().hex[:8]}")
+
+    generic_variable["id"] = saved["id"]
+    generic_variable["name"] = "hijacked"
+    response = await client.patch(f"api/v1/variables/{saved['id']}", json=generic_variable, headers=other_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_delete_variable_non_owner_returns_404_under_oss(
+    client: AsyncClient, generic_variable, logged_in_headers
+):
+    """Under OSS (no plugin), a non-owner DELETE 404s and the owner's row survives."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    other_headers = await _create_user_and_headers(client, f"var_other_{uuid4().hex[:8]}")
+
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=other_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    owner_vars = (await client.get("api/v1/variables/", headers=logged_in_headers)).json()
+    assert any(v["id"] == saved["id"] for v in owner_vars)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_variable_cross_user_allowed_with_plugin(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    """When a plugin enables cross-user fetch and allows the action, a non-owner PATCH succeeds."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_delegate_{uuid4().hex[:8]}")
+
+    patch_variable_authz(cross_user=True, enabled=True, allow=True)
+
+    generic_variable["id"] = saved["id"]
+    generic_variable["name"] = "shared_update"
+    generic_variable["value"] = "shared_value"
+    generic_variable["type"] = GENERIC_TYPE
+    response = await client.patch(f"api/v1/variables/{saved['id']}", json=generic_variable, headers=delegate_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json()["name"] == "shared_update"
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_update_variable_cross_user_denied_with_plugin(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    """When the plugin denies, the non-owner PATCH is 404 (deny_to_404), not 403."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_denied_{uuid4().hex[:8]}")
+
+    patch_variable_authz(cross_user=True, enabled=True, allow=False)
+
+    generic_variable["id"] = saved["id"]
+    generic_variable["name"] = "should_not_apply"
+    response = await client.patch(f"api/v1/variables/{saved['id']}", json=generic_variable, headers=delegate_headers)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_delete_variable_cross_user_allowed_with_plugin(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    """When a plugin enables cross-user fetch and allows, a non-owner DELETE removes the owner's row."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_del_ok_{uuid4().hex[:8]}")
+
+    patch_variable_authz(cross_user=True, enabled=True, allow=True)
+
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=delegate_headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # The owner-scoped delete actually removed the owner's row.
+    owner_vars = (await client.get("api/v1/variables/", headers=logged_in_headers)).json()
+    assert all(v["id"] != saved["id"] for v in owner_vars)
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_delete_variable_cross_user_denied_with_plugin(
+    client: AsyncClient, generic_variable, logged_in_headers, patch_variable_authz
+):
+    """When the plugin denies, the non-owner DELETE is 404 (deny_to_404) and the owner's row survives."""
+    saved = (await client.post("api/v1/variables/", json=generic_variable, headers=logged_in_headers)).json()
+    delegate_headers = await _create_user_and_headers(client, f"var_del_no_{uuid4().hex[:8]}")
+
+    patch_variable_authz(cross_user=True, enabled=True, allow=False)
+
+    response = await client.delete(f"api/v1/variables/{saved['id']}", headers=delegate_headers)
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+
+    # The deny short-circuited before the delete — the owner's row is intact.
+    owner_vars = (await client.get("api/v1/variables/", headers=logged_in_headers)).json()
+    assert any(v["id"] == saved["id"] for v in owner_vars)

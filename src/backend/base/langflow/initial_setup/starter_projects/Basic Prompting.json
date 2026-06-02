@@ -335,7 +335,6 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatInput-b6UCc",
         "measured": {
           "height": 234,
@@ -498,7 +497,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 260,
         "id": "Prompt-t2oaK",
         "measured": {
           "height": 260,
@@ -852,7 +850,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-yK0AU",
         "measured": {
           "height": 234,
@@ -867,8 +864,7 @@
           "y": 872.7273956769025
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {

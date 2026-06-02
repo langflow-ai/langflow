@@ -6,6 +6,7 @@ import logging
 import logging.handlers
 import os
 import sys
+import warnings
 from collections import deque
 from datetime import datetime
 from pathlib import Path
@@ -19,6 +20,13 @@ from platformdirs import user_cache_dir
 from typing_extensions import NotRequired
 
 from lfx.settings import DEV
+
+# OpenTelemetry is optional. Resolve once at import time so the per-record
+# processor is a simple attribute check, not a repeated import attempt.
+try:
+    from opentelemetry import trace as _otel_trace  # type: ignore[import-not-found]
+except ImportError:
+    _otel_trace = None
 
 VALID_LOG_LEVELS = ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
@@ -58,7 +66,9 @@ class SizedLogBuffer:
     def write(self, message: str) -> None:
         """Write a message to the buffer."""
         record = json.loads(message)
-        log_entry = record.get("event", record.get("msg", record.get("text", "")))
+        # ``add_serialized`` stores the rendered text under ``message``; fall back to
+        # ``event`` / ``msg`` / ``text`` for records written directly in other shapes.
+        log_entry = record.get("message") or record.get("event", record.get("msg", record.get("text", "")))
 
         # Extract timestamp - support both direct timestamp and nested record.time.timestamp
         timestamp = record.get("timestamp", 0)
@@ -178,12 +188,166 @@ def add_serialized(_logger: Any, _method_name: str, event_dict: dict[str, Any]) 
     return event_dict
 
 
-def remove_exception_in_production(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
-    """Remove exception details in production."""
-    if DEV is False:
-        event_dict.pop("exception", None)
-        event_dict.pop("exc_info", None)
+def _get_service_info() -> dict[str, str]:
+    """Read service metadata once so it can be injected into every log record."""
+    service = os.getenv("LANGFLOW_SERVICE_NAME", "langflow")
+    version = os.getenv("LANGFLOW_VERSION", "")
+    environment = os.getenv("LANGFLOW_ENVIRONMENT", "")
+    info = {"service": service}
+    if version:
+        info["version"] = version
+    if environment:
+        info["environment"] = environment
+    return info
+
+
+# Default keys whose values are redacted before rendering. Production logs leak
+# auth tokens, cookies, and API keys with surprising regularity (third-party
+# clients log request bodies, dict reprs, kwargs, etc.); a cheap, default-on
+# redactor is the only thing that survives.
+DEFAULT_REDACT_KEYS: frozenset[str] = frozenset(
+    {
+        "password",
+        "passwd",
+        "secret",
+        "api_key",
+        "apikey",
+        "token",
+        "access_token",
+        "refresh_token",
+        "authorization",
+        "auth",
+        "cookie",
+        "set-cookie",
+        "x-api-key",
+        "x-auth-token",
+    }
+)
+_REDACTED = "***"
+_REDACT_MAX_DEPTH = 4
+
+
+def _build_redact_processor(extra_keys: frozenset[str]) -> Any:
+    """Build a structlog processor that scrubs sensitive keys.
+
+    Matches case-insensitively, walks nested dicts and lists up to a small
+    depth, and replaces values with a fixed sentinel so logs still show the
+    shape of the data without leaking the value.
+    """
+    sensitive = {k.lower() for k in DEFAULT_REDACT_KEYS | extra_keys}
+
+    def _scrub(value: Any, depth: int) -> Any:
+        if depth >= _REDACT_MAX_DEPTH:
+            return value
+        if isinstance(value, dict):
+            return {
+                k: (_REDACTED if isinstance(k, str) and k.lower() in sensitive else _scrub(v, depth + 1))
+                for k, v in value.items()
+            }
+        if isinstance(value, list):
+            return [_scrub(item, depth + 1) for item in value]
+        if isinstance(value, tuple):
+            return tuple(_scrub(item, depth + 1) for item in value)
+        return value
+
+    def redact(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+        for key in list(event_dict.keys()):
+            if isinstance(key, str) and key.lower() in sensitive:
+                event_dict[key] = _REDACTED
+            else:
+                event_dict[key] = _scrub(event_dict[key], 1)
+        return event_dict
+
+    return redact
+
+
+def add_logger_name(logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Attach the bound logger's name as ``logger`` so Grafana can filter on it."""
+    name = getattr(logger, "name", None)
+    if name:
+        event_dict.setdefault("logger", name)
     return event_dict
+
+
+class _NamedPrintLoggerFactory:
+    """Logger factory that preserves the logger name across calls.
+
+    structlog's default ``PrintLoggerFactory`` drops the name passed to
+    ``get_logger("x")``. We keep it so the ``add_logger_name`` processor can
+    set the ``logger`` field on every record.
+    """
+
+    def __init__(self, file: Any) -> None:
+        self._file = file
+
+    def __call__(self, *args: Any) -> structlog.PrintLogger:
+        logger = structlog.PrintLogger(file=self._file)
+        logger.name = args[0] if args else None
+        return logger
+
+
+def add_otel_trace_context(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Inject OpenTelemetry trace_id / span_id when a span is active.
+
+    OpenTelemetry is optional in lfx, so the import is resolved once at module
+    load. Runtime calls are wrapped in a broad except: a misbehaving tracer
+    SDK must never break logging, which is the only signal an operator has
+    when the tracer itself is broken.
+    """
+    if _otel_trace is None:
+        return event_dict
+    try:
+        ctx = _otel_trace.get_current_span().get_span_context()
+    except Exception:  # noqa: BLE001 - logger must never break on a flaky tracer
+        return event_dict
+    if not ctx.is_valid:
+        return event_dict
+    event_dict.setdefault("trace_id", format(ctx.trace_id, "032x"))
+    event_dict.setdefault("span_id", format(ctx.span_id, "016x"))
+    return event_dict
+
+
+def _apply_logger_level_overrides() -> None:
+    """Apply ``LANGFLOW_LOG_LEVELS`` env var: ``name=LEVEL,name=LEVEL,...``.
+
+    Used to quiet noisy third-party loggers (``sqlalchemy.engine``, ``httpx``,
+    ``httpcore``, ``urllib3``) in production without changing global defaults.
+
+    Malformed entries (missing ``=``, unknown level, empty name) raise a
+    warning instead of being silently dropped so operators see typos like
+    ``WARN`` instead of ``WARNING``.
+    """
+    raw = os.getenv("LANGFLOW_LOG_LEVELS", "").strip()
+    if not raw:
+        return
+    for pair in raw.split(","):
+        entry = pair.strip()
+        if not entry:
+            continue
+        if "=" not in entry:
+            warnings.warn(
+                f"LANGFLOW_LOG_LEVELS: ignoring {entry!r} (expected 'name=LEVEL')",
+                stacklevel=2,
+            )
+            continue
+        name, _, level = entry.partition("=")
+        name = name.strip()
+        level_str = level.strip().upper()
+        if not name:
+            warnings.warn(
+                f"LANGFLOW_LOG_LEVELS: ignoring {entry!r} (empty logger name)",
+                stacklevel=2,
+            )
+            continue
+        numeric = LOG_LEVEL_MAP.get(level_str)
+        if numeric is None:
+            warnings.warn(
+                f"LANGFLOW_LOG_LEVELS: ignoring {entry!r} (unknown level {level_str!r}, "
+                f"expected one of {sorted(LOG_LEVEL_MAP)})",
+                stacklevel=2,
+            )
+            continue
+        logging.getLogger(name).setLevel(numeric)
 
 
 def buffer_writer(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
@@ -227,8 +391,14 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
-def setup_log_file(log_file: Path, *, max_bytes: int) -> None:
-    """Set up Langflow's rotating file handler."""
+def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
+    """Set up Langflow's rotating file handler.
+
+    ``formatter`` lets JSON modes attach a ``structlog.stdlib.ProcessorFormatter``
+    so third-party stdlib records (uvicorn, sqlalchemy, httpx, ...) are rendered
+    as JSON through the same processor chain as application logs. When omitted,
+    the handler writes the message verbatim (structlog has already rendered it).
+    """
     global _file_handler  # noqa: PLW0603
 
     if _file_handler is not None:
@@ -240,7 +410,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int) -> None:
         maxBytes=max_bytes,
         backupCount=5,
     )
-    _file_handler.setFormatter(logging.Formatter("%(message)s"))
+    _file_handler.setFormatter(formatter if formatter is not None else logging.Formatter("%(message)s"))
     logging.root.addHandler(_file_handler)
 
 
@@ -266,21 +436,17 @@ def configure(
     output_file=None,
 ) -> None:
     """Configure the logger."""
-    # Early-exit only if structlog is configured AND current min level matches the requested one.
-    cfg = structlog.get_config() if structlog.is_configured() else {}
-    wrapper_class = cfg.get("wrapper_class")
-    current_min_level = getattr(wrapper_class, "min_level", None)
-    if os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS and log_level is None:
+    # Resolve every effective input (env-var fallbacks + level validation) up
+    # front so the early-return below can compare a fingerprint of the *entire*
+    # resulting configuration, not just the log level. The old check compared
+    # only the resolved level, so a second call that changed
+    # log_env / log_file / log_format / output_file / disable at the same level
+    # silently no-opped -- skipping the file handler and renderer switch. That
+    # was both a real footgun and a source of test-isolation flakiness (a prior
+    # same-level configure() made a later file-mode configure() do nothing,
+    # surfacing as FileNotFoundError when a test read the log file).
+    if log_level is None and os.getenv("LANGFLOW_LOG_LEVEL", "").upper() in VALID_LOG_LEVELS:
         log_level = os.getenv("LANGFLOW_LOG_LEVEL")
-
-    log_level_str = os.getenv("LANGFLOW_LOG_LEVEL", "ERROR")
-    if log_level is not None:
-        log_level_str = log_level
-
-    requested_min_level = LOG_LEVEL_MAP.get(log_level_str.upper(), logging.ERROR)
-    if current_min_level == requested_min_level:
-        return
-
     if log_level is None or log_level.upper() not in LOG_LEVEL_MAP:
         log_level = "ERROR"
 
@@ -295,11 +461,48 @@ def configure(
     if log_format is None:
         log_format = os.getenv("LANGFLOW_LOG_FORMAT")
 
+    numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
+
+    # Fingerprint of every caller-supplied input that changes the resulting
+    # setup. Stored on the wrapper_class (below) so structlog.reset_defaults()
+    # -- used between tests -- invalidates it automatically and the next call
+    # rebuilds from scratch. Env-only toggles (e.g. LANGFLOW_PRETTY_LOGS) are not
+    # part of the fingerprint: the four env-backed args above are already folded
+    # into their resolved values, and the remainder are process-stable.
+    config_fingerprint = (
+        numeric_level,
+        log_env,
+        str(log_file) if log_file is not None else None,
+        log_format,
+        bool(disable),
+        log_rotation,
+        cache if cache is not None else True,
+        output_file,
+    )
+    cfg = structlog.get_config() if structlog.is_configured() else {}
+    if getattr(cfg.get("wrapper_class"), "config_fingerprint", None) == config_fingerprint:
+        return
+
     # Configure processors based on environment
-    processors = [
+    service_info = _get_service_info()
+
+    def _add_service_info(_logger: Any, _method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+        for key, value in service_info.items():
+            event_dict.setdefault(key, value)
+        return event_dict
+
+    extra_redact = frozenset(
+        k.strip().lower() for k in os.getenv("LANGFLOW_LOG_REDACT_KEYS", "").split(",") if k.strip()
+    )
+    redact_processor = _build_redact_processor(extra_redact)
+
+    processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
-        structlog.processors.TimeStamper(fmt="iso"),
+        add_logger_name,
+        add_otel_trace_context,
+        structlog.processors.TimeStamper(fmt="iso", utc=True),
+        _add_service_info,
     ]
 
     # Add callsite information only when LANGFLOW_DEV is set
@@ -316,16 +519,69 @@ def configure(
 
     processors.extend(
         [
+            redact_processor,
             add_serialized,
-            remove_exception_in_production,
             buffer_writer,
         ]
     )
 
-    # Configure output based on environment
-    if log_env.lower() == "container" or log_env.lower() == "container_json":
-        processors.append(structlog.processors.JSONRenderer())
+    # Configure output based on environment.
+    # For machine-parseable renderers, serialize exc_info as structured tracebacks
+    # so Grafana/Loki see a complete stack trace (type, value, frames) instead of
+    # dropping the exception or rendering its repr. ConsoleRenderer formats
+    # exc_info itself, so we don't add a tracebacks processor on that path.
+    #
+    # `show_locals` is OFF by default in JSON output because frame locals can
+    # leak secrets (API keys, env, request bodies). Opt in with
+    # LANGFLOW_LOG_TRACE_LOCALS=true when you need it for local debugging.
+    show_locals = os.getenv("LANGFLOW_LOG_TRACE_LOCALS", "false").lower() == "true"
+    json_traceback = structlog.processors.ExceptionRenderer(
+        structlog.tracebacks.ExceptionDictTransformer(show_locals=show_locals, max_frames=50)
+    )
+
+    # When JSON output is written to a file, render through a stdlib
+    # ProcessorFormatter on the rotating handler instead of an inline
+    # JSONRenderer. That routes foreign stdlib records (uvicorn, sqlalchemy,
+    # httpx, asyncio) through the same renderer and the same redaction, so the
+    # file is a single JSON stream and PII redaction is not bypassed -- while the
+    # stdlib RotatingFileHandler keeps log rotation. Foreign records are enriched
+    # by ``foreign_pre_chain``; structlog records carry the context built above
+    # and are handed off via ``wrap_for_formatter``.
+    file_json_formatter: logging.Formatter | None = None
+
+    def _append_json_tail() -> None:
+        nonlocal file_json_formatter
+        if log_file:
+            processors.append(structlog.stdlib.ProcessorFormatter.wrap_for_formatter)
+            foreign_pre_chain = [
+                structlog.contextvars.merge_contextvars,
+                structlog.stdlib.ExtraAdder(),
+                # NB: not ``structlog.stdlib.add_log_level`` -- that trusts
+                # ``record.levelname``, which a third-party ``addLevelName`` call
+                # can corrupt. Derive from the numeric level instead.
+                add_stdlib_log_level_from_record,
+                structlog.stdlib.add_logger_name,
+                add_otel_trace_context,
+                structlog.processors.TimeStamper(fmt="iso", utc=True),
+                _add_service_info,
+                redact_processor,
+            ]
+            file_json_formatter = structlog.stdlib.ProcessorFormatter(
+                foreign_pre_chain=foreign_pre_chain,
+                processors=[
+                    structlog.stdlib.ProcessorFormatter.remove_processors_meta,
+                    json_traceback,
+                    structlog.processors.JSONRenderer(),
+                ],
+            )
+        else:
+            processors.append(json_traceback)
+            processors.append(structlog.processors.JSONRenderer())
+
+    if log_env.lower() in ("container", "container_json"):
+        _append_json_tail()
     elif log_env.lower() == "container_csv":
+        processors.append(structlog.processors.format_exc_info)
         # Include callsite fields in key order when DEV is enabled
         key_order = ["timestamp", "level", "event"]
         if DEV:
@@ -338,28 +594,36 @@ def configure(
         if log_stdout_pretty:
             # If custom format is provided, use KeyValueRenderer with custom format
             if log_format:
+                processors.append(structlog.processors.format_exc_info)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
                 processors.append(structlog.dev.ConsoleRenderer(colors=True))
         else:
-            processors.append(structlog.processors.JSONRenderer())
+            _append_json_tail()
 
-    # Get numeric log level
-    numeric_level = LOG_LEVEL_MAP.get(log_level.upper(), logging.ERROR)
-
-    # Create wrapper class and attach the min level for later comparison
+    # Create the filtering wrapper. ``numeric_level`` was resolved above for the
+    # fingerprint. Attach min_level (kept for back-compat) and the full config
+    # fingerprint so the next configure() call early-returns only when every
+    # effective input is unchanged.
     wrapper_class = structlog.make_filtering_bound_logger(numeric_level)
     wrapper_class.min_level = numeric_level
+    wrapper_class.config_fingerprint = config_fingerprint
 
     # Configure structlog
     # Default to stdout for backward compatibility, unless output_file is specified
     log_output_file = output_file if output_file is not None else sys.stdout
 
+    # Wipe cached loggers before reconfiguring so any module that captured a
+    # logger before the real configure() call picks up the new processor chain
+    # (otherwise cache_logger_on_first_use=True binds the bootstrap chain
+    # permanently to that reference).
+    structlog.reset_defaults()
+
     structlog.configure(
         processors=processors,
         wrapper_class=wrapper_class,
         context_class=dict,
-        logger_factory=structlog.PrintLoggerFactory(file=log_output_file)
+        logger_factory=_NamedPrintLoggerFactory(file=log_output_file)
         if not log_file
         else structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=cache if cache is not None else True,
@@ -389,13 +653,28 @@ def configure(
         else:
             max_bytes = 10 * 1024 * 1024  # Default 10MB
 
-        # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output
-        setup_log_file(log_file, max_bytes=max_bytes)
+        # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output.
+        # In JSON file mode the formatter renders both structlog and foreign stdlib records as JSON.
+        setup_log_file(log_file, max_bytes=max_bytes, formatter=file_json_formatter)
         logging.root.setLevel(numeric_level)
 
     # Set up interceptors for uvicorn and gunicorn
     setup_uvicorn_logger()
     setup_gunicorn_logger()
+
+    # In JSON modes we want a single unified stdout stream: every stdlib log
+    # record (uvicorn access logs, sqlalchemy, httpx, langchain, asyncio)
+    # routed into structlog so it comes out as JSON instead of unstructured
+    # text. In non-JSON modes leave stdlib alone so dev console output stays
+    # readable.
+    json_mode = log_env.lower() in ("container", "container_json") or (
+        not log_env and os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() != "true"
+    )
+    if json_mode and not log_file:
+        _install_stdlib_intercept(numeric_level)
+
+    # Apply per-logger level overrides last so user env beats library defaults.
+    _apply_logger_level_overrides()
 
     # Create the global logger instance
     global logger  # noqa: PLW0603
@@ -427,27 +706,107 @@ def setup_gunicorn_logger() -> None:
     logging.getLogger("gunicorn.access").propagate = True
 
 
+_STDLIB_LEVEL_TO_STRUCTLOG = (
+    (logging.CRITICAL, "critical"),
+    (logging.ERROR, "error"),
+    (logging.WARNING, "warning"),
+    (logging.INFO, "info"),
+)
+
+
+def _levelno_to_structlog_name(levelno: int) -> str:
+    """Map a stdlib numeric level to a lowercase structlog level name.
+
+    Derives the name from the immutable ``levelno`` instead of ``levelname``
+    because third-party libraries can rewrite stdlib level names via
+    ``logging.addLevelName`` (e.g. ``ibm_watsonx_orchestrate`` wraps them in ANSI
+    color codes). ``levelno`` is never mutated, so the rendered ``level`` field
+    stays clean and filterable.
+    """
+    for threshold, name in _STDLIB_LEVEL_TO_STRUCTLOG:
+        if levelno >= threshold:
+            return name
+    return "debug"
+
+
+def add_stdlib_log_level_from_record(_logger: Any, method_name: str, event_dict: dict[str, Any]) -> dict[str, Any]:
+    """Set ``level`` from a foreign ``LogRecord``'s numeric level.
+
+    Drop-in replacement for ``structlog.stdlib.add_log_level`` on the
+    ProcessorFormatter ``foreign_pre_chain``. structlog derives a foreign
+    record's level from ``record.levelname.lower()``; when a third-party library
+    has rewritten that name via ``logging.addLevelName`` (e.g. wrapping it in
+    ANSI color codes), the mangled string would otherwise land verbatim in the
+    JSON ``level`` field and break level-based filtering in Grafana/Loki.
+    Deriving from the immutable ``levelno`` keeps the field stable. Mirrors the
+    numeric-level logic the stdout-mode ``InterceptHandler`` already uses.
+    """
+    record = event_dict.get("_record")
+    levelno = getattr(record, "levelno", None)
+    if levelno is None:
+        # No stdlib record on the chain (not expected on the foreign path):
+        # fall back to the method name structlog computed.
+        event_dict.setdefault("level", method_name)
+    else:
+        event_dict["level"] = _levelno_to_structlog_name(levelno)
+    return event_dict
+
+
+# Attributes present on a vanilla LogRecord. Anything else in record.__dict__ was
+# attached via ``logging.*(..., extra={...})`` and is forwarded to structlog so it
+# lands as a structured field (and is therefore subject to PII redaction), mirroring
+# the ExtraAdder used on the file-mode ProcessorFormatter path.
+_RESERVED_LOGRECORD_ATTRS = frozenset(logging.makeLogRecord({}).__dict__) | {"message", "asctime"}
+
+
 class InterceptHandler(logging.Handler):
-    """Intercept standard logging messages and route them to structlog."""
+    """Route stdlib logging records into structlog.
+
+    Forwards ``exc_info`` and ``stack_info`` so library tracebacks (httpx,
+    sqlalchemy, langchain, uvicorn) survive into the JSON output. Without
+    this, errors raised inside third-party libraries log a one-line message
+    with no stack trace.
+    """
 
     def emit(self, record: logging.LogRecord) -> None:
-        """Emit a log record by passing it to structlog."""
-        # Get corresponding structlog logger
-        logger_name = record.name
-        structlog_logger = structlog.get_logger(logger_name)
+        # Mirrors the stdlib Handler.emit safety net: a malformed third-party
+        # log call (e.g. mismatched %-format args) must not propagate up and
+        # crash the request path. Anything that raises here is routed to
+        # handleError, which is the documented contract callers expect.
+        try:
+            structlog_logger = structlog.get_logger(record.name)
+            kwargs: dict[str, Any] = {}
+            if record.exc_info:
+                kwargs["exc_info"] = record.exc_info
+            if record.stack_info:
+                # stdlib already formats stack_info as a string. Pass it as
+                # the rendered ``stack`` field directly so it survives without
+                # needing StackInfoRenderer to recompute from a different frame.
+                kwargs["stack"] = record.stack_info
+            for key, value in record.__dict__.items():
+                if key not in _RESERVED_LOGRECORD_ATTRS and not key.startswith("_") and key not in kwargs:
+                    kwargs[key] = value
+            method_name = _levelno_to_structlog_name(record.levelno)
+            getattr(structlog_logger, method_name)(record.getMessage(), **kwargs)
+        except Exception:  # noqa: BLE001 - logging must never break the caller
+            self.handleError(record)
 
-        # Map log levels
-        level = record.levelno
-        if level >= logging.CRITICAL:
-            structlog_logger.critical(record.getMessage())
-        elif level >= logging.ERROR:
-            structlog_logger.error(record.getMessage())
-        elif level >= logging.WARNING:
-            structlog_logger.warning(record.getMessage())
-        elif level >= logging.INFO:
-            structlog_logger.info(record.getMessage())
-        else:
-            structlog_logger.debug(record.getMessage())
+
+def _install_stdlib_intercept(numeric_level: int) -> None:
+    """Install (or refresh) the InterceptHandler on the stdlib root logger.
+
+    Routes every stdlib log record (uvicorn, sqlalchemy, httpx, langchain,
+    asyncio, ...) into structlog so the entire process emits a single JSON
+    stream. Re-runnable: a second call updates the level rather than stacking
+    handlers.
+    """
+    root = logging.root
+    handler = next((h for h in root.handlers if isinstance(h, InterceptHandler)), None)
+    if handler is None:
+        handler = InterceptHandler()
+        root.addHandler(handler)
+    handler.setLevel(numeric_level)
+    root.setLevel(numeric_level)
 
 
 # Initialize logger - will be reconfigured when configure() is called

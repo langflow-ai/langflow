@@ -112,6 +112,22 @@ def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
     raise RuntimeError(msg)
 
 
+def _normalize_sync_postgres_url(database_url: str) -> str:
+    """Return a sync-driver Postgres URL from a possibly async one.
+
+    Strips the ``+asyncpg`` / ``+aiosqlite`` suffix and upgrades the legacy
+    ``postgres://`` scheme to ``postgresql://`` so :func:`sa.create_engine`
+    picks the default sync driver. Centralised so the advisory-lock helper and
+    the table-creation lock path stay in sync with :func:`check_postgresql_version_sync`.
+    """
+    sync_url = database_url
+    if sync_url.startswith("postgres://"):
+        sync_url = "postgresql://" + sync_url.split("://", 1)[1]
+    for async_driver in ("+asyncpg", "+aiosqlite"):
+        sync_url = sync_url.replace(async_driver, "")
+    return sync_url
+
+
 @contextmanager
 def _postgres_migration_lock(database_url: str):
     """Hold a Postgres session-level advisory lock for the duration of the block.
@@ -131,15 +147,7 @@ def _postgres_migration_lock(database_url: str):
         yield
         return
 
-    # Normalise to a sync-compatible URL: strip async drivers so create_engine
-    # picks a sync driver, mirroring check_postgresql_version_sync above.
-    sync_url = database_url
-    if sync_url.startswith("postgres://"):
-        sync_url = "postgresql://" + sync_url.split("://", 1)[1]
-    for async_driver in ("+asyncpg", "+aiosqlite"):
-        sync_url = sync_url.replace(async_driver, "")
-
-    engine = sa.create_engine(sync_url)
+    engine = sa.create_engine(_normalize_sync_postgres_url(database_url))
     try:
         with engine.connect() as conn:
             logger.debug("Acquiring migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
@@ -176,15 +184,7 @@ def check_postgresql_version_sync(database_url: str) -> None:
 
     from sqlalchemy import create_engine
 
-    # Normalise the async URL to a sync-compatible one.
-    url = database_url
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url.split("://", 1)[1]
-    # Strip async driver suffixes so create_engine picks the default sync driver.
-    for async_driver in ("+asyncpg", "+aiosqlite"):
-        url = url.replace(async_driver, "")
-
-    engine = create_engine(url)
+    engine = create_engine(_normalize_sync_postgres_url(database_url))
     try:
         with engine.connect() as conn:
             row = conn.execute(_PG_VERSION_QUERY).fetchone()
@@ -686,8 +686,34 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        async with self.engine.begin() as conn:
-            await conn.run_sync(self._create_db_and_tables)
+        if not self.database_url.startswith(("postgresql", "postgres")):
+            # SQLite / non-PG: original async path; advisory lock does not apply.
+            async with self.engine.begin() as conn:
+                await conn.run_sync(self._create_db_and_tables)
+            return
+
+        # Postgres: serialise CREATE TYPE / CREATE TABLE across workers under
+        # the same advisory lock that protects run_migrations. Without this,
+        # concurrent workers booting against a fresh database race on
+        # ``table.create(checkfirst=True)`` and the losers fail with
+        # ``UniqueViolation`` on ``pg_type_typname_nsp_index``. The lock is
+        # acquired synchronously; run in a worker thread so a contended-lock
+        # poll does not block the event loop.
+        await asyncio.to_thread(self._create_db_and_tables_with_lock)
+
+    def _create_db_and_tables_with_lock(self) -> None:
+        """Postgres path: hold the migration advisory lock for the DDL.
+
+        Opens its own sync engine so the DDL runs on the same driver the lock
+        uses; the application's async engine is unaffected.
+        """
+        with _postgres_migration_lock(self.database_url):
+            sync_engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+            try:
+                with sync_engine.begin() as conn:
+                    self._create_db_and_tables(conn)
+            finally:
+                sync_engine.dispose()
 
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
