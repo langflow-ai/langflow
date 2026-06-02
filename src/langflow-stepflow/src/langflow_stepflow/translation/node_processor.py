@@ -51,20 +51,26 @@ class NodeProcessor:
         builder: FlowBuilder,
         node_output_refs: dict[str, Any],
         field_mapping: dict[str, dict[str, str]],
-        output_mapping: dict[str, str],
+        output_mapping: dict[tuple[str, str], str],
+        source_outputs: dict[str, list[str]],
+        output_refs_by_handle: dict[tuple[str, str], Any],
     ) -> Any | None:
         """Process a Langflow node using flow builder architecture.
 
         Args:
             node: Langflow node object
             dependencies: Dependency graph for all nodes
-            all_nodes: All nodes in the workflow
             builder: FlowBuilder instance
-            node_output_refs: Mapping of node IDs to their output references
+            node_output_refs: Mapping of node IDs to their primary output references
             field_mapping: Mapping of target nodes to their input field names
                 from edges
-            output_mapping: Mapping of source node IDs to their selected output names
+            output_mapping: Mapping of (source_id, target_id) -> selected output name
                 from edges
+            source_outputs: Mapping of source node IDs to the distinct outputs they
+                fan out, in first-seen edge order
+            output_refs_by_handle: Mapping of (source_id, output_name) -> output ref;
+                populated as steps are materialized so downstream nodes can wire to
+                the correct step when a source fans out multiple outputs
 
         Returns:
             Output reference for this node, or None if node should be skipped
@@ -100,14 +106,18 @@ class NodeProcessor:
                 # ChatInput returns a reference to workflow input directly
                 return Value.input.add_path("message")
             elif component_type == "ChatOutput":
-                # ChatOutput depends on another node - return that node's output
-                # reference
+                # ChatOutput passes through its upstream node's output. Resolve the
+                # specific fanned-out output it consumes so a multi-output source
+                # feeding ChatOutput routes the correct branch (see issue #12308).
                 dependency_node_ids = dependencies.get(node_id, [])
-                if dependency_node_ids and dependency_node_ids[0] in node_output_refs:
-                    return node_output_refs[dependency_node_ids[0]]
-                else:
-                    # ChatOutput with no dependencies - return input passthrough
-                    return Value.input.add_path("message")
+                if dependency_node_ids:
+                    dep_ref = self._resolve_dependency_ref(
+                        dependency_node_ids[0], node_id, node_output_refs, output_mapping, output_refs_by_handle
+                    )
+                    if dep_ref is not None:
+                        return dep_ref
+                # ChatOutput with no dependencies - return input passthrough
+                return Value.input.add_path("message")
 
             # Component is a tool if it has tool_mode=True at the component level
             is_tool_component = node_info.get("tool_mode", False)
@@ -120,6 +130,8 @@ class NodeProcessor:
                     dependencies,
                     node_output_refs,
                     field_mapping,
+                    output_mapping,
+                    output_refs_by_handle,
                 )
 
             # For regular components, determine routing based on component type
@@ -134,62 +146,17 @@ class NodeProcessor:
             if code_hash and module:
                 known_component = lookup_known_component(code_hash, module)
 
-            # Determine component path and inputs based on routing
+            outputs = node_info.get("outputs", [])
+
+            # Determine routing (core executor vs custom code executor)
             if known_component:
                 # Known core component - use core executor (no blob needed)
                 component_path = f"/langflow/core/{module_to_path(known_component.module)}"
                 logger.debug(f"Routing {component_type} to core executor: {component_path}")
-
-                # Extract outputs and selected_output for core executor
-                outputs = node_info.get("outputs", [])
-                selected_output = output_mapping.get(node_id)
-                if not selected_output and outputs:
-                    selected_output = outputs[0].get("name")
-
-                # Prepare template without code field
-                raw_template = {k: v for k, v in template.items() if k != "code"}
-                template_without_code = _sanitize_for_stepflow(raw_template)
-
-                step_input = {
-                    "template": template_without_code,
-                    "outputs": outputs,
-                    "selected_output": selected_output,
-                    "input": self._extract_runtime_inputs_for_builder(
-                        node,
-                        dependencies.get(node_id, []),
-                        node_output_refs,
-                        field_mapping,
-                    ),
-                }
             elif custom_code:
                 # Component with custom code - use custom code executor
                 component_path = "/langflow/custom_code"
                 logger.debug(f"Routing {component_type} to custom_code executor")
-
-                # First create a blob step for the code
-                blob_data = self._prepare_udf_blob(node, component_type, output_mapping)
-
-                blob_step_id = f"{step_id}_blob"
-                blob_step_handle = builder.add_step(
-                    id=blob_step_id,
-                    component="/builtin/put_blob",
-                    input_data={
-                        "data": _sanitize_for_stepflow(blob_data),
-                        "blob_type": "data",
-                    },
-                    must_execute=True,
-                )
-
-                # Create the custom code executor step that uses the blob
-                step_input = {
-                    "blob_id": Value.step(blob_step_handle.id, "blob_id"),
-                    "input": self._extract_runtime_inputs_for_builder(
-                        node,
-                        dependencies.get(node_id, []),
-                        node_output_refs,
-                        field_mapping,
-                    ),
-                }
             else:
                 # All executable components should have custom code or be known
                 raise ConversionError(
@@ -197,20 +164,188 @@ class NodeProcessor:
                     f"and is not a known core component."
                 )
 
-            # Add step to builder with proper ID and component path
-            step_id = self._generate_step_id(node_id, component_type)
-            step_handle = builder.add_step(
-                id=step_id,
-                component=component_path,
-                input_data=step_input,
-                must_execute=True,
+            # Runtime inputs are identical across this node's outputs, so resolve
+            # them once and reuse for every materialized step.
+            runtime_input = self._extract_runtime_inputs_for_builder(
+                node,
+                dependencies.get(node_id, []),
+                node_output_refs,
+                field_mapping,
+                output_mapping,
+                output_refs_by_handle,
             )
 
-            # Return a reference to this step's output
-            return Value.step(step_handle.id, "result")
+            # The core executor reads the template (sans code) directly; it does not
+            # vary per output, so build it once (only the core path needs it).
+            template_without_code = (
+                _sanitize_for_stepflow({k: v for k, v in template.items() if k != "code"}) if known_component else None
+            )
+
+            # Materialize one step per distinct output this node fans out. A step
+            # produces a single "result" (its selected output's method), so a node
+            # feeding different outputs to different targets needs one step apiece.
+            # NOTE: a component that fans out N distinct outputs is therefore
+            # instantiated and executed N times (once per output). Components with
+            # side effects will run their selected method once for each branch.
+            emitted_outputs = self._resolve_emitted_outputs(node_id, outputs, source_outputs)
+            if len(emitted_outputs) > 1:
+                logger.debug(
+                    "Node %s (%s) fans out %d distinct outputs %s; materializing one step each "
+                    "(component executes once per output).",
+                    node_id,
+                    component_type,
+                    len(emitted_outputs),
+                    emitted_outputs,
+                )
+
+            primary_ref = None
+            used_step_ids: set[str] = {step_id}
+            for index, output_name in enumerate(emitted_outputs):
+                # Keep the first output on the unsuffixed step id for stability;
+                # additional outputs get a unique, suffixed step id.
+                out_step_id = (
+                    step_id if index == 0 else self._unique_output_step_id(step_id, output_name, used_step_ids)
+                )
+
+                if known_component:
+                    step_input: dict[str, Any] = {
+                        "template": template_without_code,
+                        "outputs": outputs,
+                        "selected_output": output_name,
+                        "input": runtime_input,
+                    }
+                else:
+                    # Custom code: the executor reads selected_output from the blob,
+                    # so each output gets its own blob with the selection baked in.
+                    blob_data = self._prepare_udf_blob(node, component_type, output_name)
+
+                    blob_step_handle = builder.add_step(
+                        id=f"{out_step_id}_blob",
+                        component="/builtin/put_blob",
+                        input_data={
+                            "data": _sanitize_for_stepflow(blob_data),
+                            "blob_type": "data",
+                        },
+                        must_execute=True,
+                    )
+
+                    step_input = {
+                        "blob_id": Value.step(blob_step_handle.id, "blob_id"),
+                        "input": runtime_input,
+                    }
+
+                step_handle = builder.add_step(
+                    id=out_step_id,
+                    component=component_path,
+                    input_data=step_input,
+                    must_execute=True,
+                )
+
+                output_ref = Value.step(step_handle.id, "result")
+                if output_name is not None:
+                    output_refs_by_handle[(node_id, output_name)] = output_ref
+                if index == 0:
+                    primary_ref = output_ref
+
+            # Return the primary (first) output's reference as this node's default
+            return primary_ref
 
         except Exception as e:
             raise ConversionError(f"Error processing node {node.get('id', 'unknown')}: {e}") from e
+
+    def _resolve_emitted_outputs(
+        self,
+        node_id: str,
+        outputs: list[dict[str, Any]],
+        source_outputs: dict[str, list[str]],
+    ) -> list[str | None]:
+        """Determine which outputs a node must materialize as steps.
+
+        Returns one entry per distinct output the node fans out (so each downstream
+        branch can wire to the correct step). When the node has no outgoing edges
+        with a resolvable output, falls back to a single default step using the
+        component's first declared output, mirroring the prior single-step behavior.
+
+        Args:
+            node_id: The source node ID
+            outputs: The component's declared outputs
+            source_outputs: Mapping of source node IDs to their fanned-out outputs
+
+        Returns:
+            Non-empty list of output names (or a single None when no output is known)
+        """
+        emitted = source_outputs.get(node_id)
+        if emitted:
+            return list(emitted)
+
+        # No outgoing edges with a known output (e.g. a leaf feeding the workflow
+        # output) - emit a single step using the first declared output, if any.
+        default_output = outputs[0].get("name") if outputs else None
+        return [default_output]
+
+    def _sanitize_output_suffix(self, output_name: str | None) -> str:
+        """Sanitize an output name for use in a Stepflow step id suffix."""
+        if not output_name:
+            return "output"
+        return "".join(ch if ch.isalnum() else "_" for ch in output_name)
+
+    def _unique_output_step_id(self, base_step_id: str, output_name: str | None, used: set[str]) -> str:
+        """Build a unique, readable step id for a secondary fanned-out output.
+
+        Distinct output names can sanitize to the same suffix (e.g. "out-a" and
+        "out.a" both become "out_a"); a numeric disambiguator keeps each step id
+        unique so no branch silently overwrites another.
+
+        Args:
+            base_step_id: The node's primary (unsuffixed) step id
+            output_name: The output this step emits
+            used: Step ids already assigned for this node (mutated in place)
+
+        Returns:
+            A step id unique among ``used``
+        """
+        suffix = self._sanitize_output_suffix(output_name)
+        candidate = f"{base_step_id}__{suffix}"
+        disambiguator = 1
+        while candidate in used:
+            candidate = f"{base_step_id}__{suffix}_{disambiguator}"
+            disambiguator += 1
+        used.add(candidate)
+        return candidate
+
+    def _resolve_dependency_ref(
+        self,
+        dep_id: str,
+        target_id: str | None,
+        node_output_refs: dict[str, Any],
+        output_mapping: dict[tuple[str, str], str],
+        output_refs_by_handle: dict[tuple[str, str], Any],
+    ) -> Any | None:
+        """Resolve the output ref a dependency feeds into a specific target.
+
+        Prefers the step matching the exact output named on the (dep -> target)
+        edge so multi-output fan-out routes correctly; falls back to the
+        dependency's primary output ref when the edge's output is unknown or the
+        source materialized only a single (default) step.
+
+        Args:
+            dep_id: The dependency (source) node ID
+            target_id: The target node ID consuming the dependency
+            node_output_refs: Mapping of node IDs to their primary output refs
+            output_mapping: Mapping of (source_id, target_id) -> output name
+            output_refs_by_handle: Mapping of (source_id, output_name) -> output ref
+
+        Returns:
+            The resolved output reference, or None if the dependency has no ref
+        """
+        if target_id is not None:
+            edge_output = output_mapping.get((dep_id, target_id))
+            if edge_output is not None:
+                handle_ref = output_refs_by_handle.get((dep_id, edge_output))
+                if handle_ref is not None:
+                    return handle_ref
+
+        return node_output_refs.get(dep_id)
 
     def _generate_step_id(self, node_id: str, component_type: str) -> str:
         """Generate a clean step ID from node ID and type.
@@ -234,14 +369,15 @@ class NodeProcessor:
         self,
         node: dict[str, Any],
         component_type: str,
-        output_mapping: dict[str, str],
+        selected_output: str | None,
     ) -> dict[str, Any]:
         """Prepare enhanced UDF blob data for component execution.
 
         Args:
             node: Langflow node object
             component_type: Component type name
-            output_mapping: Mapping of node IDs to their selected output names
+            selected_output: The output this blob should execute. When None, falls
+                back to the component's first declared output.
 
         Returns:
             Enhanced UDF blob data with complete component information
@@ -263,14 +399,8 @@ class NodeProcessor:
         # Use node outputs if available (more complete), fallback to data outputs
         final_outputs = node_outputs if node_outputs else outputs
 
-        # Determine selected output - use output mapping from edges if available
-        selected_output = None
-        node_id = node.get("id")
-        if output_mapping and node_id in output_mapping:
-            # Use the output specified in the edge
-            selected_output = output_mapping[node_id]
-        elif final_outputs:
-            # Fallback to the first output if no edge mapping found
+        # Fall back to the first declared output when the caller didn't specify one
+        if selected_output is None and final_outputs:
             selected_output = final_outputs[0].get("name")
 
         # Extract additional component metadata from node_info
@@ -338,15 +468,19 @@ class NodeProcessor:
         dependency_node_ids: list[str],
         node_output_refs: dict[str, Any],
         field_mapping: dict[str, dict[str, str]],
+        output_mapping: dict[tuple[str, str], str],
+        output_refs_by_handle: dict[tuple[str, str], Any],
     ) -> dict[str, Any]:
         """Extract runtime inputs for UDF components using flow builder architecture.
 
         Args:
             node: Langflow node object
             dependency_node_ids: IDs of nodes this node depends on
-            node_output_refs: Mapping of node IDs to their output references
+            node_output_refs: Mapping of node IDs to their primary output references
             field_mapping: Mapping of target nodes to their input field names
                 from edges
+            output_mapping: Mapping of (source_id, target_id) -> output name
+            output_refs_by_handle: Mapping of (source_id, output_name) -> output ref
 
         Returns:
             Dict of runtime inputs
@@ -361,16 +495,21 @@ class NodeProcessor:
             field_inputs: dict[str, Any] = {}
 
             for dep_id in dependency_node_ids:
-                if dep_id in node_field_map and dep_id in node_output_refs:
+                # Resolve the specific output this dependency feeds into this node so
+                # multi-output fan-out routes to the right step (see issue #12308).
+                dep_ref = self._resolve_dependency_ref(
+                    dep_id, node_id, node_output_refs, output_mapping, output_refs_by_handle
+                )
+                if dep_id in node_field_map and dep_ref is not None:
                     field_name = node_field_map[dep_id]
 
                     # Handle list fields by collecting multiple inputs
                     if field_name not in field_inputs:
                         field_inputs[field_name] = []
-                    field_inputs[field_name].append(node_output_refs[dep_id])
-                elif dep_id in node_output_refs:
+                    field_inputs[field_name].append(dep_ref)
+                elif dep_ref is not None:
                     # Fallback to generic name if no field mapping
-                    runtime_inputs[f"input_{len(runtime_inputs)}"] = node_output_refs[dep_id]
+                    runtime_inputs[f"input_{len(runtime_inputs)}"] = dep_ref
 
             # Convert to runtime inputs format
             for field_name, inputs in field_inputs.items():
@@ -383,8 +522,11 @@ class NodeProcessor:
         else:
             # Fallback to old behavior for backwards compatibility
             for i, dep_id in enumerate(dependency_node_ids):
-                if dep_id in node_output_refs:
-                    runtime_inputs[f"input_{i}"] = node_output_refs[dep_id]
+                dep_ref = self._resolve_dependency_ref(
+                    dep_id, node_id, node_output_refs, output_mapping, output_refs_by_handle
+                )
+                if dep_ref is not None:
+                    runtime_inputs[f"input_{i}"] = dep_ref
                 else:
                     # Fallback to workflow input if dependency not found
                     runtime_inputs[f"input_{i}"] = Value.input("$.message")
@@ -434,6 +576,8 @@ class NodeProcessor:
         dependencies: dict[str, list[str]],
         node_output_refs: dict[str, Any],
         field_mapping: dict[str, dict[str, str]],
+        output_mapping: dict[tuple[str, str], str],
+        output_refs_by_handle: dict[tuple[str, str], Any],
     ) -> Any:
         """Create a component_tool step for tool-mode components.
 
@@ -444,6 +588,8 @@ class NodeProcessor:
             dependencies: Dependency graph
             node_output_refs: Node output references
             field_mapping: Field mapping from edges
+            output_mapping: Mapping of (source_id, target_id) -> output name
+            output_refs_by_handle: Mapping of (source_id, output_name) -> output ref
 
         Returns:
             Output reference for the tool wrapper step
@@ -455,7 +601,9 @@ class NodeProcessor:
             node_info = node_data.get("node", {})
 
             # Extract component inputs from dependencies and field mapping
-            component_inputs = self._build_component_inputs(node_id, dependencies, node_output_refs, field_mapping)
+            component_inputs = self._build_component_inputs(
+                node_id, dependencies, node_output_refs, field_mapping, output_mapping, output_refs_by_handle
+            )
 
             # Create step that calls component_tool to create tool wrapper
             step_handle = builder.add_step(
@@ -482,6 +630,8 @@ class NodeProcessor:
         dependencies: dict[str, list[str]],
         node_output_refs: dict[str, Any],
         field_mapping: dict[str, dict[str, str]],
+        output_mapping: dict[tuple[str, str], str],
+        output_refs_by_handle: dict[tuple[str, str], Any],
     ) -> dict[str, Any]:
         """Build input dict for a component from its dependencies.
 
@@ -490,6 +640,8 @@ class NodeProcessor:
             dependencies: Dependency graph
             node_output_refs: Output references from other nodes
             field_mapping: Field name mapping from edges
+            output_mapping: Mapping of (source_id, target_id) -> output name
+            output_refs_by_handle: Mapping of (source_id, output_name) -> output ref
 
         Returns:
             Dict mapping input field names to their values/references
@@ -501,7 +653,12 @@ class NodeProcessor:
         field_map = field_mapping.get(node_id, {})
 
         for dep_node_id in deps:
-            if dep_node_id in node_output_refs:
+            # Resolve the specific output this dependency feeds into this node so
+            # multi-output fan-out routes to the right step (see issue #12308).
+            dep_ref = self._resolve_dependency_ref(
+                dep_node_id, node_id, node_output_refs, output_mapping, output_refs_by_handle
+            )
+            if dep_ref is not None:
                 field_name = field_map.get(dep_node_id)
                 if field_name is None:
                     logger.warning(
@@ -511,6 +668,6 @@ class NodeProcessor:
                     )
                     continue
                 # Map dependency output to input field
-                inputs[field_name] = node_output_refs[dep_node_id]
+                inputs[field_name] = dep_ref
 
         return inputs
