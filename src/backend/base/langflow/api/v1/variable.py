@@ -16,8 +16,9 @@ from langflow.api.v1.models import (
 )
 from langflow.api.v1.schemas.deployments import DetectVarsRequest, DetectVarsResponse
 from langflow.services.authorization import VariableAction, ensure_variable_permission
+from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
 from langflow.services.database.models.flow_version.crud import get_flow_version_entries_by_ids
-from langflow.services.database.models.variable.model import VariableCreate, VariableRead, VariableUpdate
+from langflow.services.database.models.variable.model import Variable, VariableCreate, VariableRead, VariableUpdate
 from langflow.services.deps import get_variable_service
 from langflow.services.variable.constants import CREDENTIAL_TYPE, GENERIC_TYPE
 from langflow.services.variable.service import DatabaseVariableService
@@ -214,16 +215,31 @@ async def update_variable(
         msg = "Variable service is not an instance of DatabaseVariableService"
         raise TypeError(msg)
     try:
-        # Get existing variable to check if it's a model provider credential
-        existing_variable = await variable_service.get_variable_by_id(
-            user_id=current_user.id, variable_id=variable_id, session=session
+        # Share-aware fetch: load by id when a plugin enables cross-user fetch,
+        # otherwise scope to the owner (OSS default — behavior unchanged).
+        existing_variable = await authorized_or_owner_scoped(
+            session,
+            Variable,
+            id_column=Variable.id,
+            resource_id=variable_id,
+            owner_column=Variable.user_id,
+            owner_id=current_user.id,
         )
-        await ensure_variable_permission(
-            current_user,
-            VariableAction.WRITE,
-            variable_id=variable_id,
-            variable_user_id=current_user.id,
-        )
+        if existing_variable is None:
+            raise HTTPException(status_code=404, detail="Variable not found")
+        # Pass the *resource* owner so the owner-override only fast-paths the real
+        # owner; a non-owner falls through to the plugin's enforce(). Plugin deny
+        # → 404 (UUID privacy), matching the flow/deployment routes.
+        owner_id = existing_variable.user_id
+        try:
+            await ensure_variable_permission(
+                current_user,
+                VariableAction.WRITE,
+                variable_id=variable_id,
+                variable_user_id=owner_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Variable not found") from exc
 
         # Validate API key if updating a model provider variable
         if existing_variable.name in model_provider_variable_mapping.values() and variable.value:
@@ -239,8 +255,10 @@ async def update_variable(
                 except ValueError as e:
                     raise HTTPException(status_code=400, detail=str(e)) from e
 
+        # Mutate against the resolved owner so the owner-scoped service query
+        # matches the row a share-aware fetch resolved.
         return await variable_service.update_variable_fields(
-            user_id=current_user.id,
+            user_id=owner_id,
             variable_id=variable_id,
             variable=variable,
             session=session,
@@ -269,28 +287,46 @@ async def delete_variable(
     """
     variable_service = get_variable_service()
     try:
-        # Get the variable before deleting to check if it's a provider credential
-        variable_to_delete = await variable_service.get_variable_by_id(
-            user_id=current_user.id, variable_id=variable_id, session=session
+        # Share-aware fetch (see update_variable): load by id when a plugin
+        # enables cross-user fetch, else owner-scoped (OSS default).
+        variable_to_delete = await authorized_or_owner_scoped(
+            session,
+            Variable,
+            id_column=Variable.id,
+            resource_id=variable_id,
+            owner_column=Variable.user_id,
+            owner_id=current_user.id,
         )
-        await ensure_variable_permission(
-            current_user,
-            VariableAction.DELETE,
-            variable_id=variable_id,
-            variable_user_id=current_user.id,
-        )
+        if variable_to_delete is None:
+            raise HTTPException(status_code=404, detail="Variable not found")
+        owner_id = variable_to_delete.user_id
+        try:
+            await ensure_variable_permission(
+                current_user,
+                VariableAction.DELETE,
+                variable_id=variable_id,
+                variable_user_id=owner_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="Variable not found") from exc
 
         # Check if this variable is a model provider credential
         provider = get_provider_from_variable_name(variable_to_delete.name)
 
-        # Delete the variable
-        await variable_service.delete_variable_by_id(user_id=current_user.id, variable_id=variable_id, session=session)
+        # Delete the variable, scoped to the resolved owner so a shared delete
+        # removes the owner's row.
+        await variable_service.delete_variable_by_id(user_id=owner_id, variable_id=variable_id, session=session)
 
-        # If this was a provider credential, clean up disabled and enabled models for that provider
+        # If this was a provider credential, clean up the *owner's* disabled and
+        # enabled model lists for that provider.
         if provider and isinstance(variable_service, DatabaseVariableService):
-            await _cleanup_provider_models(variable_service, current_user.id, provider, session)
+            await _cleanup_provider_models(variable_service, owner_id, provider, session)
 
     except Exception as e:
+        # Preserve 404 / deny_to_404 (and any other HTTPException) instead of
+        # masking it as a 500.
+        if isinstance(e, HTTPException):
+            raise
         raise HTTPException(status_code=500, detail=str(e)) from e
 
 
