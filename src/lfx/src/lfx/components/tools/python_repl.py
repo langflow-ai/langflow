@@ -9,6 +9,7 @@ from lfx.field_typing import Tool
 from lfx.inputs.inputs import StrInput
 from lfx.log.logger import logger
 from lfx.schema.data import Data
+from lfx.utils.python_repl_security import safe_builtins, validate_code_safety
 
 
 class PythonREPLToolComponent(LCToolComponent):
@@ -68,15 +69,23 @@ class PythonREPLToolComponent(LCToolComponent):
             except ImportError as e:
                 msg = f"Could not import module {module}"
                 raise ImportError(msg) from e
+        # Restrict builtins so the import allow-list cannot be silently bypassed
+        # (e.g. __import__("subprocess")). Without this, exec() auto-injects the full
+        # builtins module, leaving __import__/open/eval/exec reachable.
+        global_dict["__builtins__"] = safe_builtins()
         return global_dict
 
     def build_tool(self) -> Tool:
-        globals_ = self.get_globals(self.global_imports)
-        python_repl = PythonREPL(_globals=globals_)
-
         def run_python_code(code: str) -> str:
             try:
-                return python_repl.run(code)
+                # Validate the exact (sanitized) code that will run, rejecting inline
+                # imports and escape gadgets; combined with the restricted builtins in
+                # get_globals(). A fresh globals namespace is built per invocation so
+                # state does not leak across tool calls.
+                cleaned_code = PythonREPL.sanitize_input(code)
+                validate_code_safety(cleaned_code)
+                python_repl = PythonREPL(_globals=self.get_globals(self.global_imports))
+                return python_repl.run(cleaned_code)
             except Exception as e:
                 logger.debug("Error running Python code", exc_info=True)
                 raise ToolException(str(e)) from e

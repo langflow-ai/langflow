@@ -44,6 +44,12 @@ To customize log storage locations and behaviors, set the following [Langflow en
 | `LANGFLOW_ENABLE_LOG_RETRIEVAL` | Boolean | `False` | Enables retrieval of logs from your Langflow instance with [Logs endpoints](/api-logs). |
 | `LANGFLOW_LOG_RETRIEVER_BUFFER_SIZE` | Integer | `10000` | Set the buffer size for log retrieval if `LANGFLOW_ENABLE_LOG_RETRIEVAL=True`. Must be greater than `0` for log retrieval to function. |
 | `LANGFLOW_NATIVE_TRACING` | Boolean | `true` | Enables the tracer to record execution traces directly in the Langflow database for use in Trace View. Set to `false` to disable tracing. |
+| `LANGFLOW_SERVICE_NAME` | String | `langflow` | Value of the `service` field on every JSON log record. Used as a label by Grafana/Loki. See [Grafana and Loki](./observability-grafana-loki.mdx). |
+| `LANGFLOW_VERSION` | String | Not set | Adds a `version` field when set. Omitted otherwise. |
+| `LANGFLOW_ENVIRONMENT` | String | Not set | Adds an `environment` field when set (`staging`, `production`, etc.). Omitted otherwise. |
+| `LANGFLOW_LOG_LEVELS` | String | Not set | Per-logger level overrides as `name=LEVEL,name=LEVEL`. Quiets noisy libraries without changing global defaults. Malformed entries raise a `UserWarning` at startup. Example: `sqlalchemy.engine=WARNING,httpx=INFO`. |
+| `LANGFLOW_LOG_REDACT_KEYS` | String | Not set | Comma-separated extra keys to scrub from JSON log records, on top of the defaults (`password`, `api_key`, `token`, `authorization`, `cookie`, etc.). |
+| `LANGFLOW_LOG_TRACE_LOCALS` | Boolean | `false` | Include frame locals in structured tracebacks. Off by default because locals can leak secrets; enable only for local debugging. |
 
 ## View logs in real-time
 
@@ -181,6 +187,7 @@ The log file is only created when Langflow Desktop runs. If you don't see a log 
 
 ## See also
 
+* [Grafana and Loki](./observability-grafana-loki.mdx)
 * [Logs endpoints](/api-logs)
 * [Memory management options](/memory)
 * [Configure an external PostgreSQL database](/configuration-custom-database)
