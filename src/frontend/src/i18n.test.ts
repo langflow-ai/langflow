@@ -31,9 +31,16 @@ describe("loadLanguage", () => {
   });
 
   it("loads and registers a new language bundle", async () => {
-    expect(i18n.hasResourceBundle("fr", "translation")).toBe(false);
+    const spy = jest.spyOn(i18n, "addResourceBundle");
     await loadLanguage("fr");
-    expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
+    expect(spy).toHaveBeenCalledWith(
+      "fr",
+      "translation",
+      expect.any(Object),
+      true,
+      true,
+    );
+    spy.mockRestore();
   });
 
   it("does not call addResourceBundle if language is already cached", async () => {
@@ -45,9 +52,34 @@ describe("loadLanguage", () => {
   });
 
   it("loads multiple different languages independently", async () => {
+    const spy = jest.spyOn(i18n, "addResourceBundle");
     await loadLanguage("fr");
     await loadLanguage("ja");
-    expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
-    expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+
+    expect(spy).toHaveBeenCalledWith(
+      "fr",
+      "translation",
+      expect.any(Object),
+      true,
+      true,
+    );
+    expect(spy).toHaveBeenCalledWith(
+      "ja",
+      "translation",
+      expect.any(Object),
+      true,
+      true,
+    );
+    spy.mockRestore();
+  });
+
+  it("normalizes zh to the bundled zh-Hans locale", async () => {
+    await loadLanguage("zh");
+    expect(i18n.hasResourceBundle("zh-Hans", "translation")).toBe(true);
+  });
+
+  it("normalizes zh-CN to the bundled zh-Hans locale", async () => {
+    await loadLanguage("zh-CN");
+    expect(i18n.hasResourceBundle("zh-Hans", "translation")).toBe(true);
   });
 });
