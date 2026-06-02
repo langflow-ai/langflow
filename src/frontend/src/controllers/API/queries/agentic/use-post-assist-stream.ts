@@ -4,6 +4,9 @@ import type {
   AgenticCancelledEvent,
   AgenticCompleteEvent,
   AgenticErrorEvent,
+  AgenticFileWrittenEvent,
+  AgenticFlowPreviewEvent,
+  AgenticFlowUpdateEvent,
   AgenticProgressEvent,
   AgenticSSEEvent,
   AgenticTokenEvent,
@@ -13,6 +16,9 @@ interface StreamCallbacks {
   onProgress?: (event: AgenticProgressEvent) => void;
   onToken?: (event: AgenticTokenEvent) => void;
   onComplete?: (event: AgenticCompleteEvent) => void;
+  onFlowPreview?: (event: AgenticFlowPreviewEvent) => void;
+  onFlowUpdate?: (event: AgenticFlowUpdateEvent) => void;
+  onFileWritten?: (event: AgenticFileWrittenEvent) => void;
   onError?: (event: AgenticErrorEvent) => void;
   onCancelled?: (event: AgenticCancelledEvent) => void;
 }
@@ -55,6 +61,15 @@ function processSSELine(
     case "complete":
       callbacks.onComplete?.(event);
       return { done: true };
+    case "flow_preview":
+      callbacks.onFlowPreview?.(event);
+      break;
+    case "flow_update":
+      callbacks.onFlowUpdate?.(event);
+      break;
+    case "file_written":
+      callbacks.onFileWritten?.(event);
+      break;
     case "error":
       callbacks.onError?.(event);
       return { done: true };
@@ -142,8 +157,22 @@ export async function postAssistStream(
 
     // Process any remaining data in the buffer
     if (buffer.trim()) {
-      processSSELine(buffer.trim(), callbacks);
+      const result = processSSELine(buffer.trim(), callbacks);
+      if (result.done) {
+        return;
+      }
     }
+
+    // The reader ended without ever delivering a terminal event
+    // (complete/error/cancelled) — e.g. the connection dropped or the
+    // server crashed mid-build. Surface a terminal error so the caller
+    // clears the spinner and marks the turn failed instead of hanging
+    // forever on a half-applied canvas.
+    callbacks.onError?.({
+      event: "error",
+      message:
+        "The assistant connection ended unexpectedly before completing. Please try again.",
+    });
   } finally {
     await reader.cancel();
     reader.releaseLock();

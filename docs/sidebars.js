@@ -146,6 +146,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -153,6 +154,7 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
@@ -184,6 +186,15 @@ module.exports = {
           type: "doc",
           id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
+        },
+        {
+          type: "category",
+          label: "Bundle extensions",
+          items: [
+            "Develop/extensions-overview",
+            "Develop/extensions-quickstart",
+            "Develop/extensions-manifest",
+          ],
         },
       ],
     },
@@ -283,6 +294,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy with multiple workers",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
@@ -326,6 +342,7 @@ module.exports = {
                 "Components/dynamic-create-data",
                 "Components/parser",
                 "Components/split-text",
+                "Components/text-operations",
                 "Components/type-convert",
               ]
             },
@@ -343,8 +360,9 @@ module.exports = {
               type: "category",
               label: "Files and Knowledge",
               items: [
-                "Components/directory",
+                "Components/file-system",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
@@ -550,6 +568,11 @@ module.exports = {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",

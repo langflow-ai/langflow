@@ -75,6 +75,40 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "import-star-disallowed": "error[import-star-disallowed]: Top-level wildcard import in loc: content",
     "top-level-io-disallowed": "error[top-level-io-disallowed]: Top-level I/O primitive 'content' used in loc; bundle module import must be side-effect free.",  # noqa: E501
     "execute-imports-failed": "error[execute-imports-failed]: Subprocess import probe (--execute-imports) failed for loc: msg",  # noqa: E501
+    "version-constraint-unsatisfied": "error[version-constraint-unsatisfied]: Manifest at loc declares lfx.compat='content', which does not include this lfx package's BUNDLE_API_VERSION; refusing to load.",  # noqa: E501
+    "module-import-failed": "error[module-import-failed]: Failed to import bundle module loc: msg",
+    "duplicate-component-name": "error[duplicate-component-name]: Duplicate Component class name 'content' in bundle loc; component class names must be unique within a bundle.",  # noqa: E501
+    "duplicate-distribution": "error[duplicate-distribution]: Two installed distributions share the canonical name 'content'; the lexicographically-first manifest path wins. Locations: loc.",  # noqa: E501
+    "duplicate-inline-bundle": "error[duplicate-inline-bundle]: Inline bundle name 'content' appears in multiple LANGFLOW_COMPONENTS_PATH entries; first wins. Locations: loc.",  # noqa: E501
+    "inline-bundle-name-invalid": "error[inline-bundle-name-invalid]: Inline bundle directory 'content' does not match the bundle name pattern (lowercase snake_case).",  # noqa: E501
+    "inline-path-missing": "error[inline-path-missing]: LANGFLOW_COMPONENTS_PATH entry 'content' does not exist or is not a directory; skipped.",  # noqa: E501
+    "inline-path-unreadable": "error[inline-path-unreadable]: LANGFLOW_COMPONENTS_PATH entry 'content' could not be enumerated: msg",  # noqa: E501
+    "bundle-json-invalid": "error[bundle-json-invalid]: Inline bundle.json at loc is unreadable or malformed; falling back to derived id/version.",  # noqa: E501
+    "extension-target-exists": "error[extension-target-exists]: Cannot create extension at loc: directory already exists and is not empty.",  # noqa: E501
+    "extension-target-invalid": "error[extension-target-invalid]: Cannot create extension at loc: msg",
+    "local-extension-missing": "error[local-extension-missing]: Registered dev extension at loc is missing or no longer a directory; skipping until it reappears.",  # noqa: E501
+    "migration-table-missing": "error[migration-table-missing]: Migration table not found at loc.",
+    "migration-table-unreadable": "error[migration-table-unreadable]: Could not read migration table at loc: msg",
+    "migration-table-invalid": "error[migration-table-invalid]: Invalid migration table at loc: msg",
+    "component-not-found-with-hint": "error[component-not-found-with-hint]: Legacy component reference 'content' (in flow node loc) is not in the migration table.",  # noqa: E501
+    "component-name-ambiguous": "error[component-name-ambiguous]: Legacy component reference 'content' (in flow node loc) matches more than one migration entry.",  # noqa: E501
+    "installed-extension-immutable": "error[installed-extension-immutable]: Extension 'content' is installed via pip and cannot be mutated at runtime.",  # noqa: E501
+    "seed-directory-immutable": "error[seed-directory-immutable]: Extension 'content' comes from a seed directory and cannot be mutated at runtime.",  # noqa: E501
+    "seed-directory-not-found": "error[seed-directory-not-found]: Configured seed directory loc does not exist or is not a directory.",  # noqa: E501
+    "seed-bundle-shadowed": "error[seed-bundle-shadowed]: Seed-directory bundle 'content' at loc is shadowed by an installed Extension of the same name; the seed copy is being skipped.",  # noqa: E501
+    "bundle-shadowed": "error[bundle-shadowed]: Bundle 'content' is registered from multiple discovery sources; the lower-precedence copy at loc is being skipped in favor of the higher-precedence one.",  # noqa: E501
+    "duplicate-extension-id": "error[duplicate-extension-id]: Extension id 'content' is registered more than once (already at loc).",  # noqa: E501
+    "reload-in-progress": "error[reload-in-progress]: Reload already in progress for bundle 'content'; refuse to start a second concurrent reload.",  # noqa: E501
+    "reload-bundle-not-installed": "error[reload-bundle-not-installed]: Cannot reload bundle 'content': it is not registered. Install the extension first or pass an explicit source path.",  # noqa: E501
+    "reload-bundle-name-mismatch": "error[reload-bundle-name-mismatch]: Reload source at loc declares bundle name 'content', which does not match the registered bundle being reloaded.",  # noqa: E501
+    "reload-source-missing": "error[reload-source-missing]: Reload source path 'content' for bundle 'loc' does not exist or is not a directory.",  # noqa: E501
+    "reload-post-swap-hook-failed": "error[reload-post-swap-hook-failed]: Post-swap hook failed for bundle 'content'; the bundle swap committed but a downstream side-effect (e.g. component cache rebuild) raised.",  # noqa: E501
+    "reload-class-retag-failed": "error[reload-class-retag-failed]: Could not retag content.__module__ after reload at loc: msg",  # noqa: E501
+    "reload-transport-error": "error[reload-transport-error]: Could not reach the reload endpoint at loc: msg",
+    "duplicate-bundle-name": "error[duplicate-bundle-name]: Bundle name 'content' is provided by two installed distributions; the second is dropped to prevent collision.",  # noqa: E501 — kept on one line for snapshot diff readability
+    "multi-bundle-unsupported": "error[multi-bundle-unsupported]: Manifest declares more than one bundle entry; v0 supports exactly one bundle per extension.",  # noqa: E501
+    "extension-reload-disabled": "error[extension-reload-disabled]: Extension reload is disabled on this server.  Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A).",  # noqa: E501
+    "extension-events-keyspace-forbidden": "error[extension-events-keyspace-forbidden]: The loc query parameter is not accepted; events are scoped server-side to the authenticated user (rejected value: 'content').",  # noqa: E501
 }
 
 

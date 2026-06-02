@@ -4,7 +4,7 @@ import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
-from urllib.parse import parse_qsl, urlencode, urlparse, urlunparse
+from urllib.parse import parse_qsl, urlencode, urljoin, urlparse, urlunparse
 
 import aiofiles
 import aiofiles.os as aiofiles_os
@@ -27,7 +27,14 @@ from lfx.io import (
 from lfx.schema.data import Data
 from lfx.schema.dotdict import dotdict
 from lfx.utils.component_utils import set_current_fields, set_field_advanced, set_field_display
-from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
+
+# SSRF Protection imports - for preventing Server-Side Request Forgery attacks
+from lfx.utils.ssrf_protection import (
+    SSRFProtectionError,
+    is_ssrf_protection_enabled,
+    validate_and_resolve_url,
+)
+from lfx.utils.ssrf_transport import create_ssrf_protected_client
 
 # Define fields for each mode
 MODE_FIELDS = {
@@ -40,6 +47,27 @@ MODE_FIELDS = {
 
 # Fields that should always be visible
 DEFAULT_FIELDS = ["mode"]
+
+# HTTP redirect status codes (RFC 9110).
+HTTP_MOVED_PERMANENTLY = 301
+HTTP_FOUND = 302
+HTTP_SEE_OTHER = 303
+HTTP_TEMPORARY_REDIRECT = 307
+HTTP_PERMANENT_REDIRECT = 308
+
+# Maximum number of redirects to follow when re-validating each hop (matches httpx's default).
+MAX_REDIRECTS = 20
+
+# HTTP status codes that represent a redirect carrying a Location header.
+REDIRECT_STATUS_CODES = frozenset(
+    {
+        HTTP_MOVED_PERMANENTLY,
+        HTTP_FOUND,
+        HTTP_SEE_OTHER,
+        HTTP_TEMPORARY_REDIRECT,
+        HTTP_PERMANENT_REDIRECT,
+    }
+)
 
 
 class APIRequestComponent(Component):
@@ -303,7 +331,7 @@ class APIRequestComponent(Component):
         body: Any = None,
         timeout: int = 5,
         *,
-        follow_redirects: bool = True,
+        follow_redirects: bool = False,
         save_to_file: bool = False,
         include_httpx_metadata: bool = False,
     ) -> Data:
@@ -337,54 +365,14 @@ class APIRequestComponent(Component):
                 for redirect in response.history
             ]
 
-            is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
-            response_headers = self._headers_to_dict(response.headers)
-
-            # Base metadata
-            metadata = {
-                "source": url,
-                "status_code": response.status_code,
-                "response_headers": response_headers,
-            }
-
-            if redirection_history:
-                metadata["redirection_history"] = redirection_history
-
-            if save_to_file:
-                mode = "wb" if is_binary else "w"
-                encoding = response.encoding if mode == "w" else None
-                if file_path:
-                    await aiofiles_os.makedirs(file_path.parent, exist_ok=True)
-                    if is_binary:
-                        async with aiofiles.open(file_path, "wb") as f:
-                            await f.write(response.content)
-                            await f.flush()
-                    else:
-                        async with aiofiles.open(file_path, "w", encoding=encoding) as f:
-                            await f.write(response.text)
-                            await f.flush()
-                    metadata["file_path"] = str(file_path)
-
-                if include_httpx_metadata:
-                    metadata.update({"headers": headers})
-                return Data(data=metadata)
-
-            # Handle response content
-            if is_binary:
-                result = response.content
-            else:
-                try:
-                    result = response.json()
-                except json.JSONDecodeError:
-                    self.log("Failed to decode JSON response")
-                    result = response.text.encode("utf-8")
-
-            metadata["result"] = result
-
-            if include_httpx_metadata:
-                metadata.update({"headers": headers})
-
-            return Data(data=metadata)
+            return await self._build_response_data(
+                response,
+                url,
+                headers,
+                redirection_history,
+                save_to_file=save_to_file,
+                include_httpx_metadata=include_httpx_metadata,
+            )
         except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:
             self.log(f"Error making request to {url}")
             return Data(
@@ -396,6 +384,71 @@ class APIRequestComponent(Component):
                     **({"redirection_history": redirection_history} if redirection_history else {}),
                 },
             )
+
+    async def _build_response_data(
+        self,
+        response: httpx.Response,
+        source_url: str,
+        headers: dict | None,
+        redirection_history: list,
+        *,
+        save_to_file: bool = False,
+        include_httpx_metadata: bool = False,
+    ) -> Data:
+        """Turn an httpx response into the component's ``Data`` output.
+
+        Shared by the standard request path (``make_request``) and the redirect
+        re-validation path (``_follow_redirects_with_validation``) so both produce
+        identical metadata, optional file saving, and body decoding.
+        """
+        is_binary, file_path = await self._response_info(response, with_file_path=save_to_file)
+        response_headers = self._headers_to_dict(response.headers)
+
+        # Base metadata
+        metadata = {
+            "source": source_url,
+            "status_code": response.status_code,
+            "response_headers": response_headers,
+        }
+
+        if redirection_history:
+            metadata["redirection_history"] = redirection_history
+
+        if save_to_file:
+            mode = "wb" if is_binary else "w"
+            encoding = response.encoding if mode == "w" else None
+            if file_path:
+                await aiofiles_os.makedirs(file_path.parent, exist_ok=True)
+                if is_binary:
+                    async with aiofiles.open(file_path, "wb") as f:
+                        await f.write(response.content)
+                        await f.flush()
+                else:
+                    async with aiofiles.open(file_path, "w", encoding=encoding) as f:
+                        await f.write(response.text)
+                        await f.flush()
+                metadata["file_path"] = str(file_path)
+
+            if include_httpx_metadata:
+                metadata.update({"headers": headers})
+            return Data(data=metadata)
+
+        # Handle response content
+        if is_binary:
+            result = response.content
+        else:
+            try:
+                result = response.json()
+            except json.JSONDecodeError:
+                self.log("Failed to decode JSON response")
+                result = response.text.encode("utf-8")
+
+        metadata["result"] = result
+
+        if include_httpx_metadata:
+            metadata.update({"headers": headers})
+
+        return Data(data=metadata)
 
     def add_query_params(self, url: str, params: dict) -> str:
         """Add query parameters to URL efficiently."""
@@ -422,7 +475,22 @@ class APIRequestComponent(Component):
         return {}
 
     async def make_api_request(self) -> Data:
-        """Make HTTP request with optimized parameter handling."""
+        """Make HTTP request with SSRF protection and DNS pinning.
+
+        This method implements comprehensive SSRF (Server-Side Request Forgery) protection
+        using DNS pinning to prevent DNS rebinding attacks. The protection works by:
+        1. Validating the URL and resolving DNS during security check
+        2. Pinning the validated IP address
+        3. Forcing the HTTP client to use the pinned IP for the actual request
+        4. Ignoring any subsequent DNS changes (prevents rebinding attacks)
+
+        Returns:
+            Data: Response data from the HTTP request
+
+        Raises:
+            ValueError: If URL is invalid or blocked by SSRF protection
+        """
+        # Extract request parameters
         method = self.method
         url = self.url_input.strip() if isinstance(self.url_input, str) else ""
         headers = self.headers or {}
@@ -432,7 +500,8 @@ class APIRequestComponent(Component):
         save_to_file = self.save_to_file
         include_httpx_metadata = self.include_httpx_metadata
 
-        # Security warning when redirects are enabled
+        # Security warning: HTTP redirects can bypass SSRF protection
+        # A public URL could redirect to an internal resource
         if follow_redirects:
             self.log(
                 "Security Warning: HTTP redirects are enabled. This may allow SSRF bypass attacks "
@@ -440,53 +509,244 @@ class APIRequestComponent(Component):
                 "Only enable this if you trust the target server."
             )
 
-        # if self.mode == "cURL" and self.curl_input:
-        #     self._build_config = self.parse_curl(self.curl_input, dotdict())
-        #     # After parsing curl, get the normalized URL
-        #     url = self._build_config["url_input"]["value"]
-
-        # Normalize URL before validation
+        # Normalize URL (add https:// if no protocol specified)
         url = self._normalize_url(url)
 
-        # Validate URL
+        # Basic URL format validation
         if not validators.url(url):
             msg = f"Invalid URL provided: {url}"
             raise ValueError(msg)
 
-        # SSRF Protection: Validate URL to prevent access to internal resources
-        # TODO: In next major version (2.0), remove warn_only=True to enforce blocking
+        # ============================================================================
+        # SSRF Protection with DNS Pinning
+        # ============================================================================
+        # This prevents DNS rebinding attacks by:
+        # 1. Resolving DNS and validating IPs during security check
+        # 2. Pinning the validated IP address
+        # 3. Using a custom HTTP transport that forces use of the pinned IP
+        # 4. Ignoring any new DNS resolutions (prevents rebinding)
+        #
+        # Without DNS pinning, an attacker could:
+        # - First DNS lookup: returns public IP (passes validation)
+        # - Second DNS lookup: returns internal IP (bypasses protection)
+        # - Attack succeeds: accesses internal services
+        #
+        # With DNS pinning:
+        # - First DNS lookup: returns public IP (passes validation)
+        # - IP is pinned: "example.com = 93.184.216.34"
+        # - HTTP request: uses pinned IP directly (no new DNS lookup)
+        # - Attack fails: even if DNS changes, we use the validated IP
+        # ============================================================================
+
         try:
-            validate_url_for_ssrf(url, warn_only=True)
+            # Validate URL and get validated IPs for DNS pinning
+            _validated_url, validated_ips = validate_and_resolve_url(url)
+
+            # Log DNS pinning information for security auditing
+            if validated_ips:
+                self.log(f"SSRF Protection: Using DNS pinning with {len(validated_ips)} validated IP(s)")
+
         except SSRFProtectionError as e:
-            # This will only raise if SSRF protection is enabled and warn_only=False
+            # SSRF protection blocked the request (private IP, internal network, etc.)
             msg = f"SSRF Protection: {e}"
             raise ValueError(msg) from e
 
-        # Process query parameters
+        # Process query parameters (from string or Data object)
         if isinstance(self.query_params, str):
             query_params = dict(parse_qsl(self.query_params))
         else:
             query_params = self.query_params.data if self.query_params else {}
 
-        # Process headers and body
+        # Process headers and body into proper format
         headers = self._process_headers(headers)
         body = self._process_body(body)
         url = self.add_query_params(url, query_params)
 
-        async with httpx.AsyncClient() as client:
-            result = await self.make_request(
-                client,
+        # ============================================================================
+        # Execute the request (re-validating any redirects when SSRF protection is on)
+        # ============================================================================
+        # When SSRF protection is enabled we must NOT let httpx auto-follow redirects:
+        # a validated public URL can redirect to an internal address (loopback, RFC1918,
+        # link-local / cloud metadata) that was never checked, bypassing both the initial
+        # validation and DNS pinning. Instead we follow redirects manually so every hop
+        # is re-validated with the same denylist + DNS pinning. When protection is
+        # disabled, we preserve the previous behavior and let httpx handle redirects.
+        if is_ssrf_protection_enabled() and follow_redirects:
+            result = await self._follow_redirects_with_validation(
                 method,
                 url,
                 headers,
                 body,
                 timeout,
-                follow_redirects=follow_redirects,
+                validated_ips,
                 save_to_file=save_to_file,
                 include_httpx_metadata=include_httpx_metadata,
             )
+        else:
+            # No redirect re-validation needed:
+            # - SSRF protection is disabled (user opted out), or
+            # - redirects are disabled, so httpx makes a single request.
+            # DNS pinning still applies to the single request when protection is enabled
+            # and the host resolved to validated IPs.
+            async with self._build_http_client(url, validated_ips) as client:
+                result = await self.make_request(
+                    client,
+                    method,
+                    url,
+                    headers,
+                    body,
+                    timeout,
+                    follow_redirects=follow_redirects,
+                    save_to_file=save_to_file,
+                    include_httpx_metadata=include_httpx_metadata,
+                )
+
         self.status = result
         return result
+
+    def _build_http_client(self, url: str, validated_ips: list[str]) -> httpx.AsyncClient:
+        """Create an HTTP client, pinning DNS to validated IPs when SSRF protection applies.
+
+        Args:
+            url: The request URL whose hostname will be pinned.
+            validated_ips: IPs validated by ``validate_and_resolve_url`` for this hop.
+
+        Returns:
+            httpx.AsyncClient: A client that pins DNS to ``validated_ips`` (preventing
+            rebinding) when SSRF protection is enabled and the hop has validated IPs;
+            otherwise a standard client (protection disabled, allowlisted host, or
+            hostname extraction failure).
+        """
+        if is_ssrf_protection_enabled() and validated_ips:
+            # Extract hostname from the URL so the custom transport can pin it while
+            # preserving the Host header for virtual hosting / TLS SNI.
+            hostname = urlparse(url).hostname
+            if hostname:
+                # The custom transport tries validated IPs in order (dual-stack / LB).
+                return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
+        return httpx.AsyncClient()
+
+    @staticmethod
+    def _method_for_redirect(method: str, status_code: int) -> str:
+        """Return the HTTP method to use after a redirect, mirroring httpx semantics.
+
+        A 303 (See Other) always becomes GET; 301/302 downgrade POST to GET for
+        browser compatibility; 307/308 preserve the original method (and body).
+        """
+        method = method.upper()
+        if status_code == HTTP_SEE_OTHER and method != "HEAD":
+            return "GET"
+        if status_code in (HTTP_MOVED_PERMANENTLY, HTTP_FOUND) and method == "POST":
+            return "GET"
+        return method
+
+    @staticmethod
+    def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:
+        """Drop sensitive headers when a redirect crosses to a different host.
+
+        Mirrors httpx's auto-follow behavior so manually following redirects does not
+        leak credentials (Authorization / Cookie) to a different host than the one the
+        caller intended them for. Same-host redirects keep all headers.
+        """
+        if not headers:
+            return headers
+        if urlparse(current_url).hostname == urlparse(next_url).hostname:
+            return headers
+        sensitive = {"authorization", "proxy-authorization", "cookie"}
+        return {k: v for k, v in headers.items() if k.lower() not in sensitive}
+
+    async def _follow_redirects_with_validation(
+        self,
+        method: str,
+        url: str,
+        headers: dict | None,
+        body: Any,
+        timeout: int,
+        validated_ips: list[str],
+        *,
+        save_to_file: bool = False,
+        include_httpx_metadata: bool = False,
+    ) -> Data:
+        """Make the request and follow redirects manually, re-validating every hop.
+
+        This closes an SSRF bypass: with ``follow_redirects`` enabled, httpx would
+        otherwise auto-follow a redirect from a validated public URL to an internal
+        address that was never checked. Here each redirect ``Location`` is resolved
+        (relative locations included) and re-validated with ``validate_and_resolve_url``
+        — the same private/loopback/link-local denylist and DNS pinning applied to the
+        initial request — before any connection to it is made. A blocked hop raises
+        ``ValueError``; the number of redirects is capped at ``MAX_REDIRECTS``.
+        """
+        method = method.upper()
+        if method not in {"GET", "POST", "PATCH", "PUT", "DELETE"}:
+            msg = f"Unsupported method: {method}"
+            raise ValueError(msg)
+
+        processed_body = self._process_body(body)
+        current_url = url
+        current_ips = validated_ips
+        redirection_history: list[dict] = []
+
+        for _ in range(MAX_REDIRECTS + 1):
+            request_params: dict[str, Any] = {
+                "method": method,
+                "url": current_url,
+                "headers": headers,
+                "timeout": timeout,
+                # Never let httpx follow redirects itself; each hop is validated below.
+                "follow_redirects": False,
+            }
+            # Only include body for methods that support it (GET must not have a body).
+            if method in {"POST", "PATCH", "PUT", "DELETE"} and processed_body is not None:
+                request_params["json"] = processed_body
+
+            try:
+                async with self._build_http_client(current_url, current_ips) as client:
+                    response = await client.request(**request_params)
+            except (httpx.HTTPError, httpx.RequestError, httpx.TimeoutException) as exc:
+                self.log(f"Error making request to {current_url}")
+                return Data(
+                    data={
+                        "source": url,
+                        "headers": headers,
+                        "status_code": 500,
+                        "error": str(exc),
+                        **({"redirection_history": redirection_history} if redirection_history else {}),
+                    },
+                )
+
+            location = response.headers.get("Location")
+            if response.status_code in REDIRECT_STATUS_CODES and location:
+                # Resolve relative redirects against the current URL.
+                next_url = urljoin(current_url, location)
+                redirection_history.append({"url": location, "status_code": response.status_code})
+
+                # Re-validate the redirect target with the same SSRF denylist + DNS pinning.
+                # Non-http(s) schemes, private/loopback/link-local hosts, and hostnames that
+                # resolve to blocked IPs all raise SSRFProtectionError here.
+                try:
+                    _validated_url, current_ips = validate_and_resolve_url(next_url)
+                except SSRFProtectionError as e:
+                    msg = f"SSRF Protection: blocked redirect to {next_url}: {e}"
+                    raise ValueError(msg) from e
+
+                method = self._method_for_redirect(method, response.status_code)
+                headers = self._headers_for_redirect(headers, current_url, next_url)
+                current_url = next_url
+                continue
+
+            # Not a redirect (or no Location header) - this is the final response.
+            return await self._build_response_data(
+                response,
+                url,
+                headers,
+                redirection_history,
+                save_to_file=save_to_file,
+                include_httpx_metadata=include_httpx_metadata,
+            )
+
+        msg = f"SSRF Protection: exceeded the maximum of {MAX_REDIRECTS} redirects while requesting {url}"
+        raise ValueError(msg)
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None) -> dotdict:
         """Update the build config based on the selected mode."""

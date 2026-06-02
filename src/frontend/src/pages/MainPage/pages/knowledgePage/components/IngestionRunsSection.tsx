@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
   type PaginatedIngestionRunResponse,
@@ -19,22 +20,24 @@ const TERMINAL_RUN_STATUSES = new Set([
 const RUN_POLL_INTERVAL_MS = 5000;
 
 const STATUS_STYLES: Record<string, string> = {
-  succeeded: "bg-emerald-50 text-emerald-700 border-emerald-200",
-  partial: "bg-amber-50 text-amber-700 border-amber-200",
-  failed: "bg-rose-50 text-rose-700 border-rose-200",
-  cancelled: "bg-slate-50 text-slate-600 border-slate-200",
-  running: "bg-sky-50 text-sky-700 border-sky-200",
-  pending: "bg-slate-50 text-slate-600 border-slate-200",
+  succeeded:
+    "bg-accent-emerald text-accent-emerald-foreground border-accent-emerald",
+  partial: "bg-warning text-warning-foreground border-warning",
+  failed: "bg-error-red text-accent-red-foreground border-error-red-border",
+  cancelled: "bg-muted text-muted-foreground border-border",
+  running:
+    "bg-accent-indigo text-accent-indigo-foreground border-accent-indigo",
+  pending: "bg-muted text-muted-foreground border-border",
 };
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
-  file_upload: "File Upload",
-  folder: "Folder",
-  template: "Flow Template",
-  google_drive: "Google Drive",
-  s3: "AWS S3",
-  onedrive: "OneDrive",
-  sharepoint: "SharePoint",
+  file_upload: "knowledge.ingestionSourceFileUpload",
+  folder: "knowledge.ingestionSourceFolder",
+  template: "knowledge.ingestionSourceTemplate",
+  google_drive: "knowledge.ingestionSourceGoogleDrive",
+  s3: "knowledge.ingestionSourceS3",
+  onedrive: "knowledge.ingestionSourceOneDrive",
+  sharepoint: "knowledge.ingestionSourceSharePoint",
 };
 
 function formatBytes(bytes: number): string {
@@ -56,6 +59,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
+  const { t } = useTranslation();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const { data, isLoading, isError } = useGetIngestionRuns(
     {
@@ -82,7 +86,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
   return (
     <div className="space-y-3 px-4">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium">Ingestion Runs</h4>
+        <h4 className="text-sm font-medium">{t("knowledge.ingestionRuns")}</h4>
         {data?.total ? (
           <span className="text-xs text-muted-foreground">
             {data.total} total
@@ -91,10 +95,12 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
       </div>
 
       {isLoading && (
-        <div className="text-sm text-muted-foreground">Loading runs…</div>
+        <div className="text-sm text-muted-foreground">
+          {t("knowledge.loadingRuns")}
+        </div>
       )}
       {isError && (
-        <div className="text-sm text-rose-600">
+        <div className="text-sm text-destructive">
           Unable to load ingestion runs.
         </div>
       )}
@@ -109,8 +115,9 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
         {data?.runs.map((run) => {
           const statusClass =
             STATUS_STYLES[run.status] ?? STATUS_STYLES.pending;
-          const sourceLabel =
-            SOURCE_TYPE_LABELS[run.source_type] ?? run.source_type;
+          const sourceLabel = SOURCE_TYPE_LABELS[run.source_type]
+            ? t(SOURCE_TYPE_LABELS[run.source_type])
+            : run.source_type;
           return (
             <button
               key={run.id}
@@ -135,7 +142,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
                 <span className="flex items-center gap-1">
                   <ForwardedIconComponent
                     name="CircleCheck"
-                    className="h-3 w-3 text-emerald-600"
+                    className="h-3 w-3 text-accent-emerald-foreground"
                   />
                   {run.succeeded}
                 </span>
@@ -143,7 +150,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
                   <span className="flex items-center gap-1">
                     <ForwardedIconComponent
                       name="CircleAlert"
-                      className="h-3 w-3 text-rose-600"
+                      className="h-3 w-3 text-destructive"
                     />
                     {run.failed}
                   </span>
@@ -152,7 +159,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
                   <span className="flex items-center gap-1">
                     <ForwardedIconComponent
                       name="CircleMinus"
-                      className="h-3 w-3 text-slate-500"
+                      className="h-3 w-3 text-muted-foreground"
                     />
                     {run.skipped}
                   </span>

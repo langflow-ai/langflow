@@ -297,13 +297,67 @@ async def test_update_table_params_with_load_from_db_fields_basic():
     assert table_data[0]["email"] == "admin@company.com"
     assert table_data[0]["role"] == "admin"  # unchanged
 
-    # Second row should have None for variables not found
-    assert table_data[1]["username"] is None  # static_user not in mock DB
-    assert table_data[1]["email"] is None  # static@example.com not in mock DB
+    # Unmarked values that are not variables should stay literal.
+    assert table_data[1]["username"] == "static_user"
+    assert table_data[1]["email"] == "static@example.com"
     assert table_data[1]["role"] == "user"  # unchanged
 
     # Metadata should be removed
     assert "table_data_load_from_db_columns" not in result
+
+
+@pytest.mark.asyncio
+async def test_update_table_params_respects_cell_level_literal_marker():
+    """Explicit literal table cells should not be resolved as global variables."""
+    custom_component = MagicMock()
+    custom_component.get_variable = AsyncMock(return_value="resolved_value")
+
+    params = {
+        "table_data": [
+            {
+                "header": "GLOBAL_VAR_NAME",
+                "__load_from_db_fields": {"header": False},
+            },
+        ],
+        "table_data_load_from_db_columns": ["header"],
+    }
+
+    with patch("lfx.interface.initialize.loading.session_scope") as mock_session_scope:
+        mock_session_scope.return_value.__aenter__.return_value = MagicMock()
+
+        result = await update_table_params_with_load_from_db_fields(
+            custom_component, params, "table_data", fallback_to_env_vars=False
+        )
+
+    assert result["table_data"] == [{"header": "GLOBAL_VAR_NAME"}]
+    custom_component.get_variable.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_table_params_respects_cell_level_global_variable_marker():
+    """Explicit global-variable table cells should resolve via load_from_db."""
+    custom_component = MagicMock()
+    custom_component.get_variable = AsyncMock(return_value="resolved_value")
+
+    params = {
+        "table_data": [
+            {
+                "header": "GLOBAL_VAR_NAME",
+                "__load_from_db_fields": {"header": True},
+            },
+        ],
+        "table_data_load_from_db_columns": ["header"],
+    }
+
+    with patch("lfx.interface.initialize.loading.session_scope") as mock_session_scope:
+        mock_session_scope.return_value.__aenter__.return_value = MagicMock()
+
+        result = await update_table_params_with_load_from_db_fields(
+            custom_component, params, "table_data", fallback_to_env_vars=False
+        )
+
+    assert result["table_data"] == [{"header": "resolved_value"}]
+    custom_component.get_variable.assert_awaited_once()
 
 
 @pytest.mark.asyncio

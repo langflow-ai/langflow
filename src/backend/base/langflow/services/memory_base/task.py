@@ -29,6 +29,7 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
 from langchain_chroma import Chroma
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
 from sqlalchemy import text
 from sqlmodel import Session, col, select
@@ -386,7 +387,12 @@ async def ingest_memory_task(*, request: IngestionRequest) -> dict:
             client = KBStorageHelper.get_fresh_chroma_client(kb_path)
             written = 0
             try:
-                chroma = Chroma(client=client, embedding_function=embeddings, collection_name=kb_name)
+                chroma = Chroma(
+                    client=client,
+                    embedding_function=embeddings,
+                    collection_name=kb_name,
+                    **chroma_langchain_collection_kwargs(),
+                )
 
                 written = await KBIngestionHelper.write_documents_to_chroma(
                     documents=documents,

@@ -6,7 +6,6 @@ python:
   - "pyproject.toml"
   - "uv.lock"
   - "src/backend/base/pyproject.toml"
-  - "src/backend/base/uv.lock"
   - "src/lfx/pyproject.toml"
   - "**/python_test.yml"
   - ".github/workflows/ci.yml"
@@ -23,6 +22,7 @@ frontend:
   - "src/frontend/**"
   - "**/typescript_test.yml"
   - "**/jest_test.yml"
+  - "**/lint-js.yml"
   - ".github/workflows/ci.yml"
   - "src/lfx/src/lfx/_assets/component_index.json"
 docs:
@@ -110,3 +110,7 @@ database:
 
 mainpage:
   - "src/frontend/src/pages/MainPage/**"
+
+design-md:
+  - "DESIGN.md"
+  - ".github/workflows/ci.yml"

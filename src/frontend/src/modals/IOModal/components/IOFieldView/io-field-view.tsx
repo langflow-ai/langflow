@@ -23,7 +23,6 @@ import {
   hasDuplicateKeys,
 } from "../../../../utils/reactflowUtils";
 import CsvSelect from "./components/csv-selected";
-import IOFileInput from "./components/file-input";
 import IoJsonInput from "./components/json-input";
 import IOKeyPairInput from "./components/key-pair-input";
 
@@ -65,10 +64,11 @@ export default function IOFieldView({
         nodeId: node.id,
         name: "input_value",
       })
-    : { handleOnNewValue: (value: any, options?: any) => {} };
+    : // biome-ignore lint/suspicious/noExplicitAny: legacy
+      { handleOnNewValue: (value: any, options?: any) => {} };
 
   function handleOutputType() {
-    if (!node) return <>"No node found!"</>;
+    if (!node) return <>{t("io.noNodeFound")}</>;
     switch (type) {
       case InputOutput.INPUT:
         switch (fieldType) {
@@ -78,7 +78,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("io.enterText")}
                 value={node.data.node!.template["input_value"].value}
                 onChange={(e) => {
                   e.target.value;
@@ -158,7 +158,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Enter text..."}
+                placeholder={t("io.enterText")}
                 value={node.data.node!.template["input_value"]}
                 onChange={(e) => {
                   e.target.value;
@@ -197,7 +197,7 @@ export default function IOFieldView({
             );
           case IOOutputTypes.IMAGE:
             return left ? (
-              <div>Expand the view to see the image</div>
+              <div>{t("output.imgView")}</div>
             ) : (
               <ImageViewer
                 image={
@@ -277,7 +277,7 @@ export default function IOFieldView({
                 className={`w-full custom-scroll ${
                   left ? "min-h-32" : "h-full"
                 }`}
-                placeholder={"Empty"}
+                placeholder={t("common.empty")}
                 // update to real value on flowPool
                 value={
                   (flowPool[node.id] ?? [])[

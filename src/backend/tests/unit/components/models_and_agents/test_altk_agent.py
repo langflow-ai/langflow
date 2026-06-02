@@ -42,7 +42,6 @@ class TestAgentComponent(ComponentTestBaseWithoutClient):
         return {
             "_type": "Agent",
             "add_current_date_tool": True,
-            "agent_description": "A helpful agent",
             "agent_llm": MockLanguageModel(),
             "handle_parsing_errors": True,
             "input_value": "",

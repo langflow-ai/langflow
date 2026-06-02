@@ -6,6 +6,7 @@ from lfx.custom import Component
 from lfx.io import IntInput, MessageTextInput, Output
 from lfx.log.logger import logger
 from lfx.schema import DataFrame
+from lfx.utils.ssrf_requests import ssrf_safe_get
 
 
 class RSSReaderComponent(Component):
@@ -38,7 +39,10 @@ class RSSReaderComponent(Component):
 
     def read_rss(self) -> DataFrame:
         try:
-            response = requests.get(self.rss_url, timeout=self.timeout)
+            # SSRF Protection: validate the URL and every redirect hop before fetching,
+            # blocking requests to private/loopback/link-local and cloud metadata endpoints
+            # when LANGFLOW_SSRF_PROTECTION_ENABLED=true.
+            response = ssrf_safe_get(self.rss_url, timeout=self.timeout)
             response.raise_for_status()
             if not response.content.strip():
                 msg = "Empty response received"

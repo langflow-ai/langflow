@@ -10,6 +10,7 @@ import {
   useState,
 } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { useShortcutsStore } from "@/stores/shortcuts";
@@ -52,6 +53,16 @@ const SnowflakeIcon = memo(() => (
   <IconComponent className="!w-3 !h-3 text-ice" name="Snowflake" />
 ));
 
+// Extension components carry a namespaced ``data.type`` of the form
+// ``ext:<bundle>:<ClassName>@<slot>``.  The inspect-button test IDs
+// historically read ``output-inspection-<title>-<ClassName>``; without this
+// strip, extension components would yield verbose IDs containing ``:`` and
+// ``@`` that diverge from the built-in convention.
+const classNameFromType = (type: string): string => {
+  const match = type.match(/^ext:[^:]+:([^@]+)@.+$/);
+  return match?.[1] ?? type;
+};
+
 const InspectButton = memo(
   forwardRef(
     (
@@ -79,7 +90,7 @@ const InspectButton = memo(
       <Button
         ref={ref}
         disabled={disabled}
-        data-testid={`output-inspection-${title.toLowerCase()}-${id.toLowerCase()}`}
+        data-testid={`output-inspection-${title.toLowerCase()}-${classNameFromType(id).toLowerCase()}`}
         unstyled
         onClick={onClick}
       >
@@ -127,6 +138,7 @@ function NodeOutputField({
   hidden,
   handleSelectOutput,
 }: NodeOutputFieldComponentType): JSX.Element {
+  const { t } = useTranslation();
   const ref = useRef<HTMLDivElement>(null);
   const updateNodeInternals = useUpdateNodeInternals();
 
@@ -431,9 +443,9 @@ function NodeOutputField({
             content={
               displayOutputPreview
                 ? unknownOutput || emptyOutput
-                  ? "Output can't be displayed"
-                  : "Inspect output"
-                : "Please build the component first"
+                  ? t("node.outputCantBeDisplayed")
+                  : t("node.inspectOutput")
+                : t("node.buildComponentFirst")
             }
             styleClasses="z-40"
           >

@@ -1,6 +1,7 @@
 import * as Form from "@radix-ui/react-form";
 import { cloneDeep } from "lodash";
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -57,6 +58,7 @@ const FlowSettingsComponent = ({
   close,
   open,
 }: FlowSettingsComponentProps): JSX.Element => {
+  const { t } = useTranslation();
   const saveFlow = useSaveFlow();
   const currentFlow = useFlowStore((state) =>
     flowData ? undefined : state.currentFlow,
@@ -89,7 +91,7 @@ const FlowSettingsComponent = ({
       saveFlow(newFlow)
         ?.then(() => {
           setIsSaving(false);
-          setSuccessData({ title: "Changes saved successfully" });
+          setSuccessData({ title: t("success.changesSaved") });
           close();
         })
         .catch(() => {
@@ -138,7 +140,7 @@ const FlowSettingsComponent = ({
             type="button"
             onClick={() => close()}
           >
-            Cancel
+            {t("modal.cancelButton")}
           </Button>
           <Form.Submit asChild>
             <Button
@@ -148,7 +150,7 @@ const FlowSettingsComponent = ({
               loading={isSaving}
               disabled={disableSave}
             >
-              Save
+              {t("modal.saveButton")}
             </Button>
           </Form.Submit>
         </div>

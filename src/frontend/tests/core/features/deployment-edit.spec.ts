@@ -12,6 +12,11 @@ import {
   PROVIDERS_MOCK,
 } from "../../utils/deployment-mocks";
 
+test.skip(
+  process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
+  "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
+);
+
 async function setupRoutes(page: Parameters<typeof test>[2]["page"]) {
   // Register broad catch-all FIRST so specific routes (registered after) take priority via LIFO
   await page.route("**/api/v1/deployments*", (route) => {
@@ -101,11 +106,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -128,11 +128,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -161,11 +156,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -188,11 +178,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -203,6 +188,10 @@ test(
 
     // Wait for stepper body to render (parallel fetches must complete)
     await expectDeploymentTypeStep(page);
+
+    // Change the name so the update payload is non-empty (no-op saves keep the modal open)
+    const nameInput = page.getByPlaceholder("e.g., Sales Bot");
+    await nameInput.fill("Updated Deployment");
 
     // Navigate through the stepper steps to reach Review
     // Step: Type → click Next
@@ -233,11 +222,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     await setupRoutes(page);
     await navigateToDeployments(page);
 
@@ -382,11 +366,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     // Capture folder ID from the projects API before bootstrap
     const projectsResponsePromise = page.waitForResponse(
       (resp) =>
@@ -483,11 +462,6 @@ test(
     tag: ["@release", "@workspace", "@api"],
   },
   async ({ page }) => {
-    test.skip(
-      process.env.LANGFLOW_FEATURE_WXO_DEPLOYMENTS !== "true",
-      "Requires LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true",
-    );
-
     const projectsResponsePromise = page.waitForResponse(
       (resp) =>
         resp.url().includes("/api/v1/projects") && resp.status() === 200,

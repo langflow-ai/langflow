@@ -3,6 +3,7 @@ import { MemoryDocumentPanel } from "../MemoryDocumentPanel";
 
 jest.mock("@/components/ui/dialog", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   Dialog: ({ children, onOpenChange }: any) => (
     <div>
       <button
@@ -14,7 +15,9 @@ jest.mock("@/components/ui/dialog", () => ({
       {children}
     </div>
   ),
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DialogContent: ({ children }: any) => <div>{children}</div>,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   DialogTitle: ({ children, ...props }: any) => (
     <div {...props}>{children}</div>
   ),
@@ -45,6 +48,7 @@ describe("MemoryDocumentPanel", () => {
             sender: "user",
             timestamp: "2025-01-01T10:00:00.000Z",
             content: "hello world",
+            // biome-ignore lint/suspicious/noExplicitAny: legacy
           } as any
         }
       />,
@@ -81,6 +85,7 @@ describe("MemoryDocumentPanel", () => {
             message_id: "msg-3",
             session_id: "s1",
             content: "data without timestamps",
+            // biome-ignore lint/suspicious/noExplicitAny: legacy
           } as any
         }
       />,

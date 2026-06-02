@@ -162,6 +162,20 @@ class ModelInputMixin(BaseModel):
     """Limit for the number of options to display."""
     external_options: dict[str, Any] | None = None
     """Dictionary of external options to display below the dropdown options (e.g., 'Connect other models')."""
+    filters: dict[str, Any] | None = None
+    """Optional metadata constraints applied to the model picker.
+
+    Keys are model-metadata names (any field on ``ModelMetadata`` — e.g.
+    ``tool_calling``, ``reasoning``, ``vision``) and the values are matched
+    via ``==`` against each model's metadata. Models that don't satisfy
+    every constraint are hidden from the dropdown AND from the
+    sticky-default re-injection path, so a previously-saved selection that
+    no longer satisfies the constraints is replaced with a compatible
+    default instead of silently re-appearing.
+
+    Used by the Agent component (``filters={"tool_calling": True}``) to
+    keep models that can't actually run with tools out of the picker.
+    """
 
     @field_validator("model_options", mode="before")
     @classmethod

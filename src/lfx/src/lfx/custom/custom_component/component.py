@@ -6,6 +6,7 @@ import inspect
 import logging
 from collections.abc import AsyncIterator, Iterator
 from copy import deepcopy
+from pathlib import Path
 from textwrap import dedent
 from typing import TYPE_CHECKING, Any, ClassVar, NamedTuple, get_type_hints
 from uuid import UUID
@@ -103,6 +104,10 @@ def _get_secret_text(input_obj: Any, value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _copy_component_template(items: list[Any]) -> list[Any]:
+    return [item.model_copy(deep=True) if isinstance(item, BaseModel) else deepcopy(item) for item in items]
+
+
 class PlaceholderGraph(NamedTuple):
     """A placeholder graph structure for components, providing backwards compatibility.
 
@@ -149,6 +154,9 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
+        self.inputs = _copy_component_template(getattr(self.__class__, "inputs", []))
+        self.outputs = _copy_component_template(getattr(self.__class__, "outputs", []))
+
         # Initialize instance-specific attributes first
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
@@ -427,7 +435,7 @@ class Component(CustomComponent):
         inputs_raw = getattr(self, "_Component__inputs", {})
 
         kwargs = dict(config)
-        kwargs["inputs"] = dict(inputs_raw)
+        kwargs.update(inputs_raw)
         new_component = type(self)(**kwargs)
         new_component._code = self._code
         new_component._outputs_map = self._outputs_map
@@ -479,10 +487,19 @@ class Component(CustomComponent):
         try:
             module = inspect.getmodule(self.__class__)
             if module is None:
-                msg = "Could not find module for class"
-                raise ValueError(msg)
-
-            class_code = inspect.getsource(module)
+                # Fallback: ``inspect.getmodule`` returns None when
+                # ``cls.__module__`` points to a ``sys.modules`` key that has
+                # been swapped or dropped (e.g. mid-reload, when the staging
+                # namespace was just collapsed back into the production
+                # namespace).  Read the file directly so cache rebuilds and
+                # template construction survive a transient inconsistency.
+                try:
+                    class_code = Path(inspect.getfile(self.__class__)).read_text(encoding="utf-8")
+                except (OSError, TypeError) as inner:
+                    msg = f"Could not find module for class {self.__class__.__name__!r}"
+                    raise ValueError(msg) from inner
+            else:
+                class_code = inspect.getsource(module)
             self._code = class_code
         except (OSError, TypeError) as e:
             msg = f"Could not find source code for {self.__class__.__name__}"
@@ -934,6 +951,14 @@ class Component(CustomComponent):
         except KeyError:
             input_ = self._get_fallback_input(name=key, display_name=key)
             self._inputs[key] = input_
+            # ``self.inputs`` resolves to the class attribute when the instance
+            # has not shadowed it yet. Appending in that case mutates the
+            # class-level list and leaks fallback values (e.g. a live LLM
+            # client) into every future instance — which then crashes during
+            # ``map_inputs`` deepcopy on the next ``Component()``. Promote to
+            # an instance-local copy before mutating.
+            if "inputs" not in self.__dict__:
+                self.inputs = list(self.inputs) if self.inputs else []
             self.inputs.append(input_)
             return input_
 
@@ -1060,11 +1085,17 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            input_obj = self._inputs.get(name)
+            if input_obj is not None and hasattr(input_obj, "load_from_db"):
+                frontend_node.set_field_load_from_db_in_template(name, bool(input_obj.load_from_db))
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
+                input_obj = self._inputs.get(name)
+                if input_obj is not None and "load_from_db" in template[name] and hasattr(input_obj, "load_from_db"):
+                    template[name]["load_from_db"] = bool(input_obj.load_from_db)
             except KeyError as e:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:

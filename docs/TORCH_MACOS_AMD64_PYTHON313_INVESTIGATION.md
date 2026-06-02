@@ -1,8 +1,7 @@
 # Investigation: PyTorch on macOS AMD64 (x86_64) + Python 3.13
 
-**Jira:** LE-172  
-**Date:** 2026-04-02  
-**Status:** Complete  
+**Date:** 2026-04-02
+**Status:** Complete
 
 ---
 

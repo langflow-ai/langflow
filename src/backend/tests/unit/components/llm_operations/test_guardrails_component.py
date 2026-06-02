@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from lfx.components.llm_operations.guardrails import GuardrailsComponent
 from lfx.schema import Data
+from lfx.schema.message import Message
 
 from tests.base import ComponentTestBaseWithoutClient
 
@@ -310,61 +311,111 @@ class TestGuardrailsComponent(ComponentTestBaseWithoutClient):
     # Process Pass/Fail Output Tests
     # ===================
 
+    def test_outputs_expose_message_and_data_paths(self):
+        """Test that pass/fail outputs expose separate Message and Data handles."""
+        component = GuardrailsComponent()
+
+        visible_outputs = [output for output in component.outputs if not output.hidden]
+        assert [(output.name, output.types) for output in visible_outputs] == [
+            ("pass_result", ["Message"]),
+            ("failed_result", ["Message"]),
+            ("data_result", ["Data"]),
+        ]
+
+    def test_no_outputs_are_hidden_by_default(self):
+        """Test that all Guardrails outputs are visible by default."""
+        component = GuardrailsComponent()
+
+        hidden_outputs = [output for output in component.outputs if output.hidden]
+        assert hidden_outputs == []
+
     @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_process_pass_returns_data_on_success(self, mock_get_llm, mock_llm, default_kwargs):
-        """Test that process_pass returns Data with text when validation passes."""
+    def test_pass_message_returns_raw_text_on_success(self, mock_get_llm, mock_llm, default_kwargs):
+        """Test that pass_message returns raw Message text when validation passes."""
         mock_get_llm.return_value = mock_llm
         component = GuardrailsComponent(**default_kwargs)
         component._pre_run_setup()
         component.stop = MagicMock()  # Mock the stop method
 
-        result = component.process_check()
+        result = component.pass_message()
+
+        assert isinstance(result, Message)
+        assert result.text == default_kwargs["input_text"]
+
+    @patch("lfx.components.llm_operations.guardrails.get_llm")
+    def test_fail_message_returns_justification_on_failure(
+        self, mock_get_llm, mock_llm_detect_violation, default_kwargs
+    ):
+        """Test that fail_message returns Message with justification when validation fails."""
+        mock_get_llm.return_value = mock_llm_detect_violation
+        component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
+        component.stop = MagicMock()  # Mock the stop method
+
+        result = component.fail_message()
+
+        assert isinstance(result, Message)
+        assert result.error is True
+        assert result.text
+        assert "PII" in result.text
+
+    @patch("lfx.components.llm_operations.guardrails.get_llm")
+    def test_pass_message_returns_empty_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
+        """Test that pass_message stops pass outputs when validation fails."""
+        mock_get_llm.return_value = mock_llm_detect_violation
+        component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
+        component.stop = MagicMock()
+
+        result = component.pass_message()
+
+        assert isinstance(result, Message)
+        assert result.text == ""
+        component.stop.assert_any_call("pass_result")
+
+    @patch("lfx.components.llm_operations.guardrails.get_llm")
+    def test_fail_message_returns_empty_on_success(self, mock_get_llm, mock_llm, default_kwargs):
+        """Test that fail_message stops fail outputs when validation passes."""
+        mock_get_llm.return_value = mock_llm
+        component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
+        component.stop = MagicMock()
+
+        result = component.fail_message()
+
+        assert isinstance(result, Message)
+        assert result.text == ""
+        component.stop.assert_any_call("failed_result")
+
+    @patch("lfx.components.llm_operations.guardrails.get_llm")
+    def test_result_data_returns_pass_payload_on_success(self, mock_get_llm, mock_llm, default_kwargs):
+        """Test that result_data returns Data with pass payload when validation passes."""
+        mock_get_llm.return_value = mock_llm
+        component = GuardrailsComponent(**default_kwargs)
+        component._pre_run_setup()
+        component.stop = MagicMock()
+
+        result = component.result_data()
 
         assert isinstance(result, Data)
         assert result.data.get("result") == "pass"
         assert result.data.get("text") == default_kwargs["input_text"]
+        assert "justification" not in result.data
 
     @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_process_fail_returns_data_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
-        """Test that process_fail returns Data with justification when validation fails."""
+    def test_result_data_returns_fail_payload_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
+        """Test that result_data returns Data with fail payload when validation fails."""
         mock_get_llm.return_value = mock_llm_detect_violation
         component = GuardrailsComponent(**default_kwargs)
         component._pre_run_setup()
-        component.stop = MagicMock()  # Mock the stop method
+        component.stop = MagicMock()
 
-        result = component.process_check()
+        result = component.result_data()
 
         assert isinstance(result, Data)
         assert result.data.get("result") == "fail"
+        assert result.data.get("text") == default_kwargs["input_text"]
         assert "justification" in result.data
-
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_process_pass_returns_empty_on_failure(self, mock_get_llm, mock_llm_detect_violation, default_kwargs):
-        """Test that process_check stops pass_result when validation fails."""
-        mock_get_llm.return_value = mock_llm_detect_violation
-        component = GuardrailsComponent(**default_kwargs)
-        component._pre_run_setup()
-        component.stop = MagicMock()
-
-        result = component.process_check()
-
-        assert isinstance(result, Data)
-        assert result.data.get("result") == "fail"
-        component.stop.assert_called_with("pass_result")
-
-    @patch("lfx.components.llm_operations.guardrails.get_llm")
-    def test_process_fail_returns_empty_on_success(self, mock_get_llm, mock_llm, default_kwargs):
-        """Test that process_check stops failed_result when validation passes."""
-        mock_get_llm.return_value = mock_llm
-        component = GuardrailsComponent(**default_kwargs)
-        component._pre_run_setup()
-        component.stop = MagicMock()
-
-        result = component.process_check()
-
-        assert isinstance(result, Data)
-        assert result.data.get("result") == "pass"
-        component.stop.assert_called_with("failed_result")
 
     # ===================
     # Custom Guardrail Tests

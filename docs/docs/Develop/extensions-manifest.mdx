@@ -1,0 +1,131 @@
+---
+title: Manifest reference
+slug: /extensions-manifest
+---
+
+This page is the reference for the `extension.json` manifest the Langflow Extension loader consumes.
+
+The canonical JSON Schema lives at [`https://schemas.langflow.org/extension/v1.json`](https://schemas.langflow.org/extension/v1.json) and is generated from the Pydantic model at [`lfx.extension.manifest.ExtensionManifest`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/extension/manifest.py).
+
+To export the live schema, run:
+
+```bash
+lfx extension schema --output extension.schema.json
+```
+
+Use the `$schema` reference in your manifest so editors can autocomplete and validate inline:
+
+```json
+{
+  "$schema": "https://schemas.langflow.org/extension/v1.json",
+  "id": "lfx-my-extension",
+  "version": "0.1.0",
+  "name": "My extension",
+  "lfx": { "compat": ["1"] },
+  "bundles": [{ "name": "my_bundle", "path": "components/my_bundle" }]
+}
+```
+
+## Top-level fields
+
+| Field | Type | Required | Description |
+| --- | --- | --- | --- |
+| `id` | string | yes | Globally-unique extension ID. Lowercase, hyphenated, starts with a letter, 2-64 chars. Convention: `lfx-<name>`. |
+| `version` | string | yes | SemVer 2.0.0 version string for this extension release. |
+| `name` | string | yes | Human-readable display name shown in the Langflow palette. 1-200 chars. |
+| `description` | string \| null | no | Optional one-paragraph summary, max 2000 chars. |
+| `lfx` | object | yes | [Compatibility declaration](#lfx-compatibility-declaration) against the BUNDLE_API contract. |
+| `bundles` | array | yes | [Bundle list](#bundles). v0 accepts **exactly one** bundle. |
+| `capabilities` | object | no | [Optional capability flags](#capabilities). Defaults to all-false. |
+| `$schema` | string | no | Optional pointer to this JSON Schema; editors use it for autocomplete. |
+
+`additionalProperties: false` — any field not listed here is rejected with a typed error. Reserved names (`services`, `routes`, `hooks`, `starterProjects`, `userConfig`) are documented under [Deferred fields](#deferred-fields) and surface a more specific error code.
+
+## `lfx`: compatibility declaration
+
+```json
+"lfx": { "compat": ["1"] }
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `compat` | array of strings | Non-empty list of `BUNDLE_API.md` contract versions this extension supports. Each entry is a positive-integer string. |
+
+The runtime compares `str(BUNDLE_API_VERSION)` against this list. A mismatch fails install with `version-constraint-unsatisfied`. v0 accepts only `"1"`; lists like `["1", "2"]` become meaningful when a future BUNDLE_API revision ships.
+
+## `bundles`
+
+```json
+"bundles": [
+  { "name": "my_bundle", "path": "components/my_bundle" }
+]
+```
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `name` | string | Bundle name; addressable as `ext:<bundle>:<Class>@<slot>`. Lowercase snake_case, starts with a letter, 2-64 chars. |
+| `path` | string | Path to the bundle directory, relative to the manifest. Must not start with `/` or contain `..`. |
+
+v0 enforces `minItems: 1, maxItems: 1`; multi-bundle extensions are rejected with `multi-bundle-deferred-in-this-milestone` and ship in a later epic.
+
+## `capabilities`
+
+Optional. Defaults to `{ "requiresCredentials": false }`.
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `requiresCredentials` | bool | If true, the loader records that components in this bundle expect credential variables to be configured before use. |
+
+Additional capability keys are rejected with `extra="forbid"` so a misspelled key surfaces immediately rather than silently turning a feature off.
+
+## Deferred fields
+
+The schema strips these names from the published `properties` map but reserves them via [`x-deferred-fields`](https://schemas.langflow.org/extension/v1.json), so a manifest that sets one gets a specific error code instead of the generic "additional property" message.
+
+| Reserved key | Replacement error code | Future epic |
+| --- | --- | --- |
+| `services` | `field-deferred-in-this-milestone` | B2 — non-component primitives |
+| `routes` | `field-deferred-in-this-milestone` | B2 — non-component primitives |
+| `hooks` | `field-deferred-in-this-milestone` | B2 — non-component primitives |
+| `starterProjects` | `field-deferred-in-this-milestone` | later milestone |
+| `userConfig` | `field-deferred-in-this-milestone` | later milestone |
+
+A manifest that sets any of these to a non-null value is rejected at validate / load time. Setting them to `null` is allowed (the loader treats null and absent identically).
+
+## Pyproject alternative
+
+If you'd rather not ship a separate `extension.json` next to `pyproject.toml`, declare the same fields under `[tool.langflow.extension]`:
+
+```toml
+[tool.langflow.extension]
+id = "lfx-my-extension"
+version = "0.1.0"
+name = "My extension"
+
+[tool.langflow.extension.lfx]
+compat = ["1"]
+
+[[tool.langflow.extension.bundles]]
+name = "my_bundle"
+path = "components/my_bundle"
+```
+
+The loader prefers an `extension.json` when both exist. The Pydantic validator is the same so error codes and field semantics are identical.
+
+## Error codes raised against this manifest
+
+The loader and validator both emit typed errors keyed by the manifest field that triggered them. The full code list is at [`lfx.extension.errors.ERROR_CODES`](https://github.com/langflow-ai/langflow/blob/main/src/lfx/src/lfx/extension/errors.py); the codes most relevant when authoring a manifest are:
+
+| Code | Cause |
+| --- | --- |
+| `manifest-invalid` | Schema validation failed; the message names the field. |
+| `manifest-not-found` | No `extension.json` and no `[tool.langflow.extension]` section at the extension root. |
+| `version-constraint-unsatisfied` | `lfx.compat` does not include this Langflow's `BUNDLE_API_VERSION`. |
+| `field-deferred-in-this-milestone` | A reserved field was set to a non-null value. |
+| `multi-bundle-deferred-in-this-milestone` | `bundles` has more than one entry. |
+| `path-escape` | A `bundles[].path` resolves outside the manifest root (typically a symlink). |
+| `bundle-path-not-found` | `bundles[].path` does not exist or is not a directory. |
+
+Run `lfx extension validate <path>` to see every error as a structured object with `code`, `message`, `location`, `hint`, and `ref_url`.
+
+## See also

@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import SimplifiedCodeTabComponent from "@/components/core/codeTabsComponent";
 import { Badge } from "@/components/ui/badge";
@@ -17,6 +18,7 @@ import type { SpanDetailProps } from "./types";
  * Includes inputs, outputs, model info, tokens, and errors
  */
 export function SpanDetail({ span }: SpanDetailProps) {
+  const { t } = useTranslation();
   if (!span) {
     return (
       <div
@@ -25,7 +27,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
       >
         <div className="text-center">
           <IconComponent name="MousePointer" className="mx-auto mb-2 h-8 w-8" />
-          <p className="text-sm">Select a span to view details</p>
+          <p className="text-sm">{t("trace.selectSpan")}</p>
         </div>
       </div>
     );
@@ -46,11 +48,17 @@ export function SpanDetail({ span }: SpanDetailProps) {
       {/* Header */}
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{span.name}</h3>
-          <Badge variant={getStatusVariant(span.status)} size="sm">
+          <h3 className="min-w-0 flex-1 truncate text-lg font-semibold">
+            {span.name}
+          </h3>
+          <Badge
+            variant={getStatusVariant(span.status)}
+            size="sm"
+            className="h-auto shrink-0 gap-1 px-2 py-0.5"
+          >
             <IconComponent
               name={iconName}
-              className={`mr-1 h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
               aria-label={span.status}
               dataTestId={`flow-log-status-${span.status}`}
               skipFallback
@@ -76,7 +84,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
           <div className="mb-4 rounded-md border border-error-foreground/20 bg-error-background/50 p-3">
             <div className="flex items-center gap-2 text-sm font-medium text-error-foreground">
               <IconComponent name="AlertCircle" className="h-4 w-4" />
-              Error
+              {t("trace.error")}
             </div>
             <p className="mt-1 text-sm text-error-foreground/90">
               {span.error}
@@ -87,14 +95,14 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Metrics row */}
         <div className="mb-4 grid grid-cols-2 gap-4 sm:grid-cols-4">
           <MetricCard
-            label="Latency"
+            label={t("trace.latency")}
             value={formatTotalLatency(span.latencyMs)}
             icon="Clock"
           />
           {(hasTokenUsage || isLlmSpan) && (
             <>
               <MetricCard
-                label="Tokens"
+                label={t("trace.tokens")}
                 value={
                   hasTokenUsage
                     ? span.tokenUsage!.totalTokens.toLocaleString()
@@ -103,7 +111,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
                 icon="Coins"
               />
               <MetricCard
-                label="Prompt"
+                label={t("trace.prompt")}
                 value={
                   hasTokenUsage
                     ? span.tokenUsage!.promptTokens.toLocaleString()
@@ -112,7 +120,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
                 icon="ArrowUp"
               />
               <MetricCard
-                label="Completion"
+                label={t("trace.completion")}
                 value={
                   hasTokenUsage
                     ? span.tokenUsage!.completionTokens.toLocaleString()
@@ -127,7 +135,9 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Cost (if applicable) */}
         {hasTokenUsage && span.tokenUsage!.cost > 0 && (
           <div className="mb-4 flex items-center justify-between rounded-md bg-muted p-3">
-            <span className="text-sm font-medium">Estimated Cost</span>
+            <span className="text-sm font-medium">
+              {t("trace.estimatedCost")}
+            </span>
             <span className="text-sm font-semibold">
               {formatCost(span.tokenUsage!.cost)}
             </span>
@@ -137,7 +147,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Inputs section */}
         {hasInputs && (
           <div className="mb-4">
-            <SectionHeader icon="ArrowRight" title="Input" />
+            <SectionHeader icon="ArrowRight" title={t("trace.input")} />
             <div className="mt-2">
               <SimplifiedCodeTabComponent
                 language="json"
@@ -150,7 +160,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Outputs section */}
         {hasOutputs && (
           <div className="mb-4">
-            <SectionHeader icon="ArrowLeft" title="Output" />
+            <SectionHeader icon="ArrowLeft" title={t("trace.output")} />
             <div className="mt-2">
               <SimplifiedCodeTabComponent
                 language="json"
@@ -163,7 +173,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
         {/* Empty state */}
         {!hasInputs && !hasOutputs && !span.error && (
           <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <p className="text-sm">No additional details available</p>
+            <p className="text-sm">{t("trace.noDetails")}</p>
           </div>
         )}
       </div>

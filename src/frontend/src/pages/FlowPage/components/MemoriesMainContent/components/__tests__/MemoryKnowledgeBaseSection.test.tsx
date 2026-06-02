@@ -13,6 +13,24 @@ jest.mock("@/components/ui/loading", () => ({
   default: () => <div>loading...</div>,
 }));
 
+jest.mock("@/components/common/stringReaderComponent", () => ({
+  __esModule: true,
+  default: ({ string }: { string: string }) => <span>{string}</span>,
+}));
+
+jest.mock("@/components/ui/tooltip", () => ({
+  Tooltip: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: React.ReactNode }) => (
+    <div role="tooltip">{children}</div>
+  ),
+  TooltipProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+  TooltipTrigger: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
+}));
+
 describe("MemoryKnowledgeBaseSection", () => {
   const makeBaseProps = () => {
     const documents: MemoryDocumentItem[] = [
@@ -63,14 +81,60 @@ describe("MemoryKnowledgeBaseSection", () => {
 
     render(<MemoryKnowledgeBaseSection {...props} />);
 
-    expect(screen.getByText("No chunks yet.")).toBeInTheDocument();
+    expect(screen.getByText("No chunks yet")).toBeInTheDocument();
+  });
+
+  it("shows learn more link in empty state with correct href", () => {
+    const props = {
+      ...makeBaseProps(),
+      docsData: { total: 0, sessions: [], documents: [] },
+      groupedBySession: new Map(),
+    };
+    render(<MemoryKnowledgeBaseSection {...props} />);
+
+    const link = screen.getByRole("link", {
+      name: /learn more about memory bases/i,
+    });
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/memory-bases",
+    );
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("shows tooltip description for the Memory Base heading", () => {
+    render(<MemoryKnowledgeBaseSection {...makeBaseProps()} />);
+    expect(
+      screen.getByText(/store of processed conversation chunks/i),
+    ).toBeInTheDocument();
+  });
+
+  it("shows read the docs link in Memory Base heading tooltip", () => {
+    render(<MemoryKnowledgeBaseSection {...makeBaseProps()} />);
+    const links = screen.getAllByRole("link", { name: /read the docs/i });
+    expect(links[0]).toHaveAttribute(
+      "href",
+      "https://docs.langflow.org/memory-bases",
+    );
+    expect(links[0]).toHaveAttribute("target", "_blank");
+  });
+
+  it("shows tooltip description for the chunks count", () => {
+    render(<MemoryKnowledgeBaseSection {...makeBaseProps()} />);
+    expect(
+      screen.getByText(/units of processed conversation content/i),
+    ).toBeInTheDocument();
   });
 
   it("opens document panel when row is clicked", () => {
     const props = makeBaseProps();
     render(<MemoryKnowledgeBaseSection {...props} />);
 
-    fireEvent.click(screen.getByText("hello"));
+    // Cells stop propagation so clicking cell text does not open the panel.
+    // Click the row element itself to trigger handleOpenDocumentPanel.
+    const row = screen.getByText("hello").closest("tr")!;
+    fireEvent.click(row);
     expect(props.handleOpenDocumentPanel).toHaveBeenCalled();
   });
 });
