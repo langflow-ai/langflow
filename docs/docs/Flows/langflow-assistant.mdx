@@ -1,15 +1,15 @@
 ---
-title: Build components with Langflow Assistant
+title: Build flows and components with Langflow Assistant
 slug: /langflow-assistant
 ---
 
 import Icon from "@site/src/components/icon";
 
-**Langflow Assistant** is an in-app virtual assistant pane within the **Playground**.
+**Langflow Assistant** is an in-app virtual assistant pane accessible from the canvas toolbar.
 
 It can answer questions about the application and help you get more out of Langflow.
 
-**Langflow Assistant** understands the structure of the Langflow graph, so it can create components from natural language prompts.
+**Langflow Assistant** understands the structure of the Langflow graph, so it can build complete flows or create individual components from natural language prompts.
 
 Behind the scenes, **Langflow Assistant** runs a built-in Langflow flow on your Langflow server each time you send a message.
 This flow is distinct from the flow that is open in the canvas, and has its own language model.
@@ -19,6 +19,11 @@ To give **Langflow Assistant** context for a different flow, switch to that flow
 ## Prerequisites
 
 * Connect an LLM provider in the [Global model providers page](/components-models) for **Langflow Assistant** to use
+* Custom component creation must be enabled and permitted for your user role:
+  * `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` must be `true` (default).
+   * `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY` must be `false` (default) for non-superusers. For superusers, this option is irrelevant.
+
+  For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components).
 
 ## Create a custom component with Langflow Assistant
 
@@ -26,7 +31,7 @@ In this example, you'll prompt **Langflow Assistant** to create a custom compone
 
 You'll then iterate on the code based on the results in the **Playground**.
 
-1. In the **Playground**, click the <Icon name="Langflow" aria-hidden="true"/> **Langflow** icon.
+1. In the canvas toolbar, click the <Icon name="Langflow" aria-hidden="true"/> **Langflow** icon.
     The **Langflow Assistant** pane opens.
 2. Optionally, ask `What can you help me with?` for a list of **Langflow Assistant's** capabilities.
 3. Prompt **Langflow Assistant** to generate a custom component. For example:
@@ -224,3 +229,43 @@ You'll then iterate on the code based on the results in the **Playground**.
     | https://langflow.org | Langflow \| Low-code AI builder for agentic and RAG applications | 200 |
     | https://github.com/langflow-ai/langflow | GitHub - langflow-ai/langflow: Langflow is a powerful tool for building and deploying AI-powered agents and workflows. - GitHub | 200 |
     | https://python.org | Welcome to Python.org | 200 |
+
+## Build an agent flow with Langflow Assistant
+
+:::warning
+Building a flow reads and writes the entire Langflow graph on every turn, which can use significantly more tokens than single-component generation.
+:::
+
+In addition to generating individual components, **Langflow Assistant** can create a flow from a single prompt.
+
+Continuing from the [Create a custom component with Langflow Assistant](#create-a-custom-component-with-langflow-assistant) example, ask **Langflow Assistant** to build a simple agent flow that uses the **URLTitleExtractor** custom component as a tool.
+
+1. With the **URLTitleExtractor** component still on the canvas, open **Langflow Assistant** and prompt it to build the agent flow:
+    ```
+    Build a simple agent flow using the URLTitleExtractor custom component as a tool.
+    ```
+
+2. Langflow Assistant presents a diagram of the flow it is proposing.
+    To approve, click **Add to Canvas**.
+
+    **Langflow Assistant** adds an **Agent** component, connects the **URLTitleExtractor** to its **Tools** input, and connects **Chat Input** and **Chat Output** to complete the flow.
+    Flow generation is model-driven, so the exact wiring may differ from this example.
+3. To iterate, describe changes to **Langflow Assistant**, and then click **Replace canvas** to replace the entire flow currently on the canvas. For example:
+    ```
+    Connect the URLTitleExtractor component's Toolset port to the Agent's Tools port.
+    ```
+4. Open the **Playground** and ask the agent to check a URL:
+    ```
+    What is the title of the page at https://langflow.org?
+    ```
+    The agent uses the **URLTitleExtractor** tool to fetch the page and return the title.
+
+5. **Langflow Assistant** can further iterate on the flow, or answer questions about Langflow.
+   For example, ask Langflow Assistant `How do I send an API request to chat with this flow in Python?`
+   The response includes a request sourced from the Langflow documentation that you can copy and paste into your application.
+
+## See also
+
+- [Build flows](/concepts-flows)
+- [Custom components](/components-custom-components)
+- [Trigger flows with the Langflow API](/concepts-publish)
