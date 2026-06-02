@@ -1,20 +1,22 @@
-"""Watsonx Orchestrate deployment adapter."""
+"""Watsonx Orchestrate deployment adapter package.
 
-from lfx.services.adapters.registry import register_adapter
-from lfx.services.adapters.schema import AdapterType
+Keep package-level exports lazy: both ``service.py`` and ``types.py`` import
+optional IBM SDK modules. This prevents imports of SDK-independent modules,
+such as ``payloads.py``, from requiring the ``ibm-watsonx-clients`` extra.
+"""
 
-from langflow.services.adapters.deployment.watsonx_orchestrate.constants import (
-    WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-)
-from langflow.services.adapters.deployment.watsonx_orchestrate.service import WatsonxOrchestrateDeploymentService
-from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOCredentials
+__all__ = ["WatsonxOrchestrateDeploymentService", "WxOCredentials"]
 
-register_adapter(
-    AdapterType.DEPLOYMENT,
-    WATSONX_ORCHESTRATE_DEPLOYMENT_ADAPTER_KEY,
-)(WatsonxOrchestrateDeploymentService)
 
-__all__ = [
-    "WatsonxOrchestrateDeploymentService",
-    "WxOCredentials",
-]
+def __getattr__(name: str):
+    if name == "WatsonxOrchestrateDeploymentService":
+        from langflow.services.adapters.deployment.watsonx_orchestrate.service import (
+            WatsonxOrchestrateDeploymentService,
+        )
+
+        return WatsonxOrchestrateDeploymentService
+    if name == "WxOCredentials":
+        from langflow.services.adapters.deployment.watsonx_orchestrate.types import WxOCredentials
+
+        return WxOCredentials
+    raise AttributeError(name)

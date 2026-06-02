@@ -81,7 +81,7 @@ module.exports = {
         {
           type: "doc",
           id: "Flows/langflow-assistant",
-          label: "Build components with Langflow Assistant"
+          label: "Build flows and components with Langflow Assistant"
         },
       ],
     },
@@ -154,6 +154,7 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
@@ -290,6 +291,11 @@ module.exports = {
               label: "Render"
             },
           ]
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy with multiple workers",
         },
         {
           type: "doc",

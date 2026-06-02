@@ -573,7 +573,6 @@ describe("Detected env vars auto-population", () => {
   });
 
   it("auto-detects env vars for pre-selected flow version on mount", async () => {
-    const user = userEvent.setup();
     mockInitialFlowId = "flow-1";
     mockSelectedVersionByFlow = new Map([
       [
@@ -605,6 +604,78 @@ describe("Detected env vars auto-population", () => {
       const keyInputs = screen.getAllByPlaceholderText("Key");
       expect(keyInputs).toHaveLength(1);
       expect(keyInputs[0]).toHaveValue("GLOBAL_SECRET");
+    });
+  });
+
+  it("attaches selected connections for a pre-selected canvas flow", async () => {
+    const user = userEvent.setup();
+    mockInitialFlowId = "flow-1";
+    mockSelectedVersionByFlow = new Map([
+      [
+        selectedFlow1Version1Key,
+        {
+          key: selectedFlow1Version1Key,
+          flowId: "flow-1",
+          versionId: "ver-1",
+          versionTag: "v1",
+        },
+      ],
+    ]);
+    mockConnections = [
+      {
+        id: "conn-1",
+        connectionId: "conn-1",
+        name: "testconn3",
+        variableCount: 0,
+        isNew: false,
+        environmentVariables: {},
+      },
+    ];
+
+    render(<StepAttachFlows />);
+
+    await waitFor(() => {
+      expect(screen.getByTestId("connection-item-conn-1")).toBeInTheDocument();
+    });
+    await user.click(screen.getByTestId("connection-item-conn-1"));
+    await user.click(screen.getByTestId("connection-attach"));
+
+    const updateConnections =
+      mockSetAttachedConnectionByFlow.mock.calls.at(-1)?.[0];
+    expect(updateConnections).toBeInstanceOf(Function);
+    const nextConnections = updateConnections(new Map<string, string[]>());
+    expect(nextConnections.get(selectedFlow1Version1Key)).toEqual(["conn-1"]);
+  });
+
+  it("uses the real flow name for pre-selected canvas flow tool names", async () => {
+    mockInitialFlowId = "flow-1";
+    mockSelectedVersionByFlow = new Map([
+      [
+        selectedFlow1Version1Key,
+        {
+          key: selectedFlow1Version1Key,
+          flowId: "flow-1",
+          versionId: "ver-1",
+          versionTag: "v1",
+        },
+      ],
+    ]);
+
+    render(<StepAttachFlows />);
+
+    await waitFor(() => {
+      expect(mockSetToolNameByFlow).toHaveBeenCalled();
+    });
+
+    const updateToolNames = mockSetToolNameByFlow.mock.calls.at(-1)?.[0];
+    expect(updateToolNames).toBeInstanceOf(Function);
+    const nextToolNames = updateToolNames(new Map<string, string>());
+    expect(nextToolNames.get(selectedFlow1Version1Key)).toBe("Sales Flow");
+    expect(mockHandleSelectVersion).toHaveBeenCalledWith({
+      flowId: "flow-1",
+      flowName: "Sales Flow",
+      versionId: "ver-1",
+      versionTag: "v1",
     });
   });
 });

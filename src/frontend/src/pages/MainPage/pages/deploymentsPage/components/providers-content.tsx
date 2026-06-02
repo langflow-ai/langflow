@@ -103,7 +103,10 @@ export default function ProvidersContent({
   const [editingProvider, setEditingProvider] =
     useState<ProviderAccount | null>(null);
 
-  const providerDelete = useDeleteWithConfirmation(
+  const providerDelete = useDeleteWithConfirmation<
+    ProviderAccount,
+    { provider_id: string }
+  >(
     deleteProviderAccount,
     buildProviderDeleteParams,
     t("deployments.errorDeletingEnvironment"),

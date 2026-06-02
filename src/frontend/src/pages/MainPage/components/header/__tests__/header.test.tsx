@@ -1,4 +1,5 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
+import { useUtilityStore } from "@/stores/utilityStore";
 import HeaderComponent from "../index";
 
 interface IconProps {
@@ -173,6 +174,15 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    act(() => {
+      useUtilityStore.setState({ featureFlags: {} });
+    });
+  });
+
+  afterEach(() => {
+    act(() => {
+      useUtilityStore.setState({ featureFlags: {} });
+    });
   });
 
   describe("DeleteConfirmationModal TabIndex - No Selections", () => {
@@ -233,6 +243,18 @@ describe("HeaderComponent - TabIndex Behavior with Bulk Actions", () => {
       // Delete button should be accessible
       const deleteBtn = screen.getByTestId("delete-bulk-btn");
       expect(deleteBtn).not.toHaveAttribute("tabindex", "-1");
+    });
+
+    it("should hide the New Flow button when the feature flag is enabled", () => {
+      act(() => {
+        useUtilityStore.setState({
+          hideNewFlowButton: true,
+        });
+      });
+
+      render(<HeaderComponent {...defaultProps} selectedFlows={[]} />);
+
+      expect(screen.queryByTestId("new-project-btn")).not.toBeInTheDocument();
     });
   });
 });
