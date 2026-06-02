@@ -975,7 +975,9 @@
                 "display_name": "Current Date",
                 "dynamic": false,
                 "info": "If true, will add a tool to the agent that returns the current date.",
-                "input_types": [],
+                "input_types": [
+                  "Bool"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "add_current_date_tool",
@@ -1119,7 +1121,9 @@
                 "display_name": "Handle Parse Errors",
                 "dynamic": false,
                 "info": "Adds tool-execution retry as a safety net. `create_agent` already feeds tool-call validation errors back to the LLM automatically; this flag layers `ToolRetryMiddleware` on top so transient tool runtime failures are retried (max 2 retries).",
-                "input_types": [],
+                "input_types": [
+                  "Bool"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "handle_parsing_errors",
@@ -1165,7 +1169,9 @@
                 "display_name": "Max Iterations",
                 "dynamic": false,
                 "info": "Maximum number of model calls the agent can make before stopping (maps to `ModelCallLimitMiddleware.run_limit` on the create_agent path). Must be at least 1 — it is a safety cap, never 'unlimited'.",
-                "input_types": [],
+                "input_types": [
+                  "Number"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "max_iterations",
@@ -1250,7 +1256,9 @@
                 "display_name": "Number of Chat History Messages",
                 "dynamic": false,
                 "info": "Number of chat history messages to retrieve.",
-                "input_types": [],
+                "input_types": [
+                  "Number"
+                ],
                 "list": false,
                 "list_add_label": "Add More",
                 "name": "n_messages",
