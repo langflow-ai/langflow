@@ -1,5 +1,4 @@
-import "./i18n";
-import { loadLanguage } from "./i18n";
+import i18n, { loadLanguage, resolveLanguage } from "./i18n";
 import ReactDOM from "react-dom/client";
 import reportWebVitals from "./reportWebVitals";
 
@@ -13,15 +12,27 @@ import "./style/applies.css";
 // @ts-ignore
 import App from "./customization/custom-App";
 
-const detectedLang =
-  localStorage.getItem("languagePreference") ||
-  navigator.language.split("-")[0] ||
-  "en";
+const detectedLang = resolveLanguage(
+  localStorage.getItem("languagePreference") || navigator.language || "en",
+);
 
-loadLanguage(detectedLang).then(() => {
+const renderApp = () => {
   const root = ReactDOM.createRoot(
     document.getElementById("root") as HTMLElement,
   );
   root.render(<App />);
   reportWebVitals();
-});
+};
+
+const initializeApp = async () => {
+  try {
+    await loadLanguage(detectedLang);
+    await i18n.changeLanguage(detectedLang);
+  } catch {
+    await i18n.changeLanguage("en");
+  }
+
+  renderApp();
+};
+
+void initializeApp();
