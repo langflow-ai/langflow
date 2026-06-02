@@ -1,0 +1,43 @@
+# docker/worktree.docker-compose.yml
+# Managed by scripts/wt.sh — do not run directly.
+#
+# Environment vars injected by wt.sh (sourced from .wt-config at worktree root):
+#   WT_NAME           worktree slug            e.g. epic-0
+#   CONTAINER_NAME    docker container name    e.g. langflow-wt-epic-0
+#   BACKEND_PORT      host port → 7860         e.g. 7861
+#   FRONTEND_PORT     host port → 3000         e.g. 3001
+#   DB_NAME           postgres database        e.g. langflow_wt_epic_0
+#   POSTGRES_NETWORK  docker network name      e.g. docker_dev-langflow
+#   WT_PATH           absolute worktree path
+#   MAIN_REPO_PATH    absolute main repo path  (for .env)
+#   OPENAI_BASE_URL   LLM endpoint (derived gateway relay, or .wt-config override)
+
+networks:
+  postgres-net:
+    name: ${POSTGRES_NETWORK}
+    external: true
+
+services:
+  langflow:
+    image: dev-langflow
+    container_name: ${CONTAINER_NAME}
+    restart: unless-stopped
+    ports:
+      - "${BACKEND_PORT}:7860"
+      - "${FRONTEND_PORT}:3000"
+    env_file:
+      - ${MAIN_REPO_PATH}/.env
+    # environment overrides env_file, so OPENAI_BASE_URL here replaces the .env
+    # value with the container-reachable gateway relay (or a .wt-config override,
+    # injected by wt.sh). The host-only LLM address in .env is unreachable here.
+    environment:
+      - PYTHONDONTWRITEBYTECODE=1
+      - LANGFLOW_DATABASE_URL=postgresql://langflow:langflow@postgres:5432/${DB_NAME}
+      - LANGFLOW_SUPERUSER=langflow
+      - LANGFLOW_SUPERUSER_PASSWORD=langflow
+      - LANGFLOW_CONFIG_DIR=/var/lib/langflow-${WT_NAME}
+      - OPENAI_BASE_URL=${OPENAI_BASE_URL:-}
+    volumes:
+      - ${WT_PATH}:/app
+    networks:
+      - postgres-net
