@@ -1,10 +1,12 @@
 import asyncio
 from typing import TYPE_CHECKING
 
+from lfx.log.logger import logger
 from lfx.services.cache.utils import CacheMiss
 
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService
+from langflow.services.cache.utils import is_cache_serialization_error
 from langflow.services.session.utils import compute_dict_hash, session_id_generator
 
 if TYPE_CHECKING:
@@ -35,7 +37,7 @@ class SessionService(Service):
 
         graph = Graph.from_payload(data_graph, flow_id=flow_id)
         artifacts: dict = {}
-        await self.cache_service.set(key, (graph, artifacts))
+        await self._set_cache_value(key, (graph, artifacts))
 
         return graph, artifacts
 
@@ -52,10 +54,18 @@ class SessionService(Service):
         return self.build_key(session_id, data_graph=data_graph)
 
     async def update_session(self, session_id, value) -> None:
-        if isinstance(self.cache_service, AsyncBaseCacheService):
-            await self.cache_service.set(session_id, value)
-        else:
-            await asyncio.to_thread(self.cache_service.set, session_id, value)
+        await self._set_cache_value(session_id, value)
+
+    async def _set_cache_value(self, key, value) -> None:
+        try:
+            if isinstance(self.cache_service, AsyncBaseCacheService):
+                await self.cache_service.set(key, value)
+            else:
+                await asyncio.to_thread(self.cache_service.set, key, value)
+        except TypeError as exc:
+            if not is_cache_serialization_error(exc):
+                raise
+            await logger.awarning(f"Skipping session cache write for unpickleable value at key {key!r}: {exc}")
 
     async def clear_session(self, session_id) -> None:
         if isinstance(self.cache_service, AsyncBaseCacheService):

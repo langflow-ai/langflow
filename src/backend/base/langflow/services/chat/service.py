@@ -3,9 +3,17 @@ from collections import defaultdict
 from threading import RLock
 from typing import Any
 
+from lfx.log.logger import logger
+
 from langflow.services.base import Service
 from langflow.services.cache.base import AsyncBaseCacheService, CacheService
+from langflow.services.cache.utils import is_cache_serialization_error
 from langflow.services.deps import get_cache_service
+
+
+def _cache_type_name(data: Any) -> str:
+    data_type = type(data)
+    return f"{data_type.__module__}.{data_type.__qualname__}"
 
 
 class ChatService(Service):
@@ -31,15 +39,24 @@ class ChatService(Service):
         """
         result_dict = {
             "result": data,
-            "type": type(data),
+            "type": _cache_type_name(data),
         }
-        if isinstance(self.cache_service, AsyncBaseCacheService):
-            await self.cache_service.upsert(str(key), result_dict, lock=lock or self.async_cache_locks[key])
-            return await self.cache_service.contains(key)
-        await asyncio.to_thread(
-            self.cache_service.upsert, str(key), result_dict, lock=lock or self._sync_cache_locks[key]
-        )
-        return key in self.cache_service
+        try:
+            if isinstance(self.cache_service, AsyncBaseCacheService):
+                await self.cache_service.upsert(str(key), result_dict, lock=lock or self.async_cache_locks[key])
+                cache_updated = await self.cache_service.contains(key)
+            else:
+                await asyncio.to_thread(
+                    self.cache_service.upsert, str(key), result_dict, lock=lock or self._sync_cache_locks[key]
+                )
+                cache_updated = key in self.cache_service
+        except TypeError as exc:
+            if not is_cache_serialization_error(exc):
+                raise
+            await logger.awarning(f"Skipping chat cache write for unpickleable value at key {key!r}: {exc}")
+            return False
+        else:
+            return cache_updated
 
     async def get_cache(self, key: str, lock: asyncio.Lock | None = None) -> Any:
         """Get the cache for a client.
