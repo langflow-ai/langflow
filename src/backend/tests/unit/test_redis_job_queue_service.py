@@ -2406,3 +2406,132 @@ async def test_polling_watchdog_runs_when_cancel_channel_disabled():
                 with contextlib.suppress(asyncio.CancelledError):
                     await bridge
         await fake_client.aclose()
+
+
+# ---------------------------------------------------------------------------
+# Startup connectivity probe + runtime backstop (LE-1396)
+# ---------------------------------------------------------------------------
+
+
+class _PingFailRedis:
+    """Minimal async Redis stand-in whose every op raises a redis ConnectionError."""
+
+    @staticmethod
+    def _boom() -> None:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+
+        raise RedisConnectionError
+
+    async def ping(self) -> None:
+        self._boom()
+
+    async def set(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def get(self, *_args, **_kwargs) -> None:
+        self._boom()
+
+    async def aclose(self) -> None:
+        return None
+
+
+@pytest.mark.asyncio
+async def test_is_connected_true_with_reachable_redis() -> None:
+    """is_connected() returns True when the backing Redis responds to ping."""
+    fake_client = fakeredis_aio.FakeRedis()
+    service = RedisJobQueueService()
+    service._client = fake_client
+    try:
+        assert await service.is_connected() is True
+    finally:
+        await fake_client.aclose()
+
+
+@pytest.mark.asyncio
+async def test_is_connected_false_when_redis_unreachable() -> None:
+    """is_connected() returns False (after bounded retry) when Redis is down."""
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    # Two quick attempts, no real waiting, so the bounded retry exits fast.
+    assert await service.is_connected(attempts=2, backoff_s=0.0) is False
+
+
+@pytest.mark.asyncio
+async def test_is_connected_false_when_client_missing() -> None:
+    """is_connected() returns False when the client was never created."""
+    service = RedisJobQueueService()
+    service._client = None
+    assert await service.is_connected(attempts=1, backoff_s=0.0) is False
+
+
+@pytest.mark.asyncio
+async def test_register_job_owner_raises_backend_unavailable_when_redis_down() -> None:
+    """register_job_owner raises a typed error (not a raw redis ConnectionError) when Redis is down."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.register_job_owner(str(uuid.uuid4()), uuid.uuid4())
+
+
+@pytest.mark.asyncio
+async def test_connection_target_describes_endpoint() -> None:
+    """connection_target gives an actionable host:port/db (or url) string for error messages."""
+    service = RedisJobQueueService(host="db.example", port=6380, db=2)
+    target = service.connection_target
+    assert "db.example" in target
+    assert "6380" in target
+
+    service_url = RedisJobQueueService(url="redis://cache:6379/3")
+    assert "redis://cache:6379/3" in service_url.connection_target
+
+
+@pytest.mark.asyncio
+async def test_start_creates_client_and_is_connected_false_when_unreachable() -> None:
+    """start() creates a real client; is_connected() then probes it and returns False when down.
+
+    Guards against a regression where the startup probe runs against an un-started
+    service (``_client is None``) and would reject every redis boot, healthy or not.
+    """
+    service = RedisJobQueueService(
+        host="127.0.0.1",
+        port=6390,  # nothing listening
+        db=1,
+        cancel_channel_enabled=False,
+        polling_stale_threshold_s=0,
+    )
+    service.start()
+    try:
+        assert service.is_started() is True
+        assert service._client is not None
+        assert await service.is_connected(attempts=1, backoff_s=0.0) is False
+    finally:
+        await service.stop()
+
+
+@pytest.mark.asyncio
+async def test_get_job_owner_raises_backend_unavailable_when_redis_down() -> None:
+    """get_job_owner raises the typed error (not a raw redis ConnectionError) when Redis is down."""
+    from langflow.services.job_queue.service import JobQueueBackendUnavailableError
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(JobQueueBackendUnavailableError):
+        await service.get_job_owner(str(uuid.uuid4()))
+
+
+@pytest.mark.asyncio
+async def test_verify_job_ownership_maps_backend_unavailable_to_503() -> None:
+    """The ownership-check chokepoint maps a backend-unavailable error to HTTP 503."""
+    from fastapi import HTTPException
+    from langflow.api.v1.chat import _verify_job_ownership
+
+    class _User:
+        id = uuid.uuid4()
+
+    service = RedisJobQueueService()
+    service._client = _PingFailRedis()
+    with pytest.raises(HTTPException) as exc_info:
+        await _verify_job_ownership(str(uuid.uuid4()), _User(), service)
+    assert exc_info.value.status_code == 503

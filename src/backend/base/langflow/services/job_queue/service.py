@@ -39,6 +39,32 @@ class JobQueueNotFoundError(Exception):
         super().__init__(f"Job queue not found for job_id: {job_id}")
 
 
+class JobQueueBackendUnavailableError(Exception):
+    """Raised when the configured job queue backend (e.g. Redis) is unreachable.
+
+    Route handlers translate this into a clean HTTP 503 so callers get an
+    actionable message instead of a raw redis ``ConnectionError`` stack trace.
+    """
+
+
+def _is_backend_connection_error(exc: BaseException) -> bool:
+    """Return True if *exc* indicates the Redis backend is unreachable.
+
+    Covers both builtin socket-level errors and redis-py's own
+    ``ConnectionError`` / ``TimeoutError`` (which are NOT subclasses of the
+    builtins). ``redis`` is an optional dependency, so its exception types are
+    imported lazily — this only runs on a failure path, never the hot path.
+    """
+    if isinstance(exc, ConnectionError | TimeoutError | OSError):
+        return True
+    try:
+        from redis.exceptions import ConnectionError as RedisConnectionError
+        from redis.exceptions import TimeoutError as RedisTimeoutError
+    except ImportError:
+        return False
+    return isinstance(exc, RedisConnectionError | RedisTimeoutError)
+
+
 class JobQueueService(Service):
     """Asynchronous service for managing job-specific queues and their associated tasks.
 
@@ -850,6 +876,54 @@ class RedisJobQueueService(JobQueueService):
             self._polling_watchdog_task = asyncio.create_task(self._run_polling_watchdog())
         logger.debug("RedisJobQueueService started.")
 
+    # Startup connectivity probe tunables (overridable in tests). A short retry
+    # window tolerates Redis that comes up a beat after Langflow, e.g. a
+    # docker-compose service without a healthcheck-gated dependency.
+    _STARTUP_PROBE_ATTEMPTS = 5
+    _STARTUP_PROBE_BACKOFF_S = 1.0
+
+    @property
+    def connection_target(self) -> str:
+        """Human-readable description of the configured Redis endpoint for error messages."""
+        if self._redis_url:
+            return self._redis_url
+        return f"{self._redis_host}:{self._redis_port} db={self._redis_db}"
+
+    def _backend_unavailable_message(self) -> str:
+        """Actionable message for JobQueueBackendUnavailableError."""
+        return (
+            f"Job queue backend (Redis) is unavailable at {self.connection_target}. "
+            "Start Redis, fix the LANGFLOW_REDIS_QUEUE_* settings, or set "
+            "LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+        )
+
+    async def is_connected(self, *, attempts: int | None = None, backoff_s: float | None = None) -> bool:
+        """Ping Redis with bounded retry; return True if reachable, False otherwise.
+
+        Used at startup to fail fast when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` but the
+        Redis server is not reachable, instead of booting "fine" and then emitting
+        confusing connection errors on the first flow execution.
+        """
+        if self._client is None:
+            return False
+        attempts = self._STARTUP_PROBE_ATTEMPTS if attempts is None else attempts
+        backoff_s = self._STARTUP_PROBE_BACKOFF_S if backoff_s is None else backoff_s
+        for attempt in range(1, attempts + 1):
+            try:
+                await self._client.ping()
+            except Exception as exc:  # noqa: BLE001
+                if attempt < attempts:
+                    await logger.adebug(
+                        f"RedisJobQueueService: Redis not reachable at {self.connection_target} "
+                        f"(attempt {attempt}/{attempts}): {exc}. Retrying in {backoff_s}s."
+                    )
+                    await asyncio.sleep(backoff_s)
+                    continue
+                return False
+            else:
+                return True
+        return False
+
     async def _check_connection(self) -> None:
         """Ping Redis and log a prominent error if the connection is unavailable."""
         try:
@@ -857,8 +931,7 @@ class RedisJobQueueService(JobQueueService):
             await logger.adebug("RedisJobQueueService: Redis connection OK.")
         except Exception as exc:  # noqa: BLE001
             await logger.aerror(
-                f"RedisJobQueueService: cannot reach Redis at "
-                f"{self._redis_url or f'{self._redis_host}:{self._redis_port} db={self._redis_db}'} — {exc}. "
+                f"RedisJobQueueService: cannot reach Redis at {self.connection_target} — {exc}. "
                 "Build events will NOT be delivered. "
                 "Set LANGFLOW_JOB_QUEUE_TYPE=asyncio or start Redis before running Langflow."
             )
@@ -1564,9 +1637,20 @@ class RedisJobQueueService(JobQueueService):
                     await logger.adebug(f"Redis keys deleted for job_id {job_id}")
 
     async def register_job_owner(self, job_id: str, user_id: UUID) -> None:
-        """Store the job owner in Redis for cross-worker ownership checks."""
+        """Store the job owner in Redis for cross-worker ownership checks.
+
+        Raises:
+            JobQueueBackendUnavailableError: if Redis is unreachable. Callers
+                (route handlers) translate this into a clean HTTP 503 instead of
+                letting a raw redis ``ConnectionError`` escape as a 500.
+        """
         self._job_owners[job_id] = user_id
-        await self._set_owner_key(job_id, user_id)
+        try:
+            await self._set_owner_key(job_id, user_id)
+        except Exception as exc:
+            if _is_backend_connection_error(exc):
+                raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+            raise
         if job_id in self._queues:
             self._ensure_owner_refresh_task(job_id)
 
@@ -1582,12 +1666,19 @@ class RedisJobQueueService(JobQueueService):
             return local
         if self._client:
             owner_key = self._owner_key(job_id)
-            value = await self._client.get(owner_key)
-            if value:
-                from uuid import UUID as _UUID
+            try:
+                value = await self._client.get(owner_key)
+                if value:
+                    from uuid import UUID as _UUID
 
-                # Slide the TTL forward so builds longer than the initial TTL
-                # continue to pass ownership checks as long as they are polled.
-                await self._client.expire(owner_key, self._ttl)
-                return _UUID(value.decode())
+                    # Slide the TTL forward so builds longer than the initial TTL
+                    # continue to pass ownership checks as long as they are polled.
+                    await self._client.expire(owner_key, self._ttl)
+                    return _UUID(value.decode())
+            except Exception as exc:
+                # A Redis outage mid-session must surface as a clean 503 at the
+                # ownership-check endpoints, not a raw ConnectionError 500.
+                if _is_backend_connection_error(exc):
+                    raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
+                raise
         return None

@@ -596,6 +596,23 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
         msg = "Cache service failed to connect to external database"
         raise ConnectionError(msg)
 
+    # Fail fast if the Redis-backed job queue is selected but Redis is unreachable.
+    # Otherwise Langflow boots "fine" and emits confusing connection errors only
+    # when a flow is executed. Only probes when the redis backend is selected, so
+    # the default asyncio backend is unaffected.
+    if get_settings_service().settings.job_queue_type == "redis":
+        from langflow.services.job_queue.factory import JobQueueServiceFactory
+        from langflow.services.job_queue.service import RedisJobQueueService
+
+        queue_service = get_service(ServiceType.JOB_QUEUE_SERVICE, default=JobQueueServiceFactory())
+        if isinstance(queue_service, RedisJobQueueService) and not (await queue_service.is_connected()):
+            msg = (
+                f"Job queue backend 'redis' is selected (LANGFLOW_JOB_QUEUE_TYPE=redis) but Redis is "
+                f"not reachable at {queue_service.connection_target}. Start Redis, fix the "
+                "LANGFLOW_REDIS_QUEUE_* settings, or set LANGFLOW_JOB_QUEUE_TYPE=asyncio."
+            )
+            raise ConnectionError(msg)
+
     # Setup the superuser
     await initialize_database(fix_migration=fix_migration)
     db_service = get_db_service()

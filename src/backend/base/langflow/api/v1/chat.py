@@ -57,7 +57,11 @@ from langflow.services.deps import (
     get_telemetry_service,
     session_scope,
 )
-from langflow.services.job_queue.service import JobQueueNotFoundError, JobQueueService
+from langflow.services.job_queue.service import (
+    JobQueueBackendUnavailableError,
+    JobQueueNotFoundError,
+    JobQueueService,
+)
 from langflow.services.telemetry.schema import ComponentPayload, PlaygroundPayload
 
 if TYPE_CHECKING:
@@ -71,7 +75,10 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
 
     Jobs with no registered owner (build_public_tmp) are accessible to any authenticated user.
     """
-    job_owner = await queue_service.get_job_owner(job_id)
+    try:
+        job_owner = await queue_service.get_job_owner(job_id)
+    except JobQueueBackendUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
     if job_owner is not None and job_owner != current_user.id:
         await logger.awarning(
             "Ownership check failed: user %s tried to access job %s owned by %s",
@@ -300,7 +307,13 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    await queue_service.register_job_owner(job_id, current_user.id)
+    try:
+        await queue_service.register_job_owner(job_id, current_user.id)
+    except JobQueueBackendUnavailableError as exc:
+        # Redis-backed job queue is unreachable. Surface a clean 503 instead of a
+        # raw redis ConnectionError 500. The build task already started is reaped
+        # by the queue service's periodic cleanup.
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
