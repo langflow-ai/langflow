@@ -5,6 +5,7 @@ import json
 import logging
 import logging.handlers
 import os
+import re
 import sys
 import warnings
 from collections import deque
@@ -170,7 +171,7 @@ class SizedLogBuffer:
 
 # log buffer for capturing log messages
 log_buffer = SizedLogBuffer()
-_file_handler: logging.handlers.RotatingFileHandler | None = None
+_file_handler: logging.FileHandler | None = None
 _loguru_handler_id: int | None = None
 
 
@@ -391,9 +392,72 @@ def setup_loguru_logger(log_level: str, *, enqueue: bool = False) -> None:
     )
 
 
-def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatter | None = None) -> None:
-    """Set up Langflow's rotating file handler.
+# Rotation policy parsing for LANGFLOW_LOG_ROTATION / --log-rotation.
+# Size values ("10 MB", "1 GB") use a RotatingFileHandler; time values
+# ("1 day", "12 hours", "1 week") use a TimedRotatingFileHandler; "None"
+# disables rotation. An unset or unrecognized value falls back to 10 MB.
+_ROTATION_SIZE_UNITS = {"KB": 1024, "MB": 1024**2, "GB": 1024**3}
+_ROTATION_TIME_UNITS = {
+    "second": "S",
+    "seconds": "S",
+    "minute": "M",
+    "minutes": "M",
+    "hour": "H",
+    "hours": "H",
+    "day": "D",
+    "days": "D",
+    "week": "W0",
+    "weeks": "W0",
+}
+_DEFAULT_MAX_BYTES = 10 * 1024 * 1024
+_ROTATION_BACKUP_COUNT = 5
 
+
+def _build_file_handler(log_file: Path, log_rotation: str | None) -> logging.FileHandler:
+    """Build the file handler for the configured rotation policy.
+
+    Honors the documented ``LANGFLOW_LOG_ROTATION`` formats: size (``10 MB``,
+    ``1 GB``), time (``1 day``, ``12 hours``, ``1 week``), or ``None`` to disable
+    rotation. An unset or unrecognized value falls back to 10 MB size rotation.
+    """
+    rotation = (log_rotation or "").strip()
+
+    # Explicit opt-out: a plain FileHandler never rotates.
+    if rotation.lower() in {"none", "0"}:
+        return logging.FileHandler(log_file)
+
+    # Size-based: "<n> <unit>" or "<n><unit>" (KB/MB/GB, case-insensitive).
+    size_match = re.fullmatch(r"\s*(\d+)\s*(KB|MB|GB)\s*", rotation, re.IGNORECASE)
+    if size_match:
+        max_bytes = int(size_match.group(1)) * _ROTATION_SIZE_UNITS[size_match.group(2).upper()]
+        if max_bytes <= 0:
+            max_bytes = _DEFAULT_MAX_BYTES
+        return logging.handlers.RotatingFileHandler(log_file, maxBytes=max_bytes, backupCount=_ROTATION_BACKUP_COUNT)
+
+    # Time-based: "<n> <unit>" (seconds/minutes/hours/days/weeks).
+    parts = rotation.split()
+    expected_parts = 2
+    if len(parts) == expected_parts and parts[0].isdigit():
+        when = _ROTATION_TIME_UNITS.get(parts[1].lower())
+        if when:
+            # TimedRotatingFileHandler ignores `interval` for weekly ("W0").
+            interval = 1 if when.startswith("W") else int(parts[0])
+            return logging.handlers.TimedRotatingFileHandler(
+                log_file, when=when, interval=interval, backupCount=_ROTATION_BACKUP_COUNT
+            )
+
+    # Unset or unrecognized: conservative 10 MB size rotation.
+    return logging.handlers.RotatingFileHandler(
+        log_file, maxBytes=_DEFAULT_MAX_BYTES, backupCount=_ROTATION_BACKUP_COUNT
+    )
+
+
+def setup_log_file(
+    log_file: Path, *, log_rotation: str | None = None, formatter: logging.Formatter | None = None
+) -> None:
+    """Set up Langflow's file handler for the configured rotation policy.
+
+    ``log_rotation`` selects the handler (see ``_build_file_handler``).
     ``formatter`` lets JSON modes attach a ``structlog.stdlib.ProcessorFormatter``
     so third-party stdlib records (uvicorn, sqlalchemy, httpx, ...) are rendered
     as JSON through the same processor chain as application logs. When omitted,
@@ -405,11 +469,7 @@ def setup_log_file(log_file: Path, *, max_bytes: int, formatter: logging.Formatt
         logging.root.removeHandler(_file_handler)
         _file_handler.close()
 
-    _file_handler = logging.handlers.RotatingFileHandler(
-        log_file,
-        maxBytes=max_bytes,
-        backupCount=5,
-    )
+    _file_handler = _build_file_handler(log_file, log_rotation)
     _file_handler.setFormatter(formatter if formatter is not None else logging.Formatter("%(message)s"))
     logging.root.addHandler(_file_handler)
 
@@ -571,8 +631,10 @@ def configure(
         # Use rich console for pretty printing based on environment variable
         log_stdout_pretty = os.getenv("LANGFLOW_PRETTY_LOGS", "true").lower() == "true"
         if log_stdout_pretty:
-            # If custom format is provided, use KeyValueRenderer with custom format
-            if log_format:
+            # LANGFLOW_LOG_FORMAT selects the renderer: "console" keeps structlog's
+            # ConsoleRenderer, any other value switches to KeyValueRenderer. Unset
+            # defaults to ConsoleRenderer.
+            if log_format and log_format.strip().lower() != "console":
                 processors.append(structlog.processors.format_exc_info)
                 processors.append(structlog.processors.KeyValueRenderer())
             else:
@@ -613,27 +675,14 @@ def configure(
             cache_dir = Path(user_cache_dir("langflow"))
             log_file = cache_dir / "langflow.log"
 
-        # Parse rotation settings
-        if log_rotation:
-            # Handle rotation like "1 day", "100 MB", etc.
-            max_bytes = 10 * 1024 * 1024  # Default 10MB
-            if "MB" in log_rotation.upper():
-                try:
-                    # Look for pattern like "100 MB" (with space)
-                    parts = log_rotation.split()
-                    expected_parts = 2
-                    if len(parts) >= expected_parts and parts[1].upper() == "MB":
-                        mb = int(parts[0])
-                        if mb > 0:  # Only use valid positive values
-                            max_bytes = mb * 1024 * 1024
-                except (ValueError, IndexError):
-                    pass
-        else:
-            max_bytes = 10 * 1024 * 1024  # Default 10MB
+        # Read LANGFLOW_LOG_ROTATION here so a value set purely in the environment
+        # (not just the --log-rotation CLI flag) is honored.
+        if log_rotation is None:
+            log_rotation = os.getenv("LANGFLOW_LOG_ROTATION") or None
 
         # Since structlog doesn't have built-in rotation, we'll use stdlib logging for file output.
         # In JSON file mode the formatter renders both structlog and foreign stdlib records as JSON.
-        setup_log_file(log_file, max_bytes=max_bytes, formatter=file_json_formatter)
+        setup_log_file(log_file, log_rotation=log_rotation, formatter=file_json_formatter)
         logging.root.setLevel(numeric_level)
 
     # Set up interceptors for uvicorn and gunicorn
