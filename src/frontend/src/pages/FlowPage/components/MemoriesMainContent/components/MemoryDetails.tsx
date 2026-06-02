@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/popover";
 import { cn } from "@/utils/utils";
 import { formatDate } from "../helpers";
+import { ALL_SESSIONS_VALUE } from "../hooks/useMemorySessionResolver";
 import { MemoryDetailsProps } from "../types";
 import { MemoryDetailsHeader } from "./MemoryDetailsHeader";
 import { MemoryKnowledgeBaseSection } from "./MemoryKnowledgeBaseSection";
@@ -33,6 +34,8 @@ export function MemoryDetails({
 }: MemoryDetailsProps) {
   const [configOpen, setConfigOpen] = useState(false);
   const { t } = useTranslation();
+  const isAllSessions =
+    !selectedSession || selectedSession === ALL_SESSIONS_VALUE;
   const pendingLabel =
     memory.batch_size > 1
       ? t("memory.pendingThisBatch")
@@ -61,13 +64,17 @@ export function MemoryDetails({
         <div className="mb-4 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <SummaryCard
             label={t("memory.processedMessages")}
-            value={memory.total_messages_processed}
+            value={isAllSessions ? "—" : memory.total_messages_processed}
             icon="MessageSquare"
           />
-          <SummaryCard label={pendingLabel} value={pendingValue} icon="Timer" />
+          <SummaryCard
+            label={pendingLabel}
+            value={isAllSessions ? "—" : pendingValue}
+            icon="Timer"
+          />
           <SummaryCard
             label={t("memory.lastGenerated")}
-            value={formatDate(memory.last_generated_at) || t("memory.never")}
+            value={isAllSessions ? "—" : formatDate(memory.last_generated_at)}
             icon="Clock"
           />
           <Popover open={configOpen} onOpenChange={setConfigOpen}>

@@ -25,8 +25,9 @@ The Docling dependency is required to use the Docling components in Langflow.
     * **Langflow Desktop**: Set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
     * **Langflow OSS**:
-        * If you installed `langflow` (`uv pip install langflow`), Docling is included automatically through bundled extras.
+        * If you installed `langflow` (`uv pip install langflow`), Docling is included automatically through bundled extras, without Docling's optional chunking dependencies.
         * If you installed `langflow-base` directly, install Docling with an extra, for example `uv pip install "langflow-base[docling]"`.
+        * To use the **Chunk DoclingDocument** component, install the chunking extra with `uv pip install "langflow[docling-chunking]"` or `uv pip install "langflow-base[docling-chunking]"`.
 
     * **macOS Intel (x86_64)**: Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
 
@@ -102,6 +103,8 @@ For more information, see the [Docling serve project repository](https://github.
 ### Chunk DoclingDocument
 
 The **Chunk DoclingDocument** component splits `DoclingDocument` objects into chunks.
+
+This component requires Docling's optional chunking dependencies. Install them with `uv pip install "langflow[docling-chunking]"` or `uv pip install "langflow-base[docling-chunking]"`.
 
 It outputs the chunked documents as a [`Table`](/data-types#table).
 
