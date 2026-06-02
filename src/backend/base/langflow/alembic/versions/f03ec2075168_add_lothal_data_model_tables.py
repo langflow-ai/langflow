@@ -4,6 +4,7 @@ Revision ID: f03ec2075168
 Revises: d306e5c17c41
 Create Date: 2026-06-02 21:17:29.056071
 
+Phase: EXPAND
 """
 from typing import Sequence, Union
 
@@ -51,7 +52,7 @@ def upgrade() -> None:
             sa.Column('id', sa.Uuid(), nullable=False),
             sa.Column('project_id', sa.Uuid(), nullable=False),
             sa.Column('role', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column('content', sa.Text(), nullable=True),
+            sa.Column('content', sa.Text(), nullable=False),
             sa.Column('suggestions', sa.JSON(), nullable=True),
             sa.Column('phase', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
             sa.Column('created_at', sa.DateTime(), nullable=False),
@@ -67,7 +68,7 @@ def upgrade() -> None:
             sa.Column('id', sa.Uuid(), nullable=False),
             sa.Column('project_id', sa.Uuid(), nullable=False),
             sa.Column('path', sqlmodel.sql.sqltypes.AutoString(), nullable=False),
-            sa.Column('content', sa.Text(), nullable=True),
+            sa.Column('content', sa.Text(), nullable=False),
             sa.Column('created_at', sa.DateTime(), nullable=False),
             sa.ForeignKeyConstraint(['project_id'], ['lothal_project.id'], ),
             sa.PrimaryKeyConstraint('id'),

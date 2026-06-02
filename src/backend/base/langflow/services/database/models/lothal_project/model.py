@@ -57,7 +57,7 @@ class Message(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
     project_id: UUIDstr = Field(index=True, foreign_key="lothal_project.id")
     role: str = Field()
-    content: str = Field(sa_column=Column(Text))
+    content: str = Field(sa_column=Column(Text, nullable=False))
     # Clarification chips; [] for USER messages and non-clarification replies.
     suggestions: list[str] = Field(default_factory=list, sa_column=Column(JSON))
     phase: str = Field()
@@ -74,7 +74,7 @@ class CodeFile(SQLModel, table=True):  # type: ignore[call-arg]
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
     project_id: UUIDstr = Field(index=True, foreign_key="lothal_project.id")
     path: str = Field()
-    content: str = Field(sa_column=Column(Text))
+    content: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     project: Project | None = Relationship(back_populates="code_files")
