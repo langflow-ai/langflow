@@ -1,14 +1,14 @@
 """Tests for ChunkDoclingDocumentComponent HybridChunker parameters."""
 
+import builtins
 import sys
 import types
 
 import pytest
-
-pytest.importorskip("tiktoken")
-pytest.importorskip("docling_core")
-
-from lfx.components.docling.chunk_docling_document import ChunkDoclingDocumentComponent
+from lfx.components.docling.chunk_docling_document import (
+    ChunkDoclingDocumentComponent,
+    _load_docling_chunker_dependencies,
+)
 
 
 def _base_build_config():
@@ -95,6 +95,11 @@ class TestChunkDoclingDocumentComponentHybridChunker:
                 captured["max_tokens"] = max_tokens
                 return "tokenizer"
 
+        class DummyDocMeta:
+            @classmethod
+            def model_validate(cls, meta):
+                return meta
+
         hybrid_chunker_module = types.ModuleType("docling_core.transforms.chunker.hybrid_chunker")
         hybrid_chunker_module.HybridChunker = DummyHybridChunker
         monkeypatch.setitem(sys.modules, "docling_core.transforms.chunker.hybrid_chunker", hybrid_chunker_module)
@@ -110,8 +115,8 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             huggingface_tokenizer_module,
         )
         monkeypatch.setattr(
-            "lfx.components.docling.chunk_docling_document.HierarchicalChunker",
-            DummyHierarchicalChunker,
+            "lfx.components.docling.chunk_docling_document._load_docling_chunker_dependencies",
+            lambda: (DummyDocMeta, DummyHierarchicalChunker),
         )
         monkeypatch.setattr(
             "lfx.components.docling.chunk_docling_document.extract_docling_documents",
@@ -182,3 +187,20 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             always_emit_headings_input=True,
         )
         assert captured["hierarchical_called"] is True
+
+    def test_missing_chunking_extra_has_actionable_error(self, monkeypatch):
+        original_import = builtins.__import__
+
+        def fake_import(name, globals_=None, locals_=None, fromlist=(), level=0):
+            if name in {
+                "docling_core.transforms.chunker.doc_chunk",
+                "docling_core.transforms.chunker.hierarchical_chunker",
+            }:
+                msg = "Module requires 'chunking' extra"
+                raise RuntimeError(msg)
+            return original_import(name, globals_, locals_, fromlist, level)
+
+        monkeypatch.setattr(builtins, "__import__", fake_import)
+
+        with pytest.raises(ImportError, match=r"langflow-base\[docling-chunking\]"):
+            _load_docling_chunker_dependencies()

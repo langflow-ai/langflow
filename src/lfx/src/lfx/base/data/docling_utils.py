@@ -292,7 +292,6 @@ def docling_worker(
         from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption  # noqa: F401
         from docling.models.factories import get_ocr_factory  # noqa: F401
         from docling.pipeline.vlm_pipeline import VlmPipeline  # noqa: F401
-        from langchain_docling.picture_description import PictureDescriptionLangChainOptions  # noqa: F401
 
         # Check for shutdown after imports
         check_shutdown()
@@ -332,7 +331,6 @@ def docling_worker(
             from docling.datamodel.pipeline_options import PdfPipelineOptions
             from docling.document_converter import DocumentConverter, FormatOption, PdfFormatOption
             from docling.models.factories import get_ocr_factory
-            from langchain_docling.picture_description import PictureDescriptionLangChainOptions
 
             pipeline_options = PdfPipelineOptions()
             pipeline_options.do_ocr = ocr_engine not in {"", "None"}
@@ -342,6 +340,14 @@ def docling_worker(
                 pipeline_options.ocr_options = ocr_options
 
             pipeline_options.do_picture_classification = do_picture_classification
+            try:
+                from langchain_docling.picture_description import PictureDescriptionLangChainOptions
+            except ImportError as e:
+                msg = (
+                    "langchain-docling is not installed. Please install it with `pip install langchain-docling` "
+                    "or `pip install 'langflow[docling-image-description]'`."
+                )
+                raise ImportError(msg) from e
             pic_desc_llm = _deserialize_pydantic_model(pic_desc_config)
             logger.info("Docling enabling the picture description stage.")
             pipeline_options.do_picture_description = True
