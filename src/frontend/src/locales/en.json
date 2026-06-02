@@ -135,6 +135,7 @@
   "flow.noCompatibleComponents": "No compatible components found.",
   "flow.brokenEdgesWarning": "Some connections were removed because they were invalid:",
   "flow.exclusiveComponentsNotPasted": "Some components were not pasted because they cannot be used together with components already in the flow.",
+  "flow.duplicateComponentsNotPasted": "Some components were not pasted because only one of each is allowed in a flow.",
   "flow.unsavedChangesTitle": "{{name}} has unsaved changes",
   "flow.savingChanges": "Saving your changes...",
   "flow.lastSaved": "Last saved: {{time}}",

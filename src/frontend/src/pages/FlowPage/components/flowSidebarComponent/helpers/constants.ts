@@ -1,17 +1,6 @@
-import {
-  CHAT_INPUT_COMPONENT,
-  MUTUALLY_EXCLUSIVE_COMPONENTS,
-  WEBHOOK_COMPONENT,
-} from "@/constants/constants";
-
-// Component name constants (re-exported from the shared source of truth).
-export { CHAT_INPUT_COMPONENT, WEBHOOK_COMPONENT };
-
-// Exclusivity rules: components that cannot coexist. Aliased to the shared
-// constant so the sidebar and the canvas paste flow stay in sync.
-export const EXCLUSIVITY_RULES = MUTUALLY_EXCLUSIVE_COMPONENTS;
-
-// Tooltip messages
+// Tooltip messages shown when a sidebar item is disabled by a placement
+// constraint. Keyed by the violation case (see get-disabled-tooltip); the
+// constraint logic itself lives in `@/utils/componentConstraints`.
 export const TOOLTIP_MESSAGES = {
   CHAT_INPUT_ALREADY_ADDED: "Chat input already added",
   WEBHOOK_ALREADY_ADDED: "Webhook already added",

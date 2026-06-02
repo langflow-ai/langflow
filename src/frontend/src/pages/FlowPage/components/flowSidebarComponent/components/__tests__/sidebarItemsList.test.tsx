@@ -16,19 +16,17 @@ jest.mock("@/stores/flowStore", () => ({
   default: jest.fn((selector) =>
     selector({
       nodes: [
-        { id: "node1", type: "ChatInput" },
-        { id: "node2", type: "Text" },
+        { id: "node1", data: { type: "ChatInput" } },
+        { id: "node2", data: { type: "Text" } },
       ],
     }),
   ),
 }));
 
-jest.mock("@/utils/reactflowUtils", () => ({
-  checkChatInput: jest.fn((nodes) =>
-    nodes.some((node: any) => node.type === "ChatInput"),
-  ),
-  checkWebhookInput: jest.fn((nodes) =>
-    nodes.some((node: any) => node.type === "Webhook"),
+jest.mock("@/utils/componentConstraints", () => ({
+  getPresentComponentTypes: jest.fn(
+    (nodes: any[]) =>
+      new Set(nodes.map((node) => node?.data?.type).filter(Boolean)),
   ),
 }));
 
@@ -37,18 +35,18 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("../../helpers/disable-item", () => ({
-  disableItem: jest.fn((itemName, uniqueInputs) => {
-    if (itemName === "ChatInput" && uniqueInputs.chatInput) return true;
-    if (itemName === "Webhook" && uniqueInputs.webhookInput) return true;
-    return false;
-  }),
+  disableItem: jest.fn(
+    (itemName, present: ReadonlySet<string>) =>
+      (itemName === "ChatInput" && present.has("ChatInput")) ||
+      (itemName === "Webhook" && present.has("Webhook")),
+  ),
 }));
 
 jest.mock("../../helpers/get-disabled-tooltip", () => ({
-  getDisabledTooltip: jest.fn((itemName, uniqueInputs) => {
-    if (itemName === "ChatInput" && uniqueInputs.chatInput)
+  getDisabledTooltip: jest.fn((itemName, present: ReadonlySet<string>) => {
+    if (itemName === "ChatInput" && present.has("ChatInput"))
       return "Chat Input already added";
-    if (itemName === "Webhook" && uniqueInputs.webhookInput)
+    if (itemName === "Webhook" && present.has("Webhook"))
       return "Webhook already added";
     return "";
   }),
@@ -608,10 +606,7 @@ describe("SidebarItemsList", () => {
       // Verify all mocked functions were called
       expect(require("@/stores/flowStore").default).toHaveBeenCalled();
       expect(
-        require("@/utils/reactflowUtils").checkChatInput,
-      ).toHaveBeenCalled();
-      expect(
-        require("@/utils/reactflowUtils").checkWebhookInput,
+        require("@/utils/componentConstraints").getPresentComponentTypes,
       ).toHaveBeenCalled();
       expect(
         require("../../helpers/disable-item").disableItem,

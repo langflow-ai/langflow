@@ -37,10 +37,9 @@ import type {
   VertexLayerElementType,
 } from "../types/zustand/flow";
 import { buildFlowVerticesWithFallback } from "../utils/buildUtils";
+import { filterPlaceableSelection } from "../utils/componentConstraints";
 import {
   buildPositionDictionary,
-  checkChatInput,
-  checkWebhookInput,
   cleanEdges,
   getConnectedSubgraph,
   getHandleId,
@@ -57,8 +56,6 @@ import useAlertStore from "./alertStore";
 import { useDarkStore } from "./darkStore";
 import useFlowsManagerStore from "./flowsManagerStore";
 import { useGlobalVariablesStore } from "./globalVariablesStore/globalVariables";
-import { filterMutuallyExclusiveComponents } from "./helpers/filter-mutually-exclusive-components";
-import { filterSingletonComponent } from "./helpers/filter-singleton-component";
 import { useTweaksStore } from "./tweaksStore";
 import { useTypesStore } from "./typesStore";
 import { useUtilityStore } from "./utilityStore";
@@ -558,23 +555,22 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       selection.edges = selection.edges.concat(existingEdgesToCopy);
     }
 
-    filterSingletonComponent(
-      selection,
-      "ChatInput",
-      checkChatInput(get().nodes),
-      "You can only have one Chat Input component in a flow.",
-    );
-
-    filterSingletonComponent(
-      selection,
-      "Webhook",
-      checkWebhookInput(get().nodes),
-      "You can only have one Webhook component in a flow.",
-    );
-
-    // Enforce mutual-exclusivity (e.g. Chat Input vs Webhook) on paste so the
-    // constraint cannot be bypassed by copy/paste, matching the sidebar.
-    filterMutuallyExclusiveComponents(selection, get().nodes);
+    // Enforce component placement constraints (singleton + mutual exclusivity)
+    // on paste so they cannot be bypassed by copy/paste, matching the sidebar.
+    // The filter is side-effect free; surfacing the notice is the caller's job.
+    const placeable = filterPlaceableSelection(selection, get().nodes);
+    selection.nodes = placeable.nodes;
+    selection.edges = placeable.edges;
+    if (placeable.violations.length > 0) {
+      const messages: string[] = [];
+      if (placeable.violations.some((v) => v.reason === "singleton")) {
+        messages.push(i18n.t("flow.duplicateComponentsNotPasted"));
+      }
+      if (placeable.violations.some((v) => v.reason === "exclusivity")) {
+        messages.push(i18n.t("flow.exclusiveComponentsNotPasted"));
+      }
+      useAlertStore.getState().setNoticeData({ title: messages.join(" ") });
+    }
 
     let minimumX = Infinity;
     let minimumY = Infinity;
