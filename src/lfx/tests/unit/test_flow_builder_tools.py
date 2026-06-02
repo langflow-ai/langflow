@@ -602,9 +602,9 @@ class TestConfigureComponentModelProviderOnly:
         flow = _ensure_working_flow()
         agent_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == agent_id)
         options = agent_node["data"]["node"]["template"]["model"].get("options") or []
-        assert any(
-            o.get("name") == resolved_name and o.get("provider") == "Anthropic" for o in options
-        ), f"resolved model must be mirrored into options; got {options!r}"
+        assert any(o.get("name") == resolved_name and o.get("provider") == "Anthropic" for o in options), (
+            f"resolved model must be mirrored into options; got {options!r}"
+        )
 
         assert resolved_name in (result.data.get("text") or ""), (
             f"tool result must report the resolved model name; got {result.data.get('text')!r}"
