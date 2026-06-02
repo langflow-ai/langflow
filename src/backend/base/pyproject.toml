@@ -330,7 +330,6 @@ docling = [
     "docling-slim[cli,convert-core,extract-core,feat-ocr-rapidocr,format-latex,format-office,format-pdf,format-web,models-local,service-client]>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
 docling-chunking = [
-    "langflow-base[docling]",
     "docling-core[chunking]>=2.77.0,<3.0.0",
     "tiktoken>=0.7.0",
 ]
