@@ -317,6 +317,22 @@ class TestVariableService:
             reset_request_variables(token)
             del os.environ["SHARED_VAR"]
 
+    async def test_request_scope_alias_overrides_env(self, variables):
+        """A request-scoped x-langflow-global-var-* alias wins over an env var of the same name.
+
+        Ensures a caller's per-request credential is never shadowed by an ambient process
+        credential, regardless of which form (exact name or alias) the caller supplied.
+        """
+        from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables
+
+        os.environ["ACCESS_TOKEN"] = "env-token"  # noqa: S105
+        token = activate_request_variables({"x-langflow-global-var-access-token": "alias-token"})
+        try:
+            assert await variables.get_variable("ACCESS_TOKEN") == "alias-token"
+        finally:
+            reset_request_variables(token)
+            del os.environ["ACCESS_TOKEN"]
+
     async def test_in_memory_overrides_request_scope(self, variables):
         """An in-memory variable wins over a request-scoped variable of the same name."""
         from lfx.services.variable.request_scope import activate_request_variables, reset_request_variables

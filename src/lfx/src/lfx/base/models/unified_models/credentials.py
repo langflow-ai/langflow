@@ -127,8 +127,13 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
     if not provider_vars:
         return result
 
-    # If no user_id, only check environment variables
+    # If no user_id, only check environment variables. Honor the request's no-env-fallback
+    # contract: a served flow under no_env_fallback stays isolated from process-wide
+    # credentials, so return nothing rather than leaking os.environ into provider_vars
+    # (which would defeat the _env_if_allowed guards in instantiation.py).
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+        if is_env_fallback_disabled():
+            return result
         for var_info in provider_vars:
             var_key = var_info.get("variable_key")
             if var_key:
@@ -163,7 +168,10 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                     if value:
                         values[var_key] = value
                 except (ValueError, Exception):  # noqa: BLE001
-                    # Variable not found - check environment
+                    # Variable not found - check environment, unless the request disables
+                    # env fallback (keeps served flows isolated from process-wide credentials).
+                    if is_env_fallback_disabled():
+                        continue
                     env_value = os.environ.get(var_key)
                     if env_value and env_value.strip():
                         values[var_key] = env_value

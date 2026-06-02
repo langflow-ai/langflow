@@ -164,6 +164,9 @@ async def update_table_params_with_load_from_db_fields(
     context = None
     if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
         context = custom_component.graph.context
+    # Honor the same no-env-fallback contract as load_from_env_vars so a served flow under
+    # no_env_fallback never resolves table columns from process-wide os.environ.
+    no_env_fallback = bool(context and context.get("no_env_fallback"))
 
     async with session_scope() as session:
         settings_service = get_settings_service()
@@ -201,7 +204,7 @@ async def update_table_params_with_load_from_db_fields(
                                 key = request_variables[variable_name]
                                 logger.debug(f"Found context override for variable '{variable_name}'")
 
-                        if key is None:
+                        if key is None and not no_env_fallback:
                             key = os.getenv(variable_name)
                             if key:
                                 logger.info(
@@ -222,7 +225,7 @@ async def update_table_params_with_load_from_db_fields(
                     key = None
 
                 # If we couldn't get from database and fallback is enabled, try environment
-                if fallback_to_env_vars and key is None:
+                if fallback_to_env_vars and key is None and not no_env_fallback:
                     key = os.getenv(variable_name)
                     if key:
                         logger.info(f"Using environment variable {variable_name} for table column {column_name}")

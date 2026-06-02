@@ -354,7 +354,6 @@ def serve_command(
                 # The parent's in-memory app is never passed to workers — each worker calls
                 # create_serve_app() fresh, so we skip building the app here.
                 from lfx.cli.serve_app import (
-                    _SERVE_ENV_PREFIX,
                     _SERVE_FLOW_DIR_ENV,
                     _SERVE_NO_ENV_FALLBACK_ENV,
                     _SERVE_STARTUP_PATHS_ENV,
@@ -383,8 +382,10 @@ def serve_command(
                         factory=True,
                     )
                 finally:
-                    for k in [k for k in list(os.environ) if k.startswith(_SERVE_ENV_PREFIX)]:
-                        del os.environ[k]
+                    # Only remove the keys we set above — a prefix sweep would also delete
+                    # any LFX_SERVE_* var the operator intentionally exported before launch.
+                    for k in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_STARTUP_PATHS_ENV):
+                        os.environ.pop(k, None)
             else:
                 serve_app = create_multi_serve_app(registry=registry)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)

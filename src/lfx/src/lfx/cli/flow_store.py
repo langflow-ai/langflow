@@ -104,8 +104,14 @@ class FilesystemFlowStore:
     def write(self, flow_id: str, flow_json: dict) -> None:
         target = self._safe_path(flow_id)
         tmp = self._dir / f"{flow_id}.{uuid.uuid4().hex}.tmp"
-        tmp.write_text(json.dumps(flow_json), encoding="utf-8")
-        tmp.replace(target)
+        try:
+            tmp.write_text(json.dumps(flow_json), encoding="utf-8")
+            tmp.replace(target)
+        except OSError:
+            # Don't leak the partial temp file (e.g. disk full mid-write); list_ids()
+            # only globs *.json so an orphaned *.tmp would silently accumulate.
+            tmp.unlink(missing_ok=True)
+            raise
 
     def read(self, flow_id: str) -> dict | None:
         path = self._safe_path(flow_id)

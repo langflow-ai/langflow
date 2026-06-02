@@ -64,15 +64,18 @@ class VariableService(Service):
         Resolution order (first match wins):
           1. In-memory cache (``set_variable``).
           2. Request-scoped exact name (serve ContextVar or ``LANGFLOW_REQUEST_VARIABLES``).
-          3. Environment variable (exact name).
-          4. Request-scoped ``x-langflow-global-var-*`` alias.
+          3. Request-scoped ``x-langflow-global-var-*`` alias.
+          4. Environment variable (exact name).
           5. Environment variable (``x-langflow-global-var-*`` alias).
 
-        Note: the exact-name environment lookup (3) runs *before* the request-scoped
-        alias lookup (4), so an env var named ``name`` beats a request-scoped alias.
+        Both request-scoped lookups (2, 3) run *before* any process-env fallback (4, 5),
+        so a credential the caller supplies for this request — in either the exact-name
+        or the ``x-langflow-global-var-*`` form — always beats a same-named variable left
+        in the worker's environment, preventing one caller's request from running on an
+        ambient process credential.
 
         When the active request disables env fallback (``graph.context['no_env_fallback']``,
-        propagated via the request scope), steps 3 and 5 are skipped so resolution
+        propagated via the request scope), steps 4 and 5 are skipped so resolution
         never reads ``os.environ`` — matching ``load_from_env_vars`` for ``load_from_db``
         fields and keeping served flows isolated from process-wide credentials.
         """
@@ -84,20 +87,17 @@ class VariableService(Service):
             logger.debug(f"Variable '{name}' loaded from request-scoped variables")
             return request_variables[name]
 
-        env_fallback_enabled = not is_env_fallback_disabled()
-
-        if env_fallback_enabled:
-            value = os.getenv(name)
-            if value:
-                logger.debug(f"Variable '{name}' loaded from environment")
-                return value
-
         global_alias = self._normalize_global_var_key(name)
         if global_alias in request_variables:
             logger.debug(f"Variable '{name}' loaded from request-scoped alias '{global_alias}'")
             return request_variables[global_alias]
 
-        if env_fallback_enabled:
+        if not is_env_fallback_disabled():
+            value = os.getenv(name)
+            if value:
+                logger.debug(f"Variable '{name}' loaded from environment")
+                return value
+
             value = os.getenv(global_alias)
             if value:
                 logger.debug(f"Variable '{name}' loaded from global alias '{global_alias}'")

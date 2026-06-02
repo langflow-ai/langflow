@@ -63,9 +63,8 @@ def apply_global_vars_to_graph(graph: Graph, global_vars: dict[str, str] | None)
         return
     if "request_variables" not in graph.context:
         graph.context["request_variables"] = {}
-    # TODO: stored verbatim, so blob-form vars (LANGFLOW_REQUEST_VARIABLES) are NOT flattened
-    # here. The no-DB load_from_db path (load_from_env_vars reads graph.context) only resolves
-    # direct keys, while the VariableService/ContextVar path (common.py) sees the flattened blob.
-    # For parity, consider flattening via build_request_variables_from_global_vars. No current
-    # impact: TRM also sends raw direct keys; defer unless a caller sends blob-only vars.
-    graph.context["request_variables"].update(global_vars)
+    # Flatten the LANGFLOW_REQUEST_VARIABLES blob here so the no-DB load_from_db path
+    # (load_from_env_vars reads graph.context) resolves the same names as the
+    # VariableService/ContextVar path (common.py) — otherwise a caller sending a credential
+    # only inside the JSON blob would resolve on one path and return None on the other.
+    graph.context["request_variables"].update(build_request_variables_from_global_vars(global_vars))
