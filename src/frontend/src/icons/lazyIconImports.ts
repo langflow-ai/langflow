@@ -308,6 +308,10 @@ export const lazyIconsMapping = {
     import("@/icons/JigsawStack").then((mod) => ({
       default: mod.JigsawStackIcon,
     })),
+  JungleGrid: () =>
+    import("@/icons/JungleGrid").then((mod) => ({
+      default: mod.JungleGridIcon,
+    })),
   Jira: () => import("@/icons/Jira").then((mod) => ({ default: mod.JiraIcon })),
   Jotform: () =>
     import("@/icons/Jotform").then((mod) => ({ default: mod.JotformIcon })),

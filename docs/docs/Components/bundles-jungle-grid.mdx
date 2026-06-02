@@ -1,0 +1,76 @@
+---
+title: Jungle Grid
+slug: /bundles-jungle-grid
+---
+
+# Jungle Grid bundle
+
+Jungle Grid is an execution layer for AI workloads and agents. Langflow flows can estimate, submit, monitor, cancel, and retrieve outputs from GPU-backed work without managing GPU placement directly.
+
+## Credentials
+
+Jungle Grid components require a scoped API key from the Jungle Grid portal. Keep API keys secret, do not insert them into exported public flows, and use only the scopes required by the components in your flow.
+
+The components send the key server-side as a bearer token to `https://api.junglegrid.dev` by default.
+
+## Components
+
+### Estimate Job
+
+Read-only. Estimates routing, availability, queue timing, and cost for a workload without starting execution.
+
+Required scope: `jobs:estimate`.
+
+### Submit Job
+
+Cost-incurring. Submits a real Jungle Grid workload. This operation may start compute and consume credits.
+
+Required scope: `jobs:submit` or `jobs:write`.
+
+### Get Job Status
+
+Read-only. Retrieves job lifecycle status and details.
+
+Required scope: `jobs:read` or `jobs:write`.
+
+### Get Job Runtime
+
+Read-only. Retrieves runtime information where the execution path exposes it. Runtime responses can vary by workload and route.
+
+Required scope: `jobs:read` or `jobs:write`.
+
+### Get Job Logs
+
+Read-only. Retrieves bounded stored logs for monitoring and debugging. The live SSE log stream is not implemented in this bundle version.
+
+Required scope: `logs:read`, `jobs:read`, or `jobs:write`.
+
+### Cancel Job
+
+Side-effecting. Cancels a job that has not reached a terminal state and stops work where possible.
+
+Required scope: `jobs:submit` or `jobs:write`.
+
+### List Job Artifacts
+
+Read-only. Lists artifacts created by a job. Artifacts may be unavailable until a job has completed and storage processing has finished.
+
+Required scope: `jobs:read` or `jobs:write`.
+
+### Create Artifact Download URL
+
+Temporary-sensitive output. Creates a temporary signed download URL for a job artifact. Treat the returned URL as sensitive and do not log it or publish it in exported flows.
+
+Required scope: `jobs:read` or `jobs:write`.
+
+## Example flow
+
+`Estimate Job -> Submit Job -> Get Job Status -> Get Job Runtime / Get Job Logs -> List Job Artifacts -> Create Artifact Download URL`
+
+Use `Cancel Job` as an explicit separate action when a workflow needs cancellation.
+
+## Jungle Grid documentation
+
+- [Jungle Grid docs](https://junglegrid.dev/docs)
+- [Jungle Grid API docs](https://junglegrid.dev/docs/api)
+- [Jungle Grid MCP docs](https://junglegrid.dev/docs/mcp)
