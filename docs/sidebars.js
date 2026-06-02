@@ -221,7 +221,7 @@ module.exports = {
         {
           type: "doc",
           id: "Deployment/deployment-wxo",
-          label: "Deploy Langflow agents on watsonx Orchestrate"
+          label: "Deploy flows on watsonx Orchestrate"
         },
         {
           type: "category",
