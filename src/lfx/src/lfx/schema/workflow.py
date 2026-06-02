@@ -311,10 +311,26 @@ class WorkflowExecutionResponse(BaseModel):
     """Synchronous workflow execution response."""
 
     flow_id: str
+    session_id: str | None = Field(
+        default=None,
+        description=(
+            "The session the run executed under. Echoes the request ``session_id`` "
+            "when provided, otherwise the server-generated one. Pass it back on the "
+            "next call to continue the same chat history / memory thread."
+        ),
+    )
     job_id: JobId | None = None
     object: Literal["response"] = Field(default="response")
     created_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     status: JobStatus
+    output_text: str | None = Field(
+        default=None,
+        description=(
+            "Shortcut to the run's text answer: the content of the flow's single "
+            "text output (a ChatOutput/TextOutput). None when the flow has no text "
+            "output or more than one, in which case read ``outputs``."
+        ),
+    )
     errors: list[ErrorDetail] = []
     inputs: dict[str, Any] = {}
     globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)

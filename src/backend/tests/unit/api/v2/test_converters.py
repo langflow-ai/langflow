@@ -35,11 +35,13 @@ from langflow.api.v2.converters import (
     _extract_text_from_message,
     _get_raw_content,
     _simplify_output_content,
+    _single_output_text,
     create_error_response,
     create_job_response,
     run_response_to_workflow_response,
 )
 from lfx.schema.workflow import (
+    ComponentOutput,
     ErrorDetail,
     JobStatus,
     WorkflowExecutionResponse,
@@ -736,6 +738,7 @@ class TestRunResponseToWorkflowResponse:
 
         # Create mock run response
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "output-123"
         result_data.outputs = {"message": {"message": "Hello World"}}
@@ -766,6 +769,7 @@ class TestRunResponseToWorkflowResponse:
         graph.get_terminal_nodes = Mock(return_value=[])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         globals_ = {"FILENAME": "relatório—final.pdf", "OWNER_NAME": "José"}
@@ -793,6 +797,7 @@ class TestRunResponseToWorkflowResponse:
 
         # Create mock run response with model info
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "llm-123"
         result_data.outputs = {"model_output": {"message": {"model_name": "gpt-4", "text": "response"}}}
@@ -836,6 +841,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex1, vertex2])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         request_inputs = {}
@@ -866,6 +872,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "data-123"
         result_data.outputs = {"result": {"message": {"result": "42"}}}
@@ -900,6 +907,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         request_inputs = {}
@@ -917,6 +925,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         inputs = {"component.param": "value"}
@@ -941,6 +950,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "pinecone-123"
         result_data.outputs = {"result": {"message": {"result": {"ids": ["vec1", "vec2"], "stored_count": 2}}}}
@@ -975,6 +985,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = "retriever-456"
         result_data.outputs = {
@@ -1009,6 +1020,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = None
 
         request_inputs = {}
@@ -1036,6 +1048,7 @@ class TestRunResponseToWorkflowResponse:
         _setup_graph_get_vertex(graph, [vertex])
 
         run_response = Mock()
+        run_response.session_id = None
         run_response.outputs = []
 
         request_inputs = {}
@@ -1064,6 +1077,7 @@ class TestRunResponseToWorkflowResponse:
 
         # Create result_data without component_id
         run_response = Mock()
+        run_response.session_id = None
         result_data = Mock()
         result_data.component_id = None  # Missing component_id
         result_data.outputs = {"message": "test"}
@@ -1143,6 +1157,134 @@ class TestParseWorkflowRunRequest:
 
         parsed = parse_workflow_run_request(WorkflowRunRequest(flow_id=_VALID_UUID))
         assert parsed.run_id is None
+
+
+def _component_output(type_: str, content: Any) -> ComponentOutput:
+    return ComponentOutput(type=type_, status=JobStatus.COMPLETED, content=content)
+
+
+class TestSingleOutputText:
+    """``_single_output_text`` surfaces the lone text answer, else None."""
+
+    def test_single_message_output_returns_its_text(self):
+        outputs = {"ChatOutput-abc": _component_output("message", "Hi there!")}
+        assert _single_output_text(outputs) == "Hi there!"
+
+    def test_single_text_output_returns_its_text(self):
+        outputs = {"TextOutput-abc": _component_output("text", "plain answer")}
+        assert _single_output_text(outputs) == "plain answer"
+
+    def test_message_plus_data_returns_only_the_message(self):
+        # A side DataOutput must not suppress the single text answer.
+        outputs = {
+            "ChatOutput-abc": _component_output("message", "the reply"),
+            "DataOutput-xyz": _component_output("data", {"rows": [1, 2]}),
+        }
+        assert _single_output_text(outputs) == "the reply"
+
+    def test_two_message_outputs_return_none(self):
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        assert _single_output_text(outputs) is None
+
+    def test_data_only_returns_none(self):
+        outputs = {"DataOutput-xyz": _component_output("data", {"k": "v"})}
+        assert _single_output_text(outputs) is None
+
+    def test_no_outputs_returns_none(self):
+        assert _single_output_text({}) is None
+
+    def test_empty_string_answer_is_preserved(self):
+        # A single, intentionally empty answer stays "" (distinct from None).
+        outputs = {"ChatOutput-abc": _component_output("message", "")}
+        assert _single_output_text(outputs) == ""
+
+    def test_non_string_message_content_is_ignored(self):
+        # content that isn't a plain string (e.g. None on a non-output node) doesn't count.
+        outputs = {"ChatOutput-abc": _component_output("message", None)}
+        assert _single_output_text(outputs) is None
+
+
+def _message_output_vertex(vertex_id: str) -> Mock:
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "Chat Output"
+    vertex.vertex_type = "ChatOutput"
+    vertex.is_output = True
+    vertex.outputs = [{"types": ["Message"]}]
+    return vertex
+
+
+def _message_result_data(component_id: str, text: str) -> Mock:
+    result_data = Mock()
+    result_data.component_id = component_id
+    result_data.outputs = {"message": {"message": text}}
+    result_data.metadata = {}
+    return result_data
+
+
+def _graph_for(vertices: list[Mock]) -> Mock:
+    graph = Mock()
+    graph.vertices = vertices
+    graph.get_terminal_nodes = Mock(return_value=[v.id for v in vertices])
+    _setup_graph_get_vertex(graph, vertices)
+    return graph
+
+
+class TestOutputTextAndSessionId:
+    """End-to-end: the sync response surfaces output_text and echoes session_id."""
+
+    def test_single_chat_output_populates_output_text_and_session(self):
+        vertex = _message_output_vertex("ChatOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("ChatOutput-abc", "Hi there!")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.output_text == "Hi there!"
+        assert response.outputs["ChatOutput-abc"].content == "Hi there!"
+        assert response.session_id == "session-xyz"
+
+    def test_two_chat_outputs_leave_output_text_none(self):
+        vertices = [_message_output_vertex("ChatOutput-a"), _message_output_vertex("ChatOutput-b")]
+        graph = _graph_for(vertices)
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [
+            _message_result_data("ChatOutput-a", "Hi"),
+            _message_result_data("ChatOutput-b", "Bye"),
+        ]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.output_text is None
+        assert response.outputs["ChatOutput-a"].content == "Hi"
+        assert response.outputs["ChatOutput-b"].content == "Bye"
+
+    def test_session_id_none_passes_through(self):
+        vertex = _message_output_vertex("ChatOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = None
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("ChatOutput-abc", "Hi")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.session_id is None
+        assert response.output_text == "Hi"
 
 
 if __name__ == "__main__":

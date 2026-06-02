@@ -379,6 +379,23 @@ def _process_terminal_vertex(
     return output_key, component_output
 
 
+def _single_output_text(outputs: dict[str, ComponentOutput]) -> str | None:
+    """Return the lone text answer for the ``output_text`` shortcut.
+
+    Populated only when the run has exactly one text output (a ChatOutput/
+    TextOutput with string content). With zero text outputs (e.g. a data-only
+    flow) or two or more, returns None so callers read ``outputs`` rather than
+    the shortcut guessing which channel is "the answer". An intentionally empty
+    single answer is preserved as "" (distinct from None).
+    """
+    text_outputs = [
+        output.content
+        for output in outputs.values()
+        if output.type in {"message", "text"} and isinstance(output.content, str)
+    ]
+    return text_outputs[0] if len(text_outputs) == 1 else None
+
+
 def run_response_to_workflow_response(
     run_response: RunResponse,
     flow_id: str,
@@ -457,12 +474,14 @@ def run_response_to_workflow_response(
 
     return WorkflowExecutionResponse(
         flow_id=flow_id,
+        session_id=run_response.session_id,
         job_id=job_id,
         object="response",
         status=JobStatus.COMPLETED,
         errors=[],
         inputs=inputs or {},
         globals=response_globals,
+        output_text=_single_output_text(outputs),
         outputs=outputs,
         metadata={},
     )
