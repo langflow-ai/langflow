@@ -13,7 +13,9 @@ function makeFlow(partial: Partial<FlowType>): FlowType {
 
 describe("getFolderScopedDuplicateName", () => {
   it("should_version_the_name_when_a_sibling_in_the_same_folder_shares_it", () => {
-    const flows = [makeFlow({ id: "a", name: "Simple Agent", folder_id: "f1" })];
+    const flows = [
+      makeFlow({ id: "a", name: "Simple Agent", folder_id: "f1" }),
+    ];
     const name = getFolderScopedDuplicateName(
       makeFlow({ id: "b", name: "Simple Agent", folder_id: "f1" }),
       flows,
@@ -23,7 +25,9 @@ describe("getFolderScopedDuplicateName", () => {
   });
 
   it("should_keep_the_name_when_the_only_match_lives_in_another_folder", () => {
-    const flows = [makeFlow({ id: "a", name: "Simple Agent", folder_id: "f2" })];
+    const flows = [
+      makeFlow({ id: "a", name: "Simple Agent", folder_id: "f2" }),
+    ];
     const name = getFolderScopedDuplicateName(
       makeFlow({ id: "b", name: "Simple Agent", folder_id: "f1" }),
       flows,
@@ -33,7 +37,9 @@ describe("getFolderScopedDuplicateName", () => {
   });
 
   it("should_not_count_the_flow_itself_as_a_collision", () => {
-    const flows = [makeFlow({ id: "b", name: "Simple Agent", folder_id: "f1" })];
+    const flows = [
+      makeFlow({ id: "b", name: "Simple Agent", folder_id: "f1" }),
+    ];
     const name = getFolderScopedDuplicateName(
       makeFlow({ id: "b", name: "Simple Agent", folder_id: "f1" }),
       flows,
