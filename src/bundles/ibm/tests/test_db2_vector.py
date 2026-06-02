@@ -11,11 +11,13 @@ historical schema fixtures to validate against.
 """
 
 import importlib.util
+import json
 import tempfile
 from pathlib import Path
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
+from langchain_core.embeddings import Embeddings
 from lfx.schema.data import Data
 from lfx.schema.message import Message
 from lfx_ibm.components.ibm.db2_vector import DB2VectorStoreComponent
@@ -29,6 +31,19 @@ requires_ibm_db = pytest.mark.skipif(
     importlib.util.find_spec("ibm_db_dbi") is None,
     reason="ibm-db (ibm_db_dbi) not installed on this platform (e.g. linux/aarch64)",
 )
+
+
+class FakeEmbeddings(Embeddings):
+    """Small Embeddings test double that follows the LangChain contract."""
+
+    def __init__(self, vector: list[float] | None = None):
+        self.vector = vector or [0.1, 0.2, 0.3]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self.vector.copy() for _ in texts]
+
+    def embed_query(self, _text: str) -> list[float]:
+        return self.vector.copy()
 
 
 @requires_ibm_db
@@ -54,11 +69,8 @@ class TestDB2VectorStoreComponent:
 
     @pytest.fixture
     def mock_embedding(self):
-        """Create a mock embedding model."""
-        embedding = Mock()
-        embedding.embed_documents = Mock(return_value=[[0.1, 0.2, 0.3]])
-        embedding.embed_query = Mock(return_value=[0.1, 0.2, 0.3])
-        return embedding
+        """Create an embedding model test double."""
+        return FakeEmbeddings()
 
     def test_component_metadata(self):
         """Test component metadata is correctly set."""
@@ -820,6 +832,401 @@ class TestDB2VectorStoreComponent:
                 pytest.raises(TypeError, match="Vector Store Inputs must be Data objects"),
             ):
                 component._add_documents_to_vector_store(mock_vector_store)
+
+    def test_bulk_insert_enabled_by_default(self, component, mock_embedding):
+        """Test that bulk insert is enabled by default."""
+        component.embedding = mock_embedding
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None) as mock_init:
+                component.build_vector_store()
+
+                # Verify use_bulk_insert was passed as True (default)
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["use_bulk_insert"] is True
+
+    def test_bulk_insert_toggle_enabled(self, component, mock_embedding):
+        """Test bulk insert when explicitly enabled."""
+        component.embedding = mock_embedding
+        component.use_bulk_insert = True
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None) as mock_init:
+                component.build_vector_store()
+
+                # Verify use_bulk_insert was passed as True
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["use_bulk_insert"] is True
+
+    def test_bulk_insert_toggle_disabled(self, component, mock_embedding):
+        """Test bulk insert when explicitly disabled."""
+        component.embedding = mock_embedding
+        component.use_bulk_insert = False
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None) as mock_init:
+                component.build_vector_store()
+
+                # Verify use_bulk_insert was passed as False
+                call_kwargs = mock_init.call_args[1]
+                assert call_kwargs["use_bulk_insert"] is False
+
+    def test_bulk_insert_mode_uses_executemany(self, mock_embedding):
+        """Test that bulk insert mode uses executemany() for better performance."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS
+
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        # Mock table operations
+        with (
+            patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
+            patch("lfx_ibm.components.ibm.db2vs._create_table"),
+            patch(
+                "lfx_ibm.components.ibm.db2vs._get_column_names",
+                return_value={"id": "id", "embedding": "embedding", "metadata": "metadata", "text": "text"},
+            ),
+        ):
+            # Create DB2VS instance with bulk insert enabled
+            vector_store = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=True,
+            )
+
+            # Add some test documents
+            texts = ["Document 1", "Document 2", "Document 3"]
+            metadatas = [{"source": "test1"}, {"source": "test2"}, {"source": "test3"}]
+
+            vector_store.add_texts(texts, metadatas=metadatas)
+
+            # Verify executemany was called (bulk insert)
+            assert mock_cursor.executemany.called, "executemany should be called in bulk insert mode"
+            # Verify execute was NOT called for individual inserts
+            # (execute is only called for COMMIT)
+            execute_calls = [call for call in mock_cursor.execute.call_args_list if "INSERT" in str(call)]
+            assert len(execute_calls) == 0, "execute should not be called for individual inserts in bulk mode"
+
+    def test_row_by_row_insert_mode_uses_execute(self, mock_embedding):
+        """Test that row-by-row insert mode uses execute() for each document."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS
+
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        # Mock table operations
+        with (
+            patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
+            patch("lfx_ibm.components.ibm.db2vs._create_table"),
+            patch(
+                "lfx_ibm.components.ibm.db2vs._get_column_names",
+                return_value={"id": "id", "embedding": "embedding", "metadata": "metadata", "text": "text"},
+            ),
+        ):
+            # Create DB2VS instance with bulk insert disabled
+            vector_store = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=False,
+            )
+
+            # Add some test documents
+            texts = ["Document 1", "Document 2", "Document 3"]
+            metadatas = [{"source": "test1"}, {"source": "test2"}, {"source": "test3"}]
+
+            vector_store.add_texts(texts, metadatas=metadatas)
+
+            # Verify executemany was NOT called
+            assert not mock_cursor.executemany.called, "executemany should not be called in row-by-row mode"
+            # Verify execute was called multiple times (once per document + COMMIT)
+            assert mock_cursor.execute.call_count >= len(texts), "execute should be called for each document"
+
+    def test_bulk_insert_with_multiple_documents(self, component, mock_embedding):
+        """Test bulk insert with multiple documents."""
+        component.embedding = mock_embedding
+        component.use_bulk_insert = True
+        component.ingest_data = [
+            Data(text="Document 1"),
+            Data(text="Document 2"),
+            Data(text="Document 3"),
+            Data(text="Document 4"),
+            Data(text="Document 5"),
+        ]
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+        ):
+            mock_connection = MagicMock()
+            mock_cursor = MagicMock()
+            mock_connection.cursor.return_value = mock_cursor
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with (
+                patch.object(DB2VS, "__init__", return_value=None),
+                patch.object(DB2VS, "add_documents") as mock_add_docs,
+            ):
+                vector_store = component.build_vector_store()
+                component._add_documents_to_vector_store(vector_store)
+
+                # Verify documents were added
+                if mock_add_docs.called:
+                    added_docs = mock_add_docs.call_args[0][0]
+                    assert len(added_docs) == 5, "All 5 documents should be added"
+
+    def test_bulk_insert_performance_benefit(self, mock_embedding):
+        """Test that bulk insert reduces database round-trips."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS
+
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        # Mock table operations
+        with (
+            patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
+            patch("lfx_ibm.components.ibm.db2vs._create_table"),
+            patch(
+                "lfx_ibm.components.ibm.db2vs._get_column_names",
+                return_value={"id": "id", "embedding": "embedding", "metadata": "metadata", "text": "text"},
+            ),
+        ):
+            # Test with bulk insert enabled
+            vector_store_bulk = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=True,
+            )
+
+            texts = ["Doc 1", "Doc 2", "Doc 3", "Doc 4", "Doc 5"]
+            vector_store_bulk.add_texts(texts)
+
+            # Count database calls with bulk insert
+            bulk_executemany_calls = mock_cursor.executemany.call_count
+            bulk_execute_calls = mock_cursor.execute.call_count
+
+            # Reset mocks
+            mock_cursor.reset_mock()
+
+            # Test with bulk insert disabled
+            vector_store_row = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=False,
+            )
+
+            vector_store_row.add_texts(texts)
+
+            # Count database calls with row-by-row insert
+            row_executemany_calls = mock_cursor.executemany.call_count
+            row_execute_calls = mock_cursor.execute.call_count
+
+            # Verify bulk insert uses fewer calls
+            assert bulk_executemany_calls > 0, "Bulk insert should use executemany"
+            assert row_executemany_calls == 0, "Row-by-row should not use executemany"
+            assert row_execute_calls > bulk_execute_calls, "Row-by-row should make more execute calls"
+
+    def test_bulk_insert_with_empty_documents(self, mock_embedding):
+        """Test bulk insert handles empty document list gracefully."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS
+
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        # Mock table operations
+        with (
+            patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
+            patch("lfx_ibm.components.ibm.db2vs._create_table"),
+            patch(
+                "lfx_ibm.components.ibm.db2vs._get_column_names",
+                return_value={"id": "id", "embedding": "embedding", "metadata": "metadata", "text": "text"},
+            ),
+        ):
+            vector_store = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=True,
+            )
+
+            # Add empty list
+            result = vector_store.add_texts([])
+
+            # Verify no database calls were made
+            mock_connection.cursor.assert_not_called()
+            assert not mock_cursor.executemany.called
+            assert result == []
+
+    def test_bulk_insert_with_special_characters(self, mock_embedding):
+        """Test bulk insert preserves special characters in bound parameters."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS
+
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        # Mock table operations
+        with (
+            patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
+            patch("lfx_ibm.components.ibm.db2vs._create_table"),
+            patch(
+                "lfx_ibm.components.ibm.db2vs._get_column_names",
+                return_value={"id": "id", "embedding": "embedding", "metadata": "metadata", "text": "text"},
+            ),
+        ):
+            vector_store = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=True,
+            )
+
+            # Add documents with special characters
+            texts = [
+                "Document with 'single quotes'",
+                'Document with "double quotes"',
+                "Document with \n newlines \t tabs",
+                "Document with SQL injection'; DROP TABLE users;--",
+            ]
+            metadatas = [
+                {"source": "O'Brien"},
+                {"source": 'double "quote"'},
+                {"source": "line\nbreak"},
+                {"source": "payload'; DROP TABLE users;--"},
+            ]
+            ids = ["id'1", 'id"2', "id\n3", "id;4"]
+
+            vector_store.add_texts(texts, metadatas=metadatas, ids=ids)
+
+            # Verify executemany was called (documents were processed)
+            assert mock_cursor.executemany.called
+            # Bound parameters should stay raw; the DB driver handles escaping.
+            call_args = mock_cursor.executemany.call_args[0]
+            assert len(call_args) == 2  # SQL statement and data tuples
+            insert_data = call_args[1]
+            assert insert_data[0][0] == ids[0]
+            assert insert_data[0][2] == json.dumps(metadatas[0])
+            assert insert_data[0][3] == texts[0]
+            assert "O''Brien" not in insert_data[0][2]
+            assert "''single quotes''" not in insert_data[0][3]
+
+    def test_bulk_insert_logging(self, component, mock_embedding):
+        """Test that bulk insert mode is logged correctly."""
+        component.embedding = mock_embedding
+        component.use_bulk_insert = True
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None), patch.object(component, "log") as mock_log:
+                component.build_vector_store()
+
+                messages = [str(call.args[0]).lower() for call in mock_log.call_args_list]
+                assert any("bulk insert" in message or "executemany" in message for message in messages)
+
+    def test_row_by_row_insert_logging(self, component, mock_embedding):
+        """Test that row-by-row insert mode is logged correctly."""
+        component.embedding = mock_embedding
+        component.use_bulk_insert = False
+
+        with (
+            patch("ibm_db_dbi.connect") as mock_connect,
+            patch.object(component, "_add_documents_to_vector_store"),
+        ):
+            mock_connection = MagicMock()
+            mock_connect.return_value = mock_connection
+
+            from lfx_ibm.components.ibm.db2vs import DB2VS
+
+            with patch.object(DB2VS, "__init__", return_value=None), patch.object(component, "log") as mock_log:
+                component.build_vector_store()
+
+                messages = [str(call.args[0]).lower() for call in mock_log.call_args_list]
+                assert any("row-by-row" in message or "execute" in message for message in messages)
+
+    def test_bulk_insert_error_handling(self, mock_embedding):
+        """Test that bulk insert handles errors gracefully with rollback."""
+        from lfx_ibm.components.ibm.db2vs import DB2VS
+
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_connection.cursor.return_value = mock_cursor
+
+        # Make executemany raise an error
+        mock_cursor.executemany.side_effect = Exception("Database error")
+
+        # Mock table operations
+        with (
+            patch("lfx_ibm.components.ibm.db2vs._table_exists", return_value=False),
+            patch("lfx_ibm.components.ibm.db2vs._create_table"),
+            patch(
+                "lfx_ibm.components.ibm.db2vs._get_column_names",
+                return_value={"id": "id", "embedding": "embedding", "metadata": "metadata", "text": "text"},
+            ),
+        ):
+            vector_store = DB2VS(
+                client=mock_connection,
+                embedding_function=mock_embedding,
+                table_name="test_table",
+                use_bulk_insert=True,
+            )
+
+            # Attempt to add documents
+            with pytest.raises(RuntimeError, match="during document insertion"):
+                vector_store.add_texts(["Document 1", "Document 2"])
+
+            # Verify rollback was attempted
+            rollback_calls = [call for call in mock_cursor.execute.call_args_list if "ROLLBACK" in str(call)]
+            assert len(rollback_calls) > 0, "ROLLBACK should be called on error"
+
+    def test_bulk_insert_input_exists(self, component):
+        """Test that use_bulk_insert input is defined in component."""
+        # Check that the input exists in the component's inputs
+        input_names = [inp.name for inp in component.inputs]
+        assert "use_bulk_insert" in input_names, "use_bulk_insert input should be defined"
+
+        # Find the input and verify its properties
+        bulk_insert_input = next(inp for inp in component.inputs if inp.name == "use_bulk_insert")
+        assert bulk_insert_input.value is True, "Default value should be True"
+        assert bulk_insert_input.advanced is True, "Should be an advanced setting"
 
 
 # Made with Bob

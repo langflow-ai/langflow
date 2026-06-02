@@ -69,12 +69,26 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 
 ### New features and enhancements
 
+- **Langflow Assistant**: build complete flows
+
+    **Langflow Assistant** can now build entire flows, and not only individual components.
+
+    For more information, see [Build flows and components with Langflow Assistant](/langflow-assistant).
+    
+- Redis-backed job queue for multi-worker deployments
+
+    Langflow now supports a Redis-backed job queue that allows flow build events to be shared across multiple Gunicorn/Uvicorn workers and across multiple replicas behind a load balancer.
+
+    Single-process deployments are unaffected. The default `asyncio` in-memory queue is unchanged.
+
+    For setup instructions and configuration details, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
 - Memory bases
 
     Memory bases are per-flow vector stores that automatically ingest conversation messages.
     The **Memory Base** component retrieves context from the vector store, offering long-term semantic memory for flows.
     For more information, see [Manage memory bases](../Develop/memory-bases.mdx).
-    
+
 - Python 3.14 support
 
     Langflow now supports Python 3.10 through 3.14 on macOS, Linux, and Windows.
@@ -94,7 +108,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     - OpenDsStar
 
     </details>
-    
+
 - **Agent** component: structured response output
 
     The **Agent** component now includes a **Structured Response** (`structured_response`) output that returns the agent's reply as structured data according to an **Output Schema** you define.
@@ -107,7 +121,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Existing flows are not affected.
 
     For more information, see [Agent instructions and input](/agents#agent-instructions-and-input).
-    
+
 - Extension bundles
 
     Langflow 1.10 introduces Extension bundles: component providers that are packaged and versioned as standalone pip packages, independent of the core Langflow server.
@@ -181,7 +195,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     Set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true` to restrict custom component creation and code editing to superusers.
 
     For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components#restrict-custom-components-to-superusers).
-    
+
 - macOS support matrix
 
     A new [macOS support](./macos-support-matrix.mdx) page documents feature availability across Apple Silicon and Intel Macs.

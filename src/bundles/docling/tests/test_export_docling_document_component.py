@@ -1,10 +1,6 @@
 """Tests for ExportDoclingDocumentComponent metadata preservation."""
 
-import pytest
-
-pytest.importorskip("docling_core")
-
-from lfx.components.docling.export_docling_document import ExportDoclingDocumentComponent
+from lfx_docling.components.docling.export_docling_document import ExportDoclingDocumentComponent
 
 
 class _FakeOrigin:
@@ -43,7 +39,7 @@ class TestExportDoclingDocumentMetadata:
     def _run_export(self, monkeypatch, fake_doc, export_format="Markdown"):
         """Helper: run export_document with a mocked extract_docling_documents."""
         monkeypatch.setattr(
-            "lfx.components.docling.export_docling_document.extract_docling_documents",
+            "lfx_docling.components.docling.export_docling_document.extract_docling_documents",
             lambda *_args, **_kwargs: ([fake_doc], None),
         )
 
