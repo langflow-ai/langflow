@@ -573,6 +573,59 @@ def _read_model_field_value(agent_id):
     return agent_node["data"]["node"]["template"]["model"]["value"]
 
 
+class TestConfigureComponentModelProviderOnly:
+    """Regression: assistant said one model, canvas showed another.
+
+    When the flow-builder LLM switches provider but omits the model name
+    (``[{"provider": "Anthropic"}]``), the bare value used to land on the
+    node with no ``name``. The canvas dropdown then silently selected the
+    provider's newest/default model, diverging from whatever the assistant
+    narrated. configure_component must resolve the provider's default name
+    so the applied value is complete, mirrored into options, and reported.
+    """
+
+    def test_should_resolve_provider_default_name_when_model_name_is_missing(self):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent, _ensure_working_flow
+
+        agent_id = _make_agent_node_for_model_test()
+        cfg = ConfigureComponent()
+        cfg.set(component_id=agent_id, params='{"model": [{"provider": "Anthropic"}]}')
+        result = cfg.configure_component()
+        assert "error" not in result.data, f"configure failed: {result.data}"
+
+        value = _read_model_field_value(agent_id)
+        assert isinstance(value, list) and value, f"expected a model entry, got {value!r}"
+        resolved_name = value[0].get("name")
+        assert resolved_name, f"provider-only model must be filled with a default name; got {value!r}"
+        assert value[0].get("provider") == "Anthropic"
+
+        flow = _ensure_working_flow()
+        agent_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == agent_id)
+        options = agent_node["data"]["node"]["template"]["model"].get("options") or []
+        assert any(
+            o.get("name") == resolved_name and o.get("provider") == "Anthropic" for o in options
+        ), f"resolved model must be mirrored into options; got {options!r}"
+
+        assert resolved_name in (result.data.get("text") or ""), (
+            f"tool result must report the resolved model name; got {result.data.get('text')!r}"
+        )
+
+    def test_should_preserve_an_explicitly_named_model(self):
+        from lfx.mcp.flow_builder_tools import ConfigureComponent
+
+        agent_id = _make_agent_node_for_model_test()
+        cfg = ConfigureComponent()
+        cfg.set(
+            component_id=agent_id,
+            params='{"model": [{"provider": "Anthropic", "name": "claude-sonnet-4-5-20250929"}]}',
+        )
+        result = cfg.configure_component()
+        assert "error" not in result.data
+
+        value = _read_model_field_value(agent_id)
+        assert value[0].get("name") == "claude-sonnet-4-5-20250929"
+
+
 class TestConfigureComponentModelFieldSerializedSpec:
     r"""Regression: PR-12575 round 6 bug 2.
 
