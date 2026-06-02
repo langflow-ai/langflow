@@ -97,12 +97,15 @@ describe("v2 workflows generators (shared behavior)", () => {
   );
 
   it.each(allGenerators)(
-    "%s: response peek shows only real fields (no component_id / top-level metadata)",
+    "%s: sync reads the answer from output.text, not a component-id loop",
     (_name, gen) => {
       const sync = gen(baseOptions).steps[0].code;
-      expect(sync).toContain("content");
+      expect(sync).toContain("output.text");
+      // the unpredictable component-id map is no longer the access path
+      expect(sync).not.toContain(".values()");
+      expect(sync).not.toContain("Object.values(result.outputs)");
+      // the component id never leaks as a field the caller has to read
       expect(sync).not.toContain("component_id");
-      expect(sync).not.toContain("metadata");
     },
   );
 });
@@ -124,6 +127,17 @@ describe("getV2WorkflowsCurlCode", () => {
     }).steps[0].code;
     expect(withTweaks).toContain("tweaks");
     expect(withTweaks).toContain("ChatInput-abc");
+  });
+
+  it("sync peek shows the shape: output{reason,text,source} + session_id, content but no metadata/component_id field", () => {
+    const sync = getV2WorkflowsCurlCode(baseOptions).steps[0].code;
+    expect(sync).toContain('"output"');
+    expect(sync).toContain('"reason"');
+    expect(sync).toContain("output.text");
+    expect(sync).toContain("session_id");
+    expect(sync).toContain("content");
+    expect(sync).not.toContain("component_id");
+    expect(sync).not.toContain("metadata");
   });
 });
 
