@@ -69,6 +69,33 @@ class TestRateLimitService:
         monkeypatch.setenv("LANGFLOW_RATE_LIMIT_PER_MINUTE", "0")
         assert get_rate_limit_string() == "5/minute"
 
+    def test_rate_limiter_uses_remote_address_by_default(self):
+        """Test that rate limiter uses get_remote_address when trust_proxy is false."""
+        from langflow.services.rate_limit import get_rate_limiter
+        from slowapi.util import get_remote_address
+
+        limiter = get_rate_limiter()
+
+        # Default should use get_remote_address (not trust proxy)
+        assert limiter._key_func == get_remote_address
+
+    def test_rate_limiter_uses_client_ip_when_trust_proxy_enabled(self, monkeypatch):
+        """Test that rate limiter uses get_client_ip when trust_proxy is true."""
+        # Reset the global limiter to test fresh initialization
+        import langflow.services.rate_limit.service as rate_limit_module
+        from langflow.services.rate_limit.service import get_client_ip
+
+        rate_limit_module._limiter = None
+
+        monkeypatch.setenv("LANGFLOW_RATE_LIMIT_TRUST_PROXY", "true")
+
+        from langflow.services.rate_limit import get_rate_limiter
+
+        limiter = get_rate_limiter()
+
+        # Should use get_client_ip when trust_proxy is enabled
+        assert limiter._key_func == get_client_ip
+
 
 class TestIPExtraction:
     """Test suite for IP address extraction logic."""

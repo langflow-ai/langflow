@@ -68,8 +68,14 @@ def get_rate_limiter() -> Limiter:
         # Enable in production with LANGFLOW_RATE_LIMIT_HEADERS_ENABLED=true
         headers_enabled = os.getenv("LANGFLOW_RATE_LIMIT_HEADERS_ENABLED", "false").lower() == "true"
 
+        # Choose key function based on proxy configuration
+        # When behind trusted proxies (load balancer, reverse proxy), use X-Forwarded-For
+        # Otherwise use direct connection IP to prevent header spoofing
+        trust_proxy = os.getenv("LANGFLOW_RATE_LIMIT_TRUST_PROXY", "false").lower() == "true"
+        key_func = get_client_ip if trust_proxy else get_remote_address
+
         _limiter = Limiter(
-            key_func=get_remote_address,
+            key_func=key_func,
             default_limits=["100/hour"],
             storage_uri=storage_uri,
             # Headers provide client feedback but require working storage backend
