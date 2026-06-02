@@ -7,7 +7,6 @@ test(
   "vector store from starter projects should have its connections and nodes on the flow",
   { tag: ["@release", "@starter-projects", "@mainpage"] },
   async ({ page, request }) => {
-    // Get authentication token
     const authToken = await getAuthToken(request);
 
     const response = await request.get("/api/v1/starter-projects", {
@@ -18,51 +17,24 @@ test(
     expect(response.status()).toBe(200);
     const responseBody = await response.json();
 
-    const astraStarterProject = responseBody.find((project: any) => {
-      if (project.data.nodes) {
-        return project.data.nodes.some((node: any) =>
-          node.id.includes("Astra"),
-        );
-      }
+    // Find the Vector Store RAG starter project — it now uses native
+    // KnowledgeIngestion / KnowledgeBase components instead of AstraDB.
+    // biome-ignore lint/suspicious/noExplicitAny: untyped API response
+    const vectorStoreProject = responseBody.find((project: any) => {
+      return project.name === "Vector Store RAG";
     });
 
-    await page.route("**/api/v1/flows/", async (route) => {
-      if (route.request().method() === "GET") {
-        try {
-          // Add authorization header to the request
-          const headers = route.request().headers();
-          headers["Authorization"] = `Bearer ${authToken}`;
+    expect(vectorStoreProject).toBeDefined();
 
-          const response = await route.fetch({
-            headers: headers,
-          });
-          const flowsData = await response.json();
+    // Verify the template uses the native Knowledge components
+    const nodeTypes: string[] = (vectorStoreProject?.data?.nodes ?? []).map(
+      // biome-ignore lint/suspicious/noExplicitAny: untyped API response
+      (node: any) => node.data?.type as string,
+    );
 
-          const modifiedFlows = flowsData.map((flow: any) => {
-            if (flow.name === "Vector Store RAG" && flow.user_id === null) {
-              return {
-                ...flow,
-                data: astraStarterProject?.data,
-              };
-            }
-            return flow;
-          });
-
-          const modifiedResponse = JSON.stringify(modifiedFlows);
-
-          route.fulfill({
-            status: response.status(),
-            headers: response.headers(),
-            body: modifiedResponse,
-          });
-        } catch (error) {
-          console.error("Error in route handler:", error);
-        }
-      } else {
-        // If not a GET request, continue without modifying
-        await route.continue();
-      }
-    });
+    expect(nodeTypes).toContain("KnowledgeIngestion");
+    expect(nodeTypes).toContain("KnowledgeBase");
+    expect(nodeTypes).not.toContain("AstraDBVectorStore");
 
     await awaitBootstrapTest(page);
 
@@ -71,15 +43,21 @@ test(
       .getByRole("heading", { name: "Vector Store RAG" })
       .first()
       .click();
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
 
     await adjustScreenView(page);
 
     const edges = await page.locator(".react-flow__edge-interaction").count();
     const nodes = await page.getByTestId("div-generic-node").count();
 
-    const edgesFromServer = astraStarterProject?.data.edges.length;
-    const nodesFromServer = astraStarterProject?.data.nodes.length;
+    const edgesFromServer: number =
+      vectorStoreProject?.data?.edges?.length ?? 0;
+    const nodesFromServer: number =
+      vectorStoreProject?.data?.nodes?.length ?? 0;
 
+    // Allow ±2 edge variance to account for animated/virtual edges
     expect(
       edges === edgesFromServer ||
         edges === edgesFromServer - 1 ||
