@@ -6,8 +6,10 @@ against the real surface up front. For now each one returns a structured `501`
 state keys off. An endpoint "goes live" by replacing its `stub(...)` body with a
 real implementation — its signature, response model, and the UI stay unchanged.
 
-Auth is enforced router-wide via `get_current_active_user`, so every route
-returns `401` without a valid token.
+Auth is enforced router-wide via `get_current_active_user`. A missing token
+returns `403` (mapped from `MissingCredentialsError` by `_auth_error_to_http`
+in `services/auth/utils.py`); an invalid or expired token returns `401`. The
+auth tests accept either status.
 """
 
 from uuid import UUID
