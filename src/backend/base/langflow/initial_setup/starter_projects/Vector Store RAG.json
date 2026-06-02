@@ -661,7 +661,7 @@
             "description": "# 📖 README\n  Retrieval Augmented Generation (RAG) is a way of providing additional context to a Large Language Model (LLM) by preloading a vector store with embeddings for relevant content. When a user chats with the LLM, a _similarity search_ retrieves relevant content by comparing an embedding for the user's query against the embeddings in the vector\n  store.\n  For example, a RAG chatbot could be pre-loaded with product data, and then it can help customers find specific products based on their queries.\n\n  ## Quick start\n  1. Configure your **Model Provider** with your API credentials.\n  2. Select a database or create a new one using the [Knowledge Ingestion](https://docs.langflow.org/knowledge-base) feature. \n  3. Open the **Playground** to start a chat with the flow.\n\n\n\n  ## Next steps\n  Experiment by changing the prompt and the loaded data to see how the LLM's responses change.",
             "display_name": "",
             "documentation": "",
-            "i18n_key": "template_notes.vector_store_rag.4df99c9e",
+            "i18n_key": "template_notes.vector_store_rag.e8deaec6",
             "template": {
               "backgroundColor": "neutral"
             }
