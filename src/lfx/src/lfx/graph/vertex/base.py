@@ -227,6 +227,9 @@ class Vertex:
     def __getstate__(self):
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
+        # Component instances can carry runtime/thread-local state that is not pickle-safe.
+        # Components are instantiated lazily during the next build, so don't persist live instances.
+        state["custom_component"] = None
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state

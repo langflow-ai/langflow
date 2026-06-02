@@ -1,5 +1,7 @@
 import copy
 import json
+import pickle
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -297,6 +299,18 @@ def test_update_source_handle():
     updated_edge = update_source_handle(new_edge, flow_data["nodes"], flow_data["edges"])
     assert updated_edge["source"] == "last_node"
     assert updated_edge["data"]["sourceHandle"]["id"] == "last_node"
+
+
+def test_vertex_serialization_drops_runtime_custom_component():
+    vertex = Vertex.__new__(Vertex)
+    vertex._lock = None
+    vertex.custom_component = threading.local()
+    vertex.built_object = None
+    vertex.built_result = None
+
+    restored = pickle.loads(pickle.dumps(vertex))
+
+    assert restored.custom_component is None
 
 
 # TODO: Move to Langflow tests
