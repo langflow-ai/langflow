@@ -10,6 +10,8 @@ interface RadioSelectItemProps {
   children: ReactNode;
   "data-testid"?: string;
   className?: string;
+  indicatorClassName?: string;
+  dotClassName?: string;
 }
 
 interface CheckboxSelectItemProps {
@@ -67,6 +69,8 @@ export function RadioSelectItem({
   children,
   "data-testid": testId,
   className,
+  indicatorClassName,
+  dotClassName,
 }: RadioSelectItemProps) {
   return (
     <label
@@ -89,9 +93,14 @@ export function RadioSelectItem({
         className={cn(
           "flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full border-2",
           selected ? "border-primary" : "border-muted-foreground bg-background",
+          indicatorClassName,
         )}
       >
-        {selected && <span className="h-2.5 w-2.5 rounded-full bg-primary" />}
+        {selected && (
+          <span
+            className={cn("h-2.5 w-2.5 rounded-full bg-primary", dotClassName)}
+          />
+        )}
       </span>
       {children}
     </label>
