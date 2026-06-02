@@ -427,7 +427,7 @@ export default function RecentFilesComponent({
               {t("fileManager.orVisit")}{" "}
               <CustomLink
                 className="text-accent-pink-foreground underline"
-                to="/files"
+                to="/assets/files"
               >
                 {t("files.myFiles")}.
               </CustomLink>

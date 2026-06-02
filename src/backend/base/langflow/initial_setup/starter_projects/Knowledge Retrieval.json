@@ -5,9 +5,9 @@
         "className": "",
         "data": {
           "sourceHandle": {
-            "dataType": "TextInput",
-            "id": "TextInput-k48NL",
-            "name": "text",
+            "dataType": "ChatInput",
+            "id": "ChatInput-k48NL",
+            "name": "message",
             "output_types": [
               "Message"
             ]
@@ -21,9 +21,9 @@
             "type": "str"
           }
         },
-        "id": "xy-edge__TextInput-k48NL{œdataTypeœ:œTextInputœ,œidœ:œTextInput-k48NLœ,œnameœ:œtextœ,œoutput_typesœ:[œMessageœ]}-Knowledge-kgwih{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledge-kgwihœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
-        "source": "TextInput-k48NL",
-        "sourceHandle": "{œdataTypeœ: œTextInputœ, œidœ: œTextInput-k48NLœ, œnameœ: œtextœ, œoutput_typesœ: [œMessageœ]}",
+        "id": "xy-edge__ChatInput-k48NL{œdataTypeœ:œChatInputœ,œidœ:œChatInput-k48NLœ,œnameœ:œmessageœ,œoutput_typesœ:[œMessageœ]}-Knowledge-kgwih{œfieldNameœ:œsearch_queryœ,œidœ:œKnowledge-kgwihœ,œinputTypesœ:[œMessageœ],œtypeœ:œstrœ}",
+        "source": "ChatInput-k48NL",
+        "sourceHandle": "{œdataTypeœ: œChatInputœ, œidœ: œChatInput-k48NLœ, œnameœ: œmessageœ, œoutput_typesœ: [œMessageœ]}",
         "target": "Knowledge-kgwih",
         "targetHandle": "{œfieldNameœ: œsearch_queryœ, œidœ: œKnowledge-kgwihœ, œinputTypesœ: [œMessageœ], œtypeœ: œstrœ}"
       },
@@ -122,7 +122,9 @@
       },
       {
         "data": {
-          "id": "TextInput-k48NL",
+          "description": "Get chat inputs from the Playground.",
+          "display_name": "Chat Input",
+          "id": "ChatInput-k48NL",
           "node": {
             "base_classes": [
               "Message"
@@ -130,20 +132,25 @@
             "beta": false,
             "conditional_paths": [],
             "custom_fields": {},
-            "description": "Get user text inputs.",
-            "display_name": "Text Input",
-            "documentation": "https://docs.langflow.org/components-io#text-input",
+            "description": "Get chat inputs from the Playground.",
+            "display_name": "Chat Input",
+            "documentation": "",
             "edited": false,
             "field_order": [
               "input_value",
-              "use_global_variable"
+              "should_store_message",
+              "sender",
+              "sender_name",
+              "session_id",
+              "context_id",
+              "files"
             ],
             "frozen": false,
-            "icon": "type",
+            "icon": "MessagesSquare",
             "legacy": false,
-            "lf_version": "1.5.0.post1",
+            "lf_version": "1.7.0",
             "metadata": {
-              "code_hash": "518f16485886",
+              "code_hash": "7a26c54d89ed",
               "dependencies": {
                 "dependencies": [
                   {
@@ -153,18 +160,17 @@
                 ],
                 "total_dependencies": 1
               },
-              "module": "lfx.components.input_output.text.TextInputComponent"
+              "module": "lfx.components.input_output.chat.ChatInput"
             },
-            "minimized": false,
             "output_types": [],
             "outputs": [
               {
                 "allows_loop": false,
                 "cache": true,
-                "display_name": "Output Text",
+                "display_name": "Chat Message",
                 "group_outputs": false,
-                "method": "text_response",
-                "name": "text",
+                "method": "message_response",
+                "name": "message",
                 "selected": "Message",
                 "tool_mode": true,
                 "types": [
@@ -192,23 +198,21 @@
                 "show": true,
                 "title_case": false,
                 "type": "code",
-                "value": "from typing import Any\n\nfrom lfx.base.io.text import TextComponent\nfrom lfx.io import BoolInput, MultilineInput, Output\nfrom lfx.schema.message import Message\n\n\nclass TextInputComponent(TextComponent):\n    display_name = \"Text Input\"\n    description = \"Get user text inputs.\"\n    documentation: str = \"https://docs.langflow.org/text-input-and-output\"\n    icon = \"type\"\n    name = \"TextInput\"\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Text\",\n            info=\"Text to be passed as input.\",\n        ),\n        BoolInput(\n            name=\"use_global_variable\",\n            display_name=\"Use Global Variable\",\n            info=\"Enable to select from global variables (shows globe icon). Disables multiline editing.\",\n            value=False,\n            advanced=True,\n            real_time_refresh=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Output Text\", name=\"text\", method=\"text_response\"),\n    ]\n\n    def update_build_config(self, build_config: dict, field_value: Any, field_name: str | None = None) -> dict:\n        if field_name == \"use_global_variable\":\n            if field_value:\n                # Enable global variable mode: single-line with password masking and globe dropdown\n                build_config[\"input_value\"][\"multiline\"] = False\n                build_config[\"input_value\"][\"password\"] = True\n            else:\n                # Default mode: multiline text editing\n                build_config[\"input_value\"][\"multiline\"] = True\n                build_config[\"input_value\"][\"password\"] = False\n        return build_config\n\n    def text_response(self) -> Message:\n        return Message(\n            text=self.input_value,\n        )\n"
+                "value": "from lfx.base.data.utils import IMG_FILE_TYPES, TEXT_FILE_TYPES\nfrom lfx.base.io.chat import ChatComponent\nfrom lfx.inputs.inputs import BoolInput\nfrom lfx.io import (\n    DropdownInput,\n    FileInput,\n    MessageTextInput,\n    MultilineInput,\n    Output,\n)\nfrom lfx.schema.message import Message\nfrom lfx.utils.constants import (\n    MESSAGE_SENDER_AI,\n    MESSAGE_SENDER_NAME_USER,\n    MESSAGE_SENDER_USER,\n)\n\n\nclass ChatInput(ChatComponent):\n    display_name = \"Chat Input\"\n    description = \"Get chat inputs from the Playground.\"\n    documentation: str = \"https://docs.langflow.org/chat-input-and-output\"\n    icon = \"MessagesSquare\"\n    name = \"ChatInput\"\n    minimized = True\n\n    inputs = [\n        MultilineInput(\n            name=\"input_value\",\n            display_name=\"Input Text\",\n            value=\"\",\n            info=\"Message to be passed as input.\",\n            input_types=[],\n        ),\n        BoolInput(\n            name=\"should_store_message\",\n            display_name=\"Store Messages\",\n            info=\"Store the message in the history.\",\n            value=True,\n            advanced=True,\n        ),\n        DropdownInput(\n            name=\"sender\",\n            display_name=\"Sender Type\",\n            options=[MESSAGE_SENDER_AI, MESSAGE_SENDER_USER],\n            value=MESSAGE_SENDER_USER,\n            info=\"Type of sender.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"sender_name\",\n            display_name=\"Sender Name\",\n            info=\"Name of the sender.\",\n            value=MESSAGE_SENDER_NAME_USER,\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"session_id\",\n            display_name=\"Session ID\",\n            info=\"The session ID of the chat. If empty, the current session ID parameter will be used.\",\n            advanced=True,\n        ),\n        MessageTextInput(\n            name=\"context_id\",\n            display_name=\"Context ID\",\n            info=\"The context ID of the chat. Adds an extra layer to the local memory.\",\n            value=\"\",\n            advanced=True,\n        ),\n        FileInput(\n            name=\"files\",\n            display_name=\"Files\",\n            file_types=TEXT_FILE_TYPES + IMG_FILE_TYPES,\n            info=\"Files to be sent with the message.\",\n            advanced=True,\n            is_list=True,\n            temp_file=True,\n        ),\n    ]\n    outputs = [\n        Output(display_name=\"Chat Message\", name=\"message\", method=\"message_response\"),\n    ]\n\n    async def message_response(self) -> Message:\n        # Ensure files is a list and filter out empty/None values\n        files = self.files if self.files else []\n        if files and not isinstance(files, list):\n            files = [files]\n        # Filter out None/empty values\n        files = [f for f in files if f is not None and f != \"\"]\n\n        session_id = self.session_id or self.graph.session_id or \"\"\n        message = await Message.create(\n            text=self.input_value,\n            sender=self.sender,\n            sender_name=self.sender_name,\n            session_id=session_id,\n            context_id=self.context_id,\n            files=files,\n        )\n        if session_id and isinstance(message, Message) and self.should_store_message:\n            stored_message = await self.send_message(\n                message,\n            )\n            self.message.value = stored_message\n            message = stored_message\n\n        self.status = message\n        return message\n"
               },
-              "input_value": {
-                "_input_type": "MultilineInput",
-                "advanced": false,
-                "copy_field": false,
-                "display_name": "Text",
+              "context_id": {
+                "_input_type": "MessageTextInput",
+                "advanced": true,
+                "display_name": "Context ID",
                 "dynamic": false,
-                "info": "Text to be passed as input.",
+                "info": "The context ID of the chat. Adds an extra layer to the local memory.",
                 "input_types": [
                   "Message"
                 ],
                 "list": false,
                 "list_add_label": "Add More",
                 "load_from_db": false,
-                "multiline": true,
-                "name": "input_value",
+                "name": "context_id",
                 "placeholder": "",
                 "required": false,
                 "show": true,
@@ -217,37 +221,150 @@
                 "trace_as_input": true,
                 "trace_as_metadata": true,
                 "type": "str",
-                "value": "IBM Acquires DataStax"
+                "value": ""
               },
-              "use_global_variable": {
-                "_input_type": "BoolInput",
+              "files": {
                 "advanced": true,
-                "display_name": "Use Global Variable",
+                "display_name": "Files",
                 "dynamic": false,
-                "info": "Enable to select from global variables (shows globe icon). Disables multiline editing.",
-                "list": false,
-                "list_add_label": "Add More",
-                "name": "use_global_variable",
-                "override_skip": false,
+                "fileTypes": [
+                  "csv",
+                  "json",
+                  "pdf",
+                  "txt",
+                  "md",
+                  "mdx",
+                  "yaml",
+                  "yml",
+                  "xml",
+                  "html",
+                  "htm",
+                  "docx",
+                  "py",
+                  "sh",
+                  "sql",
+                  "js",
+                  "ts",
+                  "tsx",
+                  "jpg",
+                  "jpeg",
+                  "png",
+                  "bmp",
+                  "image"
+                ],
+                "file_path": "",
+                "info": "Files to be sent with the message.",
+                "list": true,
+                "name": "files",
                 "placeholder": "",
-                "real_time_refresh": true,
+                "required": false,
+                "show": true,
+                "temp_file": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "file",
+                "value": ""
+              },
+              "input_value": {
+                "advanced": false,
+                "display_name": "Input Text",
+                "dynamic": false,
+                "info": "Message to be passed as input.",
+                "input_types": [],
+                "list": false,
+                "load_from_db": false,
+                "multiline": true,
+                "name": "input_value",
+                "placeholder": "",
                 "required": false,
                 "show": true,
                 "title_case": false,
-                "tool_mode": false,
+                "trace_as_input": true,
                 "trace_as_metadata": true,
-                "track_in_telemetry": true,
+                "type": "str",
+                "value": "IBM Acquires DataStax"
+              },
+              "sender": {
+                "advanced": true,
+                "display_name": "Sender Type",
+                "dynamic": false,
+                "info": "Type of sender.",
+                "name": "sender",
+                "options": [
+                  "Machine",
+                  "User"
+                ],
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "User"
+              },
+              "sender_name": {
+                "advanced": true,
+                "display_name": "Sender Name",
+                "dynamic": false,
+                "info": "Name of the sender.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "sender_name",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": "User"
+              },
+              "session_id": {
+                "advanced": true,
+                "display_name": "Session ID",
+                "dynamic": false,
+                "info": "The session ID of the chat. If empty, the current session ID parameter will be used.",
+                "input_types": [
+                  "Message"
+                ],
+                "list": false,
+                "load_from_db": false,
+                "name": "session_id",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_input": true,
+                "trace_as_metadata": true,
+                "type": "str",
+                "value": ""
+              },
+              "should_store_message": {
+                "_input_type": "BoolInput",
+                "advanced": true,
+                "display_name": "Store Messages",
+                "dynamic": false,
+                "info": "Store the message in the history.",
+                "list": false,
+                "name": "should_store_message",
+                "placeholder": "",
+                "required": false,
+                "show": true,
+                "title_case": false,
+                "trace_as_metadata": true,
                 "type": "bool",
-                "value": false
+                "value": true
               }
-            },
-            "tool_mode": false
+            }
           },
-          "showNode": true,
-          "type": "TextInput"
+          "selected_output": "message",
+          "type": "ChatInput"
         },
         "dragging": false,
-        "id": "TextInput-k48NL",
+        "id": "ChatInput-k48NL",
         "measured": {
           "height": 204,
           "width": 320

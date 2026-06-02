@@ -1,6 +1,7 @@
 import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TID } from "../../utils/constants/testIds";
@@ -23,6 +24,8 @@ test(
     });
 
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);

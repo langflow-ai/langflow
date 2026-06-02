@@ -1,5 +1,6 @@
 import type { CustomCellRendererProps } from "ag-grid-react";
 import { uniqueId } from "lodash";
+import { useEffect, useState } from "react";
 import NumberReader from "@/components/common/numberReader";
 import ObjectRender from "@/components/common/objectRender";
 import StringReader from "@/components/common/stringReaderComponent";
@@ -13,6 +14,8 @@ interface CustomCellRender extends CustomCellRendererProps {
   formatter?: "json" | "text" | "boolean" | "number" | "undefined" | "null";
 }
 
+export const TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields";
+
 export default function TableAutoCellRender({
   value,
   setValue,
@@ -21,6 +24,46 @@ export default function TableAutoCellRender({
   api,
   ...props
 }: CustomCellRender) {
+  const field = colDef?.field;
+  const rowData = props.data as Record<string, unknown> | undefined;
+  const [localValue, setLocalValue] = useState(value ?? "");
+
+  useEffect(() => {
+    setLocalValue(value ?? "");
+  }, [value]);
+
+  const rowLoadFromDbFields = rowData?.[TABLE_LOAD_FROM_DB_FIELDS];
+  const loadFromDbFields =
+    rowLoadFromDbFields &&
+    typeof rowLoadFromDbFields === "object" &&
+    !Array.isArray(rowLoadFromDbFields)
+      ? (rowLoadFromDbFields as Record<string, boolean>)
+      : {};
+  const cellLoadsFromDb = !!(field && loadFromDbFields[field]);
+
+  function setCellLoadFromDb(loadFromDb: boolean) {
+    if (!field || !rowData) {
+      return;
+    }
+
+    const nextLoadFromDbFields = { ...loadFromDbFields };
+    nextLoadFromDbFields[field] = loadFromDb;
+
+    rowData[TABLE_LOAD_FROM_DB_FIELDS] = nextLoadFromDbFields;
+  }
+
+  function updateGlobalVariableCell(nextValue: string, loadFromDb: boolean) {
+    setLocalValue(nextValue);
+    setCellLoadFromDb(loadFromDb);
+
+    if (loadFromDb || !field || !rowData) {
+      setValue?.(nextValue);
+      return;
+    }
+
+    rowData[field] = nextValue;
+  }
+
   function getCellType() {
     let format: string = formatter ? formatter : typeof value;
     //convert text to string to bind to the string reader
@@ -65,16 +108,19 @@ export default function TableAutoCellRender({
           return (
             <InputGlobalComponent
               id="string-reader-global"
-              value={value ?? ""}
+              value={localValue}
               editNode={false}
               handleOnNewValue={(newValue) => {
-                setValue?.(newValue.value);
+                updateGlobalVariableCell(
+                  newValue.value,
+                  !!newValue.load_from_db,
+                );
               }}
               disabled={
                 !colDef?.onCellValueChanged &&
                 !api.getGridOption("onCellValueChanged")
               }
-              load_from_db={true}
+              load_from_db={cellLoadsFromDb}
               password={false}
               display_name=""
               placeholder=""
