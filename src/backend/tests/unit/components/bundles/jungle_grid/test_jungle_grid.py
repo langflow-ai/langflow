@@ -6,7 +6,6 @@ from unittest.mock import AsyncMock, patch
 
 import httpx
 import pytest
-
 from lfx.components.jungle_grid.artifact_download_url import JungleGridCreateArtifactDownloadURLComponent
 from lfx.components.jungle_grid.cancel_job import JungleGridCancelJobComponent
 from lfx.components.jungle_grid.estimate_job import JungleGridEstimateJobComponent
@@ -15,6 +14,7 @@ from lfx.components.jungle_grid.get_job_runtime import JungleGridGetJobRuntimeCo
 from lfx.components.jungle_grid.get_job_status import JungleGridGetJobStatusComponent
 from lfx.components.jungle_grid.list_job_artifacts import JungleGridListJobArtifactsComponent
 from lfx.components.jungle_grid.submit_job import JungleGridSubmitJobComponent
+
 from tests.base import ComponentTestBaseWithoutClient
 
 SECRET = "jg_test_secret_value"
