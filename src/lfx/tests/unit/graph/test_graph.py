@@ -1,5 +1,7 @@
 import copy
 import json
+import pickle
+import threading
 from types import SimpleNamespace
 
 import pytest
@@ -113,6 +115,37 @@ def test_invalid_node_types():
     g = Graph()
     with pytest.raises(KeyError):
         g.add_nodes_and_edges(graph_data["nodes"], graph_data["edges"])
+
+
+def test_graph_pickle_drops_unpickleable_runtime_component_state():
+    graph = Graph(flow_id="flow-with-runtime-component-state")
+    vertex = object.__new__(Vertex)
+    vertex.__dict__.update(
+        {
+            "id": "model-node",
+            "_lock": None,
+            "built_object": "cached-object",
+            "built_result": {"result": "cached-result"},
+            "custom_component": SimpleNamespace(console_thread_locals=threading.local()),
+            "full_data": {"id": "model-node"},
+        }
+    )
+    graph.vertices = [vertex]
+    graph._vertices = [vertex.full_data]
+
+    with pytest.raises(TypeError, match="cannot pickle"):
+        pickle.dumps(vertex.__dict__)
+
+    cache_payload = pickle.dumps({"result": graph, "type": type(graph)})
+    restored_cache_entry = pickle.loads(cache_payload)  # noqa: S301 - trusted local fixture
+    restored_vertex = restored_cache_entry["result"].vertices[0]
+
+    assert restored_cache_entry["type"] is Graph
+    assert restored_vertex.id == "model-node"
+    assert restored_vertex.built_object == "cached-object"
+    assert restored_vertex.built_result == {"result": "cached-result"}
+    assert restored_vertex.full_data == {"id": "model-node"}
+    assert restored_vertex.custom_component is None
 
 
 def test_from_payload_blocks_custom_components_when_disabled(monkeypatch):
