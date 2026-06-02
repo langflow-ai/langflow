@@ -116,5 +116,7 @@ def test_deny_to_404_only_rewrites_403():
     rewritten = deny_to_404(HTTPException(status_code=403, detail="nope"))
     assert rewritten.status_code == 404
 
-    untouched = deny_to_404(HTTPException(status_code=500, detail="boom"))
+    # A non-403 is surfaced unchanged — its detail is not relabeled as "not found".
+    untouched = deny_to_404(HTTPException(status_code=500, detail="boom"), detail="Variable not found")
     assert untouched.status_code == 500
+    assert untouched.detail == "boom"
