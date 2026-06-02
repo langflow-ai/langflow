@@ -28,7 +28,7 @@ export default function ApiKeysPage() {
       const updatedKeysList = data["api_keys"].map((apikey) => ({
         ...apikey,
         name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
-        last_used_at: apikey.last_used_at ?? "Never",
+        last_used_at: apikey.last_used_at ?? t("settings.apiKeys.never"),
       }));
       setKeysList(updatedKeysList);
       setUserId(data["user_id"]);
