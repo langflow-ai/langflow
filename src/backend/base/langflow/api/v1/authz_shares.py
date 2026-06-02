@@ -55,14 +55,20 @@ async def _resolve_resource_owner(
     return getattr(row, owner_attr, None)
 
 
-async def _user_can_see_share(
-    session: DbSession,
+def _share_visible(
     *,
     row: AuthzShare,
     user_id: UUID,
     resource_owner_id: UUID | None,
+    is_team_member: bool,
 ) -> bool:
-    """Return True when the user may see this share row."""
+    """Pure visibility predicate shared by the single-row and list paths.
+
+    ``is_team_member`` is resolved by the caller — a membership query for the
+    single-row path, a pre-fetched team-id set for the list path — so this
+    predicate stays free of I/O and the owner/PUBLIC/USER/TEAM rules live in one
+    place.
+    """
     if user_id in {resource_owner_id, row.created_by}:
         return True
     scope = row.scope
@@ -71,13 +77,31 @@ async def _user_can_see_share(
     if scope == ShareScope.USER.value and row.target_id == user_id:
         return True
     if scope == ShareScope.TEAM.value and row.target_id is not None:
+        return is_team_member
+    return False
+
+
+async def _user_can_see_share(
+    session: DbSession,
+    *,
+    row: AuthzShare,
+    user_id: UUID,
+    resource_owner_id: UUID | None,
+) -> bool:
+    """Return True when the user may see this share row (single-row path)."""
+    is_team_member = False
+    if row.scope == ShareScope.TEAM.value and row.target_id is not None:
         membership_stmt = select(AuthzTeamMember).where(
             AuthzTeamMember.team_id == row.target_id,
             AuthzTeamMember.user_id == user_id,
         )
-        member = (await session.exec(membership_stmt)).first()
-        return member is not None
-    return False
+        is_team_member = (await session.exec(membership_stmt)).first() is not None
+    return _share_visible(
+        row=row,
+        user_id=user_id,
+        resource_owner_id=resource_owner_id,
+        is_team_member=is_team_member,
+    )
 
 
 async def _invalidate_for_share(scope: str, target_id: UUID | None) -> None:
@@ -264,16 +288,13 @@ def _row_visible_to(
     caller_team_ids: set[UUID],
 ) -> bool:
     """Batch list visibility check using pre-fetched team ids."""
-    if user_id in {resource_owner_id, row.created_by}:
-        return True
-    scope = row.scope
-    if scope == ShareScope.PUBLIC.value:
-        return True
-    if scope == ShareScope.USER.value and row.target_id == user_id:
-        return True
-    if scope == ShareScope.TEAM.value and row.target_id is not None:
-        return row.target_id in caller_team_ids
-    return False
+    is_team_member = row.target_id is not None and row.target_id in caller_team_ids
+    return _share_visible(
+        row=row,
+        user_id=user_id,
+        resource_owner_id=resource_owner_id,
+        is_team_member=is_team_member,
+    )
 
 
 @router.get("/{share_id}", response_model=ShareRead)
