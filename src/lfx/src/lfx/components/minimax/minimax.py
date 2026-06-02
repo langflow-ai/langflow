@@ -16,7 +16,7 @@ from lfx.inputs.inputs import (
     SliderInput,
 )
 
-MINIMAX_MODELS = ["MiniMax-M2.7", "MiniMax-M2.7-highspeed"]
+MINIMAX_MODELS = ["MiniMax-M3", "MiniMax-M2.7", "MiniMax-M2.7-highspeed"]
 
 
 class MiniMaxModelComponent(LCModelComponent):

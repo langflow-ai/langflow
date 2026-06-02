@@ -17,9 +17,11 @@ def test_minimax_initialization():
 
 
 def test_minimax_default_models():
+    assert "MiniMax-M3" in MINIMAX_MODELS
     assert "MiniMax-M2.7" in MINIMAX_MODELS
     assert "MiniMax-M2.7-highspeed" in MINIMAX_MODELS
-    assert len(MINIMAX_MODELS) == 2
+    assert MINIMAX_MODELS[0] == "MiniMax-M3"
+    assert len(MINIMAX_MODELS) == 3
 
 
 def test_minimax_template():
