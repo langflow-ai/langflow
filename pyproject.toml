@@ -278,6 +278,10 @@ external = ["RUF027"]
 "src/backend/base/langflow/api/v1/*" = [
     "TCH",  # FastAPI needs to evaluate types at runtime
 ]
+"src/backend/base/langflow/api/v1/lothal.py" = [
+    "TCH",   # FastAPI needs to evaluate types at runtime
+    "ARG001",  # Stub handlers declare the contract's path/body params before using them
+]
 "src/backend/base/langflow/api/v2/*" = [
     "TCH",  # FastAPI needs to evaluate types at runtime
 ]
