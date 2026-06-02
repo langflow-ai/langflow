@@ -47,6 +47,10 @@
     --accent-blue-foreground: 217 91% 60%; /* hsl(217, 91%, 60%) */
     --accent-blue-muted: 217 100% 58% / 0.2; /* #2B7FFF33 */
     --accent-blue-muted-foreground: 213 100% 66%; /* #51A2FF */
+    --deployment-callout: 224 71% 40% / 0.1; /* rgba(30, 64, 175, 0.1) */
+    --deployment-callout-border:
+      217 91% 60% / 0.3; /* rgba(59, 130, 246, 0.3) */
+    --deployment-callout-foreground: 213 94% 68%; /* #93C5FD */
 
     --accent-pink: 326, 78%, 95%; /* hsl(326, 78%, 95%) */
     --accent-pink-foreground: 333 71% 51%; /* hsl(333, 71%, 51%) */
@@ -249,6 +253,10 @@
     --accent-blue-foreground: 213 94% 68%; /* hsl(213, 94%, 68%) */
     --accent-blue-muted: 217 100% 58% / 0.2; /* #2B7FFF33 */
     --accent-blue-muted-foreground: 213 100% 66%; /* #51A2FF */
+    --deployment-callout: 224 71% 40% / 0.1; /* rgba(30, 64, 175, 0.1) */
+    --deployment-callout-border:
+      217 91% 60% / 0.3; /* rgba(59, 130, 246, 0.3) */
+    --deployment-callout-foreground: 213 94% 68%; /* #93C5FD */
 
     --accent-pink: 336, 69%, 30%; /* hsl(336, 69%, 30%) */
     --accent-pink-foreground: 329 86% 70%; /* hsl(329, 86%, 70%) */
