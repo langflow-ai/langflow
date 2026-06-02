@@ -74,7 +74,7 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
     **Langflow Assistant** can now build entire flows, and not only individual components.
 
     For more information, see [Build flows and components with Langflow Assistant](/langflow-assistant).
-    
+
 - Redis-backed job queue for multi-worker deployments
 
     Langflow now supports a Redis-backed job queue that allows flow build events to be shared across multiple Gunicorn/Uvicorn workers and across multiple replicas behind a load balancer.
@@ -125,8 +125,16 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Extension bundles
 
     Langflow 1.10 introduces Extension bundles: component providers that are packaged and versioned as standalone pip packages, independent of the core Langflow server.
-    The [arXiv](/bundles-arxiv) and [DuckDuckGo](/bundles-duckduckgo) bundles are the pilot examples.
-    Both bundles are still included in `uv pip install langflow`, so nothing changes for existing users.
+    All bundles are still included in `uv pip install langflow`, so nothing changes for existing users.
+
+    The following Extension bundles ship with Langflow 1.10:
+
+    | Package | Bundle | Components |
+    |---------|--------|------------|
+    | `lfx-arxiv` | [arXiv](/bundles-arxiv) | arXiv search |
+    | `lfx-docling` | [Docling](/bundles-docling) | Document parsing and chunking |
+    | `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) | Web search |
+    | `lfx-ibm` | [IBM](/bundles-ibm) | IBM watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
 
     To view all Extension bundles currently loaded in your environment:
 
@@ -199,6 +207,12 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - macOS support matrix
 
     A new [macOS support](./macos-support-matrix.mdx) page documents feature availability across Apple Silicon and Intel Macs.
+
+- IBM Db2 Vector Store component
+
+    The **IBM Db2 Vector Store** component is now available in the [IBM bundle](/bundles-ibm).
+
+    For more information, see [IBM Db2 Vector Store](/bundles-ibm#ibm-db2-vector-store).
 
 ### Deprecations
 

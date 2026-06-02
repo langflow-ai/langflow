@@ -14,6 +14,23 @@ import PartialVectorStoreInstance from '@site/docs/_partial-vector-store-instanc
 The **IBM** bundle provides access to IBM watsonx.ai models for text and embedding generation, plus an IBM Db2 Vector Store.
 These components require an IBM watsonx.ai deployment with API credentials, and/or a reachable IBM Db2 instance with the `ibm-db` driver.
 
+## Install the IBM bundle
+
+The **IBM** bundle is included in the `lfx-ibm` Extension bundle, which is installed automatically as part of `uv pip install langflow`.
+
+If you need to install it separately, run:
+
+```bash
+uv pip install lfx-ibm
+uv run langflow run
+```
+
+To verify the bundle is loaded in your environment:
+
+```bash
+lfx extension list
+```
+
 ## IBM watsonx.ai
 
 The **IBM watsonx.ai** component generates text using [supported foundation models](https://dataplatform.cloud.ibm.com/docs/content/wsj/analyze-data/fm-models.html?context=wx) in [IBM watsonx.ai](https://www.ibm.com/products/watsonx-ai).
