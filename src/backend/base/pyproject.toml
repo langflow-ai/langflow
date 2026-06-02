@@ -334,7 +334,6 @@ docling-chunking = [
     "tiktoken>=0.7.0",
 ]
 docling-image-description = [
-    "langflow-base[docling]",
     "langchain-docling>=1.1.0",
 ]
 
