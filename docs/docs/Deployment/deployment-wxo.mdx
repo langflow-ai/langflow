@@ -6,7 +6,6 @@ slug: /deployment-wxo
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
 
 :::tip
 As of Langflow 1.10.x, the IBM watsonx Orchestrate deployments feature is behind a feature flag. To enable it, set the following environment variable before starting Langflow:
@@ -73,8 +72,6 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
    :::tip
    To bind the connection to the flow **without** environment variable binding, click **Skip**, and then click **Next**.
    :::
-
-   For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
 8. Click **Next**. The **Review & Confirm** pane opens.
 9. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
 
@@ -118,12 +115,16 @@ From the **Projects** page, click **Deployments** to open the deployment managem
 
 ## Send requests to your flow
 
-After you deploy your flow to IBM watsonx Orchestrate, you can connect to it through the Langflow deployment run endpoints.
+After you deploy your flow to IBM watsonx Orchestrate, you can trigger the watsonx Orchestrate agent through the Langflow deployment run endpoints.
 
 Don't use the `/run` endpoint for flows deployed to IBM watsonx Orchestrate.
 Instead use `POST /api/v1/deployments/{deployment_id}/runs` to start a run, and `GET /api/v1/deployments/{deployment_id}/runs/{run_id}` to check its status.
 
 Endpoint paths must be prefixed with your Langflow server URL, such as `http://localhost:7860`.
+
+To find your `deployment_id`, navigate to the **Projects** page, click **Deployments**, and select the deployment. The ID is displayed in the deployment details.
+
+These endpoints require a Langflow API key passed in the `x-api-key` header. To create one, see [API keys and authentication](/api-keys-and-authentication).
 
 ### Create deployment run endpoint
 
@@ -327,3 +328,5 @@ curl --request GET \
 
 Check `provider_data.status` to determine whether the run is still processing or has finished.
 When the status is `completed`, read the output from `provider_data.result`.
+
+If `provider_data.status` is `failed`, the `provider_data.failed_at` timestamp and `provider_data.last_error` field contain details about what went wrong.
