@@ -43,7 +43,15 @@ export default function VersionListItem({
         )}
       >
         <div className="flex flex-col items-start">
-          <span className="font-medium text-sm pb-1">{entry.version_tag}</span>
+          <span className="font-medium text-sm pb-1">
+            {entry.version_tag}
+            {entry.description && (
+              <span className="font-normal text-muted-foreground">
+                {" "}
+                — {entry.description}
+              </span>
+            )}
+          </span>
           <span className="text-xs text-muted-foreground">
             {formatTimestamp(entry.created_at)}
           </span>
