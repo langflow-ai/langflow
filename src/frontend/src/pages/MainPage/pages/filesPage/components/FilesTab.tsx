@@ -75,9 +75,11 @@ const FilesTab = ({
       const filesIds = await uploadFile({
         files: files,
       });
-      setSuccessData({
-        title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
-      });
+      if (filesIds.length > 0) {
+        setSuccessData({
+          title: `File${filesIds.length > 1 ? "s" : ""} uploaded successfully`,
+        });
+      }
     } catch (error: any) {
       setErrorData({
         title: "Error uploading file",
