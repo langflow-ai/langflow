@@ -1,3 +1,4 @@
+import { cloneDeep } from "lodash";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import {
@@ -17,7 +18,11 @@ import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import { useFlowCollaboration } from "@/hooks/flows/use-flow-collaboration";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
-import type { CollaborationPresenceUser } from "@/types/flow-collaboration";
+import type {
+  CollaborationPresenceUser,
+  CollaborationSelectionTarget,
+  CollaborationUserSelection,
+} from "@/types/flow-collaboration";
 import type {
   CollaborationHistoryEntry,
   FlowOperation,
@@ -34,12 +39,107 @@ type QueuedOperationBatch = {
   onAccepted?: (acceptedForwardOps: FlowOperation[]) => void;
 };
 
+type UpdateNodesOperation = Extract<FlowOperation, { type: "update_nodes" }>;
+
 const MAX_COLLABORATION_HISTORY_SIZE = 100;
+const UPDATE_NODES_COALESCE_MS = 300;
+
+function getSingleUpdateNodesOperation(
+  operations: FlowOperation[],
+): UpdateNodesOperation | null {
+  const [operation] = operations;
+  return operations.length === 1 && operation?.type === "update_nodes"
+    ? operation
+    : null;
+}
+
+function isUpdateNodesOnly(operations: FlowOperation[]): boolean {
+  return getSingleUpdateNodesOperation(operations) !== null;
+}
+
+function canCoalesceOperationBatch(batch: QueuedOperationBatch): boolean {
+  if (batch.onAccepted || !isUpdateNodesOnly(batch.operations)) {
+    return false;
+  }
+
+  if (!batch.historyEntry) {
+    return true;
+  }
+
+  return (
+    isUpdateNodesOnly(batch.historyEntry.forwardOps) &&
+    isUpdateNodesOnly(batch.historyEntry.inverseOps)
+  );
+}
+
+function mergeUpdateNodeBatches(
+  current: QueuedOperationBatch,
+  incoming: QueuedOperationBatch,
+): QueuedOperationBatch {
+  const currentOperation = getSingleUpdateNodesOperation(current.operations);
+  const incomingOperation = getSingleUpdateNodesOperation(incoming.operations);
+  if (!currentOperation || !incomingOperation) {
+    return incoming;
+  }
+
+  const mergedNodesById = new Map(
+    currentOperation.nodes.map((node) => [node.id, cloneDeep(node)]),
+  );
+  for (const node of incomingOperation.nodes) {
+    mergedNodesById.set(node.id, cloneDeep(node));
+  }
+
+  const mergedForwardOps: FlowOperation[] = [
+    {
+      type: "update_nodes",
+      nodes: Array.from(mergedNodesById.values()),
+    },
+  ];
+
+  if (!current.historyEntry && !incoming.historyEntry) {
+    return { operations: mergedForwardOps };
+  }
+
+  const currentInverseOperation = current.historyEntry
+    ? getSingleUpdateNodesOperation(current.historyEntry.inverseOps)
+    : null;
+  const incomingInverseOperation = incoming.historyEntry
+    ? getSingleUpdateNodesOperation(incoming.historyEntry.inverseOps)
+    : null;
+  const inverseNodesById = new Map(
+    currentInverseOperation
+      ? currentInverseOperation.nodes.map((node) => [node.id, cloneDeep(node)])
+      : [],
+  );
+
+  if (incomingInverseOperation) {
+    for (const node of incomingInverseOperation.nodes) {
+      if (!inverseNodesById.has(node.id)) {
+        inverseNodesById.set(node.id, cloneDeep(node));
+      }
+    }
+  }
+
+  return {
+    operations: mergedForwardOps,
+    historyEntry: {
+      forwardOps: cloneDeep(mergedForwardOps),
+      inverseOps: [
+        {
+          type: "update_nodes",
+          nodes: Array.from(inverseNodesById.values()),
+        },
+      ],
+    },
+  };
+}
 
 export type UseFlowCollaborationEditingReturn = {
   betaEnabled: boolean;
   setBetaEnabled: (enabled: boolean) => Promise<void>;
   users: CollaborationPresenceUser[];
+  selections: CollaborationUserSelection[];
+  sendSelectionUpdate: (selected: CollaborationSelectionTarget | null) => void;
   isCollaborationReady: boolean;
   collaborationStatus: ReturnType<typeof useFlowCollaboration>["status"];
 };
@@ -55,6 +155,10 @@ export function useFlowCollaborationEditing({
 
   const submitChainRef = useRef<Promise<void>>(Promise.resolve());
   const queuedOperationBatchesRef = useRef<QueuedOperationBatch[]>([]);
+  const coalescedOperationBatchRef = useRef<QueuedOperationBatch | null>(null);
+  const coalescedOperationTimerRef = useRef<ReturnType<
+    typeof setTimeout
+  > | null>(null);
   const undoHistoryRef = useRef<CollaborationHistoryEntry[]>([]);
   const redoHistoryRef = useRef<CollaborationHistoryEntry[]>([]);
   const collaborationReadyRef = useRef(false);
@@ -63,6 +167,30 @@ export function useFlowCollaborationEditing({
   const clearCollaborationHistory = useCallback(() => {
     undoHistoryRef.current = [];
     redoHistoryRef.current = [];
+  }, []);
+
+  const clearCoalescedOperationBatch = useCallback(() => {
+    if (coalescedOperationTimerRef.current) {
+      clearTimeout(coalescedOperationTimerRef.current);
+      coalescedOperationTimerRef.current = null;
+    }
+    coalescedOperationBatchRef.current = null;
+  }, []);
+
+  const flushCoalescedOperationBatch = useCallback(() => {
+    if (coalescedOperationTimerRef.current) {
+      clearTimeout(coalescedOperationTimerRef.current);
+      coalescedOperationTimerRef.current = null;
+    }
+
+    const batch = coalescedOperationBatchRef.current;
+    if (!batch) {
+      return false;
+    }
+
+    coalescedOperationBatchRef.current = null;
+    queuedOperationBatchesRef.current.push(batch);
+    return true;
   }, []);
 
   const pushUndoHistory = useCallback((entry: CollaborationHistoryEntry) => {
@@ -77,6 +205,7 @@ export function useFlowCollaborationEditing({
       return;
     }
     queuedOperationBatchesRef.current = [];
+    clearCoalescedOperationBatch();
     submitChainRef.current = Promise.resolve();
     clearCollaborationHistory();
     reloadingRef.current = true;
@@ -93,7 +222,13 @@ export function useFlowCollaborationEditing({
       reloadingRef.current = false;
       useFlowStore.setState({ isApplyingRemoteOperations: false });
     }
-  }, [applyFlowToCanvas, clearCollaborationHistory, flowId, getFlow]);
+  }, [
+    applyFlowToCanvas,
+    clearCoalescedOperationBatch,
+    clearCollaborationHistory,
+    flowId,
+    getFlow,
+  ]);
 
   const submitOperationsRef = useRef<
     ReturnType<typeof useFlowCollaboration>["submitOperations"] | null
@@ -144,23 +279,58 @@ export function useFlowCollaborationEditing({
     }
   }, [pushUndoHistory, reloadFlowFromServer]);
 
+  const scheduleDrainQueue = useCallback(() => {
+    if (!collaborationReadyRef.current) {
+      return;
+    }
+
+    submitChainRef.current = submitChainRef.current
+      .catch(() => {})
+      .then(drainQueue);
+  }, [drainQueue]);
+
+  const scheduleCoalescedOperationFlush = useCallback(() => {
+    if (coalescedOperationTimerRef.current) {
+      clearTimeout(coalescedOperationTimerRef.current);
+    }
+
+    coalescedOperationTimerRef.current = setTimeout(() => {
+      coalescedOperationTimerRef.current = null;
+      if (flushCoalescedOperationBatch()) {
+        scheduleDrainQueue();
+      }
+    }, UPDATE_NODES_COALESCE_MS);
+  }, [flushCoalescedOperationBatch, scheduleDrainQueue]);
+
   const enqueueOperations = useCallback(
     (operations: FlowOperation[], options?: FlowOperationEmitOptions) => {
       if (!operations.length || reloadingRef.current) {
         return;
       }
-      queuedOperationBatchesRef.current.push({
+      const batch: QueuedOperationBatch = {
         operations,
         historyEntry: options?.historyEntry,
-      });
-      if (!collaborationReadyRef.current) {
+      };
+
+      if (canCoalesceOperationBatch(batch)) {
+        coalescedOperationBatchRef.current = coalescedOperationBatchRef.current
+          ? mergeUpdateNodeBatches(coalescedOperationBatchRef.current, batch)
+          : batch;
+        if (collaborationReadyRef.current) {
+          scheduleCoalescedOperationFlush();
+        }
         return;
       }
-      submitChainRef.current = submitChainRef.current
-        .catch(() => {})
-        .then(drainQueue);
+
+      flushCoalescedOperationBatch();
+      queuedOperationBatchesRef.current.push(batch);
+      scheduleDrainQueue();
     },
-    [drainQueue],
+    [
+      flushCoalescedOperationBatch,
+      scheduleCoalescedOperationFlush,
+      scheduleDrainQueue,
+    ],
   );
 
   const enqueueHistoryAction = useCallback(
@@ -169,15 +339,11 @@ export function useFlowCollaborationEditing({
         return;
       }
       applyFlowOperationsToStore(operations);
+      flushCoalescedOperationBatch();
       queuedOperationBatchesRef.current.push({ operations, onAccepted });
-      if (!collaborationReadyRef.current) {
-        return;
-      }
-      submitChainRef.current = submitChainRef.current
-        .catch(() => {})
-        .then(drainQueue);
+      scheduleDrainQueue();
     },
-    [drainQueue],
+    [flushCoalescedOperationBatch, scheduleDrainQueue],
   );
 
   const undoCollaborationOperations = useCallback(() => {
@@ -218,6 +384,9 @@ export function useFlowCollaborationEditing({
   );
 
   const flushCollaborationSave = useCallback(async () => {
+    if (flushCoalescedOperationBatch()) {
+      scheduleDrainQueue();
+    }
     await submitChainRef.current;
     if (queuedOperationBatchesRef.current.length > 0) {
       if (!collaborationReadyRef.current) {
@@ -226,7 +395,7 @@ export function useFlowCollaborationEditing({
       await drainQueue();
     }
     syncSavedFlowStateFromCanvas();
-  }, [drainQueue]);
+  }, [drainQueue, flushCoalescedOperationBatch, scheduleDrainQueue]);
 
   const collaboration = useFlowCollaboration({
     flowId,
@@ -237,6 +406,7 @@ export function useFlowCollaborationEditing({
     },
     onReloadRequired: () => {
       queuedOperationBatchesRef.current = [];
+      clearCoalescedOperationBatch();
       submitChainRef.current = Promise.resolve();
       clearCollaborationHistory();
       void reloadFlowFromServer();
@@ -247,16 +417,24 @@ export function useFlowCollaborationEditing({
   collaborationReadyRef.current = collaboration.isReady;
 
   useEffect(() => {
-    if (
-      !collaboration.isReady ||
-      queuedOperationBatchesRef.current.length === 0
-    ) {
+    if (!collaboration.isReady) {
       return;
     }
-    submitChainRef.current = submitChainRef.current
-      .catch(() => {})
-      .then(drainQueue);
-  }, [collaboration.isReady, drainQueue]);
+    if (
+      flushCoalescedOperationBatch() ||
+      queuedOperationBatchesRef.current.length > 0
+    ) {
+      scheduleDrainQueue();
+    }
+  }, [collaboration.isReady, flushCoalescedOperationBatch, scheduleDrainQueue]);
+
+  useEffect(() => {
+    if (!betaEnabled) {
+      clearCoalescedOperationBatch();
+    }
+  }, [betaEnabled, clearCoalescedOperationBatch]);
+
+  useEffect(() => clearCoalescedOperationBatch, [clearCoalescedOperationBatch]);
 
   useEffect(() => {
     useFlowStore.setState({
@@ -303,6 +481,8 @@ export function useFlowCollaborationEditing({
     betaEnabled,
     setBetaEnabled,
     users: collaboration.users,
+    selections: collaboration.selections,
+    sendSelectionUpdate: collaboration.sendSelectionUpdate,
     isCollaborationReady: collaboration.isReady,
     collaborationStatus: collaboration.status,
   };

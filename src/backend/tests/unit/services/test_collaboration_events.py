@@ -388,6 +388,41 @@ def test_initial_connection_counts_as_currently_unselected(svc: SQLiteCollaborat
     assert snapshot.users[0].selected is None
 
 
+def test_new_distinct_user_snapshot_preserves_existing_user_selection(
+    svc: SQLiteCollaborationEventService,
+    flow_id: UUID,
+):
+    selected_user_id = uuid4()
+    joining_user_id = uuid4()
+
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=selected_user_id,
+        connection_id="selected-conn",
+        username="selected-user",
+        profile_image=None,
+    )
+    svc.update_connection(
+        flow_id=flow_id,
+        connection_id="selected-conn",
+        selected=CollaborationSelectionTarget(kind="node", id="node-1"),
+    )
+
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=joining_user_id,
+        connection_id="joining-conn",
+        username="joining-user",
+        profile_image=None,
+    )
+
+    snapshot = svc.list_users([flow_id])[flow_id]
+    users_by_id = {user.user_id: user for user in snapshot.users}
+
+    assert users_by_id[selected_user_id].selected == CollaborationSelectionTarget(kind="node", id="node-1")
+    assert users_by_id[joining_user_id].selected is None
+
+
 def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
     shared = tmp_path / "shared"
     user_id = uuid4()

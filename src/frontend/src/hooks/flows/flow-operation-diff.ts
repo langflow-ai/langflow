@@ -14,22 +14,33 @@ export function coalesceDeleteIds(ids: string[]): string[] {
   return result;
 }
 
-function nodeSnapshot(node: AllNodeType): AllNodeType {
-  const { selected: _selected, ...rest } = node;
-  return rest as AllNodeType;
+export function nodeSnapshotForFlowOperation(node: AllNodeType): AllNodeType {
+  const {
+    selected: _selected,
+    measured: _measured,
+    dragging: _dragging,
+    ...rest
+  } = node;
+  return cloneDeep(rest) as AllNodeType;
 }
 
-function edgeSnapshot(edge: EdgeType): EdgeType {
+export function edgeSnapshotForFlowOperation(edge: EdgeType): EdgeType {
   const { selected: _selected, ...rest } = edge;
-  return rest as EdgeType;
+  return cloneDeep(rest) as EdgeType;
 }
 
 function nodesEqual(a: AllNodeType, b: AllNodeType): boolean {
-  return isEqual(nodeSnapshot(a), nodeSnapshot(b));
+  return isEqual(
+    nodeSnapshotForFlowOperation(a),
+    nodeSnapshotForFlowOperation(b),
+  );
 }
 
 function edgesEqual(a: EdgeType, b: EdgeType): boolean {
-  return isEqual(edgeSnapshot(a), edgeSnapshot(b));
+  return isEqual(
+    edgeSnapshotForFlowOperation(a),
+    edgeSnapshotForFlowOperation(b),
+  );
 }
 
 export function buildGraphDiffOperations(
@@ -50,11 +61,11 @@ export function buildGraphDiffOperations(
   for (const node of nextNodes) {
     const previous = prevNodeMap.get(node.id);
     if (!previous) {
-      addedNodes.push(cloneDeep(node));
+      addedNodes.push(nodeSnapshotForFlowOperation(node));
       continue;
     }
     if (!nodesEqual(previous, node)) {
-      updatedNodes.push(cloneDeep(node));
+      updatedNodes.push(nodeSnapshotForFlowOperation(node));
     }
   }
 
@@ -86,12 +97,12 @@ export function buildGraphDiffOperations(
   for (const edge of nextEdges) {
     const previous = prevEdgeMap.get(edge.id);
     if (!previous) {
-      addedEdges.push(cloneDeep(edge));
+      addedEdges.push(edgeSnapshotForFlowOperation(edge));
       continue;
     }
     if (!edgesEqual(previous, edge)) {
       deletedEdgeIds.push(edge.id);
-      addedEdges.push(cloneDeep(edge));
+      addedEdges.push(edgeSnapshotForFlowOperation(edge));
     }
   }
 
@@ -117,7 +128,7 @@ export function buildGraphDiffOperations(
 export function buildUpdateNodesOperation(nodes: AllNodeType[]): FlowOperation {
   return {
     type: "update_nodes",
-    nodes: nodes.map((node) => cloneDeep(node)),
+    nodes: nodes.map(nodeSnapshotForFlowOperation),
   };
 }
 

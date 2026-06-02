@@ -82,6 +82,16 @@ export type CollaborationUserSelection = {
   selected: CollaborationSelectionTarget | null;
 };
 
+export type CollaborationCollaboratorRow = {
+  user_id: string;
+  username: string;
+  profile_image?: string | null;
+  selected: CollaborationSelectionTarget | null;
+  selectionLabel: string | null;
+  isCurrentUser: boolean;
+  color: string;
+};
+
 export type CollaborationSelectionUpdateMessage = {
   type: "selection.update";
   selected: CollaborationSelectionTarget | null;

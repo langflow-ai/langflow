@@ -5,7 +5,10 @@ import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import type { FlowOperation } from "@/types/flow-operations";
 import { cleanEdges } from "@/utils/reactflowUtils";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
-import { coalesceDeleteIds } from "./flow-operation-diff";
+import {
+  coalesceDeleteIds,
+  nodeSnapshotForFlowOperation,
+} from "./flow-operation-diff";
 
 export type { FlowMutationOptions } from "@/types/flow-operations";
 export {
@@ -35,6 +38,35 @@ function applyDeleteEdges(edges: EdgeType[], ids: string[]): EdgeType[] {
   return edges.filter((edge) => !edgeIds.has(edge.id));
 }
 
+function restoreEdgeSelection(
+  edges: EdgeType[],
+  previousEdges: EdgeType[],
+): EdgeType[] {
+  const previousSelectionById = new Map(
+    previousEdges
+      .filter((edge) => edge.selected !== undefined)
+      .map((edge) => [edge.id, edge.selected]),
+  );
+
+  return edges.map((edge) => {
+    if (!previousSelectionById.has(edge.id)) {
+      return edge;
+    }
+    return {
+      ...edge,
+      selected: previousSelectionById.get(edge.id),
+    };
+  });
+}
+
+function applyNodeUpdate(existingNode: AllNodeType, nextNode: AllNodeType) {
+  const node = nodeSnapshotForFlowOperation(nextNode);
+  if (existingNode.selected !== undefined) {
+    node.selected = existingNode.selected;
+  }
+  return node;
+}
+
 export function applyFlowOperationsLocally(
   nodes: AllNodeType[],
   edges: EdgeType[],
@@ -49,7 +81,7 @@ export function applyFlowOperationsLocally(
         const existingIds = new Set(nextNodes.map((node) => node.id));
         for (const node of operation.nodes) {
           if (!existingIds.has(node.id)) {
-            nextNodes.push(cloneDeep(node));
+            nextNodes.push(nodeSnapshotForFlowOperation(node));
             existingIds.add(node.id);
           }
         }
@@ -58,8 +90,9 @@ export function applyFlowOperationsLocally(
       case "update_nodes": {
         const nodeMap = new Map(nextNodes.map((node) => [node.id, node]));
         for (const node of operation.nodes) {
-          if (nodeMap.has(node.id)) {
-            nodeMap.set(node.id, cloneDeep(node));
+          const existingNode = nodeMap.get(node.id);
+          if (existingNode) {
+            nodeMap.set(node.id, applyNodeUpdate(existingNode, node));
           }
         }
         nextNodes = Array.from(nodeMap.values());
@@ -93,7 +126,10 @@ export function applyFlowOperationsLocally(
   }
 
   const cleaned = cleanEdges(nextNodes, nextEdges);
-  return { nodes: nextNodes, edges: cleaned.edges };
+  return {
+    nodes: nextNodes,
+    edges: restoreEdgeSelection(cleaned.edges, nextEdges),
+  };
 }
 
 export function applyFlowOperationsToStore(operations: FlowOperation[]): void {

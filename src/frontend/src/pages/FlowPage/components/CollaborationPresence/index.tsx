@@ -1,11 +1,15 @@
 import { useTranslation } from "react-i18next";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { BASE_URL_API } from "@/customization/config-constants";
-import type { CollaborationPresenceUser } from "@/types/flow-collaboration";
+import type {
+  CollaborationCollaboratorRow,
+  CollaborationConnectionStatus,
+} from "@/types/flow-collaboration";
 import { cn } from "@/utils/utils";
 
-type CollaborationPresenceProps = {
-  users: CollaborationPresenceUser[];
-  currentUserId?: string | null;
+type CollaborationPresenceAvatarsProps = {
+  collaborators: CollaborationCollaboratorRow[];
+  connectionStatus: CollaborationConnectionStatus;
   className?: string;
 };
 
@@ -15,44 +19,128 @@ function profileImageUrl(profileImage?: string | null): string {
   }`;
 }
 
-export default function CollaborationPresence({
-  users,
-  currentUserId,
-  className,
-}: CollaborationPresenceProps): JSX.Element | null {
-  const { t } = useTranslation();
+function collaboratorTooltip(
+  user: CollaborationCollaboratorRow,
+  t: (
+    key: string,
+    options?: { defaultValue?: string; label?: string },
+  ) => string,
+): string {
+  const displayName = user.isCurrentUser
+    ? t("flow.collaboration.you", { defaultValue: "You" })
+    : user.username;
 
-  const collaborators = users.filter((user) => user.user_id !== currentUserId);
-
-  if (collaborators.length === 0) {
-    return null;
+  if (!user.selectionLabel) {
+    return displayName;
   }
 
-  const visibleUsers = collaborators.slice(0, 5);
-  const overflowCount = collaborators.length - visibleUsers.length;
+  if (user.selected?.kind === "edge") {
+    return `${displayName}\n${t("flow.collaboration.selectedEdge", {
+      label: user.selectionLabel,
+      defaultValue: "Selected edge: {{label}}",
+    })}`;
+  }
+
+  return `${displayName}\n${t("flow.collaboration.selectedNode", {
+    label: user.selectionLabel,
+    defaultValue: "Selected node: {{label}}",
+  })}`;
+}
+
+function connectionStatusMessage(
+  status: CollaborationConnectionStatus,
+  t: (key: string, options?: { defaultValue?: string }) => string,
+): string {
+  switch (status) {
+    case "connecting":
+      return t("flow.collaboration.connecting", {
+        defaultValue: "Connecting to collaboration…",
+      });
+    case "ready":
+      return t("flow.collaboration.connectingPresence", {
+        defaultValue: "Loading collaborators…",
+      });
+    case "disconnected":
+      return t("flow.collaboration.disconnected", {
+        defaultValue: "Collaboration disconnected. Edits may not sync.",
+      });
+    case "error":
+      return t("flow.collaboration.connectionError", {
+        defaultValue: "Collaboration connection error. Try reloading the flow.",
+      });
+    default:
+      return t("flow.collaboration.starting", {
+        defaultValue: "Starting collaboration…",
+      });
+  }
+}
+
+export default function CollaborationPresenceAvatars({
+  collaborators,
+  connectionStatus,
+  className,
+}: CollaborationPresenceAvatarsProps): JSX.Element | null {
+  const { t } = useTranslation();
+
+  if (collaborators.length === 0) {
+    if (connectionStatus === "ready") {
+      return null;
+    }
+
+    return (
+      <div
+        className={cn("flex items-center", className)}
+        data-testid="collaboration-presence"
+      >
+        <span
+          className="h-2 w-2 animate-pulse rounded-full bg-warning"
+          title={connectionStatusMessage(connectionStatus, t)}
+          data-testid="collaboration-presence-status"
+        />
+      </div>
+    );
+  }
+
+  const visibleCollaborators = collaborators.slice(0, 4);
+  const overflowCount = collaborators.length - visibleCollaborators.length;
 
   return (
     <div
-      className={cn("flex items-center gap-2", className)}
+      className={cn("flex items-center", className)}
       data-testid="collaboration-presence"
       title={t("flow.collaboration.activeCollaborators", {
         count: collaborators.length,
         defaultValue: "{{count}} collaborators editing",
       })}
     >
-      <span className="text-xs text-muted-foreground">
-        {t("flow.collaboration.editing", { defaultValue: "Editing" })}
-      </span>
-      <div className="flex -space-x-2">
-        {visibleUsers.map((user) => (
-          <img
+      <div className="flex items-center -space-x-1.5">
+        {visibleCollaborators.map((user) => (
+          <ShadTooltip
             key={user.user_id}
-            src={profileImageUrl(user.profile_image)}
-            alt={user.username}
-            title={user.username}
-            className="h-7 w-7 rounded-full border-2 border-background object-cover"
-            data-testid={`collaboration-presence-user-${user.user_id}`}
-          />
+            content={collaboratorTooltip(user, t)}
+            side="bottom"
+          >
+            <img
+              src={profileImageUrl(user.profile_image)}
+              alt={
+                user.isCurrentUser
+                  ? t("flow.collaboration.you", { defaultValue: "You" })
+                  : user.username
+              }
+              className={cn(
+                "h-7 w-7 rounded-full border-2 object-cover",
+                connectionStatus !== "ready" && "opacity-60",
+              )}
+              style={{
+                borderColor: user.color,
+                backgroundColor: "hsl(var(--background))",
+                boxShadow: user.isCurrentUser
+                  ? `0 0 0 2px color-mix(in srgb, ${user.color} 35%, transparent)`
+                  : undefined,
+              }}
+              data-testid={`collaboration-presence-user-${user.user_id}`}
+            />
+          </ShadTooltip>
         ))}
         {overflowCount > 0 ? (
           <span
@@ -63,6 +151,13 @@ export default function CollaborationPresence({
           </span>
         ) : null}
       </div>
+      {connectionStatus !== "ready" ? (
+        <span
+          className="ml-1.5 h-2 w-2 animate-pulse rounded-full bg-warning"
+          data-testid="collaboration-presence-status"
+          title={connectionStatusMessage(connectionStatus, t)}
+        />
+      ) : null}
     </div>
   );
 }

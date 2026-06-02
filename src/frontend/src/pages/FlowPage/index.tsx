@@ -20,9 +20,9 @@ import { useWebhookEvents } from "@/hooks/use-webhook-events";
 import { SaveChangesModal } from "@/modals/saveChangesModal";
 import useAlertStore from "@/stores/alertStore";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
+import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { useShortcutsStore } from "@/stores/shortcuts";
-import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import { useTypesStore } from "@/stores/typesStore";
 import { customStringify } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
@@ -159,17 +159,21 @@ export default function FlowPage({ view }: { view?: boolean }): JSX.Element {
   // Set flow tab id
   useEffect(() => {
     const awaitgetTypes = async () => {
-      if (flows && currentFlowId === "" && Object.keys(types).length > 0) {
-        const isAnExistingFlow = flows.find((flow) => flow.id === id);
+      if (!flows || currentFlowId !== "" || Object.keys(types).length === 0) {
+        return;
+      }
+      if (!id) {
+        navigate("/all");
+        return;
+      }
 
-        if (!isAnExistingFlow) {
-          navigate("/all");
-          return;
-        }
+      const existingFlow = flows.find((flow) => flow.id === id);
+      const flowIdToLoad = existingFlow?.id ?? id;
 
-        const isAnExistingFlowId = isAnExistingFlow.id;
-
-        await getFlowToAddToCanvas(isAnExistingFlowId);
+      try {
+        await getFlowToAddToCanvas(flowIdToLoad);
+      } catch {
+        navigate("/all");
       }
     };
     awaitgetTypes();

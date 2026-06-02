@@ -9,6 +9,7 @@ import {
   buildGraphDiffOperations,
   buildInverseFlowOperations,
   buildUpdateMetadataOperation,
+  buildUpdateNodesOperation,
   collectFlowOperationTouches,
   flowOperationTouchesIntersect,
 } from "../flow-operation-diff";
@@ -69,6 +70,46 @@ describe("flow-operation-adapter", () => {
         { type: "delete_edges", ids: ["e-ab"] },
       ]),
     );
+  });
+
+  it("buildGraphDiffOperations ignores React Flow runtime node fields", () => {
+    const measuredNode = {
+      ...nodeA,
+      selected: true,
+      dragging: true,
+      measured: { width: 320, height: 180 },
+    } as AllNodeType;
+
+    const operations = buildGraphDiffOperations(
+      [nodeA],
+      [edgeAb],
+      [measuredNode],
+      [edgeAb],
+    );
+
+    expect(operations).toEqual([]);
+  });
+
+  it("buildUpdateNodesOperation omits React Flow runtime node fields", () => {
+    const operation = buildUpdateNodesOperation([
+      {
+        ...nodeA,
+        selected: true,
+        dragging: true,
+        measured: { width: 320, height: 180 },
+        position: { x: 25, y: 25 },
+      } as AllNodeType,
+    ]);
+
+    expect(operation).toEqual({
+      type: "update_nodes",
+      nodes: [
+        {
+          ...nodeA,
+          position: { x: 25, y: 25 },
+        },
+      ],
+    });
   });
 
   it("buildGraphDiffOperations represents edge reconnect as delete plus add", () => {
@@ -208,6 +249,51 @@ describe("flow-operation-adapter", () => {
     expect(result.edges).toEqual([]);
   });
 
+  it("applyFlowOperationsLocally preserves local node selection on updates", () => {
+    const selectedNode = { ...nodeA, selected: true } as AllNodeType;
+    const result = applyFlowOperationsLocally(
+      [selectedNode, nodeB],
+      [edgeAb],
+      [
+        {
+          type: "update_nodes",
+          nodes: [
+            {
+              ...nodeA,
+              selected: false,
+              measured: { width: 320, height: 180 },
+              position: { x: 25, y: 25 },
+            } as AllNodeType,
+          ],
+        },
+      ],
+    );
+
+    expect(result.nodes[0]).toEqual({
+      ...nodeA,
+      selected: true,
+      position: { x: 25, y: 25 },
+    });
+  });
+
+  it("applyFlowOperationsLocally preserves local edge selection on node updates", () => {
+    const selectedEdge = { ...edgeAb, selected: true } as EdgeType;
+    const result = applyFlowOperationsLocally(
+      [nodeA, nodeB],
+      [selectedEdge],
+      [
+        {
+          type: "update_nodes",
+          nodes: [{ ...nodeA, position: { x: 25, y: 25 } } as AllNodeType],
+        },
+      ],
+    );
+
+    expect(result.edges).toEqual([
+      expect.objectContaining({ id: "e-ab", selected: true }),
+    ]);
+  });
+
   it("applyRemoteFlowOperations updates the store without emitting collaboration ops", () => {
     const emit = jest.fn();
     useFlowStore.setState({
@@ -227,5 +313,29 @@ describe("flow-operation-adapter", () => {
       y: 25,
     });
     expect(emit).not.toHaveBeenCalled();
+  });
+
+  it("applyRemoteFlowOperations preserves selected edges in the local store", () => {
+    const selectedEdge = { ...edgeAb, selected: true } as EdgeType;
+    useFlowStore.setState({
+      edges: [selectedEdge],
+      currentFlow: {
+        id: "flow-1",
+        name: "Flow",
+        description: "",
+        data: { nodes: [nodeA, nodeB], edges: [selectedEdge] },
+      },
+    });
+
+    applyRemoteFlowOperations([
+      {
+        type: "update_nodes",
+        nodes: [{ ...nodeA, position: { x: 25, y: 25 } } as AllNodeType],
+      },
+    ]);
+
+    expect(useFlowStore.getState().edges).toEqual([
+      expect.objectContaining({ id: "e-ab", selected: true }),
+    ]);
   });
 });

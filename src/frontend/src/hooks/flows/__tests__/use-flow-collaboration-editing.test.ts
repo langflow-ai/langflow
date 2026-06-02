@@ -167,6 +167,86 @@ describe("useFlowCollaborationEditing", () => {
     });
   });
 
+  it("coalesces rapid node update operations before submitting", async () => {
+    jest.useFakeTimers();
+    try {
+      writeCollaborationOperationBetaEnabled(true);
+      const originalNode = {
+        id: "node-1",
+        position: { x: 0, y: 0 },
+        data: { id: "node-1", value: "" },
+      } as AllNodeType;
+      const firstTypedNode = {
+        ...originalNode,
+        data: { id: "node-1", value: "h" },
+      } as AllNodeType;
+      const finalTypedNode = {
+        ...originalNode,
+        data: { id: "node-1", value: "hi" },
+      } as AllNodeType;
+
+      renderHook(() =>
+        useFlowCollaborationEditing({
+          flowId: "flow-1",
+        }),
+      );
+
+      await act(async () => {});
+
+      act(() => {
+        useFlowStore
+          .getState()
+          .onCollaborationOperations?.(
+            [{ type: "update_nodes", nodes: [firstTypedNode] }],
+            {
+              historyEntry: {
+                forwardOps: [{ type: "update_nodes", nodes: [firstTypedNode] }],
+                inverseOps: [{ type: "update_nodes", nodes: [originalNode] }],
+              },
+            },
+          );
+        useFlowStore
+          .getState()
+          .onCollaborationOperations?.(
+            [{ type: "update_nodes", nodes: [finalTypedNode] }],
+            {
+              historyEntry: {
+                forwardOps: [{ type: "update_nodes", nodes: [finalTypedNode] }],
+                inverseOps: [{ type: "update_nodes", nodes: [firstTypedNode] }],
+              },
+            },
+          );
+      });
+
+      expect(mockSubmitOperations).not.toHaveBeenCalled();
+
+      await act(async () => {
+        jest.advanceTimersByTime(300);
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockSubmitOperations).toHaveBeenCalledTimes(1);
+      expect(mockSubmitOperations).toHaveBeenCalledWith([
+        { type: "update_nodes", nodes: [finalTypedNode] },
+      ]);
+
+      mockSubmitOperations.mockClear();
+
+      await act(async () => {
+        useFlowStore.getState().undoCollaborationOperations?.();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockSubmitOperations).toHaveBeenCalledWith([
+        { type: "update_nodes", nodes: [originalNode] },
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
   it("reloads and drops pending operations when submit fails", async () => {
     mockSubmitOperations.mockRejectedValueOnce(
       new Error("Stale base revision"),

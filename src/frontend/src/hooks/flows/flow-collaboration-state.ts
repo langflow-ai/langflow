@@ -1,8 +1,96 @@
+import { resolveCollaborationSelectionLabel } from "@/hooks/flows/collaboration-selection-labels";
+import {
+  buildCollaborationColorRoster,
+  getCollaborationUserColor,
+} from "@/hooks/flows/collaboration-user-color";
+import type { AllNodeType, EdgeType } from "@/types/flow";
 import type {
+  CollaborationCollaboratorRow,
   CollaborationPresenceUser,
   CollaborationSelectionTarget,
   CollaborationUserSelection,
 } from "@/types/flow-collaboration";
+
+export function selectionForUser(
+  selections: CollaborationUserSelection[],
+  userId: string,
+): CollaborationSelectionTarget | null {
+  return selections.find((entry) => entry.user_id === userId)?.selected ?? null;
+}
+
+export type CurrentUserCollaborationProfile = {
+  user_id: string;
+  username: string;
+  profile_image?: string | null;
+};
+
+export function buildCollaboratorRows({
+  users,
+  selections,
+  nodes,
+  edges,
+  currentUserId,
+  currentUserProfile,
+  localSelectionForCurrentUser,
+  labelOptions,
+}: {
+  users: CollaborationPresenceUser[];
+  selections: CollaborationUserSelection[];
+  nodes: AllNodeType[];
+  edges: EdgeType[];
+  currentUserId?: string | null;
+  currentUserProfile?: CurrentUserCollaborationProfile | null;
+  localSelectionForCurrentUser?: CollaborationSelectionTarget | null;
+  labelOptions?: Parameters<typeof resolveCollaborationSelectionLabel>[3];
+}): CollaborationCollaboratorRow[] {
+  const rosterUsers = [...users];
+  if (
+    currentUserProfile &&
+    !rosterUsers.some((user) => user.user_id === currentUserProfile.user_id)
+  ) {
+    rosterUsers.unshift({
+      user_id: currentUserProfile.user_id,
+      username: currentUserProfile.username,
+      profile_image: currentUserProfile.profile_image,
+    });
+  }
+
+  const rosterUserIds = buildCollaborationColorRoster(
+    rosterUsers.map((user) => user.user_id),
+  );
+
+  const rows = rosterUsers.map((user) => {
+    const isCurrentUser = Boolean(
+      currentUserId && user.user_id === currentUserId,
+    );
+    let selected = selectionForUser(selections, user.user_id);
+    if (isCurrentUser && localSelectionForCurrentUser !== undefined) {
+      selected = localSelectionForCurrentUser;
+    }
+
+    return {
+      user_id: user.user_id,
+      username: user.username,
+      profile_image: user.profile_image,
+      selected,
+      selectionLabel: resolveCollaborationSelectionLabel(
+        selected,
+        nodes,
+        edges,
+        labelOptions,
+      ),
+      isCurrentUser,
+      color: getCollaborationUserColor(user.user_id, rosterUserIds),
+    };
+  });
+
+  return rows.sort((left, right) => {
+    if (left.isCurrentUser !== right.isCurrentUser) {
+      return left.isCurrentUser ? -1 : 1;
+    }
+    return left.username.localeCompare(right.username);
+  });
+}
 
 export function applyPresenceSnapshot(
   _currentUsers: CollaborationPresenceUser[],

@@ -1,3 +1,4 @@
+import CollaborationFlowToolbar from "@/pages/FlowPage/components/CollaborationFlowToolbar";
 import useFlowStore from "@/stores/flowStore";
 import DeployButton from "./deploy-button";
 import PublishDropdown from "./deploy-dropdown";
@@ -14,7 +15,8 @@ const FlowToolbarOptions = ({
   const hasIO = useFlowStore((state) => state.hasIO);
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-2">
+      <CollaborationFlowToolbar />
       <PlaygroundButton hasIO={hasIO} />
       <PublishDropdown
         openApiModal={openApiModal}
