@@ -104,11 +104,11 @@ docling = [
 ]
 
 docling-chunking = [
-    "langflow-base[docling-chunking]>=0.9.5",
+    "langflow-base[docling-chunking]>=0.9.6",
 ]
 
 docling-image-description = [
-    "langflow-base[docling-image-description]>=0.9.5",
+    "langflow-base[docling-image-description]>=0.9.6",
     "langchain-docling>=1.1.0",
 ]
 
