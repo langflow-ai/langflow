@@ -87,6 +87,24 @@ def test_short_import_path_flow_upgrades(migration_table, class_name: str, _modu
 
 
 @pytest.mark.integration
+def test_unrelated_component_is_not_rewritten(migration_table) -> None:
+    """A node whose type is not a Docling component must be left untouched.
+
+    Guards against over-broad rewrites in ``migrate_flow_payload``: only the
+    four Docling identifiers should migrate, never an unrelated/unknown name.
+    """
+    from lfx.extension.migration.rewrite import migrate_flow_payload
+
+    original_type = "TotallyUnrelatedComponent"
+    flow = _saved_flow(original_type)
+
+    report = migrate_flow_payload(flow, table=migration_table)
+
+    assert report.rewritten_count == 0
+    assert flow["data"]["nodes"][0]["data"]["type"] == original_type
+
+
+@pytest.mark.integration
 def test_lfx_docling_distribution_is_importable() -> None:
     try:
         import lfx_docling
