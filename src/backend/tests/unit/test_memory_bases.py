@@ -2268,3 +2268,36 @@ class TestMemoryBaseSecurityAdversarial:
         compiled = str(stmt)
         assert "user_id" in compiled
         assert "memory_base" in compiled.lower()
+
+
+class TestMemoryBaseBodyValidation:
+    """HTTP-level validation for endpoints that require a JSON request body.
+
+    Regression for: a *missing* request body must be rejected with 422
+    (the same as an empty JSON object), never a 500.  Previously the body
+    parameters were declared as ``Annotated[Model, Body(embed=False)] = ...``;
+    the Ellipsis default leaked through FastAPI's body solver when no body was
+    sent, so the handler received ``...`` and raised
+    ``'ellipsis' object has no attribute '...'`` (HTTP 500).
+    """
+
+    @pytest.mark.asyncio
+    async def test_flush_missing_body_returns_422(self, client, logged_in_headers):
+        """POST /memories/{id}/flush with no body -> 422 (not 500)."""
+        mb_id = uuid.uuid4()
+        response = await client.post(f"api/v1/memories/{mb_id}/flush", headers=logged_in_headers)
+        assert response.status_code == 422, response.text
+
+    @pytest.mark.asyncio
+    async def test_flush_empty_json_returns_422(self, client, logged_in_headers):
+        """POST /memories/{id}/flush with {} -> 422 flagging the missing session_id."""
+        mb_id = uuid.uuid4()
+        response = await client.post(f"api/v1/memories/{mb_id}/flush", headers=logged_in_headers, json={})
+        assert response.status_code == 422, response.text
+        assert "session_id" in response.text
+
+    @pytest.mark.asyncio
+    async def test_create_missing_body_returns_422(self, client, logged_in_headers):
+        """POST /memories with no body -> 422 (not 500); same root cause as flush."""
+        response = await client.post("api/v1/memories", headers=logged_in_headers)
+        assert response.status_code == 422, response.text

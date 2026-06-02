@@ -9,10 +9,17 @@ import pytest
 
 pytest.importorskip("docling_core")
 
-from lfx.components.docling import docling_remote
-from lfx.components.docling.docling_remote import DoclingRemoteComponent
+# NOTE: Import the bundle component module before lfx.inputs/lfx.schema. Importing
+# lfx.inputs/lfx.schema first leaves lfx.custom partially initialized and triggers a
+# circular import when the component (a Component subclass) is imported afterwards.
+# isort: off
+from lfx_docling.components.docling import docling_remote
+from lfx_docling.components.docling.docling_remote import DoclingRemoteComponent
+
 from lfx.inputs import TableInput
 from lfx.schema import Data
+
+# isort: on
 
 
 class _Message:
