@@ -34,6 +34,18 @@ class TestFilesystemFlowStore:
     def test_read_missing_returns_none(self, tmp_path):
         assert FilesystemFlowStore(tmp_path).read("nonexistent") is None
 
+    def test_read_corrupt_json_returns_none(self, tmp_path):
+        """A corrupted store file must be treated as absent, not raise.
+
+        On a shared/PVC store a partially-written or corrupted ``{id}.json`` would
+        otherwise raise JSONDecodeError into a 500 (or crash warm_from_store at startup).
+        """
+        store = FilesystemFlowStore(tmp_path)
+        (tmp_path / "broken.json").write_text("{ this is not valid json ", encoding="utf-8")
+        # list_ids still surfaces it (globs *.json), but read() must contain the damage.
+        assert "broken" in store.list_ids()
+        assert store.read("broken") is None
+
     def test_write_leaves_no_temp_files(self, tmp_path):
         """Write must clean up its temp file after the rename."""
         store = FilesystemFlowStore(tmp_path)

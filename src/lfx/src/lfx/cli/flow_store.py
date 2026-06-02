@@ -15,6 +15,8 @@ import uuid
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from lfx.log.logger import logger
+
 
 @runtime_checkable
 class FlowStore(Protocol):
@@ -118,6 +120,13 @@ class FilesystemFlowStore:
         try:
             return json.loads(path.read_text(encoding="utf-8"))
         except FileNotFoundError:
+            return None
+        except (json.JSONDecodeError, OSError, UnicodeDecodeError) as exc:
+            # A corrupted/unreadable file in a shared store (e.g. an external writer
+            # killed mid-write, or PVC corruption) must not take down the worker.
+            # Treat it as absent (logged) so warm_from_store/list_metas skip it and
+            # every other flow keeps serving, instead of raising into a 500/startup crash.
+            logger.warning("Skipping unreadable flow store file %s: %r", path.name, exc)
             return None
 
     def delete(self, flow_id: str) -> bool:

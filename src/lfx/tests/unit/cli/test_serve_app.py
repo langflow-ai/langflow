@@ -154,6 +154,36 @@ class TestFlowRegistry:
         registry.add(graph, self._make_meta("shared-id"))
         assert len(registry) == 1
 
+    def test_warm_from_store_skips_unloadable_flows(self, tmp_path):
+        """A single corrupt/unloadable store file must not abort warm-up of the rest.
+
+        On a shared/PVC store, one bad ``{id}.json`` would otherwise crash every
+        worker's startup. warm_from_store must skip it and load the good flows.
+        """
+        from lfx.cli.flow_store import FilesystemFlowStore
+
+        store = FilesystemFlowStore(tmp_path)
+        # Corrupt file: read() returns None -> get() returns None (skipped silently).
+        (tmp_path / "corrupt.json").write_text("{ not json ", encoding="utf-8")
+        # Valid JSON that fails to reconstruct -> get() raises -> warm_from_store must catch.
+        store.write("unloadable", {"name": "Bad", "data": {"nodes": [], "edges": []}, "id": "unloadable"})
+        # A good flow that reconstructs fine.
+        store.write("good", {"name": "Good", "data": {"nodes": [], "edges": []}, "id": "good"})
+
+        registry = FlowRegistry(store=store)
+        good_graph = MagicMock()
+        good_graph.context = {}
+
+        def fake_load(raw_json):
+            if raw_json.get("id") == "unloadable":
+                msg = "component not available in this build"
+                raise ValueError(msg)
+            return good_graph
+
+        with patch("lfx.cli.serve_app.load_flow_from_json", side_effect=fake_load):
+            registry.warm_from_store()  # must NOT raise despite corrupt + unloadable files
+            assert registry.get("good") is not None
+
     def test_remove_existing(self):
         registry = FlowRegistry()
         meta = self._make_meta("flow-1")

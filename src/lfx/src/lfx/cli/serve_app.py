@@ -327,7 +327,13 @@ class FlowRegistry:
         """
         # Bypass the TTL cache — startup must always see the current store state.
         for flow_id in self._store.list_ids():
-            self.get(flow_id)  # no-op if already cached; loads from store otherwise
+            try:
+                self.get(flow_id)  # no-op if already cached; loads from store otherwise
+            except Exception as exc:  # noqa: BLE001
+                # One unloadable flow (corrupt JSON, or a flow referencing a component
+                # not available in this build) must not abort the whole worker's startup —
+                # skip it so every other flow still serves.
+                logger.warning("Skipping flow %r during store warm-up: %r", flow_id, exc)
 
     def list_metas(self) -> list[FlowMeta]:
         seen: set[str] = set()
