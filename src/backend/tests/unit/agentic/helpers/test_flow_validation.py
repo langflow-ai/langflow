@@ -37,8 +37,11 @@ _STUB_TEMPLATE = {
     },
 }
 
-ALL_TYPES_DICT = {"Inputs": {"ChatInput": _STUB_TEMPLATE["ChatInput"]}, "Models": {
-    "OpenAIModel": _STUB_TEMPLATE["OpenAIModel"]}, "Outputs": {"ChatOutput": _STUB_TEMPLATE["ChatOutput"]}}
+ALL_TYPES_DICT = {
+    "Inputs": {"ChatInput": _STUB_TEMPLATE["ChatInput"]},
+    "Models": {"OpenAIModel": _STUB_TEMPLATE["OpenAIModel"]},
+    "Outputs": {"ChatOutput": _STUB_TEMPLATE["ChatOutput"]},
+}
 
 VALID_COMPACT = {
     "nodes": [

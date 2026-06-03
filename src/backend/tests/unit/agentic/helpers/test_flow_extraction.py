@@ -38,8 +38,7 @@ class TestExtractJsonObjects:
     def test_braces_inside_string_values_do_not_break_depth(self):
         """Braces in prompt templates must not confuse brace-depth counting."""
         text = (
-            '{"nodes": [{"id": "n1", "type": "Prompt", "values": {"template": "{question}\\n{context}"}}],'
-            ' "edges": []}'
+            '{"nodes": [{"id": "n1", "type": "Prompt", "values": {"template": "{question}\\n{context}"}}], "edges": []}'
         )
         result = _extract_json_objects(text)
         assert len(result) == 1
@@ -93,10 +92,7 @@ class TestExtractCompactFlow:
         assert result is None
 
     def test_extracts_flow_with_values(self):
-        json_str = (
-            '{"nodes": [{"id": "n1", "type": "OpenAIModel", "values": {"model_name": "gpt-4o"}}],'
-            ' "edges": []}'
-        )
+        json_str = '{"nodes": [{"id": "n1", "type": "OpenAIModel", "values": {"model_name": "gpt-4o"}}], "edges": []}'
         result = extract_compact_flow(json_str)
         assert result is not None
         assert result["nodes"][0]["values"]["model_name"] == "gpt-4o"
