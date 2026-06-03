@@ -32,6 +32,14 @@ RUN apt-get update \
     # gcc
     gcc \
     curl \
+    # PostgreSQL
+    libpq-dev \
+    # SQL Server (FreeTDS + ODBC)
+    freetds-dev \
+    unixodbc-dev \
+    # MySQL
+    default-libmysqlclient-dev \
+    pkg-config \
    && ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
@@ -84,7 +92,15 @@ FROM python:3.14-slim-trixie AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
+    && apt-get install --no-install-recommends -y \
+    curl git gnupg xz-utils \
+    # PostgreSQL
+    libpq5 \
+    # SQL Server (FreeTDS + ODBC runtime)
+    freetds-bin \
+    unixodbc \
+    # MySQL
+    default-mysql-client-core \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv

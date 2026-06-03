@@ -23,6 +23,14 @@ RUN apt-get update \
         gcc \
         git \
         curl \
+        # PostgreSQL
+        libpq-dev \
+        # SQL Server (FreeTDS + ODBC)
+        freetds-dev \
+        unixodbc-dev \
+        # MySQL
+        default-libmysqlclient-dev \
+        pkg-config \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -55,6 +63,13 @@ RUN apt-get update \
         libpq5 \
         gnupg \
         xz-utils \
+        # PostgreSQL
+        libpq5 \
+        # SQL Server (FreeTDS + ODBC runtime)
+        freetds-bin \
+        unixodbc \
+        # MySQL
+        default-mysql-client-core \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
