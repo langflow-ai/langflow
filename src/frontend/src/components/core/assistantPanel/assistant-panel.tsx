@@ -261,7 +261,22 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           isExpanded={useExpandedSize}
         />
         {!hasEnabledModels && !hasMessages ? (
-          <AssistantNoModelsState />
+          <>
+            <AssistantNoModelsState />
+            <AssistantInput
+              onSend={handleSend}
+              onStop={handleStopGeneration}
+              disabled={true}
+              isProcessing={false}
+              currentStep={currentStep}
+              compact={false}
+              autoFocus={false}
+              draftMessage={draftMessageCache}
+              onDraftChange={(draft) => {
+                draftMessageCache = draft;
+              }}
+            />
+          </>
         ) : hasMessages ? (
           <StickToBottom
             className="flex flex-1 flex-col overflow-hidden"
