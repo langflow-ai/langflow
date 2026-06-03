@@ -17,7 +17,7 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self):
         return {
-            "api_key": "dummy-key",
+            "api_key": "dummy-key",  # pragma: allowlist secret
             "model_name": "llama-3.1-sonar-small-128k-online",
             "temperature": 0.75,
             "max_tokens": 50,

@@ -51,13 +51,15 @@ def test_connect_client_cloud(mocker):
     mock_cloud = mocker.patch("weaviate.connect_to_weaviate_cloud", return_value=MagicMock())
     mock_auth = mocker.patch("lfx.components.weaviate.weaviate.AuthApiKey", return_value="AUTH")
     component = WeaviateVectorStoreComponent(
-        url="https://my-cluster.weaviate.network", index_name="Test", api_key="secret"
+        url="https://my-cluster.weaviate.network",
+        index_name="Test",
+        api_key="test-key",  # pragma: allowlist secret
     )
 
     client = component._connect_client()
 
     mock_cloud.assert_called_once_with(cluster_url="https://my-cluster.weaviate.network", auth_credentials="AUTH")
-    mock_auth.assert_called_once_with("secret")
+    mock_auth.assert_called_once_with("test-key")
     assert client is mock_cloud.return_value
 
 
