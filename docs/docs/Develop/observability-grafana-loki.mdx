@@ -23,6 +23,7 @@ To consume structured Langflow logs with other ingestion providers, see [Logs](/
    ```text
    LANGFLOW_LOG_ENV=container
    LANGFLOW_LOG_LEVEL=INFO
+   LANGFLOW_LOG_FILE=/var/log/langflow/langflow.log
    LANGFLOW_SERVICE_NAME=langflow
    LANGFLOW_VERSION=1.10.0
    LANGFLOW_ENVIRONMENT=production
@@ -30,10 +31,13 @@ To consume structured Langflow logs with other ingestion providers, see [Logs](/
 
    Setting `LANGFLOW_LOG_ENV=container` switches structlog's terminal processor to [`JSONRenderer`](https://www.structlog.org/en/stable/api.html#structlog.processors.JSONRenderer), so every line written to stdout is a JSON object containing the event message, level, timestamp, logger name, exception structure, and service metadata. For more information, see [Logs](/logging).
 
+   The shipped Promtail configuration scrapes `*.log` files from a directory rather than stdout. `LANGFLOW_LOG_FILE` must point at a file inside the directory that Promtail watches. Set `LANGFLOW_LOG_DIR` to that same directory so Langflow creates the file in the right place.
+
 3. Start the reference Loki + Promtail + Grafana stack from the repository:
 
    ```bash
    cd deploy/observability/grafana-loki
+   export LANGFLOW_LOG_DIR=/var/log/langflow
    docker compose up -d
    ```
 
