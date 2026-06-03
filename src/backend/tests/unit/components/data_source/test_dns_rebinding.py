@@ -14,6 +14,7 @@ import httpcore
 import httpx
 import pytest
 from lfx.components.data_source.api_request import APIRequestComponent
+from lfx.components.data_source.url import URLComponent
 from lfx.schema import Data
 
 
@@ -677,7 +678,7 @@ class TestURLComponentDNSRebindingProtection:
             component.timeout = 30
 
             # Should raise ValueError due to SSRF protection blocking the unsafe IP
-            with pytest.raises(ValueError, match="SSRF Protection.*127.0.0.1"):
+            with pytest.raises(ValueError, match=r"SSRF Protection.*127\.0\.0\.1"):
                 await component.fetch_url_contents()
 
     @pytest.mark.asyncio
@@ -785,7 +786,7 @@ class TestAPIRequestDNSRebindingEdgeCases:
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
             patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
         ):
-            with pytest.raises(ValueError, match="SSRF Protection.*127.0.0.1"):
+            with pytest.raises(ValueError, match=r"SSRF Protection.*127\.0\.0\.1"):
                 await component.make_api_request()
 
     @pytest.mark.asyncio

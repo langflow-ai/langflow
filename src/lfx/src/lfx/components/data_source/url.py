@@ -260,15 +260,15 @@ class URLComponent(Component):
         # ============================================================================
         try:
             _validated_url, validated_ips = validate_and_resolve_url(url)
-
+        except SSRFProtectionError as e:
+            msg = f"SSRF Protection: {e}"
+            raise ValueError(msg) from e
+        else:
             # Log DNS pinning information for security auditing
             if validated_ips:
                 logger.debug(f"SSRF Protection: Using DNS pinning with {len(validated_ips)} validated IP(s) for {url}")
 
             return url, validated_ips
-        except SSRFProtectionError as e:
-            msg = f"SSRF Protection: {e}"
-            raise ValueError(msg) from e
 
     def _build_http_client(self, url: str, validated_ips: list[str]) -> httpx.AsyncClient:
         """Create an HTTP client with DNS pinning for SSRF protection.
@@ -326,6 +326,11 @@ class URLComponent(Component):
                 # Try to extract title and description from HTML
                 try:
                     soup = BeautifulSoup(html_content, "lxml")
+                except Exception:  # noqa: BLE001
+                    # Broad exception is acceptable here - metadata extraction is optional
+                    # and we don't want to fail the entire request if it fails
+                    logger.debug(f"Failed to extract metadata from {url}")
+                else:
                     if soup.title:
                         metadata["title"] = soup.title.string or ""
 
@@ -338,16 +343,14 @@ class URLComponent(Component):
                     html_tag = soup.find("html")
                     if html_tag and html_tag.get("lang"):
                         metadata["language"] = html_tag["lang"]
-                except Exception as e:
-                    logger.debug(f"Failed to extract metadata from {url}: {e}")
-
-                return html_content, metadata
 
             except httpx.HTTPError as e:
                 if self.continue_on_failure:
                     logger.warning(f"Failed to fetch {url}: {e}")
                     return "", {}
                 raise
+            else:
+                return html_content, metadata
 
     async def _crawl_recursive(
         self, start_url: str, validated_ips: list[str], headers: dict, visited: set, depth: int = 0
@@ -428,8 +431,10 @@ class URLComponent(Component):
                             continue
                         raise
 
-            except Exception as e:
-                logger.debug(f"Failed to extract links from {start_url}: {e}")
+            except Exception:  # noqa: BLE001
+                # Broad exception is acceptable here - link extraction is optional
+                # and we don't want to fail the entire crawl if one page has issues
+                logger.debug(f"Failed to extract links from {start_url}")
 
         return documents
 
@@ -506,7 +511,7 @@ class URLComponent(Component):
                 raise ValueError(msg)
 
             # Convert to output format
-            data = [
+            return [
                 {
                     "text": safe_convert(doc["page_content"], clean_data=True),
                     "url": doc["metadata"].get("source", ""),
@@ -517,8 +522,6 @@ class URLComponent(Component):
                 }
                 for doc in all_docs
             ]
-
-            return data
 
         except Exception as e:
             error_msg = e.message if hasattr(e, "message") else str(e)
