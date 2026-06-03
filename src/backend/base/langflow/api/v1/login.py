@@ -29,7 +29,7 @@ class SessionResponse(BaseModel):
 
 
 @router.post("/login", response_model=Token, include_in_schema=False)
-@limiter.limit(lambda: get_rate_limit_string())  # Configurable rate limit per IP
+@limiter.limit(lambda: get_rate_limit_string())  # Rate limit per IP (configurable)
 async def login_to_get_access_token(
     request: Request,
     response: Response,

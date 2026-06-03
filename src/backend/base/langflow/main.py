@@ -763,12 +763,12 @@ def create_app():
     @app.exception_handler(RateLimitExceeded)
     async def rate_limit_exception_handler(request: Request, _exc: RateLimitExceeded):
         """Handle rate limit exceeded errors with structured logging."""
-        from langflow.services.rate_limit.service import get_client_ip
+        from langflow.services.rate_limit.service import get_limiter_key
 
         # Default to 60 seconds for "/minute" window
         retry_after_seconds = "60"
 
-        client_ip = get_client_ip(request)
+        client_ip = get_limiter_key(request)
         logger.warning(
             "Rate limit exceeded",
             auth_event="rate_limit_exceeded",

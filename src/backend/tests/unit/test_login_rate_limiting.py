@@ -1,15 +1,22 @@
-"""Tests for login endpoint rate limiting functionality.
-
-This module tests the rate limiting service configuration and IP extraction logic.
-The actual rate limit enforcement is tested through integration/manual testing since
-the in-memory rate limiter state persists across the test suite.
-"""
+"""Tests for login endpoint rate limiting functionality."""
 
 from __future__ import annotations
 
 from unittest.mock import Mock
 
 import pytest
+
+
+@pytest.fixture
+def limiter_snapshot():
+    """Fixture to snapshot and restore the global limiter singleton."""
+    import langflow.services.rate_limit.service as rate_limit_module
+
+    original_limiter = rate_limit_module._limiter
+    # Force recreation of limiter for each test to ensure clean state
+    rate_limit_module._limiter = None
+    yield
+    rate_limit_module._limiter = original_limiter
 
 
 class TestRateLimitService:
@@ -24,7 +31,7 @@ class TestRateLimitService:
         assert limiter is not None
         assert limiter.enabled is True
         assert limiter._storage_uri == "memory://"  # Default storage
-        assert limiter._swallow_errors is True  # Graceful degradation enabled
+        assert limiter._swallow_errors is False  # Raise exceptions on rate limit
 
     def test_rate_limiter_is_singleton(self):
         """Test that get_rate_limiter returns the same instance."""
@@ -43,32 +50,6 @@ class TestRateLimitService:
 
         assert rate_limit == "5/minute"
 
-    def test_rate_limit_string_from_env(self, monkeypatch):
-        """Test that rate limit string reads from environment."""
-        from langflow.services.rate_limit.service import get_rate_limit_string
-
-        monkeypatch.setenv("LANGFLOW_RATE_LIMIT_PER_MINUTE", "10")
-
-        rate_limit = get_rate_limit_string()
-
-        assert rate_limit == "10/minute"
-
-    def test_rate_limit_string_invalid_env_falls_back_to_default(self, monkeypatch):
-        """Test that invalid LANGFLOW_RATE_LIMIT_PER_MINUTE falls back to default."""
-        from langflow.services.rate_limit.service import get_rate_limit_string
-
-        # Test with non-numeric value
-        monkeypatch.setenv("LANGFLOW_RATE_LIMIT_PER_MINUTE", "abc")
-        assert get_rate_limit_string() == "5/minute"
-
-        # Test with negative value
-        monkeypatch.setenv("LANGFLOW_RATE_LIMIT_PER_MINUTE", "-10")
-        assert get_rate_limit_string() == "5/minute"
-
-        # Test with zero
-        monkeypatch.setenv("LANGFLOW_RATE_LIMIT_PER_MINUTE", "0")
-        assert get_rate_limit_string() == "5/minute"
-
     def test_rate_limiter_uses_remote_address_by_default(self):
         """Test that rate limiter uses get_remote_address when trust_proxy is false."""
         from langflow.services.rate_limit import get_rate_limiter
@@ -79,15 +60,21 @@ class TestRateLimitService:
         # Default should use get_remote_address (not trust proxy)
         assert limiter._key_func == get_remote_address
 
-    def test_rate_limiter_uses_client_ip_when_trust_proxy_enabled(self, monkeypatch):
+    def test_rate_limiter_uses_client_ip_when_trust_proxy_enabled(self, limiter_snapshot, monkeypatch):  # noqa: ARG002
         """Test that rate limiter uses get_client_ip when trust_proxy is true."""
-        # Reset the global limiter to test fresh initialization
-        import langflow.services.rate_limit.service as rate_limit_module
+        # Mock settings to enable trust_proxy
+        from unittest.mock import MagicMock
+
         from langflow.services.rate_limit.service import get_client_ip
 
-        rate_limit_module._limiter = None
+        mock_settings = MagicMock()
+        mock_settings.rate_limit_trust_proxy = True
+        mock_settings.rate_limit_storage_uri = "memory://"
 
-        monkeypatch.setenv("LANGFLOW_RATE_LIMIT_TRUST_PROXY", "true")
+        mock_settings_service = MagicMock()
+        mock_settings_service.settings = mock_settings
+
+        monkeypatch.setattr("langflow.services.rate_limit.service.get_settings_service", lambda: mock_settings_service)
 
         from langflow.services.rate_limit import get_rate_limiter
 
@@ -112,8 +99,8 @@ class TestIPExtraction:
 
         assert ip == "203.0.113.1"
 
-    def test_get_client_ip_from_x_forwarded_for_chain(self):
-        """Test IP extraction from X-Forwarded-For with multiple IPs (takes first)."""
+    def test_get_client_ip_from_x_forwarded_for_chain_uses_rightmost(self):
+        """Test IP extraction from X-Forwarded-For uses rightmost IP (trusted proxy)."""
         from langflow.services.rate_limit.service import get_client_ip
 
         request = Mock()
@@ -122,7 +109,8 @@ class TestIPExtraction:
 
         ip = get_client_ip(request)
 
-        assert ip == "203.0.113.1"  # First IP in chain
+        # Should use rightmost IP (the trusted proxy before us)
+        assert ip == "192.0.2.1"
 
     def test_get_client_ip_from_x_forwarded_for_with_spaces(self):
         """Test IP extraction handles spaces in X-Forwarded-For."""
@@ -134,7 +122,8 @@ class TestIPExtraction:
 
         ip = get_client_ip(request)
 
-        assert ip == "203.0.113.1"  # Stripped of whitespace
+        # Should use rightmost IP, stripped of whitespace
+        assert ip == "198.51.100.1"
 
     def test_get_client_ip_from_direct_connection(self):
         """Test IP extraction from direct client connection (no proxy)."""
@@ -178,6 +167,40 @@ class TestIPExtraction:
 class TestRateLimitIntegration:
     """Integration tests verifying rate limiting is applied to login endpoint."""
 
+    def test_rate_limit_enforcement_returns_429(self, limiter_snapshot, active_user):  # noqa: ARG002
+        """Test that exceeding rate limit returns 429 status code.
+
+        Uses TestClient (synchronous) instead of AsyncClient to properly test SlowAPI rate limiting.
+        Requires limiter_snapshot fixture to ensure clean state and avoid interference from other tests.
+        """
+        from fastapi.testclient import TestClient
+        from langflow.main import create_app
+
+        # Create a fresh app instance for this test
+        app = create_app()
+        sync_client = TestClient(app)
+
+        # Make 5 requests (the default limit)
+        status_codes = []
+        for i in range(5):
+            response = sync_client.post(
+                "/api/v1/login",
+                data={"username": active_user.username, "password": "testpassword"},  # pragma: allowlist secret
+            )
+            status_codes.append(response.status_code)
+            assert response.status_code == 200, f"Request {i + 1} should succeed, got {response.status_code}"
+
+        # 6th request should be rate limited
+        response = sync_client.post(
+            "/api/v1/login",
+            data={"username": active_user.username, "password": "testpassword"},  # pragma: allowlist secret
+        )
+        status_codes.append(response.status_code)
+
+        assert response.status_code == 429, f"Expected 429, got {response.status_code}. All codes: {status_codes}"
+        response_detail = response.json()["detail"].lower()
+        assert "too many requests" in response_detail or "rate limit" in response_detail
+
     @pytest.mark.asyncio
     async def test_login_endpoint_has_rate_limiter_applied(self):
         """Test that the login endpoint has rate limiting decorator applied."""
@@ -202,11 +225,3 @@ class TestRateLimitIntegration:
 
         assert response.status_code == 200
         assert "access_token" in response.json()
-
-    # Note: Actual rate limit enforcement testing (6th request gets 429) is not included
-    # because the test client creates isolated app instances per test, and the in-memory
-    # rate limiter storage doesn't persist across test boundaries. Rate limiting enforcement
-    # should be verified through:
-    # 1. Manual testing with curl (see LOGIN_SECURITY_IMPLEMENTATION.md)
-    # 2. Integration tests in a real deployment environment
-    # 3. The test_login_endpoint_has_rate_limiter_applied test above confirms the decorator is applied
