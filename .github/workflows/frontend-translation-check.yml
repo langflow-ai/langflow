@@ -1,0 +1,82 @@
+# Frontend Translation Checker
+#
+# Flags hardcoded user-facing strings in the frontend files changed by a PR so
+# they can be wrapped with t("...") and added to src/frontend/src/locales/en.json.
+#
+# This check is advisory: it fails (red X) and annotates the offending lines,
+# but it MUST be kept OUT of the branch-protection "required status checks" so
+# it never blocks a merge. Suppress a false positive with an `i18n-ignore`
+# comment on the line, or `i18n-ignore-file` anywhere in the file.
+name: Frontend Translation Checker
+
+on:
+  pull_request:
+    paths:
+      - "src/frontend/**"
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: "(Optional) Branch to checkout"
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  NODE_VERSION: "22"
+
+jobs:
+  check-hardcoded-strings:
+    name: Check hardcoded frontend strings
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.branch || github.ref }}
+          # Full history so we can diff against the PR base via merge-base.
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v6
+        id: setup-node
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Cache Node.js dependencies
+        uses: actions/cache@v5
+        id: npm-cache
+        with:
+          path: ~/.npm
+          key: ${{ runner.os }}-node-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-node-
+
+      - name: Install Node.js dependencies
+        run: |
+          cd src/frontend
+          npm install
+        if: ${{ steps.setup-node.outputs.cache-hit != 'true' }}
+
+      - name: Check changed frontend files for hardcoded strings
+        run: |
+          BASE_REF="${{ github.base_ref || 'main' }}"
+          MERGE_BASE=$(git merge-base HEAD "origin/$BASE_REF")
+          echo "Diffing $MERGE_BASE...HEAD against frontend .tsx files"
+
+          # Only .tsx files contain JSX copy; tests/stories are skipped by the script.
+          CHANGED_FILES=$(git diff --name-only --diff-filter=ACMR \
+            "$MERGE_BASE"...HEAD -- 'src/frontend/src/' \
+            | grep -E '\.tsx$' \
+            || true)
+
+          if [ -z "$CHANGED_FILES" ]; then
+            echo "No frontend .tsx files changed in this PR — nothing to check."
+            exit 0
+          fi
+
+          echo "=== Files to check ==="
+          echo "$CHANGED_FILES"
+
+          echo "$CHANGED_FILES" | xargs node src/frontend/scripts/check-i18n-hardcoded.mjs
