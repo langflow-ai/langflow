@@ -19,6 +19,7 @@ from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
 from lfx.base.models.unified_models import get_embedding_model_options
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.models_and_agents.embedding_model import EmbeddingModelComponent
 from lfx.log import logger
 
@@ -114,7 +115,7 @@ class KBStorageHelper:
             has_data = any((kb_path / m).exists() for m in ["chroma", "chroma.sqlite3", "index"])
             if has_data:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                chroma = Chroma(client=client, collection_name=kb_name)
+                chroma = Chroma(client=client, collection_name=kb_name, **chroma_langchain_collection_kwargs())
                 with contextlib.suppress(Exception):
                     chroma.delete_collection()
                 chroma = None
@@ -261,7 +262,7 @@ class KBAnalysisHelper:
         try:
             if created_locally:
                 client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-                chroma = Chroma(client=client, collection_name=kb_path.name)
+                chroma = Chroma(client=client, collection_name=kb_path.name, **chroma_langchain_collection_kwargs())
 
             if chroma is None:
                 return
@@ -452,6 +453,7 @@ class KBIngestionHelper:
                 client=client,
                 embedding_function=embeddings,
                 collection_name=kb_name,
+                **chroma_langchain_collection_kwargs(),
             )
 
             job_id_str = str(task_job_id)
@@ -544,6 +546,7 @@ class KBIngestionHelper:
             chroma = Chroma(
                 client=client,
                 collection_name=kb_name,
+                **chroma_langchain_collection_kwargs(),
             )
             await chroma.adelete(where={"job_id": str(job_id)})
             await logger.ainfo(f"Cleaned up chunks for job {job_id} in knowledge base '{kb_name}'")

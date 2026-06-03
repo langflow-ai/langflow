@@ -211,6 +211,11 @@ class TestKnowledgeBaseAPI:
         assert response.status_code == 201
         data = response.json()
         assert data["name"] == "New KB"
+        mock_fresh_client.return_value.create_collection.assert_called_once_with(
+            name=kb_name,
+            configuration={"embedding_function": None},
+            embedding_function=None,
+        )
 
     @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
     async def test_create_kb_path_traversal_single_level(

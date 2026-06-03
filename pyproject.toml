@@ -1,6 +1,6 @@
 [project]
 name = "langflow"
-version = "1.9.3"
+version = "1.9.6"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,7 +17,7 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.9.3",
+    "langflow-base[complete]>=0.9.6",
 ]
 
 
@@ -92,7 +92,7 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langchain-docling>=1.1.0",
+    "langflow-base[docling]>=0.9.5",
     "tesserocr>=2.8.0",
     "rapidocr-onnxruntime>=1.4.4",
     "ocrmac>=1.0.0; sys_platform == 'darwin'",
@@ -102,6 +102,16 @@ docling = [
     "torch>=2.6.0",
     "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
 ]
+
+docling-chunking = [
+    "langflow-base[docling-chunking]>=0.9.6",
+]
+
+docling-image-description = [
+    "langflow-base[docling-image-description]>=0.9.6",
+    "langchain-docling>=1.1.0",
+]
+
 
 audio = [
     "webrtcvad>=2.0.10",
@@ -115,7 +125,6 @@ cassio = [
     "cassio>=0.1.7"
 ]
 local = [
-    "llama-cpp-python~=0.2.0",
     "sentence-transformers>=2.3.1",
     "ctransformers>=0.2.10"
 ]
@@ -266,6 +275,13 @@ external = ["RUF027"]
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
 "scripts/gp/tests/*" = [
+    "D1",      # Missing docstrings
+    "PLR2004", # Magic value comparisons
+    "S101",    # Use of assert (required for pytest)
+    "TRY003",  # Long exception messages
+    "EM101",   # String literals in exceptions
+]
+"scripts/ci/test_*.py" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons
     "S101",    # Use of assert (required for pytest)

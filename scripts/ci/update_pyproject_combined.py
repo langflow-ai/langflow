@@ -36,6 +36,12 @@ def main():
     base_tag = sys.argv[3]
     lfx_tag = sys.argv[4]
 
+    # Lockstep invariant: langflow-base-nightly's published version (set here from `base_tag`)
+    # and langflow-nightly's exact `==` pin on it (set below from the same `base_tag`) MUST come
+    # from the same value, so the latest langflow-nightly always pins a base version published in
+    # the same run. `pypi_nightly_tag.py` makes the main and base tags identical; keep both writes
+    # sourced from `base_tag` or the pin can reference a version that was never published.
+
     # First handle base package updates
     update_pyproject_name("src/backend/base/pyproject.toml", "langflow-base-nightly")
     update_name_uv_dep("pyproject.toml", "langflow-base-nightly")
