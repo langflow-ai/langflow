@@ -270,7 +270,7 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": "2.3.3"
                   },
                   {
                     "name": "googleapiclient",
@@ -1585,7 +1585,7 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": "2.3.3"
                   },
                   {
                     "name": "youtube_transcript_api",
