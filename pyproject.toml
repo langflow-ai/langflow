@@ -112,7 +112,6 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langflow-base[docling]>=0.10.0",
     "lfx-docling[local]>=0.1.0",
 ]
 
