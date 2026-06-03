@@ -615,7 +615,7 @@ def setup_static_files(app: FastAPI, static_files_dir: Path) -> None:
     """
     app.mount(
         "/",
-        StaticFiles(directory=static_files_dir, html=True),
+        StaticFiles(directory=static_files_dir, html=False),
         name="static",
     )
 
