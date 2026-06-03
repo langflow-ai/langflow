@@ -7524,7 +7524,6 @@ couchbase = [
     { name = "couchbase" },
 ]
 docling = [
-    { name = "langflow-base", extra = ["docling"] },
     { name = "lfx-docling", extra = ["local"] },
 ]
 docling-chunking = [
@@ -7595,7 +7594,6 @@ requires-dist = [
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling'", editable = "src/backend/base" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
