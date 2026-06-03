@@ -82,6 +82,9 @@ async def _get_flow_context(
         if len(text_repr) > _MAX_FLOW_CONTEXT_CHARS:
             text_repr = text_repr[:_MAX_FLOW_CONTEXT_CHARS] + "\n... (truncated)"
 
+    except Exception:  # noqa: BLE001
+        return ""
+    else:
         return (
             f"\n## Current Flow\n"
             f"The user's canvas currently has these components and connections:\n"
@@ -89,8 +92,6 @@ async def _get_flow_context(
             f"\nApply the user's requested changes to this existing flow structure. "
             f"Preserve components and connections that the user did not mention changing.\n"
         )
-    except Exception:  # noqa: BLE001
-        return ""
 
 
 def _build_user_message(
@@ -125,7 +126,7 @@ async def generate_flow_streaming(
     session_id: str | None = None,
     is_disconnected: Callable[[], Coroutine[Any, Any, bool]] | None = None,
 ) -> AsyncGenerator[str, None]:
-    """Stream SSE events for natural-language → multi-node flow generation.
+    r"""Stream SSE events for natural-language → multi-node flow generation.
 
     Pipeline:
         1. Build component catalog from live registry

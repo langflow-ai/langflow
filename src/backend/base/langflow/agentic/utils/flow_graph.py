@@ -103,6 +103,13 @@ async def get_flow_graph_representations(
         flow_id_str = str(flow.id)
         text_repr, vertex_count, edge_count = _build_text_repr_from_raw(flow.data, flow.name or flow_id_str)
 
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Could not read flow graph for context injection (%s): %s", flow_id_or_name, e)
+        return {
+            "error": str(e),
+            "flow_id": flow_id_or_name,
+        }
+    else:
         return {
             "flow_id": flow_id_str,
             "flow_name": flow.name,
@@ -111,13 +118,6 @@ async def get_flow_graph_representations(
             "edge_count": edge_count,
             "tags": flow.tags,
             "description": flow.description,
-        }
-
-    except Exception as e:  # noqa: BLE001
-        logger.warning(f"Could not read flow graph for context injection ({flow_id_or_name}): {e}")
-        return {
-            "error": str(e),
-            "flow_id": flow_id_or_name,
         }
 
 
@@ -219,6 +219,6 @@ async def get_flow_graph_summary(
             "description": flow.description,
         }
 
-    except Exception as e:  # noqa: BLE001
-        logger.error(f"Error getting flow graph summary for {flow_id_or_name}: {e}")
+    except Exception as e:
+        logger.exception("Error getting flow graph summary for %s", flow_id_or_name)
         return {"error": str(e)}
