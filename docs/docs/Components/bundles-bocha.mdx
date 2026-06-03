@@ -1,0 +1,38 @@
+---
+title: Bocha
+slug: /bundles-bocha
+---
+
+import Icon from "@site/src/components/icon";
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+This page describes the components that are available in the **Bocha** bundle.
+
+For more information, see the [Bocha documentation](https://open.bochaai.com/).
+
+## Bocha Web Search
+
+This component calls the Bocha Web Search API and returns source-linked web results.
+
+It returns search results as a [`Table`](/data-types#table). Each result includes the result title, URL, content summary, site name, and publication or crawl date when Bocha returns those fields.
+
+### Bocha Web Search parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| api_key | SecretString | Input parameter. The API key for authenticating with Bocha. |
+| query | String | Input parameter. The search query to send to Bocha. |
+| count | Integer | Input parameter. The maximum number of search results to return. Default: `10`. Maximum: `50`. |
+| freshness | String | Input parameter. The freshness filter to send to Bocha. Default: `noLimit`. |
+| summary | Boolean | Input parameter. Whether to ask Bocha to include generated result summaries when available. Default: `true`. |
+| dataframe | Table | Output parameter. A table containing `title`, `url`, `snippet`, `summary`, `site_name`, `site_icon`, and `date_published` columns. |
+
+## See also
+
+* [**Web Search** component](/web-search)
+* [**SearchApi** bundle](/bundles-searchapi)
+* [**Serper** bundle](/bundles-serper)
