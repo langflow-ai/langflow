@@ -124,11 +124,11 @@ export function AssistantMessageItem({
 
   // Check if we're in flow generation mode
   const isFlowGeneration =
-    message.progress &&
-    flowGenerationSteps.includes(message.progress.step);
+    message.progress && flowGenerationSteps.includes(message.progress.step);
 
   // Show loading state during component or flow generation
-  const isGeneratingCode = isStreaming && (isComponentGeneration || isFlowGeneration);
+  const isGeneratingCode =
+    isStreaming && (isComponentGeneration || isFlowGeneration);
 
   const renderContent = () => {
     // Show detailed loading state during component or flow generation

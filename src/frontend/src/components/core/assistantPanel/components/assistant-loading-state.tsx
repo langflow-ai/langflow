@@ -81,7 +81,9 @@ function FlowNodeTimeline({ nodes }: { nodes: CompactFlowNode[] }) {
 /** Step-by-step progress track for flow generation. */
 function FlowStepTrack({ currentStep }: { currentStep: string }) {
   const steps = FLOW_STEPS.filter((s) => s !== "validated_flow");
-  const currentIdx = FLOW_STEPS.indexOf(currentStep as (typeof FLOW_STEPS)[number]);
+  const currentIdx = FLOW_STEPS.indexOf(
+    currentStep as (typeof FLOW_STEPS)[number],
+  );
 
   return (
     <div className="flex items-center gap-0">
@@ -212,7 +214,10 @@ function AssistantLoadingStateComponent({
                   <span key={i} className="flex items-center gap-1.5">
                     <span
                       className="h-6 animate-pulse rounded-md bg-muted"
-                      style={{ width: `${w}px`, animationDelay: `${i * 150}ms` }}
+                      style={{
+                        width: `${w}px`,
+                        animationDelay: `${i * 150}ms`,
+                      }}
                     />
                     {i < 2 && (
                       <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground/30" />

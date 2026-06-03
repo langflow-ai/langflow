@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, GitBranch, RotateCcw } from "lucide-react";
-import type { AgenticResult, CompactFlowNode } from "@/controllers/API/queries/agentic";
+import type {
+  AgenticResult,
+  CompactFlowNode,
+} from "@/controllers/API/queries/agentic";
 import { cn } from "@/utils/utils";
 import CodeAreaModal from "@/modals/codeAreaModal";
 
@@ -60,13 +63,20 @@ function NodeValues({ nodes }: { nodes: CompactFlowNode[] }) {
   return (
     <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1">
       {configured.map((node) =>
-        Object.entries(node.values!).slice(0, 2).map(([k, v]) => (
-          <span key={`${node.id}-${k}`} className="text-[10px] text-muted-foreground">
-            <span className="font-medium text-muted-foreground/80">{node.type}</span>
-            {" · "}
-            {k}: <span className="text-foreground/70">{String(v)}</span>
-          </span>
-        )),
+        Object.entries(node.values!)
+          .slice(0, 2)
+          .map(([k, v]) => (
+            <span
+              key={`${node.id}-${k}`}
+              className="text-[10px] text-muted-foreground"
+            >
+              <span className="font-medium text-muted-foreground/80">
+                {node.type}
+              </span>
+              {" · "}
+              {k}: <span className="text-foreground/70">{String(v)}</span>
+            </span>
+          )),
       )}
     </div>
   );
@@ -122,7 +132,8 @@ export function AssistantFlowResult({
             Generated Flow
           </p>
           <p className="text-[10px] text-muted-foreground">
-            {nodeCount} node{nodeCount !== 1 ? "s" : ""} · {edgeCount} edge{edgeCount !== 1 ? "s" : ""}
+            {nodeCount} node{nodeCount !== 1 ? "s" : ""} · {edgeCount} edge
+            {edgeCount !== 1 ? "s" : ""}
           </p>
         </div>
       </div>
