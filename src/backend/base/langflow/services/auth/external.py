@@ -304,7 +304,7 @@ def extract_bearer_or_raw_token(value: str | None) -> str | None:
     if not stripped:
         return None
     scheme, _, token = stripped.partition(" ")
-    if scheme.lower() == "bearer" and token:
+    if scheme.lower() == "bearer":
         return token.strip() or None
     return stripped
 
