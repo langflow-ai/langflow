@@ -5,6 +5,7 @@ import type { MCPServerType } from "@/types/mcp";
 import AddMcpServerModal from "..";
 
 const mockPatchMCPServer = jest.fn();
+const mockAddMCPServer = jest.fn();
 const mockSetQueryData = jest.fn();
 
 jest.mock("nanoid", () => ({
@@ -23,7 +24,7 @@ jest.mock("@tanstack/react-query", () => ({
 
 jest.mock("@/controllers/API/queries/mcp/use-add-mcp-server", () => ({
   useAddMCPServer: () => ({
-    mutateAsync: jest.fn(),
+    mutateAsync: mockAddMCPServer,
     isPending: false,
   }),
 }));
@@ -66,16 +67,19 @@ jest.mock("@/components/ui/input", () => ({
     onChange,
     "data-testid": dataTestId,
     placeholder,
+    disabled,
   }: {
     value?: string;
     onChange?: (event: { target: { value: string } }) => void;
     "data-testid"?: string;
     placeholder?: string;
+    disabled?: boolean;
   }) => (
     <input
       value={value}
       placeholder={placeholder}
       data-testid={dataTestId}
+      disabled={disabled}
       onChange={(event) =>
         onChange?.({ target: { value: event.target.value } })
       }
@@ -203,6 +207,7 @@ describe("AddMcpServerModal", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockPatchMCPServer.mockResolvedValue(undefined);
+    mockAddMCPServer.mockResolvedValue(undefined);
   });
 
   it("sends empty headers and env when deleting the last remaining HTTP entries", async () => {
@@ -232,5 +237,69 @@ describe("AddMcpServerModal", () => {
       headers: {},
       env: {},
     });
+  });
+
+  it("locks the HTTP server name field when editing an existing server", () => {
+    const initialData: MCPServerType = {
+      name: "my-server",
+      url: "http://host/sse",
+    };
+
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={jest.fn()}
+        initialData={initialData}
+      />,
+    );
+
+    // The name is the server's immutable identifier, so it cannot be edited.
+    expect(screen.getByTestId("http-name-input")).toBeDisabled();
+  });
+
+  it("locks the STDIO server name field when editing an existing server", () => {
+    const initialData: MCPServerType = {
+      name: "my-server",
+      command: "uvx",
+      args: ["mcp-server"],
+    };
+
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={jest.fn()}
+        initialData={initialData}
+      />,
+    );
+
+    expect(screen.getByTestId("stdio-name-input")).toBeDisabled();
+  });
+
+  it("patches the original server name when editing, instead of creating a duplicate", async () => {
+    const user = userEvent.setup();
+    const initialData: MCPServerType = {
+      name: "my-server",
+      command: "uvx",
+      args: ["mcp-server"],
+    };
+
+    render(
+      <AddMcpServerModal
+        open={true}
+        setOpen={jest.fn()}
+        initialData={initialData}
+      />,
+    );
+
+    // The name field is locked, so the update targets the original record.
+    await user.click(screen.getByTestId("add-mcp-server-button"));
+
+    expect(mockPatchMCPServer).toHaveBeenCalledTimes(1);
+    expect(mockPatchMCPServer).toHaveBeenCalledWith(
+      expect.objectContaining({ name: "my-server" }),
+    );
+    // The create (add) flow must never fire during an edit — that is what
+    // produced the duplicate server.
+    expect(mockAddMCPServer).not.toHaveBeenCalled();
   });
 });

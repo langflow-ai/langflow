@@ -703,6 +703,8 @@
   "files.uploadedSuccessfully": "ファイルのアップロードが完了しました",
   "flow.addDescription": "説明を追加...",
   "flow.brokenEdgesWarning": "無効な接続がいくつか削除されました：",
+  "flow.exclusiveComponentsNotPasted": "一部のコンポーネントは、フロー内の既存のコンポーネントと併用できないため、貼り付けられませんでした。",
+  "flow.duplicateComponentsNotPasted": "一部のコンポーネントは、フローごとに1つしか許可されていないため、貼り付けられませんでした。",
   "flow.buildStatus": "ステータスを確認するためにビルドする。",
   "flow.buildSuccess": "無事に完成しました ✨",
   "flow.characterLimitReached": "文字数制限に達しました",

@@ -25,9 +25,15 @@ def run_until_complete(coro):
     except RuntimeError:
         # If there's no event loop, create a new one and run the coroutine
         return asyncio.run(coro)
-    # If there's already a running event loop, we can't call run_until_complete on it
-    # Instead, we need to run the coroutine in a new thread with a new event loop
+    # If there's already a running event loop, we can't call run_until_complete on it.
+    # Instead, run the coroutine in a new thread with a new event loop. Propagate the
+    # caller's contextvars context so request-scoped state (e.g. lfx serve request
+    # variables and the no-env-fallback flag) stays visible inside the worker thread;
+    # a bare ThreadPoolExecutor would otherwise reset every ContextVar to its default.
     import concurrent.futures
+    import contextvars
+
+    ctx = contextvars.copy_context()
 
     def run_in_new_loop():
         new_loop = asyncio.new_event_loop()
@@ -38,5 +44,5 @@ def run_until_complete(coro):
             new_loop.close()
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
-        future = executor.submit(run_in_new_loop)
+        future = executor.submit(ctx.run, run_in_new_loop)
         return future.result()

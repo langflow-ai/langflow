@@ -703,6 +703,8 @@
   "files.uploadedSuccessfully": "Arquivo enviado com sucesso",
   "flow.addDescription": "Adicione uma descrição...",
   "flow.brokenEdgesWarning": "Algumas conexões foram removidas por serem inválidas:",
+  "flow.exclusiveComponentsNotPasted": "Alguns componentes não foram colados porque não podem ser usados junto com componentes já presentes no fluxo.",
+  "flow.duplicateComponentsNotPasted": "Alguns componentes não foram colados porque apenas um de cada é permitido por fluxo.",
   "flow.buildStatus": "Compilar para verificar o status.",
   "flow.buildSuccess": "Construído com sucesso ✨",
   "flow.characterLimitReached": "Limite de caracteres atingido",

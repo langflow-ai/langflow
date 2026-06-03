@@ -7,6 +7,7 @@ import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TID } from "../../utils/constants/testIds";
 import { TEXTS } from "../../utils/constants/texts";
 import { openTemplatesModal } from "../../utils/flow/new-project-flow";
+import { renameFlow } from "../../utils/rename-flow";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -16,6 +17,11 @@ test(
     if (!process.env.CI) {
       dotenv.config({ path: path.resolve(__dirname, "../../.env") });
     }
+
+    // Per-run unique name lets the Run Flow dropdown select this flow by search
+    // instead of a fragile positional index, and avoids the duplicate-name save
+    // block when a retry reuses a DB that already holds a prior run's flow.
+    const targetFlowName = `Run Flow Target ${Date.now()}`;
 
     await awaitBootstrapTest(page);
 
@@ -81,6 +87,8 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
+    await renameFlow(page, { flowName: targetFlowName });
+
     await page.getByTestId("icon-ChevronLeft").click();
 
     await expect(page.getByTestId(TID.newProjectBtn)).toBeVisible();
@@ -101,6 +109,8 @@ test(
         await page.getByTestId("add-component-button-run-flow").click();
       });
 
+    await adjustScreenView(page);
+
     await page
       .getByTestId("value-dropdown-dropdown_str_flow_name_selected")
       .click();
@@ -114,7 +124,8 @@ test(
       .getByTestId("value-dropdown-dropdown_str_flow_name_selected")
       .click();
 
-    await page.getByTestId("dropdown-option-1-container").click();
+    await page.getByTestId("dropdown_search_input").fill(targetFlowName);
+    await page.getByTestId("dropdown-option-0-container").click();
 
     await page.getByTestId(/^textarea_str_chatinput.*/).click();
     await page
