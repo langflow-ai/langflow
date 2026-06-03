@@ -2,7 +2,9 @@ import { type RefObject, useCallback, useRef, useState } from "react";
 import useFlowStore from "@/stores/flowStore";
 import type { AllNodeType, GenericNodeType } from "@/types/flow";
 import {
+  detectFieldMention,
   detectMention,
+  formatFieldMentionToken,
   formatMentionToken,
   replaceMention,
 } from "../helpers/mention-parsing";
@@ -12,6 +14,8 @@ export interface MentionItem {
   displayName: string;
   type: string;
   icon?: string;
+  /** ``component`` lists canvas nodes; ``field`` lists a node's template fields. */
+  kind: "component" | "field";
 }
 
 interface UseComponentMentionsParams {
@@ -45,7 +49,31 @@ function toItem(node: GenericNodeType): MentionItem {
     displayName: node.data.node?.display_name ?? node.data.type,
     type: node.data.type,
     icon: node.data.node?.icon,
+    kind: "component",
   };
+}
+
+// Template keys that are plumbing rather than user-facing parameters.
+// Underscore-prefixed keys (``_type``, ``_frontend_node_*``) are internal.
+const HIDDEN_FIELD_KEYS = new Set(["code"]);
+
+function toFieldItems(node: GenericNodeType): MentionItem[] {
+  const template = node.data.node?.template ?? {};
+  return Object.entries(template)
+    .filter(([key, field]) => {
+      if (key.startsWith("_") || HIDDEN_FIELD_KEYS.has(key)) return false;
+      if (field == null || typeof field !== "object" || field.show === false) {
+        return false;
+      }
+      // Only fields with a user-facing label belong in the list.
+      return Boolean(field.display_name);
+    })
+    .map(([key, field]) => ({
+      id: key,
+      displayName: (typeof field === "object" && field.display_name) || key,
+      type: "",
+      kind: "field" as const,
+    }));
 }
 
 function filterItems(items: MentionItem[], query: string): MentionItem[] {
@@ -68,6 +96,10 @@ export function useComponentMentions({
   const [items, setItems] = useState<MentionItem[]>([]);
   const [activeIndex, setActiveIndexState] = useState(0);
   const mentionStartRef = useRef(0);
+  const modeRef = useRef<"component" | "field">("component");
+  // In field mode, the component whose fields are listed — used both to
+  // build the ``'id.field'`` token and to keep the node highlighted.
+  const fieldComponentIdRef = useRef<string | null>(null);
   // Canvas selection captured when the popover opened, restored on cancel so
   // typing ``@`` never permanently changes the user's prior selection.
   const priorSelectionRef = useRef<Set<string> | null>(null);
@@ -96,6 +128,8 @@ export function useComponentMentions({
     setIsOpen(false);
     setItems([]);
     setActiveIndexState(0);
+    modeRef.current = "component";
+    fieldComponentIdRef.current = null;
     priorSelectionRef.current = null;
   }, []);
 
@@ -107,23 +141,25 @@ export function useComponentMentions({
   const setActiveIndex = useCallback(
     (index: number) => {
       setActiveIndexState(index);
-      const item = items[index];
-      if (item) highlightNode(item.id);
+      const highlightId =
+        modeRef.current === "field"
+          ? fieldComponentIdRef.current
+          : items[index]?.id;
+      if (highlightId) highlightNode(highlightId);
     },
     [items, highlightNode],
   );
 
-  const handleValueChange = useCallback(
-    (nextValue: string, caret: number) => {
-      const match = detectMention(nextValue, caret);
-      if (!match) {
-        if (isOpen) close();
-        return;
-      }
-
-      const all = useFlowStore.getState().nodes.filter(isGeneric).map(toItem);
-      const filtered = filterItems(all, match.query);
-      mentionStartRef.current = match.start;
+  const applyOpen = useCallback(
+    (
+      filtered: MentionItem[],
+      start: number,
+      mode: "component" | "field",
+      componentId: string | null,
+    ) => {
+      mentionStartRef.current = start;
+      modeRef.current = mode;
+      fieldComponentIdRef.current = componentId;
 
       if (!isOpen) {
         priorSelectionRef.current = new Set(
@@ -137,9 +173,42 @@ export function useComponentMentions({
 
       setItems(filtered);
       setActiveIndexState(0);
-      if (filtered[0]) highlightNode(filtered[0].id);
+      const highlightId = mode === "field" ? componentId : filtered[0]?.id;
+      if (highlightId) highlightNode(highlightId);
     },
-    [isOpen, close, highlightNode],
+    [isOpen, highlightNode],
+  );
+
+  const handleValueChange = useCallback(
+    (nextValue: string, caret: number) => {
+      const fieldMatch = detectFieldMention(nextValue, caret);
+      if (fieldMatch) {
+        const node = useFlowStore
+          .getState()
+          .nodes.filter(isGeneric)
+          .find((n) => (n.data.id ?? n.id) === fieldMatch.componentId);
+        if (node) {
+          const filtered = filterItems(toFieldItems(node), fieldMatch.query);
+          applyOpen(
+            filtered,
+            fieldMatch.start,
+            "field",
+            fieldMatch.componentId,
+          );
+          return;
+        }
+      }
+
+      const match = detectMention(nextValue, caret);
+      if (!match) {
+        if (isOpen) close();
+        return;
+      }
+
+      const all = useFlowStore.getState().nodes.filter(isGeneric).map(toItem);
+      applyOpen(filterItems(all, match.query), match.start, "component", null);
+    },
+    [isOpen, close, applyOpen],
   );
 
   const confirm = useCallback(
@@ -151,11 +220,15 @@ export function useComponentMentions({
       }
       const textarea = textareaRef.current;
       const caret = textarea ? textarea.selectionStart : value.length;
+      const token =
+        modeRef.current === "field" && fieldComponentIdRef.current
+          ? formatFieldMentionToken(fieldComponentIdRef.current, item.id)
+          : formatMentionToken(item.id);
       const { value: nextValue, caret: nextCaret } = replaceMention(
         value,
         mentionStartRef.current,
         caret,
-        formatMentionToken(item.id),
+        token,
       );
       setValue(nextValue);
       // Leave the confirmed node selected on the canvas (it already is from the

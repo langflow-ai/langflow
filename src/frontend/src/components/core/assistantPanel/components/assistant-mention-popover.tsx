@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
@@ -17,6 +18,14 @@ export function AssistantMentionPopover({
   onSelect,
 }: AssistantMentionPopoverProps) {
   const { t } = useTranslation();
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  // Keep the keyboard-highlighted option in view as the user arrows through a
+  // list taller than the popover.
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeIndex]);
+
   return (
     <div
       data-testid="assistant-mention-popover"
@@ -34,6 +43,7 @@ export function AssistantMentionPopover({
         items.map((item, index) => (
           <button
             key={item.id}
+            ref={index === activeIndex ? activeRef : undefined}
             type="button"
             role="option"
             aria-selected={index === activeIndex}
@@ -47,14 +57,24 @@ export function AssistantMentionPopover({
                 : "text-muted-foreground hover:bg-muted/60",
             )}
           >
-            <ForwardedIconComponent
-              name={item.icon || "ToyBrick"}
-              className="h-4 w-4 shrink-0"
-            />
-            <span className="truncate text-foreground">{item.displayName}</span>
-            <span className="truncate text-xs text-muted-foreground">
-              {item.type}
-            </span>
+            {item.kind === "field" ? (
+              <span className="truncate text-foreground">
+                {item.displayName}
+              </span>
+            ) : (
+              <>
+                <ForwardedIconComponent
+                  name={item.icon || "ToyBrick"}
+                  className="h-4 w-4 shrink-0"
+                />
+                <span className="truncate text-foreground">
+                  {item.displayName}
+                </span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {item.type}
+                </span>
+              </>
+            )}
           </button>
         ))
       )}

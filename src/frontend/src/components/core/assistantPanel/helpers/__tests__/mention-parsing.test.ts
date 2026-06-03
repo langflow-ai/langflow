@@ -1,5 +1,7 @@
 import {
+  detectFieldMention,
   detectMention,
+  formatFieldMentionToken,
   formatMentionToken,
   replaceMention,
 } from "../mention-parsing";
@@ -36,8 +38,59 @@ describe("detectMention", () => {
 });
 
 describe("formatMentionToken", () => {
-  it("should_wrap_id_in_single_quotes_with_trailing_space", () => {
-    expect(formatMentionToken("ChatInput-abc12")).toBe("'ChatInput-abc12' ");
+  it("should_wrap_id_in_single_quotes_without_trailing_space", () => {
+    expect(formatMentionToken("ChatInput-abc12")).toBe("'ChatInput-abc12'");
+  });
+});
+
+describe("detectFieldMention", () => {
+  it("should_detect_field_query_right_after_a_component_token", () => {
+    const value = "'ChatInput-abc'.inp";
+    expect(detectFieldMention(value, value.length)).toEqual({
+      start: 0,
+      componentId: "ChatInput-abc",
+      query: "inp",
+    });
+  });
+
+  it("should_detect_with_empty_query_when_dot_just_typed", () => {
+    const value = "'Node-1'.";
+    expect(detectFieldMention(value, value.length)).toEqual({
+      start: 0,
+      componentId: "Node-1",
+      query: "",
+    });
+  });
+
+  it("should_detect_token_mid_sentence_after_whitespace", () => {
+    const value = "use 'OpenAI-x'.temp";
+    expect(detectFieldMention(value, value.length)).toEqual({
+      start: 4,
+      componentId: "OpenAI-x",
+      query: "temp",
+    });
+  });
+
+  it("should_return_null_when_whitespace_in_field_query", () => {
+    const value = "'Node-1'.in put";
+    expect(detectFieldMention(value, value.length)).toBeNull();
+  });
+
+  it("should_return_null_when_dot_not_adjacent_to_a_token", () => {
+    expect(detectFieldMention("plain.field", 11)).toBeNull();
+  });
+
+  it("should_return_null_for_a_bare_component_token", () => {
+    const value = "'Node-1'";
+    expect(detectFieldMention(value, value.length)).toBeNull();
+  });
+});
+
+describe("formatFieldMentionToken", () => {
+  it("should_wrap_id_and_field_as_one_terminal_token", () => {
+    expect(formatFieldMentionToken("ChatInput-abc", "input_value")).toBe(
+      "'ChatInput-abc.input_value' ",
+    );
   });
 });
 

@@ -8,6 +8,7 @@ function makeNode(
   type: string,
   displayName: string,
   selected = false,
+  template?: Record<string, unknown>,
 ): AllNodeType {
   return {
     id,
@@ -17,7 +18,7 @@ function makeNode(
     data: {
       id,
       type,
-      node: { display_name: displayName, icon: "Box" },
+      node: { display_name: displayName, icon: "Box", template },
     },
   } as unknown as AllNodeType;
 }
@@ -113,7 +114,7 @@ describe("useComponentMentions", () => {
     );
     act(() => result.current.handleValueChange("@open", 5));
     act(() => result.current.confirm());
-    expect(setValue).toHaveBeenCalledWith("'OpenAI-bbb' ");
+    expect(setValue).toHaveBeenCalledWith("'OpenAI-bbb'");
   });
 
   it("should_cycle_active_index_with_tab", () => {
@@ -134,6 +135,73 @@ describe("useComponentMentions", () => {
       result.current.handleKeyDown(tab);
     });
     expect(result.current.activeIndex).toBe(1);
+  });
+
+  it("should_list_fields_when_dot_typed_after_a_token", () => {
+    seedNodes([
+      makeNode("ChatInput-aaa", "ChatInput", "Chat Input", false, {
+        input_value: { display_name: "Input Value", show: true, type: "str" },
+        api_key: { display_name: "API Key", show: true, type: "str" },
+        code: { show: true, type: "code" },
+        hidden: { display_name: "Hidden", show: false, type: "str" },
+        _type: "ChatInput",
+      }),
+    ]);
+    const value = "'ChatInput-aaa'.";
+    const { result } = renderHook(() =>
+      useComponentMentions({
+        value,
+        setValue: jest.fn(),
+        textareaRef: { current: makeTextarea(value.length) },
+      }),
+    );
+    act(() => result.current.handleValueChange(value, value.length));
+    expect(result.current.isOpen).toBe(true);
+    // code / _type / show:false are excluded; field display names are shown.
+    expect(result.current.items.map((i) => i.displayName)).toEqual([
+      "Input Value",
+      "API Key",
+    ]);
+    expect(result.current.items.every((i) => i.kind === "field")).toBe(true);
+  });
+
+  it("should_filter_fields_by_query_after_the_dot", () => {
+    seedNodes([
+      makeNode("ChatInput-aaa", "ChatInput", "Chat Input", false, {
+        input_value: { display_name: "Input Value", show: true, type: "str" },
+        api_key: { display_name: "API Key", show: true, type: "str" },
+      }),
+    ]);
+    const value = "'ChatInput-aaa'.api";
+    const { result } = renderHook(() =>
+      useComponentMentions({
+        value,
+        setValue: jest.fn(),
+        textareaRef: { current: makeTextarea(value.length) },
+      }),
+    );
+    act(() => result.current.handleValueChange(value, value.length));
+    expect(result.current.items.map((i) => i.id)).toEqual(["api_key"]);
+  });
+
+  it("should_insert_component_dot_field_token_on_confirm", () => {
+    seedNodes([
+      makeNode("ChatInput-aaa", "ChatInput", "Chat Input", false, {
+        input_value: { display_name: "Input Value", show: true, type: "str" },
+      }),
+    ]);
+    const value = "'ChatInput-aaa'.";
+    const setValue = jest.fn();
+    const { result } = renderHook(() =>
+      useComponentMentions({
+        value,
+        setValue,
+        textareaRef: { current: makeTextarea(value.length) },
+      }),
+    );
+    act(() => result.current.handleValueChange(value, value.length));
+    act(() => result.current.confirm());
+    expect(setValue).toHaveBeenCalledWith("'ChatInput-aaa.input_value' ");
   });
 
   it("should_restore_prior_selection_on_escape", () => {

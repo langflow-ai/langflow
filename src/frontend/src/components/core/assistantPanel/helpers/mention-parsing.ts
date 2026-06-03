@@ -38,9 +38,74 @@ export function detectMention(
   return null;
 }
 
-/** Wrap a component id in single quotes, Claude-Code style, with a trailing space. */
+const QUOTE = "'";
+
+export interface FieldMentionMatch {
+  /** Index of the opening quote of the already-inserted component token. */
+  start: number;
+  /** Component id captured from inside the quotes. */
+  componentId: string;
+  /** Text typed after the ``.`` (used to filter the field list). */
+  query: string;
+}
+
+/**
+ * Detect a field mention being typed right after a confirmed component token,
+ * i.e. the caret sits inside ``'componentId'.fieldQuery``.
+ *
+ * The component token is quoted and space-free, so the ``.`` must be adjacent
+ * to the closing quote — a whitespace or another quote in the field query
+ * cancels the match so prose after a finished token never re-triggers.
+ */
+export function detectFieldMention(
+  value: string,
+  caret: number,
+): FieldMentionMatch | null {
+  let i = caret - 1;
+  for (; i >= 0; i--) {
+    const ch = value[i];
+    if (ch === ".") break;
+    if (WHITESPACE.test(ch) || ch === QUOTE) return null;
+  }
+  if (i < 0 || value[i] !== ".") return null;
+  const dot = i;
+  if (value[dot - 1] !== QUOTE) return null;
+  const closeQuote = dot - 1;
+
+  let open = -1;
+  for (let j = closeQuote - 1; j >= 0; j--) {
+    const ch = value[j];
+    if (ch === QUOTE) {
+      open = j;
+      break;
+    }
+    if (WHITESPACE.test(ch)) return null;
+  }
+  if (open === -1) return null;
+
+  const before = open > 0 ? value[open - 1] : "";
+  if (before !== "" && !WHITESPACE.test(before)) return null;
+
+  const componentId = value.slice(open + 1, closeQuote);
+  if (!componentId) return null;
+  return { start: open, componentId, query: value.slice(dot + 1, caret) };
+}
+
+/**
+ * Wrap a component id in single quotes, Claude-Code style. No trailing space:
+ * the caret lands right after the closing quote so typing ``.`` can chain into
+ * a field mention (see {@link detectFieldMention}).
+ */
 export function formatMentionToken(componentId: string): string {
-  return `'${componentId}' `;
+  return `'${componentId}'`;
+}
+
+/** Wrap a ``componentId.fieldName`` reference as a single quoted, terminal token. */
+export function formatFieldMentionToken(
+  componentId: string,
+  fieldName: string,
+): string {
+  return `'${componentId}.${fieldName}' `;
 }
 
 export interface MentionReplacement {
