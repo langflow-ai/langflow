@@ -8,6 +8,12 @@ import pytest
 
 
 @pytest.fixture
+def enable_rate_limiting(monkeypatch):
+    """Enable rate limiting for tests that need to verify rate limit behavior."""
+    monkeypatch.setenv("LANGFLOW_RATE_LIMIT_ENABLED", "true")
+
+
+@pytest.fixture
 def limiter_snapshot():
     """Fixture to snapshot and restore the global limiter singleton."""
     import langflow.services.rate_limit.service as rate_limit_module
@@ -22,7 +28,7 @@ def limiter_snapshot():
 class TestRateLimitService:
     """Test suite for rate limit service configuration."""
 
-    def test_rate_limiter_is_configured(self):
+    def test_rate_limiter_is_configured(self, enable_rate_limiting):  # noqa: ARG002
         """Test that rate limiter singleton is properly configured."""
         from langflow.services.rate_limit import get_rate_limiter
 
@@ -33,7 +39,7 @@ class TestRateLimitService:
         assert limiter._storage_uri == "memory://"  # Default storage
         assert limiter._swallow_errors is False  # Raise exceptions on rate limit
 
-    def test_rate_limiter_is_singleton(self):
+    def test_rate_limiter_is_singleton(self, enable_rate_limiting):  # noqa: ARG002
         """Test that get_rate_limiter returns the same instance."""
         from langflow.services.rate_limit import get_rate_limiter
 
@@ -42,7 +48,7 @@ class TestRateLimitService:
 
         assert limiter1 is limiter2
 
-    def test_rate_limit_string_default(self):
+    def test_rate_limit_string_default(self, enable_rate_limiting):  # noqa: ARG002
         """Test that default rate limit string is correct."""
         from langflow.services.rate_limit.service import get_rate_limit_string
 
@@ -50,7 +56,7 @@ class TestRateLimitService:
 
         assert rate_limit == "5/minute"
 
-    def test_rate_limiter_uses_remote_address_by_default(self):
+    def test_rate_limiter_uses_remote_address_by_default(self, enable_rate_limiting):  # noqa: ARG002
         """Test that rate limiter uses get_remote_address when trust_proxy is false."""
         from langflow.services.rate_limit import get_rate_limiter
         from slowapi.util import get_remote_address
@@ -60,7 +66,12 @@ class TestRateLimitService:
         # Default should use get_remote_address (not trust proxy)
         assert limiter._key_func == get_remote_address
 
-    def test_rate_limiter_uses_client_ip_when_trust_proxy_enabled(self, limiter_snapshot, monkeypatch):  # noqa: ARG002
+    def test_rate_limiter_uses_client_ip_when_trust_proxy_enabled(
+        self,
+        enable_rate_limiting,  # noqa: ARG002
+        limiter_snapshot,  # noqa: ARG002
+        monkeypatch,
+    ):
         """Test that rate limiter uses get_client_ip when trust_proxy is true."""
         # Mock settings to enable trust_proxy
         from unittest.mock import MagicMock
@@ -167,7 +178,7 @@ class TestIPExtraction:
 class TestRateLimitIntegration:
     """Integration tests verifying rate limiting is applied to login endpoint."""
 
-    def test_rate_limit_enforcement_returns_429(self, limiter_snapshot, active_user):  # noqa: ARG002
+    def test_rate_limit_enforcement_returns_429(self, enable_rate_limiting, limiter_snapshot, active_user):  # noqa: ARG002
         """Test that exceeding rate limit returns 429 status code.
 
         Uses TestClient (synchronous) instead of AsyncClient to properly test SlowAPI rate limiting.
@@ -202,7 +213,7 @@ class TestRateLimitIntegration:
         assert "too many requests" in response_detail or "rate limit" in response_detail
 
     @pytest.mark.asyncio
-    async def test_login_endpoint_has_rate_limiter_applied(self):
+    async def test_login_endpoint_has_rate_limiter_applied(self, enable_rate_limiting):  # noqa: ARG002
         """Test that the login endpoint has rate limiting decorator applied."""
         from langflow.api.v1.login import limiter, login_to_get_access_token
 
@@ -215,7 +226,7 @@ class TestRateLimitIntegration:
         assert hasattr(login_to_get_access_token, "__wrapped__")  # Decorated function
 
     @pytest.mark.asyncio
-    async def test_successful_login_within_reasonable_limit(self, client, active_user):
+    async def test_successful_login_within_reasonable_limit(self, enable_rate_limiting, client, active_user):  # noqa: ARG002
         """Test that a single login request succeeds (well within any rate limit)."""
         response = await client.post(
             "/api/v1/login",

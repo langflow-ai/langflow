@@ -256,6 +256,8 @@ class Settings(BaseSettings):
     redis_cache_expire: int = 3600
 
     # Rate Limiting
+    rate_limit_enabled: bool = True
+    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
     rate_limit_per_minute: int = 5
     """Number of login attempts allowed per minute per IP."""
     rate_limit_storage_uri: str = "memory://"

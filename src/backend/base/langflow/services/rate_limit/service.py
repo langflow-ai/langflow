@@ -24,9 +24,12 @@ def get_rate_limit_string() -> str:
     """Get the rate limit string from settings.
 
     Returns:
-        str: Rate limit string in format "N/minute"
+        str: Rate limit string in format "N/minute", or a very high limit if disabled
     """
     settings = get_settings_service().settings
+    if not settings.rate_limit_enabled:
+        # Return a very high limit to effectively disable rate limiting
+        return "10000/minute"
     return f"{settings.rate_limit_per_minute}/minute"
 
 
