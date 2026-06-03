@@ -56,6 +56,10 @@ class ParsedWorkflowRun:
     mode: str = "stream"
     start_component_id: str | None = None
     stop_component_id: str | None = None
+    # Request-side output selection (sync mode): when set, the answer (``output``)
+    # resolves among only these component ids. Validated against the flow's outputs
+    # before the flow runs.
+    output_ids: list[str] | None = None
     # Optional live flow data (nodes + edges) overriding the DB copy. Lets the
     # canvas run with unsaved tweaks the user has made but not yet persisted.
     data: dict[str, Any] | None = None
@@ -87,6 +91,7 @@ def parse_workflow_run_request(request: WorkflowRunRequest) -> ParsedWorkflowRun
         mode=request.mode.value,
         start_component_id=request.start_component_id,
         stop_component_id=request.stop_component_id,
+        output_ids=request.output_ids,
         data=request.data,
         files=request.files,
         globals=dict(request.globals or {}),
@@ -383,7 +388,7 @@ def _process_terminal_vertex(
     return output_key, component_output
 
 
-def _resolve_output(outputs: dict[str, ComponentOutput]) -> WorkflowOutput:
+def _resolve_output(outputs: dict[str, ComponentOutput], selected_ids: list[str] | None = None) -> WorkflowOutput:
     """Resolve the run's primary text answer and explain why it resolved that way.
 
     ``text`` is the lone string answer only when exactly one output is a text
@@ -396,12 +401,24 @@ def _resolve_output(outputs: dict[str, ComponentOutput]) -> WorkflowOutput:
     - ``non_string``: a text channel exists but its content isn't a string
     - ``none``: no text channel at all (e.g. a data-only flow)
 
+    ``selected_ids`` is the request-side ``output_ids`` selection. When given (and
+    non-empty), resolution considers only the named outputs that this run actually
+    produced (selected ∩ produced), so naming one ChatOutput on a multi-output flow
+    yields ``single`` deterministically. Names that didn't fire this run (e.g. a
+    branch not taken) are simply absent. ``outputs`` itself is never filtered — the
+    selection steers ``output.text``, it does not hide outputs. An empty list means
+    "no selection", same as None.
+
     An intentionally empty single answer is preserved as "" (distinct from None).
     The ``failed`` reason is set on the error path, not here.
     """
+    considered = outputs
+    if selected_ids:
+        selected = set(selected_ids)
+        considered = {component_id: output for component_id, output in outputs.items() if component_id in selected}
     text_items = [
         (component_id, output.content)
-        for component_id, output in outputs.items()
+        for component_id, output in considered.items()
         if output.type in {"message", "text"} and isinstance(output.content, str)
     ]
     if len(text_items) == 1:
@@ -412,7 +429,7 @@ def _resolve_output(outputs: dict[str, ComponentOutput]) -> WorkflowOutput:
         return WorkflowOutput(reason=OutputReason.MULTIPLE)
     # Zero string text answers: distinguish "a text channel exists but its
     # content isn't a string" from "no text channel at all".
-    has_text_channel = any(output.type in {"message", "text"} for output in outputs.values())
+    has_text_channel = any(output.type in {"message", "text"} for output in considered.values())
     reason = OutputReason.NON_STRING if has_text_channel else OutputReason.NONE
     return WorkflowOutput(reason=reason)
 
@@ -424,6 +441,7 @@ def run_response_to_workflow_response(
     inputs: dict[str, Any],
     graph: Graph,
     effective_globals: dict[str, str] | None = None,
+    selected_ids: list[str] | None = None,
 ) -> WorkflowExecutionResponse:
     """Convert V1 RunResponse to V2 WorkflowExecutionResponse.
 
@@ -438,9 +456,10 @@ def run_response_to_workflow_response(
            - Message nodes (non-output): Only metadata is exposed (source, file_path)
 
     Output Key Selection:
-        - Uses vertex.display_name as the primary key for outputs
-        - Falls back to vertex.id if duplicate display_names are detected
-        - Stores original display_name in metadata when using id as key
+        - Keys ``outputs`` by the stable ``vertex.id`` (component id), never the
+          display name (a display-name alias would collide and break on rename).
+        - ``display_name`` is carried as a field on each ``ComponentOutput`` for
+          human-readable rendering.
 
     Args:
         run_response: The V1 response from simple_run_flow containing execution results
@@ -451,6 +470,8 @@ def run_response_to_workflow_response(
         effective_globals: The ``globals`` echoed in the response — the effective merged set
             (body globals plus any legacy header-supplied globals). When omitted, an empty
             globals map is echoed.
+        selected_ids: The request-side ``output_ids`` selection. When set, ``output``
+            resolves among only these component ids; ``outputs`` is unaffected.
 
     Returns:
         WorkflowExecutionResponse: V2 schema response with structured outputs
@@ -502,7 +523,7 @@ def run_response_to_workflow_response(
         errors=[],
         inputs=inputs or {},
         globals=response_globals,
-        output=_resolve_output(outputs),
+        output=_resolve_output(outputs, selected_ids=selected_ids),
         outputs=outputs,
     )
 

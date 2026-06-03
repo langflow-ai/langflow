@@ -24,6 +24,11 @@ class TestDefaults:
         assert req.files is None
         assert req.start_component_id is None
         assert req.stop_component_id is None
+        assert req.output_ids is None
+
+    def test_output_ids_accepts_component_id_list(self):
+        req = WorkflowRunRequest(flow_id=_VALID_UUID, output_ids=["ChatOutput-abc", "ChatOutput-def"])
+        assert req.output_ids == ["ChatOutput-abc", "ChatOutput-def"]
 
     def test_mode_accepts_string_value(self):
         req = WorkflowRunRequest(flow_id=_VALID_UUID, mode="stream")
@@ -90,6 +95,7 @@ class TestRoundTripsWithRichBody:
             "files": ["/tmp/a.txt", "/tmp/b.png"],
             "start_component_id": "ChatInput-abc",
             "stop_component_id": "ChatOutput-xyz",
+            "output_ids": ["ChatOutput-xyz"],
             "globals": {"API_TOKEN": "secret-123"},
         }
         req = WorkflowRunRequest.model_validate(body)

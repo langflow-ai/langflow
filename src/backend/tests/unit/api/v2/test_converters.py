@@ -1248,6 +1248,64 @@ class TestResolveOutput:
         assert output.reason == OutputReason.NONE
         assert output.text is None
 
+    # --- request-side output selection (steer-only) ---
+
+    def test_selected_id_disambiguates_two_messages_to_single(self):
+        # Two text outputs would be ``multiple``; naming one steers ``output.text``
+        # to it deterministically without hiding the other from ``outputs``.
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-b"])
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "Bye"
+        assert output.source == "ChatOutput-b"
+
+    def test_selecting_both_text_outputs_stays_multiple(self):
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-a", "ChatOutput-b"])
+        assert output.reason == OutputReason.MULTIPLE
+        assert output.text is None
+
+    def test_selected_id_not_produced_resolves_among_produced(self):
+        # Branching: the caller lists candidate outputs; the one that didn't fire is
+        # simply absent from ``outputs``, so we resolve among the ones that did.
+        outputs = {
+            "ChatOutput-a": _component_output("message", "the reply"),
+            "DataOutput-c": _component_output("data", {"k": "v"}),
+        }
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-a", "ChatOutput-b"])
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "the reply"
+        assert output.source == "ChatOutput-a"
+
+    def test_selection_with_empty_intersection_is_none(self):
+        # Every named id is absent from this run's outputs -> nothing to resolve.
+        outputs = {"ChatOutput-a": _component_output("message", "Hi")}
+        output = _resolve_output(outputs, selected_ids=["ChatOutput-z"])
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
+
+    def test_no_selection_preserves_default_resolution(self):
+        # selected_ids=None keeps the original behavior (two text outputs -> multiple).
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        assert _resolve_output(outputs, selected_ids=None).reason == OutputReason.MULTIPLE
+
+    def test_empty_selection_list_is_treated_as_no_selection(self):
+        # An empty list is not "select nothing"; it means no filter (same as None).
+        outputs = {
+            "ChatOutput-a": _component_output("message", "Hi"),
+            "ChatOutput-b": _component_output("message", "Bye"),
+        }
+        assert _resolve_output(outputs, selected_ids=[]).reason == OutputReason.MULTIPLE
+
 
 def _message_output_vertex(vertex_id: str) -> Mock:
     vertex = Mock()
@@ -1360,6 +1418,32 @@ class TestOutputAndSessionId:
 
         assert response.output.reason == OutputReason.MULTIPLE
         assert response.output.text is None
+        assert response.outputs["ChatOutput-a"].content == "Hi"
+        assert response.outputs["ChatOutput-b"].content == "Bye"
+
+    def test_output_ids_selection_steers_two_outputs_to_single(self):
+        # Two ChatOutputs would resolve to ``multiple``; selecting one steers
+        # ``output.text`` to it while ``outputs`` still carries both.
+        vertices = [_message_output_vertex("ChatOutput-a"), _message_output_vertex("ChatOutput-b")]
+        graph = _graph_for(vertices)
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [
+            _message_result_data("ChatOutput-a", "Hi"),
+            _message_result_data("ChatOutput-b", "Bye"),
+        ]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(
+            run_response, "flow-1", str(uuid4()), {}, graph, selected_ids=["ChatOutput-b"]
+        )
+
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "Bye"
+        assert response.output.source == "ChatOutput-b"
+        # Selection steers the answer but never hides the other output.
         assert response.outputs["ChatOutput-a"].content == "Hi"
         assert response.outputs["ChatOutput-b"].content == "Bye"
 

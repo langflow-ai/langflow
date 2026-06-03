@@ -219,6 +219,16 @@ class WorkflowRunRequest(BaseModel):
     )
     start_component_id: str | None = Field(None, description="Partial-run start component id.")
     stop_component_id: str | None = Field(None, description="Partial-run stop component id.")
+    output_ids: list[str] | None = Field(
+        None,
+        description=(
+            "Component ids of the outputs you want as the answer (sync mode). When set, "
+            "``output.text`` resolves among only these, so naming one text output makes "
+            "``output.reason`` deterministic on multi-output flows. The full ``outputs`` "
+            "map is still returned. Ids must be outputs of this flow or the request is "
+            "rejected before the flow runs. Ignored for stream/background modes."
+        ),
+    )
     globals: dict[GlobalVarKey, GlobalVarValue] = Field(
         default_factory=dict,
         description=(

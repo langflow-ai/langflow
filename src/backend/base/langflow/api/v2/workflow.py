@@ -113,6 +113,30 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
     )
 
 
+def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[str]) -> None:
+    """Reject ``output_ids`` that aren't outputs of this flow, BEFORE it runs.
+
+    Checks against the terminal node ids known after graph build but before
+    execution, so a typo or wrong id costs no compute. ``available`` lists the
+    flow's real output ids so callers can self-correct. None/empty means "no
+    selection" and never raises.
+    """
+    if not output_ids:
+        return
+    known = set(terminal_node_ids)
+    unknown = [output_id for output_id in output_ids if output_id not in known]
+    if unknown:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Unknown output_ids",
+                "code": "UNKNOWN_OUTPUT_IDS",
+                "message": f"output_ids not produced by this flow: {unknown}.",
+                "available": terminal_node_ids,
+            },
+        )
+
+
 def _build_run_inputs(parsed: ParsedWorkflowRun) -> list[InputValueRequest] | None:
     """Build the graph input list from the AG-UI chat message, if any.
 
@@ -446,6 +470,11 @@ async def execute_sync_workflow(
     # Get terminal nodes - these are the outputs we want
     terminal_node_ids = graph.get_terminal_nodes()
 
+    # Validate request-side output selection BEFORE executing: a bad id must cost
+    # no compute. Raised outside the component-error try/except below, so it
+    # surfaces as a real 422 rather than a 200-with-failed body.
+    _validate_output_ids(parsed.output_ids, terminal_node_ids)
+
     # Execute graph - component errors are caught and returned in response body
     job_service = get_job_service()
     await job_service.create_job(job_id=job_id, flow_id=flow_id_str, user_id=current_user.id)
@@ -483,6 +512,7 @@ async def execute_sync_workflow(
             inputs=parsed.tweaks,
             graph=graph,
             effective_globals=request_variables,
+            selected_ids=parsed.output_ids,
         )
 
     except asyncio.CancelledError:

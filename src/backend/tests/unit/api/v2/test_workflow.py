@@ -740,3 +740,36 @@ class TestWorkflowIDORProtection:
                 db_flow = await session.get(Flow, flow_id)
                 if db_flow:
                     await session.delete(db_flow)
+
+
+class TestValidateOutputIds:
+    """``output_ids`` is validated against the flow's outputs BEFORE the flow runs.
+
+    The validator only ever sees the terminal node ids (known after graph build,
+    before execution), so a bad id is rejected with 422 without spending any
+    compute. This is the pure-function contract; the route places the call before
+    execution.
+    """
+
+    def test_no_selection_is_a_noop(self):
+        from langflow.api.v2.workflow import _validate_output_ids
+
+        # None and empty both mean "no selection" -> never raises.
+        _validate_output_ids(None, ["ChatOutput-a"])
+        _validate_output_ids([], ["ChatOutput-a"])
+
+    def test_all_known_ids_pass(self):
+        from langflow.api.v2.workflow import _validate_output_ids
+
+        _validate_output_ids(["ChatOutput-a"], ["ChatOutput-a", "ChatOutput-b"])
+
+    def test_unknown_id_raises_422_listing_available(self):
+        from fastapi import HTTPException
+        from langflow.api.v2.workflow import _validate_output_ids
+
+        with pytest.raises(HTTPException) as exc:
+            _validate_output_ids(["ChatOutput-z"], ["ChatOutput-a", "ChatOutput-b"])
+        assert exc.value.status_code == 422
+        detail = exc.value.detail
+        assert "ChatOutput-z" in str(detail)
+        assert detail["available"] == ["ChatOutput-a", "ChatOutput-b"]

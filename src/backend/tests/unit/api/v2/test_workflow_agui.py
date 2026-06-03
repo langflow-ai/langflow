@@ -331,6 +331,63 @@ class TestAGUISyncExecution:
         assert result["outputs"]
 
 
+class TestOutputIdsSelection:
+    """Request-side ``output_ids`` steers ``output.text`` and is validated pre-run."""
+
+    async def test_unknown_output_id_rejected_before_running(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """A typo'd output id is rejected with 422 and the available ids, no run."""
+        body = _agui_body(chatbot_flow, message="hi", mode="sync")
+        body["output_ids"] = ["NotARealOutput-zzz"]
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        # 422 (a request rejection), NOT a 200-with-failed component error.
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert "NotARealOutput-zzz" in str(detail)
+        assert detail["available"]  # the flow's real output ids
+
+    async def test_selecting_the_real_output_yields_single(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """Naming the flow's text output makes ``output.reason`` deterministically single."""
+        headers = {"x-api-key": created_api_key.api_key}
+
+        # Discover the flow's text output id from an unselected run.
+        first = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, message="hi", mode="sync"),
+            headers=headers,
+        )
+        assert first.status_code == 200
+        outputs = first.json()["outputs"]
+        text_id = next(cid for cid, out in outputs.items() if out["type"] in {"message", "text"})
+
+        body = _agui_body(chatbot_flow, message="hi again", mode="sync")
+        body["output_ids"] = [text_id]
+        second = await client.post("api/v2/workflows", json=body, headers=headers)
+
+        assert second.status_code == 200
+        result = second.json()
+        assert result["output"]["reason"] == "single"
+        assert result["output"]["source"] == text_id
+        assert result["output"]["text"] is not None
+        # Selection steers the answer; the full outputs map is still present.
+        assert text_id in result["outputs"]
+
+
 class TestAGUICancellation:
     """A run can be stopped by job id, and a streaming client can disconnect."""
 
