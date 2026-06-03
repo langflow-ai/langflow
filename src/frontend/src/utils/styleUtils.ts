@@ -316,7 +316,7 @@ export const SIDEBAR_CATEGORIES = [
   {
     display_name: "sidebar.category.saved",
     name: "saved_components",
-    icon: "GradientSave",
+    icon: "Save",
   },
   {
     display_name: "sidebar.category.inputOutput",
@@ -529,7 +529,7 @@ export const SIDEBAR_BUNDLES = [
 ];
 
 export const categoryIcons: Record<string, string> = {
-  saved_components: "GradientSave",
+  saved_components: "Save",
   input_output: "Cable",
   inputs: "Download",
   outputs: "Upload",
@@ -670,7 +670,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   model_specs: "FileSliders",
   advanced: "Laptop2",
   chat: "MessageCircle",
-  saved_components: "GradientSave",
+  saved_components: "Save",
   vectorsearch: "TextSearch",
   wrappers: "Gift",
   unknown: "HelpCircle",
