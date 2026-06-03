@@ -429,6 +429,7 @@ module.exports = {
             "Components/bundles-duckduckgo",
             "Components/bundles-elastic",
             "Components/bundles-exa",
+            "Components/bundles-firecrawl",
             "Components/bundles-faiss",
             "Components/bundles-glean",
             "Components/bundles-google",
