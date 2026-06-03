@@ -110,7 +110,7 @@ def get_provider_model_candidates(provider: str) -> list[str]:
         providers=[provider],
         include_unsupported=False,
         include_deprecated=False,
-        model_type="language",
+        model_type="llm",
     )
 
     default = get_default_model(provider)
