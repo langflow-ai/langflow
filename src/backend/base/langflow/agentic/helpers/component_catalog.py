@@ -10,7 +10,6 @@ from __future__ import annotations
 
 from typing import Any
 
-
 # Common flow patterns to show in the catalog preamble
 COMMON_PATTERNS = """\
 ## Common Flow Patterns (compact format examples)
