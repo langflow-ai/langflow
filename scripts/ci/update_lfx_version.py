@@ -118,7 +118,9 @@ def rename_bundles_for_nightly(lfx_version: str) -> None:
       * rewrites its `[project] name`     `lfx-<name>` -> `lfx-<name>-nightly`
       * rewrites its `[project] version`  `0.1.0`      -> `0.1.0.dev<N>`
       * repoints the root `[tool.uv.sources]` workspace entry to the new name
-      * repoints the root `langflow` dependency to `lfx-<name>-nightly==<dev>`
+      * repoints the root `langflow` dependencies to `lfx-<name>-nightly==<dev>`,
+        including extras forms like `lfx-docling[local]>=...` in
+        `[project.optional-dependencies]` (the `[extra]` selector is preserved)
 
     The bundle's own `lfx` dep is repinned separately by
     `update_lfx_dep_in_bundles`. No-op when no bundles are present, and
@@ -149,14 +151,21 @@ def rename_bundles_for_nightly(lfx_version: str) -> None:
             raise ValueError(msg)
         root_content = source_pattern.sub(rf"{new_name}\1", root_content)
 
-        # Repoint the root dependency: `"lfx-<name>>=0.1.0"` -> exact nightly pin.
-        # The lookahead requires a version operator right after the name so we
-        # match `lfx-arxiv>=...` without also matching `lfx-arxiv-nightly`.
-        dep_pattern = re.compile(rf'"{re.escape(old_name)}(?=[<>=!~])[^"]*"')
+        # Repoint the root dependencies to the exact nightly pin. This covers
+        # both the bare main dep `"lfx-<name>>=0.1.0"` and any extras form in
+        # `[project.optional-dependencies]` such as `"lfx-docling[local]>=0.1.0"`.
+        # The optional `[extra]` is captured and re-emitted so the selector
+        # survives the rewrite (-> `"lfx-docling-nightly[local]==<dev>"`); a
+        # missed extras ref would stay `lfx-<name>` and leak to PyPI, where no
+        # `>=0.1.0` is published, breaking `uv lock`. The lookahead still
+        # requires a version operator right after the name+optional-extra so we
+        # match `lfx-arxiv>=...` / `lfx-docling[local]>=...` without also
+        # matching an already-renamed `lfx-arxiv-nightly`.
+        dep_pattern = re.compile(rf'"{re.escape(old_name)}(\[[^\]]+\])?(?=[<>=!~])[^"]*"')
         if not dep_pattern.search(root_content):
             msg = f"Root dependency on {old_name} not found in {ROOT_PYPROJECT}"
             raise ValueError(msg)
-        root_content = dep_pattern.sub(f'"{new_name}=={new_version}"', root_content)
+        root_content = dep_pattern.sub(rf'"{new_name}\g<1>=={new_version}"', root_content)
 
         print(f"Renamed bundle {old_name} -> {new_name}=={new_version}")
 
