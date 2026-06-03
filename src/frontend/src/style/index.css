@@ -161,8 +161,11 @@
     --datatype-blue: 221.2 83.2% 53.3%;
     --datatype-blue-foreground: 214.3 94.6% 92.7%;
 
-    --datatype-azure: 204 88% 46%;
-    --datatype-azure-foreground: 201 94% 91%;
+    --datatype-green: 142.1 70.6% 35.3%;
+    --datatype-green-foreground: 138.5 76.5% 90%;
+
+    --datatype-citron: 66 84% 38%;
+    --datatype-citron-foreground: 64 85% 90%;
 
     --datatype-gray: 215 13.8% 34.1%;
     --datatype-gray-foreground: 220 14.3% 95.9%;
@@ -449,8 +452,11 @@
     --datatype-blue: 211.7 96.4% 78.4%;
     --datatype-blue-foreground: 221.2 83.2% 53.3%;
 
-    --datatype-azure: 205 92% 72%;
-    --datatype-azure-foreground: 204 88% 44%;
+    --datatype-green: 141.7 76.6% 73.1%;
+    --datatype-green-foreground: 142.1 70.6% 35.3%;
+
+    --datatype-citron: 66 86% 56%;
+    --datatype-citron-foreground: 66 84% 34%;
 
     --datatype-gray: 216 12.2% 83.9%;
     --datatype-gray-foreground: 215 13.8% 34.1%;
