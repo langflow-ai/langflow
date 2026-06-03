@@ -205,13 +205,17 @@ async def generate_flow_streaming(
             execution_error: str | None = None
             full_response = ""
 
+            # Use a distinct session namespace so the flow generator's message
+            # storage doesn't collide with the translation flow's session data.
+            flow_session_id = f"flowgen_{session_id}" if session_id else None
+
             async with aclosing(
                 execute_flow_file_streaming(
                     "flow_generator.py",
                     input_value=current_input,
                     global_variables=global_variables,
                     user_id=str(user_id) if user_id else None,
-                    session_id=session_id,
+                    session_id=flow_session_id,
                     provider=provider,
                     model_name=model_name,
                     api_key_var=api_key_var,
