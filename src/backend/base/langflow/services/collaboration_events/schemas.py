@@ -60,6 +60,14 @@ class CollaborationPresenceChange:
 
 
 @dataclass(frozen=True)
+class CollaborationPresenceChangeEnvelope:
+    """Presence change plus the flow it should be routed to."""
+
+    flow_id: UUID
+    change: CollaborationPresenceChange
+
+
+@dataclass(frozen=True)
 class CollaborationPresenceSnapshot:
     users: list[CollaborationPresenceConnectionUser]
 

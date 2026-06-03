@@ -25,7 +25,7 @@ class CollaborationSessionStartMessage(BaseModel):
 
 class CollaborationSessionReadyMessage(BaseModel):
     type: Literal["session.ready"] = "session.ready"
-    connection_id: str
+    connection_id: UUID
     flow_id: UUID
     current_revision: int
 
@@ -89,6 +89,16 @@ class CollaborationSelectionUpdatedMessage(BaseModel):
     selected: CollaborationSelectionTarget | None = None
 
 
+class CollaborationHeartbeatPingMessage(BaseModel):
+    type: Literal["heartbeat.ping"] = "heartbeat.ping"
+
+
+class CollaborationHeartbeatPongMessage(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    type: Literal["heartbeat.pong"]
+
+
 class CollaborationOperationBroadcastMessage(BaseModel):
     """Accepted operation broadcast to peers (not echoed to origin)."""
 
@@ -106,12 +116,12 @@ class CollaborationOperationAcceptedEventPayload(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
+    worker_id: str
     revision: StrictInt
     actor_user_id: UUID
     actor_delegate: FlowOperationActorDelegate = FlowOperationActorDelegate.SELF
     forward_ops: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
-    origin_connection_id: str | None = None
 
 
 class CollaborationPresenceJoinedEventPayload(BaseModel):
@@ -197,5 +207,8 @@ class CollaborationUnknownMessageError(BaseModel):
 
 
 CollaborationClientMessage = (
-    CollaborationSessionStartMessage | CollaborationOperationSubmitMessage | CollaborationSelectionUpdateMessage
+    CollaborationSessionStartMessage
+    | CollaborationOperationSubmitMessage
+    | CollaborationSelectionUpdateMessage
+    | CollaborationHeartbeatPongMessage
 )

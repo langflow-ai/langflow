@@ -47,6 +47,7 @@ async def _register(manager: CollaborationManager, flow_id, user_id, username):
         user_id=user_id,
         username=username,
         profile_image=None,
+        max_connections=100,
     )
 
 
@@ -57,9 +58,9 @@ def _snapshot(*users: CollaborationPresenceConnectionUser) -> CollaborationPrese
 @pytest.mark.asyncio
 async def test_register_unregister_cleans_room(manager, flow_id, user_a):
     conn_id = await _register(manager, flow_id, user_a, "alice")
-    assert flow_id in manager.active_flow_ids()
-    await manager.unregister(flow_id, conn_id)
-    assert flow_id not in manager.active_flow_ids()
+    assert flow_id in manager.rooms.active_flow_ids()
+    await manager.unregister(conn_id)
+    assert flow_id not in manager.rooms.active_flow_ids()
 
 
 @pytest.mark.asyncio
@@ -69,8 +70,12 @@ async def test_broadcast_excludes_origin_connection(manager, flow_id, user_a, us
 
     await manager.broadcast_json(flow_id, {"type": "ping"}, exclude_connection_id=origin)
 
-    origin_ws = manager._rooms[flow_id][origin].websocket
-    peer_ws = manager._rooms[flow_id][peer].websocket
+    origin_conn = manager.rooms.get_connection(origin)
+    peer_conn = manager.rooms.get_connection(peer)
+    assert origin_conn is not None
+    assert peer_conn is not None
+    origin_ws = origin_conn.websocket
+    peer_ws = peer_conn.websocket
     origin_ws.send_json.assert_not_called()
     peer_ws.send_json.assert_called_once()
 
@@ -84,24 +89,49 @@ async def test_flow_isolation_for_broadcast(manager, user_a):
 
     await manager.broadcast_json(flow_a, {"type": "ping"})
 
-    ws_a = manager._rooms[flow_a][conn_a].websocket
-    ws_b = next(iter(manager._rooms[flow_b].values())).websocket
+    conn_a_obj = manager.rooms.get_connection(conn_a)
+    flow_b_conn = manager.rooms.connections_for_flow(flow_b)[0]
+    assert conn_a_obj is not None
+    ws_a = conn_a_obj.websocket
+    ws_b = flow_b_conn.websocket
     ws_a.send_json.assert_called_once()
     ws_b.send_json.assert_not_called()
 
 
 @pytest.mark.asyncio
-async def test_backplane_operation_deduped_when_already_fanned(manager, flow_id):
-    manager.mark_operation_fanned(flow_id, 3)
-    assert manager.should_fanout_backplane_operation(flow_id, 3) is False
-    assert manager.should_fanout_backplane_operation(flow_id, 4) is True
+async def test_handle_backplane_operation_ignores_current_worker(manager, flow_id, user_a):
+    peer_id = await _register(manager, flow_id, user_a, "alice")
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
+
+    event = CollaborationEvent(
+        id="evt-own-worker",
+        flow_id=flow_id,
+        created_at=1.0,
+        type="operation.accepted",
+        payload={
+            "worker_id": collaboration_manager_module.WORKER_ID,
+            "revision": 3,
+            "actor_user_id": str(user_a),
+            "actor_delegate": "self",
+            "forward_ops": [],
+            "created_at": "2026-01-01T00:00:00+00:00",
+        },
+    )
+
+    await manager.handle_backplane_event(event)
+
+    peer_ws.send_json.assert_not_called()
 
 
 @pytest.mark.asyncio
 async def test_handle_backplane_operation_broadcasts_to_local_peers(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
         id="evt-1",
@@ -109,6 +139,7 @@ async def test_handle_backplane_operation_broadcasts_to_local_peers(manager, flo
         created_at=1.0,
         type="operation.accepted",
         payload={
+            "worker_id": "other-worker",
             "revision": 2,
             "actor_user_id": str(user_a),
             "actor_delegate": "self",
@@ -127,7 +158,9 @@ async def test_handle_backplane_operation_broadcasts_to_local_peers(manager, flo
 async def test_handle_backplane_operation_ignores_malformed_payload(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
         id="evt-bad",
@@ -135,6 +168,7 @@ async def test_handle_backplane_operation_ignores_malformed_payload(manager, flo
         created_at=1.0,
         type="operation.accepted",
         payload={
+            "worker_id": "other-worker",
             "revision": True,
             "actor_user_id": str(user_a),
             "forward_ops": [],
@@ -151,7 +185,9 @@ async def test_handle_backplane_operation_ignores_malformed_payload(manager, flo
 async def test_handle_backplane_event_ignores_unknown_type(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
         id="evt-unknown",
@@ -194,7 +230,9 @@ async def test_presence_snapshot_includes_selection(manager, user_a):
 async def test_emit_presence_change_broadcasts_and_publishes_left(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
     event_service = Mock()
 
     await manager.emit_presence_change(flow_id, CollaborationPresenceChange(left_user_id=user_a), event_service)
@@ -214,7 +252,9 @@ async def test_emit_presence_change_broadcasts_and_publishes_left(manager, flow_
 async def test_handle_backplane_presence_joined_broadcasts(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
         id="evt-remote-join",
@@ -239,7 +279,9 @@ async def test_handle_backplane_presence_joined_broadcasts(manager, flow_id, use
 async def test_handle_backplane_presence_ignores_current_worker(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
         id="evt-own-presence",
@@ -261,7 +303,9 @@ async def test_handle_backplane_presence_ignores_current_worker(manager, flow_id
 async def test_handle_backplane_selection_updated_broadcasts(manager, flow_id, user_a, user_b):
     await _register(manager, flow_id, user_a, "alice")
     peer_id = await _register(manager, flow_id, user_b, "bob")
-    peer_ws = manager._rooms[flow_id][peer_id].websocket
+    peer_conn = manager.rooms.get_connection(peer_id)
+    assert peer_conn is not None
+    peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
         id="evt-selection",

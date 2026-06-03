@@ -40,6 +40,5 @@ async def flow_collaboration_websocket(
         websocket=websocket,
         flow_id=flow_id,
         current_user=access.current_user,
-        starting_revision=access.starting_revision,
         storage_service=storage_service,
-    ).run()
+    ).run(starting_revision=access.starting_revision)

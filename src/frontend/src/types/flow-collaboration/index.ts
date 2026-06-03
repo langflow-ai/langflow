@@ -103,6 +103,14 @@ export type CollaborationSelectionUpdatedMessage = {
   selected: CollaborationSelectionTarget | null;
 };
 
+export type CollaborationHeartbeatPingMessage = {
+  type: "heartbeat.ping";
+};
+
+export type CollaborationHeartbeatPongMessage = {
+  type: "heartbeat.pong";
+};
+
 export type CollaborationMessageErrorMessage = {
   type: "message.error";
   detail: string;
@@ -118,12 +126,14 @@ export type CollaborationServerMessage =
   | CollaborationPresenceJoinedMessage
   | CollaborationPresenceLeftMessage
   | CollaborationSelectionUpdatedMessage
+  | CollaborationHeartbeatPingMessage
   | CollaborationMessageErrorMessage;
 
 export type CollaborationClientMessage =
   | CollaborationSessionStartMessage
   | CollaborationOperationSubmitMessage
-  | CollaborationSelectionUpdateMessage;
+  | CollaborationSelectionUpdateMessage
+  | CollaborationHeartbeatPongMessage;
 
 export type CollaborationConnectionStatus =
   | "idle"

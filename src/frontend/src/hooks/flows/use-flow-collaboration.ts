@@ -233,6 +233,13 @@ export function useFlowCollaboration({
           );
           return;
         }
+        case "heartbeat.ping": {
+          const ws = wsRef.current;
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: "heartbeat.pong" }));
+          }
+          return;
+        }
         default:
           return;
       }

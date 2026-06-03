@@ -9,6 +9,7 @@ import pytest
 from langflow.services.collaboration_events import (
     CollaborationPollCursor,
     CollaborationPresenceChange,
+    CollaborationPresenceChangeEnvelope,
     CollaborationPresenceConnectionUser,
     CollaborationSelectionTarget,
     CollaborationUserSelection,
@@ -187,8 +188,8 @@ def test_list_users_requires_flow_ids(svc: SQLiteCollaborationEventService):
 
 def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
-    conn_a = "conn-a"
-    conn_b = "conn-b"
+    conn_a = uuid4()
+    conn_b = uuid4()
 
     joined = svc.add_connection(
         flow_id=flow_id,
@@ -215,7 +216,6 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
     assert len(svc.list_users([flow_id])[flow_id].users) == 1
 
     change = svc.update_connection(
-        flow_id=flow_id,
         connection_id=conn_a,
         selected=CollaborationSelectionTarget(kind="node", id="node-1"),
     )
@@ -226,26 +226,106 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
     snapshot = svc.list_users([flow_id])[flow_id]
     assert snapshot.users[0].selected == CollaborationSelectionTarget(kind="node", id="node-1")
 
-    left = svc.remove_connection(flow_id=flow_id, connection_id=conn_a)
+    left = svc.remove_connection(connection_id=conn_a)
     assert left is not None
     assert left.left_user_id is None
     assert left.selection_updated == CollaborationUserSelection(user_id=user_id, selected=None)
     assert len(svc.list_users([flow_id])[flow_id].users) == 1
 
-    final = svc.remove_connection(flow_id=flow_id, connection_id=conn_b)
+    final = svc.remove_connection(connection_id=conn_b)
     assert final is not None
     assert final.left_user_id == user_id
     assert final.selection_updated is None
     assert svc.list_users([flow_id])[flow_id].users == []
 
 
-def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUID):
-    svc.PRESENCE_TTL_SECONDS = 0.1
+def test_remove_connections_batches_presence_changes(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
+    other_user_id = uuid4()
+    conn_a = uuid4()
+    conn_b = uuid4()
+    conn_c = uuid4()
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-1",
+        connection_id=conn_a,
+        username="alice",
+        profile_image=None,
+    )
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=user_id,
+        connection_id=conn_b,
+        username="alice",
+        profile_image=None,
+    )
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=other_user_id,
+        connection_id=conn_c,
+        username="bob",
+        profile_image=None,
+    )
+
+    changes = svc.remove_connections([conn_a, conn_c])
+
+    assert changes == [
+        CollaborationPresenceChangeEnvelope(
+            flow_id=flow_id,
+            change=CollaborationPresenceChange(left_user_id=other_user_id),
+        )
+    ]
+    assert [user.user_id for user in svc.list_users([flow_id])[flow_id].users] == [user_id]
+
+    final_changes = svc.remove_connections([conn_b])
+    assert final_changes == [
+        CollaborationPresenceChangeEnvelope(
+            flow_id=flow_id,
+            change=CollaborationPresenceChange(left_user_id=user_id),
+        )
+    ]
+    assert svc.list_users([flow_id])[flow_id].users == []
+
+
+def test_remove_connections_batches_effective_user_reads(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    user_ids = [uuid4() for _ in range(5)]
+    connection_ids = []
+    for index, user_id in enumerate(user_ids):
+        connection_id = uuid4()
+        connection_ids.append(connection_id)
+        svc.add_connection(
+            flow_id=flow_id,
+            user_id=user_id,
+            connection_id=connection_id,
+            username=f"user-{index}",
+            profile_image=None,
+        )
+
+    traced_statements: list[str] = []
+    svc._conn.set_trace_callback(lambda statement: traced_statements.append(statement.strip()))
+    try:
+        changes = svc.remove_connections(connection_ids)
+    finally:
+        svc._conn.set_trace_callback(None)
+
+    connection_reads = [
+        statement
+        for statement in traced_statements
+        if statement.startswith("WITH") and "FROM connections AS c" in statement
+    ]
+    assert len(connection_reads) == 3
+    assert {presence_change.flow_id for presence_change in changes} == {flow_id}
+    assert {presence_change.change.left_user_id for presence_change in changes} == set(user_ids)
+
+
+def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    svc.PRESENCE_TTL_SECONDS = 0.1
+    user_id = uuid4()
+    conn_id = uuid4()
+    svc.add_connection(
+        flow_id=flow_id,
+        user_id=user_id,
+        connection_id=conn_id,
         username="alice",
         profile_image=None,
     )
@@ -260,10 +340,11 @@ def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUI
 def test_list_users_removes_expired_connections(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.PRESENCE_TTL_SECONDS = 0.1
     user_id = uuid4()
+    conn_id = uuid4()
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-1",
+        connection_id=conn_id,
         username="alice",
         profile_image=None,
     )
@@ -281,10 +362,11 @@ def test_poll_does_not_consume_expired_presence_before_list_users(
 ):
     svc.PRESENCE_TTL_SECONDS = 0.1
     user_id = uuid4()
+    conn_id = uuid4()
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-1",
+        connection_id=conn_id,
         username="alice",
         profile_image=None,
     )
@@ -305,10 +387,12 @@ def test_list_users_batches_flow_snapshots(
     svc.PRESENCE_TTL_SECONDS = 0.1
     expired_user_id = uuid4()
     active_user_id = uuid4()
+    expired_conn_id = uuid4()
+    active_conn_id = uuid4()
     svc.add_connection(
         flow_id=flow_id,
         user_id=expired_user_id,
-        connection_id="expired-conn",
+        connection_id=expired_conn_id,
         username="expired",
         profile_image=None,
     )
@@ -316,7 +400,7 @@ def test_list_users_batches_flow_snapshots(
     svc.add_connection(
         flow_id=other_flow_id,
         user_id=active_user_id,
-        connection_id="active-conn",
+        connection_id=active_conn_id,
         username="active",
         profile_image=None,
     )
@@ -331,29 +415,29 @@ def test_list_users_batches_flow_snapshots(
 
 def test_effective_selection_uses_latest_connection(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
+    conn_a = uuid4()
+    conn_b = uuid4()
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-a",
+        connection_id=conn_a,
         username="alice",
         profile_image=None,
     )
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-b",
+        connection_id=conn_b,
         username="alice",
         profile_image=None,
     )
     svc.update_connection(
-        flow_id=flow_id,
-        connection_id="conn-a",
+        connection_id=conn_a,
         selected=CollaborationSelectionTarget(kind="node", id="old"),
     )
     time.sleep(0.01)
     svc.update_connection(
-        flow_id=flow_id,
-        connection_id="conn-b",
+        connection_id=conn_b,
         selected=CollaborationSelectionTarget(kind="edge", id="new"),
     )
 
@@ -363,23 +447,24 @@ def test_effective_selection_uses_latest_connection(svc: SQLiteCollaborationEven
 
 def test_initial_connection_counts_as_currently_unselected(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
+    conn_a = uuid4()
+    conn_b = uuid4()
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-a",
+        connection_id=conn_a,
         username="alice",
         profile_image=None,
     )
     svc.update_connection(
-        flow_id=flow_id,
-        connection_id="conn-a",
+        connection_id=conn_a,
         selected=CollaborationSelectionTarget(kind="node", id="old"),
     )
     time.sleep(0.01)
     svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="conn-b",
+        connection_id=conn_b,
         username="alice",
         profile_image=None,
     )
@@ -394,24 +479,25 @@ def test_new_distinct_user_snapshot_preserves_existing_user_selection(
 ):
     selected_user_id = uuid4()
     joining_user_id = uuid4()
+    selected_conn_id = uuid4()
+    joining_conn_id = uuid4()
 
     svc.add_connection(
         flow_id=flow_id,
         user_id=selected_user_id,
-        connection_id="selected-conn",
+        connection_id=selected_conn_id,
         username="selected-user",
         profile_image=None,
     )
     svc.update_connection(
-        flow_id=flow_id,
-        connection_id="selected-conn",
+        connection_id=selected_conn_id,
         selected=CollaborationSelectionTarget(kind="node", id="node-1"),
     )
 
     svc.add_connection(
         flow_id=flow_id,
         user_id=joining_user_id,
-        connection_id="joining-conn",
+        connection_id=joining_conn_id,
         username="joining-user",
         profile_image=None,
     )
@@ -426,6 +512,7 @@ def test_new_distinct_user_snapshot_preserves_existing_user_selection(
 def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
     shared = tmp_path / "shared"
     user_id = uuid4()
+    conn_id = uuid4()
 
     worker_a = SQLiteCollaborationEventService(cache_dir=shared)
     worker_b = SQLiteCollaborationEventService(cache_dir=shared)
@@ -433,7 +520,7 @@ def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
     worker_a.add_connection(
         flow_id=flow_id,
         user_id=user_id,
-        connection_id="remote-conn",
+        connection_id=conn_id,
         username="bob",
         profile_image=None,
     )

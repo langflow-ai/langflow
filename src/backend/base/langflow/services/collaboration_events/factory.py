@@ -19,4 +19,8 @@ class CollaborationEventServiceFactory(ServiceFactory):
 
     @override
     def create(self, settings_service: SettingsService) -> CollaborationEventService:
-        return SQLiteCollaborationEventService(cache_dir=settings_service.settings.cache_dir)
+        settings = settings_service.settings
+        return SQLiteCollaborationEventService(
+            cache_dir=settings.cache_dir,
+            presence_ttl_seconds=settings.collaboration_connection_ttl,
+        )

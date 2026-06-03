@@ -65,7 +65,7 @@ def skip_collaboration_poll_loop(monkeypatch):
     async def _noop() -> None:
         return None
 
-    monkeypatch.setattr(flow_collaboration_connection_module, "ensure_collaboration_poll_loop", _noop)
+    monkeypatch.setattr(flow_collaboration_connection_module, "start_collaboration_background_tasks", _noop)
 
 
 def _access_token(logged_in_headers: dict[str, str]) -> str:
@@ -144,10 +144,13 @@ async def _run_websocket_test(app, flow_id: UUID, token: str, fn: Callable) -> N
     def _invoke() -> None:
         ws_client = TestClient(app)
         try:
-            with ws_client.websocket_connect(f"api/v1/flows/{flow_id}/collab?token={token}") as ws:
-                fn(ws)
-                _close_websocket_cleanly(ws)
+            with anyio.from_thread.start_blocking_portal(**ws_client.async_backend) as portal:
+                ws_client.portal = portal
+                with ws_client.websocket_connect(f"api/v1/flows/{flow_id}/collab?token={token}") as ws:
+                    fn(ws)
+                    _close_websocket_cleanly(ws)
         finally:
+            ws_client.portal = None
             ws_client.close()
 
     await anyio.to_thread.run_sync(_invoke)
@@ -157,14 +160,19 @@ async def _run_dual_websocket_test(app, flow_id: UUID, token: str, fn: Callable)
     def _invoke() -> None:
         ws_client = TestClient(app)
         try:
-            with (
-                ws_client.websocket_connect(f"api/v1/flows/{flow_id}/collab?token={token}") as ws_a,
-                ws_client.websocket_connect(f"api/v1/flows/{flow_id}/collab?token={token}") as ws_b,
-            ):
-                fn(ws_a, ws_b)
-                _close_websocket_cleanly(ws_b)
-                _close_websocket_cleanly(ws_a)
+            # WebSocket peer fanout sends through websocket objects owned by the same
+            # TestClient; sharing the portal keeps Starlette's in-memory streams on one loop.
+            with anyio.from_thread.start_blocking_portal(**ws_client.async_backend) as portal:
+                ws_client.portal = portal
+                with (
+                    ws_client.websocket_connect(f"api/v1/flows/{flow_id}/collab?token={token}") as ws_a,
+                    ws_client.websocket_connect(f"api/v1/flows/{flow_id}/collab?token={token}") as ws_b,
+                ):
+                    fn(ws_a, ws_b)
+                    _close_websocket_cleanly(ws_b)
+                    _close_websocket_cleanly(ws_a)
         finally:
+            ws_client.portal = None
             ws_client.close()
 
     await anyio.to_thread.run_sync(_invoke)
@@ -184,9 +192,7 @@ async def test_active_session_closes_when_read_access_is_revoked(active_user, mo
         websocket=cast("WebSocket", websocket),
         flow_id=UUID("00000000-0000-0000-0000-000000000001"),
         current_user=UserRead.model_validate(active_user, from_attributes=True),
-        starting_revision=0,
         storage_service=cast("StorageService", AsyncMock()),
-        manager=CollaborationManager(),
     )
 
     with pytest.raises(connection_module._CollaborationConnectionClosedError):
@@ -202,9 +208,7 @@ async def test_operation_submit_handler_raises_rejection_for_invalid_payload(act
         websocket=cast("WebSocket", websocket),
         flow_id=UUID("00000000-0000-0000-0000-000000000001"),
         current_user=UserRead.model_validate(active_user, from_attributes=True),
-        starting_revision=0,
         storage_service=cast("StorageService", AsyncMock()),
-        manager=CollaborationManager(),
     )
 
     await connection._handle_operation_submit({"type": "operation.submit", "request_id": "req-invalid"})
@@ -228,9 +232,7 @@ async def test_operation_submit_handler_raises_rejection_for_apply_error(active_
         websocket=cast("WebSocket", websocket),
         flow_id=UUID("00000000-0000-0000-0000-000000000001"),
         current_user=UserRead.model_validate(active_user, from_attributes=True),
-        starting_revision=0,
         storage_service=cast("StorageService", AsyncMock()),
-        manager=CollaborationManager(),
     )
     monkeypatch.setattr(connection, "_apply_operation", _raise_apply_error)
 

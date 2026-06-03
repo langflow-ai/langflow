@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -10,7 +9,7 @@ from fastapi import status
 from lfx.log.logger import logger
 from lfx.services.deps import session_scope_readonly
 from pydantic import ValidationError
-from starlette.websockets import WebSocketDisconnect, WebSocketState
+from starlette.websockets import WebSocketDisconnect
 
 from langflow.api.utils.collab.access import (
     FlowCollaborationAccessError,
@@ -23,11 +22,13 @@ from langflow.api.utils.collab.operations import (
     apply_flow_operation_batch,
 )
 from langflow.api.v1.collaboration_manager import (
-    CollaborationManager,
-    ensure_collaboration_poll_loop,
+    WORKER_ID,
+    CollaborationConnectionLimitExceededError,
     get_collaboration_manager,
+    start_collaboration_background_tasks,
 )
 from langflow.api.v1.schemas.flow_collaboration import (
+    CollaborationHeartbeatPongMessage,
     CollaborationOperationAcceptedMessage,
     CollaborationOperationBroadcastMessage,
     CollaborationOperationRejectedMessage,
@@ -41,15 +42,12 @@ from langflow.services.collaboration_events.schemas import (
     CollaborationPresenceChange,
 )
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_collaboration_events_service, session_scope
+from langflow.services.deps import get_collaboration_events_service, get_settings_service, session_scope
 
 if TYPE_CHECKING:
     from starlette.websockets import WebSocket
 
     from langflow.services.storage.service import StorageService
-
-
-_PRESENCE_HEARTBEAT_SECONDS = 5.0
 
 
 class _CollaborationConnectionClosedError(Exception):
@@ -65,23 +63,26 @@ class FlowCollaborationConnection:
         websocket: WebSocket,
         flow_id: UUID,
         current_user: UserRead,
-        starting_revision: int,
         storage_service: StorageService,
-        manager: CollaborationManager | None = None,
     ) -> None:
         self.websocket = websocket
         self.flow_id = flow_id
         self.current_user = current_user
-        self.starting_revision = starting_revision
         self.storage_service = storage_service
-        self.manager = manager or get_collaboration_manager()
-        self.connection_id: str | None = None
-        self._presence_task: asyncio.Task | None = None
+        self.manager = get_collaboration_manager()
+        self._registered_connection_id: UUID | None = None
         self._event_service = get_collaboration_events_service()
 
-    async def run(self) -> None:
+    @property
+    def connection_id(self) -> UUID:
+        if self._registered_connection_id is None:
+            msg = "Collaboration connection used before session.start registration"
+            raise RuntimeError(msg)
+        return self._registered_connection_id
+
+    async def run(self, *, starting_revision: int) -> None:
         try:
-            await self._receive_messages()
+            await self._receive_messages(starting_revision=starting_revision)
         except (WebSocketDisconnect, _CollaborationConnectionClosedError):
             pass
         except Exception:  # noqa: BLE001
@@ -89,10 +90,10 @@ class FlowCollaborationConnection:
         finally:
             await self._cleanup()
 
-    async def _receive_messages(self) -> None:
+    async def _receive_messages(self, *, starting_revision: int) -> None:
         raw = await self.websocket.receive_json()
         msg_type = raw.get("type") if isinstance(raw, dict) else None
-        await self._handle_session_start(raw, msg_type)
+        await self._handle_session_start(raw, msg_type, starting_revision=starting_revision)
 
         while True:
             raw = await self.websocket.receive_json()
@@ -108,9 +109,13 @@ class FlowCollaborationConnection:
                 await self._handle_selection_update(raw)
                 continue
 
+            if msg_type == "heartbeat.pong":
+                await self._handle_heartbeat_pong(raw)
+                continue
+
             await self.websocket.send_json(CollaborationUnknownMessageError().model_dump(mode="json"))
 
-    async def _handle_session_start(self, raw: Any, msg_type: str | None) -> None:
+    async def _handle_session_start(self, raw: Any, msg_type: str | None, *, starting_revision: int) -> None:
         if msg_type != "session.start":
             await self.websocket.close(
                 code=status.WS_1008_POLICY_VIOLATION,
@@ -127,20 +132,25 @@ class FlowCollaborationConnection:
             )
             raise _CollaborationConnectionClosedError from exc
 
-        self.connection_id = await self.manager.register(
-            websocket=self.websocket,
-            flow_id=self.flow_id,
-            user_id=self.current_user.id,
-            username=self.current_user.username,
-            profile_image=self.current_user.profile_image,
-        )
-        await ensure_collaboration_poll_loop()
-        self._presence_task = asyncio.create_task(self._presence_heartbeat())
+        try:
+            connection_id = await self.manager.register(
+                websocket=self.websocket,
+                flow_id=self.flow_id,
+                user_id=self.current_user.id,
+                username=self.current_user.username,
+                profile_image=self.current_user.profile_image,
+                max_connections=get_settings_service().settings.collaboration_max_connections,
+            )
+        except CollaborationConnectionLimitExceededError as exc:
+            await self.websocket.close(code=status.WS_1013_TRY_AGAIN_LATER, reason=str(exc))
+            raise _CollaborationConnectionClosedError from exc
+        self._registered_connection_id = connection_id
+        await start_collaboration_background_tasks()
 
         presence_change = self._event_service.add_connection(
             flow_id=self.flow_id,
             user_id=self.current_user.id,
-            connection_id=self.connection_id,
+            connection_id=connection_id,
             username=self.current_user.username,
             profile_image=self.current_user.profile_image,
         )
@@ -148,14 +158,14 @@ class FlowCollaborationConnection:
 
         await self.websocket.send_json(
             CollaborationSessionReadyMessage(
-                connection_id=self.connection_id,
+                connection_id=connection_id,
                 flow_id=self.flow_id,
-                current_revision=self.starting_revision,
+                current_revision=starting_revision,
             ).model_dump(mode="json")
         )
         await self.websocket.send_json(self.manager.presence_snapshot_message(snapshot))
 
-        await self._emit_presence_change(presence_change, exclude_connection_id=self.connection_id)
+        await self._emit_presence_change(presence_change, exclude_connection_id=connection_id)
 
     async def _handle_operation_submit(self, raw: Any) -> None:
         try:
@@ -249,7 +259,6 @@ class FlowCollaborationConnection:
         )
 
     async def _broadcast_operation(self, accepted: AcceptedFlowOperation) -> None:
-        self.manager.mark_operation_fanned(self.flow_id, accepted.revision)
         broadcast = CollaborationOperationBroadcastMessage(
             flow_id=accepted.flow_id,
             revision=accepted.revision,
@@ -266,12 +275,12 @@ class FlowCollaborationConnection:
 
     def _publish_operation_accepted(self, accepted: AcceptedFlowOperation) -> None:
         event_payload = {
+            "worker_id": WORKER_ID,
             "revision": accepted.revision,
             "actor_user_id": str(accepted.actor_user_id),
             "actor_delegate": accepted.actor_delegate.value,
             "forward_ops": accepted.forward_ops,
             "created_at": accepted.created_at.isoformat(),
-            "origin_connection_id": self.connection_id,
         }
         self._event_service.publish(self.flow_id, "operation.accepted", event_payload)
 
@@ -286,45 +295,36 @@ class FlowCollaborationConnection:
             )
             return
 
-        if self.connection_id is None:
-            return
-
+        connection_id = self.connection_id
         change = self._event_service.update_connection(
-            flow_id=self.flow_id,
-            connection_id=self.connection_id,
+            connection_id=connection_id,
             selected=update.selected,
         )
-        await self._emit_selection_change(change, exclude_connection_id=self.connection_id)
+        await self._emit_selection_change(change, exclude_connection_id=connection_id)
 
-    async def _presence_heartbeat(self) -> None:
-        while True:
-            await asyncio.sleep(_PRESENCE_HEARTBEAT_SECONDS)
-            if self.connection_id is None:
-                continue
-            if self.websocket.client_state != WebSocketState.CONNECTED:
-                return
-            try:
-                await self._ensure_active_read_access()
-            except _CollaborationConnectionClosedError:
-                return
-            self._event_service.update_connection(
-                flow_id=self.flow_id,
-                connection_id=self.connection_id,
-            )
+    async def _handle_heartbeat_pong(self, raw: Any) -> None:
+        try:
+            CollaborationHeartbeatPongMessage.model_validate(raw)
+        except ValidationError:
+            return
+
+        try:
+            await self._ensure_active_read_access()
+        except _CollaborationConnectionClosedError:
+            return
+
+        connection_id = self.connection_id
+        await self.manager.handle_heartbeat_pong(
+            self.flow_id,
+            connection_id,
+            self._event_service,
+        )
 
     async def _cleanup(self) -> None:
-        if self._presence_task is not None:
-            self._presence_task.cancel()
-            try:  # noqa: SIM105 - explicit cancellation handling is clearer here.
-                await self._presence_task
-            except asyncio.CancelledError:
-                pass
-
-        if self.connection_id is not None:
-            await self.manager.unregister(self.flow_id, self.connection_id)
+        if self._registered_connection_id is not None:
+            await self.manager.unregister(self._registered_connection_id)
             change = self._event_service.remove_connection(
-                flow_id=self.flow_id,
-                connection_id=self.connection_id,
+                connection_id=self._registered_connection_id,
             )
             await self._emit_presence_change(change)
 
@@ -332,7 +332,7 @@ class FlowCollaborationConnection:
         self,
         change: CollaborationPresenceChange | None,
         *,
-        exclude_connection_id: str | None = None,
+        exclude_connection_id: UUID | None = None,
     ) -> None:
         await self.manager.emit_presence_change(
             self.flow_id,
@@ -345,7 +345,7 @@ class FlowCollaborationConnection:
         self,
         change: CollaborationPresenceChange | None,
         *,
-        exclude_connection_id: str | None = None,
+        exclude_connection_id: UUID | None = None,
     ) -> None:
         await self.manager.emit_selection_change(
             self.flow_id,

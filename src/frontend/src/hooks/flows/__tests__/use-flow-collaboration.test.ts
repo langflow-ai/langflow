@@ -191,6 +191,22 @@ describe("useFlowCollaboration", () => {
     expect(result.current.isReady).toBe(true);
   });
 
+  it("should reply with heartbeat.pong on heartbeat.ping without changing state", async () => {
+    const { result } = await mountHook({ flowId: "flow-1" });
+    const socket = await connectSession(0);
+    const usersBefore = result.current.users;
+    const revisionBefore = result.current.currentRevision;
+
+    await act(async () => {
+      socket.triggerMessage({ type: "heartbeat.ping" });
+    });
+
+    expect(socket.sent.at(-1)).toBe(JSON.stringify({ type: "heartbeat.pong" }));
+    expect(result.current.users).toEqual(usersBefore);
+    expect(result.current.currentRevision).toBe(revisionBefore);
+    expect(result.current.status).toBe("ready");
+  });
+
   it("should submit operation.submit with the current revision", async () => {
     const { result } = await mountHook({ flowId: "flow-1" });
     const socket = await connectSession(5);

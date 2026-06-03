@@ -1,6 +1,7 @@
+import math
 from typing import Literal
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 from lfx.log.logger import logger
 
@@ -75,6 +76,19 @@ class RuntimeSettings(BaseModel):
     fs_flows_polling_interval: int = 10000
     """The polling interval in milliseconds for synchronizing flows from the file system."""
 
+    collaboration_heartbeat_interval: float = 45.0
+    """Seconds between heartbeat ping cycles for each collaboration WebSocket connection."""
+    collaboration_heartbeat_stagger: float = 1.0
+    """Seconds to wait between stagger buckets while scheduling heartbeat pings."""
+    collaboration_heartbeat_timeout: float = 10.0
+    """Seconds a client has to respond with heartbeat.pong after a ping."""
+    collaboration_connection_ttl: float = 90.0
+    """SQLite presence TTL for an active collaboration connection row."""
+    collaboration_presence_snapshot_interval: float = 120.0
+    """Seconds between full collaboration presence snapshots used as a fallback reconcile."""
+    collaboration_max_connections: int = 100
+    """Maximum local collaboration connections included in one heartbeat scheduling cycle."""
+
     health_check_max_retries: int = 5
     """The maximum number of retries for the health check."""
 
@@ -109,3 +123,42 @@ class RuntimeSettings(BaseModel):
                 )
             return "direct"
         return value
+
+    @field_validator(
+        "collaboration_heartbeat_interval",
+        "collaboration_heartbeat_stagger",
+        "collaboration_heartbeat_timeout",
+        "collaboration_connection_ttl",
+        "collaboration_presence_snapshot_interval",
+    )
+    @classmethod
+    def validate_collaboration_positive_float(cls, value: float) -> float:
+        if value <= 0:
+            msg = "collaboration timing values must be positive"
+            raise ValueError(msg)
+        return value
+
+    @field_validator("collaboration_max_connections")
+    @classmethod
+    def validate_collaboration_max_connections(cls, value: int) -> int:
+        if value <= 0:
+            msg = "collaboration_max_connections must be a positive integer"
+            raise ValueError(msg)
+        return value
+
+    @model_validator(mode="after")
+    def _validate_collaboration_heartbeat_scheduler(self):
+        stagger = self.collaboration_heartbeat_stagger
+        interval = self.collaboration_heartbeat_interval
+        if stagger >= interval:
+            msg = "collaboration_heartbeat_stagger must be less than collaboration_heartbeat_interval"
+            raise ValueError(msg)
+        min_stagger_buckets = 2
+        bucket_count = math.ceil(interval / stagger)
+        if bucket_count < min_stagger_buckets:
+            msg = (
+                "collaboration heartbeat scheduler requires at least two stagger buckets "
+                "within collaboration_heartbeat_interval"
+            )
+            raise ValueError(msg)
+        return self

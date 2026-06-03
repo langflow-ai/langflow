@@ -13,6 +13,7 @@ if TYPE_CHECKING:
         CollaborationEvent,
         CollaborationPollCursor,
         CollaborationPresenceChange,
+        CollaborationPresenceChangeEnvelope,
         CollaborationPresenceSnapshot,
     )
 
@@ -53,7 +54,7 @@ class CollaborationEventService(Service, ABC):
         *,
         flow_id: UUID,
         user_id: UUID,
-        connection_id: str,
+        connection_id: UUID,
         username: str,
         profile_image: str | None,
     ) -> CollaborationPresenceChange | None:
@@ -63,8 +64,7 @@ class CollaborationEventService(Service, ABC):
     def update_connection(
         self,
         *,
-        flow_id: UUID,
-        connection_id: str,
+        connection_id: UUID,
         selected: CollaborationSelectionTarget | None | object = UNSET,
     ) -> CollaborationPresenceChange | None:
         """Refresh the connection TTL and optionally update its selection columns."""
@@ -73,10 +73,13 @@ class CollaborationEventService(Service, ABC):
     def remove_connection(
         self,
         *,
-        flow_id: UUID,
-        connection_id: str,
+        connection_id: UUID,
     ) -> CollaborationPresenceChange | None:
         """Remove one active connection row."""
+
+    @abstractmethod
+    def remove_connections(self, connection_ids: list[UUID]) -> list[CollaborationPresenceChangeEnvelope]:
+        """Remove active connection rows and return user-visible presence changes keyed by flow id."""
 
     @abstractmethod
     def list_users(self, flow_ids: list[UUID]) -> dict[UUID, CollaborationPresenceSnapshot]:

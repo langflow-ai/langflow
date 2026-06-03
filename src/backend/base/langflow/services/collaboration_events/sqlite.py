@@ -14,6 +14,7 @@ from langflow.services.collaboration_events.schemas import (
     CollaborationEvent,
     CollaborationPollCursor,
     CollaborationPresenceChange,
+    CollaborationPresenceChangeEnvelope,
     CollaborationPresenceConnectionUser,
     CollaborationPresenceSnapshot,
     CollaborationSelectionTarget,
@@ -63,15 +64,22 @@ class SQLiteCollaborationEventService(CollaborationEventService):
     """
 
     TTL_SECONDS: float = 120.0
-    PRESENCE_TTL_SECONDS: float = 30.0
+    PRESENCE_TTL_SECONDS: float = 90.0
     MAX_EVENTS_PER_FLOW: int = 1000
     DEFAULT_POLL_LIMIT: int = 200
 
-    def __init__(self, cache_dir: str | Path | None = None) -> None:
+    def __init__(
+        self,
+        cache_dir: str | Path | None = None,
+        *,
+        presence_ttl_seconds: float | None = None,
+    ) -> None:
         if cache_dir is None:
             cache_dir = Path(tempfile.gettempdir()) / "langflow_collaboration"
         cache_dir = Path(cache_dir)
         cache_dir.mkdir(parents=True, exist_ok=True)
+        if presence_ttl_seconds is not None:
+            self.PRESENCE_TTL_SECONDS = presence_ttl_seconds
         self._db_path = cache_dir / "langflow_collaboration.sqlite"
         self._conn = sqlite3.connect(
             str(self._db_path),
@@ -202,7 +210,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
         *,
         flow_id: UUID,
         user_id: UUID,
-        connection_id: str,
+        connection_id: UUID,
         username: str,
         profile_image: str | None,
     ) -> CollaborationPresenceChange | None:
@@ -213,6 +221,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
         """
         flow_id_key = str(flow_id)
         user_id_key = str(user_id)
+        connection_id_key = str(connection_id)
 
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -240,7 +249,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                     (
                         flow_id_key,
                         user_id_key,
-                        connection_id,
+                        connection_id_key,
                         username,
                         profile_image,
                         now,
@@ -259,8 +268,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
     def update_connection(
         self,
         *,
-        flow_id: UUID,
-        connection_id: str,
+        connection_id: UUID,
         selected: CollaborationSelectionTarget | None | object = UNSET,
     ) -> CollaborationPresenceChange | None:
         """Refresh the TTL for an active connection and optionally update its selection.
@@ -268,7 +276,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
         If `selected` is provided (not `UNSET`), it updates the connection's
         selection state. Returns `None` when only the TTL changed.
         """
-        flow_id_key = str(flow_id)
+        connection_id_key = str(connection_id)
 
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -278,17 +286,18 @@ class SQLiteCollaborationEventService(CollaborationEventService):
 
                 row = self._conn.execute(
                     """
-                    SELECT user_id
+                    SELECT flow_id, user_id
                     FROM connections
-                    WHERE flow_id = ? AND connection_id = ? AND expires_at >= ?
+                    WHERE connection_id = ? AND expires_at >= ?
                     """,
-                    (flow_id_key, connection_id, now),
+                    (connection_id_key, now),
                 ).fetchone()
                 if row is None:
                     self._conn.execute("COMMIT")
                     return None
 
-                user_id_key = row[0]
+                flow_id_key = row[0]
+                user_id_key = row[1]
                 user_id = UUID(user_id_key)
                 before_user = self._effective_user_locked(flow_id_key, user_id_key, now)
                 expires_at = now + self.PRESENCE_TTL_SECONDS
@@ -298,9 +307,9 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                         """
                         UPDATE connections
                         SET expires_at = ?
-                        WHERE flow_id = ? AND connection_id = ?
+                        WHERE connection_id = ?
                         """,
-                        (expires_at, flow_id_key, connection_id),
+                        (expires_at, connection_id_key),
                     )
                 else:
                     if selected is None:
@@ -318,15 +327,14 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                             selected_kind = ?,
                             selected_id = ?,
                             selected_at = ?
-                        WHERE flow_id = ? AND connection_id = ?
+                        WHERE connection_id = ?
                         """,
                         (
                             expires_at,
                             selected_kind,
                             selected_id,
                             selected_at,
-                            flow_id_key,
-                            connection_id,
+                            connection_id_key,
                         ),
                     )
 
@@ -342,15 +350,14 @@ class SQLiteCollaborationEventService(CollaborationEventService):
     def remove_connection(
         self,
         *,
-        flow_id: UUID,
-        connection_id: str,
+        connection_id: UUID,
     ) -> CollaborationPresenceChange | None:
         """Remove an active connection row.
 
         Returns a `CollaborationPresenceChange` if the user fully left the flow,
         otherwise `None`.
         """
-        flow_id_key = str(flow_id)
+        connection_id_key = str(connection_id)
 
         with self._lock:
             self._conn.execute("BEGIN IMMEDIATE")
@@ -360,26 +367,27 @@ class SQLiteCollaborationEventService(CollaborationEventService):
 
                 row = self._conn.execute(
                     """
-                    SELECT user_id
+                    SELECT flow_id, user_id
                     FROM connections
-                    WHERE flow_id = ? AND connection_id = ?
+                    WHERE connection_id = ?
                     """,
-                    (flow_id_key, connection_id),
+                    (connection_id_key,),
                 ).fetchone()
                 if row is None:
                     self._conn.execute("COMMIT")
                     return None
 
-                user_id_key = row[0]
+                flow_id_key = row[0]
+                user_id_key = row[1]
                 user_id = UUID(user_id_key)
                 before_user = self._effective_user_locked(flow_id_key, user_id_key, now)
 
                 self._conn.execute(
                     """
                     DELETE FROM connections
-                    WHERE flow_id = ? AND connection_id = ?
+                    WHERE connection_id = ?
                     """,
-                    (flow_id_key, connection_id),
+                    (connection_id_key,),
                 )
 
                 after_user = self._effective_user_locked(flow_id_key, user_id_key, now)
@@ -390,6 +398,54 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                 raise
 
         return change
+
+    def remove_connections(self, connection_ids: list[UUID]) -> list[CollaborationPresenceChangeEnvelope]:
+        """Remove active connection rows in one transaction."""
+        if not connection_ids:
+            return []
+
+        connection_id_keys = [str(connection_id) for connection_id in connection_ids]
+        connection_ids_json = json.dumps(connection_id_keys)
+
+        with self._lock:
+            self._conn.execute("BEGIN IMMEDIATE")
+            try:
+                now = time.time()
+                self._purge_expired_events_locked(now)
+
+                affected_users = self._affected_users_for_connections_locked(connection_ids_json)
+                if not affected_users:
+                    self._conn.execute("COMMIT")
+                    return []
+
+                affected_users_json = json.dumps(
+                    [{"flow_id": flow_id_key, "user_id": user_id_key} for flow_id_key, user_id_key in affected_users]
+                )
+                before_users = self._effective_users_for_keys_locked(affected_users_json, now)
+                self._conn.execute(
+                    """
+                    DELETE FROM connections
+                    WHERE connection_id IN (SELECT value FROM json_each(?))
+                    """,
+                    (connection_ids_json,),
+                )
+                after_users = self._effective_users_for_keys_locked(affected_users_json, now)
+
+                changes: list[CollaborationPresenceChangeEnvelope] = []
+                for flow_id_key, user_id_key in affected_users:
+                    flow_id = UUID(flow_id_key)
+                    user_id = UUID(user_id_key)
+                    user_key = (flow_id_key, user_id_key)
+                    change = self._presence_change(user_id, before_users.get(user_key), after_users.get(user_key))
+                    if change is not None:
+                        changes.append(CollaborationPresenceChangeEnvelope(flow_id=flow_id, change=change))
+
+                self._conn.execute("COMMIT")
+            except Exception:
+                self._conn.execute("ROLLBACK")
+                raise
+
+        return changes
 
     def list_users(self, flow_ids: list[UUID]) -> dict[UUID, CollaborationPresenceSnapshot]:
         """Return snapshots of active, deduplicated users and their effective selections, grouped by flow id."""
@@ -447,6 +503,65 @@ class SQLiteCollaborationEventService(CollaborationEventService):
             """,
             (flow_id, self.MAX_EVENTS_PER_FLOW),
         )
+
+    def _affected_users_for_connections_locked(self, connection_ids_json: str) -> list[tuple[str, str]]:
+        rows = self._conn.execute(
+            """
+            WITH requested(connection_id) AS (
+                SELECT DISTINCT value
+                FROM json_each(?)
+            )
+            SELECT DISTINCT c.flow_id, c.user_id
+            FROM connections AS c
+            JOIN requested AS r ON r.connection_id = c.connection_id
+            ORDER BY c.flow_id ASC, c.user_id ASC
+            """,
+            (connection_ids_json,),
+        ).fetchall()
+        return [(row[0], row[1]) for row in rows]
+
+    def _effective_users_for_keys_locked(
+        self,
+        user_keys_json: str,
+        now: float,
+    ) -> dict[tuple[str, str], CollaborationPresenceConnectionUser]:
+        rows = self._conn.execute(
+            """
+            WITH affected(flow_id, user_id) AS (
+                SELECT DISTINCT
+                    json_extract(value, '$.flow_id'),
+                    json_extract(value, '$.user_id')
+                FROM json_each(?)
+            )
+            SELECT
+                c.flow_id,
+                c.user_id,
+                c.username,
+                c.profile_image,
+                c.selected_kind,
+                c.selected_id,
+                MAX(c.selected_at)
+            FROM connections AS c
+            JOIN affected AS a
+                ON a.flow_id = c.flow_id
+               AND a.user_id = c.user_id
+            WHERE c.expires_at >= ?
+            GROUP BY c.flow_id, c.user_id
+            ORDER BY c.flow_id ASC, c.user_id ASC
+            """,
+            (user_keys_json, now),
+        ).fetchall()
+
+        users: dict[tuple[str, str], CollaborationPresenceConnectionUser] = {}
+        for row in rows:
+            selected = self._selection_target(row[4], row[5])
+            users[(row[0], row[1])] = CollaborationPresenceConnectionUser(
+                user_id=UUID(row[1]),
+                username=row[2],
+                profile_image=row[3],
+                selected=selected,
+            )
+        return users
 
     def _presence_snapshots_for_flows_locked(
         self,
