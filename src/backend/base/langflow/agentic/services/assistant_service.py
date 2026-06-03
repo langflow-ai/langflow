@@ -202,6 +202,27 @@ async def execute_flow_with_validation_streaming(
         yield format_complete_event({"result": OFF_TOPIC_REFUSAL_MESSAGE})
         return
 
+    # Flow generation: build a complete multi-node flow from natural language
+    if intent_result.intent == "generate_flow":
+        logger.info("Flow generation request detected")
+        from langflow.agentic.services.flow_generation_service import generate_flow_streaming
+
+        flow_id = (global_variables or {}).get("FLOW_ID")
+        async for event in generate_flow_streaming(
+            intent_result.translation,
+            flow_id=flow_id,
+            user_id=user_id,
+            provider=provider,
+            model_name=model_name,
+            api_key_var=api_key_var,
+            global_variables=global_variables,
+            max_retries=max_retries,
+            session_id=session_id,
+            is_disconnected=is_disconnected,
+        ):
+            yield event
+        return
+
     # Check if this is a component generation request based on LLM classification
     is_component_request = intent_result.intent == "generate_component"
     logger.info(f"Intent classification: {intent_result.intent} (is_component_request={is_component_request})")

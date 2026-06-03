@@ -120,6 +120,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     currentStep,
     handleSend,
     handleApprove,
+    handleApproveFlow,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,
@@ -273,6 +274,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                   key={msg.id}
                   message={msg}
                   onApprove={handleApproveAndClose}
+                  onApproveFlow={handleApproveFlow}
                   onRetry={hasEnabledModels ? handleRetry : undefined}
                 />
               ))}

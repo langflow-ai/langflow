@@ -91,7 +91,7 @@ async def get_flow_graph_representations(
         }
 
     except Exception as e:  # noqa: BLE001
-        await logger.aerror(f"Error getting flow graph representations for {flow_id_or_name}: {e}")
+        await logger.awarning(f"Could not read flow graph for context injection ({flow_id_or_name}): {e}")
         return {
             "error": str(e),
             "flow_id": flow_id_or_name,

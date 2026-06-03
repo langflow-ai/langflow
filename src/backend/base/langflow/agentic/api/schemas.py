@@ -8,10 +8,14 @@ from pydantic import BaseModel, Field
 StepType = Literal[
     "generating",  # LLM is generating response
     "generating_component",  # LLM is generating component code
+    "generating_flow",  # LLM is generating a complete flow
     "generation_complete",  # LLM finished generating
     "extracting_code",  # Extracting Python code from response
+    "extracting_flow",  # Extracting compact flow JSON from response
     "validating",  # Validating component code
+    "validating_flow",  # Validating compact flow against registry
     "validated",  # Validation succeeded
+    "validated_flow",  # Flow validation passed
     "validation_failed",  # Validation failed
     "retrying",  # About to retry with error context
 ]
