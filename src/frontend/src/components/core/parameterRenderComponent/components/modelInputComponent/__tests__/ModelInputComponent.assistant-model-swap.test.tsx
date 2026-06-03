@@ -229,9 +229,7 @@ describe("Assistant-driven model swap — applied model must not fall back", () 
       <ModelInputComponent {...baseProps} value={assistantAppliedValue} />,
     );
 
-    const trigger = await screen.findByTestId(
-      `value-dropdown-${baseProps.id}`,
-    );
+    const trigger = await screen.findByTestId(`value-dropdown-${baseProps.id}`);
     expect(trigger.textContent).toContain(REQUESTED_MODEL);
   });
 });

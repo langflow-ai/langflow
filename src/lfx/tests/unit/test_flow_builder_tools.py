@@ -594,7 +594,8 @@ class TestConfigureComponentModelProviderOnly:
         assert "error" not in result.data, f"configure failed: {result.data}"
 
         value = _read_model_field_value(agent_id)
-        assert isinstance(value, list) and value, f"expected a model entry, got {value!r}"
+        assert isinstance(value, list), f"expected a model entry, got {value!r}"
+        assert value, f"expected a model entry, got {value!r}"
         resolved_name = value[0].get("name")
         assert resolved_name, f"provider-only model must be filled with a default name; got {value!r}"
         assert value[0].get("provider") == "Anthropic"
