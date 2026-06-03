@@ -54,6 +54,19 @@
 > classifier now bypasses one full LLM round-trip on plan approval the
 > same way it already does for edit continuation.
 
+> **2026-06-03 revision** — **@-mention of canvas components and fields in the
+> assistant input.** Typing `@` opens a filterable list of the canvas
+> components; selecting one inserts a quoted, space-free reference token
+> `'<componentId>'` that the agent resolves to that component's details/code via
+> the existing `get_flow_component_details` MCP tool. Typing `.` adjacent to a
+> confirmed token re-triggers the list in *field mode*, listing that component's
+> user-facing template fields (sourced client-side from `node.data.node.template`,
+> no network call); selecting one inserts a single terminal token
+> `'<componentId>.<fieldName>'` resolved to the field's current value via
+> `get_flow_component_field_value`. Frontend-only parsing
+> (`mention-parsing.ts` / `use-component-mentions.ts`); no backend change. See
+> ADR-031.
+
 > **Companion docs**: end-to-end architecture (with Mermaid sequence/flow
 > diagrams) lives at
 > `src/backend/base/langflow/agentic/ARCHITECTURE.md`. This document covers the
@@ -162,6 +175,8 @@ This context owns:
 | **AgentToolCompatibilitySection** | "Agent Tool Compatibility" block in the `LangflowAssistant.json` system prompt teaching the generator (1) action `verb_noun` method naming, (2) class-level `description` as the LLM-facing tool description, (3) `tool_mode=True` discipline + clear `info=`, (4) NEVER use the reserved `component_as_tool`/`to_toolkit` names. The complementary defense to the runtime guardrails | `LangflowAssistant.json` system prompt |
 | **OpenProviderModalEmptyState** | The "No Models Configured" empty-state button now opens a `ModelProviderModal` dialog inline (`modelType="llm"`) instead of navigating to `/settings/model-providers`. Lets the user configure providers without leaving the assistant panel | `AssistantNoModelsState` in `assistant-no-models-state.tsx`; `data-testid="assistant-no-models-configure-providers"` |
 | **MaxFlowVerificationAttempts** | Hard cost ceiling (`MAX_FLOW_VERIFICATION_ATTEMPTS = 3`) for the post-build flow-verification loop. Each attempt costs one full execution plus at most one agent fix turn — so the cap doubles as the user-visible "after N attempt(s)" caveat string | `flow_types.MAX_FLOW_VERIFICATION_ATTEMPTS` |
+| **ComponentMention** | Typing `@` in the assistant input opens a filterable list of the canvas components; arrow/Tab navigate, Enter confirms, Esc cancels, and the highlighted component is selected on the canvas as a live preview. Confirming inserts a quoted, space-free token `'<componentId>'` the agent resolves to that component's details/code | `detectMention`, `formatMentionToken` in `mention-parsing.ts`; `use-component-mentions.ts`; `assistant-mention-popover.tsx` |
+| **FieldMention** | Chaining `.` directly after a confirmed component token (`'<id>'.`) re-opens the list in *field mode*, showing that component's user-facing template fields by display name; selecting one inserts a single terminal token `'<id>.<fieldName>'` the agent resolves to the field's current value. The field list is sourced client-side from `node.data.node.template` (no network call); underscore-prefixed/internal keys (`_type`, `_frontend_node_*`) and `code`, plus `show: false` and label-less fields, are excluded | `detectFieldMention`, `formatFieldMentionToken`, `toFieldItems` in `use-component-mentions.ts` |
 
 ---
 
@@ -588,6 +603,29 @@ The frontend implements automatic model selection to ensure a valid model is alw
 - **And** `params[field]` should be mutated in place so post-configure helpers read the canonical value
 - **And** `get_llm` should NOT fall back to `provider="Unknown"` → `ValueError: missing a provider`
 - **And** bare model-name strings like `"gpt-4o"` should be left untouched so the catalog path still runs
+
+### Scenario: Reference a canvas component with an @-mention
+- **Given** the assistant panel is open and the canvas has components
+- **When** I type `@` in the input
+- **Then** a list of the canvas components should open, filterable by display name
+- **And** the highlighted component should be selected on the canvas as a preview
+- **When** I press Enter (or click an item)
+- **Then** a quoted reference token like `'LanguageModelComponent-XSmrK'` should be inserted (no trailing space)
+- **And** the agent should resolve it to that component's details/code via `get_flow_component_details`
+
+### Scenario: Reference a single field's value with @component.field
+- **Given** I have just inserted a component reference token
+- **When** I type `.` immediately after the token
+- **Then** the list should re-open in field mode showing that component's user-facing fields by display name
+- **And** internal fields (underscore-prefixed keys such as `_type` / `_frontend_node_*`, and `code`) should NOT appear
+- **When** I select a field
+- **Then** a single terminal token like `'LanguageModelComponent-XSmrK.api_key'` should replace the reference
+- **And** the agent should resolve it to that field's current value via `get_flow_component_field_value`
+
+### Scenario: Keyboard navigation scrolls the mention list into view
+- **Given** the mention list is open and taller than the popover
+- **When** I move the highlight past the visible area with the arrow keys
+- **Then** the highlighted option should scroll into view (`scrollIntoView({ block: "nearest" })`)
 
 ---
 
@@ -1449,6 +1487,39 @@ the modal is rendered with `modelType="llm"`.
 
 **Key Files:**
 - `src/frontend/.../assistantPanel/components/assistant-no-models-state.tsx`
+
+---
+
+### ADR-031: @-Mention of Canvas Components and Fields in the Assistant Input
+
+**Status**: Accepted
+
+#### Context
+The assistant always receives a (capped) canvas summary, but users had no way to point it at a *specific* component or the *current value* of a single field without describing it in prose. On large canvases this is ambiguous and burns tokens re-describing what is already on screen.
+
+#### Decision
+Add an `@`-mention affordance to the assistant input, parsed entirely on the frontend:
+1. `@` opens a filterable list of canvas components (`detectMention`). Confirming inserts a quoted, space-free token `'<componentId>'` (`formatMentionToken`).
+2. Typing `.` adjacent to a confirmed token re-triggers the list in *field mode* (`detectFieldMention`), sourcing the component's user-facing fields from `node.data.node.template` client-side (no network call, via `toFieldItems`). Confirming inserts one terminal token `'<componentId>.<fieldName>'` (`formatFieldMentionToken`).
+
+The agent resolves these tokens with the **existing** MCP tools `get_flow_component_details` (component) and `get_flow_component_field_value` (field) — no backend change required.
+
+#### Consequences
+
+**Benefits:**
+- Precise, low-token references to a component or a single field value
+- The field list is instant (client-side template) and exact (keyed off the component id, not a fuzzy name)
+- Reuses the server-side resolution tools that already existed
+
+**Trade-offs:**
+- The component token no longer auto-appends a trailing space — the `.` must sit adjacent to the closing quote to chain into a field mention, so users type their own space to continue prose. The terminal field token keeps a trailing space.
+- Only fields with a `display_name` and `show !== false` are listed; underscore-prefixed/internal keys (`_type`, `_frontend_node_*`) and `code` are excluded. A valid field that lacks a `display_name` would not appear.
+
+**Key Files:**
+- `src/frontend/.../assistantPanel/helpers/mention-parsing.ts` — `detectMention`, `detectFieldMention`, `formatMentionToken`, `formatFieldMentionToken`
+- `src/frontend/.../assistantPanel/hooks/use-component-mentions.ts` — mode state, `toFieldItems`, confirm + canvas-highlight logic
+- `src/frontend/.../assistantPanel/components/assistant-mention-popover.tsx` — list rendering (field rows show the name only) and active-item `scrollIntoView`
+- `src/backend/.../agentic/utils/flow_component.py` — `get_component_details`, `get_component_field_value` (resolution, unchanged)
 
 ---
 
