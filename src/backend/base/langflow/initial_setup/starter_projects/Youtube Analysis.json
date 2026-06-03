@@ -270,11 +270,11 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": "2.3.3"
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.196.0"
+                    "version": "2.197.0"
                   },
                   {
                     "name": "lfx",
@@ -1303,7 +1303,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",
@@ -1585,7 +1585,7 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": "2.3.3"
                   },
                   {
                     "name": "youtube_transcript_api",
