@@ -274,7 +274,7 @@
                   },
                   {
                     "name": "googleapiclient",
-                    "version": "2.196.0"
+                    "version": "2.197.0"
                   },
                   {
                     "name": "lfx",
@@ -1303,7 +1303,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",
