@@ -283,8 +283,7 @@ async def generate_flow_streaming(
                     return
                 # Retry with explicit instruction to output JSON only
                 current_input = (
-                    base_message
-                    + "\n\n---\nIMPORTANT: Output ONLY the JSON object. "
+                    base_message + "\n\n---\nIMPORTANT: Output ONLY the JSON object. "
                     "No explanation, no markdown fences, no preamble."
                 )
                 yield format_progress_event(
@@ -313,9 +312,7 @@ async def generate_flow_streaming(
                     logger.info(f"Flow validation warning: {w}")
 
             if not validation.is_valid:
-                logger.warning(
-                    f"Flow validation failed (attempt {attempt + 1}): {validation.errors}"
-                )
+                logger.warning(f"Flow validation failed (attempt {attempt + 1}): {validation.errors}")
                 yield format_progress_event(
                     "validation_failed",
                     attempt + 1,

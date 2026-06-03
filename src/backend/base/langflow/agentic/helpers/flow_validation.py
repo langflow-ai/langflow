@@ -141,14 +141,11 @@ async def validate_compact_flow(
         if comp_type not in flat_components:
             suggestion = _closest_match(comp_type, all_comp_names)
             if suggestion:
-                warnings.append(
-                    f"Component '{comp_type}' not found — auto-corrected to '{suggestion}'."
-                )
+                warnings.append(f"Component '{comp_type}' not found — auto-corrected to '{suggestion}'.")
                 node["type"] = suggestion
             else:
                 errors.append(
-                    f"Component type '{comp_type}' not found in registry. "
-                    f"Check the available components list."
+                    f"Component type '{comp_type}' not found in registry. Check the available components list."
                 )
 
     # Bail early if unknown components remain (can't validate edges without templates)
@@ -197,15 +194,13 @@ async def validate_compact_flow(
             suggestion = _closest_match(src_output, src_outputs, cutoff=0.4)
             if suggestion:
                 warnings.append(
-                    f"Output '{src_output}' not found on '{src_node['type']}' — "
-                    f"auto-corrected to '{suggestion}'."
+                    f"Output '{src_output}' not found on '{src_node['type']}' — auto-corrected to '{suggestion}'."
                 )
                 edge["source_output"] = suggestion
                 src_output = suggestion
             else:
                 warnings.append(
-                    f"Output '{src_output}' not found on '{src_node['type']}'. "
-                    f"Available: {src_outputs or ['(none)']}"
+                    f"Output '{src_output}' not found on '{src_node['type']}'. Available: {src_outputs or ['(none)']}"
                 )
 
         # Check 6: Input name validity + auto-correct
@@ -214,15 +209,13 @@ async def validate_compact_flow(
             suggestion = _closest_match(tgt_input, tgt_inputs, cutoff=0.4)
             if suggestion:
                 warnings.append(
-                    f"Input '{tgt_input}' not found on '{tgt_node['type']}' — "
-                    f"auto-corrected to '{suggestion}'."
+                    f"Input '{tgt_input}' not found on '{tgt_node['type']}' — auto-corrected to '{suggestion}'."
                 )
                 edge["target_input"] = suggestion
                 tgt_input = suggestion
             else:
                 warnings.append(
-                    f"Input '{tgt_input}' not found on '{tgt_node['type']}'. "
-                    f"Available: {tgt_inputs or ['(none)']}"
+                    f"Input '{tgt_input}' not found on '{tgt_node['type']}'. Available: {tgt_inputs or ['(none)']}"
                 )
 
         # Check 7: Type compatibility (warning only)
