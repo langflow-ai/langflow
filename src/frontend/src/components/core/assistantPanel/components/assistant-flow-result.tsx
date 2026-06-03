@@ -1,10 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
 import { ArrowRight, Check, GitBranch, RotateCcw } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type {
   AgenticResult,
   CompactFlowNode,
 } from "@/controllers/API/queries/agentic";
-import { cn } from "@/utils/utils";
 import CodeAreaModal from "@/modals/codeAreaModal";
 
 const APPROVED_DISPLAY_DURATION_MS = 3000;

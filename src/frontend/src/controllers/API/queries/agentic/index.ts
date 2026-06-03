@@ -1,4 +1,3 @@
-export { postAssistStream } from "./use-post-assist-stream";
 export type {
   AgenticAssistRequest,
   AgenticCancelledEvent,
@@ -11,8 +10,9 @@ export type {
   AgenticSSEEvent,
   AgenticStepType,
   AgenticTokenEvent,
-  CompactFlowNode,
-  CompactFlowEdge,
   CompactFlowData,
+  CompactFlowEdge,
+  CompactFlowNode,
   ExpandedFlowData,
 } from "./types";
+export { postAssistStream } from "./use-post-assist-stream";

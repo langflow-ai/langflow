@@ -6,8 +6,8 @@ import {
 } from "@/controllers/API/queries/agentic";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useAddComponent } from "@/hooks/use-add-component";
-import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import useFlowStore from "@/stores/flowStore";
+import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
 import type {
   AssistantMessage,
@@ -266,7 +266,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
         // offset calculation. expand_compact_flow() doesn't set positions, so
         // we assign a simple horizontal layout here. paste() will remap IDs
         // and reposition relative to the canvas viewport anyway.
-        const nodesWithPositions = (nodes as any[]).map((node, index) => ({
+        const nodesWithPositions = (nodes as Record<string, unknown>[]).map((node, index) => ({
           ...node,
           position: node.position ?? { x: index * 300, y: 100 },
         }));
