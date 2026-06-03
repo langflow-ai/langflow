@@ -181,11 +181,18 @@ export default function AddMcpServerModal({
         setError(t("mcp.modal.errorDuplicateEnvKeys"));
         return;
       }
-      const name = parseString(stdioName, [
-        "mcp_name_case",
-        "no_blank",
-        "lowercase",
-      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      // The server name is the immutable identifier: it is the storage key and
+      // the URL path PATCH targets. When editing, always reuse the original
+      // name so the update hits the existing record. Re-deriving it from the
+      // input would let a name change retarget the request and create a
+      // duplicate server instead of updating the original.
+      const name = initialData
+        ? initialData.name
+        : parseString(stdioName, [
+            "mcp_name_case",
+            "no_blank",
+            "lowercase",
+          ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
       const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
       try {
@@ -233,11 +240,18 @@ export default function AddMcpServerModal({
         setError(t("mcp.modal.errorDuplicateHeaders"));
         return;
       }
-      const name = parseString(httpName, [
-        "mcp_name_case",
-        "no_blank",
-        "lowercase",
-      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      // The server name is the immutable identifier: it is the storage key and
+      // the URL path PATCH targets. When editing, always reuse the original
+      // name so the update hits the existing record. Re-deriving it from the
+      // input would let a name change retarget the request and create a
+      // duplicate server instead of updating the original.
+      const name = initialData
+        ? initialData.name
+        : parseString(httpName, [
+            "mcp_name_case",
+            "no_blank",
+            "lowercase",
+          ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
       const envPayload = buildKeyPairPayload(httpEnv, initialData?.env);
       const headersPayload = buildKeyPairPayload(
         httpHeaders,
@@ -432,7 +446,7 @@ export default function AddMcpServerModal({
                       onChange={(e) => setStdioName(e.target.value)}
                       placeholder={t("mcp.modal.placeholderServerName")}
                       data-testid="stdio-name-input"
-                      disabled={isPending}
+                      disabled={isPending || !!initialData}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
@@ -493,7 +507,7 @@ export default function AddMcpServerModal({
                       onChange={(e) => setHttpName(e.target.value)}
                       placeholder={t("mcp.modal.placeholderHttpName")}
                       data-testid="http-name-input"
-                      disabled={isPending}
+                      disabled={isPending || !!initialData}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
