@@ -127,6 +127,11 @@ nv-ingest = [
     "nv-ingest-client>=26.1.0,<27.0.0 ; python_version >= '3.12'",
 ]
 
+postgresql = [
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+]
+
 [tool.uv]
 override-dependencies = [
     # temporary force a newer python-pptx

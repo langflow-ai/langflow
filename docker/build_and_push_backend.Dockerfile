@@ -22,7 +22,7 @@ RUN apt-get update \
         build-essential \
         gcc \
         git \
-        curl \
+        curl gnupg2 \
         # PostgreSQL
         libpq-dev \
         # SQL Server (FreeTDS + ODBC)
@@ -31,6 +31,11 @@ RUN apt-get update \
         # MySQL
         default-libmysqlclient-dev \
         pkg-config \
+    # Microsoft ODBC Driver 17 for SQL Server
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 || true \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
@@ -60,16 +65,24 @@ RUN apt-get update \
     && apt-get install --no-install-recommends -y \
         curl \
         git \
-        libpq5 \
-        gnupg \
+        gnupg2 \
         xz-utils \
         # PostgreSQL
         libpq5 \
         # SQL Server (FreeTDS + ODBC runtime)
         freetds-bin \
         unixodbc \
+        odbcinst \
+        tdsodbc \
         # MySQL
         default-mysql-client-core \
+    # Microsoft ODBC Driver 17 for SQL Server
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 || true \
+    # Register FreeTDS ODBC driver
+    && printf '[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n' > /etc/odbcinst.ini \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
