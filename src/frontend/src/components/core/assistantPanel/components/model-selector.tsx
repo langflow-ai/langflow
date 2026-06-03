@@ -83,6 +83,7 @@ export function ModelSelector({
       <Button
         variant="ghost"
         size="sm"
+        data-testid="assistant-model-selector"
         className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
         disabled
       >
@@ -97,6 +98,7 @@ export function ModelSelector({
       <Button
         variant="ghost"
         size="sm"
+        data-testid="assistant-model-selector"
         className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
         disabled
       >
