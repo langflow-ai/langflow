@@ -428,6 +428,7 @@ class TestDNSRebindingProtection:
         # re-resolved it, so a rebinding flip after validation has no effect.
         assert resolved.count("rebind.example.com") == 1, resolved
 
+
 class TestURLComponentDNSRebindingProtection:
     """Test DNS rebinding attack prevention in URL component.
 
@@ -518,8 +519,7 @@ class TestURLComponentDNSRebindingProtection:
             # Verify the connection was made to the pinned IP
             assert connected_to_ip is not None, "No TCP connection was made"
             assert connected_to_ip == "1.1.1.1", (
-                f"Connection should be to pinned IP 1.1.1.1, but was to {connected_to_ip}. "
-                f"DNS pinning failed!"
+                f"Connection should be to pinned IP 1.1.1.1, but was to {connected_to_ip}. DNS pinning failed!"
             )
 
     @pytest.mark.asyncio
@@ -794,9 +794,7 @@ class TestAPIRequestDNSRebindingEdgeCases:
 
         def mock_getaddrinfo(hostname, port, *args, **kwargs):
             """Return IPv4-mapped IPv6 localhost."""
-            return [
-                (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:127.0.0.1", 0))
-            ]
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:127.0.0.1", 0))]
 
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
@@ -811,9 +809,7 @@ class TestAPIRequestDNSRebindingEdgeCases:
 
         def mock_getaddrinfo(hostname, port, *args, **kwargs):
             """Return IPv4-mapped IPv6 AWS metadata address."""
-            return [
-                (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:169.254.169.254", 0))
-            ]
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:169.254.169.254", 0))]
 
         with (
             patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),

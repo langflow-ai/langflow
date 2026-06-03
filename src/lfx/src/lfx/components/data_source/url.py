@@ -286,9 +286,7 @@ class URLComponent(Component):
                 return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
         return httpx.AsyncClient()
 
-    async def _fetch_url_with_pinning(
-        self, url: str, validated_ips: list[str], headers: dict
-    ) -> tuple[str, dict]:
+    async def _fetch_url_with_pinning(self, url: str, validated_ips: list[str], headers: dict) -> tuple[str, dict]:
         """Fetch a single URL with DNS pinning protection.
 
         Args:
@@ -388,10 +386,12 @@ class URLComponent(Component):
         extracted_content = extractor(html_content)
 
         # Add the document
-        documents.append({
-            "page_content": extracted_content,
-            "metadata": metadata,
-        })
+        documents.append(
+            {
+                "page_content": extracted_content,
+                "metadata": metadata,
+            }
+        )
 
         # If we haven't reached max depth, extract and follow links
         if depth < self.max_depth - 1:
