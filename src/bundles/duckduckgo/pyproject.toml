@@ -11,11 +11,14 @@ authors = [
 keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
 
 # Runtime deps: lfx (the BUNDLE_API surface) and the langchain-community
-# binding that wraps the duckduckgo-search Python client.  We pin lfx to a
-# range that includes the BUNDLE_API_VERSION=1 contract; langchain-community
-# is the same range the lfx tree uses to keep co-installation lockstep.
+# binding that wraps the duckduckgo-search Python client.  lfx is floored
+# at >=0.5.0 -- the release that introduced extension bundles -- with no
+# upper bound, so the bundle resolves the latest available lfx; BUNDLE_API
+# compatibility is enforced separately via extension.json's
+# "lfx": {"compat": [...]} contract.  langchain-community uses the same
+# range the lfx tree does to keep co-installation lockstep.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "lfx>=0.5.0",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
 ]

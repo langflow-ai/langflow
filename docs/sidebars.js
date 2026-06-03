@@ -81,7 +81,7 @@ module.exports = {
         {
           type: "doc",
           id: "Flows/langflow-assistant",
-          label: "Build components with Langflow Assistant"
+          label: "Build flows and components with Langflow Assistant"
         },
       ],
     },
@@ -146,6 +146,7 @@ module.exports = {
               label: "Database guide for enterprise administrators"
             },
             "Develop/knowledge",
+            "Develop/memory-bases",
           ],
         },
         {
@@ -153,6 +154,7 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/observability-grafana-loki",
             "Develop/traces",
             {
               type: "category",
@@ -187,23 +189,11 @@ module.exports = {
         },
         {
           type: "category",
-          label: "Build extensions",
+          label: "Bundle extensions",
           items: [
-            {
-              type: "doc",
-              id: "Develop/extensions-quickstart",
-              label: "Build your first extension",
-            },
-            {
-              type: "doc",
-              id: "Develop/extensions-manifest",
-              label: "Manifest reference",
-            },
-            {
-              type: "doc",
-              id: "Develop/extensions-author-guide",
-              label: "Author guide",
-            },
+            "Develop/extensions-overview",
+            "Develop/extensions-quickstart",
+            "Develop/extensions-manifest",
           ],
         },
       ],
@@ -227,6 +217,11 @@ module.exports = {
           type: "doc",
           id: "Deployment/deployment-nginx-ssl",
           label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-wxo",
+          label: "Deploy flows on watsonx Orchestrate"
         },
         {
           type: "category",
@@ -287,11 +282,6 @@ module.exports = {
             },
             {
               type: "doc",
-              id: "Deployment/deployment-wxo",
-              label: "IBM watsonx Orchestrate"
-            },
-            {
-              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
@@ -304,13 +294,13 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Deployment/deployment-block-custom-components",
-          label: "Block custom components",
+          id: "Deployment/deployment-multi-worker",
+          label: "Deploy with multiple workers",
         },
         {
           type: "doc",
-          id: "Deployment/deployment-extensions-production",
-          label: "Production install pattern for Extensions",
+          id: "Deployment/deployment-block-custom-components",
+          label: "Block custom components",
         },
         {
           type: "doc",
@@ -339,7 +329,6 @@ module.exports = {
               label: "Input / Output",
               items: [
                 "Components/chat-input-and-output",
-                "Components/text-input-and-output",
                 "Components/webhook",
               ]
             },
@@ -372,6 +361,7 @@ module.exports = {
               items: [
                 "Components/file-system",
                 "Components/knowledge-base",
+                "Components/memory-base",
                 "Components/read-file",
                 "Components/write-file",
               ]
@@ -577,6 +567,11 @@ module.exports = {
           type: "doc",
           id: "Support/troubleshooting",
           label: "Troubleshoot",
+        },
+        {
+          type: "doc",
+          id: "Support/macos-support-matrix",
+          label: "macOS support",
         },
         {
           type: "doc",

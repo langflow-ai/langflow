@@ -328,6 +328,71 @@ def test_get_file_content_dicts_with_string_paths():
         Path(tmp_path).unlink(missing_ok=True)
 
 
+def test_should_not_inject_binary_payload_as_text_when_file_is_neither_image_nor_known_text_type():
+    """QA API-010: refuse to text-decode unknown binary files.
+
+    ``tweaks.ChatInput.files=['<path>']`` was injecting raw bytes as text into the
+    HumanMessage when the file was not detected as an image.
+
+    Root cause: ``read_text_file`` falls back to ``latin-1`` decoding (which always
+    succeeds), so binary content like a non-PIL-readable PNG slips through and is
+    embedded as a long stream of garbled latin-1 characters in the message. The
+    guard MUST refuse to text-decode files whose extension is neither a known text
+    type nor a known image type — silently skipping is safer than feeding the LLM
+    a binary blob.
+    """
+    import tempfile
+
+    binary_content = b"\x00\x01\x02\xff\xfe\xfd" + bytes(range(256)) * 4
+    with tempfile.NamedTemporaryFile(suffix=".bin", delete=False) as tmp:
+        tmp.write(binary_content)
+        tmp_path = tmp.name
+
+    try:
+        message = Message(text="Look at this", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        content_dicts = message.get_file_content_dicts()
+
+        assert content_dicts == [], (
+            f"Binary attachment with an unknown extension must be skipped, not decoded as text. "
+            f"Got {len(content_dicts)} content dict(s) with text starting "
+            f"{content_dicts[0].get('text', '')[:60]!r}..."
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
+def test_should_not_use_attachment_prefix_that_triggers_gemini_refusal_in_file_text_content():
+    r"""QA GAP-M-3: avoid attachment framing that triggers Gemini refusals.
+
+    The ``Attachment: <filename>\n<contents>`` framing triggers Gemini refusals
+    (``"I cannot process attachments in this environment"``). Wrap text-file
+    contents in a neutral header that doesn't read as a multimodal-attachment request.
+    """
+    import tempfile
+
+    with tempfile.NamedTemporaryFile(suffix=".txt", delete=False, mode="w", encoding="utf-8") as tmp:
+        tmp.write("hello world, this is the file body")
+        tmp_path = tmp.name
+
+    try:
+        message = Message(text="Summarize this", sender=MESSAGE_SENDER_USER)
+        message.files = [tmp_path]
+
+        content_dicts = message.get_file_content_dicts()
+
+        assert len(content_dicts) == 1
+        text = content_dicts[0].get("text", "")
+        assert "hello world, this is the file body" in text
+        assert not text.startswith("Attachment:"), (
+            "The 'Attachment:' prefix triggers Gemini refusals. Use a neutral header that does "
+            "not look like a multimodal-attachment request to the model."
+        )
+    finally:
+        Path(tmp_path).unlink(missing_ok=True)
+
+
 # Clean up the cache directory after all tests
 @pytest.fixture(autouse=True)
 def cleanup():

@@ -451,6 +451,18 @@ def _get_all_provider_mapped_fields() -> set[str]:
     return _get_all_provider_specific_field_names()
 
 
+def _is_model_name_only(value: Any) -> bool:
+    """True when ``value`` is a non-empty model name (or list of names).
+
+    ModelInput accepts a bare model name; the list-of-dicts shape is what
+    the rest of the lifecycle expects. An empty/falsy value is NOT a name
+    (it must keep its existing reset-to-default behavior).
+    """
+    if isinstance(value, str):
+        return bool(value.strip())
+    return isinstance(value, list) and bool(value) and all(isinstance(item, str) for item in value)
+
+
 def handle_model_input_update(
     component: Any,
     build_config: dict,
@@ -481,6 +493,18 @@ def handle_model_input_update(
                 return unified_models_module.get_language_model_options(user_id=user_id, filters=_filters)
         else:
             get_options_func = unified_models_module.get_language_model_options
+
+    # ModelInput documents that a single model name / list of names is
+    # auto-converted to the list-of-dicts shape. Honor that contract here
+    # (e.g. the assistant's configure_component can persist a bare model
+    # name like "gpt-5.4") so the rest of the lifecycle never indexes a
+    # str as a dict — TypeError: string indices must be integers.
+    if _is_model_name_only(field_value):
+        from .model_catalog import normalize_model_names_to_dicts
+
+        field_value = normalize_model_names_to_dicts(field_value)
+        if field_name == model_field_name and isinstance(build_config.get(model_field_name), dict):
+            build_config[model_field_name]["value"] = field_value
 
     # Step 1: Refresh/cache model options, set defaults and input_types
     build_config = update_model_options_in_build_config(

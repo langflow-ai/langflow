@@ -295,16 +295,13 @@ export function FlowInsightsContent({
           </div>
 
           <div className="flex min-w-0 flex-nowrap items-center gap-2">
-            <div className="relative w-[220px] min-w-[180px]">
-              <IconComponent
-                name="Search"
-                className="absolute left-2 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground"
-              />
+            <div className="w-[220px] min-w-[180px]">
               <Input
+                icon="Search"
                 value={searchText}
                 onChange={(e) => setSearchText(e.target.value)}
                 placeholder={t("trace.searchRuns")}
-                className="h-8 pl-8 text-sm"
+                inputClassName="h-8 text-sm"
               />
             </div>
 
@@ -438,7 +435,7 @@ export function FlowInsightsContent({
       >
         <DialogContent
           className={
-            "right-0 top-[3rem] h-[calc(100dvh-3rem)] w-full max-w-none rounded-l-xl rounded-r-none p-0 sm:w-[80vw] " +
+            "right-0 top-0 h-dvh w-full max-w-none rounded-none p-0 sm:w-[65vw] " +
             "data-[state=open]:animate-in data-[state=closed]:animate-out " +
             "data-[state=open]:slide-in-from-right-1/2 data-[state=closed]:slide-out-to-right-1/2"
           }

@@ -32,14 +32,14 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     # stringification. Unwrap here because provider clients need the raw value.
     api_key = secret_value_to_str(api_key, strip=True)
 
-    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
+    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from
+    # global vars or env. The user's per-user, encrypted DB global variable is
+    # the source of truth (it's what the Agent component resolves via
+    # load_from_db) and MUST win over a process-wide ``.env`` value — otherwise
+    # a stale/revoked .env key silently shadows the key the user configured in
+    # the UI (and, in multi-tenant deploys, every user shares a server-wide env
+    # key). Env is the fallback for the no-user (lfx run) / no-DB-value case.
     def _resolve_var_name(var_name: str) -> str | None:
-        # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
-        # served flow stays isolated from process-wide credentials (matches VariableService).
-        if not is_env_fallback_disabled():
-            env_value = os.environ.get(var_name)
-            if env_value and env_value.strip():
-                return env_value.strip()
         if user_id and not (isinstance(user_id, str) and user_id == "None"):
 
             async def _get_by_var_name():
@@ -61,6 +61,12 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
             value = secret_value_to_str(value, strip=True)
             if value:
                 return value
+        # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
+        # served flow stays isolated from process-wide credentials (matches VariableService).
+        if not is_env_fallback_disabled():
+            env_value = os.environ.get(var_name)
+            if env_value and env_value.strip():
+                return env_value.strip()
         return None
 
     if api_key and api_key.strip():
@@ -118,6 +124,26 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
     return os.getenv(variable_name)
 
 
+def _env_value_for(var_key: str) -> str | None:
+    """Read a provider key from the environment, accepting a LANGFLOW_ alias.
+
+    Provider keys are conventionally bare (``GOOGLE_API_KEY``), but some .env
+    templates prefix everything with ``LANGFLOW_`` (matching how Langflow reads
+    its own settings). Accept ``LANGFLOW_<VAR>`` as a fallback so e.g.
+    ``LANGFLOW_GOOGLE_API_KEY`` enables Gemini exactly like ``GOOGLE_API_KEY``.
+    The bare name keeps precedence — no behavior change when it is set. The
+    resolved value is always stored under the bare canonical key by callers, so
+    downstream detection (available_model_providers, get_llm) is unaffected.
+    """
+    value = os.environ.get(var_key)
+    if value and value.strip():
+        return value
+    prefixed = os.environ.get(f"LANGFLOW_{var_key}")
+    if prefixed and prefixed.strip():
+        return prefixed
+    return None
+
+
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
     """Get all configured variables for a provider from database or environment."""
     result: dict[str, str] = {}
@@ -137,8 +163,8 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
         for var_info in provider_vars:
             var_key = var_info.get("variable_key")
             if var_key:
-                env_value = os.environ.get(var_key)
-                if env_value and env_value.strip():
+                env_value = _env_value_for(var_key)
+                if env_value:
                     result[var_key] = env_value
         return result
 
@@ -172,13 +198,28 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                     # env fallback (keeps served flows isolated from process-wide credentials).
                     if is_env_fallback_disabled():
                         continue
-                    env_value = os.environ.get(var_key)
-                    if env_value and env_value.strip():
+                    env_value = _env_value_for(var_key)
+                    if env_value:
                         values[var_key] = env_value
 
             return values
 
-    return run_until_complete(_get_all_variables())
+    db_values = run_until_complete(_get_all_variables())
+
+    # decrypt_api_key swallows Fernet InvalidToken silently and returns "",
+    # so a SECRET_KEY rotation leaves required keys missing from db_values
+    # even when the env var is set. Mirror get_api_key_for_provider's
+    # post-async env fallback so the assistant doesn't reject the request
+    # with "Missing required configuration" while the env var is present.
+    for var_info in provider_vars:
+        var_key = var_info.get("variable_key")
+        if not var_key or db_values.get(var_key):
+            continue
+        env_value = _env_value_for(var_key)
+        if env_value:
+            db_values[var_key] = env_value
+
+    return db_values
 
 
 def _validate_and_get_enabled_providers(

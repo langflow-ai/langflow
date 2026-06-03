@@ -4,16 +4,16 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
 import { ensureFileSelected } from "../../utils/ensure-checkbox-checked";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { generateRandomFilename } from "../../utils/generate-filename";
 import {
   disableInspectPanel,
   enableInspectPanel,
 } from "../../utils/open-advanced-options";
 
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
-import { TEXTS } from "../../utils/constants/texts";
 // Run tests in this file serially to avoid database conflicts with shared file state
 test.describe.configure({ mode: "serial" });
 
@@ -926,6 +926,11 @@ test(
     await page.mouse.down();
     await adjustScreenView(page);
 
+    // Text Input is legacy; its "Legacy" warning bar increases node height and
+    // can overlap the Read File handle. Dismiss the bars so the layout stays
+    // compact and the handles are clickable.
+    await dismissLegacyWarnings(page);
+
     // Connect first Text Input to Read File
     const targetHandle = page.getByTestId(
       "handle-file-shownode-server file path-left",
@@ -955,6 +960,9 @@ test(
     await page.mouse.up();
     await page.mouse.down();
     await adjustScreenView(page);
+
+    // Dismiss the second Text Input's legacy bar before connecting it.
+    await dismissLegacyWarnings(page);
 
     // Connect second Text Input to Read File
     const sourceHandle2 = page

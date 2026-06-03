@@ -1,9 +1,11 @@
 import { type Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 import { TEXTS } from "../../utils/constants/texts";
+
 async function toggleNodeState(page: Page, action: "minimize" | "expand") {
   const expectedCount = action === "minimize" ? 1 : 0;
   await page.getByTestId("more-options-modal").click();
@@ -19,6 +21,8 @@ test(
   async ({ page }) => {
     await awaitBootstrapTest(page);
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextOutput);

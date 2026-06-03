@@ -32,7 +32,9 @@ members = [
     "langflow-stepflow",
     "lfx",
     "lfx-arxiv",
+    "lfx-docling",
     "lfx-duckduckgo",
+    "lfx-ibm",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -3021,7 +3023,7 @@ wheels = [
 
 [[package]]
 name = "docling-core"
-version = "2.76.0"
+version = "2.78.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "defusedxml" },
@@ -3037,9 +3039,9 @@ dependencies = [
     { name = "typer" },
     { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/59/d9/bd87c8f97edd8870d356f169decaf93842c3720f022c9a2f8d788450abb1/docling_core-2.76.0.tar.gz", hash = "sha256:e4f681ad434cb45ba93bd3afaab62c5d910bf9ac6b3fdb98b12ee2e476bb75a4", size = 323569, upload-time = "2026-05-18T15:35:25.955Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/38/7f/11acfcbf29975d1abb198b4019d2f479eecd2b285845635fb08f3a6bab87/docling_core-2.78.0.tar.gz", hash = "sha256:d8b795bbd9c29b84f85dbe5ef273d968fead350c96589620d0eae01b0bb0c825", size = 333287, upload-time = "2026-05-29T15:55:29.499Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/31/b0/ad74845b637bf75ae554df9e69a6bcf974cceaa9c109e8f4612e8896c321/docling_core-2.76.0-py3-none-any.whl", hash = "sha256:55af705c6d0755254afddb959fe5dea3a6d413d3ea7539e380bb008268806316", size = 280739, upload-time = "2026-05-18T15:35:23.841Z" },
+    { url = "https://files.pythonhosted.org/packages/d6/de/7911f2750dd65b145e4971b090a3f5c30a56b243f4589d00543c5399b141/docling_core-2.78.0-py3-none-any.whl", hash = "sha256:69c0d67e87e4d3aec1509a758691a27e8ba0496f61a85ba705cc48a5b21ffe86", size = 285552, upload-time = "2026-05-29T15:55:27.936Z" },
 ]
 
 [package.optional-dependencies]
@@ -3135,6 +3137,61 @@ wheels = [
 ]
 
 [package.optional-dependencies]
+cli = [
+    { name = "rich", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "typer", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+convert-core = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "pillow", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "rtree", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+]
+extract-core = [
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.5", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+    { name = "pillow", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "polyfactory", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "rtree", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "scipy", version = "1.15.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "scipy", version = "1.17.1", source = { registry = "https://pypi.org/simple" }, marker = "(python_full_version >= '3.11' and platform_machine != 'x86_64') or (python_full_version >= '3.12' and platform_machine == 'x86_64' and sys_platform == 'darwin') or (python_full_version >= '3.11' and sys_platform != 'darwin')" },
+]
+feat-ocr-rapidocr = [
+    { name = "rapidocr", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+format-latex = [
+    { name = "pylatexenc", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+format-office = [
+    { name = "openpyxl", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "python-docx", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "python-pptx", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+format-pdf = [
+    { name = "docling-parse", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "pypdfium2", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+format-web = [
+    { name = "beautifulsoup4", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "lxml", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "marko", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+models-local = [
+    { name = "accelerate", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "defusedxml", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "docling-ibm-models", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "huggingface-hub", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "torch", version = "2.12.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.12.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64') or (python_full_version < '3.11' and platform_machine == 'x86_64') or (python_full_version < '3.14' and platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.27.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.12' and python_full_version < '3.14' and platform_machine == 'x86_64') or (python_full_version < '3.11' and platform_machine == 'x86_64') or (python_full_version < '3.14' and platform_machine != 'arm64' and platform_machine != 'x86_64') or sys_platform != 'darwin'" },
+]
+service-client = [
+    { name = "httpx", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "websockets", marker = "python_full_version != '3.11.*' or platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
 standard = [
     { name = "accelerate" },
     { name = "beautifulsoup4" },
@@ -5676,6 +5733,45 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f3/ff/c9baf0997266d398ae08347951a2970e5e96ed6232ed0252f649f2b9a7eb/ibm_cos_sdk_s3transfer-2.14.3.tar.gz", hash = "sha256:2251ebfc4a46144401e431f4a5d9f04c262a0d6f95c88a8e71071da056e55f72", size = 139594, upload-time = "2025-08-01T06:35:46.403Z" }
 
 [[package]]
+name = "ibm-db"
+version = "3.2.9"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/6c/36/8cd1503b7f947293bb045ec86e6fa60a0bef3bacf1a601840ea65c4b78de/ibm_db-3.2.9.tar.gz", hash = "sha256:0ad6dc4575519a5563fd7f845fc6bc00d688020e1d3ae78d382e79183bc32b0b", size = 276595, upload-time = "2026-05-26T15:41:25.98Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/bf/cc/4db3062ce3b404098e73ec67498b25c672b212303a870c2703ac8f9a00c6/ibm_db-3.2.9-cp310-cp310-macosx_10_15_x86_64.whl", hash = "sha256:e130a461a0ce3fecdb9896ec767d95d89d4f14e5eb4b8b5e63aca249790c5155", size = 24166574, upload-time = "2026-04-22T16:27:50.985Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/62/98bd8e55a9a2fdd20997bd81e8d8f68b8956fa55d8c2c0cae2fd94ccd2f5/ibm_db-3.2.9-cp310-cp310-macosx_14_0_arm64.whl", hash = "sha256:4edde94384f452720b6bc58b94ed03c9b3f5dadb7343d983a55c1122b4a38cf0", size = 20391416, upload-time = "2026-04-22T16:27:54.236Z" },
+    { url = "https://files.pythonhosted.org/packages/14/be/6f95944b3052b288e5842141f334633c900ba3320f8534a8f80f657ffbde/ibm_db-3.2.9-cp310-cp310-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:80c2e242601ff2e99bce79da0fddc6e0e525b1f83d05423f00524bad5c41991e", size = 40635334, upload-time = "2026-04-22T16:27:56.746Z" },
+    { url = "https://files.pythonhosted.org/packages/89/85/571df0152cb8632e99f7923599b94fd2139f01f9e9d6ca92345f75223e9e/ibm_db-3.2.9-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:0838993f2e98827afa9f30a1a4648bdadccabb6f9f6805ee42f24787a6ae45b7", size = 43980561, upload-time = "2026-04-22T16:27:59.973Z" },
+    { url = "https://files.pythonhosted.org/packages/f1/4d/73602f4decf4c3f2f21079108cd5b43336db8c608c16aba8afd2578aa474/ibm_db-3.2.9-cp310-cp310-win32.whl", hash = "sha256:825f1ab7d911daef6ca370af62608d663e2193244832cad8dabbfa9708e81bdb", size = 24609207, upload-time = "2026-04-22T16:28:03.043Z" },
+    { url = "https://files.pythonhosted.org/packages/0a/22/8d558528e019bdd595290ba109f837b17d476bf4fbeed46e4980b052a961/ibm_db-3.2.9-cp310-cp310-win_amd64.whl", hash = "sha256:b163dd252f695113851a3d480289f8b368885835fe3296e8b202063440fe34c8", size = 28754450, upload-time = "2026-04-22T16:28:05.536Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/47/992fe2d1157963df678d94cc2573e4e292d6e29c2c47fb069a36f16e3c90/ibm_db-3.2.9-cp311-cp311-macosx_10_15_x86_64.whl", hash = "sha256:b72049768de33e0767e7ca4f5cf9c44812a6422c8a4e07bb07fd30c242f555b2", size = 24166574, upload-time = "2026-04-22T16:28:08.538Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/27/628276aff846d1afa4680106ef7905916b12f32855c95540c638184203ec/ibm_db-3.2.9-cp311-cp311-macosx_14_0_arm64.whl", hash = "sha256:a002be22327f29e1f6cf48b7ee84843e6a257bb7a2f7d017caa6e731aaea4e5a", size = 20391417, upload-time = "2026-04-22T16:28:11.392Z" },
+    { url = "https://files.pythonhosted.org/packages/2c/a5/3adf8573468a18f3c82fc41c949326a500ee0335f0290e90b565722eacc0/ibm_db-3.2.9-cp311-cp311-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:5831070fe9e6b2654668cfada10fb31a64e7555a7ef35e04e17ca831822df3bb", size = 40641529, upload-time = "2026-04-22T16:28:13.944Z" },
+    { url = "https://files.pythonhosted.org/packages/12/9d/9c0c4cf2eacfdfd5faf2f878ca1e2fdb02640a21f3defa2390c0d41c85cc/ibm_db-3.2.9-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:ec172bc1c61ac15cb98ebe1a2737689752b6565a2afa9c4442a09129f2ada963", size = 43987216, upload-time = "2026-04-22T16:28:17.083Z" },
+    { url = "https://files.pythonhosted.org/packages/05/c4/13723b51f6b560f44f146518e52b81c47e4a748d118e45f1ae3a5b496855/ibm_db-3.2.9-cp311-cp311-win32.whl", hash = "sha256:8aaefd0162f7c500af87b39593eeec126312cbebf6c4ff7c3051eeb9e8b7f47d", size = 24609273, upload-time = "2026-04-22T16:28:19.767Z" },
+    { url = "https://files.pythonhosted.org/packages/34/ef/b3dba8a536b8be36086c05f2d6903593aea7e9aef10c32bb7fabc7292660/ibm_db-3.2.9-cp311-cp311-win_amd64.whl", hash = "sha256:82517f76253ba3153aa8a43073cf9230a487974a660f3cf99bd4adda41910407", size = 28754305, upload-time = "2026-04-22T16:28:22.521Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/19/e4664a631cf69c2aa6684c03073b732ccbd41ed440a9d5d94f3700b979cb/ibm_db-3.2.9-cp312-cp312-macosx_10_15_x86_64.whl", hash = "sha256:5432ef9103c094631ebb7e534a72dfd8324f265c3695e79698eb5c09fa28cddb", size = 24166563, upload-time = "2026-04-22T16:28:25.312Z" },
+    { url = "https://files.pythonhosted.org/packages/40/23/5f9388f5ee2148a0ca5c372c4124415bbf7aaba5b64cd13ef5fb801becde/ibm_db-3.2.9-cp312-cp312-macosx_14_0_arm64.whl", hash = "sha256:d4b650ac1e3a9161090234821a655adb767baa52764e839c1a5ff306cd967de5", size = 20391654, upload-time = "2026-04-22T16:28:27.865Z" },
+    { url = "https://files.pythonhosted.org/packages/77/02/e1226db9f19ae1672098027cbb0fab7bea8c29e9b802e4337a9651595c09/ibm_db-3.2.9-cp312-cp312-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:4b3d8d707a9cf3bf633c7742fffc557d9c71e6555f0c9733a0f9b8ed7f874ffe", size = 40606621, upload-time = "2026-04-22T16:28:30.411Z" },
+    { url = "https://files.pythonhosted.org/packages/23/26/3bf46353bb850d0ab71b8f9cc396da4e76d41e54abad26bc5f2fed95c8f7/ibm_db-3.2.9-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:e60e1a12fa8e36510384944e1b438e6e9a353bc92d1d496a66acc8e1cb853a5e", size = 43945644, upload-time = "2026-04-22T16:28:33.351Z" },
+    { url = "https://files.pythonhosted.org/packages/fe/75/c0506dc89c4da674adb40aa038729b1513d90a1ef3e2e6e34faaa00a5981/ibm_db-3.2.9-cp312-cp312-win32.whl", hash = "sha256:a0b395c0f770627bbb6765f45d9fe99ed990fc4801c1adeeaa872d599ccc3b9d", size = 24608567, upload-time = "2026-04-22T16:28:36.145Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/fa/730129a0169d4986c3af351617051a2fbcc73858de21f141ef8978f502a4/ibm_db-3.2.9-cp312-cp312-win_amd64.whl", hash = "sha256:2353c0b968ec337ee4d4111dc4f8fe15a56818b3c399939de952f9a1f2589840", size = 28755039, upload-time = "2026-04-22T16:28:38.868Z" },
+    { url = "https://files.pythonhosted.org/packages/b1/62/2027a98282f2bc02ece82b46ea086b43cbc73fa4aa50e371a8e828a4b3cd/ibm_db-3.2.9-cp313-cp313-macosx_10_15_x86_64.whl", hash = "sha256:09cc163f950d0e8ffb8e390ddd65c3de45c0dc752ce7744e0934e74374134572", size = 24166466, upload-time = "2026-04-22T16:28:41.663Z" },
+    { url = "https://files.pythonhosted.org/packages/98/86/d66b45f1d7e975215abdcb9d33e61ed050467c0661fe6d98c65d2b6476bb/ibm_db-3.2.9-cp313-cp313-macosx_14_0_arm64.whl", hash = "sha256:b9264183d3353f68a77f06a8cc4ff8ba8fdfc567bcde619c74b7fc685f27152a", size = 20391631, upload-time = "2026-04-22T16:28:44.114Z" },
+    { url = "https://files.pythonhosted.org/packages/ec/8b/984c1584d1ffaa61a9c88d01ebda111bac04ede74ec8fa10528c89f680b5/ibm_db-3.2.9-cp313-cp313-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:06e578cceff73ec5a04a89b2d1807867b37553bee8dcd32369a9d07d17fe86c2", size = 40606656, upload-time = "2026-04-22T16:28:47.501Z" },
+    { url = "https://files.pythonhosted.org/packages/73/48/b017c182e3e5e902faa25b81a0416afdc7341a6fb03494f78fcfe69224cb/ibm_db-3.2.9-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:bbc992915eb03a70be716844bb05f252dc0413f0d475602445be66df7e188a11", size = 43945653, upload-time = "2026-04-22T16:28:50.4Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/08/fd17875b1ddf66a8252f6cb80d30f7d2d7ffe5fd317a473ce25067ec6305/ibm_db-3.2.9-cp313-cp313-win32.whl", hash = "sha256:03e044a50abb91852b194bf6f6ca35b1c46b8695e0377c663ee3361c118024ce", size = 24608571, upload-time = "2026-04-22T16:28:53.195Z" },
+    { url = "https://files.pythonhosted.org/packages/5a/c7/fcca5a11346d218e6a55328211c575cc29c53e7423e8b3c6c99e93144fbd/ibm_db-3.2.9-cp313-cp313-win_amd64.whl", hash = "sha256:973edafd5622a947d3a205274db5ace68a7d5bf53d92003f0901151b33c89d27", size = 28755050, upload-time = "2026-04-22T16:28:55.681Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/1e/93cb11b58589bab4b58433a54d2eb2716e4a735d9f604f01afe1dc26485c/ibm_db-3.2.9-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:5190366f1d4a777797a39624146cfa99d0884f8a3c7ced1c82c8fb9520d65faa", size = 24166743, upload-time = "2026-04-22T16:28:58.396Z" },
+    { url = "https://files.pythonhosted.org/packages/7f/b4/238c00b95b2697c5e3cf1526057e5389c5d41d7803246c21f5057b5e2318/ibm_db-3.2.9-cp314-cp314-macosx_14_0_arm64.whl", hash = "sha256:d204acdaa08436dd84ef999bb048ff352b7a1deae02752d144586bd278d9d31a", size = 20391505, upload-time = "2026-04-22T16:29:01.228Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/a1/e60b39120807bfafacdbc2a85b5d88b36fccfb36ed45338b792c77b63612/ibm_db-3.2.9-cp314-cp314-manylinux2014_i686.manylinux_2_17_i686.whl", hash = "sha256:9eb5725526b046b0d0e1021c30fe2e60078f2f1080010dc93f95d057c51cce0a", size = 40606947, upload-time = "2026-04-22T16:29:04.25Z" },
+    { url = "https://files.pythonhosted.org/packages/46/ec/e44e5c11431a16ec933e10df9bfb55e97001b6946c10eba584219dd78e7a/ibm_db-3.2.9-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.whl", hash = "sha256:5ccbce68115de998ba99af314b489f36daab5453dbdb69c9a625b3a9722da0e3", size = 43945000, upload-time = "2026-04-22T16:29:07.36Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/9b/8b544037a245e573b4ba21f4b258143e5e4c147c9a75c25eae263ee6a861/ibm_db-3.2.9-cp314-cp314-win32.whl", hash = "sha256:350d6e40c62340b583b6aa4887730a626191290fa91f63d9f7e58ff60edf17af", size = 25562087, upload-time = "2026-04-22T16:29:10.118Z" },
+    { url = "https://files.pythonhosted.org/packages/07/92/6a3749de901a633c4eff94e58fb2263691981582771f9dc03ba54ba226f2/ibm_db-3.2.9-cp314-cp314-win_amd64.whl", hash = "sha256:62b2fc14da8b49895f6d9670a3bdce65d8ea2a5fdabd00303fbe404b8f84d947", size = 29355366, upload-time = "2026-04-22T16:29:13.318Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/04/0730e66aa3dc9c61bc2b1f59abdb274188bc1ae1cafc01705e3724ccead1/ibm_db-3.2.9-cp314-cp314t-macosx_10_15_x86_64.whl", hash = "sha256:5fa430ce90eda04f2b1326a84817f09ad6a9f16d475afacb43522debf4283300", size = 24170941, upload-time = "2026-04-22T16:29:16.366Z" },
+]
+
+[[package]]
 name = "ibm-watsonx-ai"
 version = "1.3.42"
 source = { registry = "https://pypi.org/simple" }
@@ -7193,20 +7289,22 @@ wheels = [
 
 [[package]]
 name = "langchain-mongodb"
-version = "0.7.0"
+version = "0.11.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "langchain" },
+    { name = "langchain-classic" },
     { name = "langchain-core" },
     { name = "langchain-text-splitters" },
     { name = "lark" },
     { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "numpy", version = "2.4.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "pymongo" },
+    { name = "pymongo-search-utils" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/30/89ea882d3b13642049afdef94782185cf030a0f430e3785c5b8445c808d1/langchain_mongodb-0.7.0.tar.gz", hash = "sha256:f89479b8902239f29c3664dedbc35ef802d86662a6a847213c145fdd46747fb6", size = 280207, upload-time = "2025-08-19T21:12:53.447Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ba/0e/03027bbf0ae3ee71d00e32f5c64395cbee05393e6e5dc56e2d88320db542/langchain_mongodb-0.11.0.tar.gz", hash = "sha256:db483f12e8a4fdbbcfb0594881962fd1f0afcb38a3d42ee0d5fe8a2be20e1e86", size = 356447, upload-time = "2026-01-15T17:00:37.102Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/4d/84/d7edcdc71b7089cef1abcce65042443a2dc3a43627bc08eadf529b334026/langchain_mongodb-0.7.0-py3-none-any.whl", hash = "sha256:c9122e56302ed6072c704500372a967f20560d9c9f372ce876c05229e9664c29", size = 60319, upload-time = "2025-08-19T21:12:52.524Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/a1/a4ef0c7027166540a4aced056b1fd7194e4519932d2a846fd2cfd9f057cb/langchain_mongodb-0.11.0-py3-none-any.whl", hash = "sha256:7e1f43684c907d1f1fee4dbc480dd4909b3ebf03b5d3dad105ed9f4a4280d49f", size = 62037, upload-time = "2026-01-15T17:00:36.258Z" },
 ]
 
 [[package]]
@@ -7251,6 +7349,19 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-perplexity"
+version = "1.3.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "perplexityai" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/0f/9a/19bf0312b6c0ec965f6d075a47d9b3d89aa82e32bbd5fe7af71c51b077fa/langchain_perplexity-1.3.1.tar.gz", hash = "sha256:f9c0e2cf24a636d4bf90ac46e0c36cfe506b7f83f08d181c80a57194068f54e6", size = 159586, upload-time = "2026-05-27T20:45:30.991Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/0b/68/77d341a359734f250e05714b0bd643536eb71b9d1aa16a32c0e5cea66491/langchain_perplexity-1.3.1-py3-none-any.whl", hash = "sha256:6bad128417c3841e5aa10458760247fa98f4f2bc98b1d247815aaf463ce9b53a", size = 24707, upload-time = "2026-05-27T20:45:29.979Z" },
+]
+
+[[package]]
 name = "langchain-pinecone"
 version = "0.2.13"
 source = { registry = "https://pypi.org/simple" }
@@ -7279,6 +7390,20 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4f/24/9777489d6fbbee64af0c8f96d4f840239c408cf694f3394672807dafc490/langchain_protocol-0.0.15.tar.gz", hash = "sha256:9ab2d11ee73944754f10e037e717098d3a6796f0e58afa9cadda6154e7655ade", size = 5862, upload-time = "2026-05-01T22:30:04.748Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/1d/7a/9c97a7b9cbe4c5dc6a44cdb1545450c28f0c8ce89b9c1f0ee7fbad896263/langchain_protocol-0.0.15-py3-none-any.whl", hash = "sha256:461eb794358f83d5e42635a5797799ffec7b4702314e34edf73ac21e75d3ef79", size = 6982, upload-time = "2026-05-01T22:30:03.877Z" },
+]
+
+[[package]]
+name = "langchain-qdrant"
+version = "1.1.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "pydantic" },
+    { name = "qdrant-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/77/66/fb1c4e2801e55d92dea71d9a7f948574a322a1f5adc7913231023827f79f/langchain_qdrant-1.1.0.tar.gz", hash = "sha256:433236845736f973543ac6b7137f9d7fa511b7539373fbc6565c581d3ba59373", size = 195565, upload-time = "2025-10-22T17:27:15.157Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/62/7e/d951082cb13e923508ba1eee4f48e7d511efc991c6506af567334654a3f3/langchain_qdrant-1.1.0-py3-none-any.whl", hash = "sha256:546c5c9aa57f543dbcee07343f730c331e4ec2af2ec55b541010af08d872bf35", size = 24254, upload-time = "2025-10-22T17:27:14.065Z" },
 ]
 
 [[package]]
@@ -7344,6 +7469,22 @@ wheels = [
 ]
 
 [[package]]
+name = "langchain-weaviate"
+version = "0.0.6"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "langchain-core" },
+    { name = "numpy", version = "2.2.6", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "numpy", version = "2.4.5", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
+    { name = "simsimd" },
+    { name = "weaviate-client" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/db/07/dd989027b4e25c30427589ffc6093ffbe8d292561e42c1f19802a1018585/langchain_weaviate-0.0.6.tar.gz", hash = "sha256:762be0e66a1a63ebe01068483ceecd549e1b0e44c0511258de30c24dd60ba58e", size = 9740, upload-time = "2025-11-04T17:14:22.569Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/7d/0d/4dd7a439e3a19bdd664cf7964d60460c3727a530c46864b3ca2cf795d128/langchain_weaviate-0.0.6-py3-none-any.whl", hash = "sha256:a5805bd45bfccf3c1ef40f7d112fe38e69e4e225361ff3625f1b1801bb2be16c", size = 10070, upload-time = "2025-11-04T17:14:19.673Z" },
+]
+
+[[package]]
 name = "langchainhub"
 version = "0.1.21"
 source = { registry = "https://pypi.org/simple" }
@@ -7364,7 +7505,9 @@ source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
     { name = "lfx-arxiv" },
+    { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-ibm" },
 ]
 
 [package.optional-dependencies]
@@ -7381,14 +7524,13 @@ couchbase = [
     { name = "couchbase" },
 ]
 docling = [
-    { name = "langchain-docling" },
-    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
-    { name = "rapidocr-onnxruntime" },
-    { name = "tesserocr" },
-    { name = "torch", version = "2.12.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
-    { name = "torch", version = "2.12.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
-    { name = "torchvision", version = "0.27.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
-    { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+    { name = "lfx-docling", extra = ["local"] },
+]
+docling-chunking = [
+    { name = "lfx-docling", extra = ["chunking"] },
+]
+docling-image-description = [
+    { name = "lfx-docling", extra = ["image-description"] },
 ]
 local = [
     { name = "ctransformers" },
@@ -7451,23 +7593,22 @@ requires-dist = [
     { name = "clickhouse-connect", marker = "extra == 'clickhouse-connect'", specifier = "==0.7.19" },
     { name = "couchbase", marker = "extra == 'couchbase'", specifier = ">=4.2.1" },
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
-    { name = "langchain-docling", marker = "extra == 'docling'", specifier = ">=1.1.0" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
+    { name = "lfx-docling", editable = "src/bundles/docling" },
+    { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
+    { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
+    { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
-    { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'docling'", specifier = ">=1.0.0" },
-    { name = "rapidocr-onnxruntime", marker = "extra == 'docling'", specifier = ">=1.4.4" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
     { name = "sqlalchemy", extras = ["postgresql-psycopg2binary"], marker = "extra == 'postgresql'", specifier = ">=2.0.38,<3.0.0" },
-    { name = "tesserocr", marker = "extra == 'docling'", specifier = ">=2.8.0" },
-    { name = "torch", marker = "extra == 'docling'", specifier = ">=2.6.0", index = "https://download.pytorch.org/whl/cpu" },
-    { name = "torchvision", marker = "extra == 'docling'", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu" },
     { name = "webrtcvad", marker = "extra == 'audio'", specifier = ">=2.0.10" },
 ]
-provides-extras = ["docling", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
+provides-extras = ["docling", "docling-chunking", "docling-image-description", "audio", "couchbase", "cassio", "local", "clickhouse-connect", "nv-ingest", "postgresql"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -7556,6 +7697,10 @@ dependencies = [
     { name = "langchain-core" },
     { name = "langchain-experimental" },
     { name = "langchain-ibm", marker = "python_full_version < '3.14'" },
+    { name = "langchain-mongodb" },
+    { name = "langchain-perplexity" },
+    { name = "langchain-qdrant" },
+    { name = "langchain-weaviate" },
     { name = "langchainhub" },
     { name = "langgraph-checkpoint" },
     { name = "lfx" },
@@ -7638,8 +7783,8 @@ all = [
     { name = "cryptography" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "datasets" },
-    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "docling-core" },
+    { name = "docling-slim", extra = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
@@ -7682,6 +7827,7 @@ all = [
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
+    { name = "langchain-qdrant" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
     { name = "langfuse" },
@@ -7707,6 +7853,7 @@ all = [
     { name = "opik" },
     { name = "pgvector" },
     { name = "pyarrow" },
+    { name = "pydantic" },
     { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -7805,8 +7952,8 @@ complete = [
     { name = "cryptography" },
     { name = "cuga", marker = "(python_full_version < '3.14' and platform_machine == 'arm64') or (python_full_version < '3.14' and sys_platform != 'darwin')" },
     { name = "datasets" },
-    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "docling-core" },
+    { name = "docling-slim", extra = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "easyocr", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "elasticsearch" },
     { name = "faiss-cpu", version = "1.9.0.post1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14'" },
@@ -7849,6 +7996,7 @@ complete = [
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
+    { name = "langchain-qdrant" },
     { name = "langchain-sambanova" },
     { name = "langchain-unstructured" },
     { name = "langfuse" },
@@ -7874,6 +8022,7 @@ complete = [
     { name = "opik" },
     { name = "pgvector" },
     { name = "pyarrow" },
+    { name = "pydantic" },
     { name = "pymongo" },
     { name = "pypdf" },
     { name = "python-docx" },
@@ -7917,8 +8066,18 @@ datasets = [
     { name = "datasets" },
 ]
 docling = [
-    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
     { name = "docling-core" },
+    { name = "docling-slim", extra = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+]
+docling-chunking = [
+    { name = "docling-core", extra = ["chunking"] },
+    { name = "docling-slim", extra = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "tiktoken" },
+]
+docling-image-description = [
+    { name = "docling-core" },
+    { name = "docling-slim", extra = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-docling" },
 ]
 docx = [
     { name = "python-docx" },
@@ -8001,6 +8160,7 @@ langchain-unstructured = [
 ]
 langfuse = [
     { name = "langfuse" },
+    { name = "pydantic" },
 ]
 langsmith = [
     { name = "langsmith" },
@@ -8105,6 +8265,9 @@ pytube = [
 ]
 qdrant = [
     { name = "qdrant-client" },
+]
+qdrant-vectors = [
+    { name = "langchain-qdrant" },
 ]
 qianfan = [
     { name = "qianfan" },
@@ -8241,8 +8404,9 @@ requires-dist = [
     { name = "datasets", marker = "extra == 'datasets'", specifier = ">2.14.7,<5.0.0" },
     { name = "ddgs", marker = "extra == 'duckduckgo'", specifier = ">=9.0.0" },
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
-    { name = "docling", marker = "(platform_machine != 'x86_64' and extra == 'docling') or (sys_platform != 'darwin' and extra == 'docling')", specifier = ">=2.36.1,<3.0.0" },
-    { name = "docling-core", marker = "extra == 'docling'", specifier = ">=2.36.1,<3.0.0" },
+    { name = "docling-core", marker = "extra == 'docling'", specifier = ">=2.77.0,<3.0.0" },
+    { name = "docling-core", extras = ["chunking"], marker = "extra == 'docling-chunking'", specifier = ">=2.77.0,<3.0.0" },
+    { name = "docling-slim", extras = ["cli", "convert-core", "extract-core", "feat-ocr-rapidocr", "format-latex", "format-office", "format-pdf", "format-web", "models-local", "service-client"], marker = "(platform_machine != 'x86_64' and extra == 'docling') or (sys_platform != 'darwin' and extra == 'docling')", specifier = ">=2.36.1,<3.0.0" },
     { name = "docstring-parser", specifier = ">=0.16,<1.0.0" },
     { name = "duckdb", specifier = ">=1.0.0,<2.0.0" },
     { name = "dynaconf", specifier = ">=3.2.13,<4.0.0" },
@@ -8294,6 +8458,7 @@ requires-dist = [
     { name = "langchain-cohere", marker = "extra == 'cohere'", specifier = "~=0.5.0" },
     { name = "langchain-community", specifier = "~=0.4.1" },
     { name = "langchain-core", specifier = ">=1.3.3,<2.0.0" },
+    { name = "langchain-docling", marker = "extra == 'docling-image-description'", specifier = ">=1.1.0" },
     { name = "langchain-elasticsearch", marker = "extra == 'elasticsearch'", specifier = "~=1.0.0" },
     { name = "langchain-experimental", specifier = "~=0.4.1" },
     { name = "langchain-google-calendar-tools", marker = "extra == 'google'", specifier = "~=0.0.1" },
@@ -8307,13 +8472,18 @@ requires-dist = [
     { name = "langchain-mcp-adapters", marker = "extra == 'langchain-mcp-adapters'", specifier = ">=0.1.14,<0.2.0" },
     { name = "langchain-milvus", marker = "extra == 'milvus'", specifier = "~=0.3.2" },
     { name = "langchain-mistralai", marker = "extra == 'mistral'", specifier = "~=1.1.1" },
-    { name = "langchain-mongodb", marker = "extra == 'mongodb-vectors'", specifier = "==0.7.0" },
+    { name = "langchain-mongodb", specifier = ">=0.11.0" },
+    { name = "langchain-mongodb", marker = "extra == 'mongodb-vectors'", specifier = ">=0.11.0" },
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "~=1.0.0" },
     { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "~=0.3.10" },
     { name = "langchain-openai", marker = "extra == 'openai'", specifier = ">=1.1.6" },
+    { name = "langchain-perplexity", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
+    { name = "langchain-qdrant", specifier = ">=1.0.0,<2.0.0" },
+    { name = "langchain-qdrant", marker = "extra == 'qdrant-vectors'", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-sambanova", marker = "extra == 'sambanova'", specifier = "~=1.0.0" },
     { name = "langchain-unstructured", marker = "extra == 'langchain-unstructured'", specifier = "~=1.0.0" },
+    { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "langchainhub", specifier = "~=0.1.15" },
     { name = "langflow-base", extras = ["ag2"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["aioboto3"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8338,6 +8508,8 @@ requires-dist = [
     { name = "langflow-base", extras = ["cuga"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["datasets"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docling"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling-chunking'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["docling"], marker = "extra == 'docling-image-description'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["docx"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["easyocr"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["elasticsearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8392,6 +8564,7 @@ requires-dist = [
     { name = "langflow-base", extras = ["pypdf"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pytube"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["qdrant"], marker = "extra == 'complete'", editable = "src/backend/base" },
+    { name = "langflow-base", extras = ["qdrant-vectors"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["qianfan"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["ragstack"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["redis"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8451,7 +8624,7 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-requests", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-instrumentation-urllib3", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
-    { name = "opik", marker = "extra == 'opik'", specifier = ">=1.6.3,<2.0.0" },
+    { name = "opik", marker = "extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = "==2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -8463,9 +8636,10 @@ requires-dist = [
     { name = "pyarrow", marker = "extra == 'pyarrow'", specifier = ">=23.0.1,<24.0.0" },
     { name = "pyasn1", specifier = ">=0.6.3,<0.7.0" },
     { name = "pydantic", specifier = ">=2.13.0,<3.0.0" },
+    { name = "pydantic", marker = "extra == 'langfuse'", specifier = ">=2.13.0" },
     { name = "pydantic-settings", specifier = ">=2.2.0,<3.0.0" },
     { name = "pyjwt", specifier = ">=2.12.1" },
-    { name = "pymongo", marker = "extra == 'mongodb'", specifier = "==4.10.1" },
+    { name = "pymongo", marker = "extra == 'mongodb'", specifier = ">=4.10.1" },
     { name = "pypdf", specifier = ">=6.10.0,<7.0.0" },
     { name = "pypdf", marker = "extra == 'pypdf'", specifier = ">=6.10.0,<7.0.0" },
     { name = "pyperclip", specifier = ">=1.8.2,<2.0.0" },
@@ -8494,6 +8668,7 @@ requires-dist = [
     { name = "sseclient-py", marker = "extra == 'sseclient'", specifier = "==1.8.0" },
     { name = "structlog", specifier = ">=25.4.0,<26.0.0" },
     { name = "supabase", marker = "extra == 'supabase'", specifier = ">=2.6.0,<3.0.0" },
+    { name = "tiktoken", marker = "extra == 'docling-chunking'", specifier = ">=0.7.0" },
     { name = "toolguard", marker = "extra == 'toolguard'", specifier = ">=0.2.16,<1.0.0" },
     { name = "traceloop-sdk", marker = "extra == 'traceloop'", specifier = ">=0.43.1,<1.0.0" },
     { name = "transformers", specifier = ">=5.6.0,<6.0.0" },
@@ -8514,7 +8689,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -8875,7 +9050,11 @@ dev = [
 integration = [
     { name = "beautifulsoup4" },
     { name = "langchain-community" },
+    { name = "langchain-mongodb" },
     { name = "langchain-openai" },
+    { name = "langchain-perplexity" },
+    { name = "langchain-qdrant" },
+    { name = "langchain-weaviate" },
     { name = "lxml" },
 ]
 
@@ -8940,7 +9119,11 @@ dev = [
 integration = [
     { name = "beautifulsoup4", specifier = ">=4.12.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-mongodb", specifier = ">=0.11.0" },
     { name = "langchain-openai", specifier = ">=1.1.12,<2.0.0" },
+    { name = "langchain-perplexity", specifier = ">=1.0.0,<2.0.0" },
+    { name = "langchain-qdrant", specifier = ">=1.1.0" },
+    { name = "langchain-weaviate", specifier = ">=0.0.6" },
     { name = "lxml", specifier = ">=5.0.0" },
 ]
 
@@ -8960,6 +9143,75 @@ requires-dist = [
 ]
 
 [[package]]
+name = "lfx-docling"
+version = "0.1.0"
+source = { editable = "src/bundles/docling" }
+dependencies = [
+    { name = "docling-core" },
+    { name = "httpx" },
+    { name = "lfx" },
+]
+
+[package.optional-dependencies]
+all = [
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "docling-core", extra = ["chunking"] },
+    { name = "langchain-docling" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
+    { name = "rapidocr-onnxruntime" },
+    { name = "tesserocr" },
+    { name = "tiktoken" },
+    { name = "torch", version = "2.12.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.12.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.27.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+]
+chunking = [
+    { name = "docling-core", extra = ["chunking"] },
+    { name = "tiktoken" },
+]
+image-description = [
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "langchain-docling" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
+    { name = "rapidocr-onnxruntime" },
+    { name = "tesserocr" },
+    { name = "torch", version = "2.12.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.12.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.27.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+]
+local = [
+    { name = "docling", marker = "platform_machine != 'x86_64' or sys_platform != 'darwin'" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin'" },
+    { name = "rapidocr-onnxruntime" },
+    { name = "tesserocr" },
+    { name = "torch", version = "2.12.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torch", version = "2.12.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+    { name = "torchvision", version = "0.27.0", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version >= '3.14' and sys_platform == 'darwin') or (platform_machine == 'arm64' and sys_platform == 'darwin')" },
+    { name = "torchvision", version = "0.27.0+cpu", source = { registry = "https://download.pytorch.org/whl/cpu" }, marker = "(python_full_version < '3.14' and platform_machine != 'arm64') or sys_platform != 'darwin'" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "docling", marker = "(platform_machine != 'x86_64' and extra == 'local') or (sys_platform != 'darwin' and extra == 'local')", specifier = ">=2.36.1,<3.0.0" },
+    { name = "docling-core", specifier = ">=2.36.1,<3.0.0" },
+    { name = "docling-core", extras = ["chunking"], marker = "extra == 'chunking'", specifier = ">=2.36.1,<3.0.0" },
+    { name = "httpx", specifier = ">=0.28.1,<1.0.0" },
+    { name = "langchain-docling", marker = "extra == 'image-description'", specifier = ">=1.1.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "lfx-docling", extras = ["local"], marker = "extra == 'image-description'", editable = "src/bundles/docling" },
+    { name = "lfx-docling", extras = ["local", "chunking", "image-description"], marker = "extra == 'all'", editable = "src/bundles/docling" },
+    { name = "ocrmac", marker = "sys_platform == 'darwin' and extra == 'local'", specifier = ">=1.0.0" },
+    { name = "rapidocr-onnxruntime", marker = "extra == 'local'", specifier = ">=1.4.4" },
+    { name = "tesserocr", marker = "extra == 'local'", specifier = ">=2.8.0" },
+    { name = "tiktoken", marker = "extra == 'chunking'", specifier = ">=0.7.0" },
+    { name = "torch", marker = "extra == 'local'", specifier = ">=2.6.0", index = "https://download.pytorch.org/whl/cpu" },
+    { name = "torchvision", marker = "extra == 'local'", specifier = ">=0.21.0", index = "https://download.pytorch.org/whl/cpu" },
+]
+provides-extras = ["local", "chunking", "image-description", "all"]
+
+[[package]]
 name = "lfx-duckduckgo"
 version = "0.1.0"
 source = { editable = "src/bundles/duckduckgo" }
@@ -8973,6 +9225,28 @@ dependencies = [
 requires-dist = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-ibm"
+version = "0.1.0"
+source = { editable = "src/bundles/ibm" }
+dependencies = [
+    { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },
+    { name = "ibm-watsonx-ai", version = "1.3.42", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
+    { name = "ibm-watsonx-ai", version = "1.5.11", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11' and python_full_version < '3.14'" },
+    { name = "langchain-community" },
+    { name = "langchain-ibm", marker = "python_full_version < '3.14'" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'", specifier = ">=3.2.9,<4.0.0" },
+    { name = "ibm-watsonx-ai", marker = "python_full_version < '3.14'", specifier = ">=1.3.1,<2.0.0" },
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-ibm", marker = "python_full_version < '3.14'", specifier = "~=1.0.2" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
@@ -12040,7 +12314,7 @@ wheels = [
 
 [[package]]
 name = "opik"
-version = "1.11.14"
+version = "2.0.49"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "boto3-stubs", extra = ["bedrock-runtime"] },
@@ -12063,9 +12337,9 @@ dependencies = [
     { name = "uuid6" },
     { name = "watchfiles" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1d/65/00eb1eb10e301e4cc7498193e0d0a34fb1204f300f0a62e2a9d1a8635aa2/opik-1.11.14.tar.gz", hash = "sha256:9e1e0580e84caea5b0ef987160911f4d2f3dd62285a58ac6ad595565efdb9ab8", size = 890564, upload-time = "2026-04-17T08:14:19.095Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/68/40/bc93bff3b9e5387488981985ecd3630cdd0268ecccb9dd23e0ba124f3d42/opik-2.0.49.tar.gz", hash = "sha256:13a6c0e662763e67f826bf8d3d7bedc0b4fbaaf1d9387121707f9a0ae78cefcd", size = 1005440, upload-time = "2026-05-27T12:59:48.07Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/40/27/7baba6a280574a5cfe840600b1db1835bc583288d511a81ef1498cbc36c6/opik-1.11.14-py3-none-any.whl", hash = "sha256:72fe9491f67ad032ebae37cb77f43d7559d272aba3b140a73a29bd709d3047a5", size = 1475478, upload-time = "2026-04-17T08:14:17.601Z" },
+    { url = "https://files.pythonhosted.org/packages/6e/de/83147fda38f8f6d0978a9e978f394bc02870a9973daf69741812554db125/opik-2.0.49-py3-none-any.whl", hash = "sha256:e550a25593fe617d9a009c673558eda221c0d67ba3637abf3b3f2af6f5fd4deb", size = 1624155, upload-time = "2026-05-27T12:59:45.876Z" },
 ]
 
 [[package]]
@@ -12382,6 +12656,23 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/21/04/8b1f0388389c0595ccf69fec8723983e598edb0303f6227a08bc5d8cd013/peewee-4.0.5.tar.gz", hash = "sha256:b43a21493f19f205a016cb4a9e29c7eca3500576d29447a89732022d193450ba", size = 721062, upload-time = "2026-04-23T21:17:29.419Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/ef/d4/2cf83b5fb7fae8939ed596009465c6de0b8fafa70abd486ed9d192e457f7/peewee-4.0.5-py3-none-any.whl", hash = "sha256:05bf687660f04f925bcb7d744e5af826ca526322f2fad894bfa4f1d0f3bcaf50", size = 144479, upload-time = "2026-04-23T21:17:28.061Z" },
+]
+
+[[package]]
+name = "perplexityai"
+version = "0.35.1"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "anyio" },
+    { name = "distro" },
+    { name = "httpx" },
+    { name = "pydantic" },
+    { name = "sniffio" },
+    { name = "typing-extensions" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/c5/4b/7b15101ec9b399981248ba69d75b3ba3c08eb9c2e2e049fee672e129383b/perplexityai-0.35.1.tar.gz", hash = "sha256:d6a917af4ee76f241ed5b9f32008fa81c749e2ed8bb1b3235ea17919e911d465", size = 139673, upload-time = "2026-05-27T20:54:49.989Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/f3/c3/aabeceb20751de7a8336516ca8340a633f1a05622067629f5b796df9cb8e/perplexityai-0.35.1-py3-none-any.whl", hash = "sha256:1a5415f20c92010bb2cc8a9f80b5c73b289c258c655c2cae315401ab6e36ee58", size = 133309, upload-time = "2026-05-27T20:54:48.744Z" },
 ]
 
 [[package]]
@@ -13845,49 +14136,85 @@ wheels = [
 
 [[package]]
 name = "pymongo"
-version = "4.10.1"
+version = "4.17.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "dnspython" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1a/35/b62a3139f908c68b69aac6a6a3f8cc146869de0a7929b994600e2c587c77/pymongo-4.10.1.tar.gz", hash = "sha256:a9de02be53b6bb98efe0b9eda84ffa1ec027fcb23a2de62c4f941d9a2f2f3330", size = 1903902, upload-time = "2024-10-01T23:07:58.525Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/ca/64/50be6fbac9c79fe2e4c17401a467da2d8764d82833d83cec325afe5cab32/pymongo-4.17.0.tar.gz", hash = "sha256:70ffa08ba641468cc068cf46c06b34f01a8ce3489f6411309fcb5ceabe6b2fc0", size = 2523370, upload-time = "2026-04-20T16:39:53.524Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/c1/ca/f56b1dd84541de658d246f86828be27e32285f2151fab97efbce1db3ed57/pymongo-4.10.1-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:e699aa68c4a7dea2ab5a27067f7d3e08555f8d2c0dc6a0c8c60cfd9ff2e6a4b1", size = 835459, upload-time = "2024-10-01T23:06:19.654Z" },
-    { url = "https://files.pythonhosted.org/packages/97/01/fe4ee34b33c6863be6a09d1e805ceb1122d9cd5d4a5d1664e360b91adf7e/pymongo-4.10.1-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:70645abc714f06b4ad6b72d5bf73792eaad14e3a2cfe29c62a9c81ada69d9e4b", size = 835716, upload-time = "2024-10-01T23:06:22.252Z" },
-    { url = "https://files.pythonhosted.org/packages/46/ff/9eb21c1d5861729ae1c91669b02f5bfbd23221ba9809fb97fade761f3f3b/pymongo-4.10.1-cp310-cp310-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:ae2fd94c9fe048c94838badcc6e992d033cb9473eb31e5710b3707cba5e8aee2", size = 1407173, upload-time = "2024-10-01T23:06:24.204Z" },
-    { url = "https://files.pythonhosted.org/packages/e5/d9/8cf042449d6804e00e38d3bb138b0e9acb8a8e0c9dd9dd989ffffd481c3b/pymongo-4.10.1-cp310-cp310-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:5ded27a4a5374dae03a92e084a60cdbcecd595306555bda553b833baf3fc4868", size = 1456455, upload-time = "2024-10-01T23:06:26.125Z" },
-    { url = "https://files.pythonhosted.org/packages/37/9a/da0d121f98c1413853e1172e2095fe77c1629c83a1db107d45a37ca935c2/pymongo-4.10.1-cp310-cp310-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:1ecc2455e3974a6c429687b395a0bc59636f2d6aedf5785098cf4e1f180f1c71", size = 1433360, upload-time = "2024-10-01T23:06:27.898Z" },
-    { url = "https://files.pythonhosted.org/packages/7d/6d/50480f0452e2fb59256d9d641d192366c0079920c36851b818ebeff0cec9/pymongo-4.10.1-cp310-cp310-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:a920fee41f7d0259f5f72c1f1eb331bc26ffbdc952846f9bd8c3b119013bb52c", size = 1410758, upload-time = "2024-10-01T23:06:29.546Z" },
-    { url = "https://files.pythonhosted.org/packages/cd/8f/b83b9910c54f63bfff34305074e79cd08cf5e12dda22d1a2b4ad009b32b3/pymongo-4.10.1-cp310-cp310-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e0a15665b2d6cf364f4cd114d62452ce01d71abfbd9c564ba8c74dcd7bbd6822", size = 1380257, upload-time = "2024-10-01T23:06:30.895Z" },
-    { url = "https://files.pythonhosted.org/packages/ed/e3/8f381b576e5f912cf0fe34218c6b0ef23d7afdef13fed592900fb52f0ed4/pymongo-4.10.1-cp310-cp310-win32.whl", hash = "sha256:29e1c323c28a4584b7095378ff046815e39ff82cdb8dc4cc6dfe3acf6f9ad1f8", size = 812324, upload-time = "2024-10-01T23:06:32.717Z" },
-    { url = "https://files.pythonhosted.org/packages/ab/14/1cae5359e2c4677856527a2965c999c23f596cced4b7828d880cb8fc0f54/pymongo-4.10.1-cp310-cp310-win_amd64.whl", hash = "sha256:88dc4aa45f8744ccfb45164aedb9a4179c93567bbd98a33109d7dc400b00eb08", size = 826774, upload-time = "2024-10-01T23:06:34.386Z" },
-    { url = "https://files.pythonhosted.org/packages/e4/a3/d6403ec53fa2fe922b4a5c86388ea5fada01dd51d803e17bb2a7c9cda839/pymongo-4.10.1-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:57ee6becae534e6d47848c97f6a6dff69e3cce7c70648d6049bd586764febe59", size = 889238, upload-time = "2024-10-01T23:06:36.03Z" },
-    { url = "https://files.pythonhosted.org/packages/29/a2/9643450424bcf241e80bb713497ec2e3273c183d548b4eca357f75d71885/pymongo-4.10.1-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:6f437a612f4d4f7aca1812311b1e84477145e950fdafe3285b687ab8c52541f3", size = 889504, upload-time = "2024-10-01T23:06:37.328Z" },
-    { url = "https://files.pythonhosted.org/packages/ec/40/4759984f34415509e9111be8ee863034611affdc1e0b41016c9d53b2f1b3/pymongo-4.10.1-cp311-cp311-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:1a970fd3117ab40a4001c3dad333bbf3c43687d90f35287a6237149b5ccae61d", size = 1649069, upload-time = "2024-10-01T23:06:38.553Z" },
-    { url = "https://files.pythonhosted.org/packages/56/0f/b6e917478a3ada81e768475516cd544982cc42cbb7d3be325182768139e1/pymongo-4.10.1-cp311-cp311-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:7c4d0e7cd08ef9f8fbf2d15ba281ed55604368a32752e476250724c3ce36c72e", size = 1714927, upload-time = "2024-10-01T23:06:40.292Z" },
-    { url = "https://files.pythonhosted.org/packages/56/c5/4237d94dfa19ebdf9a92b1071e2139c91f48908c5782e592c571c33b67ab/pymongo-4.10.1-cp311-cp311-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:ca6f700cff6833de4872a4e738f43123db34400173558b558ae079b5535857a4", size = 1683454, upload-time = "2024-10-01T23:06:42.257Z" },
-    { url = "https://files.pythonhosted.org/packages/9a/16/dbffca9d4ad66f2a325c280f1177912fa23235987f7b9033e283da889b7a/pymongo-4.10.1-cp311-cp311-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:cec237c305fcbeef75c0bcbe9d223d1e22a6e3ba1b53b2f0b79d3d29c742b45b", size = 1653840, upload-time = "2024-10-01T23:06:43.991Z" },
-    { url = "https://files.pythonhosted.org/packages/2b/4d/21df934ef5cf8f0e587bac922a129e13d4c0346c54e9bf2371b90dd31112/pymongo-4.10.1-cp311-cp311-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:b3337804ea0394a06e916add4e5fac1c89902f1b6f33936074a12505cab4ff05", size = 1613233, upload-time = "2024-10-01T23:06:46.113Z" },
-    { url = "https://files.pythonhosted.org/packages/24/07/dd9c3db30e754680606295d5574521956898005db0629411a89163cc6eee/pymongo-4.10.1-cp311-cp311-win32.whl", hash = "sha256:778ac646ce6ac1e469664062dfe9ae1f5c9961f7790682809f5ec3b8fda29d65", size = 857331, upload-time = "2024-10-01T23:06:47.812Z" },
-    { url = "https://files.pythonhosted.org/packages/02/68/b71c4106d03eef2482eade440c6f5737c2a4a42f6155726009f80ea38d06/pymongo-4.10.1-cp311-cp311-win_amd64.whl", hash = "sha256:9df4ab5594fdd208dcba81be815fa8a8a5d8dedaf3b346cbf8b61c7296246a7a", size = 876473, upload-time = "2024-10-01T23:06:49.201Z" },
-    { url = "https://files.pythonhosted.org/packages/10/d1/60ad99fe3f64d45e6c71ac0e3078e88d9b64112b1bae571fc3707344d6d1/pymongo-4.10.1-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:fbedc4617faa0edf423621bb0b3b8707836687161210d470e69a4184be9ca011", size = 943356, upload-time = "2024-10-01T23:06:50.9Z" },
-    { url = "https://files.pythonhosted.org/packages/ca/9b/21d4c6b4ee9c1fa9691c68dc2a52565e0acb644b9e95148569b4736a4ebd/pymongo-4.10.1-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:7bd26b2aec8ceeb95a5d948d5cc0f62b0eb6d66f3f4230705c1e3d3d2c04ec76", size = 943142, upload-time = "2024-10-01T23:06:52.146Z" },
-    { url = "https://files.pythonhosted.org/packages/07/af/691b7454e219a8eb2d1641aecedd607e3a94b93650c2011ad8a8fd74ef9f/pymongo-4.10.1-cp312-cp312-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:fb104c3c2a78d9d85571c8ac90ec4f95bca9b297c6eee5ada71fabf1129e1674", size = 1909129, upload-time = "2024-10-01T23:06:53.551Z" },
-    { url = "https://files.pythonhosted.org/packages/0c/74/fd75d5ad4181d6e71ce0fca32404fb71b5046ac84d9a1a2f0862262dd032/pymongo-4.10.1-cp312-cp312-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:4924355245a9c79f77b5cda2db36e0f75ece5faf9f84d16014c0a297f6d66786", size = 1987763, upload-time = "2024-10-01T23:06:55.304Z" },
-    { url = "https://files.pythonhosted.org/packages/8a/56/6d3d0ef63c6d8cb98c7c653a3a2e617675f77a95f3853851d17a7664876a/pymongo-4.10.1-cp312-cp312-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:11280809e5dacaef4971113f0b4ff4696ee94cfdb720019ff4fa4f9635138252", size = 1950821, upload-time = "2024-10-01T23:06:57.541Z" },
-    { url = "https://files.pythonhosted.org/packages/70/ed/1603fa0c0e51444752c3fa91f16c3a97e6d92eb9fe5e553dae4f18df16f6/pymongo-4.10.1-cp312-cp312-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:e5d55f2a82e5eb23795f724991cac2bffbb1c0f219c0ba3bf73a835f97f1bb2e", size = 1912247, upload-time = "2024-10-01T23:06:59.023Z" },
-    { url = "https://files.pythonhosted.org/packages/c1/66/e98b2308971d45667cb8179d4d66deca47336c90663a7e0527589f1038b7/pymongo-4.10.1-cp312-cp312-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:e974ab16a60be71a8dfad4e5afccf8dd05d41c758060f5d5bda9a758605d9a5d", size = 1862230, upload-time = "2024-10-01T23:07:01.407Z" },
-    { url = "https://files.pythonhosted.org/packages/6c/80/ba9b7ed212a5f8cf8ad7037ed5bbebc1c587fc09242108f153776e4a338b/pymongo-4.10.1-cp312-cp312-win32.whl", hash = "sha256:544890085d9641f271d4f7a47684450ed4a7344d6b72d5968bfae32203b1bb7c", size = 903045, upload-time = "2024-10-01T23:07:02.973Z" },
-    { url = "https://files.pythonhosted.org/packages/76/8b/5afce891d78159912c43726fab32641e3f9718f14be40f978c148ea8db48/pymongo-4.10.1-cp312-cp312-win_amd64.whl", hash = "sha256:dcc07b1277e8b4bf4d7382ca133850e323b7ab048b8353af496d050671c7ac52", size = 926686, upload-time = "2024-10-01T23:07:04.403Z" },
-    { url = "https://files.pythonhosted.org/packages/83/76/df0fd0622a85b652ad0f91ec8a0ebfd0cb86af6caec8999a22a1f7481203/pymongo-4.10.1-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:90bc6912948dfc8c363f4ead54d54a02a15a7fee6cfafb36dc450fc8962d2cb7", size = 996981, upload-time = "2024-10-01T23:07:06.001Z" },
-    { url = "https://files.pythonhosted.org/packages/4c/39/fa50531de8d1d8af8c253caeed20c18ccbf1de5d970119c4a42c89f2bd09/pymongo-4.10.1-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:594dd721b81f301f33e843453638e02d92f63c198358e5a0fa8b8d0b1218dabc", size = 996769, upload-time = "2024-10-01T23:07:07.855Z" },
-    { url = "https://files.pythonhosted.org/packages/bf/50/6936612c1b2e32d95c30e860552d3bc9e55cfa79a4f73b73225fa05a028c/pymongo-4.10.1-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:0783e0c8e95397c84e9cf8ab092ab1e5dd7c769aec0ef3a5838ae7173b98dea0", size = 2169159, upload-time = "2024-10-01T23:07:09.963Z" },
-    { url = "https://files.pythonhosted.org/packages/78/8c/45cb23096e66c7b1da62bb8d9c7ac2280e7c1071e13841e7fb71bd44fd9f/pymongo-4.10.1-cp313-cp313-manylinux_2_17_ppc64le.manylinux2014_ppc64le.whl", hash = "sha256:6fb6a72e88df46d1c1040fd32cd2d2c5e58722e5d3e31060a0393f04ad3283de", size = 2260569, upload-time = "2024-10-01T23:07:11.856Z" },
-    { url = "https://files.pythonhosted.org/packages/29/b6/e5ec697087e527a6a15c5f8daa5bcbd641edb8813487345aaf963d3537dc/pymongo-4.10.1-cp313-cp313-manylinux_2_17_s390x.manylinux2014_s390x.whl", hash = "sha256:2e3a593333e20c87415420a4fb76c00b7aae49b6361d2e2205b6fece0563bf40", size = 2218142, upload-time = "2024-10-01T23:07:13.61Z" },
-    { url = "https://files.pythonhosted.org/packages/ad/8a/c0b45bee0f0c57732c5c36da5122c1796efd5a62d585fbc504e2f1401244/pymongo-4.10.1-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:72e2ace7456167c71cfeca7dcb47bd5dceda7db2231265b80fc625c5e8073186", size = 2170623, upload-time = "2024-10-01T23:07:15.319Z" },
-    { url = "https://files.pythonhosted.org/packages/3b/26/6c0a5360a571df24c9bfbd51b1dae279f4f0c511bdbc0906f6df6d1543fa/pymongo-4.10.1-cp313-cp313-manylinux_2_5_i686.manylinux1_i686.manylinux_2_17_i686.manylinux2014_i686.whl", hash = "sha256:8ad05eb9c97e4f589ed9e74a00fcaac0d443ccd14f38d1258eb4c39a35dd722b", size = 2111112, upload-time = "2024-10-01T23:07:16.859Z" },
-    { url = "https://files.pythonhosted.org/packages/38/bc/5b91b728e1cf505d931f04e24cbac71ae519523785570ed046cdc31e6efc/pymongo-4.10.1-cp313-cp313-win32.whl", hash = "sha256:ee4c86d8e6872a61f7888fc96577b0ea165eb3bdb0d841962b444fa36001e2bb", size = 948727, upload-time = "2024-10-01T23:07:18.275Z" },
-    { url = "https://files.pythonhosted.org/packages/0d/2a/7c24a6144eaa06d18ed52822ea2b0f119fd9267cd1abbb75dae4d89a3803/pymongo-4.10.1-cp313-cp313-win_amd64.whl", hash = "sha256:45ee87a4e12337353242bc758accc7fb47a2f2d9ecc0382a61e64c8f01e86708", size = 976873, upload-time = "2024-10-01T23:07:19.721Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/77/28ebbf69772a4341d530831c7a006cdb06877ac23075cb53b0a227df4fe1/pymongo-4.17.0-cp310-cp310-macosx_10_9_x86_64.whl", hash = "sha256:47b021363cd923ace5edc7a1d63c0ff8a6d9d43859b8a1ba23645f5afae63221", size = 819234, upload-time = "2026-04-20T16:37:20.888Z" },
+    { url = "https://files.pythonhosted.org/packages/88/cf/5a70cee503ff9a2fea20607607f14d189f4d975960ac0945ec306ee7b695/pymongo-4.17.0-cp310-cp310-macosx_11_0_arm64.whl", hash = "sha256:422fa50d7d7f5c22ea0953554396c9ef95684a2d775f860bd75a7b510538dfca", size = 819969, upload-time = "2026-04-20T16:37:24.187Z" },
+    { url = "https://files.pythonhosted.org/packages/23/d5/07b7e27e662c58d872efd104a0e8055eb6569aa1b6d4da436f3fdee7f897/pymongo-4.17.0-cp310-cp310-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:addd0498ebbdc6354227f6ed457ed9fce442d48a3bb30d5b5bad33e104996561", size = 1244510, upload-time = "2026-04-20T16:37:26.069Z" },
+    { url = "https://files.pythonhosted.org/packages/fb/be/7cac5b1e89bd5a8e395067648241390321593a7c29243e36f91343c02a90/pymongo-4.17.0-cp310-cp310-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:c5c8e180cb2cabe37300e1e36c60aa4f2ff956cc579f0142135a5d2cba252243", size = 1263245, upload-time = "2026-04-20T16:37:28.003Z" },
+    { url = "https://files.pythonhosted.org/packages/2e/20/40e8e99824c1fda18261411e65ce3b0cd3d9a6ed3c056cdd0a569adc870b/pymongo-4.17.0-cp310-cp310-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:bd835cdb37a1adec359dd072c24f8bb14809e2644fde86fab4ee2fc9719b9483", size = 1304113, upload-time = "2026-04-20T16:37:30.048Z" },
+    { url = "https://files.pythonhosted.org/packages/3a/94/fb7e25441dd66f2069a9b172380849b0eaa5881c18b3db217bf64a6d393c/pymongo-4.17.0-cp310-cp310-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:c4979e7e8887862bbb44d203f00cc8263a3f27237876fa691b6beba23e40e6d8", size = 1297046, upload-time = "2026-04-20T16:37:32.054Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/c9/7352e0c20fe772541556e4d283c05e07ec48f8b0d2737ad930ac4a1b6655/pymongo-4.17.0-cp310-cp310-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:77aa4bc164b4de60d5db193b322f0f5b6ead716e831031bfdef8e8bd92205556", size = 1265708, upload-time = "2026-04-20T16:37:33.934Z" },
+    { url = "https://files.pythonhosted.org/packages/8d/e4/3df15494c2015ed297958517f0e4f6493e21b00990748068a973e66d45e0/pymongo-4.17.0-cp310-cp310-win32.whl", hash = "sha256:48bbc576677b50af043df870d84ded67cc3a9b4aa7553201beef4da5dc050a0a", size = 805533, upload-time = "2026-04-20T16:37:35.744Z" },
+    { url = "https://files.pythonhosted.org/packages/22/fa/b4e71bb8cb82ad7d21bb4e8c476f2d573ba68b20368aac36ef06e4a196b4/pymongo-4.17.0-cp310-cp310-win_amd64.whl", hash = "sha256:e46767f28dea610e02edf6c5d956ce615c3c7790ea396660b9b1efd5c5ead2e0", size = 815677, upload-time = "2026-04-20T16:37:37.808Z" },
+    { url = "https://files.pythonhosted.org/packages/22/e2/0a4bba644f1cda3970ea1012149eeae3594ebfeed3f81fdaf32b61d90c95/pymongo-4.17.0-cp310-cp310-win_arm64.whl", hash = "sha256:757f2a4c0c2c46cab87df0333681ce69e86c9d5b45bc5203ceba5410b3489e59", size = 807293, upload-time = "2026-04-20T16:37:39.707Z" },
+    { url = "https://files.pythonhosted.org/packages/c4/e2/336d86f221cf1b56b2ed9330d4a3b98f9f38f0b37829ae9a9184617d5419/pymongo-4.17.0-cp311-cp311-macosx_10_9_x86_64.whl", hash = "sha256:4141e6c6a339789b2974efa00ecd9409101672d77a0e3ee2cc3839eedf8ec4df", size = 874668, upload-time = "2026-04-20T16:37:41.39Z" },
+    { url = "https://files.pythonhosted.org/packages/34/8e/75d3c6c935d187ab59c61e9c15d9aab3f274b563eaf1706e8cae5f508dec/pymongo-4.17.0-cp311-cp311-macosx_11_0_arm64.whl", hash = "sha256:e68c76b84e0c132d9dbf9307f12ff8185702328187a87b9aca8c941303873433", size = 875294, upload-time = "2026-04-20T16:37:43.432Z" },
+    { url = "https://files.pythonhosted.org/packages/5f/ec/62e855744489dbcd54fd778aae4d80fa4c4819e8fb228ca0cf6f21a03997/pymongo-4.17.0-cp311-cp311-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:ba2195d4f386f839a52a23ea1cfd60ffaaba78a3d7841db51b7e433001139918", size = 1496233, upload-time = "2026-04-20T16:37:45.518Z" },
+    { url = "https://files.pythonhosted.org/packages/82/e8/93e4e5e5ce8fdf8929dabeefe24aafa5ce046028eed0dfa8eeb936e72c49/pymongo-4.17.0-cp311-cp311-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:8446ff4bfcb6ec2a2e50998c860986a1e992136f998b7f53e7a717fb8aa5a0b9", size = 1522927, upload-time = "2026-04-20T16:37:47.492Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/ca/425dc1d21e0f17bdea0072fc463f662f7fa06d2852af52975c9eced3c07c/pymongo-4.17.0-cp311-cp311-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:2a0d5ac205728c86e0a02192f1aa5f865b0d7d51f8df6101c01a69a7fc620d72", size = 1583468, upload-time = "2026-04-20T16:37:49.221Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/9d/f08b07eeffda1a43c1759f0fa625e88ae12360996eb56d42aad832fa7dff/pymongo-4.17.0-cp311-cp311-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:485c8a8eaa4c739f00a331fc73757898ee7c092c214a79e63866ff76aaf282ff", size = 1572787, upload-time = "2026-04-20T16:37:51.061Z" },
+    { url = "https://files.pythonhosted.org/packages/e9/c2/6855a07aafa7b894929af23675b6fb9634800ce43122b76a62f6eeb8da2a/pymongo-4.17.0-cp311-cp311-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:b2dfcc795f5b9fedbe179a11fdf6051581479d196582a3fe819a92a00e9b9969", size = 1526184, upload-time = "2026-04-20T16:37:53.358Z" },
+    { url = "https://files.pythonhosted.org/packages/4e/05/c952bac7db71c1942ea3559fcd308b49754cc5004b455935fb4000d1f37b/pymongo-4.17.0-cp311-cp311-win32.whl", hash = "sha256:c2292144505fb12156b981bd440f3dc994a883da06ac726c0c8692ccdbc1c510", size = 852621, upload-time = "2026-04-20T16:37:55.28Z" },
+    { url = "https://files.pythonhosted.org/packages/11/c0/c04da9f4c0c6252404598f4e394b862a58a9e866822a70ae261c8a018fdf/pymongo-4.17.0-cp311-cp311-win_amd64.whl", hash = "sha256:2e190827834fce70ecdf9d46796c6dbc0ce08ea87dc2ff5bc6f3f5579b605cb9", size = 867852, upload-time = "2026-04-20T16:37:57.233Z" },
+    { url = "https://files.pythonhosted.org/packages/1d/b2/c7b4870fbeef471e947d3e014676f5910d02e0197074d692ebcf24ec049a/pymongo-4.17.0-cp311-cp311-win_arm64.whl", hash = "sha256:a8f9c40a09bb7d4b9fc8b1da65ecf6efa79bda5cb2756f39d9b6940fac1d19ae", size = 855019, upload-time = "2026-04-20T16:37:58.983Z" },
+    { url = "https://files.pythonhosted.org/packages/98/90/60bcb508840135d5ee46b51b1a950f548338aa8145a8366dbe6639ae51ac/pymongo-4.17.0-cp312-cp312-macosx_10_13_x86_64.whl", hash = "sha256:d53ffa94b2340dbf6b055e09a0090618c60482c158ecfc9565642fc996bf0944", size = 930529, upload-time = "2026-04-20T16:38:00.936Z" },
+    { url = "https://files.pythonhosted.org/packages/a6/e9/313840f1e52c6dfac47f704428cbfbce59956ebe7633bffc92b03f74f0ad/pymongo-4.17.0-cp312-cp312-macosx_11_0_arm64.whl", hash = "sha256:6fe0de9d0f6791abce3471230b32b4817bf89d27b1182b6a550e1ec0fa72aa9a", size = 930665, upload-time = "2026-04-20T16:38:02.915Z" },
+    { url = "https://files.pythonhosted.org/packages/78/35/9d3565ea45b1606f635c1e2cd2563c28d66caafdc50f7ad7d979fcd1b363/pymongo-4.17.0-cp312-cp312-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:e537e95514dae1aaa718f481ec03151a0f0394bcd05f1322896d8fc1330cb729", size = 1762369, upload-time = "2026-04-20T16:38:05.375Z" },
+    { url = "https://files.pythonhosted.org/packages/95/ee/149b0d4b1a11c38bff6f14c23d5814c9b0843fd6dc38ad40596bdb1a62d2/pymongo-4.17.0-cp312-cp312-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:37a8385c29881b43eab31f584100fa0eaddedd5607adf010147ba1810118be90", size = 1798044, upload-time = "2026-04-20T16:38:07.195Z" },
+    { url = "https://files.pythonhosted.org/packages/7b/d4/4cee4a7b8d8f6f0550ef6cd2fea42455c5ed619a220cb6ba4fb40d6a5bc8/pymongo-4.17.0-cp312-cp312-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:f3ee3d241ed77a4fc99ce3cff3b289c3ebce37f61fdd7349d3592c23b82c8784", size = 1878567, upload-time = "2026-04-20T16:38:09.121Z" },
+    { url = "https://files.pythonhosted.org/packages/45/ef/7fe366c84952619ee2f69973566c214775e083dd4df465751912153e4b72/pymongo-4.17.0-cp312-cp312-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:9eb5d63a3c518cb0804ed678f5e2b875af032d89a7cf57a57360322cf6a4d222", size = 1864881, upload-time = "2026-04-20T16:38:10.896Z" },
+    { url = "https://files.pythonhosted.org/packages/2f/35/b577d82c6d1be7aee7ac7e249bc86f7847998345042e5f8360de238e177b/pymongo-4.17.0-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:8e97e03fa13327c87e3fdc5656acd01e71817f0c1dc3221cd8f30de136bf4ec3", size = 1800349, upload-time = "2026-04-20T16:38:13.589Z" },
+    { url = "https://files.pythonhosted.org/packages/b8/69/dafcf04f66e130ddd91aeb92e7a692480eda46dcd04ec1dbe82c06619e10/pymongo-4.17.0-cp312-cp312-win32.whl", hash = "sha256:6877214bff5f06f6884a9fc8d9016a4a7a5f51f537f5c51ac3a576f93e7dfb32", size = 900518, upload-time = "2026-04-20T16:38:15.541Z" },
+    { url = "https://files.pythonhosted.org/packages/11/35/5c9262a459f988b4eb2605f70815240b77a0d4131136c4326d18f1822b89/pymongo-4.17.0-cp312-cp312-win_amd64.whl", hash = "sha256:9828485f72f63c7d802e0ec41f71906f633c2692621ab3af55ca990186b091b1", size = 920335, upload-time = "2026-04-20T16:38:17.665Z" },
+    { url = "https://files.pythonhosted.org/packages/8d/da/e9c7265ee176faccf4e52c4797837e794d93569a1046f6b19a4acc36e5ad/pymongo-4.17.0-cp312-cp312-win_arm64.whl", hash = "sha256:1195370a77baf003b59b10e91ecc4706297197f0dd9d29c840cc556dc08f7cee", size = 903289, upload-time = "2026-04-20T16:38:19.33Z" },
+    { url = "https://files.pythonhosted.org/packages/2a/6b/c1206879708b94e82fcd8b9653440ec271f79a3674d122192df383047f5a/pymongo-4.17.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:809ec74de3b9148ae43fa8df9faf53470f511c8d384f13b99d6f671f2a379f15", size = 985829, upload-time = "2026-04-20T16:38:21.031Z" },
+    { url = "https://files.pythonhosted.org/packages/cb/cf/bb044ed85160e5c40f568c7c4f4e8ea16f40764ff5d302e5befbe8f6f814/pymongo-4.17.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:a431b737816bf4cddd4fa0fcef04e424ad36b7692734a64150f872fb8f3208be", size = 985899, upload-time = "2026-04-20T16:38:23.409Z" },
+    { url = "https://files.pythonhosted.org/packages/74/0a/f6dfd5ea3901e5d6888da8de8ba728971a1d447debab681cfc56f90d1208/pymongo-4.17.0-cp313-cp313-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:e4fab10f8403169ce92f3cea921609d9ee81107306caae06c08f592d4b8ad2b5", size = 2028569, upload-time = "2026-04-20T16:38:25.343Z" },
+    { url = "https://files.pythonhosted.org/packages/4a/c5/081f59a1c02ae8c0dc73ae58e563838c44eec81aeafa7d0b93a637841c9b/pymongo-4.17.0-cp313-cp313-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:20323b0b1c1d33770ad1fc68d429c757734ce9ad3594421c3d6618f10572b1b9", size = 2072916, upload-time = "2026-04-20T16:38:27.291Z" },
+    { url = "https://files.pythonhosted.org/packages/31/42/6e41d434297ffe8b30d9c3717916591a4a7be9075a0dcc2fafdfaaaa62ed/pymongo-4.17.0-cp313-cp313-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:5a5de048e6da5c18e27cc2437e8c15b3b0cdc8385c15b41178b0caa3322a09c2", size = 2173234, upload-time = "2026-04-20T16:38:29.474Z" },
+    { url = "https://files.pythonhosted.org/packages/3d/cf/1e4a7db352ef9485831c7268dfe8402f0117b32a9ad54b16e810699e3617/pymongo-4.17.0-cp313-cp313-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:dff3de1294fbbc1db0ba6b511f77b8e540601d092538a31312e99c8a91a78b1e", size = 2156784, upload-time = "2026-04-20T16:38:32.134Z" },
+    { url = "https://files.pythonhosted.org/packages/12/10/6195be29962a61ebb5f4bd9e4c7519890b172f7968a0a0d880398c6ddb02/pymongo-4.17.0-cp313-cp313-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:faf03e4c2aafd6de626dbd30ba246d369ae33f47f10629d1bbe40f72115027a6", size = 2074446, upload-time = "2026-04-20T16:38:34.004Z" },
+    { url = "https://files.pythonhosted.org/packages/37/48/33410b8819837ed370c738587306bdf060b59cef11823be212f4a07703c5/pymongo-4.17.0-cp313-cp313-win32.whl", hash = "sha256:c9786665926a09630c5d420c79762cfadbff35a9438bcbc4c81a9fb5ab9228b7", size = 948435, upload-time = "2026-04-20T16:38:35.922Z" },
+    { url = "https://files.pythonhosted.org/packages/6f/77/c0ed522f798a286b99acaa7914ed8d9c80ab091f97f57c59ffed72906e5e/pymongo-4.17.0-cp313-cp313-win_amd64.whl", hash = "sha256:5960519b4d7168f1ecdd3ea10c81b2aedeb9423651aca953cfbc8e76705d3b38", size = 972847, upload-time = "2026-04-20T16:38:37.888Z" },
+    { url = "https://files.pythonhosted.org/packages/97/f0/c39480a2db385fde23861d0c8acda41cdaf1d43e46579db72c5c013a2e81/pymongo-4.17.0-cp313-cp313-win_arm64.whl", hash = "sha256:0ff6bd2f735ab5356541e3e57d5b7dbfbc3f2ee1ccb10b6b0f82d58af69d1d8e", size = 951575, upload-time = "2026-04-20T16:38:40.544Z" },
+    { url = "https://files.pythonhosted.org/packages/da/49/2b0250762a89737ed6f9cea238331baca061b89a8ddd10dd17fee52c3970/pymongo-4.17.0-cp314-cp314-macosx_10_15_x86_64.whl", hash = "sha256:ff5aa3f1c7e3f08eb0e7a016c91ba468b1850ccfd63d9b1f12f56350f4974cef", size = 1040945, upload-time = "2026-04-20T16:38:42.783Z" },
+    { url = "https://files.pythonhosted.org/packages/89/1c/7a9b5447a08be20e84b6e5b17330917e8d6d9507daa3cd099a9309f11ad7/pymongo-4.17.0-cp314-cp314-macosx_11_0_arm64.whl", hash = "sha256:e816db649ba5d7de0568cf3a9f287a9dc9aad21cf0ca667ab156a7ef47fca0b0", size = 1041187, upload-time = "2026-04-20T16:38:45.358Z" },
+    { url = "https://files.pythonhosted.org/packages/78/a1/71704f61632dfc90407a5834fe5f6132854937c4a3648f6c05c351d85a45/pymongo-4.17.0-cp314-cp314-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:12c4fded3a9f1d6a687e36ebd384ac6d00b9b00de1969aa74048e7051ec2a713", size = 2294806, upload-time = "2026-04-20T16:38:47.734Z" },
+    { url = "https://files.pythonhosted.org/packages/ad/b9/aff42be75108b96c2469b1d9329b912c15108f3e7ef32fdc86da8423c330/pymongo-4.17.0-cp314-cp314-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:2db66aa8dd253a0fc1fad3b0d23d5b3993f7ebde02fbbd7727128debf2853675", size = 2348231, upload-time = "2026-04-20T16:38:50.371Z" },
+    { url = "https://files.pythonhosted.org/packages/f2/30/44c115b8ba1479942c15fd9480eb29a7da0ba68acd56983423ba0deb4a94/pymongo-4.17.0-cp314-cp314-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:3987e96e7c7be4083d42e8ac2cc6c0d5b78db9973c90fce42ae800b616ca6b20", size = 2467614, upload-time = "2026-04-20T16:38:52.665Z" },
+    { url = "https://files.pythonhosted.org/packages/d2/84/21ee95c8bf0ca7acae7ec7eb365d740bf8fc0156c194baf2c3bdfcb85ec0/pymongo-4.17.0-cp314-cp314-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:cee36b3c0d0354f880fa7a7fdcdaf2bb5e542c2281e25c1bfadf8cfe21eba7d2", size = 2445970, upload-time = "2026-04-20T16:38:55.175Z" },
+    { url = "https://files.pythonhosted.org/packages/06/89/081d7f1809d5ca09d1e47e49f2111b245f5694de3a7af32cd3a353a6f43f/pymongo-4.17.0-cp314-cp314-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:320b34457b20bbcc79997801f95d25ce00472915ca5241167242b42c4359e027", size = 2348605, upload-time = "2026-04-20T16:38:57.557Z" },
+    { url = "https://files.pythonhosted.org/packages/ea/c3/0d949f9d3f2a341c1f635c398c16615e96f89f51ff424ed81e914cf1a4de/pymongo-4.17.0-cp314-cp314-win32.whl", hash = "sha256:df4a644af9ae132d4bfdb2e9516ea51a615fd881caddfbfbd071cf1354844479", size = 1004119, upload-time = "2026-04-20T16:39:00.309Z" },
+    { url = "https://files.pythonhosted.org/packages/f7/55/5c3a3db1048054c695c75c5964cc8bedc2247fdb5a75ef6fab4ec8bb013e/pymongo-4.17.0-cp314-cp314-win_amd64.whl", hash = "sha256:c797f8a80957134f6dd9690367a0f8f5906d672119af2c6aa55f0c527b656bed", size = 1032314, upload-time = "2026-04-20T16:39:02.665Z" },
+    { url = "https://files.pythonhosted.org/packages/e0/19/e235f39906134cb0ffd5574c5a59c355ef5380f0499644ab94994afbb109/pymongo-4.17.0-cp314-cp314-win_arm64.whl", hash = "sha256:68fca71e05ee5da23a8d73cee8379dfb3d26e609a377cae731d742771ed96946", size = 1007627, upload-time = "2026-04-20T16:39:04.678Z" },
+    { url = "https://files.pythonhosted.org/packages/1e/e0/c4c1a86791415b14c684fa0908f9da96de91594a3fd1fa1b8dc689fbb800/pymongo-4.17.0-cp314-cp314t-macosx_10_15_x86_64.whl", hash = "sha256:b4384700cffc3f1dd98e088bc0072dedf6d7d68a230bb4b972665cf69c071c1e", size = 1099151, upload-time = "2026-04-20T16:39:06.969Z" },
+    { url = "https://files.pythonhosted.org/packages/81/4b/69c67f3e23fd9b23b9bedc7ebd23754881cc9d5c5d5b2a9811e96b07f475/pymongo-4.17.0-cp314-cp314t-macosx_11_0_arm64.whl", hash = "sha256:93641192644fa1ee0f34030e774fd31022a27ad11ba22cb1716142231524f8bd", size = 1099346, upload-time = "2026-04-20T16:39:08.996Z" },
+    { url = "https://files.pythonhosted.org/packages/a2/19/a5208f62f9508a26d73acc69bd3821b8c8adae253679a3c26d2f9652f0d5/pymongo-4.17.0-cp314-cp314t-manylinux1_i686.manylinux_2_28_i686.manylinux_2_5_i686.whl", hash = "sha256:75bc3aa5b94fdb7138d357ec6ca61cd97e0c79f4f7f0bd3efe9639b15cc50942", size = 2619034, upload-time = "2026-04-20T16:39:11.049Z" },
+    { url = "https://files.pythonhosted.org/packages/77/27/426cba1ec5973082a56d4150798529bfdf4151c31391ed1fbbecb23ef2ac/pymongo-4.17.0-cp314-cp314t-manylinux2014_aarch64.manylinux_2_17_aarch64.manylinux_2_28_aarch64.whl", hash = "sha256:50e8f8e23c6df7c6d6929f5e734980b227706e73ee847517c9ba5af90f7fc466", size = 2689939, upload-time = "2026-04-20T16:39:13.617Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/2e/f70993d1255e33f6ee59a4ec4371cc65bff7a7e3fda7d55c3386f25287e8/pymongo-4.17.0-cp314-cp314t-manylinux2014_ppc64le.manylinux_2_17_ppc64le.manylinux_2_28_ppc64le.whl", hash = "sha256:15d3f3d732aecac1f8d481bde4029755615639bd3076f258a2147210aec8515a", size = 2824994, upload-time = "2026-04-20T16:39:16.057Z" },
+    { url = "https://files.pythonhosted.org/packages/b3/eb/87b0e988ba889e1fcc3430c2cfc166b251872c813e92b43174298bee17ff/pymongo-4.17.0-cp314-cp314t-manylinux2014_s390x.manylinux_2_17_s390x.manylinux_2_28_s390x.whl", hash = "sha256:6c5f62862d0f87be481fa1fe8cb811994486773c94a2b61e509285e3f2890763", size = 2801745, upload-time = "2026-04-20T16:39:18.476Z" },
+    { url = "https://files.pythonhosted.org/packages/67/4c/3f83412d086f682d4d468761d66ddc49cf161e786ea74073045eb4491c60/pymongo-4.17.0-cp314-cp314t-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl", hash = "sha256:64837adbbd72073301af51bb0fc80e3d7707fe5527cea1033ba0320f0b2f881b", size = 2684636, upload-time = "2026-04-20T16:39:20.878Z" },
+    { url = "https://files.pythonhosted.org/packages/9e/d8/b75f6f4ab6c8beb50b0270a4f1e2530b5774f5e116563440e1677ca1820f/pymongo-4.17.0-cp314-cp314t-win32.whl", hash = "sha256:b93b22eedc62598cf5ee9d8c8007a8e9121c50fd88137012d8985500e9dc3151", size = 1056356, upload-time = "2026-04-20T16:39:22.996Z" },
+    { url = "https://files.pythonhosted.org/packages/e4/5e/648c8a238eef18a25ed8a169ea6542d4a860bbec3e95b3d9badac2935c71/pymongo-4.17.0-cp314-cp314t-win_amd64.whl", hash = "sha256:3689ea34f6b647c7d1e7bdc60fcfb214b2789ed1359a7fb96569c69f50e5f18f", size = 1090964, upload-time = "2026-04-20T16:39:24.989Z" },
+    { url = "https://files.pythonhosted.org/packages/dc/cb/d9780b66939c4fc1f024bcc7be23a2abcfe06a9745ca8fa76dc73395482e/pymongo-4.17.0-cp314-cp314t-win_arm64.whl", hash = "sha256:9543d8f84c2e5608565c08ac679774811e6730770d8a645439b073422a4276fb", size = 1058526, upload-time = "2026-04-20T16:39:27.924Z" },
+]
+
+[[package]]
+name = "pymongo-search-utils"
+version = "0.3.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pymongo" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/d9/aa/3eb266ffc74ec52bbf6dd92d311ab4fc3225c2ac8f1a2e6abe98f7288867/pymongo_search_utils-0.3.0.tar.gz", hash = "sha256:56148987ce9ff191eb1cd0f56c01d3dae497a3cb6d7b7db75ec894a9afcbe418", size = 13728, upload-time = "2026-02-03T22:18:24.481Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/55/ed/87d3ed0e45b9230bacb9edcb913d515e6756bc2df3384e5f192662c38ce8/pymongo_search_utils-0.3.0-py3-none-any.whl", hash = "sha256:9b9ef8dfbd57da530ce7c2bde10aec8f462605080a9ed4e9a41679170c8742bf", size = 19467, upload-time = "2026-02-03T22:18:23.398Z" },
 ]
 
 [[package]]

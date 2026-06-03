@@ -52,7 +52,7 @@ describe("DeploymentFlowList", () => {
         id: "fv-1",
         flow_name: "Alpha",
         version_number: 2,
-        provider_data: { tool_name: "search_docs" },
+        provider_data: { tool_display_name: "Search Docs" },
       }),
       makeFlowVersion({
         id: "fv-2",
@@ -71,7 +71,7 @@ describe("DeploymentFlowList", () => {
     expect(screen.getByText("Unknown flow")).toBeInTheDocument();
     expect(screen.getByText("v2")).toBeInTheDocument();
     expect(screen.getByText("v5")).toBeInTheDocument();
-    expect(screen.getByText("search_docs")).toBeInTheDocument();
+    expect(screen.getByText("Search Docs")).toBeInTheDocument();
     expect(screen.getByText("Prod Connection")).toBeInTheDocument();
     expect(screen.getByText("Backup Connection")).toBeInTheDocument();
   });

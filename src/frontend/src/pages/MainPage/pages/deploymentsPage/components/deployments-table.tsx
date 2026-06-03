@@ -20,7 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
-import { type Deployment, type DeploymentType } from "../types";
+import {
+  type Deployment,
+  type DeploymentType,
+  getDeploymentDisplayName,
+} from "../types";
 import DeploymentExpandedRow from "./deployment-expanded-row";
 
 interface DeploymentsTableProps {
@@ -33,15 +37,7 @@ interface DeploymentsTableProps {
   onDeleteDeployment?: (deployment: Deployment) => void;
 }
 
-const COLUMNS = [
-  "Name",
-  "Type",
-  "Attached",
-  "Provider",
-  "Last Modified",
-  "Test",
-  "Actions",
-] as const;
+const COLUMN_COUNT = 7;
 
 const TYPE_CONFIG: Record<DeploymentType, { icon: string; className: string }> =
   {
@@ -50,6 +46,7 @@ const TYPE_CONFIG: Record<DeploymentType, { icon: string; className: string }> =
   };
 
 function TypeBadge({ type }: { type: DeploymentType }) {
+  const { t } = useTranslation();
   const config = TYPE_CONFIG[type] ?? TYPE_CONFIG["agent"];
   return (
     <Badge variant="secondaryStatic" size="tag" className="gap-1">
@@ -57,7 +54,9 @@ function TypeBadge({ type }: { type: DeploymentType }) {
         name={config.icon}
         className={cn("h-3 w-3", config.className)}
       />
-      {type === "agent" ? "Agent" : "MCP"}
+      {type === "agent"
+        ? t("deployments.agentTypeLabel")
+        : t("deployments.mcpTypeLabel")}
     </Badge>
   );
 }
@@ -112,6 +111,8 @@ export default function DeploymentsTable({
           const isDeleting = deletingId === deployment.id;
           const isExpanded = expandedIds.has(deployment.id);
           const hasAttachments = deployment.attached_count > 0;
+          const displayName = getDeploymentDisplayName(deployment);
+          const resolvedDisplayName = displayName || "—";
           return (
             <Fragment key={deployment.id}>
               <TableRow
@@ -123,7 +124,7 @@ export default function DeploymentsTable({
               >
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium">{deployment.name}</span>
+                    <span className="font-medium">{resolvedDisplayName}</span>
                     {deployment.description && (
                       <span className="text-xs text-muted-foreground">
                         {deployment.description}
@@ -162,12 +163,14 @@ export default function DeploymentsTable({
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {providerMap[deployment.provider_id ?? ""] ?? "—"}
+                    {providerMap[deployment.provider_id] ?? "—"}
                   </span>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {formatDate(deployment.updated_at)}
+                    {deployment.updated_at
+                      ? formatDate(deployment.updated_at)
+                      : "—"}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -177,7 +180,7 @@ export default function DeploymentsTable({
                     className="h-8 w-8"
                     data-testid={`test-deployment-${deployment.id}`}
                     aria-label={t("deployments.testDeploymentAriaLabel", {
-                      name: deployment.name,
+                      name: resolvedDisplayName,
                     })}
                     onClick={() => onTestDeployment(deployment)}
                   >
@@ -197,7 +200,9 @@ export default function DeploymentsTable({
                           size="icon"
                           className="h-8 w-8"
                           data-testid={`actions-deployment-${deployment.id}`}
-                          aria-label={`Actions for ${deployment.name}`}
+                          aria-label={t("deployments.actionsForDeployment", {
+                            name: resolvedDisplayName,
+                          })}
                         >
                           <ForwardedIconComponent
                             name="EllipsisVertical"
@@ -244,7 +249,7 @@ export default function DeploymentsTable({
               {isExpanded && (
                 <DeploymentExpandedRow
                   deploymentId={deployment.id}
-                  colSpan={COLUMNS.length}
+                  colSpan={COLUMN_COUNT}
                 />
               )}
             </Fragment>

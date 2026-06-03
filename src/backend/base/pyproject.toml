@@ -25,6 +25,10 @@ dependencies = [
     "gunicorn>=25.3.0,<27.0.0",
     "langchain~=1.2.0",
     "langchain-community~=0.4.1",
+    "langchain-mongodb>=0.11.0",
+    "langchain-perplexity>=1.0.0,<2.0.0",
+    "langchain-qdrant>=1.0.0,<2.0.0",
+    "langchain-weaviate>=0.0.6",
     "langchain-core>=1.3.3,<2.0.0",
     "langchainhub~=0.1.15",
     "loguru>=0.7.1,<1.0.0",
@@ -195,7 +199,7 @@ cassandra = ["cassio>=0.1.7"]
 clickhouse = ["clickhouse-connect==0.7.19"]
 
 
-mongodb = ["pymongo==4.10.1"]
+mongodb = ["pymongo>=4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
@@ -206,6 +210,7 @@ faiss = [
     "faiss-cpu>=1.13.2; python_version>='3.14'",
 ]
 qdrant = ["qdrant-client>=1.12.0,<2.0.0"]
+qdrant-vectors = ["langchain-qdrant>=1.0.0,<2.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0"]
 chroma = [
     "chromadb>=1.0.0,<2.0.0",
@@ -214,7 +219,7 @@ chroma = [
 upstash = ["upstash-vector==0.6.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
 milvus = ["langchain-milvus~=0.3.2"]
-mongodb-vectors = ["langchain-mongodb==0.7.0"]
+mongodb-vectors = ["langchain-mongodb>=0.11.0"]
 astradb = ["langchain-astradb~=1.0.0"]
 
 # Individual LLM providers
@@ -239,7 +244,12 @@ sentence-transformers = ["sentence-transformers>=2.3.1"]
 ctransformers = ["ctransformers>=0.2.10"]
 
 # Individual monitoring providers
-langfuse = ["langfuse~=3.8"]
+# pydantic>=2.13 is required because langfuse v3 imports pydantic.v1.BaseModel,
+# which only supports Python 3.14 from pydantic 2.13 onward. Without this guard
+# the langfuse SDK raises pydantic.v1.errors.ConfigError on import in Python
+# 3.14 environments (e.g. the official Docker image), causing tracing to
+# silently no-op. See https://github.com/langflow-ai/langflow/issues/13317.
+langfuse = ["langfuse~=3.8", "pydantic>=2.13.0"]
 langwatch = ["langwatch~=0.10.0; python_version < '3.14'"]
 langsmith = ["langsmith>=0.3.42,<1.0.0"]
 arize = ["arize-phoenix-otel>=0.6.1"]
@@ -339,15 +349,25 @@ graph-retriever = ["langchain-graph-retriever==0.8.0", "graph-retriever==0.8.0"]
 langchain-mcp-adapters = ["langchain-mcp-adapters>=0.1.14,<0.2.0"]
 
 # Additional monitoring
-opik = ["opik>=1.6.3,<2.0.0"]
+opik = ["opik>=2.0.0,<3.0.0"]
 traceloop = ["traceloop-sdk>=0.43.1,<1.0.0"]
 openlayer = ["openlayer>=0.9.0,<1.0.0"]
 
 # Document processing / OCR
 docling = [
-    "docling-core>=2.36.1,<3.0.0",
-    "docling>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
+    "docling-core>=2.77.0,<3.0.0",
+    "docling-slim[cli,convert-core,extract-core,feat-ocr-rapidocr,format-latex,format-office,format-pdf,format-web,models-local,service-client]>=2.36.1,<3.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'",
 ]
+docling-chunking = [
+    "langflow-base[docling]",
+    "docling-core[chunking]>=2.77.0,<3.0.0",
+    "tiktoken>=0.7.0",
+]
+docling-image-description = [
+    "langflow-base[docling]",
+    "langchain-docling>=1.1.0",
+]
+
 easyocr = ["easyocr>=1.7.2,<2.0.0; sys_platform != 'darwin' or platform_machine != 'x86_64'"]
 
 # Additional tools
@@ -400,6 +420,7 @@ complete = [
     "langflow-base[elasticsearch]",
     "langflow-base[faiss]",
     "langflow-base[qdrant]",
+    "langflow-base[qdrant-vectors]",
     "langflow-base[weaviate]",
     "langflow-base[chroma]",
     "langflow-base[upstash]",

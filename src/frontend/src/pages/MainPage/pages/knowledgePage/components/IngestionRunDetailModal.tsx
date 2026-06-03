@@ -1,7 +1,7 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { useGetIngestionRun } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-run";
-import { useTranslation } from "react-i18next";
 
 interface IngestionRunDetailModalProps {
   kbName: string;
@@ -68,7 +68,7 @@ const IngestionRunDetailModal = ({
           )}
           {isError && (
             <div className="text-sm text-destructive">
-              Unable to load run detail.
+              {t("knowledge.unableToLoadRunDetail")}
             </div>
           )}
 
@@ -76,18 +76,31 @@ const IngestionRunDetailModal = ({
             <div className="flex flex-col gap-4">
               <div className="grid grid-cols-4 gap-3">
                 <Metric
-                  label="Succeeded"
+                  label={t("knowledge.metricSucceeded")}
                   value={data.succeeded}
                   tone="success"
                 />
-                <Metric label="Failed" value={data.failed} tone="error" />
-                <Metric label="Skipped" value={data.skipped} tone="muted" />
-                <Metric label="Chunks" value={data.chunks_created} />
+                <Metric
+                  label={t("knowledge.metricFailed")}
+                  value={data.failed}
+                  tone="error"
+                />
+                <Metric
+                  label={t("knowledge.metricSkipped")}
+                  value={data.skipped}
+                  tone="muted"
+                />
+                <Metric
+                  label={t("knowledge.metricChunks")}
+                  value={data.chunks_created}
+                />
               </div>
 
               {data.error_message && (
                 <div className="rounded-md border border-error-red-border bg-error-red p-3 text-xs text-accent-red-foreground">
-                  <span className="font-medium">Error:</span>{" "}
+                  <span className="font-medium">
+                    {t("knowledge.errorLabel")}
+                  </span>{" "}
                   {data.error_message}
                 </div>
               )}

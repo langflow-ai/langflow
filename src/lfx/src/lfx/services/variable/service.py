@@ -17,6 +17,7 @@ class VariableService(Service):
 
     This is a lightweight implementation for LFX that maintains in-memory
     variables and falls back to environment variables for reads. No database storage.
+
     """
 
     name = "variable_service"

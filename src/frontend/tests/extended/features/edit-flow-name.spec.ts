@@ -1,8 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user should be able to edit flow name by clicking on the header or on the main page",
   { tag: ["@release", "@workspace", "@components"] },

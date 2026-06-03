@@ -1,7 +1,7 @@
 """Deployment and DeploymentProviderAccount tests against in-memory SQLite.
 
 Uses a real database with foreign keys enabled to verify CASCADE deletes,
-unique constraints, relationships, and CRUD operations.
+identity constraints, relationships, and CRUD operations.
 """
 
 from __future__ import annotations
@@ -125,7 +125,7 @@ async def deployment(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="my-deployment",
+        display_name="my-deployment",
         deployment_type=DeploymentType.AGENT,
     )
     db.add(d)
@@ -212,12 +212,12 @@ class TestDeploymentModel:
     async def test_create_and_read(self, db: AsyncSession, deployment: Deployment):
         stmt = select(Deployment).where(Deployment.id == deployment.id)
         row = (await db.exec(stmt)).one()
-        assert row.name == "my-deployment"
+        assert row.display_name == "my-deployment"
         assert row.resource_key == "rk-1"
         assert row.created_at is not None
         assert row.updated_at is not None
 
-    async def test_unique_name_per_provider(
+    async def test_duplicate_display_name_allowed_per_provider(
         self,
         db: AsyncSession,
         user: User,
@@ -230,11 +230,13 @@ class TestDeploymentModel:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-different",
-            name=deployment.name,
+            display_name=deployment.display_name,
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(dup)
-        with pytest.raises(IntegrityError):
-            await db.commit()
+        await db.commit()
+        await db.refresh(dup)
+        assert dup.display_name == deployment.display_name
 
     async def test_unique_resource_key_per_provider(
         self,
@@ -249,13 +251,14 @@ class TestDeploymentModel:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key=deployment.resource_key,
-            name="different-name",
+            display_name="different-name",
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(dup)
         with pytest.raises(IntegrityError):
             await db.commit()
 
-    async def test_same_name_allowed_across_providers(
+    async def test_same_display_name_allowed_across_providers(
         self, db: AsyncSession, user: User, folder: Folder, deployment: Deployment
     ):
         other_acct = DeploymentProviderAccount(
@@ -274,7 +277,8 @@ class TestDeploymentModel:
             project_id=folder.id,
             deployment_provider_account_id=other_acct.id,
             resource_key=deployment.resource_key,
-            name=deployment.name,
+            display_name=deployment.display_name,
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(d2)
         await db.commit()
@@ -319,7 +323,8 @@ class TestDeploymentModel:
             project_id=uuid4(),
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-orphan",
-            name="orphan",
+            display_name="orphan",
+            deployment_type=DeploymentType.AGENT,
         )
         db.add(d)
         with pytest.raises(IntegrityError):
@@ -469,7 +474,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-crud",
-            name="crud-deploy",
+            display_name="crud-deploy",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
@@ -477,7 +482,7 @@ class TestDeploymentCRUD:
         assert dep.id is not None
         fetched = await get_deployment(db, user_id=user.id, deployment_id=dep.id)
         assert fetched is not None
-        assert fetched.name == "crud-deploy"
+        assert fetched.display_name == "crud-deploy"
 
     async def test_get_by_resource_key(
         self,
@@ -495,7 +500,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-lookup",
-            name="lookup-deploy",
+            display_name="lookup-deploy",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
@@ -507,7 +512,7 @@ class TestDeploymentCRUD:
             resource_key="rk-lookup",
         )
         assert found is not None
-        assert found.name == "lookup-deploy"
+        assert found.display_name == "lookup-deploy"
 
     async def test_list_page_and_count(
         self,
@@ -526,7 +531,7 @@ class TestDeploymentCRUD:
                 project_id=folder.id,
                 deployment_provider_account_id=provider_account.id,
                 resource_key=f"rk-{i}",
-                name=f"deploy-{i}",
+                display_name=f"deploy-{i}",
                 deployment_type=DeploymentType.AGENT,
             )
         await db.commit()
@@ -570,20 +575,20 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-upd",
-            name="original",
+            display_name="original",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
-        updated = await update_deployment(db, deployment=dep, name="renamed")
+        updated = await update_deployment(db, deployment=dep, display_name="renamed")
         await db.commit()
 
-        assert updated.name == "renamed"
+        assert updated.display_name == "renamed"
 
         assert dep.id is not None
         fetched = await get_deployment(db, user_id=user.id, deployment_id=dep.id)
         assert fetched is not None
-        assert fetched.name == "renamed"
+        assert fetched.display_name == "renamed"
 
     async def test_delete_by_id(
         self,
@@ -601,7 +606,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-del",
-            name="to-delete",
+            display_name="to-delete",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
@@ -629,7 +634,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-delrk",
-            name="to-delete-rk",
+            display_name="to-delete-rk",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
@@ -643,7 +648,7 @@ class TestDeploymentCRUD:
         await db.commit()
         assert count == 1
 
-    async def test_create_duplicate_name_raises(
+    async def test_create_duplicate_display_name_allowed(
         self,
         db: AsyncSession,
         user: User,
@@ -659,21 +664,22 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-a",
-            name="same-name",
+            display_name="same-name",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
 
-        with pytest.raises(ValueError, match="conflicts with an existing record"):
-            await create_deployment(
-                db,
-                user_id=user.id,
-                project_id=folder.id,
-                deployment_provider_account_id=provider_account.id,
-                resource_key="rk-b",
-                name="same-name",
-                deployment_type=DeploymentType.AGENT,
-            )
+        duplicate = await create_deployment(
+            db,
+            user_id=user.id,
+            project_id=folder.id,
+            deployment_provider_account_id=provider_account.id,
+            resource_key="rk-b",
+            display_name="same-name",
+            deployment_type=DeploymentType.AGENT,
+        )
+        await db.commit()
+        assert duplicate.display_name == "same-name"
 
     async def test_create_duplicate_resource_key_raises(
         self,
@@ -691,7 +697,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-dup",
-            name="name-a",
+            display_name="name-a",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
@@ -703,7 +709,7 @@ class TestDeploymentCRUD:
                 project_id=folder.id,
                 deployment_provider_account_id=provider_account.id,
                 resource_key="rk-dup",
-                name="name-b",
+                display_name="name-b",
                 deployment_type=DeploymentType.AGENT,
             )
 
@@ -724,7 +730,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-scoped",
-            name="scoped",
+            display_name="scoped",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()
@@ -754,7 +760,7 @@ class TestDeploymentCRUD:
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-cascade",
-            name="cascade-test",
+            display_name="cascade-test",
             deployment_type=DeploymentType.AGENT,
         )
         await db.commit()

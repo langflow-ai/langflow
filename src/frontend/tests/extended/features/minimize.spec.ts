@@ -1,14 +1,17 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { zoomOut } from "../../utils/zoom-out";
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
-
 import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { zoomOut } from "../../utils/zoom-out";
+
 test(
   "user must be able to minimize and expand a component",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
     await openBlankFlow(page);
+
+    await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);

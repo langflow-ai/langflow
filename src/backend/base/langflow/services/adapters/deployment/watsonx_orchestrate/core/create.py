@@ -47,12 +47,13 @@ from langflow.services.adapters.deployment.watsonx_orchestrate.payloads import (
     WatsonxProviderCreateApplyResult,
     WatsonxToolAppBinding,
     WatsonxToolRefBinding,
+    build_langflow_wxo_resource_name,
+    validate_technical_name,
 )
 from langflow.services.adapters.deployment.watsonx_orchestrate.utils import (
     build_agent_payload_from_values,
     dedupe_list,
     raise_as_deployment_error,
-    validate_wxo_name,
 )
 
 if TYPE_CHECKING:
@@ -71,6 +72,7 @@ if TYPE_CHECKING:
 @dataclass(slots=True)
 class ProviderCreatePlan:
     deployment_name: str
+    display_name: str
     llm: str
     existing_tool_ids: list[str]
     existing_tool_bindings: dict[str, list[str]]
@@ -92,11 +94,15 @@ def validate_provider_create_request_sections(payload: DeploymentCreate) -> None
 
 def build_provider_create_plan(
     *,
-    deployment_name: str,
+    deployment_name: str | None,
     provider_create: WatsonxDeploymentCreatePayload,
 ) -> ProviderCreatePlan:
     """Build a deterministic CPU-only plan for provider_data create operations."""
-    normalized_deployment_name = validate_wxo_name(deployment_name)
+    technical_deployment_name = (
+        validate_technical_name(deployment_name, field_label="Agent name")
+        if deployment_name is not None
+        else build_langflow_wxo_resource_name(provider_create.display_name, resource="Agent")
+    )
 
     # existing_tool_ids: provider tool ids from bind operations that reference
     #   pre-existing tools (via tool_id_with_ref); included in the final agent.
@@ -108,10 +114,11 @@ def build_provider_create_plan(
     #   (used to determine which connections the create plan needs).
     selected_operation_app_ids = OrderedUniqueStrs()
 
-    # raw_tool_app_ids: per raw tool name, collects operation app_ids to bind
+    # raw_tool_app_ids: per raw tool provider_data.tool_name, collects operation app_ids to bind
     #   when the raw tool is created.
     raw_tool_app_ids = {
-        raw_payload.name: OrderedUniqueStrs() for raw_payload in (provider_create.tools.raw_payloads or [])
+        raw_payload.provider_data.tool_name: OrderedUniqueStrs()
+        for raw_payload in (provider_create.tools.raw_payloads or [])
     }
     for operation in provider_create.operations:
         if isinstance(operation, WatsonxAttachToolOperation):
@@ -144,14 +151,17 @@ def build_provider_create_plan(
         )
         for raw_payload in (provider_create.connections.raw_payloads or [])
     ]
-    raw_tool_pool = {raw_payload.name: raw_payload for raw_payload in (provider_create.tools.raw_payloads or [])}
+    raw_tool_pool = {
+        raw_payload.provider_data.tool_name: raw_payload for raw_payload in (provider_create.tools.raw_payloads or [])
+    }
     raw_tools_to_create = [
         RawToolCreatePlan(raw_name=raw_name, payload=raw_tool_pool[raw_name], app_ids=app_ids.to_list())
         for raw_name, app_ids in raw_tool_app_ids.items()
     ]
 
     return ProviderCreatePlan(
-        deployment_name=normalized_deployment_name,
+        deployment_name=technical_deployment_name,
+        display_name=provider_create.display_name,
         llm=provider_create.llm,
         existing_tool_ids=existing_tool_ids.to_list(),
         existing_tool_bindings={tool_id: app_ids.to_list() for tool_id, app_ids in existing_tool_bindings.items()},
@@ -266,15 +276,17 @@ async def apply_provider_create_plan_with_rollback(
             )
 
         final_tool_ids = dedupe_list([*plan.existing_tool_ids, *created_tool_ids])
-        agent_create_response = await retry_create(
-            create_agent_deployment,
-            clients=clients,
+        agent_payload = build_agent_payload_from_values(
             agent_name=plan.deployment_name,
-            agent_display_name=deployment_spec.name,
-            deployment_name=deployment_spec.name,
+            agent_display_name=plan.display_name,
             description=deployment_spec.description,
             tool_ids=final_tool_ids,
             llm=plan.llm,
+        )
+        agent_create_response = await retry_create(
+            create_agent_deployment,
+            clients=clients,
+            payload=agent_payload,
         )
     except Exception:
         # undo tool<->connection bindings of existing tools
@@ -315,7 +327,8 @@ async def apply_provider_create_plan_with_rollback(
         tools_with_refs=created_snapshot_bindings,
         tool_app_bindings=created_tool_app_bindings,
         deployment_name=plan.deployment_name,
-        display_name=deployment_spec.name,
+        display_name=plan.display_name,
+        description=agent_payload["description"],
     )
 
 
@@ -413,22 +426,9 @@ async def _bind_existing_tools_for_create(
 async def create_agent_deployment(
     *,
     clients: WxOClient,
-    tool_ids: list[str],
-    agent_name: str,
-    agent_display_name: str,
-    deployment_name: str,
-    description: str,
-    llm: str,
+    payload: dict[str, Any],
 ):
-    """Create a provider agent deployment from explicit payload fields."""
-    payload = build_agent_payload_from_values(
-        agent_name=agent_name,
-        agent_display_name=agent_display_name,
-        deployment_name=deployment_name,
-        description=description,
-        tool_ids=tool_ids,
-        llm=llm,
-    )
+    """Create a provider agent deployment from a prebuilt payload."""
     try:
         return await asyncio.to_thread(clients.agent.create, payload)
     except Exception as exc:  # noqa: BLE001
@@ -437,7 +437,7 @@ async def create_agent_deployment(
             error_prefix=ErrorPrefix.CREATE,
             log_msg="Unexpected provider error during wxO agent create",
             resource="agent",
-            resource_name=agent_name,
+            resource_name=payload["name"],
         )
 
 

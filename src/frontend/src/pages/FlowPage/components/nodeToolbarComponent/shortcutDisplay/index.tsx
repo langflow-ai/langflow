@@ -1,6 +1,6 @@
+import { useTranslation } from "react-i18next";
 import RenderIcons from "@/components/common/renderIconComponent";
 import { cn, toCamelCase } from "@/utils/utils";
-import { useTranslation } from "react-i18next";
 
 export default function ShortcutDisplay({
   display_name,

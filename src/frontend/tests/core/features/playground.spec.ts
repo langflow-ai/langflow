@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
@@ -9,7 +11,6 @@ import { disableInspectPanel } from "../../utils/open-advanced-options";
 import { sessionMoreMenu } from "../../utils/playground/sessions";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "fresh start playground",
   { tag: ["@release", "@workspace", "@api"] },
@@ -17,6 +18,8 @@ test(
     loadDotenvIfLocal(__dirname);
 
     await openBlankFlow(page);
+
+    await addLegacyComponents(page);
 
     await disableInspectPanel(page);
 

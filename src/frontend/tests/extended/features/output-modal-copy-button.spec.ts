@@ -1,13 +1,16 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 test.describe("Output Modal Copy Button", () => {
   test(
     "user should be able to copy text output from component output modal",
     { tag: ["@release", "@workspace"] },
     async ({ page }) => {
       await openBlankFlow(page);
+
+      await addLegacyComponents(page);
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 3000,

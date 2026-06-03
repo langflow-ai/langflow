@@ -81,7 +81,7 @@ export default function SettingsPage(): JSX.Element {
       ),
     },
     {
-      title: "DB Providers",
+      title: t("settings.nav.dbProviders"),
       href: "/settings/db-providers",
       icon: (
         <ForwardedIconComponent

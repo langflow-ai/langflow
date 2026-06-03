@@ -1,6 +1,8 @@
 import type { Page } from "@playwright/test";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -8,9 +10,7 @@ import {
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 import { unselectNodes } from "../../utils/unselect-nodes";
-import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
-import { TEXTS } from "../../utils/constants/texts";
 // Helper function to verify prompt variables
 async function verifyPromptVariables(
   page: Page,

@@ -1,6 +1,4 @@
-import _ from "lodash";
 import { nanoid } from "nanoid";
-import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import { Input } from "../../../../../components/ui/input";
