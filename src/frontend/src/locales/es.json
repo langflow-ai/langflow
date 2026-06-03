@@ -141,6 +141,7 @@
   "assistant.welcomeText": "Así es como puedo ayudarte",
   "assistant.working": "Procesando...",
   "assistant.workingOnIt": "Trabajando en ello...",
+  "assistant.mentionNoMatches": "No hay componentes coincidentes en el lienzo",
   "auth.adminLoginButton": "Inicio de sesión",
   "auth.adminTitle": "Administrador",
   "auth.alertSaveWithApi": "⚠️ Precaución: al exportar este flujo, se pueden revelar credenciales confidenciales.",
