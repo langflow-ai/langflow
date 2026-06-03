@@ -260,10 +260,6 @@ export const lazyIconsMapping = {
     import("@/icons/GradientSparkles").then((mod) => ({
       default: mod.GradientUngroup,
     })),
-  GradientSave: () =>
-    import("@/icons/GradientSparkles").then((mod) => ({
-      default: mod.GradientSave,
-    })),
   GridHorizontal: () =>
     import("@/icons/GridHorizontal").then((mod) => ({
       default: mod.GridHorizontalIcon,

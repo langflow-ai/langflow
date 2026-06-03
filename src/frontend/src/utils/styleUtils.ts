@@ -5,7 +5,6 @@ import { FaApple, FaDiscord, FaGithub } from "react-icons/fa";
 import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
 import { BotMessageSquareIcon } from "@/icons/BotMessageSquare";
 import { fontAwesomeIcons, isFontAwesomeIcon } from "@/icons/fontAwesomeIcons";
-import { GradientSave } from "@/icons/GradientSparkles";
 
 const iconCache = new Map<string, React.ComponentType>();
 
@@ -706,7 +705,6 @@ const iconMappingsPromise = import("../icons/lazyIconImports").then(
 
 export const eagerLoadedIconsMap = {
   // Custom icons
-  GradientSave: GradientSave,
   BotMessageSquareIcon: BotMessageSquareIcon,
 
   // React icon

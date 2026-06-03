@@ -21,13 +21,6 @@ export const GradientInfinity = forwardRef<
   );
 });
 
-export const GradientSave = forwardRef<
-  SVGSVGElement,
-  React.PropsWithChildren<{}>
->((props, ref) => {
-  return <ForwardedIconComponent name="Save" ref={ref} {...props} />;
-});
-
 export const GradientGroup = (props) => {
   return (
     <>
