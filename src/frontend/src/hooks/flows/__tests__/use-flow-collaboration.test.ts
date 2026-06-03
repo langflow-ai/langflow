@@ -214,7 +214,12 @@ describe("useFlowCollaboration", () => {
     let acceptedMessage: CollaborationOperationAcceptedMessage | undefined;
     await act(async () => {
       const promise = result.current.submitOperations([
-        { type: "update_nodes", nodes: [{ id: "n1" } as never] },
+        {
+          type: "update_nodes",
+          updates: [
+            { id: "n1", op: "set_field", path: ["position", "x"], value: 1 },
+          ],
+        },
       ]);
       const submit = JSON.parse(socket.sent[1]!) as {
         request_id: string;

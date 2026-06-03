@@ -8,6 +8,7 @@ import {
   NOTE_NODE_MIN_WIDTH,
 } from "@/constants/constants";
 import { useGetNoteTranslationsQuery } from "@/controllers/API/queries/flows/use-get-note-translations";
+import { buildSetNodeFieldUpdate } from "@/hooks/flows/flow-operation-diff";
 import { useAlternate } from "@/shared/hooks/use-alternate";
 import useFlowStore, { syncNoteTranslations } from "@/stores/flowStore";
 import type { NoteDataType } from "@/types/flow";
@@ -121,7 +122,18 @@ function NoteNode({
   const debouncedResize = useMemo(
     () =>
       debounce((width: number, height: number) => {
-        setNode(data.id, (node) => ({ ...node, width, height }));
+        setNode(
+          data.id,
+          (node) => ({ ...node, width, height }),
+          true,
+          undefined,
+          {
+            collaborationUpdates: [
+              buildSetNodeFieldUpdate(data.id, ["width"], width),
+              buildSetNodeFieldUpdate(data.id, ["height"], height),
+            ],
+          },
+        );
       }, 5),
     [data.id, setNode],
   );

@@ -2,19 +2,24 @@ import { cloneDeep } from "lodash";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
-import type { FlowOperation } from "@/types/flow-operations";
+import type { FlowOperation, UpdateNodeEntry } from "@/types/flow-operations";
 import { cleanEdges } from "@/utils/reactflowUtils";
 import { getInputsAndOutputs } from "@/utils/storeUtils";
 import {
   coalesceDeleteIds,
   nodeSnapshotForFlowOperation,
 } from "./flow-operation-diff";
+import { deleteValueAtPath, setValueAtPath } from "./flow-operation-path";
 
 export type { FlowMutationOptions } from "@/types/flow-operations";
 export {
+  buildDeleteNodeFieldUpdate,
   buildGraphDiffOperations,
   buildInverseFlowOperations,
+  buildOverwriteNodeUpdate,
+  buildSetNodeFieldUpdate,
   buildUpdateMetadataOperation,
+  buildUpdateNodeFieldsOperation,
   buildUpdateNodesOperation,
   collectFlowOperationTouches,
   flowOperationTouchesIntersect,
@@ -67,6 +72,23 @@ function applyNodeUpdate(existingNode: AllNodeType, nextNode: AllNodeType) {
   return node;
 }
 
+function applyNodeUpdateEntry(
+  existingNode: AllNodeType,
+  update: UpdateNodeEntry,
+): AllNodeType {
+  if (update.op === "overwrite_node") {
+    return applyNodeUpdate(existingNode, update.node);
+  }
+
+  const node = cloneDeep(existingNode);
+  if (update.op === "set_field") {
+    setValueAtPath(node, update.path, update.value);
+  } else {
+    deleteValueAtPath(node, update.path);
+  }
+  return node;
+}
+
 export function applyFlowOperationsLocally(
   nodes: AllNodeType[],
   edges: EdgeType[],
@@ -89,10 +111,10 @@ export function applyFlowOperationsLocally(
       }
       case "update_nodes": {
         const nodeMap = new Map(nextNodes.map((node) => [node.id, node]));
-        for (const node of operation.nodes) {
-          const existingNode = nodeMap.get(node.id);
+        for (const update of operation.updates) {
+          const existingNode = nodeMap.get(update.id);
           if (existingNode) {
-            nodeMap.set(node.id, applyNodeUpdate(existingNode, node));
+            nodeMap.set(update.id, applyNodeUpdateEntry(existingNode, update));
           }
         }
         nextNodes = Array.from(nodeMap.values());

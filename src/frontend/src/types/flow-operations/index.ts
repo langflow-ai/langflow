@@ -8,9 +8,36 @@ export type AddNodesOp = {
   nodes: AllNodeType[];
 };
 
+export type NodeFieldPathSegment = string | number;
+export type NodeFieldPath = NodeFieldPathSegment[];
+
+export type SetNodeFieldUpdate = {
+  id: string;
+  op: "set_field";
+  path: NodeFieldPath;
+  value: unknown;
+};
+
+export type DeleteNodeFieldUpdate = {
+  id: string;
+  op: "delete_field";
+  path: NodeFieldPath;
+};
+
+export type OverwriteNodeUpdate = {
+  id: string;
+  op: "overwrite_node";
+  node: AllNodeType;
+};
+
+export type UpdateNodeEntry =
+  | SetNodeFieldUpdate
+  | DeleteNodeFieldUpdate
+  | OverwriteNodeUpdate;
+
 export type UpdateNodesOp = {
   type: "update_nodes";
-  nodes: AllNodeType[];
+  updates: UpdateNodeEntry[];
 };
 
 export type DeleteNodesOp = {
@@ -44,6 +71,7 @@ export type FlowOperation =
 
 export type FlowMutationOptions = {
   skipCollaborationEmit?: boolean;
+  collaborationUpdates?: UpdateNodeEntry[];
 };
 
 export type CollaborationHistoryEntry = {

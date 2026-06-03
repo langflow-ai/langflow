@@ -96,14 +96,14 @@ describe("useFlowCollaborationEditing", () => {
         id: "flow-1",
         name: "Flow",
         description: "",
-        data: { nodes: [], edges: [] },
+        data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
       },
     });
     mockGetFlow.mockResolvedValue({
       id: "flow-1",
       name: "Flow",
       description: "",
-      data: { nodes: [], edges: [] },
+      data: { nodes: [], edges: [], viewport: { x: 0, y: 0, zoom: 1 } },
     });
   });
 
@@ -171,19 +171,24 @@ describe("useFlowCollaborationEditing", () => {
     jest.useFakeTimers();
     try {
       writeCollaborationOperationBetaEnabled(true);
-      const originalNode = {
+      const firstUpdate = {
         id: "node-1",
-        position: { x: 0, y: 0 },
-        data: { id: "node-1", value: "" },
-      } as AllNodeType;
-      const firstTypedNode = {
-        ...originalNode,
-        data: { id: "node-1", value: "h" },
-      } as AllNodeType;
-      const finalTypedNode = {
-        ...originalNode,
-        data: { id: "node-1", value: "hi" },
-      } as AllNodeType;
+        op: "set_field" as const,
+        path: ["data", "value"],
+        value: "h",
+      };
+      const finalUpdate = {
+        id: "node-1",
+        op: "set_field" as const,
+        path: ["data", "value"],
+        value: "hi",
+      };
+      const originalInverse = {
+        id: "node-1",
+        op: "set_field" as const,
+        path: ["data", "value"],
+        value: "",
+      };
 
       renderHook(() =>
         useFlowCollaborationEditing({
@@ -197,22 +202,36 @@ describe("useFlowCollaborationEditing", () => {
         useFlowStore
           .getState()
           .onCollaborationOperations?.(
-            [{ type: "update_nodes", nodes: [firstTypedNode] }],
+            [{ type: "update_nodes", updates: [firstUpdate] }],
             {
               historyEntry: {
-                forwardOps: [{ type: "update_nodes", nodes: [firstTypedNode] }],
-                inverseOps: [{ type: "update_nodes", nodes: [originalNode] }],
+                forwardOps: [{ type: "update_nodes", updates: [firstUpdate] }],
+                inverseOps: [
+                  { type: "update_nodes", updates: [originalInverse] },
+                ],
               },
             },
           );
         useFlowStore
           .getState()
           .onCollaborationOperations?.(
-            [{ type: "update_nodes", nodes: [finalTypedNode] }],
+            [{ type: "update_nodes", updates: [finalUpdate] }],
             {
               historyEntry: {
-                forwardOps: [{ type: "update_nodes", nodes: [finalTypedNode] }],
-                inverseOps: [{ type: "update_nodes", nodes: [firstTypedNode] }],
+                forwardOps: [{ type: "update_nodes", updates: [finalUpdate] }],
+                inverseOps: [
+                  {
+                    type: "update_nodes",
+                    updates: [
+                      {
+                        id: "node-1",
+                        op: "set_field" as const,
+                        path: ["data", "value"],
+                        value: "h",
+                      },
+                    ],
+                  },
+                ],
               },
             },
           );
@@ -228,7 +247,7 @@ describe("useFlowCollaborationEditing", () => {
 
       expect(mockSubmitOperations).toHaveBeenCalledTimes(1);
       expect(mockSubmitOperations).toHaveBeenCalledWith([
-        { type: "update_nodes", nodes: [finalTypedNode] },
+        { type: "update_nodes", updates: [finalUpdate] },
       ]);
 
       mockSubmitOperations.mockClear();
@@ -240,7 +259,7 @@ describe("useFlowCollaborationEditing", () => {
       });
 
       expect(mockSubmitOperations).toHaveBeenCalledWith([
-        { type: "update_nodes", nodes: [originalNode] },
+        { type: "update_nodes", updates: [originalInverse] },
       ]);
     } finally {
       jest.useRealTimers();
@@ -274,15 +293,18 @@ describe("useFlowCollaborationEditing", () => {
 
   it("submits inverse operations when collaboration undo is invoked", async () => {
     writeCollaborationOperationBetaEnabled(true);
-    const originalNode = {
+    const moveForward = {
       id: "node-1",
-      position: { x: 0, y: 0 },
-      data: { id: "node-1" },
-    } as AllNodeType;
-    const movedNode = {
-      ...originalNode,
-      position: { x: 25, y: 25 },
-    } as AllNodeType;
+      op: "set_field" as const,
+      path: ["position"],
+      value: { x: 25, y: 25 },
+    };
+    const moveInverse = {
+      id: "node-1",
+      op: "set_field" as const,
+      path: ["position"],
+      value: { x: 0, y: 0 },
+    };
 
     renderHook(() =>
       useFlowCollaborationEditing({
@@ -295,11 +317,11 @@ describe("useFlowCollaborationEditing", () => {
       useFlowStore
         .getState()
         .onCollaborationOperations?.(
-          [{ type: "update_nodes", nodes: [movedNode] }],
+          [{ type: "update_nodes", updates: [moveForward] }],
           {
             historyEntry: {
-              forwardOps: [{ type: "update_nodes", nodes: [movedNode] }],
-              inverseOps: [{ type: "update_nodes", nodes: [originalNode] }],
+              forwardOps: [{ type: "update_nodes", updates: [moveForward] }],
+              inverseOps: [{ type: "update_nodes", updates: [moveInverse] }],
             },
           },
         );
@@ -307,7 +329,7 @@ describe("useFlowCollaborationEditing", () => {
 
     await waitFor(() => {
       expect(mockSubmitOperations).toHaveBeenCalledWith([
-        { type: "update_nodes", nodes: [movedNode] },
+        { type: "update_nodes", updates: [moveForward] },
       ]);
     });
     mockSubmitOperations.mockClear();
@@ -318,7 +340,7 @@ describe("useFlowCollaborationEditing", () => {
 
     await waitFor(() => {
       expect(mockSubmitOperations).toHaveBeenCalledWith([
-        { type: "update_nodes", nodes: [originalNode] },
+        { type: "update_nodes", updates: [moveInverse] },
       ]);
     });
   });
@@ -337,7 +359,11 @@ describe("useFlowCollaborationEditing", () => {
         id: "flow-1",
         name: "Flow",
         description: "",
-        data: { nodes: [nodeA], edges: [] },
+        data: {
+          nodes: [nodeA],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
       },
     });
 

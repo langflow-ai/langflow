@@ -88,7 +88,15 @@ class TestApplyFlowOperations:
     def test_does_not_mutate_input_on_success(self):
         flow_data = _base_flow_data()
         original = copy.deepcopy(flow_data)
-        apply_flow_operations(flow_data, [{"type": "update_nodes", "nodes": [copy.deepcopy(NODE_A)]}])
+        apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 5}],
+                }
+            ],
+        )
         assert flow_data == original
 
     def test_does_not_mutate_input_on_failure(self):
@@ -109,15 +117,178 @@ class TestApplyFlowOperations:
         assert isinstance(result.forward_ops[0], AddNodesOp)
         assert result.forward_ops[0].nodes == [new_node]
 
+    def test_update_nodes_sets_scalar_null_list_and_object_values(self):
+        flow_data = _base_flow_data()
+        operations = [
+            {
+                "type": "update_nodes",
+                "updates": [
+                    {"id": "a", "op": "set_field", "path": ["position", "x"], "value": 50},
+                    {"id": "a", "op": "set_field", "path": ["data", "label"], "value": None},
+                    {"id": "a", "op": "set_field", "path": ["data", "items"], "value": [1, 2, 3]},
+                    {"id": "a", "op": "set_field", "path": ["data", "config"], "value": {"enabled": True}},
+                ],
+            }
+        ]
+        result = apply_flow_operations(flow_data, operations)
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert stored["position"]["x"] == 50
+        assert stored["data"]["label"] is None
+        assert stored["data"]["items"] == [1, 2, 3]
+        assert stored["data"]["config"] == {"enabled": True}
+        assert result.forward_ops == [UpdateNodesOp(type="update_nodes", updates=operations[0]["updates"])]
+
+    def test_update_nodes_can_create_optional_final_object_key(self):
+        flow_data = _base_flow_data()
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [{"id": "a", "op": "set_field", "path": ["data", "selected_output"], "value": "result"}],
+                }
+            ],
+        )
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert stored["data"]["selected_output"] == "result"
+
+    def test_update_nodes_deletes_optional_object_key(self):
+        flow_data = _base_flow_data()
+        flow_data["nodes"][0]["data"]["customColor"] = "#fff"
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}],
+                }
+            ],
+        )
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert "customColor" not in stored["data"]
+        assert result.forward_ops == [
+            UpdateNodesOp(
+                type="update_nodes",
+                updates=[{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}],
+            )
+        ]
+
+    def test_update_nodes_delete_missing_optional_key_is_noop(self):
+        flow_data = _base_flow_data()
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}],
+                }
+            ],
+        )
+
+        assert result.flow_data == flow_data
+        assert result.forward_ops == [
+            UpdateNodesOp(
+                type="update_nodes",
+                updates=[{"id": "a", "op": "delete_field", "path": ["data", "customColor"]}],
+            )
+        ]
+
+    def test_update_nodes_applies_array_index_replacement(self):
+        flow_data = _base_flow_data()
+        flow_data["nodes"][0]["data"]["node"] = {"outputs": [{"selected": "a"}, {"selected": "b"}]}
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [
+                        {
+                            "id": "a",
+                            "op": "set_field",
+                            "path": ["data", "node", "outputs", 1, "selected"],
+                            "value": None,
+                        }
+                    ],
+                }
+            ],
+        )
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert stored["data"]["node"]["outputs"][1]["selected"] is None
+
+    def test_update_nodes_forward_ops_snapshot_does_not_drift_after_nested_field_update(self):
+        flow_data = _base_flow_data()
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [
+                        {
+                            "id": "a",
+                            "op": "set_field",
+                            "path": ["data", "config"],
+                            "value": {"enabled": True},
+                        },
+                        {
+                            "id": "a",
+                            "op": "set_field",
+                            "path": ["data", "config", "retries"],
+                            "value": 3,
+                        },
+                    ],
+                }
+            ],
+        )
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert stored["data"]["config"] == {"enabled": True, "retries": 3}
+        update_op = result.forward_ops[0]
+        assert isinstance(update_op, UpdateNodesOp)
+        assert update_op.updates[0].value == {"enabled": True}
+
+    @pytest.mark.parametrize(
+        "updates",
+        [
+            [
+                {"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"},
+                {"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#000"},
+            ],
+            [
+                {"id": "a", "op": "delete_field", "path": ["data", "customColor"]},
+                {"id": "a", "op": "delete_field", "path": ["data", "customColor"]},
+            ],
+            [
+                {"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"},
+                {"id": "a", "op": "delete_field", "path": ["data", "customColor"]},
+            ],
+            [
+                {"id": "a", "op": "delete_field", "path": ["data", "customColor"]},
+                {"id": "a", "op": "set_field", "path": ["data", "customColor"], "value": "#fff"},
+            ],
+        ],
+    )
+    def test_update_nodes_rejects_duplicate_field_path_updates(self, updates):
+        flow_data = _base_flow_data()
+        with pytest.raises(FlowOperationValidationError, match="multiple field updates"):
+            apply_flow_operations(flow_data, [{"type": "update_nodes", "updates": updates}])
+
     def test_update_nodes_replaces_full_payload(self):
         flow_data = _base_flow_data()
         updated = copy.deepcopy(NODE_A)
         updated["position"] = {"x": 50, "y": 50}
-        result = apply_flow_operations(flow_data, [{"type": "update_nodes", "nodes": [updated]}])
+        result = apply_flow_operations(
+            flow_data, [{"type": "update_nodes", "updates": [{"id": "a", "op": "overwrite_node", "node": updated}]}]
+        )
 
         stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
         assert stored["position"] == {"x": 50, "y": 50}
-        assert result.forward_ops == [UpdateNodesOp(type="update_nodes", nodes=[updated])]
+        assert result.forward_ops == [
+            UpdateNodesOp(type="update_nodes", updates=[{"id": "a", "op": "overwrite_node", "node": updated}])
+        ]
 
     def test_delete_nodes_removes_incident_edges(self):
         flow_data = _base_flow_data()
@@ -178,17 +349,25 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError, match="duplicate node id"):
             apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [node, copy.deepcopy(node)]}])
 
-    def test_rejects_duplicate_node_id_in_update_nodes(self):
+    def test_rejects_multiple_overwrite_node_updates_for_same_node(self):
         flow_data = _base_flow_data()
         first_update = copy.deepcopy(NODE_A)
         first_update["position"] = {"x": 10, "y": 10}
         second_update = copy.deepcopy(NODE_A)
         second_update["position"] = {"x": 20, "y": 20}
 
-        with pytest.raises(FlowOperationValidationError, match="duplicate node id"):
+        with pytest.raises(FlowOperationValidationError, match="multiple overwrite_node entries"):
             apply_flow_operations(
                 flow_data,
-                [{"type": "update_nodes", "nodes": [first_update, second_update]}],
+                [
+                    {
+                        "type": "update_nodes",
+                        "updates": [
+                            {"id": "a", "op": "overwrite_node", "node": first_update},
+                            {"id": "a", "op": "overwrite_node", "node": second_update},
+                        ],
+                    }
+                ],
             )
 
     def test_rejects_missing_node_on_update(self):
@@ -196,7 +375,72 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError, match="does not exist"):
             apply_flow_operations(
                 flow_data,
-                [{"type": "update_nodes", "nodes": [{"id": "missing", "type": "generic"}]}],
+                [
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "missing", "op": "set_field", "path": ["position", "x"], "value": 1}],
+                    }
+                ],
+            )
+
+    def test_rejects_old_update_nodes_nodes_payload(self):
+        flow_data = _base_flow_data()
+        with pytest.raises(FlowOperationValidationError, match="updates"):
+            apply_flow_operations(flow_data, [{"type": "update_nodes", "nodes": [copy.deepcopy(NODE_A)]}])
+
+    def test_rejects_overwrite_node_id_mismatch(self):
+        flow_data = _base_flow_data()
+        updated = copy.deepcopy(NODE_A)
+        updated["id"] = "different"
+        with pytest.raises(FlowOperationValidationError, match="overwrite_node node id must match"):
+            apply_flow_operations(
+                flow_data,
+                [{"type": "update_nodes", "updates": [{"id": "a", "op": "overwrite_node", "node": updated}]}],
+            )
+
+    def test_rejects_mixing_overwrite_node_and_field_updates(self):
+        flow_data = _base_flow_data()
+        with pytest.raises(FlowOperationValidationError, match="cannot mix overwrite_node"):
+            apply_flow_operations(
+                flow_data,
+                [
+                    {
+                        "type": "update_nodes",
+                        "updates": [
+                            {"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1},
+                            {"id": "a", "op": "overwrite_node", "node": copy.deepcopy(NODE_A)},
+                        ],
+                    }
+                ],
+            )
+
+    @pytest.mark.parametrize(
+        ("path", "message"),
+        [
+            (["id"], "cannot modify node identity"),
+            (["data", "missing", "value"], "object path part must be an existing string key: 'missing'"),
+        ],
+    )
+    def test_rejects_invalid_update_node_paths(self, path, message):
+        flow_data = _base_flow_data()
+        with pytest.raises(FlowOperationValidationError, match=message):
+            apply_flow_operations(
+                flow_data,
+                [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": path, "value": 1}]}],
+            )
+
+    def test_rejects_array_delete(self):
+        flow_data = _base_flow_data()
+        flow_data["nodes"][0]["data"]["items"] = ["a", "b"]
+        with pytest.raises(FlowOperationValidationError, match="delete only supports object properties"):
+            apply_flow_operations(
+                flow_data,
+                [
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "a", "op": "delete_field", "path": ["data", "items", 0]}],
+                    }
+                ],
             )
 
     def test_rejects_malformed_node_payload(self):
@@ -278,7 +522,7 @@ class TestApplyFlowOperations:
         result = apply_flow_operations(
             flow_data,
             [
-                {"type": "update_nodes", "nodes": [updated]},
+                {"type": "update_nodes", "updates": [{"id": "b", "op": "overwrite_node", "node": updated}]},
                 {"type": "delete_edges", "ids": ["e-ab"]},
             ],
         )

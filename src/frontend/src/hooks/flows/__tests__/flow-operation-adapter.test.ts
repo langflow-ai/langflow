@@ -8,6 +8,7 @@ import {
 import {
   buildGraphDiffOperations,
   buildInverseFlowOperations,
+  buildSetNodeFieldUpdate,
   buildUpdateMetadataOperation,
   buildUpdateNodesOperation,
   collectFlowOperationTouches,
@@ -43,7 +44,11 @@ describe("flow-operation-adapter", () => {
         id: "flow-1",
         name: "Flow",
         description: "",
-        data: { nodes: [nodeA, nodeB], edges: [edgeAb] },
+        data: {
+          nodes: [nodeA, nodeB],
+          edges: [edgeAb],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
       },
       collaborationOperationMode: false,
       isApplyingRemoteOperations: false,
@@ -66,7 +71,16 @@ describe("flow-operation-adapter", () => {
 
     expect(operations).toEqual(
       expect.arrayContaining([
-        { type: "update_nodes", nodes: [expect.objectContaining({ id: "a" })] },
+        {
+          type: "update_nodes",
+          updates: [
+            {
+              id: "a",
+              op: "overwrite_node",
+              node: expect.objectContaining({ id: "a" }),
+            },
+          ],
+        },
         { type: "delete_edges", ids: ["e-ab"] },
       ]),
     );
@@ -103,10 +117,14 @@ describe("flow-operation-adapter", () => {
 
     expect(operation).toEqual({
       type: "update_nodes",
-      nodes: [
+      updates: [
         {
-          ...nodeA,
-          position: { x: 25, y: 25 },
+          id: "a",
+          op: "overwrite_node",
+          node: {
+            ...nodeA,
+            position: { x: 25, y: 25 },
+          },
         },
       ],
     });
@@ -218,6 +236,40 @@ describe("flow-operation-adapter", () => {
     ]);
   });
 
+  it("buildInverseFlowOperations inverts set and delete field updates", () => {
+    const nodeWithFields = {
+      ...nodeA,
+      data: { ...nodeA.data, label: "old", removed: true },
+    } as unknown as AllNodeType;
+
+    const inverse = buildInverseFlowOperations(
+      [nodeWithFields],
+      [],
+      { nodes: [nodeWithFields], edges: [] },
+      [
+        {
+          type: "update_nodes",
+          updates: [
+            buildSetNodeFieldUpdate("a", ["data", "label"], "new"),
+            buildSetNodeFieldUpdate("a", ["data", "created"], null),
+            { id: "a", op: "delete_field", path: ["data", "removed"] },
+          ],
+        },
+      ],
+    );
+
+    expect(inverse).toEqual([
+      {
+        type: "update_nodes",
+        updates: [
+          { id: "a", op: "set_field", path: ["data", "removed"], value: true },
+          { id: "a", op: "delete_field", path: ["data", "created"] },
+          { id: "a", op: "set_field", path: ["data", "label"], value: "old" },
+        ],
+      },
+    ]);
+  });
+
   it("flow operation touch helpers detect overlapping graph and metadata changes", () => {
     const localTouches = collectFlowOperationTouches([
       { type: "add_edges", edges: [edgeAb] },
@@ -257,13 +309,17 @@ describe("flow-operation-adapter", () => {
       [
         {
           type: "update_nodes",
-          nodes: [
+          updates: [
             {
-              ...nodeA,
-              selected: false,
-              measured: { width: 320, height: 180 },
-              position: { x: 25, y: 25 },
-            } as AllNodeType,
+              id: "a",
+              op: "overwrite_node",
+              node: {
+                ...nodeA,
+                selected: false,
+                measured: { width: 320, height: 180 },
+                position: { x: 25, y: 25 },
+              } as AllNodeType,
+            },
           ],
         },
       ],
@@ -284,7 +340,9 @@ describe("flow-operation-adapter", () => {
       [
         {
           type: "update_nodes",
-          nodes: [{ ...nodeA, position: { x: 25, y: 25 } } as AllNodeType],
+          updates: [
+            buildSetNodeFieldUpdate("a", ["position"], { x: 25, y: 25 }),
+          ],
         },
       ],
     );
@@ -304,7 +362,7 @@ describe("flow-operation-adapter", () => {
     applyRemoteFlowOperations([
       {
         type: "update_nodes",
-        nodes: [{ ...nodeA, position: { x: 25, y: 25 } } as AllNodeType],
+        updates: [buildSetNodeFieldUpdate("a", ["position"], { x: 25, y: 25 })],
       },
     ]);
 
@@ -323,19 +381,50 @@ describe("flow-operation-adapter", () => {
         id: "flow-1",
         name: "Flow",
         description: "",
-        data: { nodes: [nodeA, nodeB], edges: [selectedEdge] },
+        data: {
+          nodes: [nodeA, nodeB],
+          edges: [selectedEdge],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
       },
     });
 
     applyRemoteFlowOperations([
       {
         type: "update_nodes",
-        nodes: [{ ...nodeA, position: { x: 25, y: 25 } } as AllNodeType],
+        updates: [buildSetNodeFieldUpdate("a", ["position"], { x: 25, y: 25 })],
       },
     ]);
 
     expect(useFlowStore.getState().edges).toEqual([
       expect.objectContaining({ id: "e-ab", selected: true }),
     ]);
+  });
+
+  it("applyFlowOperationsLocally updates fields without clobbering siblings", () => {
+    const node = {
+      ...nodeA,
+      data: { ...nodeA.data, label: "old", sibling: true },
+    } as unknown as AllNodeType;
+
+    const result = applyFlowOperationsLocally(
+      [node],
+      [],
+      [
+        {
+          type: "update_nodes",
+          updates: [
+            buildSetNodeFieldUpdate("a", ["data", "label"], null),
+            { id: "a", op: "delete_field", path: ["data", "missing"] },
+          ],
+        },
+      ],
+    );
+
+    expect(result.nodes[0]?.data).toEqual({
+      ...nodeA.data,
+      label: null,
+      sibling: true,
+    });
   });
 });

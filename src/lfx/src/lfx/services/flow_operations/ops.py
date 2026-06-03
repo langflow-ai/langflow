@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import Any, Literal
+from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, ValidationError
+from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
 
@@ -24,11 +24,85 @@ class AddNodesOp(BaseModel):
     nodes: list[dict[str, Any]]
 
 
+NodeFieldPathSegment = str | int
+NodeFieldPath = tuple[NodeFieldPathSegment, ...]
+
+
+class _NodeFieldUpdateBase(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    path: NodeFieldPath
+
+    @field_validator("id")
+    @classmethod
+    def validate_node_id(cls, node_id: str) -> str:
+        if not isinstance(node_id, str) or not node_id:
+            msg = "update_nodes entry id must be a non-empty string"
+            raise ValueError(msg)
+        return node_id
+
+    @field_validator("path")
+    @classmethod
+    def validate_path(cls, path: NodeFieldPath) -> NodeFieldPath:
+        if not path:
+            msg = "update_nodes entry path must not be empty"
+            raise ValueError(msg)
+        for segment in path:
+            # bool is a subclass of int, but JSON booleans are not valid array indexes here.
+            if isinstance(segment, bool) or not isinstance(segment, (str, int)):
+                msg = "update_nodes entry path segments must be strings or integers"
+                raise TypeError(msg)
+        return path
+
+
+class SetNodeFieldUpdate(_NodeFieldUpdateBase):
+    op: Literal["set_field"]
+    value: Any
+
+
+class DeleteNodeFieldUpdate(_NodeFieldUpdateBase):
+    op: Literal["delete_field"]
+
+
+class OverwriteNodeUpdate(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    id: str
+    op: Literal["overwrite_node"]
+    node: dict[str, Any]
+
+    @field_validator("id")
+    @classmethod
+    def validate_node_id(cls, node_id: str) -> str:
+        if not isinstance(node_id, str) or not node_id:
+            msg = "update_nodes entry id must be a non-empty string"
+            raise ValueError(msg)
+        return node_id
+
+    @model_validator(mode="after")
+    def validate_payload_node_id(self) -> OverwriteNodeUpdate:
+        payload_node_id = self.node.get("id")
+        if not isinstance(payload_node_id, str) or not payload_node_id:
+            msg = "overwrite_node node must have a non-empty string id"
+            raise ValueError(msg)
+        if payload_node_id != self.id:
+            msg = "overwrite_node node id must match update id"
+            raise ValueError(msg)
+        return self
+
+
+UpdateNodeEntry = Annotated[
+    SetNodeFieldUpdate | DeleteNodeFieldUpdate | OverwriteNodeUpdate,
+    Field(discriminator="op"),
+]
+
+
 class UpdateNodesOp(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     type: Literal["update_nodes"]
-    nodes: list[dict[str, Any]]
+    updates: list[UpdateNodeEntry]
 
 
 class DeleteNodesOp(BaseModel):

@@ -8,6 +8,10 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { CustomNodeStatus } from "@/customization/components/custom-NodeStatus";
 import { buildCollaborationSelectionOutline } from "@/hooks/flows/collaboration-user-color";
+import {
+  buildDeleteNodeFieldUpdate,
+  buildSetNodeFieldUpdate,
+} from "@/hooks/flows/flow-operation-diff";
 import { useNodeCollaborationParticipants } from "@/hooks/flows/use-node-collaboration-participants";
 import UpdateComponentModal from "@/modals/updateComponentModal";
 import { useAlternate } from "@/shared/hooks/use-alternate";
@@ -329,35 +333,70 @@ function GenericNode({
         });
       });
 
-      setNode(data.id, (oldNode) => {
-        const newNode = cloneDeep(oldNode);
-        if (newNode.data.node?.outputs) {
-          newNode.data.node.outputs.forEach((out) => {
-            if (out.selected) {
-              out.selected = undefined;
-            }
-          });
+      const outputIndex =
+        data.node?.outputs?.findIndex((o) => o.name === output.name) ?? -1;
+      const outputTypes = output.types || [];
+      const defaultType = outputTypes.length > 0 ? outputTypes[0] : undefined;
+      const selectedValue = output.selected ?? defaultType;
+      const collaborationUpdates =
+        data.node?.outputs?.flatMap((out, index) =>
+          out.selected
+            ? [
+                buildDeleteNodeFieldUpdate(data.id, [
+                  "data",
+                  "node",
+                  "outputs",
+                  index,
+                  "selected",
+                ]),
+              ]
+            : [],
+        ) ?? [];
+      if (outputIndex !== -1 && selectedValue !== undefined) {
+        collaborationUpdates.push(
+          buildSetNodeFieldUpdate(
+            data.id,
+            ["data", "node", "outputs", outputIndex, "selected"],
+            selectedValue,
+          ),
+        );
+        collaborationUpdates.push(
+          buildSetNodeFieldUpdate(
+            data.id,
+            ["data", "selected_output"],
+            output.name,
+          ),
+        );
+      }
 
-          const outputIndex = newNode.data.node.outputs.findIndex(
-            (o) => o.name === output.name,
-          );
-          if (outputIndex !== -1) {
-            const outputTypes = output.types || [];
-            const defaultType =
-              outputTypes.length > 0 ? outputTypes[0] : undefined;
-            newNode.data.node.outputs[outputIndex].selected =
-              output.selected ?? defaultType;
+      setNode(
+        data.id,
+        (oldNode) => {
+          const newNode = cloneDeep(oldNode);
+          if (newNode.data.node?.outputs) {
+            newNode.data.node.outputs.forEach((out) => {
+              if (out.selected) {
+                out.selected = undefined;
+              }
+            });
+
+            if (outputIndex !== -1) {
+              newNode.data.node.outputs[outputIndex].selected = selectedValue;
+            }
+
+            const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
+            (newNode.data as NodeDataType).selected_output = selectedOutput;
           }
 
-          const selectedOutput = newNode.data.node.outputs[outputIndex]?.name;
-          (newNode.data as NodeDataType).selected_output = selectedOutput;
-        }
-
-        return newNode;
-      });
+          return newNode;
+        },
+        true,
+        undefined,
+        { collaborationUpdates },
+      );
       updateNodeInternals(data.id);
     },
-    [data.id, setNode, setEdges, updateNodeInternals],
+    [data.id, data.node?.outputs, setNode, setEdges, updateNodeInternals],
   );
 
   useEffect(() => {
@@ -453,10 +492,24 @@ function GenericNode({
               deleteNode(id);
             }}
             setShowNode={(show) => {
-              setNode(data.id, (old) => ({
-                ...old,
-                data: { ...old.data, showNode: show },
-              }));
+              setNode(
+                data.id,
+                (old) => ({
+                  ...old,
+                  data: { ...old.data, showNode: show },
+                }),
+                true,
+                undefined,
+                {
+                  collaborationUpdates: [
+                    buildSetNodeFieldUpdate(
+                      data.id,
+                      ["data", "showNode"],
+                      show,
+                    ),
+                  ],
+                },
+              );
             }}
             numberOfOutputHandles={shownOutputs.length ?? 0}
             showNode={showNode}

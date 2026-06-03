@@ -3,6 +3,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import useHandleNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import CustomIOFileInput from "@/customization/components/custom-file-input";
+import { buildSetNodeFieldUpdate } from "@/hooks/flows/flow-operation-diff";
 import type { AllNodeType } from "@/types/flow";
 import ImageViewer from "../../../../components/common/ImageViewer";
 import CsvOutputComponent from "../../../../components/core/csvOutputComponent";
@@ -42,13 +43,28 @@ export default function IOFieldView({
   const flowPoolNode = (flowPool[node!.id] ?? [])[
     (flowPool[node!.id]?.length ?? 1) - 1
   ];
+  const setTemplateValue = (
+    targetNode: AllNodeType,
+    templateName: string,
+    value: unknown,
+  ) => {
+    const newNode = cloneDeep(targetNode);
+    if (newNode.data.node?.template[templateName]) {
+      newNode.data.node.template[templateName].value = value;
+      setNode(newNode.id, newNode, true, undefined, {
+        collaborationUpdates: [
+          buildSetNodeFieldUpdate(
+            newNode.id,
+            ["data", "node", "template", templateName, "value"],
+            value,
+          ),
+        ],
+      });
+    }
+  };
   const handleChangeSelect = (e) => {
     if (node) {
-      const newNode = cloneDeep(node);
-      if (newNode.data.node?.template.separator) {
-        newNode.data.node.template.separator.value = e;
-        setNode(newNode.id, newNode);
-      }
+      setTemplateValue(node, "separator", e);
     }
   };
 
@@ -83,10 +99,7 @@ export default function IOFieldView({
                 onChange={(e) => {
                   e.target.value;
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value =
-                      e.target.value;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "input_value", e.target.value);
                   }
                 }}
               />
@@ -97,9 +110,7 @@ export default function IOFieldView({
                 field={node.data.node!.template["file_path"]["value"]}
                 updateValue={(e) => {
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["file_path"].value = e;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "file_path", e);
                   }
                 }}
               />
@@ -111,9 +122,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value = e;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "input_value", e);
                   }
                   const valueToNumbers = convertValuesToNumbers(e);
                   setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));
@@ -130,9 +139,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value = e;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "input_value", e);
                   }
                 }}
                 left={left}
@@ -163,10 +170,7 @@ export default function IOFieldView({
                 onChange={(e) => {
                   e.target.value;
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value =
-                      e.target.value;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "input_value", e.target.value);
                   }
                 }}
               />
@@ -214,9 +218,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value = e;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "input_value", e);
                   }
                 }}
                 left={left}
@@ -230,9 +232,7 @@ export default function IOFieldView({
                 value={node.data.node!.template["input_value"]?.value}
                 onChange={(e) => {
                   if (node) {
-                    const newNode = cloneDeep(node);
-                    newNode.data.node!.template["input_value"].value = e;
-                    setNode(node.id, newNode);
+                    setTemplateValue(node, "input_value", e);
                   }
                   const valueToNumbers = convertValuesToNumbers(e);
                   setErrorDuplicateKey(hasDuplicateKeys(valueToNumbers));

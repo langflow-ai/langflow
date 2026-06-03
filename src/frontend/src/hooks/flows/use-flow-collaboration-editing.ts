@@ -27,6 +27,7 @@ import type {
   CollaborationHistoryEntry,
   FlowOperation,
   FlowOperationEmitOptions,
+  UpdateNodeEntry,
 } from "@/types/flow-operations";
 
 type UseFlowCollaborationEditingOptions = {
@@ -53,12 +54,13 @@ function getSingleUpdateNodesOperation(
     : null;
 }
 
-function isUpdateNodesOnly(operations: FlowOperation[]): boolean {
-  return getSingleUpdateNodesOperation(operations) !== null;
+function hasOverwriteNodeUpdate(operation: UpdateNodesOperation): boolean {
+  return operation.updates.some((update) => update.op === "overwrite_node");
 }
 
 function canCoalesceOperationBatch(batch: QueuedOperationBatch): boolean {
-  if (batch.onAccepted || !isUpdateNodesOnly(batch.operations)) {
+  const operation = getSingleUpdateNodesOperation(batch.operations);
+  if (batch.onAccepted || !operation || hasOverwriteNodeUpdate(operation)) {
     return false;
   }
 
@@ -66,10 +68,65 @@ function canCoalesceOperationBatch(batch: QueuedOperationBatch): boolean {
     return true;
   }
 
-  return (
-    isUpdateNodesOnly(batch.historyEntry.forwardOps) &&
-    isUpdateNodesOnly(batch.historyEntry.inverseOps)
+  const forwardOperation = getSingleUpdateNodesOperation(
+    batch.historyEntry.forwardOps,
   );
+  const inverseOperation = getSingleUpdateNodesOperation(
+    batch.historyEntry.inverseOps,
+  );
+  return Boolean(
+    forwardOperation &&
+      inverseOperation &&
+      !hasOverwriteNodeUpdate(forwardOperation) &&
+      !hasOverwriteNodeUpdate(inverseOperation),
+  );
+}
+
+function updateEntryKey(update: UpdateNodeEntry): string | null {
+  if (update.op === "overwrite_node") {
+    return null;
+  }
+  return `${update.id}:${JSON.stringify(update.path)}`;
+}
+
+function canonicalizeLastFieldUpdates(
+  updates: UpdateNodeEntry[],
+): UpdateNodeEntry[] {
+  const seen = new Set<string>();
+  const reversed: UpdateNodeEntry[] = [];
+  for (const update of [...updates].reverse()) {
+    const key = updateEntryKey(update);
+    if (!key) {
+      reversed.push(cloneDeep(update));
+      continue;
+    }
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    reversed.push(cloneDeep(update));
+  }
+  return reversed.reverse();
+}
+
+function keepFirstInverseFieldUpdates(
+  updates: UpdateNodeEntry[],
+): UpdateNodeEntry[] {
+  const seen = new Set<string>();
+  const merged: UpdateNodeEntry[] = [];
+  for (const update of updates) {
+    const key = updateEntryKey(update);
+    if (!key) {
+      merged.push(cloneDeep(update));
+      continue;
+    }
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    merged.push(cloneDeep(update));
+  }
+  return merged;
 }
 
 function mergeUpdateNodeBatches(
@@ -82,17 +139,15 @@ function mergeUpdateNodeBatches(
     return incoming;
   }
 
-  const mergedNodesById = new Map(
-    currentOperation.nodes.map((node) => [node.id, cloneDeep(node)]),
-  );
-  for (const node of incomingOperation.nodes) {
-    mergedNodesById.set(node.id, cloneDeep(node));
-  }
+  const mergedUpdates = canonicalizeLastFieldUpdates([
+    ...currentOperation.updates,
+    ...incomingOperation.updates,
+  ]);
 
   const mergedForwardOps: FlowOperation[] = [
     {
       type: "update_nodes",
-      nodes: Array.from(mergedNodesById.values()),
+      updates: mergedUpdates,
     },
   ];
 
@@ -106,19 +161,10 @@ function mergeUpdateNodeBatches(
   const incomingInverseOperation = incoming.historyEntry
     ? getSingleUpdateNodesOperation(incoming.historyEntry.inverseOps)
     : null;
-  const inverseNodesById = new Map(
-    currentInverseOperation
-      ? currentInverseOperation.nodes.map((node) => [node.id, cloneDeep(node)])
-      : [],
-  );
-
-  if (incomingInverseOperation) {
-    for (const node of incomingInverseOperation.nodes) {
-      if (!inverseNodesById.has(node.id)) {
-        inverseNodesById.set(node.id, cloneDeep(node));
-      }
-    }
-  }
+  const inverseUpdates = keepFirstInverseFieldUpdates([
+    ...(currentInverseOperation?.updates ?? []),
+    ...(incomingInverseOperation?.updates ?? []),
+  ]);
 
   return {
     operations: mergedForwardOps,
@@ -127,7 +173,7 @@ function mergeUpdateNodeBatches(
       inverseOps: [
         {
           type: "update_nodes",
-          nodes: Array.from(inverseNodesById.values()),
+          updates: inverseUpdates,
         },
       ],
     },

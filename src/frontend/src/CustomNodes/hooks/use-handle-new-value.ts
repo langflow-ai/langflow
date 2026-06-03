@@ -5,11 +5,16 @@ import { useTranslation } from "react-i18next";
 import { DEBOUNCE_FIELD_LIST } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
+import { buildSetNodeFieldUpdate } from "@/hooks/flows/flow-operation-diff";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
+import type {
+  FlowMutationOptions,
+  UpdateNodeEntry,
+} from "@/types/flow-operations";
 import { mutateTemplate } from "../helpers/mutate-template";
 
 const DEBOUNCE_TIME_1_SECOND = 1000;
@@ -48,6 +53,9 @@ const useHandleOnNewValue = ({
   setNode?: (
     id: string,
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
+    isUserChange?: boolean,
+    callback?: () => void,
+    options?: FlowMutationOptions,
   ) => void;
 }) => {
   const { t } = useTranslation();
@@ -71,7 +79,7 @@ const useHandleOnNewValue = ({
 
   // Memoize the node update function
   const updateNodeState = useCallback(
-    (newNode: APIClassType) => {
+    (newNode: APIClassType, collaborationUpdates?: UpdateNodeEntry[]) => {
       setNode(
         nodeId,
         (oldNode) => {
@@ -86,6 +94,7 @@ const useHandleOnNewValue = ({
         () => {
           updateNodeInternals(nodeId);
         },
+        collaborationUpdates ? { collaborationUpdates } : undefined,
       );
     },
     [nodeId, setNode, updateNodeInternals],
@@ -127,6 +136,15 @@ const useHandleOnNewValue = ({
       Object.entries(changes).forEach(([key, value]) => {
         if (value !== undefined) parameter[key] = value;
       });
+      const collaborationUpdates = Object.entries(changes)
+        .filter(([, value]) => value !== undefined)
+        .map(([key, value]) =>
+          buildSetNodeFieldUpdate(
+            nodeId,
+            ["data", "node", "template", name, key],
+            value,
+          ),
+        );
 
       // When Data Operations "operations" list is cleared, optimistically hide operation-specific fields
       // so the UI updates immediately without waiting for the debounced API response
@@ -143,6 +161,13 @@ const useHandleOnNewValue = ({
             "show" in template[field]
           ) {
             template[field].show = false;
+            collaborationUpdates.push(
+              buildSetNodeFieldUpdate(
+                nodeId,
+                ["data", "node", "template", field, "show"],
+                false,
+              ),
+            );
           }
         }
       }
@@ -185,7 +210,7 @@ const useHandleOnNewValue = ({
         );
       }
 
-      updateNodeState(newNode);
+      updateNodeState(newNode, collaborationUpdates);
     },
     [
       node,

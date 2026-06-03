@@ -6,9 +6,9 @@ import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
 import { useGetModelProviders } from "@/controllers/API/queries/models/use-get-model-providers";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
+import { buildSetNodeFieldUpdate } from "@/hooks/flows/flow-operation-diff";
 import { useRefreshModelInputs } from "@/hooks/use-refresh-model-inputs";
 import ModelProviderModal from "@/modals/modelProviderModal";
-import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
@@ -51,7 +51,6 @@ export default function ModelInputComponent({
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
-  const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const [openManageProvidersDialog, setOpenManageProvidersDialog] =
@@ -87,6 +86,16 @@ export default function ModelInputComponent({
           data: { ...node.data, _connectionMode: enabled },
         }),
         false,
+        undefined,
+        {
+          collaborationUpdates: [
+            buildSetNodeFieldUpdate(
+              nodeId,
+              ["data", "_connectionMode"],
+              enabled,
+            ),
+          ],
+        },
       );
     },
     [nodeId],
@@ -510,6 +519,21 @@ export default function ModelInputComponent({
               } as NodeDataType,
             }),
             false,
+            undefined,
+            {
+              collaborationUpdates: [
+                buildSetNodeFieldUpdate(
+                  nodeId,
+                  ["data", "_connectionMode"],
+                  false,
+                ),
+                buildSetNodeFieldUpdate(
+                  nodeId,
+                  ["data", "node", "template", "model", "_connection_mode"],
+                  false,
+                ),
+              ],
+            },
           );
         }
       }

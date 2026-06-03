@@ -1,6 +1,17 @@
 import { cloneDeep, isEqual } from "lodash";
 import type { AllNodeType, EdgeType } from "@/types/flow";
-import type { FlowOperation, UpdateMetadataOp } from "@/types/flow-operations";
+import type {
+  FlowOperation,
+  NodeFieldPath,
+  UpdateMetadataOp,
+  UpdateNodeEntry,
+  UpdateNodesOp,
+} from "@/types/flow-operations";
+import {
+  deleteValueAtPath,
+  getValueAtPath,
+  setValueAtPath,
+} from "./flow-operation-path";
 
 export function coalesceDeleteIds(ids: string[]): string[] {
   const seen = new Set<string>();
@@ -55,7 +66,7 @@ export function buildGraphDiffOperations(
   const nextNodeMap = new Map(nextNodes.map((node) => [node.id, node]));
 
   const addedNodes: AllNodeType[] = [];
-  const updatedNodes: AllNodeType[] = [];
+  const updatedNodes: UpdateNodeEntry[] = [];
   const deletedNodeIds: string[] = [];
 
   for (const node of nextNodes) {
@@ -65,7 +76,7 @@ export function buildGraphDiffOperations(
       continue;
     }
     if (!nodesEqual(previous, node)) {
-      updatedNodes.push(nodeSnapshotForFlowOperation(node));
+      updatedNodes.push(buildOverwriteNodeUpdate(node));
     }
   }
 
@@ -79,7 +90,7 @@ export function buildGraphDiffOperations(
     operations.push({ type: "add_nodes", nodes: addedNodes });
   }
   if (updatedNodes.length > 0) {
-    operations.push({ type: "update_nodes", nodes: updatedNodes });
+    operations.push({ type: "update_nodes", updates: updatedNodes });
   }
   if (deletedNodeIds.length > 0) {
     operations.push({
@@ -128,7 +139,42 @@ export function buildGraphDiffOperations(
 export function buildUpdateNodesOperation(nodes: AllNodeType[]): FlowOperation {
   return {
     type: "update_nodes",
-    nodes: nodes.map(nodeSnapshotForFlowOperation),
+    updates: nodes.map(buildOverwriteNodeUpdate),
+  };
+}
+
+export function buildSetNodeFieldUpdate(
+  id: string,
+  path: NodeFieldPath,
+  value: unknown,
+): UpdateNodeEntry {
+  return { id, op: "set_field", path: [...path], value: cloneDeep(value) };
+}
+
+export function buildDeleteNodeFieldUpdate(
+  id: string,
+  path: NodeFieldPath,
+): UpdateNodeEntry {
+  return { id, op: "delete_field", path: [...path] };
+}
+
+export function buildOverwriteNodeUpdate(node: AllNodeType): UpdateNodeEntry {
+  return {
+    id: node.id,
+    op: "overwrite_node",
+    node: nodeSnapshotForFlowOperation(node),
+  };
+}
+
+export function buildUpdateNodeFieldsOperation(
+  updates: UpdateNodeEntry[],
+): UpdateNodesOp | null {
+  if (updates.length === 0) {
+    return null;
+  }
+  return {
+    type: "update_nodes",
+    updates: updates.map((update) => cloneDeep(update)),
   };
 }
 
@@ -152,7 +198,7 @@ function appendOperation(
       if (operation.nodes.length > 0) groups.push([operation]);
       return;
     case "update_nodes":
-      if (operation.nodes.length > 0) groups.push([operation]);
+      if (operation.updates.length > 0) groups.push([operation]);
       return;
     case "delete_nodes":
       if (operation.ids.length > 0) groups.push([operation]);
@@ -195,11 +241,22 @@ function applyGraphOperationToState(
       };
     }
     case "update_nodes": {
-      const updatedById = getNodeMap(
-        operation.nodes.map((node) => cloneDeep(node)),
-      );
+      const updatedById = getNodeMap(nodes.map((node) => cloneDeep(node)));
+      for (const update of operation.updates) {
+        const currentNode = updatedById.get(update.id);
+        if (!currentNode) {
+          continue;
+        }
+        if (update.op === "overwrite_node") {
+          updatedById.set(update.id, cloneDeep(update.node));
+        } else if (update.op === "set_field") {
+          setValueAtPath(currentNode, update.path, update.value);
+        } else {
+          deleteValueAtPath(currentNode, update.path);
+        }
+      }
       return {
-        nodes: nodes.map((node) => updatedById.get(node.id) ?? node),
+        nodes: Array.from(updatedById.values()),
         edges,
       };
     }
@@ -310,14 +367,49 @@ export function buildInverseFlowOperations(
         break;
       }
       case "update_nodes": {
-        const currentNodeMap = getNodeMap(currentNodes);
-        const previousPayloads = operation.nodes
-          .map((node) => currentNodeMap.get(node.id))
-          .filter((node): node is AllNodeType => Boolean(node))
-          .map((node) => cloneDeep(node));
+        const inverseUpdates: UpdateNodeEntry[] = [];
+        for (const update of operation.updates) {
+          const currentNode = getNodeMap(currentNodes).get(update.id);
+          if (!currentNode) {
+            continue;
+          }
+
+          if (update.op === "overwrite_node") {
+            inverseUpdates.unshift(buildOverwriteNodeUpdate(currentNode));
+          } else if (update.op === "set_field") {
+            const previous = getValueAtPath(currentNode, update.path);
+            inverseUpdates.unshift(
+              previous.exists
+                ? buildSetNodeFieldUpdate(
+                    update.id,
+                    update.path,
+                    previous.value,
+                  )
+                : buildDeleteNodeFieldUpdate(update.id, update.path),
+            );
+          } else {
+            const previous = getValueAtPath(currentNode, update.path);
+            if (previous.exists) {
+              inverseUpdates.unshift(
+                buildSetNodeFieldUpdate(update.id, update.path, previous.value),
+              );
+            }
+          }
+
+          const nextGraph = applyGraphOperationToState(
+            currentNodes,
+            currentEdges,
+            {
+              type: "update_nodes",
+              updates: [update],
+            },
+          );
+          currentNodes = nextGraph.nodes;
+          currentEdges = nextGraph.edges;
+        }
         appendOperation(inverseGroups, {
           type: "update_nodes",
-          nodes: previousPayloads,
+          updates: inverseUpdates,
         });
         break;
       }
@@ -372,13 +464,15 @@ export function buildInverseFlowOperations(
         break;
     }
 
-    const nextGraph = applyGraphOperationToState(
-      currentNodes,
-      currentEdges,
-      operation,
-    );
-    currentNodes = nextGraph.nodes;
-    currentEdges = nextGraph.edges;
+    if (operation.type !== "update_nodes") {
+      const nextGraph = applyGraphOperationToState(
+        currentNodes,
+        currentEdges,
+        operation,
+      );
+      currentNodes = nextGraph.nodes;
+      currentEdges = nextGraph.edges;
+    }
   }
 
   return inverseGroups.reverse().flat();
@@ -386,6 +480,7 @@ export function buildInverseFlowOperations(
 
 export type FlowOperationTouchSet = {
   nodeIds: Set<string>;
+  nodeFieldPaths: Set<string>;
   edgeIds: Set<string>;
   metadataKeys: Set<string>;
 };
@@ -395,6 +490,7 @@ export function collectFlowOperationTouches(
 ): FlowOperationTouchSet {
   const touches: FlowOperationTouchSet = {
     nodeIds: new Set(),
+    nodeFieldPaths: new Set(),
     edgeIds: new Set(),
     metadataKeys: new Set(),
   };
@@ -402,9 +498,20 @@ export function collectFlowOperationTouches(
   for (const operation of operations) {
     switch (operation.type) {
       case "add_nodes":
-      case "update_nodes":
         for (const node of operation.nodes) {
           touches.nodeIds.add(node.id);
+        }
+        break;
+      case "update_nodes":
+        for (const update of operation.updates) {
+          touches.nodeIds.add(update.id);
+          if (update.op !== "overwrite_node") {
+            for (let i = 1; i <= update.path.length; i += 1) {
+              touches.nodeFieldPaths.add(
+                `${update.id}:${JSON.stringify(update.path.slice(0, i))}`,
+              );
+            }
+          }
         }
         break;
       case "delete_nodes":

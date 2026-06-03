@@ -283,20 +283,20 @@ async def test_operation_submit_accepted_increments_revision(client: AsyncClient
     def _submit(ws) -> None:
         ws.send_json({"type": "session.start"})
         ready, _ = _receive_session_bootstrap(ws)
-        updated = copy.deepcopy(NODE_A)
-        updated["position"] = {"x": 50, "y": 50}
+        update = {"id": "a", "op": "set_field", "path": ["position"], "value": {"x": 50, "y": 50}}
         ws.send_json(
             {
                 "type": "operation.submit",
                 "request_id": "req-1",
                 "base_revision": ready["current_revision"],
-                "operations": [{"type": "update_nodes", "nodes": [updated]}],
+                "operations": [{"type": "update_nodes", "updates": [update]}],
             }
         )
         accepted = _receive_message_type(ws, "operation.accepted")
         assert accepted["type"] == "operation.accepted"
         assert accepted["request_id"] == "req-1"
         assert accepted["revision"] == 1
+        assert accepted["forward_ops"] == [{"type": "update_nodes", "updates": [update]}]
 
     await _run_websocket_test(app, flow_id, token, _submit)
 
@@ -334,15 +334,18 @@ async def test_filesystem_mirror_restored_when_commit_fails(
 
         monkeypatch.setattr(session, "commit", _fail_once_commit)
 
-        updated = copy.deepcopy(NODE_A)
-        updated["position"] = {"x": 88, "y": 88}
         with pytest.raises(FlowOperationApplyError) as exc:
             await apply_flow_operation_batch(
                 session,
                 flow_id=flow_id,
                 actor_user_id=active_user.id,
                 base_revision=0,
-                operations=[{"type": "update_nodes", "nodes": [updated]}],
+                operations=[
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "a", "op": "set_field", "path": ["position"], "value": {"x": 88, "y": 88}}],
+                    }
+                ],
                 storage_service=storage_service,
             )
 
@@ -367,7 +370,12 @@ async def test_stale_revision_rejected(client: AsyncClient, logged_in_headers):
                 "type": "operation.submit",
                 "request_id": "req-1",
                 "base_revision": ready["current_revision"],
-                "operations": [{"type": "update_nodes", "nodes": [copy.deepcopy(NODE_A)]}],
+                "operations": [
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1}],
+                    }
+                ],
             }
         )
         _receive_message_type(ws, "operation.accepted")
@@ -376,7 +384,12 @@ async def test_stale_revision_rejected(client: AsyncClient, logged_in_headers):
                 "type": "operation.submit",
                 "request_id": "req-2",
                 "base_revision": ready["current_revision"],
-                "operations": [{"type": "update_nodes", "nodes": [copy.deepcopy(NODE_B)]}],
+                "operations": [
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "b", "op": "set_field", "path": ["position", "x"], "value": 2}],
+                    }
+                ],
             }
         )
         rejected = _receive_message_type(ws, "operation.rejected")
@@ -461,14 +474,13 @@ async def test_operation_broadcast_to_peer_socket(client: AsyncClient, logged_in
         ws_b.send_json({"type": "session.start"})
         _receive_session_bootstrap(ws_b)
 
-        updated = copy.deepcopy(NODE_B)
-        updated["position"] = {"x": 200, "y": 0}
+        update = {"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 200, "y": 0}}
         ws_a.send_json(
             {
                 "type": "operation.submit",
                 "request_id": "req-peer",
                 "base_revision": ready_a["current_revision"],
-                "operations": [{"type": "update_nodes", "nodes": [updated]}],
+                "operations": [{"type": "update_nodes", "updates": [update]}],
             }
         )
         accepted_a = _receive_message_type(ws_a, "operation.accepted")
@@ -478,6 +490,7 @@ async def test_operation_broadcast_to_peer_socket(client: AsyncClient, logged_in
         assert broadcast["type"] == "operation.broadcast"
         assert broadcast["revision"] == accepted_a["revision"]
         assert broadcast["actor_user_id"] is not None
+        assert broadcast["forward_ops"] == [{"type": "update_nodes", "updates": [update]}]
 
     await _run_dual_websocket_test(app, flow_id, token, _peers)
 

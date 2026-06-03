@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import copy
-from collections import defaultdict
+from collections import Counter, defaultdict
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -17,9 +18,15 @@ from lfx.services.flow_operations.ops import (
     AddEdgesOp,
     AddNodesOp,
     DeleteEdgesOp,
+    DeleteNodeFieldUpdate,
     DeleteNodesOp,
     FlowOperation,
+    NodeFieldPath,
+    NodeFieldPathSegment,
+    OverwriteNodeUpdate,
+    SetNodeFieldUpdate,
     UpdateMetadataOp,
+    UpdateNodeEntry,
     UpdateNodesOp,
     coalesce_delete_ids,
     normalize_requested_ops,
@@ -122,7 +129,7 @@ def _apply_operation(state: GraphState, op: FlowOperation) -> tuple[list[FlowOpe
     if isinstance(op, AddNodesOp):
         return _apply_add_nodes(state, op.nodes), []
     if isinstance(op, UpdateNodesOp):
-        return _apply_update_nodes(state, op.nodes), []
+        return _apply_update_nodes(state, op.updates), []
     if isinstance(op, DeleteNodesOp):
         return _apply_delete_nodes(state, op.ids)
     if isinstance(op, AddEdgesOp):
@@ -158,26 +165,211 @@ def _apply_add_nodes(state: GraphState, nodes: list[dict[str, Any]]) -> list[Flo
     return [AddNodesOp(type="add_nodes", nodes=payloads)]
 
 
-def _apply_update_nodes(state: GraphState, nodes: list[dict[str, Any]]) -> list[FlowOperation]:
-    if not nodes:
+def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> list[FlowOperation]:
+    if not updates:
         return []
 
-    payloads: list[dict[str, Any]] = []
-    seen_in_request: set[str] = set()
-    for index, node in enumerate(nodes):
-        node_id = _require_node_id(node, context=f"update_nodes[{index}]")
-        if node_id in seen_in_request:
-            msg = f"update_nodes: duplicate node id in request: {node_id!r}"
-            raise FlowOperationValidationError(msg)
+    _validate_update_node_entries(updates)
+    accepted_updates_by_key: dict[tuple[Any, ...], _AcceptedNodeUpdate] = {}
+    for index, (update, forward_update) in enumerate(zip(updates, copy.deepcopy(updates), strict=True)):
+        accepted_update = _AcceptedNodeUpdate(update=update, forward_update=forward_update, input_index=index)
+        if forward_update.op == "overwrite_node":
+            accepted_updates_by_key[("overwrite_node", forward_update.id)] = accepted_update
+            continue
+
+        field_key = ("field", forward_update.id, forward_update.path)
+        accepted_updates_by_key[field_key] = accepted_update
+
+    forward_updates: list[UpdateNodeEntry] = []
+    for accepted_update in accepted_updates_by_key.values():
+        node_id = accepted_update.update.id
         if node_id not in state.nodes_by_id:
             msg = f"update_nodes: node does not exist: {node_id!r}"
             raise FlowOperationValidationError(msg)
-        seen_in_request.add(node_id)
-        payload = copy.deepcopy(node)
-        state.nodes_by_id[node_id] = payload
-        payloads.append(payload)
+        NODE_UPDATE_HANDLERS[accepted_update.update.op](state, accepted_update.update, accepted_update.input_index)
+        forward_updates.append(accepted_update.forward_update)
+    if not forward_updates:
+        return []
+    return [UpdateNodesOp(type="update_nodes", updates=forward_updates)]
 
-    return [UpdateNodesOp(type="update_nodes", nodes=payloads)]
+
+@dataclass(frozen=True)
+class _AcceptedNodeUpdate:
+    update: UpdateNodeEntry
+    forward_update: UpdateNodeEntry
+    input_index: int
+
+
+NodeUpdateHandler = Callable[[GraphState, Any, int], None]
+
+
+def _apply_overwrite_node_update(
+    state: GraphState,
+    update: OverwriteNodeUpdate,
+    _index: int,
+) -> None:
+    state.nodes_by_id[update.id] = update.node
+
+
+def _apply_set_node_field_update(
+    state: GraphState,
+    update: SetNodeFieldUpdate,
+    index: int,
+) -> None:
+    _validate_node_field_path(update.path, context=f"update_nodes[{index}].path")
+    _set_node_field(state.nodes_by_id[update.id], update.path, update.value, context=f"update_nodes[{index}]")
+
+
+def _apply_delete_node_field_update(
+    state: GraphState,
+    update: DeleteNodeFieldUpdate,
+    index: int,
+) -> None:
+    _validate_node_field_path(update.path, context=f"update_nodes[{index}].path")
+    _delete_node_field(state.nodes_by_id[update.id], update.path, context=f"update_nodes[{index}]")
+
+
+NODE_UPDATE_HANDLERS: dict[str, NodeUpdateHandler] = {
+    "overwrite_node": _apply_overwrite_node_update,
+    "set_field": _apply_set_node_field_update,
+    "delete_field": _apply_delete_node_field_update,
+}
+
+
+def _validate_update_node_entries(
+    updates: list[UpdateNodeEntry],
+) -> None:
+    """Reject update batches with ambiguous per-node overwrite behavior.
+
+    A node can be overwritten once, or patched through one or more field updates.
+    It cannot do both in the same update_nodes operation. A field path can appear
+    at most once per node.
+    """
+    overwrite_counts: Counter[str] = Counter()
+    field_update_counts: defaultdict[str, Counter[NodeFieldPath]] = defaultdict(Counter)
+    for update in updates:
+        if update.op == "overwrite_node":
+            overwrite_counts[update.id] += 1
+        if update.op in {"set_field", "delete_field"}:
+            field_update_counts[update.id][update.path] += 1
+            if field_update_counts[update.id][update.path] > 1:
+                msg = f"update_nodes: multiple field updates for node/path: {update.id!r} {update.path!r}"
+                raise FlowOperationValidationError(msg)
+
+        if overwrite_counts[update.id] > 1:
+            msg = f"update_nodes: multiple overwrite_node entries for node id: {update.id!r}"
+            raise FlowOperationValidationError(msg)
+        if overwrite_counts[update.id] > 0 and update.id in field_update_counts:
+            msg = f"update_nodes: cannot mix overwrite_node and field updates for node id: {update.id!r}"
+            raise FlowOperationValidationError(msg)
+
+
+def _validate_node_field_path(path: NodeFieldPath, *, context: str) -> None:
+    if path[0] == "id":
+        msg = f"{context}: cannot modify node identity"
+        raise FlowOperationValidationError(msg)
+
+
+def _read_object_path_part(
+    json_object: dict[str, Any],
+    path_part: NodeFieldPathSegment,
+    *,
+    context: str,
+) -> Any:
+    if not isinstance(path_part, str) or path_part not in json_object:
+        msg = f"{context}: object path part must be an existing string key: {path_part!r}"
+        raise FlowOperationValidationError(msg)
+    return json_object[path_part]
+
+
+def _read_array_path_part(
+    json_array: list[Any],
+    path_part: NodeFieldPathSegment,
+    *,
+    context: str,
+) -> Any:
+    if not _is_json_array_index(path_part):
+        msg = f"{context}: array path part must be an integer index"
+        raise FlowOperationValidationError(msg)
+    if not (0 <= path_part < len(json_array)):
+        msg = f"{context}: array index is out of range"
+        raise FlowOperationValidationError(msg)
+    return json_array[path_part]
+
+
+def _write_object_path_part(
+    json_object: dict[str, Any],
+    path_part: NodeFieldPathSegment,
+    value: Any,
+    *,
+    context: str,
+) -> None:
+    if not isinstance(path_part, str):
+        msg = f"{context}: object path part must be a string: {path_part!r}"
+        raise FlowOperationValidationError(msg)
+    json_object[path_part] = value
+
+
+def _write_array_path_part(
+    json_array: list[Any],
+    path_part: NodeFieldPathSegment,
+    value: Any,
+    *,
+    context: str,
+) -> None:
+    if not _is_json_array_index(path_part):
+        msg = f"{context}: array path part must be an integer index"
+        raise FlowOperationValidationError(msg)
+    if not (0 <= path_part < len(json_array)):
+        msg = f"{context}: array index is out of range"
+        raise FlowOperationValidationError(msg)
+    json_array[path_part] = value
+
+
+def _read_json_value_before_last_path_part(
+    node: dict[str, Any],
+    path: NodeFieldPath,
+    *,
+    context: str,
+) -> dict[str, Any] | list[Any]:
+    json_value: Any = node
+    for path_index, path_part in enumerate(path[:-1]):
+        if isinstance(json_value, dict):
+            json_value = _read_object_path_part(json_value, path_part, context=f"{context}.path[{path_index}]")
+            continue
+        if isinstance(json_value, list):
+            json_value = _read_array_path_part(json_value, path_part, context=f"{context}.path[{path_index}]")
+            continue
+        msg = f"{context}.path[{path_index}]: path must pass through objects or arrays"
+        raise FlowOperationValidationError(msg)
+    if not isinstance(json_value, (dict, list)):
+        msg = f"{context}: path must end at an object or array"
+        raise FlowOperationValidationError(msg)
+    return json_value
+
+
+def _set_node_field(node: dict[str, Any], path: NodeFieldPath, value: Any, *, context: str) -> None:
+    json_value = _read_json_value_before_last_path_part(node, path, context=context)
+    last_path_part = path[-1]
+    if isinstance(json_value, dict):
+        _write_object_path_part(json_value, last_path_part, value, context=context)
+        return
+    if isinstance(json_value, list):
+        _write_array_path_part(json_value, last_path_part, value, context=context)
+        return
+
+
+def _delete_node_field(node: dict[str, Any], path: NodeFieldPath, *, context: str) -> None:
+    json_value = _read_json_value_before_last_path_part(node, path, context=context)
+    last_path_part = path[-1]
+    if not isinstance(json_value, dict) or not isinstance(last_path_part, str):
+        msg = f"{context}: delete only supports object properties"
+        raise FlowOperationValidationError(msg)
+    json_value.pop(last_path_part, None)
+
+
+def _is_json_array_index(path_part: NodeFieldPathSegment) -> bool:
+    return isinstance(path_part, int) and not isinstance(path_part, bool)
 
 
 def _apply_delete_nodes(state: GraphState, ids: list[str]) -> tuple[list[FlowOperation], list[str]]:

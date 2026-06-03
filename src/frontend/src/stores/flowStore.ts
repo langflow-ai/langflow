@@ -23,6 +23,8 @@ import type { FlowMutationOptions } from "@/hooks/flows/flow-operation-adapter";
 import {
   buildGraphDiffOperations,
   buildInverseFlowOperations,
+  buildUpdateNodeFieldsOperation,
+  coalesceDeleteIds,
 } from "@/hooks/flows/flow-operation-diff";
 import { brokenEdgeMessage } from "@/utils/utils";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
@@ -115,6 +117,34 @@ export async function waitForNodeUpdates(
         `${pendingNodeUpdates.size} updates still pending: ${pendingIds.join(", ")}`,
     );
   }
+}
+
+function buildCollaborationOperations(
+  prevNodes: AllNodeType[],
+  prevEdges: EdgeType[],
+  nextNodes: AllNodeType[],
+  nextEdges: EdgeType[],
+  options?: FlowMutationOptions,
+): FlowOperation[] {
+  const updateNodeFieldsOperation = buildUpdateNodeFieldsOperation(
+    options?.collaborationUpdates ?? [],
+  );
+  if (!updateNodeFieldsOperation) {
+    return buildGraphDiffOperations(prevNodes, prevEdges, nextNodes, nextEdges);
+  }
+
+  const operations: FlowOperation[] = [updateNodeFieldsOperation];
+  const nextEdgeIds = new Set(nextEdges.map((edge) => edge.id));
+  const deletedEdgeIds = prevEdges
+    .filter((edge) => !nextEdgeIds.has(edge.id))
+    .map((edge) => edge.id);
+  if (deletedEdgeIds.length > 0) {
+    operations.push({
+      type: "delete_edges",
+      ids: coalesceDeleteIds(deletedEdgeIds),
+    });
+  }
+  return operations;
 }
 
 // this is our useStore hook that we can use in our components to get parts of the store and call actions
@@ -445,11 +475,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       !get().isApplyingRemoteOperations &&
       !options?.skipCollaborationEmit
     ) {
-      const operations = buildGraphDiffOperations(
+      const operations = buildCollaborationOperations(
         prevNodes,
         prevEdges,
         newChange,
         newEdges,
+        options,
       );
       if (operations.length > 0) {
         get().onCollaborationOperations?.(operations, {
@@ -487,11 +518,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       !get().isApplyingRemoteOperations &&
       !options?.skipCollaborationEmit
     ) {
-      const operations = buildGraphDiffOperations(
+      const operations = buildCollaborationOperations(
         prevNodes,
         prevEdges,
         get().nodes,
         newChange,
+        options,
       );
       if (operations.length > 0) {
         get().onCollaborationOperations?.(operations, {
@@ -564,11 +596,12 @@ const useFlowStore = create<FlowStoreType>((set, get) => ({
       !get().isApplyingRemoteOperations &&
       !options?.skipCollaborationEmit
     ) {
-      const operations = buildGraphDiffOperations(
+      const operations = buildCollaborationOperations(
         prevNodes,
         prevEdges,
         newNodes,
         newEdges,
+        options,
       );
       if (operations.length > 0) {
         get().onCollaborationOperations?.(operations, {
