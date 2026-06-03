@@ -194,12 +194,16 @@ async def test_named_variable_resolves_from_request_scope_under_no_env_fallback(
 
 
 @pytest.mark.usefixtures("variable_service_registered")
-async def test_named_variable_env_precedes_request_scope_when_fallback_enabled(monkeypatch):
-    """Documents current precedence: for an explicitly-named var, os.environ is read first."""
+async def test_named_variable_request_scope_precedes_env_when_fallback_enabled(monkeypatch):
+    """Documents current precedence: for an explicitly-named var, VariableService is read first.
+
+    Mirrors the primary path — ``_resolve_var_name`` consults VariableService (where the
+    user's encrypted global variable, and the request scope it rides on, live) before
+    ``os.environ``, so the request-scoped credential wins even with env fallback enabled.
+    """
     monkeypatch.setenv("OPENAI_API_KEY", "sk-env")
     with _request_scope({"OPENAI_API_KEY": "sk-from-request"}):
-        # _resolve_var_name reads os.environ before VariableService, so env wins here.
-        assert get_api_key_for_provider(_USER_ID, _PROVIDER, "OPENAI_API_KEY") == "sk-env"
+        assert get_api_key_for_provider(_USER_ID, _PROVIDER, "OPENAI_API_KEY") == "sk-from-request"
 
 
 @pytest.mark.usefixtures("variable_service_registered")
