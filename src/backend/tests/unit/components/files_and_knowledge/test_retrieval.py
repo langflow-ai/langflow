@@ -21,15 +21,39 @@ The rewritten suite covers the actual retrieval contract:
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from langchain_core.documents import Document
+from langchain_core.embeddings import Embeddings
+from lfx.base.knowledge_bases.backends import ChromaLocalBackend
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.components.files_and_knowledge.retrieval import KnowledgeBaseComponent
 
 from tests.base import ComponentTestBaseWithClient
+
+
+class _DeterministicEmbeddings(Embeddings):
+    """Hash-based embedder so the embedding join can be exercised without credentials.
+
+    Uses ``hashlib`` (not the builtin ``hash``) so the vector for a given string is
+    stable across processes — the ingest pass and the query pass must agree.
+    """
+
+    DIMENSION = 8
+
+    def _embed(self, text: str) -> list[float]:
+        digest = int(hashlib.sha256(text.encode()).hexdigest(), 16)
+        return [((digest >> (i * 4)) & 0xF) / 15.0 for i in range(self.DIMENSION)]
+
+    def embed_documents(self, texts: list[str]) -> list[list[float]]:
+        return [self._embed(t) for t in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        return self._embed(text)
 
 
 class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
@@ -550,6 +574,159 @@ class TestKnowledgeBaseComponent(ComponentTestBaseWithClient):
         assert call_kwargs["model"][0]["name"] == "sentence-transformers/all-MiniLM-L6-v2"
         assert call_kwargs["chunk_size"] == 1000
         assert call_kwargs["user_id"] == default_kwargs["_user_id"]
+
+    # ---- include_embeddings against a real Chroma backend ------------
+
+    async def _retrieve_against_real_kb(self, component_class, default_kwargs, active_user, docs):
+        """Populate a real Chroma KB with ``docs`` then run ``retrieve_data``.
+
+        Uses an in-process Chroma backend (no mocks for the vector store) so the
+        embedding-join path — ``similarity_search`` + ``iter_documents`` — is
+        exercised end to end. Only the user/session/path/embedding-config plumbing
+        is patched, mirroring the other ``retrieve_data`` tests in this module.
+        """
+        kb_path = Path(default_kwargs["kb_root_path"]) / active_user.username / default_kwargs["knowledge_base"]
+        kb_path.mkdir(parents=True, exist_ok=True)
+        embeddings = _DeterministicEmbeddings()
+
+        # Pre-populate the KB through the real backend, then tear it down so the
+        # retrieval pass opens its own client (matches production lifecycle).
+        seed_backend = ChromaLocalBackend(
+            kb_name=default_kwargs["knowledge_base"],
+            kb_path=kb_path,
+            embedding_function=embeddings,
+        )
+        try:
+            await seed_backend.add_documents(docs)
+        finally:
+            await seed_backend.teardown()
+
+        def _make_backend(*_args, **kwargs):
+            return ChromaLocalBackend(
+                kb_name=kwargs.get("kb_name", default_kwargs["knowledge_base"]),
+                kb_path=kwargs.get("kb_path", kb_path),
+                embedding_function=embeddings,
+            )
+
+        user_record = MagicMock()
+        user_record.username = active_user.username
+
+        component = component_class(**default_kwargs)
+        with (
+            patch("lfx.components.files_and_knowledge.knowledge.session_scope") as mock_session_scope,
+            patch(
+                "langflow.services.database.models.user.crud.get_user_by_id",
+                return_value=user_record,
+            ),
+            patch(
+                "lfx.components.files_and_knowledge.knowledge._get_knowledge_bases_root_path",
+                return_value=Path(default_kwargs["kb_root_path"]),
+            ),
+            patch(
+                "lfx.components.files_and_knowledge.knowledge.get_embeddings",
+                return_value=embeddings,
+            ),
+            patch(
+                "lfx.components.files_and_knowledge.knowledge.create_backend",
+                side_effect=_make_backend,
+            ),
+        ):
+            mock_session_scope.return_value.__aenter__ = AsyncMock(return_value=AsyncMock())
+            mock_session_scope.return_value.__aexit__ = AsyncMock(return_value=False)
+            return await component.retrieve_data()
+
+    async def test_include_embeddings_populates_for_upload_style_kb(self, component_class, default_kwargs, active_user):
+        """Regression: ``include_embeddings`` must work for upload-populated KBs.
+
+        Chunks ingested via direct file upload (``KBIngestionHelper``) carry no
+        ``_id`` metadata key. The retrieval embedding-join used to key solely on
+        ``_id``, so every such KB returned ``_embeddings: None``. The join now
+        falls back to page content, so the vectors resolve.
+        """
+        default_kwargs["search_query"] = "chunk 1 text"
+        default_kwargs["include_embeddings"] = True
+
+        # Upload-style metadata — note the absence of any ``_id`` key.
+        docs = [
+            Document(
+                page_content=f"chunk {i} text",
+                metadata={"source": "f.txt", "file_name": "f.txt", "chunk_index": i},
+            )
+            for i in range(3)
+        ]
+
+        result = await self._retrieve_against_real_kb(component_class, default_kwargs, active_user, docs)
+
+        rows = result.to_dict("records")
+        assert len(rows) == 3
+        for row in rows:
+            assert "_embeddings" in row
+            assert isinstance(row["_embeddings"], list)
+            assert len(row["_embeddings"]) == _DeterministicEmbeddings.DIMENSION
+
+    async def test_include_embeddings_populates_with_id_metadata(self, component_class, default_kwargs, active_user):
+        """The ``_id``-keyed path (component-driven ingestion) keeps working."""
+        default_kwargs["search_query"] = "chunk 1 text"
+        default_kwargs["include_embeddings"] = True
+
+        docs = [
+            Document(
+                page_content=f"chunk {i} text",
+                metadata={"_id": hashlib.sha256(f"chunk {i} text".encode()).hexdigest(), "source": "s"},
+            )
+            for i in range(3)
+        ]
+
+        result = await self._retrieve_against_real_kb(component_class, default_kwargs, active_user, docs)
+
+        rows = result.to_dict("records")
+        assert len(rows) == 3
+        for row in rows:
+            assert isinstance(row["_embeddings"], list)
+            assert len(row["_embeddings"]) == _DeterministicEmbeddings.DIMENSION
+
+    async def test_include_embeddings_disabled_omits_embeddings(self, component_class, default_kwargs, active_user):
+        """With the flag off, no ``_embeddings`` column is added."""
+        default_kwargs["search_query"] = "chunk 1 text"
+        default_kwargs["include_embeddings"] = False
+
+        docs = [
+            Document(page_content=f"chunk {i} text", metadata={"source": "f.txt", "chunk_index": i}) for i in range(3)
+        ]
+
+        result = await self._retrieve_against_real_kb(component_class, default_kwargs, active_user, docs)
+
+        rows = result.to_dict("records")
+        assert len(rows) == 3
+        for row in rows:
+            assert "_embeddings" not in row
+
+
+class TestEmbeddingMatchKey:
+    """Unit coverage for the ``_id``-or-content join key used by the embedding merge."""
+
+    def test_prefers_id_when_present(self):
+        from lfx.components.files_and_knowledge.knowledge import _embedding_match_key
+
+        assert _embedding_match_key("some text", {"_id": "abc", "source": "s"}) == ("id", "abc")
+
+    def test_falls_back_to_content_without_id(self):
+        from lfx.components.files_and_knowledge.knowledge import _embedding_match_key
+
+        assert _embedding_match_key("some text", {"source": "s"}) == ("content", "some text")
+
+    def test_handles_missing_metadata(self):
+        from lfx.components.files_and_knowledge.knowledge import _embedding_match_key
+
+        assert _embedding_match_key("some text", None) == ("content", "some text")
+
+    def test_id_and_content_key_spaces_do_not_collide(self):
+        from lfx.components.files_and_knowledge.knowledge import _embedding_match_key
+
+        # A chunk whose content equals another chunk's _id must not cross-match.
+        id_key = _embedding_match_key("payload", {"_id": "payload"})
+        content_key = _embedding_match_key("payload", {})
+        assert id_key != content_key
 
 
 class TestMetadataFilterHelpers:
