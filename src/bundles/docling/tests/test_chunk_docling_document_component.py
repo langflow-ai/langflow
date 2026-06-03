@@ -5,7 +5,7 @@ import sys
 import types
 
 import pytest
-from lfx.components.docling.chunk_docling_document import (
+from lfx_docling.components.docling.chunk_docling_document import (
     ChunkDoclingDocumentComponent,
     _load_docling_chunker_dependencies,
 )
@@ -88,17 +88,17 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             def contextualize(self, **_kwargs):
                 return ""
 
+        class DummyDocMeta:
+            @classmethod
+            def model_validate(cls, meta):
+                return meta
+
         class DummyTokenizer:
             @classmethod
             def from_pretrained(cls, model_name, max_tokens=None):
                 captured["model_name"] = model_name
                 captured["max_tokens"] = max_tokens
                 return "tokenizer"
-
-        class DummyDocMeta:
-            @classmethod
-            def model_validate(cls, meta):
-                return meta
 
         hybrid_chunker_module = types.ModuleType("docling_core.transforms.chunker.hybrid_chunker")
         hybrid_chunker_module.HybridChunker = DummyHybridChunker
@@ -115,11 +115,11 @@ class TestChunkDoclingDocumentComponentHybridChunker:
             huggingface_tokenizer_module,
         )
         monkeypatch.setattr(
-            "lfx.components.docling.chunk_docling_document._load_docling_chunker_dependencies",
+            "lfx_docling.components.docling.chunk_docling_document._load_docling_chunker_dependencies",
             lambda: (DummyDocMeta, DummyHierarchicalChunker),
         )
         monkeypatch.setattr(
-            "lfx.components.docling.chunk_docling_document.extract_docling_documents",
+            "lfx_docling.components.docling.chunk_docling_document.extract_docling_documents",
             lambda *_args, **_kwargs: ([], None),
         )
 
@@ -202,5 +202,5 @@ class TestChunkDoclingDocumentComponentHybridChunker:
 
         monkeypatch.setattr(builtins, "__import__", fake_import)
 
-        with pytest.raises(ImportError, match=r"langflow-base\[docling-chunking\]"):
+        with pytest.raises(ImportError, match=r"docling-chunking"):
             _load_docling_chunker_dependencies()

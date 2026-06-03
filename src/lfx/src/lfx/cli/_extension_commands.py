@@ -708,7 +708,7 @@ def dev_command(
             "external dev-server scripts."
         ),
     ),
-    extra_args: list[str] | None = typer.Argument(  # noqa: B008 - Typer requires call-site default
+    extra_args: list[str] | None = typer.Argument(
         None,
         help="Extra arguments forwarded to ``langflow run`` (after a ``--`` separator).",
     ),

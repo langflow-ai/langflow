@@ -7,8 +7,8 @@ from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, MessageTextI
 from lfx.schema import Data, DataFrame
 
 _CHUNKING_INSTALL_HINT = (
-    "Install them with `uv pip install 'langflow[docling-chunking]'`, "
-    "`uv pip install 'langflow-base[docling-chunking]'`, or "
+    "Install them with `uv pip install 'lfx-docling[chunking]'`, "
+    "`uv pip install 'langflow[docling-chunking]'`, or "
     "`uv pip install 'docling-core[chunking]' tiktoken`."
 )
 
@@ -25,7 +25,7 @@ def _load_docling_chunker_dependencies() -> tuple[type[Any], type[Any]]:
 
 class ChunkDoclingDocumentComponent(Component):
     display_name: str = "Chunk DoclingDocument"
-    description: str = "Use the DocumentDocument chunkers to split the document into chunks."
+    description: str = "Use DoclingDocument chunkers to split the document into chunks."
     documentation = "https://docling-project.github.io/docling/concepts/chunking/"
     icon = "Docling"
     name = "ChunkDoclingDocument"

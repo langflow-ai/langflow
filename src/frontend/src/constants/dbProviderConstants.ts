@@ -165,12 +165,16 @@ export const DB_PROVIDER_OPTIONS: DBProviderOption[] = [
         placeholder: "langflow_knowledge",
       },
       {
+        // LangChain's OpenSearchVectorSearch stores KB embeddings under
+        // ``vector_field`` (its hardwired default), so that is the field the
+        // backend reads them back from. Defaulting elsewhere persisted a
+        // never-written name and left ``include_embeddings`` retrieval empty.
         label: "Vector field",
         variableKey: OPENSEARCH_VARIABLES.VECTOR_FIELD,
         required: false,
         isSecret: false,
-        placeholder: "chunk_embedding",
-        defaultValue: "chunk_embedding",
+        placeholder: "vector_field",
+        defaultValue: "vector_field",
       },
       {
         label: "Text field",
@@ -314,7 +318,7 @@ export function getDBProviderConfig(
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.INDEX_NAME) ?? "",
     vector_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.VECTOR_FIELD) ??
-      "chunk_embedding",
+      "vector_field",
     text_field:
       getGlobalVariableValue(variables, OPENSEARCH_VARIABLES.TEXT_FIELD) ??
       "text",

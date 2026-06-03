@@ -242,6 +242,57 @@ class TestFolderIngest:
         assert "outside the configured allow-list" in response.json()["detail"]
         mock_job_service.assert_not_called()
 
+    @patch("langflow.api.v1.knowledge_bases.KBAnalysisHelper.get_metadata")
+    @patch("langflow.api.v1.knowledge_bases.KBStorageHelper.get_root_path")
+    async def test_folder_ingest_with_real_settings_returns_400_not_500(
+        self,
+        mock_root,
+        mock_meta,
+        client: AsyncClient,
+        logged_in_headers,
+        active_user,
+        tmp_path,
+        monkeypatch,
+    ):
+        """Regression: the route must read a *declared* Settings field.
+
+        The other folder-ingest tests inject ``SimpleNamespace(kb_allowed_folder_roots=...)``
+        so they never touch the real ``Settings`` model. In 1.10.0 the field was not
+        declared, so the route raised ``AttributeError`` → HTTP 500 on every call. This
+        test deliberately does NOT mock ``get_settings_service``: with the field present
+        and defaulting to an empty allow-list, the route reaches
+        ``FolderSource.validate_config()`` and returns an actionable 400 — exactly like
+        the sibling ``/ingest/connector`` route — instead of a 500.
+        """
+        # The regression depends on an *empty* allow-list (the default). Clear any
+        # ``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS`` a developer may have exported so the
+        # test deterministically hits the empty-allow-list gate rather than the
+        # "outside the configured allow-list" branch.
+        monkeypatch.delenv("LANGFLOW_KB_ALLOWED_FOLDER_ROOTS", raising=False)
+
+        mock_root.return_value = tmp_path
+        kb_dir = tmp_path / active_user.username / "folder_kb_real_settings"
+        kb_dir.mkdir(parents=True)
+        mock_meta.return_value = {
+            "id": "00000000-0000-0000-0000-000000000006",
+            "embedding_provider": "OpenAI",
+            "embedding_model": "text-embedding-3-small",
+        }
+
+        # ``tmp_path`` exists and is a directory, so validation advances past the
+        # path checks to the allow-list gate (empty by default → actionable 400).
+        response = await client.post(
+            "api/v1/knowledge_bases/folder_kb_real_settings/ingest/folder",
+            headers=logged_in_headers,
+            json={"path": str(tmp_path)},
+        )
+
+        assert response.status_code == 400, response.text
+        # Assert the *specific* empty-allow-list message so the test pins the
+        # regression path (real Settings → empty default → actionable 400) rather
+        # than the generic substring shared with the "outside the allow-list" branch.
+        assert "Configure LANGFLOW_KB_ALLOWED_FOLDER_ROOTS" in response.json()["detail"]
+
     async def test_folder_ingest_rejects_unbounded_chunk_parameters(self, client: AsyncClient, logged_in_headers):
         response = await client.post(
             "api/v1/knowledge_bases/folder_kb/ingest/folder",

@@ -22,6 +22,7 @@ dependencies = [
     "lfx-duckduckgo>=0.1.0",
     "lfx-arxiv>=0.1.0",
     "lfx-ibm>=0.1.0",
+    "lfx-docling>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -82,6 +83,7 @@ langflow-sdk = { workspace = true }
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
+lfx-docling = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -97,6 +99,7 @@ members = [
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
     "src/bundles/ibm",
+    "src/bundles/docling",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -109,26 +112,16 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langflow-base[docling]>=0.9.5",
-    "tesserocr>=2.8.0",
-    "rapidocr-onnxruntime>=1.4.4",
-    "ocrmac>=1.0.0; sys_platform == 'darwin'",
-    # CPU-only PyTorch required for docling features
-    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    # Updated to 2.6.0+ to address CVE: RCE vulnerability in torch.load() with weights_only=True
-    "torch>=2.6.0",
-    "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
+    "lfx-docling[local]>=0.1.0",
 ]
 
 docling-chunking = [
-    "langflow-base[docling-chunking]>=0.9.5",
+    "lfx-docling[chunking]>=0.1.0",
 ]
 
 docling-image-description = [
-    "langflow-base[docling-image-description]>=0.9.5",
-    "langchain-docling>=1.1.0",
+    "lfx-docling[image-description]>=0.1.0",
 ]
-
 
 audio = [
     "webrtcvad>=2.0.10",
@@ -257,6 +250,7 @@ flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",
     "fastapi.Query",
+    "typer.Argument",
     "typer.Option",
 ]
 flake8-type-checking.runtime-evaluated-base-classes = [
