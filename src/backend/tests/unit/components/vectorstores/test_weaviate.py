@@ -10,8 +10,8 @@ the migration logic runs in CI without a live Weaviate instance.
 from unittest.mock import MagicMock
 
 import pytest
-from lfx_weaviate.components.weaviate.weaviate import WeaviateVectorStoreComponent
 from lfx.schema.data import Data
+from lfx_weaviate.components.weaviate.weaviate import WeaviateVectorStoreComponent
 
 
 def test_initialization():
@@ -74,7 +74,9 @@ def test_connect_client_wraps_errors(mocker):
 def test_build_vector_store_without_documents(mocker):
     mock_client = MagicMock()
     mocker.patch.object(WeaviateVectorStoreComponent, "_connect_client", return_value=mock_client)
-    mock_store_cls = mocker.patch("lfx_weaviate.components.weaviate.weaviate.WeaviateVectorStore", return_value=MagicMock())
+    mock_store_cls = mocker.patch(
+        "lfx_weaviate.components.weaviate.weaviate.WeaviateVectorStore", return_value=MagicMock()
+    )
     fake_embedding = MagicMock()
 
     component = WeaviateVectorStoreComponent(url="http://localhost:8080", index_name="Test")
