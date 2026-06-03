@@ -20,9 +20,18 @@ secrets — and round-trips cleanly through the UI.
   the raw credential.
 * ``index_name`` — OpenSearch index this KB writes / reads. Required.
 * ``vector_field`` — document field for the embedding vector.
-  Defaults to ``chunk_embedding`` to match the canvas OpenSearch
-  component's default, so KB ingestion and the canvas component
-  can target the same index without manual overrides.
+  Defaults to ``vector_field`` — the field LangChain's
+  ``OpenSearchVectorSearch`` actually writes to. That wrapper derives
+  ``vector_field`` from *per-call* kwargs (default ``"vector_field"``)
+  and ignores the value handed to its constructor, and this backend
+  never passes a per-call override — so ingested embeddings always land
+  under ``vector_field`` regardless of this setting. ``iter_documents``
+  (which powers ``include_embeddings`` retrieval) reads the configured
+  field but **falls back to ``vector_field``** so stored vectors come
+  back even when a KB's persisted config names a different, never-
+  actually-written field (e.g. the legacy ``chunk_embedding`` default).
+  Operators pointing the KB at an externally-populated index can still
+  set ``vector_field`` to read embeddings from a custom field.
 * ``text_field`` — document field for the chunk text. Defaults to
   ``text``.
 * ``engine`` — k-NN engine (``jvector``, ``nmslib``, ``faiss``,
@@ -61,7 +70,21 @@ if TYPE_CHECKING:
 DEFAULT_URL_VARIABLE = "OPENSEARCH_URL"
 DEFAULT_USERNAME_VARIABLE = "OPENSEARCH_USERNAME"
 DEFAULT_PASSWORD_VARIABLE = "OPENSEARCH_PASSWORD"  # noqa: S105 — variable name, not a secret  # pragma: allowlist secret
-DEFAULT_VECTOR_FIELD = "chunk_embedding"
+# LangChain's ``OpenSearchVectorSearch`` resolves ``vector_field`` from
+# per-call kwargs (default ``"vector_field"``) and ignores the value passed to
+# its constructor. This backend never passes a per-call override, so ingestion
+# writes — and similarity search reads — always land on
+# ``LANGCHAIN_DEFAULT_VECTOR_FIELD`` regardless of the configured name.
+# ``DEFAULT_VECTOR_FIELD`` is therefore only the *config* fallback used when a
+# KB's ``backend_config`` doesn't name one.
+DEFAULT_VECTOR_FIELD = "vector_field"
+# The field LangChain physically stores embeddings under for this backend (see
+# above). ``iter_documents`` reads the configured field but falls back to this
+# so ``include_embeddings`` retrieval still returns the stored vectors even when
+# a KB's persisted ``backend_config.vector_field`` names a different, never-
+# actually-written field — e.g. the historical ``chunk_embedding`` default the
+# DB-providers UI still writes.
+LANGCHAIN_DEFAULT_VECTOR_FIELD = "vector_field"
 DEFAULT_TEXT_FIELD = "text"
 # ``faiss`` is part of the core OpenSearch k-NN plugin on every
 # released version (1.x → 3.x) and works without extra cluster setup.
@@ -401,9 +424,22 @@ class OpenSearchBackend(BaseVectorStoreBackend):
         index = self._os_index
         vector_field = self._os_vector_field
         text_field = self._os_text_field
-        # Skip the embedding column in ``_source`` when the caller doesn't
-        # need it — large embedding vectors dominate scroll payloads.
-        source_excludes = None if include_embeddings else [vector_field]
+        # LangChain stores embeddings under its own default field for this
+        # backend (see ``LANGCHAIN_DEFAULT_VECTOR_FIELD``), so the on-disk field
+        # is ``vector_field`` regardless of what the KB's persisted config names
+        # (historically ``chunk_embedding``). Read the configured field first
+        # (honouring an explicit override on an externally-populated index) and
+        # fall back to LangChain's field so ``include_embeddings`` retrieval
+        # actually returns the stored vectors.
+        embedding_fields = [vector_field]
+        if LANGCHAIN_DEFAULT_VECTOR_FIELD not in embedding_fields:
+            embedding_fields.append(LANGCHAIN_DEFAULT_VECTOR_FIELD)
+        # Skip the embedding column(s) in ``_source`` when the caller doesn't
+        # need them — large embedding vectors dominate scroll payloads.
+        source_excludes = None if include_embeddings else list(embedding_fields)
+        # Keys that are never chunk metadata when we have to reconstruct it from
+        # a flat ``_source`` (the non-LangChain layout fallback below).
+        non_metadata_keys = {text_field, "metadata", *embedding_fields}
 
         sentinel = object()
         batch_queue: sync_queue.Queue[Any] = sync_queue.Queue(maxsize=2)
@@ -438,10 +474,13 @@ class OpenSearchBackend(BaseVectorStoreBackend):
                     content = source.get(text_field) or ""
                     metadata = source.get("metadata")
                     if not isinstance(metadata, dict):
-                        metadata = {k: v for k, v in source.items() if k not in {text_field, vector_field, "metadata"}}
+                        metadata = {k: v for k, v in source.items() if k not in non_metadata_keys}
                     embedding: list[float] | None = None
                     if include_embeddings:
-                        raw_vec = source.get(vector_field)
+                        raw_vec = next(
+                            (source[field] for field in embedding_fields if source.get(field) is not None),
+                            None,
+                        )
                         if raw_vec is not None:
                             embedding = list(raw_vec)
                     buf.append(

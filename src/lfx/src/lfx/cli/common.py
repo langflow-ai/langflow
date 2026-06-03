@@ -23,6 +23,7 @@ from urllib.parse import urlparse
 import httpx
 import typer
 
+from lfx.cli.runtime_variables import build_request_variables_from_global_vars
 from lfx.cli.script_loader import (
     extract_structured_result,
     find_graph_variable,
@@ -31,6 +32,12 @@ from lfx.cli.script_loader import (
 from lfx.load import load_flow_from_json
 from lfx.run._defaults import apply_run_defaults, resolve_fallback_to_env_vars
 from lfx.schema.schema import InputValueRequest
+from lfx.services.variable.request_scope import (
+    activate_no_env_fallback,
+    activate_request_variables,
+    reset_no_env_fallback,
+    reset_request_variables,
+)
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -335,6 +342,10 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
 
     fallback_to_env_vars = resolve_fallback_to_env_vars()
 
+    scope_vars = build_request_variables_from_global_vars(graph.context.get("request_variables"))
+    scope_token = activate_request_variables(scope_vars or None)
+    no_env_fallback_token = activate_no_env_fallback(disabled=bool(graph.context.get("no_env_fallback")))
+
     try:
         sys.stdout = captured_stdout
         sys.stderr = captured_stderr
@@ -347,6 +358,8 @@ async def execute_graph_with_capture(graph, input_value: str | None, session_id:
             exc.args = (f"{exc.args[0] if exc.args else str(exc)}\n\nCaptured stderr:\n{error_output}",)
         raise
     finally:
+        reset_no_env_fallback(no_env_fallback_token)
+        reset_request_variables(scope_token)
         # Restore original stdout/stderr
         sys.stdout = original_stdout
         sys.stderr = original_stderr

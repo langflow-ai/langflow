@@ -8,13 +8,11 @@ from pathlib import Path  # noqa: TC003
 from typing import Any
 
 import httpx
-from docling_core.types.doc import DoclingDocument
-from pydantic import ValidationError
-
 from lfx.base.data import BaseFileComponent
+from lfx.base.data.docling_utils import coerce_docling_document
 from lfx.inputs import IntInput, NestedDictInput, StrInput, TableInput
 from lfx.inputs.inputs import FloatInput
-from lfx.schema import Data, dotdict
+from lfx.schema import Data, DataFrame, dotdict
 from lfx.utils.util import transform_localhost_url
 
 
@@ -136,6 +134,10 @@ class DoclingRemoteComponent(BaseFileComponent):
     outputs = [
         *BaseFileComponent.get_base_outputs(),
     ]
+
+    def build(self) -> DataFrame:
+        # Static bundle validation cannot see BaseFileComponent's inherited output method.
+        return self.load_files()
 
     @staticmethod
     def _add_header(headers: dict[str, str], key: Any, value: Any) -> None:
@@ -272,12 +274,12 @@ class DoclingRemoteComponent(BaseFileComponent):
             return None
 
         try:
-            doc = DoclingDocument.model_validate(result["document"]["json_content"])
+            doc = coerce_docling_document(result["document"]["json_content"])
             data_dict: dict[str, Any] = {"doc": doc}
             if file_path:
                 data_dict["file_path"] = file_path
             return Data(data=data_dict)
-        except ValidationError as e:
+        except Exception as e:  # noqa: BLE001
             self.log(f"Error validating the document. {e}")
             return None
 

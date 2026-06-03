@@ -1,10 +1,19 @@
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 import SidebarItemsList from "../sidebarItemsList";
 
 // Mock external dependencies
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children, content, side }: any) => (
+  default: ({
+    children,
+    content,
+    side,
+  }: {
+    children?: ReactNode;
+    content?: string;
+    side?: string;
+  }) => (
     <div data-testid="tooltip" data-content={content} data-side={side}>
       {children}
     </div>
@@ -16,19 +25,17 @@ jest.mock("@/stores/flowStore", () => ({
   default: jest.fn((selector) =>
     selector({
       nodes: [
-        { id: "node1", type: "ChatInput" },
-        { id: "node2", type: "Text" },
+        { id: "node1", data: { type: "ChatInput" } },
+        { id: "node2", data: { type: "Text" } },
       ],
     }),
   ),
 }));
 
-jest.mock("@/utils/reactflowUtils", () => ({
-  checkChatInput: jest.fn((nodes) =>
-    nodes.some((node: any) => node.type === "ChatInput"),
-  ),
-  checkWebhookInput: jest.fn((nodes) =>
-    nodes.some((node: any) => node.type === "Webhook"),
+jest.mock("@/utils/componentConstraints", () => ({
+  getPresentComponentTypes: jest.fn(
+    (nodes: Array<{ data?: { type?: string } }>) =>
+      new Set(nodes.map((node) => node?.data?.type).filter(Boolean)),
   ),
 }));
 
@@ -37,18 +44,18 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("../../helpers/disable-item", () => ({
-  disableItem: jest.fn((itemName, uniqueInputs) => {
-    if (itemName === "ChatInput" && uniqueInputs.chatInput) return true;
-    if (itemName === "Webhook" && uniqueInputs.webhookInput) return true;
-    return false;
-  }),
+  disableItem: jest.fn(
+    (itemName, present: ReadonlySet<string>) =>
+      (itemName === "ChatInput" && present.has("ChatInput")) ||
+      (itemName === "Webhook" && present.has("Webhook")),
+  ),
 }));
 
 jest.mock("../../helpers/get-disabled-tooltip", () => ({
-  getDisabledTooltip: jest.fn((itemName, uniqueInputs) => {
-    if (itemName === "ChatInput" && uniqueInputs.chatInput)
+  getDisabledTooltip: jest.fn((itemName, present: ReadonlySet<string>) => {
+    if (itemName === "ChatInput" && present.has("ChatInput"))
       return "Chat Input already added";
-    if (itemName === "Webhook" && uniqueInputs.webhookInput)
+    if (itemName === "Webhook" && present.has("Webhook"))
       return "Webhook already added";
     return "";
   }),
@@ -70,7 +77,21 @@ jest.mock("../sidebarDraggableComponent", () => ({
     legacy,
     disabled,
     disabledTooltip,
-  }: any) => (
+  }: {
+    sectionName?: string;
+    apiClass?: unknown;
+    icon?: string;
+    onDragStart?: (event: unknown, data: unknown) => void;
+    color?: string;
+    itemName?: string;
+    error?: boolean;
+    display_name?: string;
+    official?: boolean;
+    beta?: boolean;
+    legacy?: boolean;
+    disabled?: boolean;
+    disabledTooltip?: string;
+  }) => (
     <div
       data-testid={`draggable-${itemName}`}
       data-section-name={sectionName}
@@ -608,10 +629,7 @@ describe("SidebarItemsList", () => {
       // Verify all mocked functions were called
       expect(require("@/stores/flowStore").default).toHaveBeenCalled();
       expect(
-        require("@/utils/reactflowUtils").checkChatInput,
-      ).toHaveBeenCalled();
-      expect(
-        require("@/utils/reactflowUtils").checkWebhookInput,
+        require("@/utils/componentConstraints").getPresentComponentTypes,
       ).toHaveBeenCalled();
       expect(
         require("../../helpers/disable-item").disableItem,
