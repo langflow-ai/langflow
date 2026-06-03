@@ -330,6 +330,7 @@ class TestURLComponentSSRFProtection:
                 component.fetch_content()
 
 
+
 class TestURLComponentProxyHandling:
     """Test proxy detection in URLComponent._create_loader."""
 
