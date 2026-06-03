@@ -7,6 +7,7 @@ import {
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
 import { useAddComponent } from "@/hooks/use-add-component";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type {
   AssistantMessage,
@@ -23,6 +24,7 @@ interface UseAssistantChatReturn {
   currentStep: AgenticStepType | null;
   handleSend: (content: string, model: AssistantModel | null) => Promise<void>;
   handleApprove: (messageId: string, componentCode?: string) => Promise<void>;
+  handleApproveFlow: (messageId: string) => void;
   handleRetry: (messageId: string) => void;
   handleStopGeneration: () => void;
   handleClearHistory: () => void;
@@ -42,7 +44,14 @@ export function useAssistantChat(): UseAssistantChatReturn {
 
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
   const addComponent = useAddComponent();
+  const paste = useFlowStore((state) => state.paste);
+  const deleteNode = useFlowStore((state) => state.deleteNode);
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
+
+  // Tracks IDs of nodes that were pasted by the last "Add to Canvas" approval.
+  // On follow-up edits, these are removed before the new flow is pasted so the
+  // old flow doesn't accumulate on the canvas alongside the updated one.
+  const lastPastedNodeIdsRef = useRef<string[]>([]);
 
   const updateMessage = useCallback(
     (
@@ -123,6 +132,9 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   className: event.class_name ?? msg.progress?.className,
                   componentCode:
                     event.component_code ?? msg.progress?.componentCode,
+                  flowData: event.flow_data ?? msg.progress?.flowData,
+                  expandedFlow:
+                    event.expanded_flow ?? msg.progress?.expandedFlow,
                 },
                 completedSteps: [...completedSteps],
               }));
@@ -143,6 +155,11 @@ export function useAssistantChat(): UseAssistantChatReturn {
                   componentCode: event.data.component_code,
                   validationAttempts: event.data.validation_attempts,
                   validationError: event.data.validation_error,
+                  flowValidated: event.data.flow_validated,
+                  flowData: event.data.flow_data,
+                  expandedFlow: event.data.expanded_flow,
+                  nodeCount: event.data.node_count,
+                  edgeCount: event.data.edge_count,
                 },
               }));
               setCurrentStep(null);
@@ -215,6 +232,69 @@ export function useAssistantChat(): UseAssistantChatReturn {
     [messages, validateComponent, addComponent, updateMessage],
   );
 
+  const handleApproveFlow = useCallback(
+    (messageId: string) => {
+      const message = messages.find((m) => m.id === messageId);
+      const expandedFlow = message?.result?.expandedFlow;
+      if (!expandedFlow) return;
+
+      const nodes = (expandedFlow as { nodes?: unknown[] }).nodes;
+      const edges = (expandedFlow as { edges?: unknown[] }).edges;
+      if (!nodes?.length) return;
+
+      try {
+        // Remove nodes from the previous flow approval so edits replace
+        // the old flow instead of stacking a second copy on top of it.
+        if (lastPastedNodeIdsRef.current.length > 0) {
+          deleteNode(lastPastedNodeIdsRef.current);
+          lastPastedNodeIdsRef.current = [];
+        }
+
+        // Capture the current node ID set so we can diff after paste.
+        const nodeIdsBefore = new Set(
+          useFlowStore.getState().nodes.map((n) => n.id),
+        );
+
+        // paste() requires each node to have a position field for its internal
+        // offset calculation. expand_compact_flow() doesn't set positions, so
+        // we assign a simple horizontal layout here. paste() will remap IDs
+        // and reposition relative to the canvas viewport anyway.
+        const nodesWithPositions = (nodes as any[]).map((node, index) => ({
+          ...node,
+          position: node.position ?? { x: index * 300, y: 100 },
+        }));
+        // paste() handles ID remapping, edge handle encoding, and canvas positioning
+        paste(
+          { nodes: nodesWithPositions, edges: edges ?? [] },
+          { x: 0, y: 0 },
+        );
+
+        // Record the newly added node IDs (paste remaps IDs, so we diff).
+        // We do this on the next tick after paste has updated the store.
+        setTimeout(() => {
+          const newIds = useFlowStore
+            .getState()
+            .nodes.map((n) => n.id)
+            .filter((id) => !nodeIdsBefore.has(id));
+          lastPastedNodeIdsRef.current = newIds;
+        }, 0);
+      } catch (error) {
+        console.error("Failed to add flow to canvas:", error);
+        updateMessage(messageId, (msg) => ({
+          result: msg.result
+            ? {
+                ...msg.result,
+                validationError: `Failed to add flow to canvas: ${
+                  error instanceof Error ? error.message : String(error)
+                }`,
+              }
+            : msg.result,
+        }));
+      }
+    },
+    [messages, paste, deleteNode, updateMessage],
+  );
+
   const handleRetry = useCallback(
     (messageId: string) => {
       // Find the failed assistant message and the user message before it
@@ -257,6 +337,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     setMessages([]);
     setCurrentStep(null);
     setIsProcessing(false);
+    lastPastedNodeIdsRef.current = [];
     const newId = `${AGENTIC_SESSION_PREFIX}${uid.randomUUID(16)}`;
     sessionIdRef.current = newId;
     setSessionId(newId);
@@ -267,6 +348,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     setMessages(msgs);
     setCurrentStep(null);
     setIsProcessing(false);
+    lastPastedNodeIdsRef.current = [];
     sessionIdRef.current = id;
     setSessionId(id);
   }, []);
@@ -278,6 +360,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
     currentStep,
     handleSend,
     handleApprove,
+    handleApproveFlow,
     handleRetry,
     handleStopGeneration,
     handleClearHistory,

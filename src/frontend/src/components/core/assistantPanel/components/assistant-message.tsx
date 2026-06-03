@@ -9,12 +9,14 @@ import { cn } from "@/utils/utils";
 import type { AssistantMessage } from "../assistant-panel.types";
 import { getRandomThinkingMessage } from "../helpers/messages";
 import { AssistantComponentResult } from "./assistant-component-result";
+import { AssistantFlowResult } from "./assistant-flow-result";
 import { AssistantLoadingState } from "./assistant-loading-state";
 import { AssistantValidationFailed } from "./assistant-validation-failed";
 
 interface AssistantMessageItemProps {
   message: AssistantMessage;
   onApprove?: (messageId: string, componentCode?: string) => void;
+  onApproveFlow?: (messageId: string) => void;
   onRetry?: (messageId: string) => void;
 }
 
@@ -40,6 +42,7 @@ function ThinkingIndicator({ message }: { message: string }) {
 export function AssistantMessageItem({
   message,
   onApprove,
+  onApproveFlow,
   onRetry,
 }: AssistantMessageItemProps) {
   const isUser = message.role === "user";
@@ -48,9 +51,23 @@ export function AssistantMessageItem({
     message.result?.validated && message.result?.componentCode;
   const hasValidationError =
     message.result?.validated === false && message.result?.validationError;
+  const hasFlowResult =
+    message.result?.flowValidated && message.result?.expandedFlow;
   // Skip animation if the message is already complete on mount (e.g. panel was closed and reopened)
   const [validationAnimationComplete, setValidationAnimationComplete] =
     useState(message.status === "complete");
+
+  // Auto-complete animation for flow results — no "Continue" button needed since
+  // there is no code to review; the flow result card is shown directly.
+  useEffect(() => {
+    if (
+      message.status === "complete" &&
+      hasFlowResult &&
+      !validationAnimationComplete
+    ) {
+      setValidationAnimationComplete(true);
+    }
+  }, [message.status, hasFlowResult, validationAnimationComplete]);
 
   // Timeout fallback: if message is complete but user hasn't clicked Continue,
   // force transition after 30s to prevent indefinitely stuck loading states
@@ -85,6 +102,14 @@ export function AssistantMessageItem({
     "validated",
   ];
 
+  // Steps that indicate flow generation mode
+  const flowGenerationSteps = [
+    "generating_flow",
+    "extracting_flow",
+    "validating_flow",
+    "validated_flow",
+  ];
+
   // Detect component code in streaming content (handles misclassified intent)
   const contentLooksLikeComponentCode =
     isStreaming &&
@@ -97,17 +122,23 @@ export function AssistantMessageItem({
       componentGenerationSteps.includes(message.progress.step)) ||
     contentLooksLikeComponentCode;
 
-  // Show loading state during component generation
-  const isGeneratingCode = isStreaming && isComponentGeneration;
+  // Check if we're in flow generation mode
+  const isFlowGeneration =
+    message.progress &&
+    flowGenerationSteps.includes(message.progress.step);
+
+  // Show loading state during component or flow generation
+  const isGeneratingCode = isStreaming && (isComponentGeneration || isFlowGeneration);
 
   const renderContent = () => {
-    // Show detailed loading state during component generation
+    // Show detailed loading state during component or flow generation
     // Keep showing it until validation animation completes
     const showLoadingState =
       (isGeneratingCode && message.progress) ||
       ((hasValidatedResult || hasValidationError) &&
         !validationAnimationComplete &&
-        message.progress);
+        message.progress) ||
+      (isFlowGeneration && message.progress && !validationAnimationComplete);
 
     if (showLoadingState && message.progress) {
       return (
@@ -143,6 +174,17 @@ export function AssistantMessageItem({
         <AssistantValidationFailed
           result={message.result}
           onRetry={onRetry ? () => onRetry(message.id) : undefined}
+        />
+      );
+    }
+
+    // Show successful flow result
+    if (hasFlowResult && message.result && canShowResult) {
+      return (
+        <AssistantFlowResult
+          result={message.result}
+          onApproveFlow={() => onApproveFlow?.(message.id)}
+          onRegenerate={onRetry ? () => onRetry(message.id) : undefined}
         />
       );
     }

@@ -14,6 +14,8 @@ def format_progress_event(
     error: str | None = None,
     class_name: str | None = None,
     component_code: str | None = None,
+    flow_data: dict | None = None,
+    expanded_flow: dict | None = None,
 ) -> str:
     """Format SSE progress event.
 
@@ -25,6 +27,8 @@ def format_progress_event(
         error: Optional error message (for validation_failed step)
         class_name: Optional class name (for validation_failed step)
         component_code: Optional component code (for validation_failed step)
+        flow_data: Optional compact flow JSON (for flow generation steps)
+        expanded_flow: Optional expanded ReactFlow JSON (for validated_flow step)
     """
     data: dict = {
         "event": "progress",
@@ -40,6 +44,10 @@ def format_progress_event(
         data["class_name"] = class_name
     if component_code:
         data["component_code"] = component_code
+    if flow_data:
+        data["flow_data"] = flow_data
+    if expanded_flow:
+        data["expanded_flow"] = expanded_flow
     return f"data: {json.dumps(data)}\n\n"
 
 

@@ -11,4 +11,8 @@ export type {
   AgenticSSEEvent,
   AgenticStepType,
   AgenticTokenEvent,
+  CompactFlowNode,
+  CompactFlowEdge,
+  CompactFlowData,
+  ExpandedFlowData,
 } from "./types";

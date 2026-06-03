@@ -1,17 +1,18 @@
 """TranslationFlow - Language Detection, Translation, and Intent Classification.
 
 This flow translates user input to English and classifies intent as either
-'generate_component' or 'question'.
+'generate_component', 'generate_flow', 'question', or 'off_topic'.
 
 Usage:
     from langflow.agentic.flows.translation_flow import get_graph
     graph = await get_graph(provider="OpenAI", model_name="gpt-4o-mini")
 """
 
-from lfx.base.models.model_metadata import get_provider_param_mapping
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models import LanguageModelComponent
 from lfx.graph import Graph
+
+from langflow.agentic.flows._model_config import build_model_config
 
 TRANSLATION_PROMPT = """You are a Language Detection, Translation, and Intent Classification \
 Agent for Langflow Assistant.
@@ -21,11 +22,18 @@ Your responsibilities are:
 2. Classify the user's intent
 
 Intent Classification:
-- "generate_component": User wants you to CREATE/BUILD/GENERATE/MODIFY a custom Langflow component.
-  This includes both new component requests AND follow-up modifications to a previous component.
+- "generate_component": User wants you to CREATE/BUILD/GENERATE/MODIFY a single custom Langflow \
+component (a Python class). This includes new component requests AND follow-up modifications to a \
+previous component.
   Examples: "Create a component that calls an API", "Build me a custom component for...",
   "can you use dataframe output instead?", "add error handling", "make it also support CSV",
   "change the output to return a list", "use requests instead of urllib", "add a timeout parameter"
+- "generate_flow": User wants to CREATE/BUILD a complete FLOW or PIPELINE with multiple existing \
+Langflow components connected together. They describe a workflow, not a single custom component.
+  Examples: "build a RAG pipeline with OpenAI and Milvus", "create a chatbot flow with GPT-4",
+  "make a flow that takes user input and generates embeddings",
+  "connect ChatInput to an LLM to ChatOutput", "add a vector store retrieval step before the LLM",
+  "replace the OpenAI model with Claude in my flow", "wire up a summarization pipeline"
 - "question": User is ASKING A QUESTION about Langflow, seeking help with Langflow, or wants \
 information about Langflow features, components, flows, or how to use Langflow.
   Examples: "How do I create a component?", "What is a component?", "Can you explain flows?", \
@@ -37,15 +45,22 @@ knowledge, or anything unrelated to Langflow.
 
 IMPORTANT rules:
 - "How to create a component" = question (asking for Langflow guidance)
-- "Create a component that does X" = generate_component (requesting creation)
-- Short follow-up requests that imply changes to something previously generated = generate_component
-  (e.g., "use X instead", "add Y", "change Z", "make it do W", "can you also...", "what about using...")
+- "Create a component that does X" = generate_component (single custom Python class)
+- "Build a flow/pipeline that does X" = generate_flow (multiple connected components)
+- "Connect X to Y" or "wire up X with Y" = generate_flow
+- Keywords: pipeline/flow/chain/workflow/connect/wire = generate_flow
+- Keywords: component/class/custom/code = generate_component
+- Short follow-up requests implying changes to a previously generated component = generate_component
+  (e.g., "use X instead", "add Y", "change Z", "make it do W")
+- Short follow-up requests implying changes to a flow = generate_flow
+  (e.g., "replace OpenAI with Claude", "add a memory step", "remove the vector store")
+- If ambiguous between component and flow, prefer generate_flow (more capable)
 - Questions about OTHER tools or platforms (n8n, Make, Zapier, AutoGen, CrewAI, etc.) = off_topic
 - General knowledge questions NOT related to Langflow = off_topic
 - If unsure whether it's about Langflow, classify as "question" (not off_topic)
 
 Output format (JSON only, no markdown):
-{{"translation": "<english text>", "intent": "<generate_component|question|off_topic>"}}
+{{"translation": "<english text>", "intent": "<generate_component|generate_flow|question|off_topic>"}}
 
 Examples:
 Input: "como criar um componente no langflow"
@@ -77,30 +92,20 @@ Output: {{"translation": "explain how kubernetes works", "intent": "off_topic"}}
 
 Input: "write me a poem about cats"
 Output: {{"translation": "write me a poem about cats", "intent": "off_topic"}}
+
+Input: "build me a RAG pipeline with OpenAI and Milvus"
+Output: {{"translation": "build me a RAG pipeline with OpenAI and Milvus", "intent": "generate_flow"}}
+
+Input: "create a chatbot flow with input, GPT-4, and output"
+Output: {{"translation": "create a chatbot flow with input, GPT-4, and output", "intent": "generate_flow"}}
+
+Input: "replace the OpenAI model with Claude in my flow"
+Output: {{"translation": "replace the OpenAI model with Claude in my flow", "intent": "generate_flow"}}
 """
 
 
-def _build_model_config(provider: str, model_name: str) -> list[dict]:
-    """Build model configuration for LanguageModelComponent."""
-    param_mapping = get_provider_param_mapping(provider)
-    metadata: dict = {
-        "api_key_param": param_mapping.get("api_key_param", "api_key"),
-        "context_length": 128000,
-        "model_class": param_mapping.get("model_class", "ChatOpenAI"),
-        "model_name_param": param_mapping.get("model_name_param", "model"),
-    }
-    # Include extra params like base_url_param for providers like Ollama
-    for extra_param in ("url_param", "project_id_param", "base_url_param"):
-        if extra_param in param_mapping:
-            metadata[extra_param] = param_mapping[extra_param]
-    return [
-        {
-            "icon": provider,
-            "metadata": metadata,
-            "name": model_name,
-            "provider": provider,
-        }
-    ]
+# Keep the private alias for backward compatibility within this module
+_build_model_config = build_model_config
 
 
 def get_graph(
