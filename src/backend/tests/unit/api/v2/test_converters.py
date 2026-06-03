@@ -34,8 +34,8 @@ from langflow.api.v2.converters import (
     _extract_nested_value,
     _extract_text_from_message,
     _get_raw_content,
+    _resolve_output,
     _simplify_output_content,
-    _single_output_text,
     create_error_response,
     create_job_response,
     run_response_to_workflow_response,
@@ -44,6 +44,7 @@ from lfx.schema.workflow import (
     ComponentOutput,
     ErrorDetail,
     JobStatus,
+    OutputReason,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
 )
@@ -717,11 +718,13 @@ class TestCreateErrorResponse:
         response = create_error_response("flow-1", str(uuid4()), {}, error, effective_globals=globals_)
         assert response.globals == globals_
 
-    def test_create_error_response_has_no_output_text_or_session(self):
-        """The failed path must not surface a text answer or a session to continue."""
+    def test_create_error_response_reports_failed_output_and_no_session(self):
+        """The failed path marks output.reason=failed with no text answer or session."""
         response = create_error_response("flow-1", str(uuid4()), {}, Exception("boom"))
-        assert response.output_text is None
+        assert response.output.reason == OutputReason.FAILED
+        assert response.output.text is None
         assert response.session_id is None
+        assert response.has_errors is True
 
 
 class TestRunResponseToWorkflowResponse:
@@ -1169,16 +1172,22 @@ def _component_output(type_: str, content: Any) -> ComponentOutput:
     return ComponentOutput(type=type_, status=JobStatus.COMPLETED, content=content)
 
 
-class TestSingleOutputText:
-    """``_single_output_text`` surfaces the lone text answer, else None."""
+class TestResolveOutput:
+    """``_resolve_output`` surfaces the lone text answer and names the reason."""
 
     def test_single_message_output_returns_its_text(self):
         outputs = {"ChatOutput-abc": _component_output("message", "Hi there!")}
-        assert _single_output_text(outputs) == "Hi there!"
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "Hi there!"
+        assert output.source == "ChatOutput-abc"
 
     def test_single_text_output_returns_its_text(self):
         outputs = {"TextOutput-abc": _component_output("text", "plain answer")}
-        assert _single_output_text(outputs) == "plain answer"
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "plain answer"
+        assert output.source == "TextOutput-abc"
 
     def test_message_plus_data_returns_only_the_message(self):
         # A side DataOutput must not suppress the single text answer.
@@ -1186,39 +1195,58 @@ class TestSingleOutputText:
             "ChatOutput-abc": _component_output("message", "the reply"),
             "DataOutput-xyz": _component_output("data", {"rows": [1, 2]}),
         }
-        assert _single_output_text(outputs) == "the reply"
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == "the reply"
+        assert output.source == "ChatOutput-abc"
 
-    def test_two_message_outputs_return_none(self):
+    def test_two_message_outputs_are_multiple_with_no_text(self):
         outputs = {
             "ChatOutput-a": _component_output("message", "Hi"),
             "ChatOutput-b": _component_output("message", "Bye"),
         }
-        assert _single_output_text(outputs) is None
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.MULTIPLE
+        assert output.text is None
+        assert output.source is None
 
-    def test_data_only_returns_none(self):
+    def test_data_only_is_none_reason(self):
         outputs = {"DataOutput-xyz": _component_output("data", {"k": "v"})}
-        assert _single_output_text(outputs) is None
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
 
-    def test_no_outputs_returns_none(self):
-        assert _single_output_text({}) is None
+    def test_no_outputs_is_none_reason(self):
+        output = _resolve_output({})
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
 
     def test_empty_string_answer_is_preserved(self):
         # A single, intentionally empty answer stays "" (distinct from None).
         outputs = {"ChatOutput-abc": _component_output("message", "")}
-        assert _single_output_text(outputs) == ""
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.SINGLE
+        assert output.text == ""
+        assert output.source == "ChatOutput-abc"
 
-    def test_non_string_message_content_is_ignored(self):
-        # content that isn't a plain string (e.g. None on a non-output node) doesn't count.
+    def test_non_string_message_content_is_non_string_reason(self):
+        # A text channel exists but its content isn't a plain string (e.g. None on a
+        # non-output node). The reason distinguishes this from "no text channel at all".
         outputs = {"ChatOutput-abc": _component_output("message", None)}
-        assert _single_output_text(outputs) is None
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.NON_STRING
+        assert output.text is None
 
     def test_string_content_data_output_excluded_by_type(self):
         # A data output whose content happens to be a plain string must still be
-        # excluded by the TYPE filter alone, not merely by the non-str guard. This
-        # isolates the type check: adding "data" to the accepted set would surface
-        # this string as the answer, which is exactly what we must not do.
+        # excluded by the TYPE filter alone, not merely by the non-str guard. With no
+        # text channel present the reason is ``none``; adding "data" to the accepted
+        # set would surface this string as the answer (reason ``single``), which is
+        # exactly what we must not do.
         outputs = {"DataOutput-xyz": _component_output("data", "looks like an answer but is data")}
-        assert _single_output_text(outputs) is None
+        output = _resolve_output(outputs)
+        assert output.reason == OutputReason.NONE
+        assert output.text is None
 
 
 def _message_output_vertex(vertex_id: str) -> Mock:
@@ -1294,10 +1322,10 @@ def _graph_for(vertices: list[Mock]) -> Mock:
     return graph
 
 
-class TestOutputTextAndSessionId:
-    """End-to-end: the sync response surfaces output_text and echoes session_id."""
+class TestOutputAndSessionId:
+    """End-to-end: the sync response resolves ``output`` and echoes session_id."""
 
-    def test_single_chat_output_populates_output_text_and_session(self):
+    def test_single_chat_output_populates_output_and_session(self):
         vertex = _message_output_vertex("ChatOutput-abc")
         graph = _graph_for([vertex])
 
@@ -1309,11 +1337,13 @@ class TestOutputTextAndSessionId:
 
         response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
 
-        assert response.output_text == "Hi there!"
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "Hi there!"
+        assert response.output.source == "ChatOutput-abc"
         assert response.outputs["ChatOutput-abc"].content == "Hi there!"
         assert response.session_id == "session-xyz"
 
-    def test_two_chat_outputs_leave_output_text_none(self):
+    def test_two_chat_outputs_resolve_to_multiple(self):
         vertices = [_message_output_vertex("ChatOutput-a"), _message_output_vertex("ChatOutput-b")]
         graph = _graph_for(vertices)
 
@@ -1328,7 +1358,8 @@ class TestOutputTextAndSessionId:
 
         response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
 
-        assert response.output_text is None
+        assert response.output.reason == OutputReason.MULTIPLE
+        assert response.output.text is None
         assert response.outputs["ChatOutput-a"].content == "Hi"
         assert response.outputs["ChatOutput-b"].content == "Bye"
 
@@ -1345,15 +1376,17 @@ class TestOutputTextAndSessionId:
         response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
 
         assert response.session_id is None
-        assert response.output_text == "Hi"
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "Hi"
 
-    def test_terminal_non_output_message_leaves_output_text_none(self):
+    def test_terminal_non_output_message_resolves_to_non_string(self):
         # A terminal LLM (is_output=False) carries EXTRACTABLE text: if it were an
         # output node the converter would surface "raw model text" as content. But
-        # because it is not an output node, content is suppressed to None, so
-        # output_text must not surface that intermediate text as "the answer".
+        # because it is not an output node, content is suppressed to None, so the
+        # answer must not surface that intermediate text. A message-typed channel
+        # exists with non-string content, so reason is ``non_string`` and text None.
         # (If the is_output guard regressed, content would become "raw model text"
-        # and this test would fail.)
+        # and reason would flip to ``single`` — this test would fail.)
         vertex = _message_nonoutput_vertex("LLM-xyz")
         graph = _graph_for([vertex])
 
@@ -1367,7 +1400,8 @@ class TestOutputTextAndSessionId:
 
         assert response.outputs["LLM-xyz"].type == "message"
         assert response.outputs["LLM-xyz"].content is None
-        assert response.output_text is None
+        assert response.output.reason == OutputReason.NON_STRING
+        assert response.output.text is None
 
     def test_chat_output_plus_data_output_still_surfaces_text(self):
         # The realistic "chat answer plus structured data" flow: a side DataOutput
@@ -1390,11 +1424,13 @@ class TestOutputTextAndSessionId:
         assert response.outputs["ChatOutput-abc"].type == "message"
         assert response.outputs["DataOutput-xyz"].type == "data"
         assert response.outputs["DataOutput-xyz"].content == {"rows": [1, 2]}
-        assert response.output_text == "the reply"
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "the reply"
+        assert response.output.source == "ChatOutput-abc"
 
-    def test_data_only_flow_leaves_output_text_none(self):
+    def test_data_only_flow_resolves_to_none(self):
         # A flow whose only terminal is a DataOutput produces a real type="data"
-        # output, which the shortcut must exclude.
+        # output, which the answer resolver must exclude (reason ``none``).
         data = _data_output_vertex("DataOutput-xyz")
         graph = _graph_for([data])
 
@@ -1407,10 +1443,11 @@ class TestOutputTextAndSessionId:
         response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
 
         assert response.outputs["DataOutput-xyz"].type == "data"
-        assert response.output_text is None
+        assert response.output.reason == OutputReason.NONE
+        assert response.output.text is None
 
-    def test_text_output_surfaces_output_text(self):
-        # output_text is not ChatOutput-specific: a TextOutput (type "text") feeds it too.
+    def test_text_output_surfaces_text(self):
+        # The answer is not ChatOutput-specific: a TextOutput (type "text") feeds it too.
         vertex = _text_output_vertex("TextOutput-abc")
         graph = _graph_for([vertex])
 
@@ -1423,14 +1460,14 @@ class TestOutputTextAndSessionId:
         response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
 
         assert response.outputs["TextOutput-abc"].type == "text"
-        assert response.output_text == "plain answer"
+        assert response.output.reason == OutputReason.SINGLE
+        assert response.output.text == "plain answer"
 
-    def test_output_entries_expose_only_the_de_nested_fields(self):
+    def test_output_entries_expose_the_de_nested_fields(self):
         # The outputs dict key already IS the component id, so each ComponentOutput
-        # exposes exactly {type, status, content, metadata} and carries no redundant
-        # inner id. Pinning the exact field set means adding a component_id field to
-        # the ComponentOutput schema would fail here (the old "component_id not in
-        # dump" check could never fail, since the schema has no such field).
+        # exposes exactly {type, status, display_name, content, metadata} and carries
+        # no redundant inner id. Pinning the exact field set means adding a
+        # component_id field to the ComponentOutput schema would fail here.
         vertex = _message_output_vertex("ChatOutput-abc")
         graph = _graph_for([vertex])
 
@@ -1443,7 +1480,9 @@ class TestOutputTextAndSessionId:
         response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
 
         assert "ChatOutput-abc" in response.outputs
-        assert set(response.outputs["ChatOutput-abc"].model_dump()) == {"type", "status", "content", "metadata"}
+        entry = response.outputs["ChatOutput-abc"]
+        assert set(entry.model_dump()) == {"type", "status", "display_name", "content", "metadata"}
+        assert entry.display_name == "Chat Output"
 
 
 if __name__ == "__main__":

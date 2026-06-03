@@ -31,8 +31,10 @@ from lfx.schema.workflow import (
     ErrorDetail,
     JobId,
     JobStatus,
+    OutputReason,
     WorkflowExecutionResponse,
     WorkflowJobResponse,
+    WorkflowOutput,
     WorkflowRunRequest,
 )
 
@@ -369,31 +371,50 @@ def _process_terminal_vertex(
     output_key = vertex.id
 
     # Build ComponentOutput. The component id lives in the outputs dict key, so
-    # ComponentOutput deliberately has no component_id field of its own.
+    # ComponentOutput deliberately has no component_id field of its own. The
+    # display_name is carried as a field for human-readable rendering.
     component_output = ComponentOutput(
         type=output_type,
         status=JobStatus.COMPLETED,
+        display_name=vertex.display_name or vertex.vertex_type,
         content=content,
         metadata=metadata,
     )
     return output_key, component_output
 
 
-def _single_output_text(outputs: dict[str, ComponentOutput]) -> str | None:
-    """Return the lone text answer for the ``output_text`` shortcut.
+def _resolve_output(outputs: dict[str, ComponentOutput]) -> WorkflowOutput:
+    """Resolve the run's primary text answer and explain why it resolved that way.
 
-    Populated only when the run has exactly one text output (a ChatOutput/
-    TextOutput with string content). With zero text outputs (e.g. a data-only
-    flow) or two or more, returns None so callers read ``outputs`` rather than
-    the shortcut guessing which channel is "the answer". An intentionally empty
-    single answer is preserved as "" (distinct from None).
+    ``text`` is the lone string answer only when exactly one output is a text
+    channel (a ChatOutput/TextOutput with string content). Otherwise ``text`` is
+    None and ``reason`` names why, so callers never have to guess which channel
+    is "the answer":
+
+    - ``single``: exactly one text answer (``text`` holds it, ``source`` names it)
+    - ``multiple``: two or more text answers (read ``outputs`` and pick)
+    - ``non_string``: a text channel exists but its content isn't a string
+    - ``none``: no text channel at all (e.g. a data-only flow)
+
+    An intentionally empty single answer is preserved as "" (distinct from None).
+    The ``failed`` reason is set on the error path, not here.
     """
-    text_outputs = [
-        output.content
-        for output in outputs.values()
+    text_items = [
+        (component_id, output.content)
+        for component_id, output in outputs.items()
         if output.type in {"message", "text"} and isinstance(output.content, str)
     ]
-    return text_outputs[0] if len(text_outputs) == 1 else None
+    if len(text_items) == 1:
+        component_id, text = text_items[0]
+        return WorkflowOutput(reason=OutputReason.SINGLE, text=text, source=component_id)
+    if text_items:
+        # More than one text answer (exactly one was handled above).
+        return WorkflowOutput(reason=OutputReason.MULTIPLE)
+    # Zero string text answers: distinguish "a text channel exists but its
+    # content isn't a string" from "no text channel at all".
+    has_text_channel = any(output.type in {"message", "text"} for output in outputs.values())
+    reason = OutputReason.NON_STRING if has_text_channel else OutputReason.NONE
+    return WorkflowOutput(reason=reason)
 
 
 def run_response_to_workflow_response(
@@ -481,9 +502,8 @@ def run_response_to_workflow_response(
         errors=[],
         inputs=inputs or {},
         globals=response_globals,
-        output_text=_single_output_text(outputs),
+        output=_resolve_output(outputs),
         outputs=outputs,
-        metadata={},
     )
 
 
@@ -540,6 +560,6 @@ def create_error_response(
         errors=[error_detail],
         inputs=inputs or {},
         globals=response_globals,
+        output=WorkflowOutput(reason=OutputReason.FAILED),
         outputs={},
-        metadata={},
     )

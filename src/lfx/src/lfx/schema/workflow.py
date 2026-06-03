@@ -7,7 +7,7 @@ from enum import Enum
 from typing import Annotated, Any, Literal
 from uuid import UUID
 
-from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, model_validator
+from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, computed_field, model_validator
 
 from lfx.schema.validators import null_check_validator, uuid_validator
 
@@ -54,8 +54,47 @@ class ComponentOutput(BaseModel):
 
     type: str = Field(..., description="Type of the component output (e.g., 'message', 'data', 'tool', 'text')")
     status: JobStatus
+    display_name: str | None = Field(
+        default=None,
+        description="Human-readable component name. The stable component id remains the ``outputs`` dict key.",
+    )
     content: Any | None = None
     metadata: dict[str, Any] | None = None
+
+
+class OutputReason(str, Enum):
+    """Why ``WorkflowOutput.text`` resolved the way it did.
+
+    Mirrors the LLM-domain ``finish_reason`` / ``stop_reason`` convention: a
+    machine-readable enum explaining the disposition of the answer, distinct from
+    the lifecycle ``status``.
+    """
+
+    SINGLE = "single"  # exactly one text answer; ``text`` holds it
+    MULTIPLE = "multiple"  # two or more text answers; read ``outputs`` and pick
+    NONE = "none"  # no text channel at all (e.g. a data-only flow)
+    NON_STRING = "non_string"  # a text channel exists but its content isn't a string
+    FAILED = "failed"  # the run failed before producing an answer
+
+
+class WorkflowOutput(BaseModel):
+    """The run's primary text answer plus the reason it resolved that way."""
+
+    reason: OutputReason = Field(
+        description=(
+            "Why ``text`` is or isn't populated. ``single`` means ``text`` holds the answer; "
+            "``multiple`` / ``none`` / ``non_string`` / ``failed`` mean ``text`` is null and name "
+            "why, so callers never have to guess."
+        )
+    )
+    text: str | None = Field(
+        default=None,
+        description="The run's text answer. Set only when ``reason`` is ``single``. Empty string is a valid answer.",
+    )
+    source: str | None = Field(
+        default=None,
+        description="Component id that produced ``text``. Set only when ``reason`` is ``single``.",
+    )
 
 
 class WorkflowExecutionRequest(BaseModel):
@@ -323,18 +362,24 @@ class WorkflowExecutionResponse(BaseModel):
     object: Literal["response"] = Field(default="response")
     created_timestamp: str = Field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     status: JobStatus
-    output_text: str | None = Field(
-        default=None,
+    output: WorkflowOutput = Field(
+        default_factory=lambda: WorkflowOutput(reason=OutputReason.NONE),
         description=(
-            "Shortcut to the run's text answer: the content of the flow's single "
-            "text output (a ChatOutput/TextOutput). None when the flow has no text "
-            "output or more than one, in which case read ``outputs``."
+            "The run's text answer plus why it resolved that way. Read ``output.text`` for the "
+            "answer; when it's null, ``output.reason`` says why (``multiple`` / ``none`` / "
+            "``non_string`` / ``failed``) so you know whether to read ``outputs``."
         ),
     )
     errors: list[ErrorDetail] = []
     inputs: dict[str, Any] = {}
     globals: dict[GlobalVarKey, GlobalVarValue] = Field(default_factory=dict)
     outputs: dict[str, ComponentOutput] = {}
+
+    @computed_field
+    @property
+    def has_errors(self) -> bool:
+        """True when the run reported any error. Derived from ``errors`` so it can't drift."""
+        return len(self.errors) > 0
 
 
 class WorkflowJobResponse(BaseModel):
