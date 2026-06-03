@@ -141,6 +141,7 @@
   "assistant.welcomeText": "私がお手伝いできることは以下の通りです",
   "assistant.working": "処理中...",
   "assistant.workingOnIt": "作業しています...",
+  "assistant.mentionNoMatches": "キャンバスに一致するコンポーネントがありません",
   "auth.adminLoginButton": "ログイン",
   "auth.adminTitle": "管理者",
   "auth.alertSaveWithApi": "⚠️ 注意：このフローをエクスポートすると、機密性の高い認証情報が漏洩する恐れがあります。",

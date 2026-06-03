@@ -141,6 +141,7 @@
   "assistant.welcomeText": "Voici comment je peux vous aider",
   "assistant.working": "En cours...",
   "assistant.workingOnIt": "En cours de traitement...",
+  "assistant.mentionNoMatches": "Aucun composant correspondant sur le canevas",
   "auth.adminLoginButton": "Connexion",
   "auth.adminTitle": "Administrateur",
   "auth.alertSaveWithApi": "⚠️ Attention : l'exportation de ce flux peut entraîner la divulgation d'identifiants sensibles.",

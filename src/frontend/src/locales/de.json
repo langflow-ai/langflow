@@ -141,6 +141,7 @@
   "assistant.welcomeText": "So kann ich Ihnen helfen",
   "assistant.working": "Wird geladen...",
   "assistant.workingOnIt": "Ich arbeite daran...",
+  "assistant.mentionNoMatches": "Keine passenden Komponenten auf der Arbeitsfläche",
   "auth.adminLoginButton": "Anmeldung",
   "auth.adminTitle": "Administrator",
   "auth.alertSaveWithApi": "⚠️ Achtung: Durch das Exportieren dieses Flows können vertrauliche Anmeldedaten offengelegt werden.",

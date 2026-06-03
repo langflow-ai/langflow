@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { cn } from "@/utils/utils";
 import type { MentionItem } from "../hooks/use-component-mentions";
@@ -15,6 +16,7 @@ export function AssistantMentionPopover({
   onHover,
   onSelect,
 }: AssistantMentionPopoverProps) {
+  const { t } = useTranslation();
   return (
     <div
       data-testid="assistant-mention-popover"
@@ -26,7 +28,7 @@ export function AssistantMentionPopover({
     >
       {items.length === 0 ? (
         <div className="px-3 py-2 text-xs text-muted-foreground">
-          No matching components on the canvas
+          {t("assistant.mentionNoMatches")}
         </div>
       ) : (
         items.map((item, index) => (

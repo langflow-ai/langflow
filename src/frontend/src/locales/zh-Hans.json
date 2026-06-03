@@ -141,6 +141,7 @@
   "assistant.welcomeText": "以下是我能提供的帮助",
   "assistant.working": "正在处理中...",
   "assistant.workingOnIt": "正在处理...",
+  "assistant.mentionNoMatches": "画布上没有匹配的组件",
   "auth.adminLoginButton": "登录",
   "auth.adminTitle": "管理员",
   "auth.alertSaveWithApi": "⚠️ 注意：导出此流程可能会泄露敏感凭据。",
