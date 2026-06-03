@@ -1,40 +1,11 @@
-import type { UniqueInputsComponents } from "../types";
-import {
-  CHAT_INPUT_COMPONENT,
-  EXCLUSIVITY_RULES,
-  WEBHOOK_COMPONENT,
-} from "./constants";
+import { evaluatePlacement } from "@/utils/componentConstraints";
 
+/**
+ * Whether a sidebar item should be disabled because the component cannot be
+ * added given the component types already present in the flow. Delegates to the
+ * shared constraint engine so the policy lives in one place.
+ */
 export const disableItem = (
   SBItemName: string,
-  uniqueInputsComponents: UniqueInputsComponents,
-) => {
-  // Check if component already exists
-  if (SBItemName === CHAT_INPUT_COMPONENT && uniqueInputsComponents.chatInput) {
-    return true;
-  }
-  if (SBItemName === WEBHOOK_COMPONENT && uniqueInputsComponents.webhookInput) {
-    return true;
-  }
-
-  // Check exclusivity rules
-  const exclusiveComponents = EXCLUSIVITY_RULES[SBItemName];
-  if (exclusiveComponents) {
-    for (const exclusiveComponent of exclusiveComponents) {
-      if (
-        exclusiveComponent === CHAT_INPUT_COMPONENT &&
-        uniqueInputsComponents.chatInput
-      ) {
-        return true;
-      }
-      if (
-        exclusiveComponent === WEBHOOK_COMPONENT &&
-        uniqueInputsComponents.webhookInput
-      ) {
-        return true;
-      }
-    }
-  }
-
-  return false;
-};
+  presentTypes: ReadonlySet<string>,
+): boolean => evaluatePlacement(SBItemName, presentTypes) !== null;

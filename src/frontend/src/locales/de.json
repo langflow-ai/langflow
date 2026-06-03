@@ -702,6 +702,8 @@
   "files.uploadedSuccessfully": "Datei erfolgreich hochgeladen",
   "flow.addDescription": "Beschreibung hinzufügen...",
   "flow.brokenEdgesWarning": "Einige Verbindungen wurden entfernt, da sie ungültig waren:",
+  "flow.exclusiveComponentsNotPasted": "Einige Komponenten wurden nicht eingefügt, da sie nicht zusammen mit bereits im Flow vorhandenen Komponenten verwendet werden können.",
+  "flow.duplicateComponentsNotPasted": "Einige Komponenten wurden nicht eingefügt, da pro Flow nur eine Instanz erlaubt ist.",
   "flow.buildStatus": "Erstellen, um den Status zu überprüfen.",
   "flow.buildSuccess": "Erfolgreich erstellt ✨",
   "flow.characterLimitReached": "Zeichenlimit erreicht",
