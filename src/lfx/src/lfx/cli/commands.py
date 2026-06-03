@@ -202,12 +202,13 @@ async def serve_command(
     # --- upgrade compatibility gate (shared with `lfx run`; before temp-file write) ---
     # Runs before the temp-file write below so the server loads any upgraded content.
     if upgrade_flow and json_data is not None:
-        from lfx.interface.components import component_cache
         from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
 
-        all_types = component_cache.all_types_dict or {}
+        # Pass no registry: the gate loads the bundled component index (the same source
+        # `lfx upgrade` uses). component_cache.all_types_dict is empty here because it is
+        # populated lazily after services start, so using it would block every component.
         try:
-            json_data, applied = apply_upgrade_gate(json_data, all_types, upgrade_flow)
+            json_data, applied = apply_upgrade_gate(json_data, mode=upgrade_flow)
         except UpgradeFlowError as e:
             typer.echo(f"Error: {e}", err=True)
             raise typer.Exit(1) from e

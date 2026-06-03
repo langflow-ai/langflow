@@ -1543,10 +1543,11 @@ class TestUpgradeFlowOption:
 
         flow_json = _json.dumps(self._flow_dict(code=self.NODE_CODE))
 
-        with patch("lfx.interface.components.component_cache") as mock_cache:
-            mock_cache.all_types_dict = self._registry()
-            with pytest.raises(RunError, match="incompatible components"):
-                await run_flow(flow_json=flow_json, upgrade_flow="check")
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(flow_json=flow_json, upgrade_flow="check")
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outdated_file(self, tmp_path):
@@ -1556,10 +1557,11 @@ class TestUpgradeFlowOption:
         f = tmp_path / "flow.json"
         f.write_text(_json.dumps(self._flow_dict(code=self.NODE_CODE)))
 
-        with patch("lfx.interface.components.component_cache") as mock_cache:
-            mock_cache.all_types_dict = self._registry()
-            with pytest.raises(RunError, match="incompatible components"):
-                await run_flow(script_path=f, upgrade_flow="check")
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(script_path=f, upgrade_flow="check")
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outer_envelope_file(self, tmp_path):
@@ -1573,10 +1575,11 @@ class TestUpgradeFlowOption:
         f = tmp_path / "flow.json"
         f.write_text(_json.dumps(envelope))
 
-        with patch("lfx.interface.components.component_cache") as mock_cache:
-            mock_cache.all_types_dict = self._registry()
-            with pytest.raises(RunError, match="incompatible components"):
-                await run_flow(script_path=f, upgrade_flow="check")
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(script_path=f, upgrade_flow="check")
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_rejects_py_script(self, tmp_path):
@@ -1603,10 +1606,11 @@ class TestUpgradeFlowOption:
 
         flow_json = _json.dumps(self._flow_dict(code=self.REGISTRY_CODE))
 
-        with patch("lfx.interface.components.component_cache") as mock_cache:
-            mock_cache.all_types_dict = self._registry()
-            with pytest.raises(RunError, match="Unknown --upgrade-flow"):
-                await run_flow(flow_json=flow_json, upgrade_flow="typo")
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="Unknown --upgrade-flow"),
+        ):
+            await run_flow(flow_json=flow_json, upgrade_flow="typo")
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outer_envelope_inline_json(self):
@@ -1616,10 +1620,11 @@ class TestUpgradeFlowOption:
         envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
         flow_json = _json.dumps(envelope)
 
-        with patch("lfx.interface.components.component_cache") as mock_cache:
-            mock_cache.all_types_dict = self._registry()
-            with pytest.raises(RunError, match="incompatible components"):
-                await run_flow(flow_json=flow_json, upgrade_flow="check")
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(flow_json=flow_json, upgrade_flow="check")
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_check_rejects_outer_envelope_stdin(self):
@@ -1630,12 +1635,52 @@ class TestUpgradeFlowOption:
         envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
 
         with (
-            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
             patch("sys.stdin", StringIO(_json.dumps(envelope))),
+            pytest.raises(RunError, match="incompatible components"),
         ):
-            mock_cache.all_types_dict = self._registry()
-            with pytest.raises(RunError, match="incompatible components"):
-                await run_flow(stdin=True, upgrade_flow="check")
+            await run_flow(stdin=True, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_passes_clean_real_flow_without_registry_mock(self):
+        """Regression: a known-clean real starter flow must PASS --upgrade-flow=check.
+
+        Deliberately does NOT mock the registry. The original bug was that the gate read
+        component_cache.all_types_dict (empty at gate time) instead of the bundled component
+        index, so every component was classified 'blocked' and every flow rejected. Every
+        other test here mocks a populated registry, which is exactly what hid the bug — this
+        one exercises the real default source end-to-end.
+        """
+        from pathlib import Path
+
+        fixture = Path(__file__).parents[2] / "fixtures" / "starter_flows" / "v1.9.0" / "basic_prompting.json"
+        flow_json = fixture.read_text(encoding="utf-8")
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        # Mock only the loader/executor (not the registry) so we isolate the gate decision:
+        # the gate must pass using the real bundled index, then run_flow proceeds to load.
+        with (
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            # Must not raise: clean flow + real bundled index => gate passes, loader is reached.
+            await run_flow(flow_json=flow_json, upgrade_flow="check")
+            mock_load.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_upgrade_flow_safe_envelope_file_loads_successfully(self, tmp_path):
@@ -1664,12 +1709,11 @@ class TestUpgradeFlowOption:
         mock_graph.async_start = _async_start
 
         with (
-            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
             patch("lfx.load.aload_flow_from_json") as mock_load,
             patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
             patch("lfx.run.base.extract_structured_result") as mock_extract,
         ):
-            mock_cache.all_types_dict = self._registry()
             mock_load.return_value = mock_graph
             mock_validate.return_value = []
             mock_extract.return_value = {"success": True, "result": "ok"}
@@ -1702,12 +1746,11 @@ class TestUpgradeFlowOption:
         mock_graph.async_start = _async_start
 
         with (
-            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
             patch("lfx.load.aload_flow_from_json") as mock_load,
             patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
             patch("lfx.run.base.extract_structured_result") as mock_extract,
         ):
-            mock_cache.all_types_dict = self._registry()
             mock_load.return_value = mock_graph
             mock_validate.return_value = []
             mock_extract.return_value = {"success": True, "result": "ok"}
@@ -1746,12 +1789,11 @@ class TestUpgradeFlowOption:
         mock_graph.async_start = _async_start
 
         with (
-            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
             patch("lfx.load.aload_flow_from_json") as mock_load,
             patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
             patch("lfx.run.base.extract_structured_result") as mock_extract,
         ):
-            mock_cache.all_types_dict = self._registry()
             mock_load.return_value = mock_graph
             mock_validate.return_value = []
             mock_extract.return_value = {"success": True, "result": "ok"}
@@ -1786,13 +1828,12 @@ class TestUpgradeFlowOption:
         mock_graph.async_start = _async_start
 
         with (
-            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
             patch("lfx.load.aload_flow_from_json") as mock_load,
             patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
             patch("lfx.run.base.extract_structured_result") as mock_extract,
             patch("sys.stdin", StringIO(_json.dumps(envelope))),
         ):
-            mock_cache.all_types_dict = self._registry()
             mock_load.return_value = mock_graph
             mock_validate.return_value = []
             mock_extract.return_value = {"success": True, "result": "ok"}

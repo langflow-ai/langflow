@@ -341,11 +341,10 @@ def test_serve_upgrade_flow_check_aborts_on_incompatible():
     from typer.testing import CliRunner
 
     with (
-        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_serve_registry()),
         patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
-        mock_cache.all_types_dict = _serve_registry()
         result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "check"])
         assert result.exit_code != 0
         assert not mock_uvicorn.called
@@ -356,11 +355,10 @@ def test_serve_upgrade_flow_safe_blocked_aborts():
     from typer.testing import CliRunner
 
     with (
-        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value={}),
         patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
-        mock_cache.all_types_dict = {}  # empty registry -> the node is blocked
         result = CliRunner().invoke(_serve_app(), ["--flow-json", _serve_flow_json(), "--upgrade-flow", "safe"])
         assert result.exit_code != 0
         assert not mock_uvicorn.called
@@ -384,12 +382,11 @@ def test_serve_upgrade_flow_safe_proceeds_to_serve():
     from typer.testing import CliRunner
 
     with (
-        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_serve_registry()),
         patch("lfx.cli.commands.load_graph_from_path") as mock_load,
         patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
-        mock_cache.all_types_dict = _serve_registry()
         mock_graph = MagicMock()
         mock_graph.prepare = MagicMock()
         mock_graph.nodes = {}
@@ -457,12 +454,11 @@ def test_serve_upgrade_safe_writes_loadable_enveloped_temp_file():
 
     captured: dict = {}
     with (
-        patch("lfx.interface.components.component_cache") as mock_cache,
+        patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_serve_registry()),
         patch("lfx.cli.commands.load_graph_from_path") as mock_load,
         patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
         patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
     ):
-        mock_cache.all_types_dict = _serve_registry()
         mock_load.side_effect = _loader_capturing_payload(captured)
         args = ["--flow-json", _serve_flow_json_enveloped(), "--upgrade-flow", "safe"]
         result = CliRunner().invoke(_serve_app(), args)
@@ -550,12 +546,11 @@ def test_serve_file_upgrade_safe_writes_enveloped_temp_file():
     captured: dict = {}
     try:
         with (
-            patch("lfx.interface.components.component_cache") as mock_cache,
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=_serve_registry()),
             patch("lfx.cli.commands.load_graph_from_path") as mock_load,
             patch("lfx.cli.commands.uvicorn.Server.serve", new=AsyncMock(return_value=None)) as mock_uvicorn,
             patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-key"}),  # pragma: allowlist secret
         ):
-            mock_cache.all_types_dict = _serve_registry()
             mock_load.side_effect = _loader_capturing_payload(captured)
             result = CliRunner().invoke(_serve_app(), [flow_path, "--upgrade-flow", "safe"])
             assert result.exit_code == 0, result.stdout

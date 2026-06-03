@@ -252,12 +252,13 @@ async def run_flow(
 
     # --- upgrade compatibility gate (shared with `lfx serve`) ---
     if upgrade_flow and flow_dict is not None:
-        from lfx.interface.components import component_cache
         from lfx.upgrade.cli_gate import UpgradeFlowError, apply_upgrade_gate
 
-        all_types = component_cache.all_types_dict or {}
+        # Pass no registry: the gate loads the bundled component index (the same source
+        # `lfx upgrade` uses). component_cache.all_types_dict is empty here because it is
+        # populated lazily after services start, so using it would block every component.
         try:
-            flow_dict, applied = apply_upgrade_gate(flow_dict, all_types, upgrade_flow)
+            flow_dict, applied = apply_upgrade_gate(flow_dict, mode=upgrade_flow)
         except UpgradeFlowError as e:
             output_error(str(e), verbose=verbose)
             raise RunError(str(e), e) from e
