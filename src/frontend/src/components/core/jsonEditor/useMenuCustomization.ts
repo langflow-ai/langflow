@@ -19,6 +19,7 @@ export const useMenuCustomization = (
   const customizeMenu = (
     items: MenuItem[],
     context: { mode: Mode; modal: boolean; readOnly: boolean },
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     getEditor: () => any,
   ): MenuItem[] => {
     switch (context.mode) {

@@ -18,6 +18,7 @@ import type {
 import {
   DEFAULT_FLOW_NAME,
   getDefaultDeploymentToolName,
+  getDeploymentDisplayName,
   WXO_PROVIDER_KEY,
 } from "../types";
 import {
@@ -94,7 +95,6 @@ export function buildConnectionPayloads({
 export function buildDeploymentPayload({
   attachedConnectionByFlow,
   connections,
-  defaultToolNameScopeId,
   deploymentDescription,
   deploymentName,
   deploymentType,
@@ -108,7 +108,6 @@ export function buildDeploymentPayload({
 }: {
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
-  defaultToolNameScopeId: string | null;
   deploymentDescription: string;
   deploymentName: string;
   deploymentType: DeploymentType;
@@ -121,7 +120,7 @@ export function buildDeploymentPayload({
   toolNameByFlow: Map<string, string>;
 }): DeploymentCreateRequest {
   if (!isDeploymentNameValid) {
-    throw new Error("Deployment name must start with a letter");
+    throw new Error("Deployment name is required");
   }
   const allConnectionIds = new Set<string>();
   Array.from(attachedConnectionByFlow.values()).forEach((ids) => {
@@ -147,15 +146,11 @@ export function buildDeploymentPayload({
     )?.trim();
     const resolvedToolName =
       strictToolName ||
-      getDefaultDeploymentToolName(
-        versionEntry.flowName ?? DEFAULT_FLOW_NAME,
-        versionEntry.versionId,
-        defaultToolNameScopeId,
-      );
+      getDefaultDeploymentToolName(versionEntry.flowName ?? DEFAULT_FLOW_NAME);
     addFlows.push({
       flow_version_id: versionEntry.versionId,
       app_ids: connectionIds,
-      tool_name: resolvedToolName,
+      tool_display_name: resolvedToolName,
     });
   }
 
@@ -167,10 +162,10 @@ export function buildDeploymentPayload({
   return {
     provider_id: providerId,
     ...(projectId ? { project_id: projectId } : {}),
-    name: deploymentName.trim(),
     description: deploymentDescription,
     type: deploymentType,
     provider_data: {
+      display_name: deploymentName.trim(),
       llm: selectedLlm,
       add_flows: addFlows,
       connections: connectionPayloads,
@@ -181,9 +176,10 @@ export function buildDeploymentPayload({
 export function buildDeploymentUpdatePayload({
   attachedConnectionByFlow,
   connections,
-  defaultToolNameScopeId,
   deploymentDescription,
+  deploymentName,
   editingDeployment,
+  initialLlm,
   initialConnectionsByFlow,
   initialToolNameByFlow,
   initialVersionByFlow,
@@ -195,9 +191,10 @@ export function buildDeploymentUpdatePayload({
 }: {
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
-  defaultToolNameScopeId: string | null;
   deploymentDescription: string;
+  deploymentName: string;
   editingDeployment: Deployment | null;
+  initialLlm: string;
   initialConnectionsByFlow: Map<string, string[]>;
   initialToolNameByFlow: Map<string, string>;
   initialVersionByFlow: Map<string, SelectedFlowVersion>;
@@ -211,18 +208,18 @@ export function buildDeploymentUpdatePayload({
     throw new Error("buildDeploymentUpdatePayload called outside edit mode");
   }
   if (!isDeploymentNameValid) {
-    throw new Error("Deployment name must start with a letter");
+    throw new Error("Deployment name is required");
   }
 
   const result: DeploymentUpdateRequest = {
     deployment_id: editingDeployment.id,
   };
 
-  const descriptionChanged =
-    deploymentDescription !== (editingDeployment.description ?? "");
-  if (descriptionChanged) {
+  if (deploymentDescription !== (editingDeployment.description ?? "")) {
     result.description = deploymentDescription;
   }
+  const displayNameChanged =
+    deploymentName.trim() !== getDeploymentDisplayName(editingDeployment);
 
   const upsertFlows: DeploymentUpdateFlowItem[] = [];
 
@@ -245,16 +242,12 @@ export function buildDeploymentUpdatePayload({
     )?.trim();
     const resolvedToolName =
       strictToolName ||
-      getDefaultDeploymentToolName(
-        versionEntry.flowName ?? DEFAULT_FLOW_NAME,
-        versionEntry.versionId,
-        defaultToolNameScopeId,
-      );
+      getDefaultDeploymentToolName(versionEntry.flowName ?? DEFAULT_FLOW_NAME);
     upsertFlows.push({
       flow_version_id: versionEntry.versionId,
       add_app_ids: connectionIds,
       remove_app_ids: [],
-      tool_name: resolvedToolName,
+      tool_display_name: resolvedToolName,
     });
   }
 
@@ -304,7 +297,7 @@ export function buildDeploymentUpdatePayload({
         flow_version_id: versionEntry.versionId,
         add_app_ids: addAppIds,
         remove_app_ids: removeAppIds,
-        ...(nameChanged && { tool_name: currentName }),
+        ...(nameChanged && { tool_display_name: currentName }),
       });
     }
   }
@@ -326,14 +319,17 @@ export function buildDeploymentUpdatePayload({
     connections,
   });
 
-  const llmToSend = selectedLlm;
+  const llmChanged = selectedLlm !== initialLlm;
+  const llmToSend = llmChanged ? selectedLlm : undefined;
   if (
     llmToSend ||
+    displayNameChanged ||
     upsertFlows.length > 0 ||
     removeFlows.length > 0 ||
     connectionPayloads.length > 0
   ) {
     const providerData: DeploymentUpdateProviderData = {
+      ...(displayNameChanged && { display_name: deploymentName.trim() }),
       ...(llmToSend && { llm: llmToSend }),
       ...(upsertFlows.length > 0 && { upsert_flows: upsertFlows }),
       ...(removeFlows.length > 0 && { remove_flows: removeFlows }),
@@ -344,9 +340,13 @@ export function buildDeploymentUpdatePayload({
     result.provider_data = providerData;
   }
 
-  if (result.description === undefined && !result.provider_data) {
-    result.description = deploymentDescription;
-  }
-
   return result;
+}
+
+export function isDeploymentUpdatePayloadEmpty(
+  payload: DeploymentUpdateRequest,
+): boolean {
+  return (
+    payload.description === undefined && payload.provider_data === undefined
+  );
 }

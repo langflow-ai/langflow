@@ -20,6 +20,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.memory_base.kb_path_helpers import hash_session_id, validate_kb_path
 from sqlmodel import select
 
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.files_and_knowledge._kb_paths import (
     get_knowledge_bases_root_path,
     load_kb_metadata,
@@ -126,7 +127,7 @@ class MemoryBaseComponent(Component):
         Output(
             name="retrieve_data",
             display_name="Results",
-            method="retrieve_data",
+            method="retrieve_memory",
             info=(
                 "Returns matching memory chunks. Scoped to the current session by "
                 "default; turn 'Filter by Session' off to retrieve across sessions."
@@ -234,6 +235,7 @@ class MemoryBaseComponent(Component):
             persist_directory=str(kb_path),
             embedding_function=embedding_function,
             collection_name=kb_name,
+            **chroma_langchain_collection_kwargs(),
         )
 
     def _format_results(self, results: list[tuple]) -> DataFrame:
@@ -254,12 +256,12 @@ class MemoryBaseComponent(Component):
             data_list.append(Data(**kwargs))
         return DataFrame(data=data_list)
 
-    async def retrieve_data(self) -> DataFrame:
+    async def retrieve_memory(self) -> DataFrame:
         """Retrieve chunks from the selected Memory Base.
 
         Scoped to the current ``session_id`` when ``filter_by_session`` is true; when
         false, every chunk in the Memory Base is queryable so the agent can recall
-        context from prior conversations.
+        context from prior conversations across all sessions.
         """
         session_id = getattr(self.graph, "session_id", None)
         if bool(self.filter_by_session) and not session_id:

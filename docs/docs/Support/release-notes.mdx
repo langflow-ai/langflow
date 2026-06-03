@@ -51,7 +51,116 @@ To avoid the impact of potential breaking changes and test new versions, the Lan
 Highlights of this release include the following changes.
 For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
 
+
+### Breaking changes
+
+- Upcoming breaking change: bundle separation
+
+    Langflow 1.10.x introduces the Extension bundles model.
+    In future releases, bundle separation will extend to more component providers.
+
+    Saved flows will continue to open normally, but the following may require manual updates before upgrading:
+
+    - Code or scripts that reference component class names or `lfx.components.<provider>` import paths.
+    - External tooling that reads component type identifiers from raw flow JSON.
+    - Custom deployment scripts that install or pin individual component packages.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+
 ### New features and enhancements
+
+- **Langflow Assistant**: build complete flows
+
+    **Langflow Assistant** can now build entire flows, and not only individual components.
+
+    For more information, see [Build flows and components with Langflow Assistant](/langflow-assistant).
+
+- Redis-backed job queue for multi-worker deployments
+
+    Langflow now supports a Redis-backed job queue that allows flow build events to be shared across multiple Gunicorn/Uvicorn workers and across multiple replicas behind a load balancer.
+
+    Single-process deployments are unaffected. The default `asyncio` in-memory queue is unchanged.
+
+    For setup instructions and configuration details, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
+- Memory bases
+
+    Memory bases are per-flow vector stores that automatically ingest conversation messages.
+    The **Memory Base** component retrieves context from the vector store, offering long-term semantic memory for flows.
+    For more information, see [Manage memory bases](../Develop/memory-bases.mdx).
+
+- Python 3.14 support
+
+    Langflow now supports Python 3.10 through 3.14 on macOS, Linux, and Windows.
+    The Langflow Docker images now use Python 3.14.
+
+    <details>
+    <summary>Optional integrations not yet available on Python 3.14</summary>
+
+    The following optional integrations are excluded from installs on Python 3.14:
+
+    - [IBM watsonx](/bundles-ibm)
+    - [IBM watsonx Orchestrate](/deployment-wxo)
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - OpenDsStar
+
+    </details>
+
+- **Agent** component: structured response output
+
+    The **Agent** component now includes a **Structured Response** (`structured_response`) output that returns the agent's reply as structured data according to an **Output Schema** you define.
+
+    For more information, see [Agent component output](/agents#agent-component-output).
+
+- **Agent** component: default system prompt
+
+    The **Agent** component now uses a structured default system prompt that includes the current date and the active model name.
+    Existing flows are not affected.
+
+    For more information, see [Agent instructions and input](/agents#agent-instructions-and-input).
+
+- Extension bundles
+
+    Langflow 1.10 introduces Extension bundles: component providers that are packaged and versioned as standalone pip packages, independent of the core Langflow server.
+    All bundles are still included in `uv pip install langflow`, so nothing changes for existing users.
+
+    The following Extension bundles ship with Langflow 1.10:
+
+    | Package | Bundle | Components |
+    |---------|--------|------------|
+    | `lfx-arxiv` | [arXiv](/bundles-arxiv) | arXiv search |
+    | `lfx-docling` | [Docling](/bundles-docling) | Document parsing and chunking |
+    | `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) | Web search |
+    | `lfx-ibm` | [IBM](/bundles-ibm) | IBM watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
+
+    To view all Extension bundles currently loaded in your environment:
+
+    ```bash
+    lfx extension list
+    ```
+
+    If a bundle is not installed, its components are absent from the canvas.
+    To install a missing bundle, install its standalone package and restart Langflow:
+
+    ```bash
+    uv pip install lfx-duckduckgo
+    uv run langflow run
+    ```
+
+    Components in Extension bundles use a namespaced identifier instead of a bare class name.
+    For example, `DuckDuckGoSearchComponent` is now identified as:
+
+    ```text
+    ext:duckduckgo:DuckDuckGoSearchComponent@official
+    ```
+
+    You can see this identifier in the raw JSON of any saved flow that uses the component.
+    Langflow migrates saved flow references to the new format automatically when you open a flow.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
 
 - File System component
 
@@ -71,10 +180,53 @@ For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/rel
 - Database connectors for knowledge bases
 
     Knowledge bases now support configurable vector database backends through **DB Providers** configured in **Settings → DB Providers**.
+    Available providers include [Chroma (default)](https://docs.trychroma.com/), [Chroma Cloud](https://docs.trychroma.com/cloud/getting-started), and [OpenSearch](https://docs.opensearch.org/latest/about/).
 
-    For setup instructions and configuration details, see [Manage vector data](/knowledge).
+    For more information, see [Manage vector data](/knowledge).
+
+- MCP server management lock
+
+    Set `LANGFLOW_MCP_SERVERS_LOCKED=true` to prevent non-superusers from adding, editing, or removing MCP server connections.
+
+    For more information, see [Restrict MCP server management to superusers](/mcp-server#restrict-mcp-server-management).
+
+- Embedded mode UI flags
+
+    Set `LANGFLOW_EMBEDDED_MODE=true` to hide standalone UI elements when embedding the Langflow visual editor in another application.
+
+    These flags control UI visibility only. They do not block the underlying API endpoints.
+
+    For more information, see [Embedded mode](/environment-variables#embedded-mode).
+
+- Custom component admin-only restriction
+
+    Set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true` to restrict custom component creation and code editing to superusers.
+
+    For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components#restrict-custom-components-to-superusers).
+
+- macOS support matrix
+
+    A new [macOS support](./macos-support-matrix.mdx) page documents feature availability across Apple Silicon and Intel Macs.
+
+- IBM Db2 Vector Store component
+
+    The **IBM Db2 Vector Store** component is now available in the [IBM bundle](/bundles-ibm).
+
+    For more information, see [IBM Db2 Vector Store](/bundles-ibm#ibm-db2-vector-store).
+
+- Internationalization
+
+    The Langflow interface is now available in multiple languages.
+    To change the display language, click your **Profile Picture**, select **Settings**, and then select a language from the **Language** dropdown.
+
+    Available languages include English, French (Français), Spanish (Español), German (Deutsch), Portuguese (Português), Japanese (日本語), and Chinese (中文).
 
 ### Deprecations
+
+- **Text Input** and **Text Output** components are legacy
+
+    The **Text Input** and **Text Output** components are now legacy and may be removed in a future release.
+    Replace them with the [**Chat Input** and **Chat Output** components](/chat-input-and-output).
 
 - Voice mode is removed
 

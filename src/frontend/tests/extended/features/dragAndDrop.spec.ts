@@ -1,6 +1,8 @@
 import { readFileSync } from "fs";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { waitForNewProjectButton } from "../../utils/flow/new-project-flow";
 import { simulateDragAndDrop } from "../../utils/simulate-drag-and-drop";
 
 test(
@@ -11,7 +13,9 @@ test(
 
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -27,9 +31,7 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector('[data-testid="new-project-btn"]', {
-      timeout: 100000,
-    });
+    await waitForNewProjectButton(page, { timeout: 100000 });
 
     await simulateDragAndDrop(
       page,
@@ -65,7 +67,9 @@ test(
 
     //add a new flow just to have the workspace available
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -81,9 +85,7 @@ test(
       timeout: 5000,
     });
 
-    await page.waitForSelector('[data-testid="new-project-btn"]', {
-      timeout: 100000,
-    });
+    await waitForNewProjectButton(page, { timeout: 100000 });
     // Read your file into a buffer.
     const jsonContent = readFileSync(
       "tests/assets/flow_test_drag_and_drop.json",

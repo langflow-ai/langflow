@@ -1,49 +1,35 @@
-import dotenv from "dotenv";
-import { readFileSync } from "fs";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TID } from "../../utils/constants/testIds";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 
 test(
-  "user must be able to send images in the playground with the agent component",
+  "user must be able to run Simple Agent in the playground with Anthropic provider",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.ANTHROPIC_API_KEY,
-      "ANTHROPIC_API_KEY required to run this test",
-    );
+    skipIfMissing.anthropicKey();
+    loadDotenvIfLocal(__dirname);
 
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Simple Agent" }).first().click();
+    await openStarterProject(page, "Simple Agent");
 
     await page.getByTestId("value-dropdown-dropdown_str_agent_llm").click();
-
-    await page.waitForTimeout(200);
-
     await page.getByText("Anthropic").last().click();
 
     await page
-      .getByTestId("popover-anchor-input-api_key")
+      .getByTestId(TID.popoverAnchorInputApiKey)
       .fill(process.env.ANTHROPIC_API_KEY || "");
 
-    await page.getByTestId("playground-btn-flow-io").click();
+    await page.getByTestId(TID.playgroundBtnFlowIo).click();
 
-    await page.waitForSelector('[data-testid="button-send"]', {
-      timeout: 100000,
+    await page.waitForSelector(`[data-testid="${TID.buttonSend}"]`, {
+      timeout: TIMEOUTS.componentMount,
     });
 
-    await page.getByTestId("button-send").click();
+    await page.getByTestId(TID.buttonSend).click();
 
-    await page.waitForSelector("text=Finished", {
-      timeout: 5000,
-    });
-
-    await page.waitForTimeout(2000);
+    await page.waitForSelector("text=Finished", { timeout: TIMEOUTS.short });
 
     const textFromLlm = await page
       .locator(".markdown.prose")

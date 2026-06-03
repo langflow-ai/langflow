@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import { useStartNewFlow } from "@/components/core/flowBuilderWelcome/hooks/use-start-new-flow";
 import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
@@ -51,6 +52,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders[0]?.name ??
     "";
   const flows = useFlowsManagerStore((state) => state.flows);
+  // The primary "New Flow" handler — creates an empty flow, primes the
+  // welcome overlay store, and navigates to the canvas. Replaces the old
+  // "open the templates modal" behavior. The templates modal is still
+  // reachable from inside the welcome via "Browse more templates".
+  const startNewFlow = useStartNewFlow();
 
   useEffect(() => {
     // Only check if we have a folderId and folders have loaded
@@ -285,12 +291,16 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                 view={view}
                 setView={setView}
                 setNewProjectModal={setNewProjectModal}
+                onNewFlow={startNewFlow}
                 setSearch={onSearch}
                 isEmptyFolder={isEmptyFolder === true}
                 selectedFlows={selectedFlows}
               />
               {isEmptyFolder === true ? (
-                <EmptyFolder setOpenModal={setNewProjectModal} />
+                <EmptyFolder
+                  setOpenModal={setNewProjectModal}
+                  onNewFlow={startNewFlow}
+                />
               ) : (
                 <div className="flex h-full flex-col">
                   {isLoading || isEmptyFolder === null ? (

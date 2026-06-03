@@ -410,6 +410,49 @@ async def clean_transactions(settings_service: SettingsService, session: AsyncSe
         # Don't re-raise since this is a cleanup task
 
 
+async def clean_authz_audit_log(settings_service: SettingsService, session: AsyncSession) -> int:
+    """Delete authz_audit_log rows older than ``AUTHZ_AUDIT_RETENTION_DAYS``.
+
+    Retention is configured via ``AuthSettings.AUTHZ_AUDIT_RETENTION_DAYS``;
+    setting it to ``0`` disables pruning so operators relying on an external
+    archival pipeline (Postgres partitioning, SIEM export) can opt out without
+    losing rows here. The function is intentionally best-effort: failures are
+    logged and swallowed so startup never fails because the audit table is
+    transiently unreachable.
+
+    Returns the number of rows deleted (best-effort; ``-1`` when the rowcount
+    is unavailable from the driver).
+    """
+    try:
+        retention_days = int(getattr(settings_service.auth_settings, "AUTHZ_AUDIT_RETENTION_DAYS", 90))
+    except Exception:  # noqa: BLE001 — settings shape can vary in tests/stubs
+        retention_days = 90
+    if retention_days <= 0:
+        logger.debug("authz_audit_log retention disabled (AUTHZ_AUDIT_RETENTION_DAYS=%d)", retention_days)
+        return 0
+
+    from datetime import datetime, timedelta, timezone
+
+    from langflow.services.database.models.auth import AuthzAuditLog
+
+    cutoff = datetime.now(timezone.utc) - timedelta(days=retention_days)
+    try:
+        delete_stmt = delete(AuthzAuditLog).where(col(AuthzAuditLog.timestamp) < cutoff)
+        result = await session.exec(delete_stmt)
+        deleted = getattr(result, "rowcount", None)
+        deleted_count = int(deleted) if deleted is not None and deleted >= 0 else -1
+        logger.debug(
+            "authz_audit_log cleanup removed %s rows older than %d days",
+            deleted_count if deleted_count >= 0 else "?",
+            retention_days,
+        )
+    except (sqlalchemy_exc.SQLAlchemyError, asyncio.TimeoutError) as exc:
+        logger.warning("authz_audit_log cleanup failed: %s", exc)
+        return -1
+    else:
+        return deleted_count
+
+
 async def clean_vertex_builds(settings_service: SettingsService, session: AsyncSession) -> None:
     """Clean up old vertex builds from the database.
 
@@ -449,6 +492,8 @@ def register_all_service_factories() -> None:
 
     from langflow.services.auth import factory as auth_factory
     from langflow.services.auth.service import AuthService
+    from langflow.services.authorization import factory as authorization_factory
+    from langflow.services.authorization.service import LangflowAuthorizationService
     from langflow.services.cache import factory as cache_factory
     from langflow.services.chat import factory as chat_factory
     from langflow.services.database import factory as database_factory
@@ -483,16 +528,26 @@ def register_all_service_factories() -> None:
     # Override LFX's no-op auth service with Langflow's full JWT implementation
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
+    # Same pattern as ``auth_service``: register the OSS pass-through here with
+    # ``override=True`` so Langflow always has a default. A registered
+    # authorization plugin replaces it by listing its class in
+    # ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use ``override=True`` via
+    # ``_discover_from_config``). Plain entry-point discovery uses
+    # ``override=False`` and would lose to this default — the supported
+    # override path is the ``lfx.toml`` config, matching SSO.
+    service_manager.register_service_class(
+        ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
+    )
+    service_manager.register_factory(authorization_factory.AuthorizationServiceFactory())
     service_manager.register_factory(mcp_composer_factory.MCPComposerServiceFactory())
     service_manager.set_factory_registered()
 
 
 def register_builtin_adapters() -> None:
-    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
+    """Import built-in adapter registration modules.
 
     Mirrors ``register_all_service_factories()`` for the adapter registry system.
-    Each import triggers the ``@register_adapter`` decorator at module scope,
-    registering the adapter class on the AdapterRegistry singleton.
+    Each import registers the adapter class on the AdapterRegistry singleton.
 
     TODO: Watsonx risks are documented here because registration is runtime-optional:
     missing ``ibm_*`` modules should skip adapter registration, but broad
@@ -507,7 +562,7 @@ def register_builtin_adapters() -> None:
         return
 
     try:
-        import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
+        import_module("langflow.services.adapters.deployment.watsonx_orchestrate.register")
     except ModuleNotFoundError as exc:
         logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 
@@ -556,3 +611,4 @@ async def initialize_services(*, fix_migration: bool = False) -> None:
     async with session_scope() as session:
         await clean_transactions(settings_service, session)
         await clean_vertex_builds(settings_service, session)
+        await clean_authz_audit_log(settings_service, session)

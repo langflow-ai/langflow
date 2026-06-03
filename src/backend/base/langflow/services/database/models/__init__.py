@@ -1,5 +1,16 @@
 from .api_key import ApiKey
-from .auth import SSOConfig, SSOUserProfile
+from .auth import (
+    AuthzAuditLog,
+    AuthzEditLock,
+    AuthzRole,
+    AuthzRoleAssignment,
+    AuthzShare,
+    AuthzTeam,
+    AuthzTeamMember,
+    CasbinRule,
+    SSOConfig,
+    SSOUserProfile,
+)
 from .deployment import Deployment
 from .deployment_provider_account import DeploymentProviderAccount
 from .file import File
@@ -19,6 +30,14 @@ from .variable import Variable
 
 __all__ = [
     "ApiKey",
+    "AuthzAuditLog",
+    "AuthzEditLock",
+    "AuthzRole",
+    "AuthzRoleAssignment",
+    "AuthzShare",
+    "AuthzTeam",
+    "AuthzTeamMember",
+    "CasbinRule",
     "Deployment",
     "DeploymentProviderAccount",
     "File",

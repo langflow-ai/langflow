@@ -13,7 +13,7 @@ legacy reference shapes are mapped:
     3. ``bare_class_name`` -- the unqualified class name (``OpenAIEmbeddings``).
        Added only if the class name is globally unique across every Bundle in
        this Langflow release; CI guards this with
-       ``scripts/migrate/check_bare_names.py`` (LE-1023).
+       ``scripts/migrate/check_bare_names.py``.
 
 The table is a single JSON file at a canonical in-repo path.  Every Langflow
 release adds entries; **no entry is ever removed**.  CI rejects removals so a

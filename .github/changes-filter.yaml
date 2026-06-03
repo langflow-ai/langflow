@@ -6,7 +6,6 @@ python:
   - "pyproject.toml"
   - "uv.lock"
   - "src/backend/base/pyproject.toml"
-  - "src/backend/base/uv.lock"
   - "src/lfx/pyproject.toml"
   - "**/python_test.yml"
   - ".github/workflows/ci.yml"

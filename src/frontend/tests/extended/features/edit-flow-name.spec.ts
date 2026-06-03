@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -13,7 +14,9 @@ test(
 
     await awaitBootstrapTest(page);
 
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await renameFlow(page, { flowName: randomName });
 

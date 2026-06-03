@@ -30,12 +30,6 @@ RUN apt-get update \
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
 COPY ./src/sdk ./src/sdk
-# Workspace bundles (LE-1023 pilot+): each Bundle is shipped as a
-# separate distribution that langflow-base depends on by name (e.g.
-# ``lfx-duckduckgo``).  Without copying the source tree, the install
-# below cannot resolve the path-based bundle deps and ends up with a
-# Langflow image missing components that previously lived in lfx.
-COPY ./src/bundles ./src/bundles
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -44,14 +38,15 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
 # Install langflow-base with all extras except dev (which includes Playwright).
-# Each pilot-extracted bundle is installed alongside so the runtime image
-# keeps shipping the same component set users had before LE-1023.
+# This image ships the langflow-base core only.  Extension bundles
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# installed here -- they belong to the full ``langflow`` distribution, not
+# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
+# alongside this image, to add those components.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install \
         ./src/sdk \
         ./src/lfx \
-        ./src/bundles/duckduckgo \
-        ./src/bundles/arxiv \
         "./src/backend/base[complete,postgresql]"
 
 ################################
@@ -92,9 +87,18 @@ COPY --from=builder --chown=1000:0 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Create home directory and ensure proper ownership
-# The user needs write access to /app/data (home) and /app (workdir)
+# The user needs write access to /app/data (home) and /app (workdir).
+# Also pre-create /app/langflow (LANGFLOW_CONFIG_DIR used by the docker_example
+# compose file) with the non-root user as owner, so a fresh named volume mounted
+# at /app/langflow inherits the correct ownership/permissions and the in-container
+# uid=1000 user can write secret_key, profile_pictures, etc. Without this, the
+# volume would be initialized as root:root and Langflow would crash with
+# PermissionError on /app/langflow/secret_key (issue #10437).
 # Note: .venv is already owned by 1000:0 via COPY --chown above, so no recursive chown needed
-RUN mkdir -p /app/data && chown -R 1000:0 /app/data && chown 1000:0 /app
+RUN mkdir -p /app/data /app/langflow \
+    && chown -R 1000:0 /app/data /app/langflow \
+    && chmod -R g+rwX /app/langflow \
+    && chown 1000:0 /app
 
 LABEL org.opencontainers.image.title=langflow-backend
 LABEL org.opencontainers.image.authors=['Langflow']

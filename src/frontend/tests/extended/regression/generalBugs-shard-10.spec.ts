@@ -1,37 +1,33 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
   "freeze must work correctly",
   { tag: ["@release", "@api", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     const promptText = "answer as you are a dog";
     const newPromptText = "answer as you are a bird";
 
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
     });
 
     await adjustScreenView(page);
 
-    await page.getByText("Language Model").last().click();
+    await page.getByText(TEXTS.componentLanguageModel).last().click();
     await page.keyboard.press("Delete");
 
     //connection 1
@@ -54,13 +50,13 @@ test(
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(promptText);
 
-    await page.getByText("Check & Save").click();
+    await page.getByText(TEXTS.checkAndSave).click();
 
     await initialGPTsetup(page);
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully");
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`);
 
     await page.getByTestId("playground-btn-flow-io").click();
 
@@ -81,7 +77,7 @@ test(
     // Ensure we captured a non-empty response
     expect(firstResponseText.length).toBeGreaterThan(0);
 
-    // await page.getByText("Close").last().click();
+    // await page.getByText(TEXTS.close).last().click();
     await page.getByTestId("playground-close-button").click();
 
     // Freeze the Chat Output node (not Prompt) so the entire response is cached
@@ -113,13 +109,15 @@ test(
       .getByTestId("modal-promptarea_prompt_template")
       .fill(newPromptText);
 
-    await page.getByText("Check & Save").click();
+    await page.getByText(TEXTS.checkAndSave).click();
 
     await page.waitForTimeout(500);
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     await page.getByTestId("playground-btn-flow-io").click();
 

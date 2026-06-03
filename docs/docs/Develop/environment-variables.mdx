@@ -393,6 +393,10 @@ See [Configure log options](/logging#log-storage).
 
 See [Use Langflow as an MCP server](/mcp-server).
 
+### Multi-worker deployments
+
+For multi-worker job queue environment variables, including Redis connection settings, TTLs, and cancellation configuration, see [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference).
+
 ### Monitoring and metrics
 
 For environment variables for specific monitoring service providers, see the Langflow monitoring integration guides, such as [Langfuse](/integrations-langfuse) and [Best practices for Langflow on Kubernetes](/deployment-prod-best-practices).
@@ -411,9 +415,8 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
 | `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
 | `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
-| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. Can reduce per-worker startup cost; behavior and compatibility may change. |
-| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. |
-| `LANGFLOW_REDIS_QUEUE_DB` | Integer | `1` | Redis database index used by the Redis job queue backend. |
+| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. See [Multi-worker deployments](#multi-worker-deployments). |
+| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. See [Multi-worker deployments](#multi-worker-deployments). |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
@@ -433,21 +436,6 @@ GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"
 Here is what these arguments do:
 - `--max-requests 100`: Automatically restarts a worker after it has processed 100 requests. This helps prevent memory leaks from accumulating over time.
 - `--max-requests-jitter 20`: Adds a random jitter of up to 20 requests to the `--max-requests` value. This ensures that all workers don't restart simultaneously, which could cause a brief downtime or spikes in latency.
-
-#### High-load and multi-worker environments
-
-For high-concurrency deployments (such as when increasing `LANGFLOW_WORKERS`), consider the following best practices:
-- **Enable Gunicorn preload (experimental):**
-  Set `LANGFLOW_GUNICORN_PRELOAD=true` to enable Gunicorn’s `preload_app` mode, which can reduce per-worker startup overhead (non-Windows only).
-- **Use Redis-backed job queue:**
-  Set `LANGFLOW_JOB_QUEUE_TYPE=redis` to share queue events across workers.
-  **Note:** Always configure a dedicated Redis database for the job queue, separate from the cache database.
-- **Disable tracing:**
-  Set `LANGFLOW_DEACTIVATE_TRACING=True` to turn off tracing, which may cause concurrency bottlenecks under high load or in multi-worker environments.
-- **Use PostgreSQL instead of SQLite:**
-  SQLite can experience database locks and deadlocks with concurrent, write-heavy usage. For production or multi-worker environments, configure Langflow to use PostgreSQL by setting the `LANGFLOW_DATABASE_URL` environment variable (see [Memory management options](/memory#configure-external-memory)). This is strongly recommended to avoid operational issues.
-
-For more information about deploying Langflow servers, see [Langflow deployment overview](/deployment-overview).
 
 ### Storage
 
@@ -469,6 +457,7 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_COMPONENTS_PATH` | String | Not set | Path to a directory containing custom components. Typically used if you have local custom components or you are building a Docker image with custom components. |
 | `LANGFLOW_COMPONENTS_INDEX_PATH` | String | Not set | File path or URL (`http://` or `https://`) to a prebuilt component index JSON file used to populate built-in components in the visual editor. When not set, Langflow uses the included index. Useful for supplying a curated component index, for example in airgapped deployments. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` | Boolean | `True` | If `false`, disables custom components and in-editor editing of component code. This feature is in beta. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
+| `LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE` | Boolean | `True` | When `false` alongside `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, components contributed by `LANGFLOW_COMPONENTS_PATH` and `LANGFLOW_COMPONENTS_INDEX_PATH` no longer bypass the block. Has no effect when `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`. For more information, see [Block custom components](../Deployment/deployment-block-custom-components.mdx). |
 | `LANGFLOW_LOAD_FLOWS_PATH` | String | Not set | Path to a directory containing flow JSON files to be loaded on startup. Typically used when creating a Docker image with prepackaged flows. Requires `LANGFLOW_AUTO_LOGIN=True`. |
 | `LANGFLOW_LOAD_FLOWS_OVERWRITE_ON_NAME_MATCH` | Boolean | `False` | When a flow file in `LANGFLOW_LOAD_FLOWS_PATH` shares a name with an existing DB row but has a different `id`, controls whether to overwrite the existing row. `False` (default) skips with a warning so UI edits are preserved on restart when file UUIDs regenerate. Set to `True` to opt into prepackaged-flows-are-source-of-truth semantics, typically for CI/CD pipelines. |
 | `LANGFLOW_CREATE_STARTER_PROJECTS` | Boolean | `True` | Whether to create templates during initialization. If `false`, Langflow doesn't create templates, and `LANGFLOW_UPDATE_STARTER_PROJECTS` is treated as `false`. |
@@ -484,3 +473,30 @@ See [Telemetry](/contributing-telemetry).
 | `LANGFLOW_MAX_VERTEX_BUILDS_PER_VERTEX` | Integer | `2` | Maximum number of builds to keep per vertex. Older builds are deleted. Relates to [Playground](/concepts-playground) functionality. |
 | `LANGFLOW_PUBLIC_FLOW_CLEANUP_INTERVAL` | Integer | `3600` | The interval in seconds at which data for [shared Playground](/concepts-playground#share-a-flows-playground) flows are cleaned up. Default: 3600 seconds (1 hour). Minimum: 600 seconds (10 minutes). |
 | `LANGFLOW_PUBLIC_FLOW_EXPIRATION` | Integer | `86400` | The time in seconds after which a [shared Playground](/concepts-playground#share-a-flows-playground) flow is considered expired and eligible for cleanup. Default: 86400 seconds (24 hours). Minimum: 600 seconds (10 minutes). |
+
+### Hide UI elements with embedded mode {#embedded-mode}
+
+When you embed the Langflow visual editor in another application, such as an iframe within a host portal, you can hide UI elements that are usually visible in the visual editor.
+
+The embedded mode environment variables control which UI elements appear in the visual editor.
+Embedded mode controls UI visibility only, and does not block API endpoints or deploy Langflow.
+
+Embedded mode is distinct from the [embedded chat widget](/concepts-publish#embedded-chat-widget), which embeds a single flow's chat UI in a website.
+
+When `LANGFLOW_EMBEDDED_MODE=true`, Langflow hides the following buttons in the UI:
+
+* **Logout**
+* **New project**
+* **New flow**
+* **Starter projects**
+
+You can hide individual elements without enabling the umbrella flag.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_EMBEDDED_MODE` | Boolean | `False` | Umbrella flag for embedded or iframe deployments. When `true`, hides standalone UI elements: logout, new project, new flow, and starter projects. Individual hide flags can also be set without enabling this flag. |
+| `LANGFLOW_HIDE_LOGOUT_BUTTON` | Boolean | `False` | If `true`, hides the logout button in the account menu. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_NEW_PROJECT_BUTTON` | Boolean | `False` | If `true`, hides the new project/folder button in the sidebar. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_NEW_FLOW_BUTTON` | Boolean | `False` | If `true`, hides the new flow button in the header. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_STARTER_PROJECTS` | Boolean | `False` | If `true`, hides the starter projects tab in the templates modal. Does not affect database seeding of starter projects. Automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |
+| `LANGFLOW_HIDE_GETTING_STARTED_PROGRESS` | Boolean | `False` | If `true`, hides the getting-started onboarding progress UI. Not automatically enabled when `LANGFLOW_EMBEDDED_MODE=true`. |

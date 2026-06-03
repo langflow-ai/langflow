@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import {
   EnabledModelsResponse,
   useGetEnabledModels,
@@ -68,6 +69,7 @@ export const useModelToggleQueue = ({
   providerName,
 }: UseModelToggleQueueOptions): UseModelToggleQueueReturn => {
   const queryClient = useQueryClient();
+  const { t } = useTranslation();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const { mutate: updateEnabledModels, mutateAsync: updateEnabledModelsAsync } =
     useUpdateEnabledModels({ retry: 0 });
@@ -135,7 +137,7 @@ export const useModelToggleQueue = ({
         queryClient.setQueryData(["useGetEnabledModels"], previousData);
       }
       setErrorData({
-        title: "Error updating model status",
+        title: t("errors.updateModelStatus"),
         list: [getErrorMessage(error) || "Failed to update model status"],
       });
     },

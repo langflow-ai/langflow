@@ -141,7 +141,7 @@ async def deployment(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="my-deployment",
+        display_name="my-deployment",
     )
     db.add(d)
     await db.commit()

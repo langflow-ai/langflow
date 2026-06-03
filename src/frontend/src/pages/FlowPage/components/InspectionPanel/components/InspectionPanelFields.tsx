@@ -13,9 +13,9 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import type { NodeDataType, targetHandleType } from "@/types/flow";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
+import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 import InspectionPanelEditField from "./InspectionPanelEditField";
 import InspectionPanelField from "./InspectionPanelField";
-import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 
 interface InspectionPanelFieldsProps {
   data: NodeDataType;

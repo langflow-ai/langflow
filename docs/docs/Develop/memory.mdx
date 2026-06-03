@@ -41,6 +41,10 @@ The following tables are stored in `langflow.db`:
 
 • **ApiKey**: Manages Langflow API authentication keys. Component API keys are stored in the **Variables** table. For more information, see [API keys and authentication](/api-keys-and-authentication).
 
+• **Deployment**: Tracks deployments of Langflow flows to external providers, including the deployment name, provider resource key, and associated project and provider account.
+
+• **DeploymentProviderAccount**: Stores configured connections to external deployment providers, including provider URL, tenant settings, and encrypted credentials.
+
 • **File**: Stores metadata for files uploaded to Langflow's file management system, including file names, paths, sizes, and storage providers. For more information, see [Manage files](/concepts-file-management).
 
 • **Flow**: Contains flow definitions, including nodes, edges, and components, stored as JSON or database records. For more information, see [Build flows](/concepts-flows).
@@ -51,9 +55,29 @@ The following tables are stored in `langflow.db`:
     This helps prevent credentials from being stored in the database.
     :::
 
+• **FlowVersion**: Stores numbered snapshots of flow definitions, enabling version history. Each row captures a complete flow data snapshot linked to a flow and identified by a sequential version number. For more information, see [Save and restore flow versions](/concepts-flows#save-and-restore-flow-versions).
+
+• **FlowVersionDeploymentAttachment**: Links specific flow versions to provider deployments, tracking which flow version is deployed where and the provider's opaque snapshot identifier for that version.
+
 • **Folder**: Provides a structure for flow storage, including single-user folders and shared folders accessed by multiple users. For more information, see [Manage flows in projects](/concepts-flows#projects).
 
+• **IngestionRun**: Records knowledge base ingestion run history, including aggregate counters (chunks created, bytes processed, files succeeded/failed/skipped) and per-file outcome details for each ingestion job. For more information, see [Knowledge bases](/knowledge-base).
+
+• **Job**: Background job queue for asynchronous tasks including flow workflow execution and knowledge base ingestion. Tracks job type (`workflow`, `ingestion`, `evaluation`), status (`queued`, `in_progress`, `completed`, `failed`), timestamps, and per-job progress metadata.
+
+• **KnowledgeBase**: Stores knowledge base configurations, including the embedding model, chunking settings, backend type, status, and cached statistics (chunk count, word count, total size). For more information, see [Knowledge bases](/knowledge-base).
+
+• **MemoryBase**: Stores memory base configurations for flows, including the associated knowledge base name, embedding model, auto-capture threshold, and optional preprocessing settings.
+
+• **MemoryBasePreprocessingOutput**: Captures LLM-distilled preprocessing output before knowledge base writes. Each row represents one preprocessing batch and tracks the status (`processed`, `ingested`, or `skipped`) to support resumable two-phase commit (LLM call → knowledge base write).
+
+• **MemoryBaseSession**: Tracks per-session state for each memory base, including the sync cursor position and total count of processed messages.
+
+• **MemoryBaseWorkflowRun**: Records workflow job runs per memory base and session to support threshold-based ingestion, linking each workflow job to its resulting ingestion job.
+
 • **Message**: Stores chat messages and interactions that occur between components. For more information, see [Message objects](/data-types#message) and [Store chat memory](#store-chat-memory).
+
+• **MessageIngestionRecord**: Records which messages have been ingested into a memory base and by which job. Serves as a join table between messages and memory bases, ensuring each message is not re-ingested.
 
 • **Trace** and **Span**: Stores traces and spans for flows and components. For more information, see [Traces](/traces).
 

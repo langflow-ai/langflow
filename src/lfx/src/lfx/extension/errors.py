@@ -70,7 +70,7 @@ ERROR_CODES: frozenset[str] = frozenset(
         "inline-path-missing",
         "inline-path-unreadable",
         "bundle-json-invalid",
-        # init / dev CLI codes (LE-1016)
+        # init / dev CLI codes
         "extension-target-exists",
         "extension-target-invalid",
         "local-extension-missing",
@@ -80,14 +80,14 @@ ERROR_CODES: frozenset[str] = frozenset(
         "migration-table-invalid",
         "component-not-found-with-hint",
         "component-name-ambiguous",
-        # Production install / discovery (LE-1022)
+        # Production install / discovery
         "installed-extension-immutable",
         "seed-directory-immutable",
         "seed-directory-not-found",
         "seed-bundle-shadowed",
         "bundle-shadowed",
         "duplicate-extension-id",
-        # Reload-specific codes (LE-1018)
+        # Reload-specific codes
         "reload-in-progress",
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
@@ -104,6 +104,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         # reload route on Mode B/C deployments returns this code so the
         # client gets the same typed envelope as every other reload error.
         "extension-reload-disabled",
+        # Extension events route: keyspace is server-derived from the
+        # authenticated user; clients that pass ``?keyspace=...`` are
+        # rejected so the contract is explicit instead of silently dropped.
+        "extension-events-keyspace-forbidden",
     }
 )
 
@@ -302,6 +306,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "extension-reload-disabled": (
         "Extension reload is disabled on this server.  "
         "Set LANGFLOW_ENABLE_EXTENSION_RELOAD=true to enable it on a local-development install (Mode A)."
+    ),
+    "extension-events-keyspace-forbidden": (
+        "The {location} query parameter is not accepted; events are scoped server-side to the "
+        "authenticated user (rejected value: {content!r})."
     ),
 }
 

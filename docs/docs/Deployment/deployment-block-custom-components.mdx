@@ -21,7 +21,17 @@ This environment variable is a beta feature, and should not be your only safegua
 
 In the event that Langflow could execute untrusted or LLM-generated code, run Langflow in an isolated and containerized execution environment.
 
-### Configure a custom component allow-list
+### Restrict custom component creation to superusers{#restrict-custom-components-to-superusers}
+
+To restrict custom component creation to superusers while keeping built-in components functional for users, set the following [environment variable](/environment-variables):
+
+```bash
+LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true
+```
+
+When set to `true`, non-superusers can still view and use custom components in flows, but they cannot create new custom components or edit custom component code.
+
+## Configure a custom component allow-list
 
 `LANGFLOW_ALLOW_CUSTOM_COMPONENTS` works together with optional paths that define which component templates the server loads, and which code hashes are trusted.
 
@@ -36,6 +46,18 @@ It does **not** import Python modules from a directory on disk.
 To allow-list custom components, use the `LANGFLOW_COMPONENTS_PATH` environment variable.
 
 If both environment variables are set, Langflow builds one combined set of components from the custom index _and_ from `LANGFLOW_COMPONENTS_PATH`. If the same component category name exists in both, `LANGFLOW_COMPONENTS_PATH` replaces that whole category from the custom index.
+
+### Disable the allow-list bypass
+
+The allow-list behavior above assumes the admin controls which env vars are set at startup. In deployments where that assumption doesn't hold, set:
+
+```bash
+LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=false
+```
+
+When this is `false` **and** `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, components contributed by `LANGFLOW_COMPONENTS_PATH` and `LANGFLOW_COMPONENTS_INDEX_PATH` are ignored and no longer bypass the block.
+
+Default is `true`, which preserves existing behavior. The setting has no effect while `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=true`, since nothing is being bypassed.
 
 For more information, see:
 

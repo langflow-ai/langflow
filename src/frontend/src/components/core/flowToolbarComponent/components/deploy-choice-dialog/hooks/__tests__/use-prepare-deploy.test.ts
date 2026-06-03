@@ -3,18 +3,26 @@ import type {
   DeploymentProvider,
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getSelectedFlowVersionKey } from "@/pages/MainPage/pages/deploymentsPage/types";
 
 // ---------------------------------------------------------------------------
 // Mocks
 // ---------------------------------------------------------------------------
 
 let mockCurrentFlowId: string | undefined = "flow-1";
+let mockCurrentFlowName: string | undefined = "Sales Flow";
 
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
-  default: (selector: (state: { currentFlow?: { id: string } }) => unknown) =>
+  default: (
+    selector: (state: {
+      currentFlow?: { id: string; name?: string };
+    }) => unknown,
+  ) =>
     selector({
-      currentFlow: mockCurrentFlowId ? { id: mockCurrentFlowId } : undefined,
+      currentFlow: mockCurrentFlowId
+        ? { id: mockCurrentFlowId, name: mockCurrentFlowName }
+        : undefined,
     }),
 }));
 
@@ -88,6 +96,7 @@ const makeDeploymentProvider = (): DeploymentProvider => ({
 beforeEach(() => {
   jest.clearAllMocks();
   mockCurrentFlowId = "flow-1";
+  mockCurrentFlowName = "Sales Flow";
   mockSaveFlow.mockResolvedValue(undefined);
   mockCreateSnapshot.mockResolvedValue({ id: "snap-1", version_tag: "v1.0" });
   mockFetchProviders.mockResolvedValue({ data: { provider_accounts: [] } });
@@ -215,9 +224,11 @@ describe("usePrepareDeploy — handleDeploy: no providers", () => {
       await result.current.handleDeploy();
     });
 
-    expect(result.current.initialVersionByFlow.get("flow-1")).toEqual({
-      key: "flow-1:snap-xyz",
+    const key = getSelectedFlowVersionKey("flow-1", "snap-xyz");
+    expect(result.current.initialVersionByFlow.get(key)).toEqual({
+      key,
       flowId: "flow-1",
+      flowName: "Sales Flow",
       versionId: "snap-xyz",
       versionTag: "v3.0",
     });
@@ -455,7 +466,7 @@ describe("usePrepareDeploy — handleUpdateComplete", () => {
     });
 
     expect(mockSetSuccessData).toHaveBeenCalledWith({
-      title: 'Deployment "Sales Bot" updated successfully',
+      title: '"Sales Bot" has been updated.',
     });
   });
 });

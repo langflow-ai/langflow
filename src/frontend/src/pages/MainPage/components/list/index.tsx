@@ -174,7 +174,9 @@ const ListComponent = ({
               </div>
               <div className="flex min-w-0 flex-shrink text-xs text-muted-foreground">
                 <span className="truncate">
-                  Edited {timeElapsed(flowData.updated_at)} ago
+                  {t("mainPage.editedAgo", {
+                    time: timeElapsed(flowData.updated_at, t),
+                  })}
                 </span>
               </div>
             </div>

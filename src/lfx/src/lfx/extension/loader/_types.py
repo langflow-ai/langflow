@@ -52,11 +52,11 @@ class LoadedComponent:
     folders from ``LANGFLOW_COMPONENTS_PATH``, never pip-installed. The
     reverse (``@official`` with ``distribution=None``) is permitted because
     ``load_extension`` is used for dev-mode loads against a working tree
-    *before* the package gets installed (the LE-1016 ``extension dev``
-    flow); only ``load_installed_extensions`` is required to carry a
-    canonical PEP-503 name through. Enforced in :meth:`__post_init__` so
-    the rule travels with the type when LE-1018 reload and LE-1022 startup
-    discovery start constructing :class:`LoadedComponent` directly.
+    *before* the package gets installed (the ``extension dev`` flow);
+    only ``load_installed_extensions`` is required to carry a canonical
+    PEP-503 name through. Enforced in :meth:`__post_init__` so the rule
+    travels with the type when reload and startup discovery construct
+    :class:`LoadedComponent` directly.
     """
 
     extension_id: str
@@ -116,7 +116,7 @@ class LoadResult:
     successfully-registered classes from sibling files). Callers that only
     branch on ``ok`` get strict success; callers that want to surface
     "partial X of Y loaded" diagnostics should consume ``components`` and
-    ``errors`` together. The events pipeline (LE-1017) is expected to fan
+    ``errors`` together. The future events pipeline is expected to fan
     out as: ``extension_loaded`` when ``ok``, ``extension_error`` when not,
     plus per-component ``component_registered`` events for everything in
     ``components`` regardless of ``ok``.

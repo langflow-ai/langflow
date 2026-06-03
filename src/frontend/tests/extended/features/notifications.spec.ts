@@ -1,20 +1,24 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "User should be able to interact notifications tab",
   { tag: ["@release"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
+
+    await addLegacyComponents(page);
+
     await page.waitForSelector('[data-testid="disclosure-input & output"]', {
-      timeout: 3000,
+      timeout: 30000,
       state: "visible",
     });
 
     await page.getByTestId("disclosure-input & output").click();
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
-      timeout: 3000,
+      timeout: 30000,
       state: "visible",
     });
     await page
@@ -30,12 +34,14 @@ test(
       state: "visible",
     });
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
     await page.getByTestId("notification_button").click();
 
     // Add explicit waits before checking visibility
     await page.waitForSelector('[data-testid="icon-Trash2"]', {
-      timeout: 3000,
+      timeout: 30000,
       state: "visible",
     });
 

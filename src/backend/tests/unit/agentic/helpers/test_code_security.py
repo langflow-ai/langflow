@@ -256,3 +256,52 @@ class TestScanCodeSecurityEdgeCases:
         """Violations should be a tuple (immutable)."""
         result = scan_code_security("exec('x')")
         assert isinstance(result.violations, tuple)
+
+
+class TestScanCodeSecurityExfiltrationAndEscapes:
+    """Guardrails for malicious generated components (user-requested).
+
+    Secret/env exfiltration and sandbox-escape via dunders are the real
+    threats. We block those WITHOUT banning all HTTP (legit API
+    components need `requests`) — surgical and low-false-positive.
+    """
+
+    def test_should_detect_os_environ_secret_read(self):
+        result = scan_code_security('import os\nk = os.environ["OPENAI_API_KEY"]')
+        assert result.is_safe is False
+
+    def test_should_detect_os_getenv_secret_read(self):
+        result = scan_code_security('import os\nk = os.getenv("OPENAI_API_KEY")')
+        assert result.is_safe is False
+
+    def test_should_detect_raw_open_file_access(self):
+        result = scan_code_security('data = open("/etc/passwd").read()')
+        assert result.is_safe is False
+
+    def test_should_detect_subclasses_sandbox_escape(self):
+        result = scan_code_security("evil = ().__class__.__bases__[0].__subclasses__()")
+        assert result.is_safe is False
+
+    def test_should_detect_func_globals_escape(self):
+        result = scan_code_security("def f():\n    pass\ng = f.__globals__")
+        assert result.is_safe is False
+
+    def test_should_detect_builtins_escape(self):
+        result = scan_code_security("def f():\n    pass\nb = f.__builtins__")
+        assert result.is_safe is False
+
+    # --- no-regression: legitimate patterns must still pass ---
+
+    def test_should_still_allow_http_requests(self):
+        # HTTP is a core legit use case — must NOT be banned.
+        result = scan_code_security('import requests\nr = requests.get("https://api.example.com")')
+        assert result.is_safe is True
+
+    def test_should_still_allow_os_path(self):
+        result = scan_code_security('import os\np = os.path.join("a", "b")')
+        assert result.is_safe is True
+
+    def test_should_still_allow_getattr(self):
+        # getattr is common/legit — banning it would regress real components.
+        result = scan_code_security('v = getattr(self, "field", None)')
+        assert result.is_safe is True

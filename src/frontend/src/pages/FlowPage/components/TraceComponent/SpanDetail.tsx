@@ -48,11 +48,17 @@ export function SpanDetail({ span }: SpanDetailProps) {
       {/* Header */}
       <div className="border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <h3 className="text-lg font-semibold">{span.name}</h3>
-          <Badge variant={getStatusVariant(span.status)} size="sm">
+          <h3 className="min-w-0 flex-1 truncate text-lg font-semibold">
+            {span.name}
+          </h3>
+          <Badge
+            variant={getStatusVariant(span.status)}
+            size="sm"
+            className="h-auto shrink-0 gap-1 px-2 py-0.5"
+          >
             <IconComponent
               name={iconName}
-              className={`mr-1 h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
+              className={`h-4 w-4 ${colorClass} ${shouldSpin ? "animate-spin" : ""}`}
               aria-label={span.status}
               dataTestId={`flow-log-status-${span.status}`}
               skipFallback

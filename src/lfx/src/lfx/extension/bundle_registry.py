@@ -1,4 +1,4 @@
-"""In-memory component registry for installed Bundles (LE-1018).
+"""In-memory component registry for installed Bundles.
 
 The :class:`BundleRegistry` is the single piece of mutable shared state the
 Extension System owns at runtime.  It maps a Bundle name to a frozen record
@@ -35,8 +35,8 @@ Slot semantics
 
 The registry stores both ``official`` and ``extra`` slot bundles in the
 same map keyed by bundle name.  Bundle names are unique across slots in
-v0; the LE-1015 loader and ``discover_inline_bundles`` both enforce this
-upstream so the registry does not need to disambiguate by slot.
+v0; the component loader and ``discover_inline_bundles`` both enforce
+this upstream so the registry does not need to disambiguate by slot.
 """
 
 from __future__ import annotations
@@ -268,8 +268,8 @@ class BundleRegistry:
 
         Tolerates filesystem errors silently: the index file is a cache,
         not a source of truth, and a transient write failure must not
-        abort an otherwise-successful registry mutation.  The CLI's
-        ``extension status`` (LE-1019 territory) surfaces stale indexes.
+        abort an otherwise-successful registry mutation.  A future
+        ``extension status`` CLI surfaces stale indexes.
         """
         if self._index_path is None:
             return
@@ -320,9 +320,9 @@ def get_default_registry() -> BundleRegistry:
     """Return the lazily-created process-wide registry.
 
     The HTTP endpoint and CLI both target this registry by default; tests
-    construct fresh registries directly so they do not bleed state.  LE-1022
-    will replace this lazy initializer with a startup-time install at the
-    @official slot; until then the registry begins empty.
+    construct fresh registries directly so they do not bleed state.  A
+    future startup-time install at the @official slot will replace this
+    lazy initializer; until then the registry begins empty.
     """
     global _default_registry  # noqa: PLW0603
     with _default_registry_lock:

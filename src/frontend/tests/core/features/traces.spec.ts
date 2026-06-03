@@ -3,6 +3,8 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "should able to see and interact with Traces",
   { tag: ["@release", "@workspace", "@api"] },
@@ -31,7 +33,9 @@ test(
         response.status() === 201,
       { timeout: 120000 },
     );
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await flowCreatePromise;
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -99,7 +103,9 @@ test.skip(
         response.status() === 201,
       { timeout: 120000 },
     );
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
     await flowCreatePromise;
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
