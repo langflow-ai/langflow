@@ -16,6 +16,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "weaviate"]
 dependencies = [
     "lfx>=0.5.0",
     "langchain-community~=0.4.1",
+    "langchain-weaviate>=0.0.6",
     "weaviate-client>=4.10.2,<5.0.0",
 ]
 

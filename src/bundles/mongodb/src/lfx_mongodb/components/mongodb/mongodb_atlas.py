@@ -2,7 +2,7 @@ import tempfile
 import time
 
 import certifi
-from langchain_community.vectorstores import MongoDBAtlasVectorSearch
+from langchain_mongodb import MongoDBAtlasVectorSearch
 from pymongo.collection import Collection
 from pymongo.operations import SearchIndexModel
 

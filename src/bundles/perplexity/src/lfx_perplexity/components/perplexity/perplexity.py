@@ -1,4 +1,4 @@
-from langchain_community.chat_models import ChatPerplexity
+from langchain_perplexity import ChatPerplexity
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
 from lfx.field_typing.range_spec import RangeSpec
