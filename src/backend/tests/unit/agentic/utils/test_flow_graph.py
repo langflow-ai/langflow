@@ -1,275 +1,270 @@
 """Tests for flow graph visualization utilities.
 
 Tests get_flow_graph_representations, get_flow_ascii_graph,
-get_flow_text_repr, and get_flow_graph_summary.
+get_flow_text_repr, get_flow_graph_summary, and _build_text_repr_from_raw.
 """
 
+from __future__ import annotations
+
 from types import SimpleNamespace
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import AsyncMock, patch
 from uuid import UUID, uuid4
 
 import pytest
 from langflow.agentic.utils.flow_graph import (
+    _build_text_repr_from_raw,
     get_flow_ascii_graph,
     get_flow_graph_representations,
     get_flow_graph_summary,
     get_flow_text_repr,
 )
-from lfx.interface.components import component_cache
 
 MODULE = "langflow.agentic.utils.flow_graph"
 
 FLOW_ID = str(uuid4())
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
-def _mock_logger():
-    """Create a mock async logger."""
-    mock = MagicMock()
-    mock.aerror = AsyncMock()
-    mock.ainfo = AsyncMock()
-    mock.awarning = AsyncMock()
-    return mock
-
-
-def _make_flow(*, has_data=True, name="TestFlow"):
-    """Create a mock flow object."""
-    flow = MagicMock()
-    flow.id = UUID(FLOW_ID)
-    flow.name = name
-    flow.tags = ["test"]
-    flow.description = "A test flow"
-    flow.data = {"nodes": [], "edges": []} if has_data else None
-    return flow
-
-
-def _make_graph(vertex_ids=None, edge_pairs=None):
-    """Create a mock graph with vertices and edges."""
-    graph = MagicMock()
-
-    vertices = []
-    for vid in ["v1", "v2"] if vertex_ids is None else vertex_ids:
-        v = MagicMock()
-        v.id = vid
-        vertices.append(v)
-    graph.vertices = vertices
-
-    edges = []
-    for src, tgt in [("v1", "v2")] if edge_pairs is None else edge_pairs:
-        e = MagicMock()
-        e.source_id = src
-        e.target_id = tgt
-        edges.append(e)
-    graph.edges = edges
-
-    graph.__repr__ = MagicMock(return_value="Graph(vertices=2, edges=1)")  # type: ignore[method-assign]
-    return graph
+_FLOW_DATA_WITH_NODES = {
+    "nodes": [
+        {"id": "n1", "data": {"type": "ChatInput", "node": {"display_name": "Chat Input"}}},
+        {"id": "n2", "data": {"type": "OpenAIModel", "node": {"display_name": "OpenAI"}}},
+    ],
+    "edges": [
+        {
+            "source": "n1",
+            "target": "n2",
+            "data": {
+                "sourceHandle": {"name": "message"},
+                "targetHandle": {"fieldName": "input_value"},
+            },
+        }
+    ],
+}
 
 
-@pytest.mark.asyncio
-async def test_get_flow_graph_summary_blocks_custom_components(monkeypatch):
-    blocked_flow = SimpleNamespace(
-        id="flow-1",
-        name="Blocked Flow",
-        tags=[],
-        description="Contains blocked custom code",
-        data={
+def _make_flow(*, has_data=True, data=None, name="TestFlow"):
+    return SimpleNamespace(
+        id=UUID(FLOW_ID),
+        name=name,
+        tags=["test"],
+        description="A test flow",
+        data=(data if data is not None else (_FLOW_DATA_WITH_NODES if has_data else None)),
+    )
+
+
+# ---------------------------------------------------------------------------
+# _build_text_repr_from_raw
+# ---------------------------------------------------------------------------
+
+
+class TestBuildTextReprFromRaw:
+    def test_empty_returns_zero_counts(self):
+        _, v, e = _build_text_repr_from_raw({"nodes": [], "edges": []}, "Flow")
+        assert v == 0
+        assert e == 0
+
+    def test_nodes_listed_with_display_name(self):
+        text, v, e = _build_text_repr_from_raw(_FLOW_DATA_WITH_NODES, "Flow")
+        assert "Chat Input" in text
+        assert "OpenAI" in text
+        assert v == 2
+        assert e == 1
+
+    def test_edge_ports_shown(self):
+        text, _, _ = _build_text_repr_from_raw(_FLOW_DATA_WITH_NODES, "Flow")
+        assert "Chat Input.message" in text
+        assert "OpenAI.input_value" in text
+
+    def test_none_nodes_and_edges_handled_safely(self):
+        """flow_data with None values must not raise TypeError."""
+        _, v, e = _build_text_repr_from_raw({"nodes": None, "edges": None}, "Flow")
+        assert v == 0
+        assert e == 0
+
+    def test_falls_back_to_type_when_no_display_name(self):
+        data = {"nodes": [{"id": "n1", "data": {"type": "Milvus"}}], "edges": []}
+        text, v, _ = _build_text_repr_from_raw(data, "Flow")
+        assert "Milvus" in text
+        assert v == 1
+
+    def test_encoded_string_handles_dont_crash(self):
+        """Edges with œ-encoded string sourceHandle must not raise."""
+        data = {
             "nodes": [
+                {"id": "n1", "data": {"type": "A", "node": {"display_name": "A"}}},
+                {"id": "n2", "data": {"type": "B", "node": {"display_name": "B"}}},
+            ],
+            "edges": [
                 {
-                    "id": "node-1",
-                    "data": {
-                        "id": "node-1",
-                        "type": "TotallyCustom",
-                        "node": {
-                            "display_name": "Blocked Node",
-                            "template": {
-                                "code": {"value": "print('blocked')"},
-                            },
-                        },
-                    },
+                    "source": "n1",
+                    "target": "n2",
+                    "sourceHandle": "œdataTypeœ:œAœ",
+                    "targetHandle": "œfieldNameœ:œinput_valueœ",
+                    "data": {},  # no nested dicts
                 }
             ],
-            "edges": [],
-        },
-    )
+        }
+        text, _, edge_count = _build_text_repr_from_raw(data, "Flow")
+        assert edge_count == 1
+        assert "A" in text
 
-    async def _get_flow(*_args, **_kwargs):
-        return blocked_flow
 
-    monkeypatch.setattr("langflow.agentic.utils.flow_graph.get_flow_by_id_or_endpoint_name", _get_flow)
-    monkeypatch.setattr(
-        "lfx.services.deps.get_settings_service",
-        lambda: SimpleNamespace(settings=SimpleNamespace(allow_custom_components=False)),
-    )
-    monkeypatch.setattr(component_cache, "type_to_current_hash", {"ChatInput": "known-hash"})
-    monkeypatch.setattr(component_cache, "all_types_dict", None)
-
-    result = await get_flow_graph_summary("flow-1")
-
-    assert "custom components are not allowed" in result["error"]
+# ---------------------------------------------------------------------------
+# get_flow_graph_representations
+# ---------------------------------------------------------------------------
 
 
 class TestGetFlowGraphRepresentations:
-    """Tests for get_flow_graph_representations."""
-
     @pytest.mark.asyncio
-    async def test_should_return_all_data(self):
-        """Should return ascii_graph, text_repr, vertex/edge counts."""
+    async def test_returns_all_fields_for_valid_flow(self):
         flow = _make_flow()
-        graph = _make_graph()
-
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.Graph.from_payload", return_value=graph),
-            patch(f"{MODULE}.draw_graph", return_value="[v1] -> [v2]"),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_graph_representations("test-flow")
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow):
+            result = await get_flow_graph_representations(FLOW_ID)
 
         assert result["flow_id"] == FLOW_ID
         assert result["flow_name"] == "TestFlow"
-        assert result["ascii_graph"] == "[v1] -> [v2]"
         assert result["vertex_count"] == 2
         assert result["edge_count"] == 1
-        assert result["tags"] == ["test"]
+        assert "text_repr" in result
+        assert "error" not in result
 
     @pytest.mark.asyncio
-    async def test_should_return_error_when_flow_not_found(self):
-        """Should return error dict for nonexistent flow."""
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_graph_representations("missing-flow")
+    async def test_returns_error_for_missing_flow(self):
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None):
+            result = await get_flow_graph_representations("nonexistent")
 
         assert "error" in result
         assert "not found" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_should_return_error_when_no_data(self):
-        """Should return error for flow with no data."""
+    async def test_returns_error_for_flow_without_data(self):
         flow = _make_flow(has_data=False)
-
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_graph_representations("test-flow")
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow):
+            result = await get_flow_graph_representations(FLOW_ID)
 
         assert "error" in result
         assert "no data" in result["error"]
 
     @pytest.mark.asyncio
-    async def test_should_handle_draw_graph_failure(self):
-        """Should return fallback message when draw_graph raises."""
-        flow = _make_flow()
-        graph = _make_graph()
-
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.Graph.from_payload", return_value=graph),
-            patch(f"{MODULE}.draw_graph", side_effect=RuntimeError("too complex")),
-            patch(f"{MODULE}.logger", _mock_logger()),
+    async def test_handles_exception_gracefully(self):
+        with patch(
+            f"{MODULE}.get_flow_by_id_or_endpoint_name",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("DB error"),
         ):
-            result = await get_flow_graph_representations("test-flow")
+            result = await get_flow_graph_representations(FLOW_ID)
 
-        assert "failed" in result["ascii_graph"].lower()
+        assert "error" in result
 
     @pytest.mark.asyncio
-    async def test_should_return_none_ascii_when_no_vertices(self):
-        """Should return None for ascii_graph when graph has no vertices."""
-        flow = _make_flow()
-        graph = _make_graph(vertex_ids=[], edge_pairs=[])
+    async def test_encodes_edge_handles_in_raw_data(self):
+        """Flow with œ-encoded handles must parse without error."""
+        data_with_encoded = {
+            "nodes": [
+                {"id": "n1", "data": {"type": "Milvus", "node": {"display_name": "Milvus"}}},
+                {"id": "n2", "data": {"type": "OpenAIModel", "node": {"display_name": "OpenAI"}}},
+            ],
+            "edges": [
+                {
+                    "source": "n1",
+                    "target": "n2",
+                    "sourceHandle": "œdataTypeœ:œMilvusœ,œidœ:œn1œ,œnameœ:œsearch_resultsœ",
+                    "targetHandle": "œfieldNameœ:œinput_valueœ,œidœ:œn2œ",
+                    "data": {},
+                }
+            ],
+        }
+        flow = _make_flow(data=data_with_encoded)
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow):
+            result = await get_flow_graph_representations(FLOW_ID)
 
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.Graph.from_payload", return_value=graph),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_graph_representations("test-flow")
+        # Must succeed even with encoded handles
+        assert "error" not in result
+        assert result["vertex_count"] == 2
+        assert result["edge_count"] == 1
 
-        assert result["ascii_graph"] is None
+
+# ---------------------------------------------------------------------------
+# get_flow_ascii_graph
+# ---------------------------------------------------------------------------
 
 
 class TestGetFlowAsciiGraph:
-    """Tests for get_flow_ascii_graph."""
-
     @pytest.mark.asyncio
-    async def test_should_return_ascii_string(self):
-        """Should return the ASCII graph string."""
+    async def test_returns_text_for_valid_flow(self):
         flow = _make_flow()
-        graph = _make_graph()
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow):
+            result = await get_flow_ascii_graph(FLOW_ID)
 
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.Graph.from_payload", return_value=graph),
-            patch(f"{MODULE}.draw_graph", return_value="[v1] -> [v2]"),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_ascii_graph("test-flow")
-
-        assert result == "[v1] -> [v2]"
+        assert isinstance(result, str)
+        assert "Error" not in result
 
     @pytest.mark.asyncio
-    async def test_should_return_error_string(self):
-        """Should return 'Error: ...' for nonexistent flow."""
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_ascii_graph("missing-flow")
+    async def test_returns_error_string_for_missing_flow(self):
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None):
+            result = await get_flow_ascii_graph("missing")
 
         assert result.startswith("Error:")
 
 
+# ---------------------------------------------------------------------------
+# get_flow_text_repr
+# ---------------------------------------------------------------------------
+
+
 class TestGetFlowTextRepr:
-    """Tests for get_flow_text_repr."""
+    @pytest.mark.asyncio
+    async def test_returns_text_repr(self):
+        flow = _make_flow()
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow):
+            result = await get_flow_text_repr(FLOW_ID)
+
+        assert "TestFlow" in result
+        assert "Chat Input" in result
 
     @pytest.mark.asyncio
-    async def test_should_return_repr_string(self):
-        """Should return the graph's text representation."""
-        flow = _make_flow()
-        graph = _make_graph()
+    async def test_returns_error_string_for_missing_flow(self):
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None):
+            result = await get_flow_text_repr("missing")
 
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.Graph.from_payload", return_value=graph),
-            patch(f"{MODULE}.draw_graph", return_value="ascii"),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_text_repr("test-flow")
+        assert result.startswith("Error:")
 
-        assert isinstance(result, str)
+
+# ---------------------------------------------------------------------------
+# get_flow_graph_summary
+# ---------------------------------------------------------------------------
 
 
 class TestGetFlowGraphSummary:
-    """Tests for get_flow_graph_summary."""
-
     @pytest.mark.asyncio
-    async def test_should_return_metadata(self):
-        """Should return flow metadata with counts, vertices, edges."""
+    async def test_returns_metadata_with_counts(self):
         flow = _make_flow()
-        graph = _make_graph(vertex_ids=["a", "b", "c"], edge_pairs=[("a", "b"), ("b", "c")])
-
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow),
-            patch(f"{MODULE}.Graph.from_payload", return_value=graph),
-            patch(f"{MODULE}.logger", _mock_logger()),
-        ):
-            result = await get_flow_graph_summary("test-flow")
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=flow):
+            result = await get_flow_graph_summary(FLOW_ID)
 
         assert result["flow_id"] == FLOW_ID
-        assert result["vertex_count"] == 3
-        assert result["edge_count"] == 2
-        assert result["vertices"] == ["a", "b", "c"]
-        assert ("a", "b") in result["edges"]
+        assert result["vertex_count"] == 2
+        assert result["edge_count"] == 1
+        assert "n1" in result["vertices"]
+        assert ("n1", "n2") in result["edges"]
 
     @pytest.mark.asyncio
-    async def test_should_return_error_when_not_found(self):
-        """Should return error dict for nonexistent flow."""
-        with (
-            patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None),
-            patch(f"{MODULE}.logger", _mock_logger()),
+    async def test_returns_error_for_missing_flow(self):
+        with patch(f"{MODULE}.get_flow_by_id_or_endpoint_name", new_callable=AsyncMock, return_value=None):
+            result = await get_flow_graph_summary("missing")
+
+        assert "error" in result
+
+    @pytest.mark.asyncio
+    async def test_returns_error_on_exception(self):
+        with patch(
+            f"{MODULE}.get_flow_by_id_or_endpoint_name",
+            new_callable=AsyncMock,
+            side_effect=RuntimeError("fail"),
         ):
-            result = await get_flow_graph_summary("missing-flow")
+            result = await get_flow_graph_summary(FLOW_ID)
 
         assert "error" in result

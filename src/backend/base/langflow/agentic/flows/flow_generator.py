@@ -65,8 +65,10 @@ def get_graph(
     """Create and return the FlowGenerator graph.
 
     The graph takes a user message containing the catalog + request and
-    produces compact flow JSON. session_id-based message storage is enabled
-    so multi-turn editing ("replace X with Y") retains context.
+    produces compact flow JSON. Message storage is disabled — the full
+    catalog + context is injected fresh into every request by
+    flow_generation_service, so persisting turns would only replay
+    large catalog blobs and crowd out edit instructions on retries.
 
     Args:
         provider: Model provider (e.g., "OpenAI", "Anthropic"). Defaults to OpenAI.
@@ -79,12 +81,13 @@ def get_graph(
     provider = provider or "OpenAI"
     model_name = model_name or "gpt-4o-mini"
 
-    # Chat input — stores messages so multi-turn edit sessions retain context
+    # Chat input — stateless: catalog + context are injected per-request,
+    # so storing messages would accumulate large catalog blobs across retries.
     chat_input = ChatInput()
     chat_input.set(
         sender="User",
         sender_name="User",
-        should_store_message=True,
+        should_store_message=False,
     )
 
     # Language model component
@@ -102,13 +105,13 @@ def get_graph(
 
     llm.set(**llm_config)
 
-    # Chat output — stores model responses for session continuity
+    # Chat output — stateless for the same reason as ChatInput
     chat_output = ChatOutput()
     chat_output.set(
         input_value=llm.text_response,
         sender="Machine",
         sender_name="AI",
-        should_store_message=True,
+        should_store_message=False,
         clean_data=True,
         data_template="{text}",
     )

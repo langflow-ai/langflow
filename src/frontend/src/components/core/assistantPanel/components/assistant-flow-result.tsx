@@ -12,7 +12,7 @@ const MAX_VISIBLE_CHIPS = 6;
 
 interface AssistantFlowResultProps {
   result: AgenticResult;
-  onApproveFlow: () => void;
+  onApproveFlow: () => boolean;
   onRegenerate?: () => void;
 }
 
@@ -113,8 +113,8 @@ export function AssistantFlowResult({
   }, [showApproved]);
 
   const handleApprove = () => {
-    onApproveFlow();
-    setShowApproved(true);
+    const success = onApproveFlow();
+    if (success) setShowApproved(true);
   };
 
   return (

@@ -34,9 +34,7 @@ def _fix_common_llm_json_errors(text: str) -> str:
 
     # Replace single-quoted strings with double-quoted (simple cases)
     # Only when not inside a double-quoted string — use a simple heuristic
-    text = re.sub(r"'([^']*)'", r'"\1"', text)
-
-    return text
+    return re.sub(r"'([^']*)'", r'"\1"', text)
 
 
 def _is_valid_compact_flow(data: dict) -> bool:
@@ -126,16 +124,36 @@ def extract_compact_flow(llm_output: str) -> dict | None:
 
 
 def _extract_json_objects(text: str) -> list[str]:
-    """Extract all top-level JSON object strings from text using brace matching.
+    r"""Extract all top-level JSON object strings from text using brace matching.
 
     Returns candidates that contain the word "nodes" (to filter irrelevant objects).
     Prefers longer (more complete) candidates first.
+
+    Tracks quote and escape state so that braces inside string values (e.g.
+    ``"template": "{question}\n{context}"``) do not perturb depth counting.
     """
     candidates: list[str] = []
     depth = 0
     start = -1
+    in_string = False
+    escape_next = False
 
     for i, ch in enumerate(text):
+        if escape_next:
+            escape_next = False
+            continue
+
+        if ch == "\\" and in_string:
+            escape_next = True
+            continue
+
+        if ch == '"' and not escape_next:
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
         if ch == "{":
             if depth == 0:
                 start = i

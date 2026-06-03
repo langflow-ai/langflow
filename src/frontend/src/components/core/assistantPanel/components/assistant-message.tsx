@@ -16,7 +16,7 @@ import { AssistantValidationFailed } from "./assistant-validation-failed";
 interface AssistantMessageItemProps {
   message: AssistantMessage;
   onApprove?: (messageId: string, componentCode?: string) => void;
-  onApproveFlow?: (messageId: string) => void;
+  onApproveFlow?: (messageId: string) => boolean;
   onRetry?: (messageId: string) => void;
 }
 
@@ -183,7 +183,7 @@ export function AssistantMessageItem({
       return (
         <AssistantFlowResult
           result={message.result}
-          onApproveFlow={() => onApproveFlow?.(message.id)}
+          onApproveFlow={() => onApproveFlow?.(message.id) ?? false}
           onRegenerate={onRetry ? () => onRetry(message.id) : undefined}
         />
       );

@@ -21,8 +21,8 @@ def _build_text_repr_from_raw(flow_data: dict[str, Any], flow_name: str) -> tupl
     Returns:
         (text_repr, vertex_count, edge_count)
     """
-    nodes: list[dict[str, Any]] = flow_data.get("nodes", [])
-    edges: list[dict[str, Any]] = flow_data.get("edges", [])
+    nodes: list[dict[str, Any]] = flow_data.get("nodes") or []
+    edges: list[dict[str, Any]] = flow_data.get("edges") or []
 
     # Build node ID → display name map
     node_map: dict[str, str] = {}
@@ -205,8 +205,8 @@ async def get_flow_graph_summary(
 
         flow_id_str = str(flow.id)
         _, vertex_count, edge_count = _build_text_repr_from_raw(flow.data, flow.name or flow_id_str)
-        nodes: list[dict[str, Any]] = flow.data.get("nodes", [])
-        edges_raw: list[dict[str, Any]] = flow.data.get("edges", [])
+        nodes: list[dict[str, Any]] = flow.data.get("nodes") or []
+        edges_raw: list[dict[str, Any]] = flow.data.get("edges") or []
 
         return {
             "flow_id": flow_id_str,

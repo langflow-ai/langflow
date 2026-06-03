@@ -46,6 +46,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
   const addComponent = useAddComponent();
   const paste = useFlowStore((state) => state.paste);
   const deleteNode = useFlowStore((state) => state.deleteNode);
+  const setEdges = useFlowStore((state) => state.setEdges);
   const { mutateAsync: validateComponent } = usePostValidateComponentCode();
 
   // Tracks IDs of nodes that were pasted by the last "Add to Canvas" approval.
@@ -233,19 +234,25 @@ export function useAssistantChat(): UseAssistantChatReturn {
   );
 
   const handleApproveFlow = useCallback(
-    (messageId: string) => {
+    (messageId: string): boolean => {
       const message = messages.find((m) => m.id === messageId);
       const expandedFlow = message?.result?.expandedFlow;
-      if (!expandedFlow) return;
+      if (!expandedFlow) return false;
 
       const nodes = (expandedFlow as { nodes?: unknown[] }).nodes;
       const edges = (expandedFlow as { edges?: unknown[] }).edges;
-      if (!nodes?.length) return;
+      if (!nodes?.length) return false;
 
       try {
-        // Remove nodes from the previous flow approval so edits replace
-        // the old flow instead of stacking a second copy on top of it.
+        // Remove nodes AND their incident edges from the previous flow approval
+        // so edits replace the old flow instead of leaving orphaned connections.
         if (lastPastedNodeIdsRef.current.length > 0) {
+          const removedIds = new Set(lastPastedNodeIdsRef.current);
+          setEdges((currentEdges) =>
+            currentEdges.filter(
+              (e) => !removedIds.has(e.source) && !removedIds.has(e.target),
+            ),
+          );
           deleteNode(lastPastedNodeIdsRef.current);
           lastPastedNodeIdsRef.current = [];
         }
@@ -278,6 +285,7 @@ export function useAssistantChat(): UseAssistantChatReturn {
             .filter((id) => !nodeIdsBefore.has(id));
           lastPastedNodeIdsRef.current = newIds;
         }, 0);
+        return true;
       } catch (error) {
         console.error("Failed to add flow to canvas:", error);
         updateMessage(messageId, (msg) => ({
@@ -290,9 +298,10 @@ export function useAssistantChat(): UseAssistantChatReturn {
               }
             : msg.result,
         }));
+        return false;
       }
     },
-    [messages, paste, deleteNode, updateMessage],
+    [messages, paste, deleteNode, setEdges, updateMessage],
   );
 
   const handleRetry = useCallback(

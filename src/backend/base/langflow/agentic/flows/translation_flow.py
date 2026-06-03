@@ -47,8 +47,9 @@ IMPORTANT rules:
 - "How to create a component" = question (asking for Langflow guidance)
 - "Create a component that does X" = generate_component (single custom Python class)
 - "Build a flow/pipeline that does X" = generate_flow (multiple connected components)
-- "Connect X to Y" or "wire up X with Y" = generate_flow
-- Keywords: pipeline/flow/chain/workflow/connect/wire = generate_flow
+- "Connect X to Y" or "wire up X with Y" = generate_flow ONLY when phrased as an imperative command
+- "How do I connect X to Y?" or "Can I wire X to Y?" = question (interrogative, not a build request)
+- Keywords: pipeline/flow/chain/workflow/connect/wire = generate_flow when used imperatively
 - Keywords: component/class/custom/code = generate_component
 - Short follow-up requests implying changes to a previously generated component = generate_component
   (e.g., "use X instead", "add Y", "change Z", "make it do W")

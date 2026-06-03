@@ -15,13 +15,48 @@ COMMON_PATTERNS = """\
 ## Common Flow Patterns (compact format examples)
 
 ### Simple Chatbot
-{"nodes": [{"id": "n1", "type": "ChatInput"}, {"id": "n2", "type": "OpenAIModel", "values": {"model_name": "gpt-4o"}}, {"id": "n3", "type": "ChatOutput"}], "edges": [{"source": "n1", "source_output": "message", "target": "n2", "target_input": "input_value"}, {"source": "n2", "source_output": "text_output", "target": "n3", "target_input": "input_value"}]}
+{
+  "nodes": [
+    {"id": "n1", "type": "ChatInput"},
+    {"id": "n2", "type": "OpenAIModel", "values": {"model_name": "gpt-4o"}},
+    {"id": "n3", "type": "ChatOutput"}
+  ],
+  "edges": [
+    {"source": "n1", "source_output": "message", "target": "n2", "target_input": "input_value"},
+    {"source": "n2", "source_output": "text_output", "target": "n3", "target_input": "input_value"}
+  ]
+}
 
 ### RAG Pipeline (Retrieval-Augmented Generation)
-{"nodes": [{"id": "n1", "type": "ChatInput"}, {"id": "n2", "type": "Milvus", "values": {"collection_name": "docs"}}, {"id": "n3", "type": "OpenAIModel"}, {"id": "n4", "type": "ChatOutput"}], "edges": [{"source": "n1", "source_output": "message", "target": "n2", "target_input": "search_query"}, {"source": "n2", "source_output": "search_results", "target": "n3", "target_input": "context"}, {"source": "n1", "source_output": "message", "target": "n3", "target_input": "input_value"}, {"source": "n3", "source_output": "text_output", "target": "n4", "target_input": "input_value"}]}
+{
+  "nodes": [
+    {"id": "n1", "type": "ChatInput"},
+    {"id": "n2", "type": "Milvus", "values": {"collection_name": "docs"}},
+    {"id": "n3", "type": "OpenAIModel"},
+    {"id": "n4", "type": "ChatOutput"}
+  ],
+  "edges": [
+    {"source": "n1", "source_output": "message", "target": "n2", "target_input": "search_query"},
+    {"source": "n2", "source_output": "search_results", "target": "n3", "target_input": "context"},
+    {"source": "n1", "source_output": "message", "target": "n3", "target_input": "input_value"},
+    {"source": "n3", "source_output": "text_output", "target": "n4", "target_input": "input_value"}
+  ]
+}
 
 ### Text Processing Pipeline
-{"nodes": [{"id": "n1", "type": "TextInput"}, {"id": "n2", "type": "Prompt", "values": {"template": "Summarize: {input}"}}, {"id": "n3", "type": "OpenAIModel"}, {"id": "n4", "type": "TextOutput"}], "edges": [{"source": "n1", "source_output": "text", "target": "n2", "target_input": "input"}, {"source": "n2", "source_output": "prompt", "target": "n3", "target_input": "input_value"}, {"source": "n3", "source_output": "text_output", "target": "n4", "target_input": "input_value"}]}
+{
+  "nodes": [
+    {"id": "n1", "type": "TextInput"},
+    {"id": "n2", "type": "Prompt", "values": {"template": "Summarize: {input}"}},
+    {"id": "n3", "type": "OpenAIModel"},
+    {"id": "n4", "type": "TextOutput"}
+  ],
+  "edges": [
+    {"source": "n1", "source_output": "text", "target": "n2", "target_input": "input"},
+    {"source": "n2", "source_output": "prompt", "target": "n3", "target_input": "input_value"},
+    {"source": "n3", "source_output": "text_output", "target": "n4", "target_input": "input_value"}
+  ]
+}
 """
 
 
