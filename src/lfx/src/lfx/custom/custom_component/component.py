@@ -437,8 +437,16 @@ class Component(CustomComponent):
         kwargs = dict(config)
         kwargs.update(inputs_raw)
         new_component = type(self)(**kwargs)
+        # Register in memo before the recursive deepcopy calls below so reference
+        # cycles (e.g. components linked through _components) resolve to this same
+        # copy instead of producing a duplicate.
+        memo[id(self)] = new_component
         new_component._code = self._code
-        new_component._outputs_map = self._outputs_map
+        # Must deep-copy so each graph_copy has independent Output objects.
+        # Output.cache=True by default, and output.value is set during execution.
+        # A shallow copy causes all concurrent requests to share the same Output objects,
+        # so the first request's cached output.value is returned to all subsequent requests.
+        new_component._outputs_map = deepcopy(self._outputs_map, memo)
 
         # Safe deepcopy of inputs
         new_inputs = {}
@@ -471,13 +479,16 @@ class Component(CustomComponent):
                 new_inputs[k] = input_copy
 
         new_component._inputs = new_inputs
-        new_component._edges = self._edges
-        new_component._components = self._components
+        # Must deep-copy so each graph_copy has independent component instances.
+        # Shallow copies here caused all concurrent requests to share the same
+        # intermediate component objects (e.g. the LLM node), producing identical
+        # responses for different inputs under concurrent load.
+        new_component._edges = deepcopy(self._edges, memo)
+        new_component._components = deepcopy(self._components, memo)
         new_component._parameters = dict(self._parameters)
         new_component._attributes = dict(self._attributes)
         new_component._output_logs = self._output_logs
         new_component._logs = self._logs  # type: ignore[attr-defined]
-        memo[id(self)] = new_component
         return new_component
 
     def set_class_code(self) -> None:

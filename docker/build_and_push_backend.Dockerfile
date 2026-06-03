@@ -30,12 +30,6 @@ RUN apt-get update \
 COPY ./src/backend ./src/backend
 COPY ./src/lfx ./src/lfx
 COPY ./src/sdk ./src/sdk
-# Workspace bundles (LE-1023 pilot+): each Bundle is shipped as a
-# separate distribution that langflow-base depends on by name (e.g.
-# ``lfx-duckduckgo``).  Without copying the source tree, the install
-# below cannot resolve the path-based bundle deps and ends up with a
-# Langflow image missing components that previously lived in lfx.
-COPY ./src/bundles ./src/bundles
 
 # Create venv and install langflow-base with dependencies
 # Using uv pip instead of uv sync to avoid workspace complexities
@@ -44,98 +38,15 @@ ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
 # Install langflow-base with all extras except dev (which includes Playwright).
-# Each pilot-extracted bundle is installed alongside so the runtime image
-# keeps shipping the same component set users had before LE-1023.
+# This image ships the langflow-base core only.  Extension bundles
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# installed here -- they belong to the full ``langflow`` distribution, not
+# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
+# alongside this image, to add those components.
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv pip install \
         ./src/sdk \
         ./src/lfx \
-        ./src/bundles/duckduckgo \
-        ./src/bundles/arxiv \
-        ./src/bundles/datastax \
-        ./src/bundles/wikipedia \
-        ./src/bundles/wolframalpha \
-        ./src/bundles/serpapi \
-        ./src/bundles/tavily \
-        ./src/bundles/youtube \
-        ./src/bundles/exa \
-        ./src/bundles/bing \
-        ./src/bundles/baidu \
-        ./src/bundles/firecrawl \
-        ./src/bundles/glean \
-        ./src/bundles/scrapegraph \
-        ./src/bundles/searchapi \
-        ./src/bundles/jigsawstack \
-        ./src/bundles/needle \
-        ./src/bundles/openai \
-        ./src/bundles/aiml \
-        ./src/bundles/amazon \
-        ./src/bundles/anthropic \
-        ./src/bundles/azure \
-        ./src/bundles/cohere \
-        ./src/bundles/deepseek \
-        ./src/bundles/groq \
-        ./src/bundles/huggingface \
-        ./src/bundles/ibm \
-        ./src/bundles/litellm \
-        ./src/bundles/lmstudio \
-        ./src/bundles/maritalk \
-        ./src/bundles/mistral \
-        ./src/bundles/notdiamond \
-        ./src/bundles/novita \
-        ./src/bundles/nvidia \
-        ./src/bundles/ollama \
-        ./src/bundles/openrouter \
-        ./src/bundles/perplexity \
-        ./src/bundles/sambanova \
-        ./src/bundles/vertexai \
-        ./src/bundles/xai \
-        ./src/bundles/cometapi \
-        ./src/bundles/vllm \
-        ./src/bundles/cassandra \
-        ./src/bundles/chroma \
-        ./src/bundles/clickhouse \
-        ./src/bundles/couchbase \
-        ./src/bundles/elastic \
-        ./src/bundles/faiss \
-        ./src/bundles/milvus \
-        ./src/bundles/mongodb \
-        ./src/bundles/pgvector \
-        ./src/bundles/pinecone \
-        ./src/bundles/qdrant \
-        ./src/bundles/redis \
-        ./src/bundles/supabase \
-        ./src/bundles/upstash \
-        ./src/bundles/vectara \
-        ./src/bundles/weaviate \
-        ./src/bundles/zep \
-        ./src/bundles/notion \
-        ./src/bundles/agentql \
-        ./src/bundles/apify \
-        ./src/bundles/assemblyai \
-        ./src/bundles/cleanlab \
-        ./src/bundles/cloudflare \
-        ./src/bundles/composio \
-        ./src/bundles/confluence \
-        ./src/bundles/docling \
-        ./src/bundles/git \
-        ./src/bundles/homeassistant \
-        ./src/bundles/icosacomputing \
-        ./src/bundles/langwatch \
-        ./src/bundles/mem0 \
-        ./src/bundles/twelvelabs \
-        ./src/bundles/unstructured \
-        ./src/bundles/agentics \
-        ./src/bundles/altk \
-        ./src/bundles/codeagents \
-        ./src/bundles/crewai \
-        ./src/bundles/cuga \
-        ./src/bundles/olivya \
-        ./src/bundles/vlmrun \
-        ./src/bundles/google_genai \
-        ./src/bundles/google_workspace \
-        ./src/bundles/google_bigquery \
-        ./src/bundles/google_search \
         "./src/backend/base[complete,postgresql]"
 
 ################################

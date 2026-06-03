@@ -219,6 +219,11 @@ module.exports = {
           label: "Deploy Langflow with Nginx and SSL"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-wxo",
+          label: "Deploy flows on watsonx Orchestrate"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
@@ -277,11 +282,6 @@ module.exports = {
             },
             {
               type: "doc",
-              id: "Deployment/deployment-wxo",
-              label: "IBM watsonx Orchestrate"
-            },
-            {
-              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
@@ -329,7 +329,6 @@ module.exports = {
               label: "Input / Output",
               items: [
                 "Components/chat-input-and-output",
-                "Components/text-input-and-output",
                 "Components/webhook",
               ]
             },
@@ -448,6 +447,7 @@ module.exports = {
             "Components/bundles-elastic",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",

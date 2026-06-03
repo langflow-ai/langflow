@@ -499,6 +499,7 @@ flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",
     "fastapi.Query",
+    "typer.Argument",
     "typer.Option",
 ]
 flake8-type-checking.runtime-evaluated-base-classes = [
