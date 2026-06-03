@@ -368,10 +368,10 @@ def _process_terminal_vertex(
     # Determine output key: use vertex id but TODO: add alias handling when avialable
     output_key = vertex.id
 
-    # Build ComponentOutput
+    # Build ComponentOutput. The component id lives in the outputs dict key, so
+    # ComponentOutput deliberately has no component_id field of its own.
     component_output = ComponentOutput(
         type=output_type,
-        component_id=vertex.id,
         status=JobStatus.COMPLETED,
         content=content,
         metadata=metadata,

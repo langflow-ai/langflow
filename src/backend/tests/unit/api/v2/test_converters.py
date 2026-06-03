@@ -717,6 +717,12 @@ class TestCreateErrorResponse:
         response = create_error_response("flow-1", str(uuid4()), {}, error, effective_globals=globals_)
         assert response.globals == globals_
 
+    def test_create_error_response_has_no_output_text_or_session(self):
+        """The failed path must not surface a text answer or a session to continue."""
+        response = create_error_response("flow-1", str(uuid4()), {}, Exception("boom"))
+        assert response.output_text is None
+        assert response.session_id is None
+
 
 class TestRunResponseToWorkflowResponse:
     """Test suite for run_response_to_workflow_response function."""
@@ -1206,6 +1212,14 @@ class TestSingleOutputText:
         outputs = {"ChatOutput-abc": _component_output("message", None)}
         assert _single_output_text(outputs) is None
 
+    def test_string_content_data_output_excluded_by_type(self):
+        # A data output whose content happens to be a plain string must still be
+        # excluded by the TYPE filter alone, not merely by the non-str guard. This
+        # isolates the type check: adding "data" to the accepted set would surface
+        # this string as the answer, which is exactly what we must not do.
+        outputs = {"DataOutput-xyz": _component_output("data", "looks like an answer but is data")}
+        assert _single_output_text(outputs) is None
+
 
 def _message_output_vertex(vertex_id: str) -> Mock:
     vertex = Mock()
@@ -1221,6 +1235,53 @@ def _message_result_data(component_id: str, text: str) -> Mock:
     result_data = Mock()
     result_data.component_id = component_id
     result_data.outputs = {"message": {"message": text}}
+    result_data.metadata = {}
+    return result_data
+
+
+def _message_nonoutput_vertex(vertex_id: str) -> Mock:
+    """A terminal LLM-style message node that is NOT an output (is_output=False)."""
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "LLM"
+    vertex.vertex_type = "OpenAIModel"
+    vertex.is_output = False
+    vertex.outputs = [{"types": ["Message"]}]
+    return vertex
+
+
+def _data_output_vertex(vertex_id: str) -> Mock:
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "Data Output"
+    vertex.vertex_type = "DataOutput"
+    vertex.is_output = True
+    vertex.outputs = [{"types": ["Data"]}]
+    return vertex
+
+
+def _data_result_data(component_id: str, payload: Any) -> Mock:
+    result_data = Mock()
+    result_data.component_id = component_id
+    result_data.outputs = {"result": {"message": payload}}
+    result_data.metadata = {}
+    return result_data
+
+
+def _text_output_vertex(vertex_id: str) -> Mock:
+    vertex = Mock()
+    vertex.id = vertex_id
+    vertex.display_name = "Text Output"
+    vertex.vertex_type = "TextOutput"
+    vertex.is_output = True
+    vertex.outputs = [{"types": ["Text"]}]
+    return vertex
+
+
+def _text_result_data(component_id: str, text: str) -> Mock:
+    result_data = Mock()
+    result_data.component_id = component_id
+    result_data.outputs = {"text": {"text": text}}
     result_data.metadata = {}
     return result_data
 
@@ -1285,6 +1346,104 @@ class TestOutputTextAndSessionId:
 
         assert response.session_id is None
         assert response.output_text == "Hi"
+
+    def test_terminal_non_output_message_leaves_output_text_none(self):
+        # A terminal LLM (is_output=False) carries EXTRACTABLE text: if it were an
+        # output node the converter would surface "raw model text" as content. But
+        # because it is not an output node, content is suppressed to None, so
+        # output_text must not surface that intermediate text as "the answer".
+        # (If the is_output guard regressed, content would become "raw model text"
+        # and this test would fail.)
+        vertex = _message_nonoutput_vertex("LLM-xyz")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("LLM-xyz", "raw model text")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["LLM-xyz"].type == "message"
+        assert response.outputs["LLM-xyz"].content is None
+        assert response.output_text is None
+
+    def test_chat_output_plus_data_output_still_surfaces_text(self):
+        # The realistic "chat answer plus structured data" flow: a side DataOutput
+        # classifies as type "data" and must not suppress the single text answer.
+        chat = _message_output_vertex("ChatOutput-abc")
+        data = _data_output_vertex("DataOutput-xyz")
+        graph = _graph_for([chat, data])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [
+            _message_result_data("ChatOutput-abc", "the reply"),
+            _data_result_data("DataOutput-xyz", {"rows": [1, 2]}),
+        ]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["ChatOutput-abc"].type == "message"
+        assert response.outputs["DataOutput-xyz"].type == "data"
+        assert response.outputs["DataOutput-xyz"].content == {"rows": [1, 2]}
+        assert response.output_text == "the reply"
+
+    def test_data_only_flow_leaves_output_text_none(self):
+        # A flow whose only terminal is a DataOutput produces a real type="data"
+        # output, which the shortcut must exclude.
+        data = _data_output_vertex("DataOutput-xyz")
+        graph = _graph_for([data])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_data_result_data("DataOutput-xyz", {"k": "v"})]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["DataOutput-xyz"].type == "data"
+        assert response.output_text is None
+
+    def test_text_output_surfaces_output_text(self):
+        # output_text is not ChatOutput-specific: a TextOutput (type "text") feeds it too.
+        vertex = _text_output_vertex("TextOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = "session-xyz"
+        run_output = Mock()
+        run_output.outputs = [_text_result_data("TextOutput-abc", "plain answer")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert response.outputs["TextOutput-abc"].type == "text"
+        assert response.output_text == "plain answer"
+
+    def test_output_entries_expose_only_the_de_nested_fields(self):
+        # The outputs dict key already IS the component id, so each ComponentOutput
+        # exposes exactly {type, status, content, metadata} and carries no redundant
+        # inner id. Pinning the exact field set means adding a component_id field to
+        # the ComponentOutput schema would fail here (the old "component_id not in
+        # dump" check could never fail, since the schema has no such field).
+        vertex = _message_output_vertex("ChatOutput-abc")
+        graph = _graph_for([vertex])
+
+        run_response = Mock()
+        run_response.session_id = None
+        run_output = Mock()
+        run_output.outputs = [_message_result_data("ChatOutput-abc", "Hi")]
+        run_response.outputs = [run_output]
+
+        response = run_response_to_workflow_response(run_response, "flow-1", str(uuid4()), {}, graph)
+
+        assert "ChatOutput-abc" in response.outputs
+        assert set(response.outputs["ChatOutput-abc"].model_dump()) == {"type", "status", "content", "metadata"}
 
 
 if __name__ == "__main__":
