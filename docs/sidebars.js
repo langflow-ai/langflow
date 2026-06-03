@@ -447,6 +447,7 @@ module.exports = {
             "Components/bundles-elastic",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",
             "Components/bundles-groq",
