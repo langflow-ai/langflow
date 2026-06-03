@@ -1,4 +1,12 @@
-FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim
+# Pinned by digest for reproducible builds. The bare `python3.14-bookworm-slim`
+# tag is floating — it silently advanced between rebuilds and broke psycopg
+# (no `psycopg-binary` wheel for the new Python + no system libpq). Pinning the
+# digest makes a Python bump deliberate and lockfile-aware.
+# Stays on Python 3.14 to mirror prod (docker/build_and_push.Dockerfile), which
+# runs 3.14 + libpq5 (see the apt layer below). Resolved 2026-06-03 from
+# `docker pull ghcr.io/astral-sh/uv:python3.14-bookworm-slim` → Python 3.14.2.
+# To bump: pull the new tag, copy its RepoDigest here, confirm `uv.lock` supports it.
+FROM ghcr.io/astral-sh/uv:python3.14-bookworm-slim@sha256:7cf77f594be8042dab6daa9fe326f90962252268b4f120a7f5dccce4d947e6c1
 ENV TZ=UTC
 
 WORKDIR /app
@@ -9,6 +17,7 @@ RUN apt-get update \
     build-essential \
     curl \
     git \
+    libpq5 \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
     && apt-get clean \
