@@ -732,7 +732,7 @@
                   },
                   {
                     "name": "fastapi",
-                    "version": "0.136.1"
+                    "version": "0.136.3"
                   },
                   {
                     "name": "lfx",
@@ -1616,11 +1616,11 @@
                 "dependencies": [
                   {
                     "name": "pandas",
-                    "version": "2.2.3"
+                    "version": "2.3.3"
                   },
                   {
                     "name": "cryptography",
-                    "version": "46.0.7"
+                    "version": "48.0.0"
                   },
                   {
                     "name": "langchain_chroma",
@@ -1636,7 +1636,7 @@
                   },
                   {
                     "name": "numpy",
-                    "version": "2.4.5"
+                    "version": "2.4.6"
                   },
                   {
                     "name": "chromadb",
