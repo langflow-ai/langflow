@@ -266,10 +266,12 @@ export function useAssistantChat(): UseAssistantChatReturn {
         // offset calculation. expand_compact_flow() doesn't set positions, so
         // we assign a simple horizontal layout here. paste() will remap IDs
         // and reposition relative to the canvas viewport anyway.
-        const nodesWithPositions = (nodes as Record<string, unknown>[]).map((node, index) => ({
-          ...node,
-          position: node.position ?? { x: index * 300, y: 100 },
-        }));
+        const nodesWithPositions = (nodes as Record<string, unknown>[]).map(
+          (node, index) => ({
+            ...node,
+            position: node.position ?? { x: index * 300, y: 100 },
+          }),
+        );
         // paste() handles ID remapping, edge handle encoding, and canvas positioning
         paste(
           { nodes: nodesWithPositions, edges: edges ?? [] },
