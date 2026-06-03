@@ -702,6 +702,8 @@
   "files.uploadedSuccessfully": "El archivo se ha subido correctamente",
   "flow.addDescription": "Añade una descripción...",
   "flow.brokenEdgesWarning": "Se han eliminado algunas conexiones porque no eran válidas:",
+  "flow.exclusiveComponentsNotPasted": "No se pegaron algunos componentes porque no se pueden usar junto con componentes que ya están en el flujo.",
+  "flow.duplicateComponentsNotPasted": "No se pegaron algunos componentes porque solo se permite uno de cada tipo en un flujo.",
   "flow.buildStatus": "Compilar para comprobar el estado.",
   "flow.buildSuccess": "Creado con éxito ✨",
   "flow.characterLimitReached": "Se ha alcanzado el límite de caracteres",

@@ -112,7 +112,6 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langflow-base[docling]>=0.10.0",
     "lfx-docling[local]>=0.1.0",
 ]
 
@@ -251,6 +250,7 @@ flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",
     "fastapi.Query",
+    "typer.Argument",
     "typer.Option",
 ]
 flake8-type-checking.runtime-evaluated-base-classes = [

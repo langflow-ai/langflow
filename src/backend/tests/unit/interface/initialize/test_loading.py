@@ -369,6 +369,10 @@ async def test_update_table_params_with_fallback_to_env():
 
     # Create mock custom component
     custom_component = MagicMock()
+    # graph.context is a dict in production; set it explicitly so no_env_fallback resolves
+    # to False (a bare MagicMock's .context.get(...) returns a truthy mock and would
+    # silently disable env fallback).
+    custom_component.graph.context = {}
     custom_component.get_variable = AsyncMock(side_effect=ValueError("variable not found."))
 
     # Set up table params
@@ -406,6 +410,10 @@ async def test_update_table_params_mixed_db_and_env():
 
     # Create mock custom component
     custom_component = MagicMock()
+    # graph.context is a dict in production; set it explicitly so no_env_fallback resolves
+    # to False (a bare MagicMock's .context.get(...) returns a truthy mock and would
+    # silently disable env fallback).
+    custom_component.graph.context = {}
 
     async def mock_get_variable(name, **_kwargs):
         if name == "DB_KEY":

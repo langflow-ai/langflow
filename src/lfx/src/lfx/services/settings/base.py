@@ -69,6 +69,16 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    kb_allowed_folder_roots: list[str] = []
+    """Allow-list of directories the folder-ingestion endpoint may read from.
+
+    Comma-separated when set via env (``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS``),
+    e.g. ``/srv/docs,/data/shared``. Empty by default — operators must opt in.
+    ``POST /api/v1/knowledge_bases/{kb_name}/ingest/folder`` refuses to walk any
+    directory that is not equal to or inside one of these roots; symlink escapes
+    are blocked because the path is resolved before the containment check. Leave
+    empty in multi-tenant cloud deployments to refuse arbitrary-path access."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
