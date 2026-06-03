@@ -1,6 +1,6 @@
 services:
   langflow:
-    image: langflowai/langflow:latest # or another version tag on https://hub.docker.com/r/langflowai/langflow
+    image: langflowai/langflow:1.9.4 # or another version tag on https://hub.docker.com/r/langflowai/langflow
     pull_policy: always               # set to 'always' when using 'latest' image
     ports:
       - "7860:7860"
@@ -11,7 +11,9 @@ services:
       # This variable defines where the logs, file storage, monitor data and secret keys are stored.
       - LANGFLOW_CONFIG_DIR=/app/langflow
     volumes:
-      - langflow-data:/app/langflow
+      - ./volumes/langflow:/app/langflow
+    networks:
+      - langflow-network  # 加入自定义网络
 
   postgres:
     # Pinned to a specific Debian base (trixie) so the postgres:16 tag does not
@@ -24,10 +26,13 @@ services:
       POSTGRES_PASSWORD: langflow
       POSTGRES_DB: langflow
     ports:
-      - "5432:5432"
+      - "5434:5432"
     volumes:
-      - langflow-postgres:/var/lib/postgresql/data
+      - ./volumes/postgres:/var/lib/postgresql/data
+    networks:
+      - langflow-network  # 加入自定义网络
 
-volumes:
-  langflow-postgres:
-  langflow-data:
+# 定义自定义网络
+networks:
+  langflow-network:
+    driver: bridge

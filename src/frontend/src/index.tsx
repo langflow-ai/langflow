@@ -1,6 +1,6 @@
 import "./i18n";
-import { loadLanguage } from "./i18n";
 import ReactDOM from "react-dom/client";
+import { loadLanguage } from "./i18n";
 import reportWebVitals from "./reportWebVitals";
 
 import "./style/classes.css";
@@ -14,9 +14,7 @@ import "./style/applies.css";
 import App from "./customization/custom-App";
 
 const detectedLang =
-  localStorage.getItem("languagePreference") ||
-  navigator.language.split("-")[0] ||
-  "en";
+  localStorage.getItem("languagePreference") || navigator.language || "en";
 
 loadLanguage(detectedLang).then(() => {
   const root = ReactDOM.createRoot(

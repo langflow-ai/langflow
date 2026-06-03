@@ -90,6 +90,16 @@ dependencies = [
     "greenlet>=3.1.1,<4.0.0",
     "jsonquerylang>=1.1.1,<2.0.0",
     "sqlalchemy[aiosqlite]>=2.0.38,<3.0.0",
+    # Database drivers
+    "asyncpg>=0.30.0,<1.0.0",
+    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
+    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
+    "aiomysql>=0.2.0,<1.0.0",
+    "pymysql>=1.1.0,<2.0.0",
+    "pymssql>=2.3.0,<3.0.0",
+    "pyodbc>=5.1.0,<6.0.0",
+    "aioodbc>=0.5.0,<1.0.0",
+    "oracledb>=2.5.0,<3.0.0",
     'elevenlabs==1.58.1; python_version == "3.12"',
     'elevenlabs>=1.52.0,<2.0.0; python_version != "3.12"',
     "scipy>=1.15.2,<2.0.0",
@@ -173,11 +183,6 @@ Documentation = "https://docs.langflow.org"
 [project.optional-dependencies]
 audio = [
     "webrtcvad>=2.0.10",
-]
-
-postgresql = [
-    "sqlalchemy[postgresql_psycopg2binary]>=2.0.38,<3.0.0",
-    "sqlalchemy[postgresql_psycopg]>=2.0.38,<3.0.0",
 ]
 
 local = [

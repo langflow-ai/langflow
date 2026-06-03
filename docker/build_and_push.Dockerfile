@@ -31,8 +31,21 @@ RUN apt-get update \
     git \
     # gcc
     gcc \
-    curl \
-   && ARCH=$(dpkg --print-architecture) \
+    curl gnupg2 \
+    # PostgreSQL
+    libpq-dev \
+    # SQL Server (FreeTDS + ODBC)
+    freetds-dev \
+    unixodbc-dev \
+    # MySQL
+    default-libmysqlclient-dev \
+    pkg-config \
+    # Microsoft ODBC Driver 17 for SQL Server
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 || true \
+    && ARCH=$(dpkg --print-architecture) \
     && if [ "$ARCH" = "amd64" ]; then NODE_ARCH="x64"; \
        elif [ "$ARCH" = "arm64" ]; then NODE_ARCH="arm64"; \
        else NODE_ARCH="$ARCH"; fi \
@@ -83,7 +96,25 @@ FROM python:3.14-slim-trixie AS runtime
 
 RUN apt-get update \
     && apt-get upgrade -y \
-    && apt-get install --no-install-recommends -y curl git libpq5 gnupg xz-utils \
+    && apt-get install --no-install-recommends -y \
+    curl git gnupg2 xz-utils \
+    # PostgreSQL
+    libpq5 \
+    # SQL Server (FreeTDS + ODBC runtime)
+    freetds-dev \
+    freetds-bin \
+    unixodbc \
+    odbcinst \
+    tdsodbc \
+    # MySQL
+    default-mysql-client-core \
+    # Microsoft ODBC Driver 17 for SQL Server
+    && curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg \
+    && echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/debian/12/prod bookworm main" > /etc/apt/sources.list.d/mssql-release.list \
+    && apt-get update \
+    && ACCEPT_EULA=Y apt-get install -y --no-install-recommends msodbcsql17 || true \
+    # Register FreeTDS ODBC driver
+    && printf '[FreeTDS]\nDescription=FreeTDS Driver\nDriver=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\nSetup=/usr/lib/x86_64-linux-gnu/odbc/libtdsodbc.so\n' > /etc/odbcinst.ini \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=builder /usr/local/bin/uv /usr/local/bin/uv
