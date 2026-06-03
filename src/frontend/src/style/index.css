@@ -164,6 +164,9 @@
     --datatype-green: 142.1 70.6% 35.3%;
     --datatype-green-foreground: 138.5 76.5% 90%;
 
+    --datatype-citron: 66 84% 38%;
+    --datatype-citron-foreground: 64 85% 90%;
+
     --datatype-gray: 215 13.8% 34.1%;
     --datatype-gray-foreground: 220 14.3% 95.9%;
 
@@ -451,6 +454,9 @@
 
     --datatype-green: 141.7 76.6% 73.1%;
     --datatype-green-foreground: 142.1 70.6% 35.3%;
+
+    --datatype-citron: 66 86% 56%;
+    --datatype-citron-foreground: 66 84% 34%;
 
     --datatype-gray: 216 12.2% 83.9%;
     --datatype-gray-foreground: 215 13.8% 34.1%;
