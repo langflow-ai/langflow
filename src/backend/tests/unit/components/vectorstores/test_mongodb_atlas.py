@@ -214,7 +214,7 @@ class TestMongoVectorStoreComponent(ComponentTestBaseWithoutClient):
 def _mock_component(mocker, **overrides) -> tuple[MongoVectorStoreComponent, MagicMock, MagicMock]:
     mock_client = MagicMock()
     mocker.patch("pymongo.MongoClient", return_value=mock_client)
-    mock_store_cls = mocker.patch("lfx.components.mongodb.mongodb_atlas.MongoDBAtlasVectorSearch")
+    mock_store_cls = mocker.patch("lfx_mongodb.components.mongodb.mongodb_atlas.MongoDBAtlasVectorSearch")
     kwargs = {
         "mongodb_atlas_cluster_uri": "mongodb://localhost:27017",
         "db_name": "test_db",

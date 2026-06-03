@@ -10,7 +10,7 @@ the migration logic runs in CI without a live Weaviate instance.
 from unittest.mock import MagicMock
 
 import pytest
-from lfx.components.weaviate.weaviate import WeaviateVectorStoreComponent
+from lfx_weaviate.components.weaviate.weaviate import WeaviateVectorStoreComponent
 from lfx.schema.data import Data
 
 
@@ -49,7 +49,7 @@ def test_connect_client_custom(mocker):
 def test_connect_client_cloud(mocker):
     """A Weaviate Cloud URL routes to connect_to_weaviate_cloud (gRPC resolved internally)."""
     mock_cloud = mocker.patch("weaviate.connect_to_weaviate_cloud", return_value=MagicMock())
-    mock_auth = mocker.patch("lfx.components.weaviate.weaviate.AuthApiKey", return_value="AUTH")
+    mock_auth = mocker.patch("lfx_weaviate.components.weaviate.weaviate.AuthApiKey", return_value="AUTH")
     component = WeaviateVectorStoreComponent(
         url="https://my-cluster.weaviate.network",
         index_name="Test",
@@ -74,7 +74,7 @@ def test_connect_client_wraps_errors(mocker):
 def test_build_vector_store_without_documents(mocker):
     mock_client = MagicMock()
     mocker.patch.object(WeaviateVectorStoreComponent, "_connect_client", return_value=mock_client)
-    mock_store_cls = mocker.patch("lfx.components.weaviate.weaviate.WeaviateVectorStore", return_value=MagicMock())
+    mock_store_cls = mocker.patch("lfx_weaviate.components.weaviate.weaviate.WeaviateVectorStore", return_value=MagicMock())
     fake_embedding = MagicMock()
 
     component = WeaviateVectorStoreComponent(url="http://localhost:8080", index_name="Test")
@@ -95,7 +95,7 @@ def test_build_vector_store_without_documents(mocker):
 def test_build_vector_store_with_documents_uses_from_documents(mocker):
     mock_client = MagicMock()
     mocker.patch.object(WeaviateVectorStoreComponent, "_connect_client", return_value=mock_client)
-    mock_store_cls = mocker.patch("lfx.components.weaviate.weaviate.WeaviateVectorStore")
+    mock_store_cls = mocker.patch("lfx_weaviate.components.weaviate.weaviate.WeaviateVectorStore")
     fake_embedding = MagicMock()
 
     component = WeaviateVectorStoreComponent(url="http://localhost:8080", index_name="Test")

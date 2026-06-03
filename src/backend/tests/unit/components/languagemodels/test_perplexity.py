@@ -1,7 +1,7 @@
 from unittest.mock import MagicMock
 
 import pytest
-from lfx.components.perplexity.perplexity import PerplexityComponent
+from lfx_perplexity.components.perplexity.perplexity import PerplexityComponent
 from lfx.custom.custom_component.component import Component
 from lfx.custom.utils import build_custom_component_template
 from lfx.inputs.inputs import DropdownInput, FloatInput, IntInput, SecretStrInput, SliderInput
@@ -62,7 +62,7 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
         # moved out of langchain_community.chat_models into the standalone
         # langchain_perplexity package. build_model must construct that class with the
         # inputs mapped onto its kwargs.
-        mock_chat = mocker.patch("lfx.components.perplexity.perplexity.ChatPerplexity", return_value=MagicMock())
+        mock_chat = mocker.patch("lfx_perplexity.components.perplexity.perplexity.ChatPerplexity", return_value=MagicMock())
         component = component_class(**default_kwargs)
         component.top_p = 0.9
         component.n = 2
@@ -82,7 +82,7 @@ class TestPerplexityComponent(ComponentTestBaseWithoutClient):
     def test_build_model_applies_defaults(self, component_class, mocker):
         # top_p falls back to None and n falls back to 1 when left unset; a falsy
         # temperature falls back to 0.75.
-        mock_chat = mocker.patch("lfx.components.perplexity.perplexity.ChatPerplexity", return_value=MagicMock())
+        mock_chat = mocker.patch("lfx_perplexity.components.perplexity.perplexity.ChatPerplexity", return_value=MagicMock())
         component = component_class(api_key="dummy-key", model_name="llama-3.1-8b-instruct", max_tokens=10)
         component.temperature = 0
         component.top_p = None

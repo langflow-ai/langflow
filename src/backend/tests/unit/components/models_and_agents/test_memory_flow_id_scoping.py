@@ -501,7 +501,7 @@ class TestCugaGetMemoryDataIntegration:
     @staticmethod
     def _make_cuga(flow_id: str | UUID | None, session_id: str = "shared", n_messages: int = 10):
         try:
-            from lfx.components.cuga import cuga_agent
+            from lfx_cuga.components.cuga import cuga_agent
         except Exception as exc:  # pragma: no cover - optional deps
             pytest.skip(f"cuga_agent not importable in this env: {exc}")
 
@@ -517,7 +517,7 @@ class TestCugaGetMemoryDataIntegration:
         agent = self._make_cuga(flow_id=flow_id_str)
 
         with patch(
-            "lfx.components.cuga.cuga_agent.aget_agent_chat_history",
+            "lfx_cuga.components.cuga.cuga_agent.aget_agent_chat_history",
             new=AsyncMock(return_value=[]),
         ) as mock_helper:
             await agent.get_memory_data()
