@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.d29a2eb4.css">
-<script src="/assets/js/runtime~main.81376a44.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.925d91a4.js" defer="defer"></script>
 <script src="/assets/js/main.18ca0898.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -77,8 +77,8 @@ The default storage path depends on your operating system and installation metho
 </li>
 <li class="">
 <p><strong>External PostgreSQL database</strong>: You can use an external PostgreSQL database for all of your Langflow storage.
+External storage can be useful if you want to preserve the data after uninstalling Langflow or to share the same database between multiple virtual environments.
 For more information, see <a href="#configure-external-memory" class="">Configure external memory</a></p>
-<p>External storage can be useful if you want to preserve the data after uninstalling Langflow or to share the same database between multiple virtual environments.</p>
 </li>
 <li class="">
 <p><strong>Separate chat memory</strong>: You can selectively use external storage for chat memory only, separate from other Langflow storage.
@@ -118,7 +118,7 @@ For more information and examples, see <a class="" href="/configuration-custom-d
 <p><code>LANGFLOW_DB_CONNECT_TIMEOUT</code>: The number of seconds to wait before giving up on a lock to be released or establishing a connection to the database. This may be separate from the <code>pool_timeout</code> in <code>LANGFLOW_DB_CONNECTION_SETTINGS</code>. Default: 30.</p>
 </li>
 <li class="">
-<p><code>LANGFLOW_MIGRATION_LOCK_NAMESPACE</code>: Optional namespace identifier for PostgreSQL advisory lock during migrations. If not provided, a hash of the database URL will be used. Useful when multiple Langflow instances share the same database and need coordinated migration locking</p>
+<p><code>LANGFLOW_MIGRATION_LOCK_NAMESPACE</code>: Optional namespace for PostgreSQL advisory locks used during database migrations. This is useful when running multiple Langflow instances that share the same PostgreSQL database. Each instance should use a unique namespace to avoid conflicts. If not set, Langflow uses a default namespace. This setting only applies when using PostgreSQL as your database backend.</p>
 </li>
 <li class="">
 <p><code>LANGFLOW_DB_CONNECTION_SETTINGS</code>: A JSON dictionary containing the following database connection pool settings:</p>
@@ -135,9 +135,6 @@ For more information and examples, see <a class="" href="/configuration-custom-d
 <p>Don&#x27;t use the deprecated environment variables <code>LANGFLOW_DB_POOL_SIZE</code> or <code>LANGFLOW_DB_MAX_OVERFLOW</code>.
 Instead, use <code>pool_size</code> and <code>max_overflow</code> in <code>LANGFLOW_DB_CONNECTION_SETTINGS</code>.</p>
 </li>
-<li class="">
-<p><code>LANGFLOW_MIGRATION_LOCK_NAMESPACE</code>: Optional namespace for PostgreSQL advisory locks used during database migrations. This is useful when running multiple Langflow instances that share the same PostgreSQL database. Each instance should use a unique namespace to avoid conflicts. If not set, Langflow uses a default namespace. This setting only applies when using PostgreSQL as your database backend.</p>
-</li>
 </ul>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="configure-cache-memory">Configure cache memory<a href="#configure-cache-memory" class="hash-link" aria-label="Direct link to Configure cache memory" title="Direct link to Configure cache memory" translate="no">​</a></h2>
 <p>The default Langflow caching behavior is an asynchronous, in-memory cache:</p>
@@ -145,7 +142,7 @@ Instead, use <code>pool_size</code> and <code>max_overflow</code> in <code>LANGF
 <p>Langflow officially supports only the default asynchronous, in-memory cache, which is suitable for most use cases.
 Other cache options, such as Redis, are experimental and can change without notice.
 If you want to use a non-default cache setting, you can use the following environment variables:</p>
-<table><thead><tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>LANGFLOW_CACHE_TYPE</code></td><td>String</td><td><code>async</code></td><td>Set the cache type for Langflow&#x27;s internal caching system. Possible values: <code>async</code>, <code>redis</code>, <code>memory</code>, <code>disk</code>. If you set the type to <code>redis</code>, then you must also set the <code>LANGFLOW_REDIS_*</code> environment variables.</td></tr><tr><td><code>LANGFLOW_LANGCHAIN_CACHE</code></td><td>String</td><td><code>InMemoryCache</code></td><td>Set the cache storage type for the LangChain caching system (a Langflow dependency), either <code>InMemoryCache</code> or <code>SQLiteCache</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_HOST</code></td><td>String</td><td><code>localhost</code></td><td>Redis server hostname if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_PORT</code></td><td>Integer</td><td><code>6379</code></td><td>Redis server port if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_DB</code></td><td>Integer</td><td><code>0</code></td><td>Redis database number if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_CACHE_EXPIRE</code></td><td>Integer</td><td><code>3600</code></td><td>Cache expiration time in seconds if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_PASSWORD</code></td><td>String</td><td>Not set</td><td>Optional password for Redis authentication if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr></tbody></table>
+<table><thead><tr><th>Variable</th><th>Type</th><th>Default</th><th>Description</th></tr></thead><tbody><tr><td><code>LANGFLOW_CACHE_TYPE</code></td><td>String</td><td><code>async</code></td><td>Set the cache type for Langflow&#x27;s internal caching system. Possible values: <code>async</code>, <code>redis</code>, <code>memory</code>. If you set the type to <code>redis</code>, then you must also set the <code>LANGFLOW_REDIS_*</code> environment variables. The <code>disk</code> backend was removed in 1.9.4 — switch to <code>async</code> for in-memory or <code>redis</code> for cross-worker.</td></tr><tr><td><code>LANGFLOW_LANGCHAIN_CACHE</code></td><td>String</td><td><code>InMemoryCache</code></td><td>Set the cache storage type for the LangChain caching system (a Langflow dependency), either <code>InMemoryCache</code> or <code>SQLiteCache</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_HOST</code></td><td>String</td><td><code>localhost</code></td><td>Redis server hostname if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_PORT</code></td><td>Integer</td><td><code>6379</code></td><td>Redis server port if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_DB</code></td><td>Integer</td><td><code>0</code></td><td>Redis database number if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_CACHE_EXPIRE</code></td><td>Integer</td><td><code>3600</code></td><td>Cache expiration time in seconds if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr><tr><td><code>LANGFLOW_REDIS_PASSWORD</code></td><td>String</td><td>Not set</td><td>Optional password for Redis authentication if <code>LANGFLOW_CACHE_TYPE=redis</code>.</td></tr></tbody></table>
 <h2 class="anchor anchorTargetStickyNavbar_Vzrq" id="store-chat-memory">Store chat memory<a href="#store-chat-memory" class="hash-link" aria-label="Direct link to Store chat memory" title="Direct link to Store chat memory" translate="no">​</a></h2>
 <p>Chat-based flows with a <strong>Chat Input</strong> or <strong>Chat Output</strong> component produce chat history that is stored in the Langflow <code>messages</code> table.
 At minimum, this serves as a chat log, but it isn&#x27;t functionally the same as chat memory that provides historical context to an LLM.</p>

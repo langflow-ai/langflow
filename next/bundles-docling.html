@@ -25,7 +25,7 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;family=Sora:wght@550;600&amp;display=swap">
 <script>function gtag(){dataLayer.push(arguments)}window.dataLayer=window.dataLayer||[],gtag("consent","default",{ad_storage:"denied",ad_user_data:"denied",ad_personalization:"denied",analytics_storage:"denied"})</script>
 <script>!function(){function e(){if(void 0!==window.truste&&window.truste.cma){var e=window.truste.cma.callApi("getConsent",window.location.href)||{},n=1===e[2],t=1===e[3];gtag("consent","update",{ad_storage:n?"granted":"denied",ad_user_data:n?"granted":"denied",ad_personalization:n?"granted":"denied",analytics_storage:t?"granted":"denied"})}}window.addEventListener&&(window.addEventListener("cm_data_subject_consent_changed",e),window.addEventListener("cm_consent_preferences_set",e)),"complete"===document.readyState?e():window.addEventListener("load",e)}()</script><link rel="stylesheet" href="/assets/css/styles.d29a2eb4.css">
-<script src="/assets/js/runtime~main.81376a44.js" defer="defer"></script>
+<script src="/assets/js/runtime~main.925d91a4.js" defer="defer"></script>
 <script src="/assets/js/main.18ca0898.js" defer="defer"></script>
 </head>
 <body class="navigation-with-keyboard">
@@ -70,8 +70,9 @@ The Docling dependency is required to use the Docling components in Langflow.</p
 <li class="">
 <p><strong>Langflow OSS</strong>:</p>
 <ul>
-<li class="">If you installed <code>langflow</code> (<code>uv pip install langflow</code>), Docling is included automatically through bundled extras.</li>
+<li class="">If you installed <code>langflow</code> (<code>uv pip install langflow</code>), Docling is included automatically through bundled extras, without Docling&#x27;s optional chunking dependencies.</li>
 <li class="">If you installed <code>langflow-base</code> directly, install Docling with an extra, for example <code>uv pip install &quot;langflow-base[docling]&quot;</code>.</li>
+<li class="">To use the <strong>Chunk DoclingDocument</strong> component, install the chunking extra with <code>uv pip install &quot;langflow[docling-chunking]&quot;</code> or <code>uv pip install &quot;langflow-base[docling-chunking]&quot;</code>.</li>
 </ul>
 </li>
 <li class="">
@@ -130,6 +131,7 @@ The <strong>Split Text</strong> component will split the Markdown into chunks fo
 <table><thead><tr><th>Name</th><th>Type</th><th>Description</th></tr></thead><tbody><tr><td>files</td><td>File</td><td>The files to process.</td></tr><tr><td>api_url</td><td>String</td><td>URL of the Docling Serve instance.</td></tr><tr><td>max_concurrency</td><td>Integer</td><td>Maximum number of concurrent requests for the server.</td></tr><tr><td>max_poll_timeout</td><td>Float</td><td>Maximum waiting time for the document conversion to complete.</td></tr><tr><td>api_headers</td><td>Dict</td><td>Optional dictionary of additional headers required for connecting to Docling Serve.</td></tr><tr><td>docling_serve_opts</td><td>Dict</td><td>Optional dictionary of additional options for Docling Serve.</td></tr></tbody></table>
 <h3 class="anchor anchorTargetStickyNavbar_Vzrq" id="chunk-doclingdocument">Chunk DoclingDocument<a href="#chunk-doclingdocument" class="hash-link" aria-label="Direct link to Chunk DoclingDocument" title="Direct link to Chunk DoclingDocument" translate="no">​</a></h3>
 <p>The <strong>Chunk DoclingDocument</strong> component splits <code>DoclingDocument</code> objects into chunks.</p>
+<p>This component requires Docling&#x27;s optional chunking dependencies. Install them with <code>uv pip install &quot;langflow[docling-chunking]&quot;</code> or <code>uv pip install &quot;langflow-base[docling-chunking]&quot;</code>.</p>
 <p>It outputs the chunked documents as a <a class="" href="/data-types#table"><code>Table</code></a>.</p>
 <p>For more information, see the <a href="https://github.com/docling-project/docling-core" target="_blank" rel="noopener noreferrer" class="">Docling core project repository</a>.</p>
 <h4 class="anchor anchorTargetStickyNavbar_Vzrq" id="chunk-doclingdocument-parameters">Chunk DoclingDocument parameters<a href="#chunk-doclingdocument-parameters" class="hash-link" aria-label="Direct link to Chunk DoclingDocument parameters" title="Direct link to Chunk DoclingDocument parameters" translate="no">​</a></h4>
