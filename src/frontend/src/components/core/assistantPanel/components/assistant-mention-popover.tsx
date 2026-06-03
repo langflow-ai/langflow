@@ -24,7 +24,7 @@ export function AssistantMentionPopover({
       // Keep the textarea focused when clicking an item so the caret position
       // used for token insertion stays valid.
       onMouseDown={(e) => e.preventDefault()}
-      className="absolute bottom-full left-2 z-40 mb-2 max-h-48 w-72 max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border border-border bg-background py-1 shadow-md"
+      className="absolute bottom-full left-2 z-40 mb-2 max-h-48 w-[70%] max-w-[calc(100%-1rem)] overflow-y-auto rounded-md border border-border bg-background py-1 shadow-md"
     >
       {items.length === 0 ? (
         <div className="px-3 py-2 text-xs text-muted-foreground">
