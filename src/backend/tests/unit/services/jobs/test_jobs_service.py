@@ -65,3 +65,49 @@ async def test_set_error_persists_blob():
 async def test_set_result_returns_none_for_missing_job():
     service = JobService()
     assert await service.set_result(uuid4(), {"x": 1}) is None
+
+
+@pytest.mark.usefixtures("client")
+async def test_append_event_assigns_monotonic_seq():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    seq1 = await service.append_event(job_id, "run_started", {"a": 1})
+    seq2 = await service.append_event(job_id, "vertex_started", {"b": 2})
+    seq3 = await service.append_event(job_id, "run_finished", {"c": 3})
+
+    assert (seq1, seq2, seq3) == (1, 2, 3)
+
+
+@pytest.mark.usefixtures("client")
+async def test_append_event_seq_is_per_job():
+    service = JobService()
+    job_a = uuid4()
+    job_b = uuid4()
+    await service.create_job(job_id=job_a, flow_id=uuid4(), user_id=uuid4())
+    await service.create_job(job_id=job_b, flow_id=uuid4(), user_id=uuid4())
+
+    assert await service.append_event(job_a, "x", {}) == 1
+    assert await service.append_event(job_b, "x", {}) == 1
+    assert await service.append_event(job_a, "x", {}) == 2
+
+
+@pytest.mark.usefixtures("client")
+async def test_read_events_after_seq_returns_ordered_tail():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    await service.append_event(job_id, "e1", {"i": 1})
+    await service.append_event(job_id, "e2", {"i": 2})
+    await service.append_event(job_id, "e3", {"i": 3})
+
+    tail = await service.read_events(job_id, after_seq=1)
+    assert [e.seq for e in tail] == [2, 3]
+    assert [e.event_type for e in tail] == ["e2", "e3"]
+    assert tail[0].payload == {"i": 2}
+
+    # after_seq=0 (or default) returns everything in order.
+    all_events = await service.read_events(job_id, after_seq=0)
+    assert [e.seq for e in all_events] == [1, 2, 3]

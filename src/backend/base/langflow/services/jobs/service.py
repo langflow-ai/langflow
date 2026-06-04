@@ -17,7 +17,7 @@ from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
-from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
+from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus, JobType
 from langflow.services.deps import session_scope
 from langflow.services.jobs.exceptions import DuplicateJobError
 
@@ -228,6 +228,40 @@ class JobService(Service):
             session.add(job)
             await session.flush()
             return job
+
+    async def append_event(self, job_id: UUID, event_type: str, payload: dict) -> int:
+        """Append a durable event for a job and return its per-job seq.
+
+        seq is assigned as max(existing seq for job) + 1. UNIQUE(job_id, seq)
+        on the table guards against concurrent double-assignment — a colliding
+        writer raises IntegrityError, which the runner treats as a retryable
+        append.
+        """
+        async with session_scope() as session:
+            stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id)
+            result = await session.exec(stmt)
+            current_max = result.one()
+            next_seq = (current_max or 0) + 1
+            event = JobEvent(job_id=job_id, seq=next_seq, event_type=event_type, payload=payload)
+            session.add(event)
+            await session.flush()
+            return next_seq
+
+    async def read_events(self, job_id: UUID, after_seq: int = 0) -> list[JobEvent]:
+        """Return durable events for a job with seq > after_seq, ordered by seq.
+
+        ``after_seq`` is the SSE Last-Event-ID cursor; pass 0 to read from the
+        start.
+        """
+        async with session_scope() as session:
+            stmt = (
+                select(JobEvent)
+                .where(JobEvent.job_id == job_id)
+                .where(JobEvent.seq > after_seq)
+                .order_by(col(JobEvent.seq).asc())
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
