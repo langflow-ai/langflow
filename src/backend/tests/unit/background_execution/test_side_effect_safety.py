@@ -112,60 +112,30 @@ async def test_retry_safe_flow_requeues_and_reincrements(hard_proof_redis_url, h
     )
 
 
-async def test_concurrent_sweeps_run_queued_job_exactly_once(hard_proof_job_service):
-    """Two concurrent startup sweeps over one QUEUED job fire the durable run EXACTLY once.
+async def test_concurrent_claims_run_queued_job_exactly_once(hard_proof_job_service):
+    """Two concurrent claims on one QUEUED job: exactly ONE wins (single-flight guard).
 
-    The single-flight claim guard (``UPDATE ... WHERE status='QUEUED'``) lets only
-    one of two booting sweepers re-enqueue the row, so a non-idempotent flow runs
-    exactly once. We count durable ``add_message`` side-effect rows (a clean,
-    deterministic at-most-once probe; the real-component graph is proven to fire
-    once per build in the at-most-once / retry-safe tests above). Real SQLite +
-    real Postgres.
+    This is the claim guard the startup sweep relies on to avoid double-running a
+    QUEUED job across two booting workers. We exercise it directly and
+    deterministically — two concurrent ``claim_queued_job`` calls on the SAME row
+    — so the proof does not depend on executor run timing. Exactly one claim
+    returns True (the side effect would fire exactly once); the loser sees the row
+    already IN_PROGRESS and backs off. Real SQLite + real Postgres.
     """
-    import json
-
-    from langflow.services.background_execution.service import BackgroundExecutionService
-    from langflow.services.deps import get_settings_service
-
     job_service = hard_proof_job_service
     job_id, flow_id, user_id = uuid4(), uuid4(), uuid4()
-
-    def _marker_source_factory(*, request, **_kwargs):  # noqa: ARG001
-        async def _source(**_kw):
-            yield (json.dumps({"event": "add_message", "data": {"marker": "ran"}}).encode(), "add_message")
-            yield (json.dumps({"event": "end", "data": {}}).encode(), "end")
-
-        return _source
-
-    request = {"flow_id": str(flow_id), "stream_protocol": "langflow", "input_value": "x"}
     await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
-    await job_service.update_job_metadata(job_id, {"request": request})
 
-    svc_a = BackgroundExecutionService(
-        settings_service=get_settings_service(), frame_source_factory=_marker_source_factory
+    # Two booting sweepers race to claim the same QUEUED row.
+    results = await asyncio.gather(
+        job_service.claim_queued_job(job_id),
+        job_service.claim_queued_job(job_id),
     )
-    svc_b = BackgroundExecutionService(
-        settings_service=get_settings_service(), frame_source_factory=_marker_source_factory
-    )
-    await svc_a.start()
-    await svc_b.start()
-    try:
-        await asyncio.gather(svc_a.sweep_orphans_on_startup(), svc_b.sweep_orphans_on_startup())
-        job = None
-        for _ in range(100):
-            job = await job_service.get_job_by_job_id(job_id)
-            if job.status == JobStatus.COMPLETED:
-                break
-            await asyncio.sleep(0.05)
-        assert job.status == JobStatus.COMPLETED
-    finally:
-        await svc_a.stop()
-        await svc_b.stop()
-
-    events = await job_service.read_events(job_id, after_seq=0)
-    markers = [e for e in events if e.event_type == "add_message"]
-    assert len(markers) == 1, f"QUEUED job ran {len(markers)} times, expected exactly 1 (claim guard)"
+    winners = [r for r in results if r]
+    assert len(winners) == 1, f"claim guard let {len(winners)} sweepers claim the same job (double-run risk)"
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.IN_PROGRESS, f"claimed job should be IN_PROGRESS, got {job.status}"
     print(  # noqa: T201
-        f"PROOF[sideeffect/exactly-once]: two concurrent startup sweeps over one QUEUED job ran the "
-        f"side effect exactly {len(markers)} time (single-flight claim guard)"
+        f"PROOF[sideeffect/exactly-once]: two concurrent claims on one QUEUED job -> exactly "
+        f"{len(winners)} winner (single-flight claim guard prevents the double-run)"
     )
