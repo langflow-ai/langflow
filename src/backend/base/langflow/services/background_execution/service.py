@@ -294,9 +294,10 @@ class BackgroundExecutionService(Service):
         await self._validate(job_id, user)
         if self._scaled:
             # Scaled mode: the owning worker runs in another process. backend.stop
-            # writes the durable STOP signal (the source of truth the worker polls
-            # at vertex boundaries) AND publishes the redis pub/sub fast-path so
-            # the owning worker reacts immediately instead of waiting for its poll.
+            # writes the durable STOP signal — the single source of truth the
+            # worker's JobRunner polls at vertex boundaries. There is no pub/sub
+            # fast-path (nothing in the worker subscribes to one), so stop latency
+            # is one vertex-boundary poll, bounded by the run's durable cadence.
             await self._backend.stop(str(job_id))
             return
         job_service = get_job_service()

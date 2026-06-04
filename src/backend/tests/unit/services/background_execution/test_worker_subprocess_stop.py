@@ -1,10 +1,10 @@
-"""REAL-PROCESS hard proof: pub/sub STOP from the API reaches a separate worker.
+"""REAL-PROCESS hard proof: a durable STOP from the API reaches a separate worker.
 
 Closes the Phase 4 caveat that stop was delivered in-process. Here an ACTUAL
 ``langflow worker`` OS subprocess runs a slowish multi-vertex real flow; the
-API-side facade calls ``stop_job`` (durable STOP signal + redis pub/sub
-fast-path); the SEPARATE worker process honors the stop and the job ends
-CANCELLED with the STOP signal consumed.
+API-side facade calls ``stop_job`` (the durable STOP signal, the single source of
+truth); the SEPARATE worker process honors the stop at its next vertex boundary
+and the job ends CANCELLED with the STOP signal consumed.
 
 Requires real Postgres + real Redis. Skips otherwise. Every wait is bounded.
 """
@@ -48,7 +48,7 @@ async def test_real_worker_subprocess_honors_pubsub_stop():
         user_id, flow_id = await harness.seed_slow_flow()
         job_id = await harness.submit_job(flow_id=flow_id, user_id=user_id, input_value="stop-me")
 
-        # API-side scaled facade (writes the durable STOP + publishes pub/sub).
+        # API-side scaled facade (writes the durable STOP signal, the source of truth).
         from redis.asyncio import StrictRedis
 
         api_client = StrictRedis.from_url(harness.redis_url)
@@ -67,8 +67,8 @@ async def test_real_worker_subprocess_honors_pubsub_stop():
             if job.status != JobStatus.IN_PROGRESS:
                 pytest.skip(f"job reached {job.status} before stop could land (too fast on this host)")
 
-            # API-side stop: durable STOP signal + redis pub/sub fast-path to the
-            # owning worker process.
+            # API-side stop: the durable STOP signal the owning worker process
+            # polls at its next vertex boundary.
             await facade.stop_job(job_id, _StubUser(user_id))
 
             # The SEPARATE worker honors the stop at a vertex boundary -> CANCELLED.
@@ -82,7 +82,7 @@ async def test_real_worker_subprocess_honors_pubsub_stop():
             assert leftover == [], "STOP signal was not consumed by the worker"
             print(  # noqa: T201
                 f"PROOF[subprocess/stop]: API stop_job -> SEPARATE worker (pid={proc.pid}) honored "
-                f"durable STOP + pub/sub -> job CANCELLED, signal consumed"
+                f"durable STOP -> job CANCELLED, signal consumed"
             )
         finally:
             await api_client.aclose()

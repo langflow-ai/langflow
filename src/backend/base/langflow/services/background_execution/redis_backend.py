@@ -23,11 +23,7 @@ from typing import TYPE_CHECKING, Any
 
 from langflow.services.background_execution.redis_queue import RedisJobClaimQueue
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
-from langflow.services.job_queue.service import (
-    _CANCEL_CHANNEL_PREFIX,
-    RedisJobQueueService,
-    RedisQueueWrapper,
-)
+from langflow.services.job_queue.service import RedisQueueWrapper
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -42,8 +38,8 @@ def _as_signal_job_id(job_id: str) -> Any:
     """Best-effort coerce a job id string to a UUID for the durable signal row.
 
     The facade always passes a real UUID string, so the durable STOP row keys
-    match ``unconsumed_signals(UUID)`` lookups. A non-UUID id (the pure pub/sub
-    wire test runs with a noop job service) is passed through unchanged.
+    match ``unconsumed_signals(UUID)`` lookups. A non-UUID id is passed through
+    unchanged (tolerated so a test with a non-UUID id does not crash the coerce).
     """
     if isinstance(job_id, uuid.UUID):
         return job_id
@@ -112,29 +108,25 @@ class RedisBackgroundQueue:
 
     # ---------------------------------------------------------------- control
 
-    async def stop(self, job_id: str, *, marker_ttl: int = 60) -> None:
-        """Request a cooperative stop: durable signal first, then pub/sub fast-path.
+    async def stop(self, job_id: str) -> None:
+        """Request a cooperative stop via the durable STOP signal.
 
-        The ExecutionSignal(STOP) row is the source of truth — a worker polls
-        unconsumed_signals at vertex boundaries and stops even if the pub/sub
-        message is missed (worker restart, late subscribe). The redis marker +
-        PUBLISH is the fast-path so the owning worker reacts immediately.
+        The ExecutionSignal(STOP) row is the single source of truth: the worker's
+        JobRunner polls ``unconsumed_signals`` at each durable vertex/milestone
+        boundary and cooperatively cancels, so a stop lands at the next boundary
+        and survives a worker restart or late subscribe.
 
-        The marker/channel conventions mirror RedisJobQueueService exactly so a
-        worker running the existing cancel dispatcher / marker-check picks these
-        up unchanged (we reuse, not reimplement, the wire path).
+        There is deliberately NO redis pub/sub fast-path here. The background
+        worker (run_worker_loop -> WorkerJobRunner -> JobRunner) does not run the
+        v1 RedisJobQueueService cancel dispatcher and nothing else subscribes to a
+        cancel channel or checks a cancel marker, so a PUBLISH/marker would be a
+        no-op in production — a misleading dead fast-path. Scaled stop latency is
+        therefore one vertex-boundary poll (bounded by the run's durable-frame
+        cadence), proven by the scaled-stop real-redis test.
         """
-        # 1. Durable source of truth. Coerce to UUID so the DB row keys match
-        #    unconsumed_signals(UUID) lookups; tolerate non-UUID ids (used in the
-        #    pure pub/sub wire test with a noop job service) by passing them
-        #    through unchanged.
+        # Coerce to UUID so the DB row keys match unconsumed_signals(UUID)
+        # lookups; tolerate a non-UUID id by passing it through unchanged.
         await self._job_service.write_signal(_as_signal_job_id(job_id), SignalType.STOP)
-        # 2. Fast-path: set the marker (race-safe for a worker that hasn't
-        #    subscribed yet) then publish on the cancel channel.
-        marker_key = f"{RedisJobQueueService._CANCEL_MARKER_PREFIX}{job_id}"  # noqa: SLF001
-        channel = f"{_CANCEL_CHANNEL_PREFIX}{job_id}"
-        await self._client.set(marker_key, "1", ex=marker_ttl)
-        await self._client.publish(channel, "1")
 
     # ------------------------------------------------------------- watchdog
 

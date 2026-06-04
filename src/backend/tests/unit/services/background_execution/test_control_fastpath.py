@@ -1,4 +1,4 @@
-"""stop() writes the durable STOP signal (source of truth) and publishes the fast-path."""
+"""stop() writes the durable STOP signal (the single source of truth, no fast-path)."""
 
 from __future__ import annotations
 
@@ -29,7 +29,13 @@ async def test_stop_writes_durable_signal(active_user):
 
 @pytest.mark.usefixtures("client")
 @pytest.mark.asyncio
-async def test_stop_publishes_fastpath_marker(active_user):
+async def test_stop_writes_no_dead_pubsub_marker(active_user):
+    """stop() must NOT set a cancel marker / publish: nothing in the worker reads it.
+
+    The background worker does not run the v1 RedisJobQueueService cancel
+    dispatcher, so a marker + PUBLISH would be a dead, misleading fast-path. The
+    durable STOP signal is the only mechanism; assert no cancel marker is written.
+    """
     jobs = get_job_service()
     job_id = uuid.uuid4()
     await jobs.create_job(job_id=job_id, flow_id=uuid.uuid4(), user_id=active_user.id)
@@ -38,7 +44,5 @@ async def test_stop_publishes_fastpath_marker(active_user):
     backend = RedisBackgroundQueue(client=redis, job_service=jobs)
     await backend.stop(str(job_id))
 
-    # Fast-path: the cancel marker is set so a worker that races the publish
-    # still sees it on its start_job marker check.
     marker = await redis.get(f"langflow:cancel-marker:{job_id}")
-    assert marker is not None
+    assert marker is None, "stop() wrote a dead cancel marker no worker consumes"

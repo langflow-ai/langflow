@@ -1,16 +1,18 @@
-"""Real-redis + real-DB: facade stop_job (scaled) lands a STOP the worker honors -> CANCELLED.
+"""Real-redis + real-DB: scaled stop latency is bounded by the vertex-boundary poll.
 
-The facade's scaled stop_job writes the durable ExecutionSignal(STOP), the single
-source of truth (no pub/sub fast-path). The worker's JobRunner polls
-unconsumed_signals at vertex boundaries and cooperatively cancels. This proves the
-control path end-to-end on real redis: stop -> worker sees STOP -> job CANCELLED,
-with the STOP signal stamped consumed.
+Scaled stop has NO pub/sub fast-path: the durable STOP signal is the source of
+truth, and the worker's JobRunner polls ``unconsumed_signals`` at each durable
+vertex/milestone boundary. This proves the latency contract: a job emitting a
+durable frame every ``boundary_s`` is cancelled within a small number of
+boundaries after ``stop_job`` (not "never" and not "one long vertex too late"),
+so removing the dead fast-path did not regress responsiveness — the durable poll
+delivers a bounded stop on its own.
 """
 
 from __future__ import annotations
 
 import asyncio
-import json
+import time
 import uuid
 from typing import TYPE_CHECKING
 
@@ -19,7 +21,7 @@ from langflow.services.background_execution.redis_backend import RedisBackground
 from langflow.services.background_execution.redis_live_bus import RedisStreamLiveBus
 from langflow.services.background_execution.service import BackgroundExecutionService
 from langflow.services.background_execution.worker import WorkerJobRunner, run_worker_loop
-from langflow.services.database.models.jobs.model import JobStatus, SignalType
+from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.deps import get_job_service, get_settings_service
 
 if TYPE_CHECKING:
@@ -27,23 +29,23 @@ if TYPE_CHECKING:
 
 pytestmark = pytest.mark.usefixtures("client")
 
+_BOUNDARY_S = 0.1
+
 
 def _frame(event_type: str, data: dict) -> tuple[bytes, str]:
+    import json
+
     return (json.dumps({"event": event_type, "data": data}).encode("utf-8"), event_type)
 
 
-def _slow_source_factory(stop_requested: asyncio.Event):
-    # A frame-source factory is a plain callable returning an async-generator
-    # callable (see _default_frame_source_factory) — NOT an async function.
+def _cadence_source_factory(in_flight: asyncio.Event):
     def _factory(**_kw):
         async def _source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
-            # Emit a durable frame, signal the test that the run is in-flight, then
-            # keep emitting durable frames slowly so the JobRunner polls the STOP
-            # signal at a boundary and cancels before the natural end.
             yield _frame("build_start", {})
-            stop_requested.set()
-            for i in range(50):
-                await asyncio.sleep(0.1)
+            in_flight.set()
+            # Durable frame every _BOUNDARY_S so the STOP poll fires on a known cadence.
+            for i in range(200):
+                await asyncio.sleep(_BOUNDARY_S)
                 yield _frame("end_vertex", {"id": f"n{i}"})
             yield _frame("end", {})
 
@@ -52,7 +54,7 @@ def _slow_source_factory(stop_requested: asyncio.Event):
     return _factory
 
 
-async def test_scaled_stop_cancels_the_running_job(real_redis, active_user):
+async def test_scaled_stop_latency_is_bounded(real_redis, active_user):
     jobs = get_job_service()
     settings = get_settings_service().settings
     settings.job_queue_type = "redis"
@@ -63,29 +65,27 @@ async def test_scaled_stop_cancels_the_running_job(real_redis, active_user):
     backend.claim_queue.processing_key = f"{prefix}processing"
     facade = BackgroundExecutionService(settings_service=get_settings_service(), backend=backend)
 
-    flow_id = uuid.uuid4()
-    job_id = await facade.submit(flow_id=flow_id, request={"stream_protocol": "langflow"}, user=active_user)
+    job_id = await facade.submit(flow_id=uuid.uuid4(), request={"stream_protocol": "langflow"}, user=active_user)
 
     in_flight = asyncio.Event()
     live_bus = RedisStreamLiveBus(real_redis, ttl=60)
     worker_runner = WorkerJobRunner(
-        settings=settings,
-        live_bus=live_bus,
-        frame_source_factory=_slow_source_factory(in_flight),
+        settings=settings, live_bus=live_bus, frame_source_factory=_cadence_source_factory(in_flight)
     )
     stop_event = asyncio.Event()
+    latency: dict[str, float] = {}
 
     async def drive_stop_then_wait():
-        # Wait until the run is in-flight, then stop it through the facade.
         await asyncio.wait_for(in_flight.wait(), timeout=10.0)
+        t0 = time.monotonic()
         await facade.stop_job(job_id, active_user)
-        # Wait until the durable row reaches CANCELLED, then end the worker loop.
-        for _ in range(200):
+        for _ in range(400):
             refreshed = await jobs.get_job_by_job_id(job_id)
             if refreshed.status in {JobStatus.CANCELLED, JobStatus.COMPLETED, JobStatus.FAILED}:
+                latency["s"] = time.monotonic() - t0
                 stop_event.set()
                 return
-            await asyncio.sleep(0.05)
+            await asyncio.sleep(0.02)
         stop_event.set()
 
     driver = asyncio.create_task(drive_stop_then_wait())
@@ -94,6 +94,7 @@ async def test_scaled_stop_cancels_the_running_job(real_redis, active_user):
 
     refreshed = await jobs.get_job_by_job_id(job_id)
     assert refreshed.status == JobStatus.CANCELLED
-    # The STOP signal was stamped consumed by the runner's terminal reconcile.
-    leftover = [s for s in await jobs.unconsumed_signals(job_id) if s.signal_type == SignalType.STOP]
-    assert leftover == []
+    # Bounded: cancelled within a few boundary polls, not "one long vertex" later.
+    # 20 boundaries (2s) is a generous ceiling over the 0.1s cadence — a real
+    # regression (stop never honored) would blow well past this.
+    assert latency.get("s", 999) <= 20 * _BOUNDARY_S, f"stop latency unbounded: {latency}"
