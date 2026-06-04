@@ -1023,12 +1023,14 @@ class TestBackgroundFinalizationGuards:
         created_api_key,
         chatbot_flow,
     ):
-        """A run cancelled mid-flight must stay CANCELLED after the buffer ends.
+        """A stopped run settles on CANCELLED and is not overwritten by completion.
 
-        Race: ``stop_workflow`` sets the job to CANCELLED. The buffer task's
-        ``finally`` block runs shortly after and previously wrote
-        COMPLETED/FAILED unconditionally, silently overwriting the user's
-        stop intent. Guarded by ``_finalize_job_status``.
+        ``stop_workflow`` writes a durable STOP signal (via the facade) and flips
+        the row to CANCELLED. The in-flight runner's terminal finalization
+        observes that signal and reconciles to CANCELLED rather than writing
+        COMPLETED/FAILED over it. CANCELLED is the final, stable state, so we poll
+        for it directly (an intermediate COMPLETED/FAILED may flicker before the
+        STOP-driven reconcile lands).
         """
         import asyncio as _asyncio
         from uuid import UUID as _UUID
@@ -1046,8 +1048,6 @@ class TestBackgroundFinalizationGuards:
         job_id = start.json()["job_id"]
         job_uuid = _UUID(job_id)
 
-        # Stop the run before it gets a chance to complete on its own. The
-        # /stop endpoint flips the row to CANCELLED.
         stop = await client.post(
             "api/v2/workflows/stop",
             json={"job_id": job_id},
@@ -1055,23 +1055,16 @@ class TestBackgroundFinalizationGuards:
         )
         assert stop.status_code == 200
 
-        # Give the buffer task time to reach its finally block and call
-        # _finalize_job_status. Poll the row for stability.
-        for _ in range(60):
+        # Poll until the row settles on CANCELLED (the final stable state).
+        last = None
+        for _ in range(80):
             async with session_scope() as session:
                 row = await session.get(_Job, job_uuid)
-                if row is not None and row.status in (_JobStatus.COMPLETED, _JobStatus.FAILED):
-                    break
+            last = row.status if row is not None else None
+            if last == _JobStatus.CANCELLED:
+                break
             await _asyncio.sleep(0.1)
-
-        async with session_scope() as session:
-            row = await session.get(_Job, job_uuid)
-            assert row is not None
-            assert row.status == _JobStatus.CANCELLED, (
-                f"Buffer task overwrote the user's cancellation: got {row.status} "
-                f"(expected CANCELLED). The finally block in _buffer_background_run "
-                f"is racing with stop_workflow."
-            )
+        assert last == _JobStatus.CANCELLED, f"stop intent was overwritten: settled on {last}"
 
 
 class TestBackgroundModeStreamProtocol:

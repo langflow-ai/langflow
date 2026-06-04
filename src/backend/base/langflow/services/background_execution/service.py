@@ -43,16 +43,6 @@ if TYPE_CHECKING:
 # adapter + flow; tests inject a scripted generator.
 FrameSourceFactory = Callable[..., Any]
 
-# Statuses where the run has genuinely finished, so a STOP is pointless.
-# CANCELLED is intentionally excluded: ``stop_workflow`` flips the row to
-# CANCELLED before calling ``stop_job``, but the in-flight runner may still be
-# racing to COMPLETED — we must still write the STOP signal and cancel the task.
-_FINISHED_STATUSES = {
-    JobStatus.COMPLETED,
-    JobStatus.FAILED,
-    JobStatus.TIMED_OUT,
-}
-
 
 class BackgroundExecutionService(Service):
     name = "background_execution_service"
@@ -164,16 +154,17 @@ class BackgroundExecutionService(Service):
     # -------------------------------------------------------------------- stop
 
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
-        job = await self._validate(job_id, user)
-        if job.status in _FINISHED_STATUSES:
-            return
+        # Enforces ownership (raises PermissionError on a cross-user/unknown job).
+        await self._validate(job_id, user)
         job_service = get_job_service()
-        # Durable STOP so the runner's boundary poll (and its terminal reconcile)
-        # sees the stop even if the in-flight task cancel races; then cancel the
-        # local task for promptness. Written even when the row is already
-        # CANCELLED because the runner may still be mid-flight racing to
-        # COMPLETED — the durable STOP is what makes the reconcile win.
+        # Always write the durable STOP signal — even when the row currently
+        # reads a finished status. An in-flight runner can write its terminal
+        # status (COMPLETED/FAILED) in the tiny window after stop_workflow flips
+        # the row to CANCELLED but before this fetch; the runner's terminal
+        # reconcile keys off this signal to force CANCELLED back over that
+        # overwrite. Skipping the signal here is what let a racing FAILED win.
         await job_service.write_signal(job_id, SignalType.STOP)
+        # Cancel the in-flight task for promptness; a no-op if it already ended.
         await self._executor.cancel(str(job_id))
 
     # ----------------------------------------------------------- startup sweep

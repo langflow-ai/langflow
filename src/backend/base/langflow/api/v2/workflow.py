@@ -1066,12 +1066,14 @@ async def stop_workflow(
 
     try:
         revoked = await task_service.revoke_task(job_id)
-        await job_service.update_job_status(job_id, JobStatus.CANCELLED)
-        # Tell the facade to write a durable STOP signal, cancel the in-flight
-        # executor task, and close the live stream so re-attach readers see a
-        # clean end. Best-effort: a facade hiccup must not fail the stop.
+        # Write the durable STOP signal + cancel the in-flight executor task
+        # BEFORE flipping the row to CANCELLED. The signal is the marker the
+        # runner's terminal reconcile keys off, so persisting it first means an
+        # in-flight runner racing to a terminal state reliably observes the stop
+        # and finalizes CANCELLED rather than overwriting it with COMPLETED/FAILED.
         with contextlib.suppress(Exception):
             await get_background_execution_service().stop_job(job_id, current_user)
+        await job_service.update_job_status(job_id, JobStatus.CANCELLED)
 
         message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."
         return WorkflowStopResponse(job_id=str(job_id), message=message)
