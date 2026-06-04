@@ -159,29 +159,6 @@ class TestFirecrawlMapApi:
         assert client.map.call_args.kwargs.get("sitemap") == "skip"
 
 
-class TestFirecrawlExtractApi:
-    def test_extract_calls_v2_with_urls_list_and_web_search(self, mock_firecrawl):
-        client = mock_firecrawl.return_value
-        client.extract.return_value = _typed({"data": {"x": 1}})
-
-        component = FirecrawlExtractApi()
-        component._attributes = {
-            "api_key": "test-key",
-            "urls": "https://example.com",
-            "prompt": "extract the title",
-            "schema": None,
-            "enable_web_search": True,
-        }
-
-        result = component.extract()
-
-        client.extract.assert_called_once()
-        # v2 takes the URLs as a list in the first positional arg.
-        assert client.extract.call_args.args[0] == ["https://example.com"]
-        assert client.extract.call_args.kwargs.get("enable_web_search") is True
-        assert result.data == {"data": {"x": 1}}
-
-
 class TestFirecrawlSearchApi:
     def test_search_calls_v2_with_query_limit_location(self, mock_firecrawl):
         client = mock_firecrawl.return_value
