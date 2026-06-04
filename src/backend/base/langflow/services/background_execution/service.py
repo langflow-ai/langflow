@@ -58,21 +58,51 @@ class BackgroundExecutionService(Service):
         settings_service: SettingsService,
         *,
         frame_source_factory: FrameSourceFactory | None = None,
+        backend: Any | None = None,
     ) -> None:
         self.settings_service = settings_service
         self._settings = settings_service.settings
-        self._is_redis = self._settings.job_queue_type == "redis"
+        self._is_redis = self._settings.background_backend_is_scaled
+        # Scaled backend: the redis claim queue + Streams live bus + DB replay.
+        # When configured (redis), the API process only enqueues — a separate
+        # ``langflow worker`` process drains the queue and runs the JobRunner.
+        # Injected in tests; otherwise built lazily here from settings when the
+        # scaled backend is configured. In the default (asyncio) path it stays
+        # None and the in-process executor below runs jobs inside the API.
+        if backend is None and self._is_redis:
+            backend = self._build_scaled_backend()
+        self._backend = backend
         self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
         self._bus = InMemoryLiveBus()
         # Injected in tests; defaulted to the real build loop by the route wiring.
         self._frame_source_factory = frame_source_factory
         self.set_ready()
 
+    @property
+    def _scaled(self) -> bool:
+        """True when a redis-backed scaled backend is wired behind this facade."""
+        return self._backend is not None
+
+    def _build_scaled_backend(self) -> Any:
+        """Build the redis-backed scaled backend from settings.
+
+        Reuses the worker's redis-client resolution (URL → host/port/db with the
+        cache-redis fallbacks) so the API enqueues to the exact redis a worker
+        drains, and ``select_background_backend`` so selection follows
+        ``background_backend_is_scaled``. Returns None in the default path.
+        """
+        from langflow.services.background_execution.factory import select_background_backend
+        from langflow.services.background_execution.worker import _build_redis_client
+        from langflow.services.deps import get_job_service
+
+        client = _build_redis_client(self._settings)
+        return select_background_backend(self._settings, client=client, job_service=get_job_service())
+
     async def start(self) -> None:
-        if self._is_redis:
-            # Phase 3 fills this in (redis queue + worker process + streams bus).
-            msg = "Redis background backend is not implemented yet (Phase 3)."
-            raise NotImplementedError(msg)
+        # Scaled mode: nothing to start in the API process — the worker process
+        # owns execution. (No NotImplementedError: the redis backend is wired.)
+        if self._scaled:
+            return
         await self._executor.start()
 
     async def stop(self) -> None:
@@ -108,10 +138,16 @@ class BackgroundExecutionService(Service):
             raise
         # Persist the submit request on the job row so a QUEUED job that survives
         # a restart is re-enqueued with its ORIGINAL inputs (input_value, tweaks,
-        # globals, etc.), not a reconstructed default. The startup sweep reads it
-        # back via ``_reconstruct_request``.
+        # globals, etc.), not a reconstructed default. The worker / startup sweep
+        # read it back via ``_reconstruct_request``.
         await job_service.update_job_metadata(job_id, {"request": request})
-        await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
+        if self._scaled:
+            # Scaled mode: hand the QUEUED job id to a worker via the redis claim
+            # queue. The DB row stays the system of record; the API does NOT run
+            # the flow. The worker hydrates the request from the job row.
+            await self._backend.enqueue(str(job_id))
+        else:
+            await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
         return job_id
 
     @staticmethod
@@ -182,10 +218,27 @@ class BackgroundExecutionService(Service):
         # is empty, so ``reattach`` would replay durable rows then block forever on
         # ``while True: queue.get()`` waiting for a live tail that will never come.
         # Decide "finished" off the persisted status (the cross-restart source of
-        # truth), replay, and return.
+        # truth), replay, and return. The same holds cross-replica in scaled mode:
+        # a terminal job has nothing live left on the redis Stream.
         if job.status in _TERMINAL_STATUSES:
             for frame in await read_durable(last_seq):
                 yield frame.data
+            return
+
+        # Scaled mode: any API replica serves reattach by replaying durable
+        # job_events (from the DB) then tailing the shared redis Stream. The
+        # backend yields durable event rows (carry .seq) and live _StreamFrames
+        # (payload is already SSE bytes the worker's RedisStreamLiveBus XADDed).
+        if self._scaled:
+            async for item in self._backend.events(str(job_id), last_event_id=last_seq):
+                seq = getattr(item, "seq", None)
+                if seq is not None:
+                    # Durable milestone row — re-frame through the SSE formatter
+                    # so replayed bytes match live frames (Last-Event-ID resume).
+                    yield self._row_to_frame(item)
+                else:
+                    # Live ephemeral frame from the Stream tail — already framed.
+                    yield item.payload
             return
 
         async for frame in self._bus.reattach(str(job_id), last_seq=last_seq, read_durable=read_durable):
@@ -216,6 +269,13 @@ class BackgroundExecutionService(Service):
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
         # Enforces ownership (raises PermissionError on a cross-user/unknown job).
         await self._validate(job_id, user)
+        if self._scaled:
+            # Scaled mode: the owning worker runs in another process. backend.stop
+            # writes the durable STOP signal (the source of truth the worker polls
+            # at vertex boundaries) AND publishes the redis pub/sub fast-path so
+            # the owning worker reacts immediately instead of waiting for its poll.
+            await self._backend.stop(str(job_id))
+            return
         job_service = get_job_service()
         # Always write the durable STOP signal — even when the row currently
         # reads a finished status. An in-flight runner can write its terminal

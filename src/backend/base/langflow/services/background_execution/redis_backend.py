@@ -85,6 +85,16 @@ class RedisBackgroundQueue:
         """Hand a queued job id to a worker process via the claim queue."""
         await self.claim_queue.enqueue(job_id)
 
+    # ----------------------------------------------------------- worker claim
+
+    async def claim(self, *, block_ms: int = 1000) -> str | None:
+        """Claim a job id off the queue for a worker (delegates to the claim queue)."""
+        return await self.claim_queue.claim(block_ms=block_ms)
+
+    async def complete(self, job_id: str) -> None:
+        """Release a worker's lease on a job (delegates to the claim queue)."""
+        await self.claim_queue.complete(job_id)
+
     # ---------------------------------------------------------------- control
 
     async def stop(self, job_id: str, *, marker_ttl: int = 60) -> None:
