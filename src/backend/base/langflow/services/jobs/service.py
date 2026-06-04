@@ -425,6 +425,41 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def retry_requeue_claim(self, job_id: UUID, *, expected_attempt: int) -> bool:
+        """Atomically bump ``attempt`` AND flip IN_PROGRESS->QUEUED for a retry requeue.
+
+        A SINGLE conditional UPDATE guarded by BOTH ``attempt == expected_attempt``
+        AND ``status == IN_PROGRESS``. The winner sets ``attempt = expected+1`` and
+        ``status = QUEUED`` in one statement; every racing reconciler then sees
+        either a changed attempt or a non-IN_PROGRESS status and gets
+        ``rowcount == 0``. This closes the window that a separate increment +
+        ``update_job_status(QUEUED)`` left open, where a second reconciler could
+        read the already-bumped attempt on a still-IN_PROGRESS row and bump it
+        again past ``max_attempts``. Portable across SQLite and Postgres.
+        """
+        from sqlalchemy import Integer
+        from sqlalchemy import cast as sa_cast
+        from sqlmodel import update
+
+        attempt_expr = sa_cast(col(Job.job_metadata)["attempt"].as_string(), Integer)
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {}), "attempt": expected_attempt + 1}
+            stmt = (
+                update(Job)
+                .where(
+                    Job.job_id == job_id,
+                    attempt_expr == expected_attempt,
+                    Job.status == JobStatus.IN_PROGRESS,
+                )
+                .values(job_metadata=merged, status=JobStatus.QUEUED)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def claim_queued_lease(self, job_id: UUID, *, owner: str, lease_ttl_s: float) -> bool:
         """Lease-claim a QUEUED row WITHOUT flipping its status. Returns True if won.
 

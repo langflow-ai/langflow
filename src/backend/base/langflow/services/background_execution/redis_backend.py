@@ -184,13 +184,15 @@ class RedisBackgroundQueue:
                 attempt = int(meta.get("attempt", 1))
                 max_attempts = int(meta.get("max_attempts", 1))
                 if attempt < max_attempts:
-                    # Atomic bump: only ONE concurrent reconciler whose read saw
-                    # ``attempt`` wins the conditional UPDATE, so two watchdogs
-                    # racing the same lost job cannot both requeue it past the cap.
-                    if await self._job_service.increment_attempt_if(job.job_id, expected=attempt, new=attempt + 1):
-                        await self._job_service.update_job_status(job.job_id, JobStatus.QUEUED)
-                        if await self._requeue(job_id):
-                            requeued.append(job_id)
+                    # Atomic bump+flip in ONE conditional UPDATE guarded by both
+                    # attempt==expected AND status==IN_PROGRESS, so two watchdogs
+                    # racing the same lost job cannot both bump it past the cap (the
+                    # loser sees status already QUEUED -> rowcount 0). Closes the
+                    # window a separate increment + status flip left open.
+                    if await self._job_service.retry_requeue_claim(
+                        job.job_id, expected_attempt=attempt
+                    ) and await self._requeue(job_id):
+                        requeued.append(job_id)
                     # Lost the race: another reconciler already handled it; skip.
                     continue
             # Default at-most-once, or retries exhausted: fail worker_lost.
