@@ -722,11 +722,7 @@ export const getCachedIcon = (name: string) => {
 };
 
 export const getNodeIcon = async (name: string) => {
-<<<<<<< HEAD
   const cacheAndReturn = (icon: React.ComponentType) => {
-=======
-  const cacheAndReturn = (icon: ElementType) => {
->>>>>>> 9af983a07b (Add Oracle Integration)
     iconCache.set(name, icon);
     return icon;
   };
