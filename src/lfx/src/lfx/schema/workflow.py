@@ -62,6 +62,19 @@ class ComponentOutput(BaseModel):
     metadata: dict[str, Any] | None = None
 
 
+class OutputEvent(ComponentOutput):
+    """A single component's output, as emitted on the ``langflow`` stream protocol.
+
+    The streaming counterpart of a sync ``outputs[id]`` entry: the same
+    ``ComponentOutput`` payload plus ``component_id`` (which sync carries as the
+    dict key). Subclassing keeps the shared fields from drifting, so one parser
+    reads ``type``/``status``/``display_name``/``content``/``metadata`` off both the
+    sync ``outputs`` map and the stream ``output`` events.
+    """
+
+    component_id: str = Field(..., description="Stable component id that produced this output.")
+
+
 class OutputReason(str, Enum):
     """Why ``WorkflowOutput.text`` resolved the way it did.
 

@@ -388,6 +388,64 @@ class TestOutputIdsSelection:
         assert text_id in result["outputs"]
 
 
+class TestLangflowStreamOutputParity:
+    """The ``langflow`` stream emits per-output ``output`` events that share sync's PARSER.
+
+    One handler reads ``component_id``/``type``/``status``/``display_name``/``content`` off
+    both the sync ``outputs`` map and the stream ``output`` events: same fields, same
+    component SET (terminals), same type/display_name/status. ``content`` is each mode's
+    own serialization — the framework serializes a Message differently in the per-vertex
+    ``VertexBuildResponse`` (stream) than in the final ``RunResponse`` (sync), so this
+    asserts structural parity, not byte-identical content.
+    """
+
+    async def test_stream_output_events_share_sync_shape(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        headers = {"x-api-key": created_api_key.api_key}
+
+        sync = await client.post(
+            "api/v2/workflows",
+            json={"flow_id": str(chatbot_flow), "input_value": "hi", "mode": "sync", "session_id": "sync-1"},
+            headers=headers,
+        )
+        assert sync.status_code == 200
+        sync_outputs = sync.json()["outputs"]
+        assert sync_outputs
+
+        # Stream run with the DEFAULT protocol (langflow, not agui).
+        stream = await client.post(
+            "api/v2/workflows",
+            json={"flow_id": str(chatbot_flow), "input_value": "hi", "mode": "stream", "session_id": "stream-1"},
+            headers=headers,
+        )
+        assert stream.status_code == 200
+
+        output_events: dict[str, dict] = {}
+        for raw in stream.text.splitlines():
+            line = raw.strip()
+            if not line.startswith("data:"):
+                continue
+            payload = json.loads(line[len("data:") :].strip())
+            if payload.get("event") == "output":
+                data = payload["data"]
+                output_events[data["component_id"]] = data
+
+        # The langflow stream emitted a normalized output event for the SAME set sync reports.
+        assert output_events
+        assert set(output_events) == set(sync_outputs)
+        for component_id, streamed in output_events.items():
+            synced = sync_outputs[component_id]
+            # Same parser: identical field set and identical identity/type/lifecycle fields.
+            assert set(streamed) == set(synced) | {"component_id"}
+            assert streamed["type"] == synced["type"]
+            assert streamed["display_name"] == synced["display_name"]
+            assert streamed["status"] == synced["status"]
+
+
 class TestAGUICancellation:
     """A run can be stopped by job id, and a streaming client can disconnect."""
 

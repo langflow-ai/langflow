@@ -34,8 +34,10 @@ from langflow.api.v2.converters import (
     _extract_nested_value,
     _extract_text_from_message,
     _get_raw_content,
+    _process_terminal_vertex,
     _resolve_output,
     _simplify_output_content,
+    build_component_output,
     create_error_response,
     create_job_response,
     run_response_to_workflow_response,
@@ -514,6 +516,17 @@ class TestGetRawContent:
         data.results = {"from": "results"}
         data.messages = None
 
+        result = _get_raw_content(data)
+        assert result == {"from": "outputs"}
+
+    def test_get_raw_content_dict_outputs_priority(self):
+        """Dict form must prefer ``outputs`` like the object form does.
+
+        The stream's ``VertexBuildResponse.data`` is a dict carrying BOTH ``outputs``
+        and ``results``; to match sync (object form returns ``.outputs``) it must
+        resolve to ``outputs``, else sync/stream output content diverges.
+        """
+        data = {"outputs": {"from": "outputs"}, "results": {"from": "results"}}
         result = _get_raw_content(data)
         assert result == {"from": "outputs"}
 
@@ -1567,6 +1580,55 @@ class TestOutputAndSessionId:
         entry = response.outputs["ChatOutput-abc"]
         assert set(entry.model_dump()) == {"type", "status", "display_name", "content", "metadata"}
         assert entry.display_name == "Chat Output"
+
+
+class TestBuildComponentOutput:
+    """The shared builder both sync and the stream adapter use to make a ComponentOutput."""
+
+    def test_message_output_extracts_text_content(self):
+        result_data = _message_result_data("ChatOutput-abc", "Hi there!")
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=result_data,
+        )
+        assert output.type == "message"
+        assert output.status == JobStatus.COMPLETED
+        assert output.display_name == "Chat Output"
+        assert output.content == "Hi there!"
+        assert output.metadata["component_type"] == "ChatOutput"
+
+    def test_matches_sync_process_terminal_vertex(self):
+        # The builder must produce the byte-identical ComponentOutput the sync path
+        # produces for the same vertex — that's what makes sync/stream parity real.
+        vertex = _message_output_vertex("ChatOutput-abc")
+        result_data = _message_result_data("ChatOutput-abc", "Hi there!")
+        _, expected = _process_terminal_vertex(vertex, {"ChatOutput-abc": result_data})
+
+        built = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=result_data,
+        )
+        assert built.model_dump() == expected.model_dump()
+
+    def test_no_result_data_yields_empty_content(self):
+        output = build_component_output(
+            component_id="ChatOutput-abc",
+            is_output=True,
+            vertex_type="ChatOutput",
+            output_type="message",
+            display_name="Chat Output",
+            result_data=None,
+        )
+        assert output.content is None
+        assert output.metadata == {"component_type": "ChatOutput"}
 
 
 if __name__ == "__main__":

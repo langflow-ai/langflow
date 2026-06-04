@@ -215,7 +215,11 @@ def _get_raw_content(vertex_output_data: Any) -> Any:
     if hasattr(vertex_output_data, "messages") and vertex_output_data.messages is not None:
         return vertex_output_data.messages
     if isinstance(vertex_output_data, dict):
-        # Check for 'results' first, then 'content' if results is None
+        # Mirror the attribute order above so dict-form result data (the stream's
+        # ``VertexBuildResponse.data``) resolves the same field as object-form
+        # (sync's ``ResultData``), keeping sync/stream output content in parity.
+        if vertex_output_data.get("outputs") is not None:
+            return vertex_output_data["outputs"]
         if "results" in vertex_output_data:
             return vertex_output_data["results"]
         if "content" in vertex_output_data:
@@ -309,11 +313,91 @@ def _build_metadata_for_non_output(
     return metadata
 
 
+def resolve_output_type(output_types: list[str] | None, vertex_type: str | None) -> str:
+    """Resolve the v2 output ``type`` string from a vertex's declared output types.
+
+    The single rule both the sync converter and the ``langflow`` stream adapter rely
+    on so an output's ``type`` is identical in both modes: first declared output type
+    lowercased, else the vertex type lowercased, else ``"unknown"``.
+    """
+    if output_types:
+        first = output_types[0]
+        if first:
+            return first.lower()
+    if vertex_type:
+        return vertex_type.lower()
+    return "unknown"
+
+
+def build_component_output(
+    *,
+    component_id: str,
+    is_output: bool,
+    vertex_type: str | None,
+    output_type: str,
+    display_name: str | None,
+    result_data: Any,
+) -> ComponentOutput:
+    """Build a ``ComponentOutput`` from one component's result data.
+
+    Shared by the sync converter (``_process_terminal_vertex``) and the ``langflow``
+    stream adapter so a component's output has the byte-identical shape in both modes.
+    ``result_data`` is the per-component result — the sync ``ResultData`` object or the
+    stream ``VertexBuildResponse.data`` dict; ``_get_raw_content`` tolerates both.
+
+    The component id lives in the sync ``outputs`` dict key (and in ``OutputEvent`` on
+    the stream), so ``ComponentOutput`` itself carries no component_id; the caller
+    attaches it where needed.
+    """
+    metadata: dict[str, Any] = {"component_type": vertex_type}
+    resolved_display_name = display_name or vertex_type
+
+    content = None
+    if result_data:
+        raw_content = _get_raw_content(result_data)
+
+        if is_output and raw_content is not None:
+            # Output nodes: simplify content
+            content = _simplify_output_content(raw_content, output_type)
+        elif not is_output and raw_content is not None:
+            # Non-output nodes:
+            # - For data types: extract and show content
+            # - For message types: extract metadata only (source, file_path)
+            # TODO: Future scope - Add support for "dataframe" output type
+            if output_type in ["data", "dataframe"]:
+                content = _simplify_output_content(raw_content, output_type)
+            else:
+                metadata.update(
+                    _build_metadata_for_non_output(
+                        raw_content, component_id, resolved_display_name, vertex_type, output_type
+                    )
+                )
+
+        # Add any additional metadata from result data
+        if hasattr(result_data, "metadata") and result_data.metadata:
+            metadata.update(result_data.metadata)
+        elif isinstance(result_data, dict) and "metadata" in result_data:
+            result_metadata = result_data.get("metadata")
+            if isinstance(result_metadata, dict):
+                metadata.update(result_metadata)
+
+    return ComponentOutput(
+        type=output_type,
+        status=JobStatus.COMPLETED,
+        display_name=resolved_display_name,
+        content=content,
+        metadata=metadata,
+    )
+
+
 def _process_terminal_vertex(
     vertex: Any,
     output_data_map: dict[str, Any],
 ) -> tuple[str, ComponentOutput]:
     """Process a single terminal vertex and return (output_key, component_output).
+
+    Delegates the shape to ``build_component_output`` so sync and the stream adapter
+    produce the identical ``ComponentOutput`` for the same component.
 
     Args:
         vertex: The vertex to process
@@ -322,70 +406,16 @@ def _process_terminal_vertex(
     Returns:
         Tuple of (output_key, ComponentOutput)
     """
-    # Get output data by vertex.id (component_id)
-    vertex_output_data = output_data_map.get(vertex.id)
-
-    # Determine output type from vertex
-    output_type = "unknown"
-    if vertex.outputs and len(vertex.outputs) > 0:
-        types = vertex.outputs[0].get("types", [])
-        if types:
-            output_type = types[0].lower()
-    if output_type == "unknown" and vertex.vertex_type:
-        output_type = vertex.vertex_type.lower()
-
-    # Initialize metadata with component_type
-    metadata: dict[str, Any] = {"component_type": vertex.vertex_type}
-
-    # Extract content
-    content = None
-    if vertex_output_data:
-        raw_content = _get_raw_content(vertex_output_data)
-
-        if vertex.is_output and raw_content is not None:
-            # Output nodes: simplify content
-            content = _simplify_output_content(raw_content, output_type)
-        elif not vertex.is_output and raw_content is not None:
-            # Non-output nodes:
-            # - For data types: extract and show content
-            # - For message types: extract metadata only (source, file_path)
-            # TODO: Future scope - Add support for "dataframe" output type
-            if output_type in ["data", "dataframe"]:
-                # Show data content for non-output data nodes
-                content = _simplify_output_content(raw_content, output_type)
-            else:
-                # For message types, extract metadata only
-                extra_metadata = _build_metadata_for_non_output(
-                    raw_content,
-                    vertex.id,
-                    vertex.display_name or vertex.vertex_type,
-                    vertex.vertex_type,
-                    output_type,
-                )
-                metadata.update(extra_metadata)
-
-        # Add any additional metadata from result data
-        if hasattr(vertex_output_data, "metadata") and vertex_output_data.metadata:
-            metadata.update(vertex_output_data.metadata)
-        elif isinstance(vertex_output_data, dict) and "metadata" in vertex_output_data:
-            result_metadata = vertex_output_data.get("metadata")
-            if isinstance(result_metadata, dict):
-                metadata.update(result_metadata)
-
-    # Determine output key: use vertex id but TODO: add alias handling when avialable
-    output_key = vertex.id
-
-    # Build ComponentOutput. The component id lives in the outputs dict key, so
-    # ComponentOutput deliberately has no component_id field of its own. The
-    # display_name is carried as a field for human-readable rendering.
-    component_output = ComponentOutput(
-        type=output_type,
-        status=JobStatus.COMPLETED,
+    output_types = vertex.outputs[0].get("types", []) if (vertex.outputs and len(vertex.outputs) > 0) else []
+    component_output = build_component_output(
+        component_id=vertex.id,
+        is_output=vertex.is_output,
+        vertex_type=vertex.vertex_type,
+        output_type=resolve_output_type(output_types, vertex.vertex_type),
         display_name=vertex.display_name or vertex.vertex_type,
-        content=content,
-        metadata=metadata,
+        result_data=output_data_map.get(vertex.id),
     )
-    return output_key, component_output
+    return vertex.id, component_output
 
 
 def _resolve_output(outputs: dict[str, ComponentOutput], selected_ids: list[str] | None = None) -> WorkflowOutput:

@@ -11,15 +11,24 @@ import json
 from collections.abc import Iterable
 from typing import Any, ClassVar
 
+from lfx.schema.workflow import OutputEvent
+
 from langflow.api.v2.adapters import (
     StreamAdapterContext,
     StreamEvent,
     register_stream_adapter,
 )
+from langflow.api.v2.converters import build_component_output, resolve_output_type
 
 
 class LangflowAdapter:
-    """Passthrough adapter: each EventManager event becomes one wire event."""
+    """Passthrough adapter: each EventManager event becomes one wire event.
+
+    On a terminal ``end_vertex`` it ALSO emits a normalized ``output`` event whose
+    payload is an :class:`OutputEvent` carrying the same ``ComponentOutput`` shape
+    sync returns in ``outputs[id]``. That gives sync and the stream one parser: read
+    ``type``/``status``/``display_name``/``content``/``metadata`` off both.
+    """
 
     name: ClassVar[str] = "langflow"
 
@@ -30,10 +39,46 @@ class LangflowAdapter:
         return ()
 
     def translate(self, event_type: str, event_data: dict[str, Any]) -> Iterable[StreamEvent]:
+        events = [self._passthrough(event_type, event_data)]
+        if event_type == "end_vertex":
+            output_event = self._output_event(event_data)
+            if output_event is not None:
+                events.append(output_event)
+        return events
+
+    @staticmethod
+    def _passthrough(event_type: str, event_data: dict[str, Any]) -> StreamEvent:
         payload = {"event": event_type, "data": event_data}
         # ``default=str`` keeps non-JSON-serializable values (e.g. component
         # objects logged by add_message) from crashing the stream.
-        return (StreamEvent(type=event_type, data_json=json.dumps(payload, default=str)),)
+        return StreamEvent(type=event_type, data_json=json.dumps(payload, default=str))
+
+    @staticmethod
+    def _output_event(event_data: dict[str, Any]) -> StreamEvent | None:
+        """Build the normalized ``output`` event for a terminal output, or None.
+
+        Returns None for non-terminal vertices so the stream emits an ``output`` for
+        exactly the set sync reports in ``outputs``. The vertex metadata is the
+        authoritative ``output_meta`` shipped by the v1 build path.
+        """
+        output_meta = event_data.get("output_meta") or {}
+        if not output_meta.get("is_terminal"):
+            return None
+        build_data = event_data.get("build_data") or {}
+        component_id = output_meta.get("component_id") or build_data.get("id")
+        if not component_id:
+            return None
+        component_output = build_component_output(
+            component_id=component_id,
+            is_output=bool(output_meta.get("is_output")),
+            vertex_type=output_meta.get("vertex_type"),
+            output_type=resolve_output_type(output_meta.get("output_types"), output_meta.get("vertex_type")),
+            display_name=output_meta.get("display_name"),
+            result_data=build_data.get("data"),
+        )
+        output = OutputEvent(component_id=component_id, **component_output.model_dump())
+        payload = {"event": "output", "data": output.model_dump(mode="json")}
+        return StreamEvent(type="output", data_json=json.dumps(payload, default=str))
 
     def final_events(self) -> Iterable[StreamEvent]:
         return ()
