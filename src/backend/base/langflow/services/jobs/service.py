@@ -127,11 +127,22 @@ class JobService(Service):
 
         async with session_scope() as session:
             if dedupe_key is not None:
+                # Scope uniqueness to the owner: a client-controlled
+                # idempotency_key flows into dedupe_key, so a GLOBAL count would
+                # let user A collide with / DoS user B's key (and the error would
+                # leak that a job with that key exists for someone else). When
+                # user_id is None (single-tenant AUTO_LOGIN), the ownerless rows
+                # form their own dedupe space.
                 stmt = (
                     select(func.count())
                     .select_from(Job)
                     .where(Job.dedupe_key == dedupe_key)
                     .where(col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+                )
+                stmt = (
+                    stmt.where(Job.user_id == user_id)
+                    if user_id is not None
+                    else stmt.where(col(Job.user_id).is_(None))
                 )
                 result = await session.exec(stmt)
                 if result.one() > 0:

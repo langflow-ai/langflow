@@ -91,6 +91,7 @@ from langflow.services.deps import (
     get_memory_base_service,
     get_task_service,
 )
+from langflow.services.jobs.exceptions import DuplicateJobError
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
@@ -841,6 +842,20 @@ async def execute_workflow_background(
         raise
     except MemoryError as exc:
         raise WorkflowResourceError from exc
+    except DuplicateJobError as exc:
+        # Defense-in-depth for the residual create/lookup race: a still-active
+        # job already exists for this user's idempotency_key. Map to a 409 with a
+        # generic body so the key is not echoed back (no existence leak) instead
+        # of bubbling to the outer 500 handler.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Duplicate request",
+                "code": "DUPLICATE_REQUEST",
+                "message": "A job with this idempotency_key is already in progress.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from exc
 
 
 @router.get(
