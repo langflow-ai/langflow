@@ -295,18 +295,23 @@ class TestNoBreakingChange:
         assert "text/event-stream" in response.headers["content-type"]
         body = response.text
         event_ids = [int(line.removeprefix("id:").strip()) for line in body.splitlines() if line.startswith("id:")]
-        # Monotonic, gap-free ids (Last-Event-ID resume contract). The langflow
-        # protocol's first durable frame is id:0; assert contiguity from there.
-        assert event_ids, "expected durable SSE frames to carry id: lines"
+        # Monotonic, gap-free ids so a dropped client can resume by id.
+        assert event_ids, "expected SSE frames to carry id: lines"
         assert event_ids == list(range(event_ids[0], event_ids[0] + len(event_ids)))
 
-    async def test_last_event_id_skips_already_delivered(
+    async def test_last_event_id_at_end_replays_nothing(
         self,
         client: AsyncClient,
         created_api_key,
         chatbot_flow,
     ):
-        """Re-attaching with Last-Event-ID=0 must not replay the first event again."""
+        """Re-attaching past the last durable seq replays no further durable events.
+
+        The durable resume cursor is the ``job_events.seq`` (1-based). After the
+        run completes, re-attaching with a Last-Event-ID at/beyond the highest
+        durable seq must yield an empty durable replay — the resume contract that
+        lets a caller who has seen everything reconnect without a flood.
+        """
         headers = {"x-api-key": created_api_key.api_key}
         start = await client.post(
             "api/v2/workflows",
@@ -315,14 +320,26 @@ class TestNoBreakingChange:
         )
         job_id = start.json()["job_id"]
 
+        from langflow.services.database.models.jobs.model import JobStatus
+
+        assert await _wait_terminal(job_id) == JobStatus.COMPLETED
+
+        # Highest durable seq actually written for this run.
+        from langflow.services.deps import get_job_service
+
+        rows = await get_job_service().read_events(UUID(job_id), after_seq=0)
+        assert rows, "expected the completed run to have durable events"
+        last_seq = max(r.seq for r in rows)
+
         response = await client.get(
             f"api/v2/workflows/{job_id}/events",
-            headers={**headers, "Last-Event-ID": "0"},
+            headers={**headers, "Last-Event-ID": str(last_seq)},
         )
 
         assert response.status_code == 200
-        event_ids = [line.removeprefix("id:").strip() for line in response.text.splitlines() if line.startswith("id:")]
-        assert "0" not in event_ids
+        # Nothing after the last durable seq: the run is closed and fully seen.
+        replayed = [line for line in response.text.splitlines() if line.startswith("data:")]
+        assert replayed == []
 
 
 class TestDeadMachineryRemoved:
