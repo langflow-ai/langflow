@@ -10,6 +10,7 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
+from sqlalchemy.exc import IntegrityError, OperationalError
 from sqlmodel import col, func, select
 
 from langflow.services.base import Service
@@ -27,6 +28,11 @@ from langflow.services.database.models.jobs.model import (
 )
 from langflow.services.deps import session_scope
 from langflow.services.jobs.exceptions import DuplicateJobError
+
+# Bounded retries for append_event's optimistic seq assignment. Real contention is
+# at most a couple of concurrent appenders per job (a worker plus the orphan sweep,
+# or multiple processes in the scaled backend), so this is comfortably generous.
+_APPEND_EVENT_MAX_RETRIES = 50
 
 
 class JobService(Service):
@@ -240,19 +246,36 @@ class JobService(Service):
         """Append a durable event for a job and return its per-job seq.
 
         seq is assigned as max(existing seq for job) + 1. UNIQUE(job_id, seq)
-        on the table guards against concurrent double-assignment — a colliding
-        writer raises IntegrityError, which the runner treats as a retryable
-        append.
+        guards against concurrent double-assignment: a colliding writer hits
+        IntegrityError, and we retry with a freshly re-read max so every event
+        lands gap-free even when a worker and the orphan sweep (or, in the
+        scaled backend, multiple processes) append to the same job at once.
         """
-        async with session_scope() as session:
-            stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id)
-            result = await session.exec(stmt)
-            current_max = result.one()
-            next_seq = (current_max or 0) + 1
-            event = JobEvent(job_id=job_id, seq=next_seq, event_type=event_type, payload=payload)
-            session.add(event)
-            await session.flush()
-            return next_seq
+        last_exc: Exception | None = None
+        for attempt in range(_APPEND_EVENT_MAX_RETRIES):
+            try:
+                async with session_scope() as session:
+                    stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job_id)
+                    result = await session.exec(stmt)
+                    current_max = result.one()
+                    next_seq = (current_max or 0) + 1
+                    event = JobEvent(job_id=job_id, seq=next_seq, event_type=event_type, payload=payload)
+                    session.add(event)
+                    await session.flush()
+                    return next_seq
+            except IntegrityError as exc:
+                # Lost the (job_id, seq) race — re-read max and try again.
+                last_exc = exc
+            except OperationalError as exc:
+                # SQLite "database is locked"/busy under concurrent writers is transient.
+                if "lock" not in str(exc).lower() and "busy" not in str(exc).lower():
+                    raise
+                last_exc = exc
+            # Yield + brief backoff so the contending writer can commit before we retry.
+            await asyncio.sleep(min(0.05, 0.002 * (attempt + 1)))
+        # Exhausted retries under sustained contention — surface the last collision.
+        msg = f"append_event exhausted {_APPEND_EVENT_MAX_RETRIES} retries for job {job_id} (seq contention)"
+        raise RuntimeError(msg) from last_exc
 
     async def read_events(self, job_id: UUID, after_seq: int = 0) -> list[JobEvent]:
         """Return durable events for a job with seq > after_seq, ordered by seq.

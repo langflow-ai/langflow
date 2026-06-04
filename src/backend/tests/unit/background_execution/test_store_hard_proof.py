@@ -10,6 +10,7 @@ uq_job_events_job_id_seq unique constraint).
 
 from __future__ import annotations
 
+import asyncio
 from uuid import uuid4
 
 import pytest
@@ -59,6 +60,28 @@ async def test_append_event_seq_is_per_job(hard_proof_job_service) -> None:
     assert await service.append_event(job_a, "x", {}) == 1
     assert await service.append_event(job_b, "x", {}) == 1
     assert await service.append_event(job_a, "x", {}) == 2
+
+
+@pytest.mark.hard_proof
+@pytest.mark.no_blockbuster
+async def test_append_event_concurrent_appends_all_land_gap_free(hard_proof_job_service) -> None:
+    """Concurrent appends to one job must ALL land, gap-free (retry on UNIQUE collision).
+
+    Regression for the seq race: SELECT max(seq)+1 then INSERT collides under
+    contention; without retry the losers' events were silently dropped.
+    """
+    service = hard_proof_job_service
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    n = 12
+    seqs = await asyncio.gather(*(service.append_event(job_id, f"e{i}", {"i": i}) for i in range(n)))
+
+    # Every append returned a distinct seq and the set is exactly 1..n (no loss, no gaps).
+    assert sorted(seqs) == list(range(1, n + 1)), f"returned seqs not gap-free: {sorted(seqs)}"
+    events = await service.read_events(job_id)
+    assert [e.seq for e in events] == list(range(1, n + 1)), "persisted events not gap-free"
+    assert len(events) == n
 
 
 @pytest.mark.hard_proof
