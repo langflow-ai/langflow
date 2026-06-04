@@ -255,6 +255,16 @@ class Settings(BaseSettings):
     redis_url: str | None = None
     redis_cache_expire: int = 3600
 
+    # Rate Limiting
+    rate_limit_enabled: bool = True
+    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    rate_limit_per_minute: int = 5
+    """Number of login attempts allowed per minute per IP."""
+    rate_limit_storage_uri: str = "memory://"
+    """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
+    rate_limit_trust_proxy: bool = False
+    """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
+
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
