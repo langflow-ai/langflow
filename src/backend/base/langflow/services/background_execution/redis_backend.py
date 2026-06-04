@@ -248,20 +248,54 @@ class RedisBackgroundQueue:
         Any API replica can call this: durable milestones come from the DB so a
         replica that didn't start the job still serves full history; live
         ephemeral frames come off the shared redis Stream via RedisQueueWrapper.
+
+        Dedup-at-the-seam: the worker publishes every durable milestone to BOTH
+        the DB and the Stream, so a Stream tail from ``0-0`` would re-deliver each
+        milestone already replayed from the DB. We track the highest durable seq
+        replayed and skip any Stream frame whose stamped seq is ``<= highest`` —
+        the SAME rule the in-memory bus uses (``item.seq <= highest: continue``),
+        so the default and scaled reattach paths agree: each milestone is
+        delivered exactly once, and an ephemeral frame is passed only when its seq
+        is strictly newer than everything already seen.
         """
         # 1. Durable replay from the DB (the Last-Event-ID cursor is seq).
+        highest = last_event_id
         for event in await self._job_service.read_events(job_id, after_seq=last_event_id):
+            seq = getattr(event, "seq", None)
+            if seq is not None:
+                highest = max(highest, seq)
             yield event
 
-        # 2. Live tail of the redis Stream for ephemeral frames published by the
-        #    worker. The wrapper self-terminates on the end-of-stream sentinel or
-        #    when the stream key is gone (job finished + cleaned up).
+        # 2. Live tail of the redis Stream. Each Stream frame carries the durable
+        #    seq the worker stamped (``event_id`` field); skip any frame already
+        #    covered by the DB replay so it is not delivered twice. The wrapper
+        #    self-terminates on the end-of-stream sentinel or when the stream key
+        #    is gone (job finished + cleaned up).
         wrapper = RedisQueueWrapper(job_id, self._client, self._stream_ttl, startup_grace_s=self._startup_grace_s)
         try:
             while True:
                 event_id, data, _ts = await wrapper.get()
                 if data is None:
                     return  # end-of-stream sentinel
+                frame_seq = self._parse_stream_seq(event_id)
+                if frame_seq is not None and frame_seq <= highest:
+                    # Already replayed from the DB (or seen before the reattach
+                    # cursor) — drop so the milestone is delivered exactly once.
+                    continue
+                if frame_seq is not None:
+                    highest = frame_seq
                 yield _StreamFrame(seq=None, event_type=event_id, payload=data)
         finally:
             await wrapper.cancel()
+
+    @staticmethod
+    def _parse_stream_seq(event_id: Any) -> int | None:
+        """Parse the durable seq the worker stamped on a Stream frame's ``event_id``.
+
+        ``RedisStreamLiveBus`` sets ``event_id = str(frame.seq)``; a non-numeric
+        value (a legacy/foreign frame) has no durable seq, so it is never deduped.
+        """
+        try:
+            return int(event_id)
+        except (TypeError, ValueError):
+            return None
