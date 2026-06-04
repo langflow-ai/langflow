@@ -1,11 +1,11 @@
 import { ArrowUp } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ModelSelector } from "@/components/core/assistantPanel/components/model-selector";
 import { useAssistantSelectedModel } from "@/components/core/assistantPanel/hooks/use-assistant-selected-model";
 import { useEnabledModels } from "@/components/core/assistantPanel/hooks/use-enabled-models";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import type { SidebarSection } from "@/components/ui/sidebar";
 import ModelProviderModal from "@/modals/modelProviderModal";
