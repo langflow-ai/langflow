@@ -220,10 +220,14 @@ class BackgroundExecutionService(Service):
         job = await self._validate(job_id, user)
         job_service = get_job_service()
         last_seq = self._parse_last_event_id(last_event_id)
+        # The durable replay must serialize with the SAME separators the live
+        # adapter used (agui = compact, langflow = spaced) so replayed bytes are
+        # byte-identical. The protocol is on the persisted submit request.
+        protocol = self._job_protocol(job)
 
         async def read_durable(after_seq: int) -> list[LiveFrame]:
             rows = await job_service.read_events(job_id, after_seq=after_seq)
-            return [LiveFrame(seq=r.seq, data=self._row_to_frame(r)) for r in rows]
+            return [LiveFrame(seq=r.seq, data=self._row_to_frame(r, protocol=protocol)) for r in rows]
 
         # Terminal jobs must be answered from the DURABLE log alone. The live bus
         # is process-local: after a restart it is fresh and its ``_closed`` marker
@@ -247,7 +251,7 @@ class BackgroundExecutionService(Service):
                 if seq is not None:
                     # Durable milestone row — re-frame through the SSE formatter
                     # so replayed bytes match live frames (Last-Event-ID resume).
-                    yield self._row_to_frame(item)
+                    yield self._row_to_frame(item, protocol=protocol)
                 else:
                     # Live ephemeral frame from the Stream tail — already framed.
                     yield item.payload
@@ -420,6 +424,21 @@ class BackgroundExecutionService(Service):
             raise PermissionError(msg)
         return job
 
+    @staticmethod
+    def _job_protocol(job: Job) -> str:
+        """The stream protocol the run used, read off the persisted submit request.
+
+        ``submit`` persists the request (incl. ``stream_protocol``) under
+        ``job_metadata['request']``. Replay needs it so it serializes durable
+        rows with the SAME separators the live adapter used. Defaults to
+        ``langflow`` for legacy rows written before the request was persisted.
+        """
+        meta = job.job_metadata or {}
+        request = meta.get("request")
+        if isinstance(request, dict):
+            return request.get("stream_protocol") or "langflow"
+        return meta.get("stream_protocol") or "langflow"
+
     def _build_adapter(self, request: dict[str, Any], job_id: UUID, flow_id: UUID):
         from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
 
@@ -442,13 +461,20 @@ class BackgroundExecutionService(Service):
             return 0
 
     @staticmethod
-    def _row_to_frame(row: JobEvent) -> bytes:
+    def _row_to_frame(row: JobEvent, *, protocol: str = "langflow") -> bytes:
         # Re-frame the durable payload through the SAME SSE formatter the live
         # path uses (``format_sse_event(data_str=..., id=str(seq))``) so replayed
         # bytes are byte-compatible with live frames and a client's
         # ``Last-Event-ID`` resume works across the replay/tail boundary. The
         # live path passes the payload's JSON string as ``data_str``; ``seq`` is
         # the durable row seq, matching the live frame's ``id``.
+        #
+        # The JSON separators must match the LIVE adapter or the replayed bytes
+        # are not byte-identical: the ``langflow`` adapter serializes via
+        # ``json.dumps`` (default spaced separators) while the ``agui`` adapter
+        # serializes via pydantic ``model_dump_json`` (compact separators). Pick
+        # the matching separators by protocol so replay == live for both wires.
         from fastapi.sse import format_sse_event
 
-        return format_sse_event(data_str=json.dumps(row.payload), id=str(row.seq))
+        separators = (",", ":") if protocol == "agui" else None
+        return format_sse_event(data_str=json.dumps(row.payload, separators=separators), id=str(row.seq))
