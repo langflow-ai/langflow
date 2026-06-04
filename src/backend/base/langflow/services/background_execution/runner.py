@@ -18,13 +18,16 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import json
+import time
 from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
+from langflow.services.background_execution import metrics as bg_metrics
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
+from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -63,6 +66,15 @@ class JobRunner:
         # (scripted tests that don't care about liveness) the heartbeat is off.
         self._owner = owner
         self._heartbeat_interval_s = max(heartbeat_interval_s, 0.1)
+        # Metric label for the backend this run executes on, derived once.
+        # "scaled" when a redis job queue drains jobs in separate workers, else
+        # "default" (in-process executor). Best-effort: a missing settings
+        # service (scripted tests) must not break runner construction.
+        backend = "default"
+        with contextlib.suppress(Exception):
+            if get_settings_service().settings.background_backend_is_scaled:
+                backend = "scaled"
+        self._backend = backend
 
     async def run(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """Execute one background job to a terminal state."""
@@ -81,8 +93,18 @@ class JobRunner:
             else:
                 await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
-        heartbeat_task = self._start_heartbeat(job_id)
+        bg_metrics.emit_job_started(backend=self._backend)
+        # Monotonic start: the job row has no started_at/finished_at, so we
+        # measure run duration off a monotonic clock captured here and read at
+        # the terminal point. Monotonic avoids wall-clock skew.
+        started_monotonic = time.monotonic()
+
+        # Start the heartbeat INSIDE the try so any failure here still lands in
+        # the finally: emit_job_started already fired, so its terminal partner
+        # (_emit_terminal_metrics) must always run to keep started/terminal paired.
+        heartbeat_task: asyncio.Task | None = None
         try:
+            heartbeat_task = self._start_heartbeat(job_id)
             await self._jobs.execute_with_status(job_id, _wrapped)
         except asyncio.CancelledError as exc:
             # A cooperative STOP that we raised ourselves ends the run cleanly
@@ -118,6 +140,40 @@ class JobRunner:
             with contextlib.suppress(Exception):
                 await asyncio.shield(self._finalize_terminal_event(job_id))
             await self._bus.close(str(job_id))
+            # One terminal emit per run, off the authoritative final status (read
+            # after the stop reconcile + finalize so a late-stop CANCELLED counts
+            # as cancelled, not completed). emit_* helpers swallow their own
+            # errors, so no extra guard is needed here.
+            await self._emit_terminal_metrics(job_id, time.monotonic() - started_monotonic)
+
+    async def _emit_terminal_metrics(self, job_id: UUID, duration_seconds: float) -> None:
+        """Emit the completed/failed counter + duration histogram once per run.
+
+        Reads the final job status and maps it to the metric outcome/reason:
+        COMPLETED -> completed; FAILED -> failed(reason=error); TIMED_OUT ->
+        failed(reason=timeout); CANCELLED -> failed(reason=cancelled). A missing
+        job row (best-effort fetch failure) is skipped silently.
+
+        A non-terminal status read here (e.g. a status-write failure left the row
+        IN_PROGRESS, or the run was orphaned) is an INTENTIONAL no-op: that run's
+        terminal metric is emitted by the reconciliation path (Task 5), not here.
+        """
+        job = None
+        with contextlib.suppress(Exception):
+            job = await self._jobs.get_job_by_job_id(job_id)
+        if job is None:
+            return
+        if job.status == JobStatus.COMPLETED:
+            bg_metrics.emit_job_completed(backend=self._backend)
+            bg_metrics.emit_job_duration(seconds=duration_seconds, outcome="completed", backend=self._backend)
+        elif job.status in (JobStatus.FAILED, JobStatus.TIMED_OUT, JobStatus.CANCELLED):
+            reason = {
+                JobStatus.FAILED: "error",
+                JobStatus.TIMED_OUT: "timeout",
+                JobStatus.CANCELLED: "cancelled",
+            }[job.status]
+            bg_metrics.emit_job_failed(reason=reason, backend=self._backend)
+            bg_metrics.emit_job_duration(seconds=duration_seconds, outcome="failed", backend=self._backend)
 
     async def _finalize_terminal_event(self, job_id: UUID) -> None:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.

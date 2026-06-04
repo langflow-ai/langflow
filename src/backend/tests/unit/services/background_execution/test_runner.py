@@ -184,6 +184,37 @@ async def test_late_stop_after_completion_clears_result(active_user):
     assert (job.error or {}).get("type") == "cancelled"
 
 
+async def test_runner_lifecycle_metric_emit_does_not_break_run(active_user):
+    """Emit wiring must reach a real terminal state without raising.
+
+    The runner emits started/completed/failed counters + a duration histogram at
+    its lifecycle points. With the real telemetry service available (via the
+    ``client`` fixture), driving a job to COMPLETED must still reach the terminal
+    state and must not raise out of the emit calls. Counter VALUES are not
+    asserted here (OTel instruments are write-only); the contract is "emit does
+    not change runner behavior". The runner derives a backend label at __init__.
+    """
+    job_service = get_job_service()
+    job_id = await _make_job(uuid4(), active_user.id)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end_vertex", {"id": "n1"})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
+    # backend label is derived once at construction and is one of the small enum.
+    assert runner._backend in ("default", "scaled")
+
+    # No exception may propagate from the emit calls wired into run().
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED
+
+
 async def test_runner_stops_at_signal_boundary(active_user):
     job_service = get_job_service()
     job_id = await _make_job(uuid4(), active_user.id)
