@@ -12,7 +12,6 @@ import types
 from unittest.mock import MagicMock
 
 import pytest
-
 from lfx.components.firecrawl.firecrawl_crawl_api import FirecrawlCrawlApi
 from lfx.components.firecrawl.firecrawl_extract_api import FirecrawlExtractApi
 from lfx.components.firecrawl.firecrawl_map_api import FirecrawlMapApi
