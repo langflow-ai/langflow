@@ -86,8 +86,8 @@ class FirecrawlMapApi(Component):
             result = app.map(url, **kwargs)
             # v2 returns a typed MapData object whose .links is a list of typed
             # SearchResult objects; serialize each to a dict for downstream consumers.
-            for link in getattr(result, "links", None) or []:
-                combined_links.append(link.model_dump() if hasattr(link, "model_dump") else link)
+            links = getattr(result, "links", None) or []
+            combined_links.extend(link.model_dump() if hasattr(link, "model_dump") else link for link in links)
 
         map_result = {"success": True, "links": combined_links}
 
