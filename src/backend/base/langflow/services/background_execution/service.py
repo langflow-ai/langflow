@@ -18,9 +18,15 @@ from __future__ import annotations
 
 import contextlib
 import json
+import os
+import tempfile
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 from uuid import uuid4
+
+from filelock import FileLock, Timeout
+from lfx.log.logger import logger
 
 from langflow.services.background_execution.executor import InProcessExecutor
 from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
@@ -74,6 +80,10 @@ class BackgroundExecutionService(Service):
         self._backend = backend
         self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
         self._bus = InMemoryLiveBus()
+        # Process-unique owner token stamped on the heartbeat of jobs this API
+        # process runs in the default backend. Lets a liveness-aware sweep tell a
+        # job this live process is running from a genuinely orphaned one.
+        self._owner = f"api:{os.getpid()}:{uuid4().hex[:8]}"
         # Injected in tests; defaulted to the real build loop by the route wiring.
         self._frame_source_factory = frame_source_factory
         self.set_ready()
@@ -188,6 +198,8 @@ class BackgroundExecutionService(Service):
             adapter=adapter,
             frame_source=source,
             job_timeout=self._settings.background_job_timeout,
+            owner=self._owner,
+            heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
         )
 
         async def _coro() -> None:
@@ -292,19 +304,38 @@ class BackgroundExecutionService(Service):
     async def sweep_orphans_on_startup(self) -> None:
         """Reconcile jobs left mid-flight by a crashed process.
 
-        ``JobService.sweep_orphans`` does the durable reconcile (it marks
-        orphaned IN_PROGRESS rows FAILED with ``{type: worker_lost}`` and writes
-        a terminal event). QUEUED workflow rows never started, so under
-        at-least-once we re-enqueue them onto this worker's executor with a
-        reconstructed request. Best-effort per job so one bad row can't block
-        the rest. Redis backend reconciles via its own watchdog (Phase 3).
+        Single-flight across workers: this runs in the per-worker lifespan on
+        every uvicorn/gunicorn boot, so it is guarded by a file lock (the same
+        primitive ``main.py`` uses for starter projects). Only ONE booting worker
+        runs the IN_PROGRESS reconcile; the others skip it. The reconcile is also
+        liveness-aware (``sweep_orphans`` only fails rows whose heartbeat is
+        stale/absent), so even without the lock a booting worker can never flip a
+        sibling's actively-running, freshly-heartbeated job FAILED.
+
+        ``JobService.sweep_orphans`` does the durable reconcile (FAILED +
+        worker_lost + terminal event). QUEUED workflow rows never started, so
+        under at-least-once we re-enqueue them onto this worker's executor with a
+        reconstructed request. Best-effort per job so one bad row can't block the
+        rest. Redis backend reconciles via its own watchdog.
         """
         if self._is_redis:
             return
         await self.start()
         job_service = get_job_service()
-        # Fail orphaned IN_PROGRESS rows (at-most-once for in-flight work).
-        await job_service.sweep_orphans()
+        lease_ttl = self._settings.background_lease_ttl_s
+        # Single-flight the IN_PROGRESS reconcile: only the worker that wins the
+        # lock fails orphans; the others skip (a non-blocking try-acquire). The
+        # QUEUED re-enqueue below stays per-worker because each row is claimed
+        # atomically (claim_queued_job), so two workers cannot double-run it.
+        lock_file = Path(tempfile.gettempdir()) / "langflow_bg_orphan_sweep.lock"
+        lock = FileLock(lock_file, timeout=0)
+        try:
+            with lock:
+                # Fail genuinely-orphaned IN_PROGRESS rows (stale/absent heartbeat).
+                await job_service.sweep_orphans(lease_ttl_s=lease_ttl)
+        except Timeout:
+            # Another worker is running the reconcile; skip ours.
+            await logger.adebug("Another worker is sweeping orphans, skipping")
         # Re-enqueue QUEUED workflow rows (at-least-once for not-yet-started work).
         # Each row is claimed atomically (conditional UPDATE) before enqueuing so
         # two workers booting against the same DB cannot both re-run it — only the

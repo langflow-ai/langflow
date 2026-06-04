@@ -444,42 +444,45 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
-    async def sweep_orphans(self) -> list[UUID]:
-        """Reconcile IN_PROGRESS jobs left behind by a crashed worker.
+    async def sweep_orphans(self, *, lease_ttl_s: float = 30.0) -> list[UUID]:
+        """Reconcile GENUINELY orphaned IN_PROGRESS jobs (stale/absent heartbeat).
 
-        Under the default at-most-once policy an in-flight job whose worker
-        died is unrecoverable, so we mark it FAILED with a worker_lost error,
-        stamp finished_timestamp, and append a terminal ``run_failed`` event so
-        a reattacher always sees a clean end. QUEUED jobs are intentionally
+        Liveness-aware: only an IN_PROGRESS row whose heartbeat is older than
+        ``lease_ttl_s`` (or never recorded) is treated as orphaned. A row with a
+        FRESH heartbeat means a live owner is mid-run, so the sweep must NOT
+        touch it — this is what stops a booting worker B from flipping worker A's
+        actively-running job FAILED(worker_lost) under ``gunicorn -w N``.
+
+        For a real orphan, mark it FAILED with a worker_lost error, stamp
+        finished_timestamp, and append a terminal ``run_failed`` event so a
+        reattacher always sees a clean end. QUEUED jobs are intentionally
         untouched (at-least-once: they get re-picked by a fresh worker).
 
         Returns the ids of the jobs transitioned to FAILED.
         """
         error_payload = {"type": "worker_lost"}
+        reconciled: list[UUID] = []
         async with session_scope() as session:
             stmt = select(Job).where(Job.status == JobStatus.IN_PROGRESS)
             result = await session.exec(stmt)
-            orphans = list(result.all())
-            if not orphans:
-                return []
+            in_progress = list(result.all())
             now = datetime.now(timezone.utc)
-            for job in orphans:
+            for job in in_progress:
+                if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
+                    # Live owner still heartbeating — leave the run alone.
+                    continue
                 job.status = JobStatus.FAILED
                 job.error = dict(error_payload)
                 job.finished_timestamp = now
                 session.add(job)
-                # Terminal milestone on the durable log so reattach sees an end.
-                max_stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job.job_id)
-                current_max = (await session.exec(max_stmt)).one()
-                event = JobEvent(
-                    job_id=job.job_id,
-                    seq=(current_max or 0) + 1,
-                    event_type="run_failed",
-                    payload=dict(error_payload),
-                )
-                session.add(event)
+                reconciled.append(job.job_id)
             await session.flush()
-            return [job.job_id for job in orphans]
+        # Append the terminal milestone via append_event (its own session) so the
+        # IntegrityError/seq-collision retry applies: a seq collision with a
+        # concurrent appender can no longer roll back the whole sweep.
+        for job_id in reconciled:
+            await self.append_event(job_id, "run_failed", dict(error_payload))
+        return reconciled
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.

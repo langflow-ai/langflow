@@ -46,6 +46,8 @@ class JobRunner:
         adapter: StreamAdapter,
         frame_source: FrameSource,
         job_timeout: float | None = None,
+        owner: str | None = None,
+        heartbeat_interval_s: float = 15.0,
     ) -> None:
         self._jobs = job_service
         self._bus = live_bus
@@ -55,6 +57,12 @@ class JobRunner:
         # surfaces as asyncio.TimeoutError, which execute_with_status maps to
         # TIMED_OUT. None means unbounded (the prior behaviour).
         self._job_timeout = job_timeout
+        # Liveness: while a run is in flight, a background task refreshes the
+        # job-row heartbeat so a reconciler can tell this live run from a
+        # genuinely orphaned one. ``owner`` is a process-unique token; when None
+        # (scripted tests that don't care about liveness) the heartbeat is off.
+        self._owner = owner
+        self._heartbeat_interval_s = max(heartbeat_interval_s, 0.1)
 
     async def run(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """Execute one background job to a terminal state."""
@@ -73,6 +81,7 @@ class JobRunner:
             else:
                 await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
+        heartbeat_task = self._start_heartbeat(job_id)
         try:
             await self._jobs.execute_with_status(job_id, _wrapped)
         except asyncio.CancelledError as exc:
@@ -90,6 +99,9 @@ class JobRunner:
             # execute_with_status; log and swallow so the worker survives.
             await logger.aerror(f"Background job {job_id} runner error: {exc}", exc_info=True)
         finally:
+            # Stop refreshing the heartbeat: the run has reached a terminal
+            # state, so a reconciler should now see it as no-longer-live.
+            await self._stop_heartbeat(heartbeat_task)
             # Last-writer reconcile: a ``/stop`` that raced terminal finalization
             # (execute_with_status writes COMPLETED/FAILED unconditionally) must
             # not be silently overwritten. If a durable STOP signal exists, force
@@ -100,6 +112,32 @@ class JobRunner:
                 if await asyncio.shield(self._reconcile_stop(job_id)):
                     await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
             await self._bus.close(str(job_id))
+
+    def _start_heartbeat(self, job_id: UUID) -> asyncio.Task | None:
+        """Spawn the periodic heartbeat task for a run (None when owner unset).
+
+        The task writes the owner + a fresh timestamp immediately, then refreshes
+        on the interval until cancelled in ``run``'s finally. A heartbeat write
+        failure is swallowed so a transient DB hiccup never kills the run.
+        """
+        if self._owner is None:
+            return None
+
+        async def _beat() -> None:
+            while True:
+                with contextlib.suppress(Exception):
+                    await self._jobs.heartbeat(job_id, self._owner)
+                await asyncio.sleep(self._heartbeat_interval_s)
+
+        return asyncio.create_task(_beat())
+
+    @staticmethod
+    async def _stop_heartbeat(task: asyncio.Task | None) -> None:
+        if task is None:
+            return
+        task.cancel()
+        with contextlib.suppress(asyncio.CancelledError, Exception):
+            await task
 
     async def _reconcile_stop(self, job_id: UUID) -> bool:
         """Force CANCELLED when a STOP signal exists. Returns True if it acted.

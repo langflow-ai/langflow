@@ -48,6 +48,31 @@ async def test_orphaned_in_progress_marked_failed(active_user):
         await svc.stop()
 
 
+async def test_startup_sweep_spares_fresh_heartbeat_job(active_user):
+    """A live IN_PROGRESS job (fresh heartbeat) survives a booting worker's sweep."""
+    job_service = get_job_service()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
+    await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    # Another (live) worker is running this job and just heartbeated it.
+    await job_service.heartbeat(job_id, owner="sibling-worker")
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=lambda **_kw: _scripted,
+    )
+    await svc.start()
+    try:
+        await svc.sweep_orphans_on_startup()
+        job = await job_service.get_job_by_job_id(job_id)
+        # Not flipped FAILED: the sibling's live run is left alone.
+        assert job.status == JobStatus.IN_PROGRESS
+        assert job.error is None
+        assert all(e.event_type != "run_failed" for e in await job_service.read_events(job_id))
+    finally:
+        await svc.stop()
+
+
 async def test_orphaned_queued_is_re_enqueued_and_runs(active_user):
     job_service = get_job_service()
     job_id = uuid4()

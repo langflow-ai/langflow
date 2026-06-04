@@ -297,6 +297,20 @@ class Settings(BaseSettings):
     """Wall-clock seconds a single background job may run before it is marked
     TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
     the runner via ``asyncio.wait_for`` around the build loop."""
+    background_lease_ttl_s: float = Field(default=45.0, gt=0)
+    """Liveness lease window for a running background job. The running owner
+    refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled
+    watchdog) only fails or requeues an IN_PROGRESS job whose heartbeat is older
+    than this TTL (or never recorded). Must comfortably exceed
+    ``background_heartbeat_interval_s`` so a healthy owner never looks stale."""
+    background_heartbeat_interval_s: float = Field(default=15.0, gt=0)
+    """How often a running background job refreshes its liveness heartbeat. Kept
+    well below ``background_lease_ttl_s`` so a brief stall does not trip the
+    reconciler. Must be > 0."""
+    background_watchdog_interval_s: float = Field(default=15.0, gt=0)
+    """How often the scaled worker's periodic watchdog scans for orphaned leases
+    (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
+    restart. Must be > 0."""
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 
