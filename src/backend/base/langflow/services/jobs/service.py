@@ -53,7 +53,7 @@ class JobService(Service):
                 select(Job)
                 .where(Job.flow_id == flow_id)
                 .where((Job.user_id == user_id) | (Job.user_id.is_(None)))
-                .order_by(col(Job.created_at).desc())
+                .order_by(col(Job.created_timestamp).desc())
                 .offset((page - 1) * page_size)
                 .limit(page_size)
             )
