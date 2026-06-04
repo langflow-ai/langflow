@@ -350,14 +350,13 @@ LANGFLOW_GUNICORN_PRELOAD=true
 GUNICORN_CMD_ARGS="--max-requests 250 --max-requests-jitter 50"
 ```
 
-`LANGFLOW_WORKERS` and `LANGFLOW_WORKER_TIMEOUT` raise worker count for concurrency. Raise `LANGFLOW_WORKER_TIMEOUT` if you expect long agent runs.
+`LANGFLOW_WORKERS` sets how many Gunicorn worker processes run for concurrency. `LANGFLOW_WORKER_TIMEOUT` is how long a worker may handle a single request before Gunicorn kills it. Raise it if you expect long agent runs.
 
 `LANGFLOW_GUNICORN_PRELOAD=true` loads the app once in the Gunicorn master before workers fork so Linux can share memory across workers through Copy-on-Write. Safe to leave off; behavior matches older releases when `false`.
 
 `GUNICORN_CMD_ARGS` recycles workers after a set number of requests, so memory usage growth does not continuously accumulate.
-`--max-requests 150` restarts a worker after it processes 150 requests.
-`--max-requests-jitter 30` adds a random extra 0–30 requests on top of the `max-requests` limit for each worker. Spreading restarts over time avoids every worker reloading at once.
-If RAM usage incereases over time, lower `--max-requests` before you lower worker count.
+In the example above, `--max-requests 250` restarts a worker after it processes 250 requests, and `--max-requests-jitter 50` adds a random extra 0–50 requests on top of that limit for each worker. Spreading restarts over time avoids every worker reloading at once.
+If RAM usage increases over time, lower `--max-requests` before you lower worker count.
 
 ### Starter configurations by hardware
 
