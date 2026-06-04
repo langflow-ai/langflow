@@ -75,3 +75,19 @@ It outputs the API response as [`Data`](/data-types#data).
 | Prompt (`prompt`) | String | Input parameter. Prompt to guide the extraction process. |
 | Schema (`schema`) | Data | Input parameter. Schema to define the structure of the extracted data. |
 | Enable Web Search (`enable_web_search`) | Boolean | Input parameter. When true, the extraction uses web search to find additional data. |
+
+
+## Firecrawl Search API
+
+This component searches the web and returns the results.
+
+It outputs the API response as [`Data`](/data-types#data).
+
+### Firecrawl Search API parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| Firecrawl API Key (`api_key`) | SecretString | Input parameter. The API key to use Firecrawl API. |
+| Query (`query`) | String | Input parameter. The search query to run. |
+| Limit (`limit`) | Integer | Input parameter. The maximum number of results to return. |
+| Location (`location`) | String | Input parameter. Location to bias the search results (for example, a country or region). |
