@@ -381,6 +381,59 @@ async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
         assert f"id: {seq}".encode() in frame, f"replayed frame missing id: {frame!r}"
 
 
+async def test_executor_stop_applies_terminal_reconcile(hard_proof_job_service):
+    """``executor.stop()`` lets an in-flight stopped job's reconcile land.
+
+    Drives the REAL runner on the executor. The job blocks mid-run; a STOP signal
+    is written, then ``executor.stop()`` tears the pool down. stop() cancels and
+    gathers the in-flight task so the runner's shielded terminal reconcile applies
+    BEFORE it returns, and the durable row reads CANCELLED. The job swallows its
+    cancellation (user-stop path): stop() cancels the job task directly and
+    gathers it rather than waiting on the worker's absorbed-cancel ``await``,
+    which leaves the worker in cancellation limbo and stalls teardown. The
+    ``wait_for`` budget plus pytest-timeout turn that stall into a failure. Real
+    SQLite and Postgres.
+    """
+    import asyncio
+
+    from langflow.services.background_execution.executor import InProcessExecutor
+
+    job_service = hard_proof_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    started = asyncio.Event()
+    release = asyncio.Event()
+
+    async def blocking_source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        started.set()
+        await release.wait()  # block until cancelled
+        yield _frame("end", {})  # unreachable
+
+    bus = InMemoryLiveBus()
+    runner = _runner(job_service, bus, job_id, blocking_source)
+    executor = InProcessExecutor(max_concurrency=1)
+    await executor.start()
+
+    async def _coro() -> None:
+        await runner.run(job_id=job_id, source_kwargs={})
+
+    await executor.submit(str(job_id), _coro)
+    await asyncio.wait_for(started.wait(), timeout=5.0)
+
+    await job_service.write_signal(job_id, SignalType.STOP)
+    # The fixed stop() (cancel+gather job tasks first) returns in well under a
+    # second. The original ordering (await workers first) leaves the worker in
+    # cancellation limbo behind the job's swallowed cancel and only unblocks once
+    # the reconcile's DB writes drain through lock backoff (many seconds), so a
+    # tight budget here reliably distinguishes the two.
+    await asyncio.wait_for(executor.stop(), timeout=5.0)
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.CANCELLED
+
+
 async def test_stop_signal_is_marked_consumed(hard_proof_job_service):
     """When the runner acts on a STOP, the signal row is stamped ``consumed_at``.
 

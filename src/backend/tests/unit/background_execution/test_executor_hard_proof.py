@@ -93,6 +93,49 @@ async def test_pool_survives_repeated_job_cancellation(monkeypatch):
         await executor.stop()
 
 
+async def test_stop_awaits_in_flight_tasks():
+    """``stop()`` leaves every in-flight task ``done()`` when it returns.
+
+    A real job cancelled mid-flight reconciles its terminal status inside a
+    shielded ``finally`` (a DB write). ``stop()`` cancels the in-flight tasks and
+    then ``gather``s them so that work finishes before teardown, rather than
+    racing a closing DB engine and leaving a "Task was destroyed but it is
+    pending" warning. We capture the in-flight task handle and assert it (and its
+    multi-turn shielded finalizer) is done the instant ``stop()`` returns — the
+    awaited-teardown contract the gather guarantees.
+    """
+    running = asyncio.Event()
+    finalized = asyncio.Event()
+
+    async def _job() -> None:
+        try:
+            running.set()
+            await asyncio.sleep(3600)  # block until cancelled
+        finally:
+            # The runner's terminal reconcile is a shielded await (a DB write)
+            # that spans several event-loop turns. Model it so the task only
+            # finishes after a real awaited finalizer, not the instant the
+            # cancel is delivered.
+            for _ in range(10):
+                await asyncio.shield(asyncio.sleep(0.02))
+            finalized.set()
+
+    executor = InProcessExecutor(max_concurrency=1)
+    await executor.start()
+    await executor.submit("job", _job)
+    await asyncio.wait_for(running.wait(), timeout=2.0)
+
+    # Capture the in-flight task before stop() clears the registry.
+    in_flight = executor._in_flight["job"]
+
+    await executor.stop()
+
+    # If stop() awaited the in-flight task, it (and its shielded finalizer) are
+    # done the moment stop() returns. A non-awaiting stop() leaves it pending.
+    assert in_flight.done(), "stop() returned without awaiting the in-flight task"
+    assert finalized.is_set(), "shielded finalizer did not complete before stop() returned"
+
+
 async def test_pool_survives_job_exception():
     """A job raising a non-CancelledError must not kill the worker."""
     executor = InProcessExecutor(max_concurrency=1)

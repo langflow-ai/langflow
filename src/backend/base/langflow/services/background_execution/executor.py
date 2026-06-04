@@ -43,15 +43,36 @@ class InProcessExecutor:
 
     async def stop(self) -> None:
         self._closed = True
+        # Cancel the in-flight JOB tasks directly first, then await them. A job
+        # that catches its cancel (a user-stop reconciles to CANCELLED) would
+        # otherwise leave the worker's ``await task`` in cancellation limbo, so we
+        # do not rely on cancellation propagating through the worker. Awaiting the
+        # job tasks here lets each one's shielded terminal reconcile finish BEFORE
+        # teardown — without it a reconcile write races a closing DB engine and a
+        # "Task was destroyed but it is pending" warning is logged.
+        # return_exceptions swallows the CancelledError each task raises so one
+        # cancel cannot mask the others.
+        # Cancel the in-flight JOB tasks directly first, then await them. A job
+        # that catches its cancel (a user-stop reconciles to CANCELLED) would
+        # otherwise leave the worker's ``await task`` in cancellation limbo, so we
+        # do not rely on cancellation propagating through the worker. Awaiting the
+        # job tasks here lets each one's shielded terminal reconcile finish BEFORE
+        # teardown — without it a reconcile write races a closing DB engine and a
+        # "Task was destroyed but it is pending" warning is logged.
+        # return_exceptions swallows the CancelledError each task raises so one
+        # cancel cannot mask the others.
+        in_flight = list(self._in_flight.values())
+        for task in in_flight:
+            task.cancel()
+        if in_flight:
+            await asyncio.gather(*in_flight, return_exceptions=True)
+        self._in_flight.clear()
         for task in self._workers:
             task.cancel()
         for task in self._workers:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         self._workers.clear()
-        for task in list(self._in_flight.values()):
-            task.cancel()
-        self._in_flight.clear()
 
     async def submit(self, key: str, coro_factory: CoroFactory) -> None:
         """Enqueue a job. A free worker picks it up and invokes the factory."""
