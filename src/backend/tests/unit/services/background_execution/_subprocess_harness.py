@@ -30,11 +30,10 @@ from urllib.parse import urlparse, urlunparse
 # arg the DatabaseService sets for Postgres; asyncpg does not.
 _PSYCOPG_PREFIX = "postgresql+psycopg://"
 
-# Default claim-queue keys the worker drains (RedisJobClaimQueue defaults). The
-# test-side facade enqueues to these same keys; isolation comes from a dedicated
+# The pending claim-queue key the worker drains (RedisJobClaimQueue default). The
+# test-side harness enqueues to this same key; isolation comes from a dedicated
 # redis DB index that is flushed per test.
 _PENDING_KEY = "langflow:bg:pending"
-_PROCESSING_KEY = "langflow:bg:processing"
 
 
 def psycopg_url(raw: str) -> str:
