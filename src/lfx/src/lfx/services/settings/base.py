@@ -208,6 +208,8 @@ class Settings(BaseSettings):
     """If set to True, Langflow will expose Prometheus metrics."""
     prometheus_port: int = 9090
     """The port on which Langflow will expose Prometheus metrics. 9090 is the default port."""
+    background_metrics_interval: int = 15
+    """Seconds between background-execution DB-derived metric collector ticks."""
 
     disable_track_apikey_usage: bool = False
     remove_api_keys: bool = False
