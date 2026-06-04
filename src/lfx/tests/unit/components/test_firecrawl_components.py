@@ -12,6 +12,7 @@ import types
 from unittest.mock import MagicMock
 
 import pytest
+
 from lfx.components.firecrawl.firecrawl_crawl_api import FirecrawlCrawlApi
 from lfx.components.firecrawl.firecrawl_extract_api import FirecrawlExtractApi
 from lfx.components.firecrawl.firecrawl_map_api import FirecrawlMapApi
@@ -55,14 +56,16 @@ class TestFirecrawlScrapeApi:
         client = mock_firecrawl.return_value
         client.scrape.return_value = _typed({"markdown": "# Hi", "metadata": {}})
 
-        comp = FirecrawlScrapeApi()
-        comp.api_key = "test-key"
-        comp.url = "https://example.com"
-        comp.timeout = 0
-        comp.scrapeOptions = None
-        comp.extractorOptions = None
+        component = FirecrawlScrapeApi()
+        component._attributes = {
+            "api_key": "test-key",
+            "url": "https://example.com",
+            "timeout": 0,
+            "scrapeOptions": None,
+            "extractorOptions": None,
+        }
 
-        result = comp.scrape()
+        result = component.scrape()
 
         mock_firecrawl.assert_called_once_with(api_key="test-key")
         client.scrape.assert_called_once()
@@ -73,15 +76,17 @@ class TestFirecrawlScrapeApi:
         client = mock_firecrawl.return_value
         client.scrape.side_effect = RuntimeError("boom")
 
-        comp = FirecrawlScrapeApi()
-        comp.api_key = "k"
-        comp.url = "https://example.com"
-        comp.timeout = 0
-        comp.scrapeOptions = None
-        comp.extractorOptions = None
+        component = FirecrawlScrapeApi()
+        component._attributes = {
+            "api_key": "k",
+            "url": "https://example.com",
+            "timeout": 0,
+            "scrapeOptions": None,
+            "extractorOptions": None,
+        }
 
         with pytest.raises(RuntimeError):
-            comp.scrape()
+            component.scrape()
 
 
 class TestFirecrawlCrawlApi:
@@ -89,15 +94,17 @@ class TestFirecrawlCrawlApi:
         client = mock_firecrawl.return_value
         client.crawl.return_value = _typed({"status": "completed", "data": []})
 
-        comp = FirecrawlCrawlApi()
-        comp.api_key = "test-key"
-        comp.url = "https://example.com"
-        comp.timeout = 0
-        comp.idempotency_key = ""
-        comp.crawlerOptions = None
-        comp.scrapeOptions = None
+        component = FirecrawlCrawlApi()
+        component._attributes = {
+            "api_key": "test-key",
+            "url": "https://example.com",
+            "timeout": 0,
+            "idempotency_key": "",
+            "crawlerOptions": None,
+            "scrapeOptions": None,
+        }
 
-        result = comp.crawl()
+        result = component.crawl()
 
         mock_firecrawl.assert_called_once_with(api_key="test-key")
         client.crawl.assert_called_once()
@@ -114,19 +121,20 @@ class TestFirecrawlCrawlApi:
 class TestFirecrawlMapApi:
     def test_map_sitemap_only_maps_to_enum(self, mock_firecrawl):
         client = mock_firecrawl.return_value
-        link = _typed({"url": "https://example.com/a"})
         result_obj = MagicMock()
-        result_obj.links = [link]
+        result_obj.links = [_typed({"url": "https://example.com/a"})]
         client.map.return_value = result_obj
 
-        comp = FirecrawlMapApi()
-        comp.api_key = "test-key"
-        comp.urls = "https://example.com"
-        comp.ignore_sitemap = False
-        comp.sitemap_only = True
-        comp.include_subdomains = False
+        component = FirecrawlMapApi()
+        component._attributes = {
+            "api_key": "test-key",
+            "urls": "https://example.com",
+            "ignore_sitemap": False,
+            "sitemap_only": True,
+            "include_subdomains": False,
+        }
 
-        result = comp.map()
+        result = component.map()
 
         client.map.assert_called_once()
         assert client.map.call_args.kwargs.get("sitemap") == "only"
@@ -138,14 +146,16 @@ class TestFirecrawlMapApi:
         result_obj.links = []
         client.map.return_value = result_obj
 
-        comp = FirecrawlMapApi()
-        comp.api_key = "k"
-        comp.urls = "https://example.com"
-        comp.ignore_sitemap = True
-        comp.sitemap_only = False
-        comp.include_subdomains = False
+        component = FirecrawlMapApi()
+        component._attributes = {
+            "api_key": "k",
+            "urls": "https://example.com",
+            "ignore_sitemap": True,
+            "sitemap_only": False,
+            "include_subdomains": False,
+        }
 
-        comp.map()
+        component.map()
 
         assert client.map.call_args.kwargs.get("sitemap") == "skip"
 
@@ -155,14 +165,16 @@ class TestFirecrawlExtractApi:
         client = mock_firecrawl.return_value
         client.extract.return_value = _typed({"data": {"x": 1}})
 
-        comp = FirecrawlExtractApi()
-        comp.api_key = "test-key"
-        comp.urls = "https://example.com"
-        comp.prompt = "extract the title"
-        comp.schema = None
-        comp.enable_web_search = True
+        component = FirecrawlExtractApi()
+        component._attributes = {
+            "api_key": "test-key",
+            "urls": "https://example.com",
+            "prompt": "extract the title",
+            "schema": None,
+            "enable_web_search": True,
+        }
 
-        result = comp.extract()
+        result = component.extract()
 
         client.extract.assert_called_once()
         # v2 takes the URLs as a list in the first positional arg.
@@ -176,13 +188,15 @@ class TestFirecrawlSearchApi:
         client = mock_firecrawl.return_value
         client.search.return_value = _typed({"web": [{"url": "https://example.com"}]})
 
-        comp = FirecrawlSearchApi()
-        comp.api_key = "test-key"
-        comp.query = "firecrawl"
-        comp.limit = 5
-        comp.location = "US"
+        component = FirecrawlSearchApi()
+        component._attributes = {
+            "api_key": "test-key",
+            "query": "firecrawl",
+            "limit": 5,
+            "location": "US",
+        }
 
-        result = comp.search()
+        result = component.search()
 
         mock_firecrawl.assert_called_once_with(api_key="test-key")
         client.search.assert_called_once()
