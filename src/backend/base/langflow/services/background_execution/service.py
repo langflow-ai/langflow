@@ -28,6 +28,7 @@ from langflow.services.background_execution.runner import JobRunner
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.deps import get_job_service
+from langflow.services.jobs.exceptions import DuplicateJobError
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -84,12 +85,22 @@ class BackgroundExecutionService(Service):
         job_service = get_job_service()
         job_id = uuid4()
         dedupe_key = request.get("idempotency_key")
-        await job_service.create_job(
-            job_id=job_id,
-            flow_id=flow_id,
-            user_id=user.id,
-            dedupe_key=dedupe_key,
-        )
+        try:
+            await job_service.create_job(
+                job_id=job_id,
+                flow_id=flow_id,
+                user_id=user.id,
+                dedupe_key=dedupe_key,
+            )
+        except DuplicateJobError:
+            # Idempotent retry: a non-terminal job already exists for this key,
+            # so return that job_id instead of queuing duplicate work. Falls
+            # through to a fresh submit only if the existing row vanished in the
+            # race between create_job's check and this lookup.
+            existing = await self._existing_job_for_dedupe(dedupe_key, user.id)
+            if existing is not None:
+                return existing
+            raise
         # Persist the submit request on the job row so a QUEUED job that survives
         # a restart is re-enqueued with its ORIGINAL inputs (input_value, tweaks,
         # globals, etc.), not a reconstructed default. The startup sweep reads it
@@ -97,6 +108,33 @@ class BackgroundExecutionService(Service):
         await job_service.update_job_metadata(job_id, {"request": request})
         await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
         return job_id
+
+    @staticmethod
+    async def _existing_job_for_dedupe(dedupe_key: str | None, user_id: UUID | None) -> UUID | None:
+        """Return the active job_id sharing ``dedupe_key`` for this user, if any.
+
+        Mirrors ``create_job``'s non-terminal set (QUEUED / IN_PROGRESS /
+        COMPLETED) so a retried POST resolves to the same job a terminal job
+        with the same key would not block (allowing a genuine re-run).
+        """
+        if dedupe_key is None:
+            return None
+        from sqlmodel import col, select
+
+        from langflow.services.database.models.jobs.model import Job as JobModel
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as session:
+            stmt = (
+                select(JobModel)
+                .where(JobModel.dedupe_key == dedupe_key)
+                .where(col(JobModel.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+            )
+            if user_id is not None:
+                stmt = stmt.where(JobModel.user_id == user_id)
+            result = await session.exec(stmt)
+            row = result.first()
+            return row.job_id if row is not None else None
 
     async def _enqueue(self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any], user: UserRead | None) -> None:
         """Build a runner for the job and submit it to the in-process executor."""

@@ -193,3 +193,41 @@ class TestStatusDurableResultError:
                 flow = await session.get(Flow, bad_flow)
                 if flow:
                     await session.delete(flow)
+
+
+class TestIdempotentSubmit:
+    """An optional idempotency_key dedupes background submits via dedupe_key."""
+
+    async def test_repeated_idempotency_key_returns_same_job(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """Two background submits with the same idempotency_key share one job_id."""
+        headers = {"x-api-key": created_api_key.api_key}
+        key = f"idem-{uuid4()}"
+        body = _body(chatbot_flow, mode="background")
+        body["idempotency_key"] = key
+
+        first = await client.post("api/v2/workflows", json=body, headers=headers)
+        second = await client.post("api/v2/workflows", json=body, headers=headers)
+
+        assert first.status_code == 200, first.text
+        assert second.status_code == 200, second.text
+        assert first.json()["job_id"] == second.json()["job_id"]
+
+    async def test_no_idempotency_key_creates_distinct_jobs(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """Without an idempotency_key, repeated submits create distinct jobs."""
+        headers = {"x-api-key": created_api_key.api_key}
+        body = _body(chatbot_flow, mode="background")
+
+        first = await client.post("api/v2/workflows", json=body, headers=headers)
+        second = await client.post("api/v2/workflows", json=body, headers=headers)
+
+        assert first.json()["job_id"] != second.json()["job_id"]

@@ -252,6 +252,15 @@ class WorkflowRunRequest(BaseModel):
             "legacy ``X-LANGFLOW-GLOBAL-VAR-*`` headers."
         ),
     )
+    idempotency_key: str | None = Field(
+        None,
+        description=(
+            "Optional client-supplied key that dedupes background submits. Two "
+            "background runs with the same key return the same job_id instead of "
+            "queuing duplicate work. Ignored for sync/stream modes."
+        ),
+        max_length=255,
+    )
 
     model_config = ConfigDict(
         extra="forbid",

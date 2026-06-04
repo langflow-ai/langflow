@@ -257,6 +257,7 @@ async def execute_workflow(
                 current_user=current_user,
                 http_request=http_request,
                 stream_protocol=request.stream_protocol,
+                idempotency_key=request.idempotency_key,
             )
 
         # Stream mode: the adapter instance drives the SSE frame loop, so we
@@ -798,6 +799,7 @@ async def execute_workflow_background(
     current_user: UserRead,
     http_request: Request,  # noqa: ARG001
     stream_protocol: str,
+    idempotency_key: str | None = None,
 ) -> WorkflowJobResponse:
     """Queue a background run through the BackgroundExecutionService facade.
 
@@ -805,6 +807,9 @@ async def execute_workflow_background(
     and terminal-state finalization. We pass the original request fields so the
     runner re-parses them on the worker (the build happens off the request
     path) and replays durable milestones from ``job_events`` on re-attach.
+
+    An optional ``idempotency_key`` dedupes submits: a retried POST with the
+    same key returns the existing job_id rather than queuing duplicate work.
     """
     try:
         service = get_background_execution_service()
@@ -823,6 +828,7 @@ async def execute_workflow_background(
             "files": parsed.files,
             "start_component_id": parsed.start_component_id,
             "stop_component_id": parsed.stop_component_id,
+            "idempotency_key": idempotency_key,
         }
         job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
         return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
