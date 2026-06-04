@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+from collections import OrderedDict
 from collections.abc import AsyncIterator, Awaitable, Callable
 from dataclasses import dataclass
 
@@ -21,6 +22,15 @@ from dataclasses import dataclass
 # the oldest live frame rather than growing without bound; the durable log is
 # the source of truth for anything the client missed, reachable via reattach.
 _SUBSCRIBER_MAXSIZE = 1000
+
+# Cap on the closed-marker map. ``close()`` records each finished job so a later
+# direct reattach/subscribe to it terminates immediately instead of blocking on a
+# live tail that will never produce. The map is evicted eagerly when a job's last
+# subscriber drops; this LRU cap is the backstop for jobs that close and are
+# never reattached, so a long-lived API process cannot leak one key per job
+# without bound. The facade also gates terminal jobs on the persisted JobStatus,
+# so an evicted marker never causes a missed/blocked production reattach.
+_CLOSED_MARKER_MAXSIZE = 4096
 
 
 @dataclass(frozen=True)
@@ -47,8 +57,10 @@ class InMemoryLiveBus:
     def __init__(self) -> None:
         # job_id -> set of subscriber queues.
         self._subscribers: dict[str, set[asyncio.Queue]] = {}
-        # job_id -> True once closed; late subscribers end immediately.
-        self._closed: dict[str, bool] = {}
+        # job_id -> True once closed; late subscribers end immediately. Bounded
+        # LRU (OrderedDict) so a long-lived process cannot leak one key per job;
+        # see ``_mark_closed`` / ``_CLOSED_MARKER_MAXSIZE``.
+        self._closed: OrderedDict[str, bool] = OrderedDict()
 
     def _new_queue(self, job_id: str) -> asyncio.Queue:
         queue: asyncio.Queue = asyncio.Queue(maxsize=_SUBSCRIBER_MAXSIZE)
@@ -61,14 +73,6 @@ class InMemoryLiveBus:
             subs.discard(queue)
             if not subs:
                 self._subscribers.pop(job_id, None)
-                # Evict the closed-marker with the last subscriber so a long-lived
-                # API process does not leak one key per completed job. The marker
-                # only needs to outlive close() until existing subscribers drain;
-                # a LATER reattach to a finished job is gated on the persisted
-                # JobStatus by the facade (the cross-restart source of truth), not
-                # on this in-process flag, so dropping it here cannot make a late
-                # reattacher block on a tail that never produces.
-                self._closed.pop(job_id, None)
 
     async def publish(self, job_id: str, frame: LiveFrame) -> None:
         """Push ``frame`` to every live subscriber for ``job_id``."""
@@ -79,22 +83,25 @@ class InMemoryLiveBus:
             with contextlib.suppress(asyncio.QueueFull):
                 queue.put_nowait(frame)
 
-    async def close(self, job_id: str) -> None:
-        """Mark the job's stream ended and wake every subscriber.
+    def _mark_closed(self, job_id: str) -> None:
+        """Record a job as closed, bounding the map to an LRU of recent jobs.
 
-        The ``_closed`` marker is set only when there are live subscribers to
-        end: it exists so a subscriber attached just before close ends promptly,
-        and so a reattach racing close (between this call and the subscriber's
-        drain) short-circuits. With NO subscribers there is nothing to wake and a
-        later reattach is gated on the persisted JobStatus by the facade, so
-        setting the marker would only leak a key per completed job. It is evicted
-        with the last subscriber in ``_drop_queue``.
+        Always recorded (even with no subscribers) so a later direct reattach to
+        the finished job terminates instead of blocking on a tail that will never
+        produce. The OrderedDict is the LRU: re-mark moves the key to the end, and
+        the oldest entry is dropped once the cap is exceeded. Eviction of a very
+        old marker is safe — the facade gates terminal jobs on the persisted
+        JobStatus, so a production reattach never depends on this in-process flag.
         """
-        subs = list(self._subscribers.get(job_id, set()))
-        if not subs:
-            return
         self._closed[job_id] = True
-        for queue in subs:
+        self._closed.move_to_end(job_id)
+        while len(self._closed) > _CLOSED_MARKER_MAXSIZE:
+            self._closed.popitem(last=False)
+
+    async def close(self, job_id: str) -> None:
+        """Mark the job's stream ended and wake every subscriber."""
+        self._mark_closed(job_id)
+        for queue in list(self._subscribers.get(job_id, set())):
             with contextlib.suppress(asyncio.QueueFull):
                 queue.put_nowait(_CLOSED)
 

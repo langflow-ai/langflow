@@ -65,25 +65,28 @@ async def test_closed_marker_is_bounded_not_leaked():
 
     The bus is a single long-lived per-process object; close(job_id) used to set
     ``_closed[job_id]=True`` and never evict it, leaking one key per job for the
-    process lifetime. Drive many jobs through subscribe->publish->drain->close and
-    assert the marker map does not retain an entry per finished job once its last
-    subscriber has drained.
+    process lifetime. Close many MORE jobs than the LRU cap and assert the marker
+    map stays bounded (does not grow with the number of finished jobs) and that a
+    reattach to a still-tracked closed job still terminates immediately.
     """
-    bus = InMemoryLiveBus()
-    for i in range(200):
-        job_id = f"job-{i}"
-        sub = bus.subscribe(job_id)
-        await bus.publish(job_id, LiveFrame(seq=1, data=b"x"))
-        frame = await asyncio.wait_for(sub.__anext__(), timeout=2)
-        assert frame.data == b"x"
-        await bus.close(job_id)
-        # Drain to end-of-stream so the subscriber generator's finally runs.
-        with pytest.raises(StopAsyncIteration):
-            await asyncio.wait_for(sub.__anext__(), timeout=2)
+    from langflow.services.background_execution.live_bus import _CLOSED_MARKER_MAXSIZE
 
-    # No subscribers remain; the closed-marker map must not retain 200 entries.
-    assert len(bus._subscribers) == 0
-    assert len(bus._closed) == 0, f"_closed leaked {len(bus._closed)} entries"
+    bus = InMemoryLiveBus()
+    total = _CLOSED_MARKER_MAXSIZE + 500
+    for i in range(total):
+        await bus.close(f"job-{i}")
+
+    # Bounded: the map never exceeds the LRU cap no matter how many jobs finish.
+    assert len(bus._closed) <= _CLOSED_MARKER_MAXSIZE, f"_closed leaked {len(bus._closed)} entries"
+
+    # A reattach to a recently-closed job (still in the LRU) terminates at once,
+    # not blocking on a live tail that will never produce.
+    async def read_durable(after_seq: int) -> list[LiveFrame]:  # noqa: ARG001
+        return []
+
+    recent = f"job-{total - 1}"
+    seqs = [f.seq async for f in bus.reattach(recent, last_seq=0, read_durable=read_durable)]
+    assert seqs == []
 
 
 async def test_reattach_dedupes_overlap_between_durable_and_live():
