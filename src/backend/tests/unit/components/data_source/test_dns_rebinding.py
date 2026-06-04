@@ -478,7 +478,7 @@ class TestURLComponentDNSRebindingProtection:
                 [
                     b"HTTP/1.1 200 OK\r\n",
                     b"Content-Type: text/html\r\n",
-                    b"Content-Length: 42\r\n",
+                    b"Content-Length: 38\r\n",
                     b"\r\n",
                     b"<html><body>Test content</body></html>",
                 ]
@@ -615,7 +615,7 @@ class TestURLComponentDNSRebindingProtection:
                 [
                     b"HTTP/1.1 200 OK\r\n",
                     b"Content-Type: text/html\r\n",
-                    b"Content-Length: 70\r\n",
+                    b"Content-Length: 61\r\n",
                     b"\r\n",
                     b'<html><body><a href="http://evil.com/">Link</a></body></html>',
                 ]

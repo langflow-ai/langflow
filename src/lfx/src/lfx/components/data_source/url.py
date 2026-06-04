@@ -454,6 +454,7 @@ class URLComponent(Component):
         try:
             # Validate all URLs and get their validated IPs for DNS pinning
             validated_urls = []
+            first_validation_error: Exception | None = None
             for url in self.urls:
                 if not url.strip():
                     continue
@@ -461,6 +462,11 @@ class URLComponent(Component):
                     normalized_url, validated_ips = self.ensure_url(url)
                     validated_urls.append((normalized_url, validated_ips))
                 except (ValueError, SSRFProtectionError) as e:
+                    # Remember the first rejection so its real cause (for example an
+                    # SSRF block) can be surfaced if no URL survives validation,
+                    # instead of being hidden behind "No valid URLs provided".
+                    if first_validation_error is None:
+                        first_validation_error = e
                     if self.continue_on_failure:
                         logger.warning(f"Skipping invalid URL {url}: {e}")
                         continue
@@ -477,6 +483,11 @@ class URLComponent(Component):
             logger.debug(f"Validated {len(unique_validated_urls)} unique URL(s)")
 
             if not unique_validated_urls:
+                # Surface the actual reason every candidate URL was rejected (e.g. an
+                # SSRF block) rather than a generic message, so a security failure is
+                # not silently swallowed when continue_on_failure is enabled.
+                if first_validation_error is not None:
+                    raise first_validation_error
                 msg = "No valid URLs provided."
                 raise ValueError(msg)
 
