@@ -118,3 +118,43 @@ async def test_concurrent_reconcile_caps_attempts(real_redis, active_user):
     assert refreshed.status == JobStatus.QUEUED
     pending = await real_redis.lrange(backend.claim_queue.pending_key, 0, -1)
     assert pending.count(str(job_id).encode()) == 1  # one pending entry, no duplicates
+
+    # No double-run: draining the queue yields the job exactly once more.
+    first = await backend.claim(block_ms=200)
+    second = await backend.claim(block_ms=200)
+    assert first == str(job_id)
+    assert second is None  # not claimable a second time -> runs at most once more
+
+
+async def test_concurrent_reconcile_no_double_run_side_effect(real_redis, active_user):
+    """A side-effect-style counter: concurrent reconcile of one lost job runs it once more.
+
+    Models the at-most-once-for-retry guarantee with an observable counter: each
+    time the reconciled job is CLAIMED off the queue counts as one (re)run. Many
+    reconcilers racing the single lost id must leave the job claimable exactly
+    once, so a draining worker would execute the side effect a single extra time.
+    """
+    jobs = get_job_service()
+    job_id = uuid.uuid4()
+    await jobs.create_job(job_id=job_id, flow_id=uuid.uuid4(), user_id=active_user.id)
+    await jobs.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    old = (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat()
+    await jobs.update_job_metadata(
+        job_id,
+        {"retry_safe": True, "max_attempts": 10, "attempt": 1, "owner": "dead", "heartbeat_at": old},
+    )
+
+    backend = _scoped_backend(real_redis, jobs)
+    await real_redis.lpush(backend.claim_queue.processing_key, str(job_id))
+
+    await asyncio.gather(*(backend.requeue_lost(lease_ttl_s=30.0) for _ in range(12)))
+
+    # Count how many times the job is claimable = how many times it would re-run.
+    runs = 0
+    while True:
+        claimed = await backend.claim(block_ms=200)
+        if claimed is None:
+            break
+        runs += 1
+        assert claimed == str(job_id)
+    assert runs == 1  # exactly one extra run, never two — no double side effect
