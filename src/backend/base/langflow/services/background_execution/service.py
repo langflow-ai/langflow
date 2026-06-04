@@ -1,0 +1,206 @@
+"""BackgroundExecutionService: the facade over the background-run primitives.
+
+Composes the existing durable store (``JobService``) with the in-process
+executor, the in-memory live bus, and the per-job runner. Methods:
+
+* ``submit(flow_id, request, user) -> job_id``
+* ``events(job_id, last_event_id, user) -> AsyncIterator[bytes]``
+* ``status(job_id, user)`` / ``result(job_id, user)``
+* ``stop_job(job_id, user)``
+
+Backend selection follows ``settings.job_queue_type``: ``asyncio`` (default)
+uses the in-process executor + in-memory bus implemented here; ``redis``
+raises ``NotImplementedError`` until Phase 3 wires the scaled backend behind
+these same methods.
+"""
+
+from __future__ import annotations
+
+import json
+from collections.abc import Callable
+from typing import TYPE_CHECKING, Any
+from uuid import uuid4
+
+from langflow.services.background_execution.executor import InProcessExecutor
+from langflow.services.background_execution.live_bus import InMemoryLiveBus, LiveFrame
+from langflow.services.background_execution.runner import JobRunner
+from langflow.services.base import Service
+from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
+from langflow.services.deps import get_job_service
+
+if TYPE_CHECKING:
+    from collections.abc import AsyncIterator
+    from uuid import UUID
+
+    from lfx.services.settings.service import SettingsService
+
+    from langflow.services.database.models.jobs.model import Job, JobEvent
+    from langflow.services.database.models.user.model import UserRead
+
+# A frame-source factory returns the async-generator callable the runner drives.
+# Default wiring (Task 2.7) returns ``_stream_event_frames`` bound to the run's
+# adapter + flow; tests inject a scripted generator.
+FrameSourceFactory = Callable[..., Any]
+
+# Statuses past which a job is terminal and stop/resubmit are no-ops.
+_TERMINAL_STATUSES = {
+    JobStatus.COMPLETED,
+    JobStatus.FAILED,
+    JobStatus.CANCELLED,
+    JobStatus.TIMED_OUT,
+}
+
+
+class BackgroundExecutionService(Service):
+    name = "background_execution_service"
+
+    def __init__(
+        self,
+        settings_service: SettingsService,
+        *,
+        frame_source_factory: FrameSourceFactory | None = None,
+    ) -> None:
+        self.settings_service = settings_service
+        self._settings = settings_service.settings
+        self._is_redis = self._settings.job_queue_type == "redis"
+        self._executor = InProcessExecutor(max_concurrency=self._settings.background_max_concurrency)
+        self._bus = InMemoryLiveBus()
+        # Injected in tests; defaulted to the real build loop by the route wiring.
+        self._frame_source_factory = frame_source_factory
+        self.set_ready()
+
+    async def start(self) -> None:
+        if self._is_redis:
+            # Phase 3 fills this in (redis queue + worker process + streams bus).
+            msg = "Redis background backend is not implemented yet (Phase 3)."
+            raise NotImplementedError(msg)
+        await self._executor.start()
+
+    async def stop(self) -> None:
+        await self._executor.stop()
+
+    async def teardown(self) -> None:
+        await self.stop()
+
+    # ------------------------------------------------------------------ submit
+
+    async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
+        job_service = get_job_service()
+        job_id = uuid4()
+        dedupe_key = request.get("idempotency_key")
+        await job_service.create_job(
+            job_id=job_id,
+            flow_id=flow_id,
+            user_id=user.id,
+            dedupe_key=dedupe_key,
+        )
+        await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
+        return job_id
+
+    async def _enqueue(self, *, job_id: UUID, flow_id: UUID, request: dict[str, Any], user: UserRead | None) -> None:
+        """Build a runner for the job and submit it to the in-process executor."""
+        job_service = get_job_service()
+        adapter = self._build_adapter(request, job_id, flow_id)
+        source = self._frame_source_factory(request=request, flow_id=flow_id, user=user, adapter=adapter)
+        runner = JobRunner(
+            job_service=job_service,
+            live_bus=self._bus,
+            adapter=adapter,
+            frame_source=source,
+        )
+
+        async def _coro() -> None:
+            await runner.run(job_id=job_id, source_kwargs={})
+
+        await self._executor.submit(str(job_id), _coro)
+
+    # ------------------------------------------------------------------ events
+
+    async def events(
+        self,
+        job_id: UUID,
+        last_event_id: str | None,
+        user: UserRead,
+    ) -> AsyncIterator[bytes]:
+        await self._validate(job_id, user)
+        job_service = get_job_service()
+        last_seq = self._parse_last_event_id(last_event_id)
+
+        async def read_durable(after_seq: int) -> list[LiveFrame]:
+            rows = await job_service.read_events(job_id, after_seq=after_seq)
+            return [LiveFrame(seq=r.seq, data=self._row_to_frame(r)) for r in rows]
+
+        async for frame in self._bus.reattach(str(job_id), last_seq=last_seq, read_durable=read_durable):
+            yield frame.data
+
+    # ------------------------------------------------------------------ status
+
+    async def status(self, job_id: UUID, user: UserRead) -> dict[str, Any]:
+        job = await self._validate(job_id, user)
+        payload: dict[str, Any] = {
+            "job_id": str(job.job_id),
+            "flow_id": str(job.flow_id),
+            "status": job.status,
+        }
+        # Surface durable result/error additively.
+        if job.result is not None:
+            payload["result"] = job.result
+        if job.error is not None:
+            payload["error"] = job.error
+        return payload
+
+    async def result(self, job_id: UUID, user: UserRead) -> Any:
+        job = await self._validate(job_id, user)
+        return job.result
+
+    # -------------------------------------------------------------------- stop
+
+    async def stop_job(self, job_id: UUID, user: UserRead) -> None:
+        job = await self._validate(job_id, user)
+        if job.status in _TERMINAL_STATUSES:
+            return
+        job_service = get_job_service()
+        # Durable STOP so the runner's vertex-boundary poll sees it even if the
+        # in-flight task cancel races; then cancel the local task for promptness.
+        await job_service.write_signal(job_id, SignalType.STOP)
+        await self._executor.cancel(str(job_id))
+
+    # ----------------------------------------------------------------- helpers
+
+    async def _validate(self, job_id: UUID, user: UserRead) -> Job:
+        job_service = get_job_service()
+        try:
+            job = await job_service._validate_ownership(job_id, user.id)  # noqa: SLF001
+        except ValueError as exc:
+            raise PermissionError(str(exc)) from exc
+        if job.type != JobType.WORKFLOW:
+            msg = f"Job {job_id} is not a workflow job"
+            raise PermissionError(msg)
+        return job
+
+    def _build_adapter(self, request: dict[str, Any], job_id: UUID, flow_id: UUID):
+        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
+
+        protocol = request.get("stream_protocol", "langflow")
+        return get_stream_adapter(
+            protocol,
+            StreamAdapterContext(
+                run_id=str(job_id),
+                thread_id=request.get("session_id") or str(flow_id),
+            ),
+        )
+
+    @staticmethod
+    def _parse_last_event_id(last_event_id: str | None) -> int:
+        if not last_event_id:
+            return 0
+        try:
+            return int(last_event_id)
+        except ValueError:
+            return 0
+
+    @staticmethod
+    def _row_to_frame(row: JobEvent) -> bytes:
+        # Re-frame the durable payload as the same JSON-shaped bytes a live
+        # subscriber would receive. ``payload`` is the {"event","data"} object.
+        return json.dumps(row.payload).encode("utf-8")

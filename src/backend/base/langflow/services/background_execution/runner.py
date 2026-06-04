@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING, Any
 from lfx.log.logger import logger
 
 from langflow.services.background_execution.live_bus import LiveFrame
-from langflow.services.database.models.jobs.model import SignalType
+from langflow.services.database.models.jobs.model import JobStatus, SignalType
 
 if TYPE_CHECKING:
     from uuid import UUID
@@ -61,16 +61,19 @@ class JobRunner:
         try:
             await self._jobs.execute_with_status(job_id, _wrapped)
         except asyncio.CancelledError as exc:
-            # execute_with_status already mapped status (CANCELLED on a
-            # user-tagged cooperative stop, FAILED otherwise). A cooperative
-            # stop we raised ourselves should end the run cleanly; only a REAL
-            # external task cancel (executor stop()) must propagate so asyncio
-            # cancellation semantics hold for the caller.
+            # A cooperative STOP that we raised ourselves ends the run cleanly
+            # (execute_with_status already wrote CANCELLED). A REAL external
+            # task cancel (executor stop()) arrives untagged: if a durable STOP
+            # was written by ``stop_job`` before the cancel, the user asked to
+            # stop, so correct the status to CANCELLED (execute_with_status
+            # wrote FAILED for the untagged cancel) and swallow. Otherwise it is
+            # a genuine system cancel — re-raise so asyncio semantics hold.
             user_tagged = bool(exc.args) and exc.args[0] == "LANGFLOW_USER_CANCELLED"
-            task = asyncio.current_task()
-            externally_cancelled = task is not None and task.cancelling() > 0
-            if user_tagged and not externally_cancelled:
+            if user_tagged:
                 await logger.adebug(f"Background job {job_id} stopped cooperatively")
+            elif await self._stop_requested(job_id):
+                await self._jobs.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+                await logger.adebug(f"Background job {job_id} cancelled via STOP signal")
             else:
                 raise
         except Exception as exc:  # noqa: BLE001
