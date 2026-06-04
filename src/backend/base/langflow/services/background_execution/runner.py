@@ -203,11 +203,14 @@ class JobRunner:
                 payload = self._decode_payload(frame_bytes)
                 seq = await self._jobs.append_event(job_id, event_type, payload)
                 last_durable_seq = seq
-                await self._bus.publish(str(job_id), LiveFrame(seq=seq, data=frame_bytes))
+                await self._bus.publish(str(job_id), LiveFrame(seq=seq, data=self._restamp_id(frame_bytes, seq)))
                 if event_type == self._adapter.terminal_error_type:
                     errored_payload = payload
             else:
-                await self._bus.publish(str(job_id), LiveFrame(seq=last_durable_seq, data=frame_bytes))
+                await self._bus.publish(
+                    str(job_id),
+                    LiveFrame(seq=last_durable_seq, data=self._restamp_id(frame_bytes, last_durable_seq)),
+                )
 
         # Final cooperative-stop check: a STOP that lands after the last frame
         # (or while a fast flow was finishing) must still win over a clean
@@ -235,6 +238,37 @@ class JobRunner:
         exc = asyncio.CancelledError()
         exc.args = ("LANGFLOW_USER_CANCELLED",)
         return exc
+
+    @staticmethod
+    def _restamp_id(frame_bytes: bytes, seq: int) -> bytes:
+        r"""Rewrite the SSE ``id:`` line so the live id == the durable ``seq``.
+
+        The frame source (``_stream_event_frames``) bakes its OWN per-frame stream
+        counter into ``id:`` — counting ephemeral tokens and initial frames too —
+        so those ids live in a DIFFERENT namespace than ``job_events.seq``. A
+        client's ``Last-Event-ID`` (a live id) is later fed to
+        ``read_events(after_seq=...)`` (a durable seq), so the two MUST share one
+        namespace or a reattach gaps/duplicates milestones. We re-stamp every live
+        frame's id with its durable cursor (the row seq for a milestone, the last
+        milestone's seq for an ephemeral token) so live ids and durable replay ids
+        are one cursor. ``_row_to_frame`` already stamps replayed rows with
+        ``id=row.seq``, so live and replay now agree byte-for-byte on the id line.
+
+        Bare-JSON frames (scripted tests, no ``id:`` line) get one appended; a
+        frame that already carries an ``id:`` line has it replaced.
+        """
+        from fastapi.sse import format_sse_event
+
+        text = frame_bytes.decode("utf-8", errors="replace")
+        data_str: str | None = None
+        for line in text.splitlines():
+            if line.startswith("data:"):
+                data_str = line[len("data:") :].strip()
+                break
+        if data_str is None:
+            # Not SSE-framed (bare JSON from scripted tests): frame it now with id.
+            data_str = text.strip()
+        return format_sse_event(data_str=data_str, id=str(seq))
 
     @staticmethod
     def _decode_payload(frame_bytes: bytes) -> dict[str, Any]:
