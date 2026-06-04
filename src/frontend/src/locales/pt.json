@@ -141,6 +141,7 @@
   "assistant.welcomeText": "Veja como posso ajudar",
   "assistant.working": "Processando...",
   "assistant.workingOnIt": "Trabalhando nisso...",
+  "assistant.mentionNoMatches": "Nenhum componente correspondente no canvas",
   "auth.adminLoginButton": "Efetuar Login",
   "auth.adminTitle": "Administrador",
   "auth.alertSaveWithApi": "⚠️ Atenção: a exportação deste fluxo pode expor credenciais confidenciais.",
