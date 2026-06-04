@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 from uuid import uuid4
 
 import pytest
+from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.jobs.service import JobService
 
 
@@ -110,3 +111,67 @@ async def test_increment_attempt_concurrent_only_one_wins():
     assert results.count(True) == 1
     job = await service.get_job_by_job_id(job_id)
     assert job.job_metadata["attempt"] == 2
+
+
+@pytest.mark.usefixtures("client")
+async def test_claim_queued_lease_keeps_status_queued():
+    """A lease-claim of a QUEUED row stamps owner+heartbeat WITHOUT flipping status.
+
+    This is what makes a re-enqueue that crashes before the runner starts safe:
+    the row stays QUEUED (re-runnable) instead of becoming a stranded IN_PROGRESS
+    that the next sweep would fail worker_lost.
+    """
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    assert await service.claim_queued_lease(job_id, owner="w1", lease_ttl_s=30.0) is True
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED  # NOT flipped to IN_PROGRESS
+    assert (job.job_metadata or {}).get("owner") == "w1"
+    assert (job.job_metadata or {}).get("heartbeat_at")
+
+
+@pytest.mark.usefixtures("client")
+async def test_claim_queued_lease_single_flight_when_fresh():
+    """A second claimant loses while the first lease is still fresh (single-flight)."""
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    assert await service.claim_queued_lease(job_id, owner="w1", lease_ttl_s=30.0) is True
+    # w2 sees a fresh lease -> must not steal it.
+    assert await service.claim_queued_lease(job_id, owner="w2", lease_ttl_s=30.0) is False
+    job = await service.get_job_by_job_id(job_id)
+    assert (job.job_metadata or {}).get("owner") == "w1"
+
+
+@pytest.mark.usefixtures("client")
+async def test_claim_queued_lease_reclaimable_when_stale():
+    """Once the lease goes stale (claimant died before running) it is re-claimable."""
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    old = (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat()
+    await service.update_job_metadata(job_id, {"owner": "dead", "heartbeat_at": old})
+
+    # The row is still QUEUED with a STALE lease -> a fresh worker re-claims it.
+    assert await service.claim_queued_lease(job_id, owner="w2", lease_ttl_s=30.0) is True
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED
+    assert (job.job_metadata or {}).get("owner") == "w2"
+
+
+@pytest.mark.usefixtures("client")
+async def test_claim_queued_lease_concurrent_only_one_wins():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    results = await asyncio.gather(
+        *(service.claim_queued_lease(job_id, owner=f"w{i}", lease_ttl_s=30.0) for i in range(8))
+    )
+    assert results.count(True) == 1
+    job = await service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.QUEUED

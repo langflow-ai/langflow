@@ -325,8 +325,8 @@ class BackgroundExecutionService(Service):
         lease_ttl = self._settings.background_lease_ttl_s
         # Single-flight the IN_PROGRESS reconcile: only the worker that wins the
         # lock fails orphans; the others skip (a non-blocking try-acquire). The
-        # QUEUED re-enqueue below stays per-worker because each row is claimed
-        # atomically (claim_queued_job), so two workers cannot double-run it.
+        # QUEUED re-enqueue below stays per-worker because each row is lease-claimed
+        # atomically (claim_queued_lease), so two workers cannot double-run it.
         lock_file = Path(tempfile.gettempdir()) / "langflow_bg_orphan_sweep.lock"
         lock = FileLock(lock_file, timeout=0)
         try:
@@ -337,11 +337,15 @@ class BackgroundExecutionService(Service):
             # Another worker is running the reconcile; skip ours.
             await logger.adebug("Another worker is sweeping orphans, skipping")
         # Re-enqueue QUEUED workflow rows (at-least-once for not-yet-started work).
-        # Each row is claimed atomically (conditional UPDATE) before enqueuing so
-        # two workers booting against the same DB cannot both re-run it — only the
-        # sweeper whose claim wins (rowcount==1) enqueues; the loser skips it.
+        # Each row is LEASE-claimed (single-flight) WITHOUT flipping it to
+        # IN_PROGRESS, so two workers booting against the same DB cannot both
+        # re-run it (only the claim whose rowcount==1 enqueues), AND a re-enqueue
+        # that crashes before the runner starts leaves the row QUEUED and
+        # re-runnable on the next boot rather than a stranded IN_PROGRESS the next
+        # sweep would fail worker_lost. The runner's execute_with_status performs
+        # the real QUEUED->IN_PROGRESS flip once it actually starts emitting.
         for job in await self._queued_workflow_jobs():
-            if not await job_service.claim_queued_job(job.job_id):
+            if not await job_service.claim_queued_lease(job.job_id, owner=self._owner, lease_ttl_s=lease_ttl):
                 continue
             request_dict = self._reconstruct_request(job)
             user = self._user_stub(job.user_id)

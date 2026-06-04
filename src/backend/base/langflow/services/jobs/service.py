@@ -425,6 +425,49 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def claim_queued_lease(self, job_id: UUID, *, owner: str, lease_ttl_s: float) -> bool:
+        """Lease-claim a QUEUED row WITHOUT flipping its status. Returns True if won.
+
+        Single-flight ownership for the default re-enqueue path that, unlike
+        ``claim_queued_job``, does NOT move the row to IN_PROGRESS. Keeping the
+        row QUEUED means a re-enqueue that crashes before the runner emits its
+        first transition leaves the job re-runnable (the sweep never fails QUEUED
+        rows, and the next boot re-claims it once this lease goes stale) instead
+        of becoming a stranded IN_PROGRESS that gets failed worker_lost. The
+        runner's ``execute_with_status`` performs the real QUEUED->IN_PROGRESS
+        flip when it actually starts.
+
+        The claim succeeds only when the row is QUEUED and its current lease is
+        absent or stale, and the conditional UPDATE matches the EXACT prior
+        ``heartbeat_at`` we read, so two workers racing the same stale row see
+        only one ``rowcount == 1``. Portable across SQLite and Postgres.
+        """
+        from sqlmodel import update
+
+        hb_expr = col(Job.job_metadata)["heartbeat_at"].as_string()
+        now = datetime.now(timezone.utc).isoformat()
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None or job.status != JobStatus.QUEUED:
+                return False
+            meta = job.job_metadata or {}
+            prior_hb = meta.get("heartbeat_at")
+            # A fresh lease means another worker already owns this claim window.
+            if not self.is_lease_stale(job, lease_ttl_s=lease_ttl_s):
+                return False
+            merged = {**meta, "owner": owner, "heartbeat_at": now}
+            # Guard on the exact prior heartbeat so a concurrent claimer that
+            # already stamped its own loses the conditional UPDATE.
+            guard = hb_expr.is_(None) if prior_hb is None else hb_expr == prior_hb
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED, guard)
+                .values(job_metadata=merged)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def queued_workflow_job_ids(self) -> list[UUID]:
         """Return the ids of every QUEUED workflow job (for strand recovery)."""
         async with session_scope() as session:
