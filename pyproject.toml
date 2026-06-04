@@ -204,7 +204,8 @@ markers = [
     "unit: Unit tests",
     "integration: Integration tests",
     "slow: Slow-running tests",
-    "security: Security regression tests (IDOR, auth, access control)"
+    "security: Security regression tests (IDOR, auth, access control)",
+    "hard_proof: Real-instance proof tests (real SQLite + real Postgres + real Redis)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
