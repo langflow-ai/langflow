@@ -138,7 +138,15 @@ async def test_real_worker_kill9_midjob_reconciled_by_watchdog():
         try:
             stranded = await backend.claim_queue.processing_ids()
             assert str(job_id) in stranded, f"job not on the processing list after kill: {stranded}"
-            await backend.requeue_lost()
+            # Lease still fresh (the worker heartbeated just before dying): a
+            # reconcile with a generous TTL must NOT touch it — this is the
+            # at-most-once guard that stops a live job being failed.
+            await backend.requeue_lost(lease_ttl_s=3600.0)
+            still = await harness.job_service.get_job_by_job_id(job_id)
+            assert still.status == JobStatus.IN_PROGRESS, f"fresh-lease job wrongly reconciled: {still.status}"
+            # Once the lease is treated as expired (the dead worker stopped
+            # heartbeating), the watchdog reconciles it worker_lost.
+            await backend.requeue_lost(lease_ttl_s=0.0)
         finally:
             await client.aclose()
 

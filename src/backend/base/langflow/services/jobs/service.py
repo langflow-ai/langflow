@@ -421,6 +421,16 @@ class JobService(Service):
             await session.flush()
             return result.rowcount == 1
 
+    async def queued_workflow_job_ids(self) -> list[UUID]:
+        """Return the ids of every QUEUED workflow job (for strand recovery)."""
+        async with session_scope() as session:
+            stmt = select(Job.job_id).where(
+                Job.status == JobStatus.QUEUED,
+                Job.type == JobType.WORKFLOW,
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
+
     async def claim_queued_job(self, job_id: UUID) -> bool:
         """Atomically claim a QUEUED job for execution. Returns True if we won.
 

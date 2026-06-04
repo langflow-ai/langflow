@@ -860,7 +860,15 @@ def worker(
             typer.echo("LANGFLOW_JOB_QUEUE_TYPE must be 'redis' to run a worker.")
             raise typer.Exit(code=1)
 
-        backend, worker_runner, teardown = await build_worker()
+        from uuid import uuid4
+
+        from langflow.services.deps import get_job_service
+
+        # Process-unique owner so this worker's heartbeats are attributable, and
+        # a periodic watchdog so a dead worker's in-flight job is reaped under a
+        # steady fleet WITHOUT requiring a restart.
+        owner = f"worker:{os.getpid()}:{uuid4().hex[:8]}"
+        backend, worker_runner, teardown = await build_worker(owner=owner)
         stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
@@ -868,7 +876,16 @@ def worker(
                 loop.add_signal_handler(sig, stop_event.set)
         logger.info("Langflow worker started; draining the redis job-claim queue.")
         try:
-            await run_worker_loop(backend, worker_runner, stop_event=stop_event, idle_block_ms=idle_block_ms)
+            await run_worker_loop(
+                backend,
+                worker_runner,
+                stop_event=stop_event,
+                idle_block_ms=idle_block_ms,
+                job_service=get_job_service(),
+                owner=owner,
+                lease_ttl_s=settings.background_lease_ttl_s,
+                watchdog_interval_s=settings.background_watchdog_interval_s,
+            )
         finally:
             await teardown()
 

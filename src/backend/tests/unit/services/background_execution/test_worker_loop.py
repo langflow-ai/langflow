@@ -20,7 +20,7 @@ class _FakeBackend:
         self.completed: list[str] = []
         self.reconciled = False
 
-    async def requeue_lost(self):
+    async def requeue_lost(self, *, lease_ttl_s=45.0):  # noqa: ARG002 - lease_ttl_s is part of the contract
         self.reconciled = True
         return []
 

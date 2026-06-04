@@ -11,6 +11,7 @@ the watchdog reconciles the durable job row separately.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -42,10 +43,14 @@ class WorkerJobRunner:
         settings: Settings,
         live_bus: Any,
         frame_source_factory: Callable[..., Any] | None = None,
+        owner: str | None = None,
     ) -> None:
         self._settings = settings
         self._live_bus = live_bus
         self._frame_source_factory = frame_source_factory
+        # Process-unique token the in-flight JobRunner stamps on the heartbeat so
+        # the periodic watchdog can tell this live run from a dead worker's.
+        self._owner = owner
 
     def _resolve_frame_source_factory(self) -> Callable[..., Any]:
         if self._frame_source_factory is not None:
@@ -81,6 +86,8 @@ class WorkerJobRunner:
             adapter=adapter,
             frame_source=source,
             job_timeout=self._settings.background_job_timeout,
+            owner=self._owner,
+            heartbeat_interval_s=self._settings.background_heartbeat_interval_s,
         )
         await runner.run(job_id=job_uuid, source_kwargs={"job_id": job_uuid})
 
@@ -98,44 +105,136 @@ class WorkerJobRunner:
         )
 
 
+async def _watchdog_loop(
+    backend: Any,
+    job_service: Any,
+    *,
+    stop_event: asyncio.Event,
+    lease_ttl_s: float,
+    interval_s: float,
+) -> None:
+    """Periodically reconcile orphaned leases until *stop_event* is set.
+
+    This is the running watchdog the design calls for: a worker that died
+    mid-run leaves a stale-lease id on the processing list, and under a steady
+    fleet (no restarts) nothing else reconciles it. Running ``requeue_lost`` on
+    an interval reaps it WITHOUT requiring a new worker process to boot. Each
+    pass is best-effort so a transient error never kills the loop. When a DB is
+    wired (``job_service``), it also re-enqueues QUEUED rows stranded off redis.
+    """
+    while not stop_event.is_set():
+        with contextlib.suppress(Exception):
+            await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
+            if job_service is not None:
+                await _recover_stranded_queued(backend)
+        try:
+            await asyncio.wait_for(stop_event.wait(), timeout=interval_s)
+        except asyncio.TimeoutError:
+            continue
+
+
+async def _recover_stranded_queued(backend: Any) -> None:
+    """Re-enqueue QUEUED workflow rows that are on neither redis list.
+
+    Covers the API-crash window between persisting a QUEUED row and the LPUSH:
+    such a row is invisible to ``requeue_lost`` (it only scans the processing
+    list). Each row is claimed atomically so two workers cannot double-enqueue.
+    The backend's claim guard only re-pushes ids that truly are not already
+    pending/processing.
+    """
+    recover = getattr(backend, "recover_stranded_queued", None)
+    if recover is None:
+        return
+    await recover()
+
+
 async def run_worker_loop(
     backend: Any,
     runner: Any,
     *,
     stop_event: asyncio.Event,
     idle_block_ms: int = 1000,
+    job_service: Any = None,
+    owner: str | None = None,
+    lease_ttl_s: float = 45.0,
+    watchdog_interval_s: float | None = None,
 ) -> None:
-    """Claim-and-run loop. Returns when *stop_event* is set.
+    """Claim-and-run loop with a periodic lease watchdog. Returns on *stop_event*.
 
     Args:
-        backend: object exposing requeue_lost(), claim(block_ms=), complete(id).
+        backend: object exposing requeue_lost(lease_ttl_s=), claim(block_ms=),
+            complete(id), and (optionally) recover_stranded_queued().
         runner: object exposing run(job_id).
         stop_event: set by the signal handler for cooperative shutdown.
         idle_block_ms: how long claim() blocks waiting for work each iteration;
             kept short so the loop notices stop_event promptly.
+        job_service: durable store; when set, the worker stamps a heartbeat on
+            claim (so a just-claimed job's lease is fresh while it starts) and
+            the watchdog also recovers QUEUED rows stranded off redis.
+        owner: process-unique token stamped on the claim heartbeat.
+        lease_ttl_s: lease window the watchdog uses to decide "dead".
+        watchdog_interval_s: how often the periodic watchdog runs; None disables
+            it (startup-only reconcile, the prior behaviour).
     """
     # Startup reconcile: requeue work lost by a previously-crashed worker.
-    await backend.requeue_lost()
+    await backend.requeue_lost(lease_ttl_s=lease_ttl_s)
+    if job_service is not None:
+        with contextlib.suppress(Exception):
+            await _recover_stranded_queued(backend)
 
-    while not stop_event.is_set():
-        job_id = await backend.claim(block_ms=idle_block_ms)
-        if job_id is None:
-            # claim() blocks up to idle_block_ms on a real redis, but a backend
-            # that returns None promptly (empty queue, error path, test double)
-            # must not hot-spin — yield so the stop signal and other tasks run.
-            await asyncio.sleep(0)
-            continue
-        try:
-            await runner.run(job_id)
-        except asyncio.CancelledError:
-            raise
-        except Exception as exc:  # noqa: BLE001
-            await logger.aexception(f"Worker: runner failed for job {job_id}: {exc}")
-        finally:
-            # Always release the lease — the durable job row + watchdog decide
-            # whether the work should be retried; a stuck processing-list entry
-            # would block reconcile forever.
-            await backend.complete(job_id)
+    watchdog_task: asyncio.Task | None = None
+    if watchdog_interval_s is not None:
+        watchdog_task = asyncio.create_task(
+            _watchdog_loop(
+                backend,
+                job_service,
+                stop_event=stop_event,
+                lease_ttl_s=lease_ttl_s,
+                interval_s=watchdog_interval_s,
+            )
+        )
+
+    try:
+        while not stop_event.is_set():
+            job_id = await backend.claim(block_ms=idle_block_ms)
+            if job_id is None:
+                # claim() blocks up to idle_block_ms on a real redis, but a backend
+                # that returns None promptly (empty queue, error path, test double)
+                # must not hot-spin — yield so the stop signal and other tasks run.
+                await asyncio.sleep(0)
+                continue
+            # Stamp a heartbeat-on-claim so the lease is fresh the moment we own
+            # the id: a sibling watchdog must not reap a job we just claimed but
+            # have not yet flipped to IN_PROGRESS. Best-effort.
+            if job_service is not None and owner is not None:
+                with contextlib.suppress(Exception):
+                    await job_service.heartbeat(_coerce_uuid(job_id), owner)
+            try:
+                await runner.run(job_id)
+            except asyncio.CancelledError:
+                raise
+            except Exception as exc:  # noqa: BLE001
+                await logger.aexception(f"Worker: runner failed for job {job_id}: {exc}")
+            finally:
+                # Always release the lease — the durable job row + watchdog decide
+                # whether the work should be retried; a stuck processing-list entry
+                # would block reconcile forever.
+                await backend.complete(job_id)
+    finally:
+        if watchdog_task is not None:
+            watchdog_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await watchdog_task
+
+
+def _coerce_uuid(job_id: Any) -> Any:
+    from uuid import UUID
+
+    if isinstance(job_id, UUID):
+        return job_id
+    with contextlib.suppress(ValueError, AttributeError, TypeError):
+        return UUID(job_id)
+    return job_id
 
 
 def _build_redis_client(settings: Settings) -> Any:
@@ -154,13 +253,14 @@ def _build_redis_client(settings: Settings) -> Any:
     return StrictRedis(host=host, port=port, db=settings.redis_queue_db)
 
 
-async def build_worker():
+async def build_worker(*, owner: str | None = None):
     """Construct the redis backend, the WorkerJobRunner, and a teardown callable.
 
     Reads the live services (settings, jobs, redis client) so the worker process
     shares the same configuration as the API. The runner publishes live frames to
     the redis Streams bus (RedisStreamLiveBus) so any API replica can reattach.
-    Returns ``(backend, runner, teardown)``.
+    ``owner`` is the process-unique token the in-flight runner stamps on the job
+    heartbeat. Returns ``(backend, runner, teardown)``.
     """
     from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
     from langflow.services.background_execution.redis_live_bus import RedisStreamLiveBus
@@ -177,7 +277,7 @@ async def build_worker():
         startup_grace_s=settings.redis_queue_startup_grace_s,
     )
     live_bus = RedisStreamLiveBus(client, ttl=settings.redis_queue_ttl)
-    runner = WorkerJobRunner(settings=settings, live_bus=live_bus)
+    runner = WorkerJobRunner(settings=settings, live_bus=live_bus, owner=owner)
 
     async def teardown() -> None:
         await client.aclose()

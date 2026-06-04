@@ -57,8 +57,15 @@ class RedisJobClaimQueue:
             return None
         return raw.decode() if isinstance(raw, bytes) else raw
 
-    async def complete(self, job_id: str) -> None:
-        await self._client.lrem(self.processing_key, 0, job_id)
+    async def complete(self, job_id: str) -> int:
+        """Remove ``job_id`` from the processing list. Returns the count removed.
+
+        ``LREM`` is atomic and returns how many entries it deleted, so a
+        reconciler can use a non-zero return as a single-flight token: only the
+        caller whose LREM actually removed the id owns the follow-up requeue,
+        and concurrent reconcilers that removed nothing (0) must not re-enqueue.
+        """
+        return int(await self._client.lrem(self.processing_key, 0, job_id))
 
     async def processing_ids(self) -> list[str]:
         """Return all ids currently on the processing list (for the watchdog)."""
