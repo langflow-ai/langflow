@@ -17,6 +17,7 @@ history because milestones are durable and live frames are on the shared Stream.
 
 from __future__ import annotations
 
+import contextlib
 import uuid
 from typing import TYPE_CHECKING, Any
 
@@ -32,6 +33,20 @@ if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
     from langflow.services.jobs.service import JobService
+
+
+def _as_signal_job_id(job_id: str) -> Any:
+    """Best-effort coerce a job id string to a UUID for the durable signal row.
+
+    The facade always passes a real UUID string, so the durable STOP row keys
+    match ``unconsumed_signals(UUID)`` lookups. A non-UUID id (the pure pub/sub
+    wire test runs with a noop job service) is passed through unchanged.
+    """
+    if isinstance(job_id, uuid.UUID):
+        return job_id
+    with contextlib.suppress(ValueError, AttributeError, TypeError):
+        return uuid.UUID(job_id)
+    return job_id
 
 
 class _StreamFrame:
@@ -84,8 +99,11 @@ class RedisBackgroundQueue:
         worker running the existing cancel dispatcher / marker-check picks these
         up unchanged (we reuse, not reimplement, the wire path).
         """
-        # 1. Durable source of truth.
-        await self._job_service.write_signal(uuid.UUID(job_id) if isinstance(job_id, str) else job_id, SignalType.STOP)
+        # 1. Durable source of truth. Coerce to UUID so the DB row keys match
+        #    unconsumed_signals(UUID) lookups; tolerate non-UUID ids (used in the
+        #    pure pub/sub wire test with a noop job service) by passing them
+        #    through unchanged.
+        await self._job_service.write_signal(_as_signal_job_id(job_id), SignalType.STOP)
         # 2. Fast-path: set the marker (race-safe for a worker that hasn't
         #    subscribed yet) then publish on the cancel channel.
         marker_key = f"{RedisJobQueueService._CANCEL_MARKER_PREFIX}{job_id}"  # noqa: SLF001
