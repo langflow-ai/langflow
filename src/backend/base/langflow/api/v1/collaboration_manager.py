@@ -46,8 +46,17 @@ if TYPE_CHECKING:
 
     from langflow.services.collaboration_events.schemas import CollaborationEvent
 
-BackplaneEventHandler = Callable[[UUID, Any], Awaitable[None]]
+BackplaneEventHandler = Callable[[UUID, UUID, Any], Awaitable[None]]
 BackplaneEventType = Literal["operation.accepted", "presence.joined", "presence.left", "selection.updated"]
+
+
+class LocalEvent:
+    """Sentinel for events created on this worker."""
+
+
+class NoPendingPongDeadline:
+    """Sentinel for connections where the server is not waiting on a heartbeat pong."""
+
 
 WORKER_ID = str(uuid.uuid4())
 _HEARTBEAT_PING_MESSAGE = CollaborationHeartbeatPingMessage().model_dump(mode="json")
@@ -61,7 +70,7 @@ class FlowConnection:
     user_id: UUID
     username: str
     profile_image: str | None
-    pong_deadline_at: float | None = field(default=None)
+    pong_deadline_at: float | type[NoPendingPongDeadline] = field(default=NoPendingPongDeadline)
 
 
 @dataclass
@@ -185,12 +194,13 @@ class CollaborationManager:
         return [connections[i * bucket_size : (i + 1) * bucket_size] for i in range(bucket_count)]
 
     async def disconnect_expired_heartbeats(self, event_service: CollaborationEventService) -> None:
-        expired: list[UUID] = []
         async with self._lock:
             current = time.time()
-            for connection_id, conn in self.rooms.iter_connection_items():
-                if conn.pong_deadline_at is not None and conn.pong_deadline_at <= current:
-                    expired.append(connection_id)
+            expired = [
+                connection_id
+                for connection_id, conn in self.rooms.iter_connection_items()
+                if conn.pong_deadline_at is not NoPendingPongDeadline and conn.pong_deadline_at <= current
+            ]
         await self.disconnect_connections(expired, event_service)
 
     async def send_heartbeat_ping(self, conn: FlowConnection, timeout_seconds: float) -> None:
@@ -217,9 +227,11 @@ class CollaborationManager:
                 return
             if conn.flow_id != flow_id:
                 return
-            if conn.pong_deadline_at is None or conn.pong_deadline_at < time.time():
+            deadline = conn.pong_deadline_at
+            # Ignore stray/duplicate pongs unless this server has an outstanding ping.
+            if deadline is NoPendingPongDeadline or deadline < time.time():
                 return
-            conn.pong_deadline_at = None
+            conn.pong_deadline_at = NoPendingPongDeadline
 
         await event_service.update_connection(connection_id=connection_id)
 
@@ -307,12 +319,21 @@ class CollaborationManager:
         flow_id: UUID,
         message: dict[str, Any],
         *,
+        event_id: UUID | type[LocalEvent] = LocalEvent,
         exclude_connection_id: UUID | None = None,
     ) -> None:
         async with self._lock:
             connections = self.rooms.connections_for_flow(flow_id)
 
-        await logger.adebug("Broadcasting message to %d connections for flow %s", len(connections), flow_id)
+        if event_id is LocalEvent:
+            await logger.adebug("Broadcasting message to %d connections for flow %s", len(connections), flow_id)
+        else:
+            await logger.adebug(
+                "Broadcasting message from another server to %d connections for flow %s (event_id: %s)",
+                len(connections),
+                flow_id,
+                event_id,
+            )
 
         for conn in connections:
             if exclude_connection_id and conn.connection_id == exclude_connection_id:
@@ -331,10 +352,8 @@ class CollaborationManager:
             await logger.adebug("Ignoring malformed collaboration event %s: %s", event.id, exc)
             return
 
-        handler = self._backplane_event_handlers.get(backplane_event.type)
-        if handler is None:
-            return
-        await handler(flow_id, backplane_event)
+        handler = self._backplane_event_handlers[backplane_event.type]
+        await handler(flow_id, event.id, backplane_event)
 
     async def emit_presence_change(
         self,
@@ -418,6 +437,7 @@ class CollaborationManager:
     async def _handle_operation_accepted_backplane_event(
         self,
         flow_id: UUID,
+        event_id: UUID,
         event: CollaborationOperationAcceptedBackplaneEvent,
     ) -> None:
         payload = event.payload
@@ -432,11 +452,12 @@ class CollaborationManager:
             forward_ops=payload.forward_ops,
             created_at=payload.created_at,
         )
-        await self.broadcast_json(flow_id, broadcast.model_dump(mode="json"))
+        await self.broadcast_json(flow_id, broadcast.model_dump(mode="json"), event_id=event_id)
 
     async def _handle_presence_joined_backplane_event(
         self,
         flow_id: UUID,
+        event_id: UUID,
         event: CollaborationPresenceJoinedBackplaneEvent,
     ) -> None:
         payload = event.payload
@@ -451,22 +472,25 @@ class CollaborationManager:
                 username=user.username,
                 profile_image=user.profile_image,
             ),
+            event_id=event_id,
         )
 
     async def _handle_presence_left_backplane_event(
         self,
         flow_id: UUID,
+        event_id: UUID,
         event: CollaborationPresenceLeftBackplaneEvent,
     ) -> None:
         payload = event.payload
         if payload.worker_id == WORKER_ID:
             return
 
-        await self.broadcast_json(flow_id, self.presence_left_message(payload.user_id))
+        await self.broadcast_json(flow_id, self.presence_left_message(payload.user_id), event_id=event_id)
 
     async def _handle_selection_updated_backplane_event(
         self,
         flow_id: UUID,
+        event_id: UUID,
         event: CollaborationSelectionUpdatedBackplaneEvent,
     ) -> None:
         payload = event.payload
@@ -476,6 +500,7 @@ class CollaborationManager:
         await self.broadcast_json(
             flow_id,
             self.selection_updated_message(payload.user_id, payload.selected),
+            event_id=event_id,
         )
 
 
@@ -544,7 +569,7 @@ async def _collaboration_heartbeat_loop() -> None:
         for bucket in buckets:
             await manager.disconnect_expired_heartbeats(event_service)
             for conn in bucket:
-                if conn.pong_deadline_at is None:
+                if conn.pong_deadline_at is NoPendingPongDeadline:
                     await manager.send_heartbeat_ping(conn, timeout)
             await asyncio.sleep(stagger)
 

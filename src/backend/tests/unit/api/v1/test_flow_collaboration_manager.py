@@ -106,7 +106,7 @@ async def test_handle_backplane_operation_ignores_current_worker(manager, flow_i
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-own-worker",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="operation.accepted",
@@ -134,7 +134,7 @@ async def test_handle_backplane_operation_broadcasts_to_local_peers(manager, flo
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-1",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="operation.accepted",
@@ -163,7 +163,7 @@ async def test_handle_backplane_operation_ignores_malformed_payload(manager, flo
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-bad",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="operation.accepted",
@@ -190,7 +190,7 @@ async def test_handle_backplane_event_ignores_unknown_type(manager, flow_id, use
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-unknown",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="unknown.event",
@@ -257,7 +257,7 @@ async def test_handle_backplane_presence_joined_broadcasts(manager, flow_id, use
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-remote-join",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="presence.joined",
@@ -284,7 +284,7 @@ async def test_handle_backplane_presence_ignores_current_worker(manager, flow_id
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-own-presence",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="presence.joined",
@@ -308,7 +308,7 @@ async def test_handle_backplane_selection_updated_broadcasts(manager, flow_id, u
     peer_ws = peer_conn.websocket
 
     event = CollaborationEvent(
-        id="evt-selection",
+        id=uuid4(),
         flow_id=flow_id,
         created_at=1.0,
         type="selection.updated",

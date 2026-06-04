@@ -8,7 +8,11 @@ from unittest.mock import AsyncMock, Mock, patch
 from uuid import UUID, uuid4
 
 import pytest
-from langflow.api.v1.collaboration_manager import CollaborationConnectionLimitExceededError, CollaborationManager
+from langflow.api.v1.collaboration_manager import (
+    CollaborationConnectionLimitExceededError,
+    CollaborationManager,
+    NoPendingPongDeadline,
+)
 from langflow.services.collaboration_events.schemas import (
     CollaborationPresenceChange,
     CollaborationPresenceChangeEnvelope,
@@ -84,7 +88,7 @@ async def test_valid_pong_clears_deadline_and_refreshes_presence(manager, flow_i
     with patch("langflow.api.v1.collaboration_manager.time.time", return_value=1000.0):
         await manager.handle_heartbeat_pong(flow_id, conn_id, event_service)
 
-    assert conn.pong_deadline_at is None
+    assert conn.pong_deadline_at is NoPendingPongDeadline
     event_service.update_connection.assert_awaited_once_with(connection_id=conn_id)
 
 

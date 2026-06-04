@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 class CollaborationEvent:
     """Opaque collaboration event stored in the cross-worker backplane."""
 
-    id: str
+    id: UUID
     flow_id: UUID
     created_at: float
     type: str
@@ -23,7 +23,7 @@ class CollaborationPollCursor:
     """Per-worker poll position for a flow's collaboration event stream."""
 
     created_at: float = 0.0
-    event_id: str = ""
+    event_id: UUID | None = None
 
 
 @dataclass(frozen=True)

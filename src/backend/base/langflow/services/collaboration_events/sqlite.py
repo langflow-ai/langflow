@@ -116,7 +116,8 @@ class SQLiteCollaborationEventService(CollaborationEventService):
             msg = "payload must be a dict"
             raise TypeError(msg)
 
-        event_id = str(uuid.uuid4())
+        event_id = uuid.uuid4()
+        event_id_key = str(event_id)
         event_payload = dict(payload)
         payload_json = json.dumps(event_payload)
 
@@ -140,7 +141,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                         (id, flow_id, created_at, type, payload, expires_at)
                     VALUES (?, ?, ?, ?, ?, ?)
                     """,
-                    (event_id, flow_id_key, now, event_type, payload_json, expires_at),
+                    (event_id_key, flow_id_key, now, event_type, payload_json, expires_at),
                 )
                 await self._enforce_per_flow_cap_locked(conn, flow_id_key)
                 await conn.execute("COMMIT")
@@ -149,7 +150,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                     _LOG_PREFIX,
                     event_type,
                     flow_id_key,
-                    event_id,
+                    event_id_key,
                 )
             except Exception as exc:
                 await conn.execute("ROLLBACK")
@@ -180,6 +181,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
             raise ValueError(msg)
 
         cursor = cursor or CollaborationPollCursor()
+        cursor_event_id_key = str(cursor.event_id) if cursor.event_id is not None else ""
         async with self._lock:
             conn = await self._ensure_conn()
             now = time.time()
@@ -204,7 +206,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                         now,
                         cursor.created_at,
                         cursor.created_at,
-                        cursor.event_id,
+                        cursor_event_id_key,
                         poll_limit,
                     ),
                 )
@@ -212,7 +214,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
 
         events = [
             CollaborationEvent(
-                id=row[0],
+                id=UUID(row[0]),
                 flow_id=flow_id,
                 created_at=row[1],
                 type=row[2],
