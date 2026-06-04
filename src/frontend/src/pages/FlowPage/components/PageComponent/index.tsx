@@ -24,10 +24,8 @@ import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { FlowBuilderWelcomeMount } from "@/components/core/flowBuilderWelcome/flow-builder-welcome-mount";
 import FlowToolbar from "@/components/core/flowToolbarComponent";
 import {
-  COLOR_OPTIONS,
   NOTE_NODE_MIN_HEIGHT,
   NOTE_NODE_MIN_WIDTH,
-  NOTE_PLACEMENT_CURSOR_OFFSET,
 } from "@/constants/constants";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
@@ -80,6 +78,7 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
+import { computeNoteScreenPosition } from "./utils/compute-note-position";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import {
   MemoizedBackground,
@@ -298,14 +297,7 @@ export default function Page({
     }
   }, [currentFlowId]);
 
-  const [isAddingNote, setIsAddingNote] = useState(false);
-
   const addComponent = useAddComponent();
-
-  const zoomLevel = reactFlowInstance?.getZoom();
-  const shadowBoxWidth = NOTE_NODE_MIN_WIDTH * (zoomLevel || 1);
-  const shadowBoxHeight = NOTE_NODE_MIN_HEIGHT * (zoomLevel || 1);
-  const shadowBoxBackgroundColor = COLOR_OPTIONS[Object.keys(COLOR_OPTIONS)[0]];
 
   const handleGroupNode = useCallback(() => {
     takeSnapshot();
@@ -777,58 +769,11 @@ export default function Page({
     [effectiveLocked, setRightClickedNodeId, setNodes],
   );
 
-  const onPaneClick = useCallback(
-    (event: React.MouseEvent) => {
-      setFilterEdge([]);
-      setFilterComponent("");
-      // Hide right-click dropdown when clicking on the pane
-      setRightClickedNodeId(null);
-      if (isAddingNote) {
-        const shadowBox = document.getElementById("shadow-box");
-        if (shadowBox) {
-          shadowBox.style.display = "none";
-        }
-        const position = reactFlowInstance?.screenToFlowPosition({
-          x: event.clientX - shadowBoxWidth / 2,
-          y: event.clientY - shadowBoxHeight - NOTE_PLACEMENT_CURSOR_OFFSET,
-        });
-        const data = {
-          node: {
-            description: "",
-            display_name: "",
-            documentation: "",
-            template: {},
-          },
-          type: "note",
-        };
-        const newId = getNodeId(data.type);
-
-        const newNode: NoteNodeType = {
-          id: newId,
-          type: "noteNode",
-          position: position || { x: 0, y: 0 },
-          width: NOTE_NODE_MIN_WIDTH,
-          height: NOTE_NODE_MIN_HEIGHT,
-          data: {
-            ...data,
-            id: newId,
-          },
-        };
-        setNodes((nds) => nds.concat(newNode));
-        setIsAddingNote(false);
-        // Signal sidebar to revert add_note active state
-        window.dispatchEvent(new Event("lf:end-add-note"));
-      }
-    },
-    [
-      isAddingNote,
-      setNodes,
-      reactFlowInstance,
-      getNodeId,
-      setFilterEdge,
-      setFilterComponent,
-    ],
-  );
+  const onPaneClick = useCallback(() => {
+    setFilterEdge([]);
+    setFilterComponent("");
+    setRightClickedNodeId(null);
+  }, [setFilterEdge, setFilterComponent, setRightClickedNodeId]);
 
   const handleEdgeClick = (event, edge) => {
     if (effectiveLocked) {
@@ -850,42 +795,48 @@ export default function Page({
     }
   };
 
-  useEffect(() => {
-    const handleGlobalMouseMove = (event) => {
-      if (isAddingNote) {
-        const shadowBox = document.getElementById("shadow-box");
-        if (shadowBox) {
-          shadowBox.style.display = "block";
-          shadowBox.style.left = `${event.clientX - shadowBoxWidth / 2}px`;
-          shadowBox.style.top = `${event.clientY - shadowBoxHeight - NOTE_PLACEMENT_CURSOR_OFFSET}px`;
-        }
-      }
-    };
-
-    document.addEventListener("mousemove", handleGlobalMouseMove);
-
-    return () => {
-      document.removeEventListener("mousemove", handleGlobalMouseMove);
-    };
-  }, [isAddingNote, shadowBoxWidth, shadowBoxHeight]);
-
-  // Listen for a global event to start the add-note flow from outside components
+  // Listen for a global event to start the add-note flow from outside components.
+  // Immediately places the note above the toolbar so the user can drag it right away.
   useEffect(() => {
     const handleStartAddNote = () => {
-      setIsAddingNote(true);
-      const shadowBox = document.getElementById("shadow-box");
-      if (shadowBox) {
-        shadowBox.style.display = "block";
-        shadowBox.style.left = `${position.current.x - shadowBoxWidth / 2}px`;
-        shadowBox.style.top = `${position.current.y - shadowBoxHeight - NOTE_PLACEMENT_CURSOR_OFFSET}px`;
-      }
+      const toolbar = document.querySelector(
+        "[data-testid='main_canvas_controls']",
+      );
+      const screenPos = computeNoteScreenPosition(
+        toolbar?.getBoundingClientRect(),
+      );
+      const notePosition = reactFlowInstance?.screenToFlowPosition(screenPos);
+
+      const data = {
+        node: {
+          description: "",
+          display_name: "",
+          documentation: "",
+          template: {},
+        },
+        type: "note",
+      };
+      const newId = getNodeId(data.type);
+
+      const newNode: NoteNodeType = {
+        id: newId,
+        type: "noteNode",
+        position: notePosition ?? { x: 0, y: 0 },
+        width: NOTE_NODE_MIN_WIDTH,
+        height: NOTE_NODE_MIN_HEIGHT,
+        selected: false,
+        data: { ...data, id: newId },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+      window.dispatchEvent(new Event("lf:end-add-note"));
     };
 
     window.addEventListener("lf:start-add-note", handleStartAddNote);
     return () => {
       window.removeEventListener("lf:start-add-note", handleStartAddNote);
     };
-  }, [shadowBoxWidth, shadowBoxHeight]);
+  }, [reactFlowInstance, getNodeId, setNodes]);
 
   const MIN_ZOOM = 0.25;
   const MAX_ZOOM = 2;
@@ -940,9 +891,6 @@ export default function Page({
               <>
                 <MemoizedCanvasControls
                   selectedNode={selectedNode}
-                  setIsAddingNote={setIsAddingNote}
-                  shadowBoxWidth={shadowBoxWidth}
-                  shadowBoxHeight={shadowBoxHeight}
                   isAgentWorking={isAgentWorking}
                 />
                 {!isPreviewActive && <FlowToolbar />}
@@ -1050,20 +998,6 @@ export default function Page({
                 "New Flow" button on the home page. */}
             <FlowBuilderWelcomeMount />
           </div>
-          <div
-            id="shadow-box"
-            style={{
-              position: "absolute",
-              width: `${shadowBoxWidth}px`,
-              height: `${shadowBoxHeight}px`,
-              backgroundColor: `${shadowBoxBackgroundColor}`,
-              opacity: 0.7,
-              pointerEvents: "none",
-              borderRadius: "12px",
-              // Prevent shadow-box from showing unexpectedly during initial renders
-              display: "none",
-            }}
-          ></div>
         </>
       ) : (
         <div className="flex h-full w-full items-center justify-center">

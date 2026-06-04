@@ -17,9 +17,6 @@ export const MemoizedBackground = memo(() => (
 ));
 
 interface MemoizedCanvasControlsProps {
-  setIsAddingNote: (value: boolean) => void;
-  shadowBoxWidth: number;
-  shadowBoxHeight: number;
   selectedNode: AllNodeType | null;
   isAgentWorking?: boolean;
 }
