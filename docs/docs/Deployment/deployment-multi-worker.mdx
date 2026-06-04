@@ -6,9 +6,14 @@ slug: /deployment-multi-worker
 By default, Langflow runs with a single worker process and stores build job state in memory.
 
 A single-worker process is fine for development, but it doesn't scale when you run more than one worker.
-A flow build started on worker A cannot be polled or streamed from worker B because the in-memory job queue is _per-process_.
+A flow build started on worker **A** cannot be polled or streamed from worker **B** because the in-memory job queue is _per-process_.
+
+A multi-worker deployment runs more than one worker process on the same host. Concurrency can be increased by increasing the number of `LANGFLOW_WORKERS`, but each process keeps its own in-memory build queue unless you add a shared store.
 
 A Redis-backed job queue stores build events in [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/), so any worker can pick up and serve any job's events.
+To configure a multi-worker Langflow, follow the steps to enable the Redis job queue.
+
+After the Redis job queue is configured, you can optionally follow [recommended Gunicorn settings](#recommended-gunicorn-settings) to reduce memory use and keep workers healthy. That tuning applies to **Linux** production hosts only (`langflow run` uses a single Uvicorn process on Windows and macOS).
 
 ## Prerequisites
 
@@ -325,3 +330,43 @@ The Redis backend response includes the following fields:
 | `cancel_stats.activity_touch_errors` | Number of errors writing the client heartbeat key to Redis. |
 | `cancel_stats.activity_get_errors` | Number of errors reading the client heartbeat key from Redis. |
 | `cancel_stats.activity_parse_errors` | Number of malformed heartbeat values encountered by the watchdog. |
+
+## Recommended Gunicorn settings
+
+:::tip
+This step is **optional** and **Linux only**. It does not replace the Redis job queue. On Windows and macOS, `langflow run` uses one Uvicorn process, so `LANGFLOW_GUNICORN_PRELOAD` and `GUNICORN_CMD_ARGS` have no effect.
+:::
+
+These recommendations are **starting points** from Langflow engineering benchmarks on Linux multi-worker deployments.
+They should be treated as values to try and then adjust using `htop` or `btop` while you run flows.
+PostgreSQL, Redis, and vector database services also consume RAM on the same host.
+
+Add the starter values to your server's `.env` file after the Redis variables:
+
+```text
+LANGFLOW_WORKERS=15
+LANGFLOW_WORKER_TIMEOUT=300
+LANGFLOW_GUNICORN_PRELOAD=true
+GUNICORN_CMD_ARGS="--max-requests 250 --max-requests-jitter 50"
+```
+
+`LANGFLOW_WORKERS` and `LANGFLOW_WORKER_TIMEOUT` raise worker count for concurrency. Raise `LANGFLOW_WORKER_TIMEOUT` if you expect long agent runs.
+
+`LANGFLOW_GUNICORN_PRELOAD=true` loads the app once in the Gunicorn master before workers fork so Linux can share memory across workers through Copy-on-Write. Safe to leave off; behavior matches older releases when `false`.
+
+`GUNICORN_CMD_ARGS` recycles workers after a set number of requests, so memory usage growth does not continuously accumulate.
+`--max-requests 150` restarts a worker after it processes 150 requests.
+`--max-requests-jitter 30` adds a random extra 0–30 requests on top of the `max-requests` limit for each worker. Spreading restarts over time avoids every worker reloading at once.
+If RAM usage incereases over time, lower `--max-requests` before you lower worker count.
+
+### Starter configurations by hardware
+
+Copy the block that best matches your server, add it to `.env` after the [Redis job queue](#enable-the-redis-job-queue) settings, and restart Langflow.
+
+| Environment | Starter `.env` values | Notes |
+|---|---|---|
+| **Small / dev** (4–8 GB RAM) | `LANGFLOW_WORKERS=5`<br/>`LANGFLOW_WORKER_TIMEOUT=120`<br/>`LANGFLOW_GUNICORN_PRELOAD=true`<br/>`GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"` | Start with fewer workers so Langflow and local databases do not hit OOM. |
+| **Standard API** (12 GB RAM) | `LANGFLOW_WORKERS=15`<br/>`LANGFLOW_WORKER_TIMEOUT=300`<br/>`LANGFLOW_GUNICORN_PRELOAD=true`<br/>`GUNICORN_CMD_ARGS="--max-requests 250 --max-requests-jitter 50"` | A balanced default for a dedicated Langflow host. |
+| **Heavy multi-agent** (24 GB+ RAM) | `LANGFLOW_WORKERS=30`<br/>`LANGFLOW_WORKER_TIMEOUT=600`<br/>`LANGFLOW_GUNICORN_PRELOAD=true`<br/>`GUNICORN_CMD_ARGS="--max-requests 150 --max-requests-jitter 30"` | Agent loops use more RAM per request, so a lower `--max-requests`  value restarts workers more often to keep long-term usage consistent. |
+
+For more information, see the Langflow [Scaling Langflow blog post](https://www.langflow.org/blog/scaling-langflow).
