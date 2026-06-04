@@ -318,6 +318,29 @@ class JobService(Service):
             result = await session.exec(stmt)
             return list(result.all())
 
+    async def claim_queued_job(self, job_id: UUID) -> bool:
+        """Atomically claim a QUEUED job for execution. Returns True if we won.
+
+        Single-flight guard for the startup sweep: a conditional
+        ``UPDATE job SET status=IN_PROGRESS WHERE job_id=? AND status='QUEUED'``
+        means only ONE racer's update affects a row (``rowcount == 1``); every
+        other concurrent sweeper sees ``rowcount == 0`` and must not enqueue.
+        Works identically on SQLite and Postgres (a single-row conditional UPDATE
+        is atomic on both), so two uvicorn workers booting against one DB cannot
+        both re-run the same non-idempotent QUEUED job.
+        """
+        from sqlmodel import update
+
+        async with session_scope() as session:
+            stmt = (
+                update(Job)
+                .where(Job.job_id == job_id, Job.status == JobStatus.QUEUED)
+                .values(status=JobStatus.IN_PROGRESS)
+            )
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def sweep_orphans(self) -> list[UUID]:
         """Reconcile IN_PROGRESS jobs left behind by a crashed worker.
 

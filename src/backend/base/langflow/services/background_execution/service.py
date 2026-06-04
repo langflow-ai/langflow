@@ -246,7 +246,12 @@ class BackgroundExecutionService(Service):
         # Fail orphaned IN_PROGRESS rows (at-most-once for in-flight work).
         await job_service.sweep_orphans()
         # Re-enqueue QUEUED workflow rows (at-least-once for not-yet-started work).
+        # Each row is claimed atomically (conditional UPDATE) before enqueuing so
+        # two workers booting against the same DB cannot both re-run it — only the
+        # sweeper whose claim wins (rowcount==1) enqueues; the loser skips it.
         for job in await self._queued_workflow_jobs():
+            if not await job_service.claim_queued_job(job.job_id):
+                continue
             request_dict = self._reconstruct_request(job)
             user = self._user_stub(job.user_id)
             with contextlib.suppress(Exception):

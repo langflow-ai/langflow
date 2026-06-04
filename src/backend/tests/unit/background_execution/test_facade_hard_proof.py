@@ -381,6 +381,78 @@ async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
         assert f"id: {seq}".encode() in frame, f"replayed frame missing id: {frame!r}"
 
 
+def _side_effect_factory(*, request, **_kwargs):  # noqa: ARG001
+    """Frame source that emits exactly one durable ``add_message`` side effect.
+
+    Counting the durable ``add_message`` rows for the job is an exactly-once
+    probe: if two sweepers both re-enqueue the same QUEUED job, the run fires
+    twice and two rows land; a single-flight claim leaves exactly one.
+    """
+
+    async def _source(**_kw):
+        yield _frame("add_message", {"marker": "ran"})
+        yield _frame("end", {})
+
+    return _source
+
+
+async def test_concurrent_sweep_runs_queued_job_exactly_once(hard_proof_job_service):
+    """Two startup sweepers sharing one DB must run a QUEUED job EXACTLY once.
+
+    Models two uvicorn workers booting against the same database, each calling
+    ``sweep_orphans_on_startup`` concurrently on the same QUEUED row. Without a
+    single-flight claim both re-enqueue the row and the non-idempotent flow runs
+    twice (two durable side-effect rows). The per-row conditional claim
+    (UPDATE ... WHERE status='QUEUED') lets exactly one sweeper win, so the side
+    effect happens exactly once. Real SQLite and real Postgres.
+    """
+    import asyncio
+
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = hard_proof_job_service
+    user_id = uuid4()
+    flow_id = uuid4()
+    job_id = uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "x",
+        "session_id": "thread-restart",
+    }
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
+    await job_service.update_job_metadata(job_id, {"request": request})
+
+    svc_a = BackgroundExecutionService(
+        settings_service=get_settings_service(), frame_source_factory=_side_effect_factory
+    )
+    svc_b = BackgroundExecutionService(
+        settings_service=get_settings_service(), frame_source_factory=_side_effect_factory
+    )
+    await svc_a.start()
+    await svc_b.start()
+    try:
+        # Both sweep at once: only one may claim and run the QUEUED row.
+        await asyncio.gather(svc_a.sweep_orphans_on_startup(), svc_b.sweep_orphans_on_startup())
+
+        job = None
+        for _ in range(100):
+            job = await job_service.get_job_by_job_id(job_id)
+            if job.status == JobStatus.COMPLETED:
+                break
+            await asyncio.sleep(0.05)
+        assert job.status == JobStatus.COMPLETED
+    finally:
+        await svc_a.stop()
+        await svc_b.stop()
+
+    events = await job_service.read_events(job_id, after_seq=0)
+    markers = [e for e in events if e.event_type == "add_message"]
+    assert len(markers) == 1, f"QUEUED job ran {len(markers)} times, expected exactly 1"
+
+
 class _StubUser:
     """Minimal user carrying only ``id`` (all the facade submit path reads)."""
 
