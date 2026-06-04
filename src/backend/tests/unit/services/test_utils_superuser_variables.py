@@ -23,6 +23,7 @@ from sqlmodel.ext.asyncio.session import AsyncSession
 
 @pytest.fixture(name="db_engine")
 def db_engine_fixture():
+    """Create an in-memory SQLite engine for superuser bootstrap tests."""
     engine = create_async_engine(
         "sqlite+aiosqlite://",
         connect_args={"check_same_thread": False},
@@ -31,6 +32,7 @@ def db_engine_fixture():
 
     @event.listens_for(engine.sync_engine, "connect")
     def _enable_fk(dbapi_connection, connection_record):  # noqa: ARG001
+        """Enable foreign-key checks for the SQLite test database."""
         cursor = dbapi_connection.cursor()
         cursor.execute("PRAGMA foreign_keys=ON")
         cursor.close()
@@ -40,6 +42,7 @@ def db_engine_fixture():
 
 @pytest.fixture(name="db")
 async def db_fixture(db_engine):
+    """Provide a clean async database session for each test."""
     async with db_engine.begin() as conn:
         await conn.run_sync(SQLModel.metadata.create_all)
     async with AsyncSession(db_engine, expire_on_commit=False) as session:
@@ -50,10 +53,14 @@ async def db_fixture(db_engine):
 
 
 class _FakeAuthService:
+    """Small auth-service stand-in used by setup_superuser tests."""
+
     def verify_password(self, password: str, hashed_password: str) -> bool:
+        """Treat stored test passwords as already comparable plain text."""
         return password == hashed_password
 
     async def create_super_user(self, username: str, password: str, db: AsyncSession) -> User:
+        """Create a superuser row through the provided async session."""
         super_user = User(username=username, password=password, is_superuser=True, is_active=True)
         db.add(super_user)
         await db.flush()
@@ -63,6 +70,7 @@ class _FakeAuthService:
 
 @pytest.fixture
 def settings_service(monkeypatch):
+    """Build settings and variable-service stubs shared by the tests."""
     auth_settings = SimpleNamespace(
         AUTO_LOGIN=False,
         SUPERUSER="configured-admin",
@@ -94,6 +102,7 @@ def settings_service(monkeypatch):
 
 
 async def _get_variable(db: AsyncSession, user_id, name: str) -> Variable:
+    """Fetch a single variable for a user by name."""
     return (await db.exec(select(Variable).where(Variable.user_id == user_id, Variable.name == name))).one()
 
 
@@ -103,6 +112,7 @@ async def test_auto_login_false_fresh_superuser_gets_env_variables_during_setup(
     monkeypatch,
     settings_service,
 ) -> None:
+    """Create configured superuser variables during non-AUTO_LOGIN setup."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "env-secret")
 
     result = await service_utils.setup_superuser(settings_service, db)
@@ -120,6 +130,7 @@ async def test_auto_login_false_setup_does_not_overwrite_user_modified_env_varia
     monkeypatch,
     settings_service,
 ) -> None:
+    """Preserve a user-edited environment variable on repeated setup."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "new-env-secret")
     super_user = User(
         username="configured-admin",
@@ -157,6 +168,7 @@ async def test_auto_login_false_existing_superuser_gets_missing_env_variable(
     monkeypatch,
     settings_service,
 ) -> None:
+    """Backfill missing environment variables for an existing superuser."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "env-secret")
     super_user = User(
         username="configured-admin",
@@ -181,8 +193,12 @@ async def test_auto_login_false_variable_initialization_failure_does_not_fail_su
     monkeypatch,
     settings_service,
 ) -> None:
+    """Keep superuser setup successful when variable bootstrap raises."""
     class FailingVariableService:
+        """Variable service that fails before writing anything."""
+
         async def initialize_user_variables(self, *_, **__) -> None:
+            """Raise a synthetic bootstrap failure."""
             msg = "variable bootstrap failed"
             raise RuntimeError(msg)
 
@@ -201,8 +217,12 @@ async def test_auto_login_false_variable_initialization_db_failure_rolls_back_on
     monkeypatch,
     settings_service,
 ) -> None:
+    """Rollback only partial variable writes when bootstrap fails after flush."""
     class FailingAfterFlushVariableService:
+        """Variable service that writes a row and then fails."""
+
         async def initialize_user_variables(self, user_id, session: AsyncSession) -> None:
+            """Insert a partial variable before raising a bootstrap failure."""
             session.add(
                 Variable(
                     user_id=user_id,
@@ -235,6 +255,7 @@ async def test_auto_login_true_fresh_default_superuser_gets_env_variables_during
     monkeypatch,
     settings_service,
 ) -> None:
+    """Initialize default superuser variables during AUTO_LOGIN setup."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "env-secret")
     settings_service.auth_settings.AUTO_LOGIN = True
 
@@ -252,11 +273,13 @@ async def test_initialize_auto_login_default_superuser_gets_env_variables(
     monkeypatch,
     settings_service,
 ) -> None:
+    """Initialize variables through the standalone AUTO_LOGIN helper."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "env-secret")
     settings_service.auth_settings.AUTO_LOGIN = True
 
     @asynccontextmanager
     async def test_session_scope():
+        """Yield the test session in place of the app session scope."""
         yield db
 
     monkeypatch.setattr(initial_setup, "session_scope", test_session_scope)
@@ -276,8 +299,12 @@ async def test_auto_login_true_fresh_variable_initialization_db_failure_keeps_su
     monkeypatch,
     settings_service,
 ) -> None:
+    """Keep AUTO_LOGIN superuser creation when variable bootstrap rolls back."""
     class FailingAfterFlushVariableService:
+        """Variable service that writes a row and then fails."""
+
         async def initialize_user_variables(self, user_id, session: AsyncSession) -> None:
+            """Insert a partial variable before raising a bootstrap failure."""
             session.add(
                 Variable(
                     user_id=user_id,
@@ -311,6 +338,7 @@ async def test_auto_login_true_existing_default_superuser_gets_missing_env_varia
     monkeypatch,
     settings_service,
 ) -> None:
+    """Backfill missing variables for an existing AUTO_LOGIN superuser."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "env-secret")
     settings_service.auth_settings.AUTO_LOGIN = True
     super_user = User(
@@ -336,6 +364,7 @@ async def test_auto_login_lock_timeout_existing_default_superuser_gets_missing_e
     monkeypatch,
     settings_service,
 ) -> None:
+    """Backfill variables after a lock timeout when the superuser exists."""
     monkeypatch.setenv("BOOTSTRAP_API_KEY", "env-secret")
     settings_service.auth_settings.AUTO_LOGIN = True
     super_user = User(
@@ -349,14 +378,18 @@ async def test_auto_login_lock_timeout_existing_default_superuser_gets_missing_e
     await db.refresh(super_user)
 
     class FailingLock:
+        """FileLock replacement that always times out on enter."""
+
         def __init__(self, *_, **__) -> None:
-            pass
+            """Accept the same construction shape as FileLock."""
 
         def __enter__(self):
+            """Raise a timeout to exercise the lock-timeout recovery path."""
             msg = "mock lock timeout"
             raise TimeoutError(msg)
 
         def __exit__(self, *_) -> bool:
+            """Do not suppress exceptions from the context manager."""
             return False
 
     monkeypatch.setattr(filelock, "FileLock", FailingLock)
