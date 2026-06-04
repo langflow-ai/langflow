@@ -25,3 +25,22 @@ def test_job_has_result_and_error_columns(db_url):  # noqa: F811
 
     assert "result" in columns
     assert "error" in columns
+
+
+def test_job_events_table_and_unique_seq(db_url):  # noqa: F811
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "head")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            inspector = inspect(connection)
+            assert "job_events" in inspector.get_table_names()
+            columns = {c["name"] for c in inspector.get_columns("job_events")}
+            assert {"id", "job_id", "seq", "event_type", "payload", "created_at"} <= columns
+            indexes = inspector.get_indexes("job_events")
+            assert any(idx["column_names"] == ["job_id"] for idx in indexes)
+            unique = inspector.get_unique_constraints("job_events")
+            assert any(set(u["column_names"]) == {"job_id", "seq"} for u in unique)
+    finally:
+        engine.dispose()

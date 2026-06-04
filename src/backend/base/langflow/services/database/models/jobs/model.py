@@ -1,9 +1,9 @@
 from datetime import datetime, timezone
 from enum import Enum
 from typing import Any
-from uuid import UUID
+from uuid import UUID, uuid4
 
-from sqlalchemy import JSON, Column, DateTime
+from sqlalchemy import JSON, Column, DateTime, Integer, String, UniqueConstraint
 from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
@@ -101,3 +101,28 @@ class JobBase(SQLModel):
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
+
+
+class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]
+    """Durable event log for a background job.
+
+    ``seq`` is the per-job monotonic cursor used as the SSE Last-Event-ID.
+    UNIQUE(job_id, seq) enforces gap-free ordering and lets append_event
+    detect collisions.
+    """
+
+    __tablename__ = "job_events"
+    __table_args__ = (UniqueConstraint("job_id", "seq", name="uq_job_events_job_id_seq"),)
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    job_id: UUID = Field(index=True, nullable=False)
+    seq: int = Field(sa_column=Column(Integer, nullable=False))
+    event_type: str = Field(sa_column=Column(String, nullable=False))
+    payload: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JsonVariant, nullable=True),
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
