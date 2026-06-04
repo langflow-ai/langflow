@@ -297,6 +297,12 @@ class Settings(BaseSettings):
     """Wall-clock seconds a single background job may run before it is marked
     TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
     the runner via ``asyncio.wait_for`` around the build loop."""
+    test_redis_url: str | None = Field(default=None)
+    """Redis URL used by tests that exercise the scaled background backend.
+
+    Mirrors LANGFLOW_TEST_DATABASE_URI: when set, lease/watchdog/Streams/pubsub
+    timing tests run against this real Redis; when unset they skip. Read from
+    the LANGFLOW_TEST_REDIS_URL environment variable via the env_prefix."""
 
     # Sentry
     sentry_dsn: str | None = None
@@ -889,6 +895,17 @@ class Settings(BaseSettings):
             return False
         else:
             return True
+
+    @property
+    def background_backend_is_scaled(self) -> bool:
+        """True when the background executor should use the redis-backed queue.
+
+        Backend selection follows the existing job_queue_type/redis settings:
+        a redis job queue means a separate `langflow worker` process drains
+        jobs, so the scaled background backend is used. Otherwise the default
+        in-process executor runs jobs inside the API process.
+        """
+        return self.job_queue_type == "redis"
 
     @classmethod
     @override
