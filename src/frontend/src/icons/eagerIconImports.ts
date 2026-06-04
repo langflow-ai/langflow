@@ -78,6 +78,7 @@ import { OneDriveIcon } from "@/icons/OneDrive";
 import { OpenAiIcon } from "@/icons/OpenAi";
 import { OpenRouterIcon } from "@/icons/OpenRouter";
 import { OpenSearch } from "@/icons/OpenSearch";
+import { OracleIcon } from "@/icons/Oracle";
 import { PerplexityIcon } from "@/icons/Perplexity";
 import { PineconeIcon } from "@/icons/Pinecone";
 import { PostgresIcon } from "@/icons/Postgres";
@@ -202,6 +203,7 @@ export const eagerIconsMapping = {
   OpenAI: OpenAiIcon,
   OpenRouter: OpenRouterIcon,
   OpenSearch: OpenSearch,
+  Oracle: OracleIcon,
   Perplexity: PerplexityIcon,
   Pinecone: PineconeIcon,
   Postgres: PostgresIcon,

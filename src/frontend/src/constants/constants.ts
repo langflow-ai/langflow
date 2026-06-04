@@ -812,6 +812,7 @@ export const BUNDLES_SIDEBAR_FOLDER_NAMES = [
   "Code Agents",
   "files_ingestion",
   "File Processing",
+  "oracledb",
 ];
 
 export const AUTHORIZED_DUPLICATE_REQUESTS = [

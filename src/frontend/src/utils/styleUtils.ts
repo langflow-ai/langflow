@@ -497,6 +497,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
   { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
   { display_name: "pgvector", name: "pgvector", icon: "cpu" },
+  { display_name: "Oracle", name: "oracledb", icon: "Oracle" },
   { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
   { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
   { display_name: "Redis", name: "redis", icon: "Redis" },
@@ -721,7 +722,11 @@ export const getCachedIcon = (name: string) => {
 };
 
 export const getNodeIcon = async (name: string) => {
+<<<<<<< HEAD
   const cacheAndReturn = (icon: React.ComponentType) => {
+=======
+  const cacheAndReturn = (icon: ElementType) => {
+>>>>>>> 9af983a07b (Add Oracle Integration)
     iconCache.set(name, icon);
     return icon;
   };

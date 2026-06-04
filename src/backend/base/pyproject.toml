@@ -204,6 +204,10 @@ mongodb = ["pymongo>=4.10.1"]
 supabase = ["supabase>=2.6.0,<3.0.0"]
 redis = ["redis>=7.4.0,<8.0.0"]
 elasticsearch = ["elasticsearch~=8.19", "langchain-elasticsearch~=1.0.0"]
+oracledb = [
+    "oracledb>=2.2.0,<4.0.0",
+    "langchain-oracledb>=1.0.1,<2.0.0",
+]
 
 # Individual vector store providers
 faiss = [
@@ -419,6 +423,7 @@ complete = [
     "langflow-base[supabase]",
     "langflow-base[redis]",
     "langflow-base[elasticsearch]",
+    "langflow-base[oracledb]",
     "langflow-base[faiss]",
     "langflow-base[qdrant]",
     "langflow-base[qdrant-vectors]",
