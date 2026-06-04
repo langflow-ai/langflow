@@ -17,7 +17,14 @@ from langflow.services.database.models.jobs.crud import (
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
-from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus, JobType
+from langflow.services.database.models.jobs.model import (
+    ExecutionSignal,
+    Job,
+    JobEvent,
+    JobStatus,
+    JobType,
+    SignalType,
+)
 from langflow.services.deps import session_scope
 from langflow.services.jobs.exceptions import DuplicateJobError
 
@@ -259,6 +266,31 @@ class JobService(Service):
                 .where(JobEvent.job_id == job_id)
                 .where(JobEvent.seq > after_seq)
                 .order_by(col(JobEvent.seq).asc())
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
+
+    async def write_signal(self, job_id: UUID, signal_type: SignalType, data: dict | None = None) -> ExecutionSignal:
+        """Write a control signal for a job (e.g. STOP).
+
+        The runner consumes it at the next vertex boundary and stamps
+        ``consumed_at``.
+        """
+        async with session_scope() as session:
+            signal = ExecutionSignal(job_id=job_id, signal_type=signal_type, data=data)
+            session.add(signal)
+            await session.flush()
+            await session.refresh(signal)
+            return signal
+
+    async def unconsumed_signals(self, job_id: UUID) -> list[ExecutionSignal]:
+        """Return signals for a job that have not yet been consumed, oldest first."""
+        async with session_scope() as session:
+            stmt = (
+                select(ExecutionSignal)
+                .where(ExecutionSignal.job_id == job_id)
+                .where(col(ExecutionSignal.consumed_at).is_(None))
+                .order_by(col(ExecutionSignal.created_at).asc())
             )
             result = await session.exec(stmt)
             return list(result.all())

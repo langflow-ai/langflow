@@ -5,7 +5,7 @@ from __future__ import annotations
 from uuid import uuid4
 
 import pytest
-from langflow.services.database.models.jobs.model import JobStatus, JobType
+from langflow.services.database.models.jobs.model import JobStatus, JobType, SignalType
 from langflow.services.jobs.service import JobService
 
 
@@ -111,3 +111,27 @@ async def test_read_events_after_seq_returns_ordered_tail():
     # after_seq=0 (or default) returns everything in order.
     all_events = await service.read_events(job_id, after_seq=0)
     assert [e.seq for e in all_events] == [1, 2, 3]
+
+
+@pytest.mark.usefixtures("client")
+async def test_write_signal_then_unconsumed():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    signal = await service.write_signal(job_id, SignalType.STOP)
+    assert signal.signal_type == SignalType.STOP
+    assert signal.consumed_at is None
+
+    pending = await service.unconsumed_signals(job_id)
+    assert len(pending) == 1
+    assert pending[0].signal_type == SignalType.STOP
+
+
+@pytest.mark.usefixtures("client")
+async def test_unconsumed_signals_empty_when_none_written():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    assert await service.unconsumed_signals(job_id) == []
