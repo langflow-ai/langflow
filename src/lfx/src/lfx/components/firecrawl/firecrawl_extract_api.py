@@ -70,7 +70,7 @@ class FirecrawlExtractApi(Component):
 
     def extract(self) -> Data:
         try:
-            from firecrawl import FirecrawlApp
+            from firecrawl import Firecrawl
         except ImportError as e:
             msg = "Could not import firecrawl integration package. Please install it with `pip install firecrawl-py`."
             raise ImportError(msg) from e
@@ -104,23 +104,20 @@ class FirecrawlExtractApi(Component):
         if "schema" not in prompt_text.lower():
             enhanced_prompt = f"{prompt_text}. Please extract all instances in a comprehensive, structured format."
 
-        params = {
+        # firecrawl-py v2 takes typed keyword arguments instead of a params dict.
+        kwargs: dict = {
             "prompt": enhanced_prompt,
-            "enableWebSearch": self.enable_web_search,
-            # Optional parameters - not essential for basic extraction
-            "ignoreSitemap": self.ignore_sitemap,
-            "includeSubdomains": self.include_subdomains,
-            "showSources": self.show_sources,
+            "enable_web_search": self.enable_web_search,
             "timeout": 300,
         }
 
-        # Only add schema to params if it's provided and is a valid schema structure
+        # Only add schema if it's provided and is a valid schema structure
         if self.schema:
             try:
                 if isinstance(self.schema, dict) and "type" in self.schema:
-                    params["schema"] = self.schema
+                    kwargs["schema"] = self.schema
                 elif hasattr(self.schema, "dict") and "type" in self.schema.dict():
-                    params["schema"] = self.schema.dict()
+                    kwargs["schema"] = self.schema.dict()
                 else:
                     # Skip invalid schema without raising an error
                     pass
@@ -128,9 +125,11 @@ class FirecrawlExtractApi(Component):
                 logger.error(f"Invalid schema: {e!s}")
 
         try:
-            app = FirecrawlApp(api_key=self.api_key)
-            extract_result = app.extract(urls, params=params)
-            return Data(data=extract_result)
+            app = Firecrawl(api_key=self.api_key)
+            # v2 takes urls as the first argument and returns a typed response object.
+            extract_result = app.extract(urls, **kwargs)
+            data = extract_result.model_dump() if hasattr(extract_result, "model_dump") else extract_result
+            return Data(data=data)
         except Exception as e:
             msg = f"Error during extraction: {e!s}"
             raise ValueError(msg) from e
