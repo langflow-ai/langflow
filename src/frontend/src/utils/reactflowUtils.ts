@@ -71,14 +71,6 @@ import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
 
-export function checkChatInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "ChatInput");
-}
-
-export function checkWebhookInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "Webhook");
-}
-
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   const brokenEdges: {
     source: {

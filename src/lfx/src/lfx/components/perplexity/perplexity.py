@@ -1,4 +1,4 @@
-from langchain_community.chat_models import ChatPerplexity
+from langchain_perplexity import ChatPerplexity
 from pydantic.v1 import SecretStr
 
 from lfx.base.models.model import LCModelComponent

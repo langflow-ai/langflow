@@ -4,7 +4,7 @@ from types import SimpleNamespace
 from typing import TYPE_CHECKING
 
 import pytest
-from fastapi import UploadFile
+from fastapi import HTTPException, UploadFile
 
 # Module under test
 from langflow.api.v2.files import upload_user_file
@@ -239,3 +239,122 @@ async def test_concurrent_update_server_should_not_lose_servers(
     assert "server_a" in config_state["mcpServers"], "server_a was lost due to concurrent update_server race condition"
     assert "server_b" in config_state["mcpServers"], "server_b was lost due to concurrent update_server race condition"
     assert "server_c" in config_state["mcpServers"], "server_c was lost due to concurrent update_server race condition"
+
+
+def test_enforce_immutable_server_name_rejects_mismatch():
+    """A body name that differs from the URL name is an explicit 422, not a silent no-op."""
+    from langflow.api.v2.mcp import _enforce_immutable_server_name
+
+    with pytest.raises(HTTPException) as exc_info:
+        _enforce_immutable_server_name("old-name", {"name": "new-name", "url": "http://localhost:9000"})
+
+    assert exc_info.value.status_code == 422
+    # The message names both the URL identifier and the rejected body value.
+    assert "old-name" in exc_info.value.detail
+    assert "new-name" in exc_info.value.detail
+
+
+def test_enforce_immutable_server_name_strips_matching_name():
+    """A redundant matching name is dropped so it never pollutes the stored config."""
+    from langflow.api.v2.mcp import _enforce_immutable_server_name
+
+    cleaned = _enforce_immutable_server_name("srv", {"name": "srv", "command": "npx", "args": ["-y", "x"]})
+
+    assert cleaned == {"command": "npx", "args": ["-y", "x"]}
+    assert "name" not in cleaned
+
+
+def test_enforce_immutable_server_name_passthrough_without_name():
+    """Configs without a name field are returned unchanged."""
+    from langflow.api.v2.mcp import _enforce_immutable_server_name
+
+    config = {"command": "npx", "args": ["-y", "x"]}
+
+    assert _enforce_immutable_server_name("srv", config) == config
+
+
+@pytest.mark.asyncio
+async def test_patch_server_rejects_name_change(session, storage_service, settings_service, current_user):
+    """PATCH with a body name different from the URL must 422 instead of silently no-op'ing.
+
+    Regression: MCPServerConfig allows extra fields, so a ``name`` in the PATCH body was
+    persisted as stray config and echoed in the 200 response, falsely implying a rename
+    succeeded while the server stayed keyed under the original (URL) name.
+    """
+    from unittest.mock import AsyncMock, patch
+
+    from langflow.api.v2.mcp import update_server_endpoint
+    from langflow.api.v2.schemas import MCPServerConfig
+
+    body = MCPServerConfig(name="new-name", url="http://localhost:9000")
+
+    with (
+        patch("langflow.api.v2.mcp.update_server", new=AsyncMock()) as mock_update,
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await update_server_endpoint(
+            server_name="old-name",
+            server_config=body,
+            current_user=current_user,
+            session=session,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    mock_update.assert_not_called()  # guard fires before any write/upsert
+
+
+@pytest.mark.asyncio
+async def test_patch_server_strips_matching_name_before_persist(
+    session, storage_service, settings_service, current_user
+):
+    """A PATCH body that echoes the URL name must not persist ``name`` as stray config."""
+    from unittest.mock import AsyncMock, patch
+
+    from langflow.api.v2.mcp import update_server_endpoint
+    from langflow.api.v2.schemas import MCPServerConfig
+
+    body = MCPServerConfig(name="srv", url="http://localhost:9000")
+
+    with patch("langflow.api.v2.mcp.update_server", new=AsyncMock(return_value={"ok": True})) as mock_update:
+        await update_server_endpoint(
+            server_name="srv",
+            server_config=body,
+            current_user=current_user,
+            session=session,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    # update_server is called positionally as (server_name, server_config_dict, ...).
+    persisted_config = mock_update.call_args.args[1]
+    assert persisted_config == {"url": "http://localhost:9000"}
+    assert "name" not in persisted_config
+
+
+@pytest.mark.asyncio
+async def test_post_server_rejects_name_mismatch(session, storage_service, settings_service, current_user):
+    """POST with a body name different from the URL must 422 (same guard as PATCH)."""
+    from unittest.mock import AsyncMock, patch
+
+    from langflow.api.v2.mcp import add_server
+    from langflow.api.v2.schemas import MCPServerConfig
+
+    body = MCPServerConfig(name="different", url="http://localhost:9000")
+
+    with (
+        patch("langflow.api.v2.mcp.update_server", new=AsyncMock()) as mock_update,
+        pytest.raises(HTTPException) as exc_info,
+    ):
+        await add_server(
+            server_name="intended-name",
+            server_config=body,
+            current_user=current_user,
+            session=session,
+            storage_service=storage_service,
+            settings_service=settings_service,
+        )
+
+    assert exc_info.value.status_code == 422
+    mock_update.assert_not_called()

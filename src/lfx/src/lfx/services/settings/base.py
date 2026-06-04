@@ -69,6 +69,16 @@ class Settings(BaseSettings):
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
 
+    kb_allowed_folder_roots: list[str] = []
+    """Allow-list of directories the folder-ingestion endpoint may read from.
+
+    Comma-separated when set via env (``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS``),
+    e.g. ``/srv/docs,/data/shared``. Empty by default — operators must opt in.
+    ``POST /api/v1/knowledge_bases/{kb_name}/ingest/folder`` refuses to walk any
+    directory that is not equal to or inside one of these roots; symlink escapes
+    are blocked because the path is resolved before the containment check. Leave
+    empty in multi-tenant cloud deployments to refuse arbitrary-path access."""
+
     dev: bool = False
     """If True, Langflow will run in development mode."""
     database_url: str | None = None
@@ -244,6 +254,16 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Rate Limiting
+    rate_limit_enabled: bool = True
+    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    rate_limit_per_minute: int = 5
+    """Number of login attempts allowed per minute per IP."""
+    rate_limit_storage_uri: str = "memory://"
+    """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
+    rate_limit_trust_proxy: bool = False
+    """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
 
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
