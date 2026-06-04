@@ -423,6 +423,7 @@ class WorkflowJobResponse(BaseModel):
         if not self.links:
             self.links = {
                 "status": f"/api/v2/workflows?job_id={self.job_id!s}",
+                "events": f"/api/v2/workflows/{self.job_id!s}/events",
                 "stop": "/api/v2/workflows/stop",
             }
         return self
