@@ -24,6 +24,8 @@ from langflow.services.collaboration_events.schemas import (
 )
 from langflow.services.collaboration_events.service import CollaborationEventService
 
+_LOG_PREFIX = "[Collaboration Events (SQLite)] "
+
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS events (
     id         TEXT NOT NULL,
@@ -143,12 +145,20 @@ class SQLiteCollaborationEventService(CollaborationEventService):
                 await self._enforce_per_flow_cap_locked(conn, flow_id_key)
                 await conn.execute("COMMIT")
                 await logger.adebug(
-                    "Published collaboration event %s for flow %s (id: %s)", event_type, flow_id_key, event_id
+                    "%sPublished collaboration event %s for flow %s (event_id: %s)",
+                    _LOG_PREFIX,
+                    event_type,
+                    flow_id_key,
+                    event_id,
                 )
             except Exception as exc:
                 await conn.execute("ROLLBACK")
                 await logger.aerror(
-                    "Failed to publish collaboration event %s for flow %s: %s", event_type, flow_id_key, exc
+                    "%sFailed to publish collaboration event %s for flow %s: %s",
+                    _LOG_PREFIX,
+                    event_type,
+                    flow_id_key,
+                    exc,
                 )
                 raise
 
@@ -223,7 +233,7 @@ class SQLiteCollaborationEventService(CollaborationEventService):
             conn = await self._ensure_conn()
             now = time.time()
             await self._purge_expired_locked(conn, now)
-            await logger.adebug("Completed collaboration events cleanup")
+            await logger.adebug("%sCompleted collaboration events cleanup", _LOG_PREFIX)
 
     async def add_connection(
         self,
