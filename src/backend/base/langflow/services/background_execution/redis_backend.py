@@ -17,11 +17,16 @@ history because milestones are durable and live frames are on the shared Stream.
 
 from __future__ import annotations
 
+import uuid
 from typing import TYPE_CHECKING, Any
 
 from langflow.services.background_execution.redis_queue import RedisJobClaimQueue
-from langflow.services.database.models.jobs.model import JobStatus
-from langflow.services.job_queue.service import RedisQueueWrapper
+from langflow.services.database.models.jobs.model import JobStatus, SignalType
+from langflow.services.job_queue.service import (
+    _CANCEL_CHANNEL_PREFIX,
+    RedisJobQueueService,
+    RedisQueueWrapper,
+)
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -64,6 +69,29 @@ class RedisBackgroundQueue:
     async def enqueue(self, job_id: str) -> None:
         """Hand a queued job id to a worker process via the claim queue."""
         await self.claim_queue.enqueue(job_id)
+
+    # ---------------------------------------------------------------- control
+
+    async def stop(self, job_id: str, *, marker_ttl: int = 60) -> None:
+        """Request a cooperative stop: durable signal first, then pub/sub fast-path.
+
+        The ExecutionSignal(STOP) row is the source of truth — a worker polls
+        unconsumed_signals at vertex boundaries and stops even if the pub/sub
+        message is missed (worker restart, late subscribe). The redis marker +
+        PUBLISH is the fast-path so the owning worker reacts immediately.
+
+        The marker/channel conventions mirror RedisJobQueueService exactly so a
+        worker running the existing cancel dispatcher / marker-check picks these
+        up unchanged (we reuse, not reimplement, the wire path).
+        """
+        # 1. Durable source of truth.
+        await self._job_service.write_signal(uuid.UUID(job_id) if isinstance(job_id, str) else job_id, SignalType.STOP)
+        # 2. Fast-path: set the marker (race-safe for a worker that hasn't
+        #    subscribed yet) then publish on the cancel channel.
+        marker_key = f"{RedisJobQueueService._CANCEL_MARKER_PREFIX}{job_id}"  # noqa: SLF001
+        channel = f"{_CANCEL_CHANNEL_PREFIX}{job_id}"
+        await self._client.set(marker_key, "1", ex=marker_ttl)
+        await self._client.publish(channel, "1")
 
     # ------------------------------------------------------------- watchdog
 
