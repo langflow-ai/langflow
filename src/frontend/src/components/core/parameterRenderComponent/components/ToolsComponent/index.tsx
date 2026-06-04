@@ -125,7 +125,7 @@ export default function ToolsComponent({
                 data-testid={testIdCase(`tool_${action.name}`)}
               >
                 <span className="truncate text-xxs font-medium">
-                  {action.name.toUpperCase()}
+                  {(action.name === "unnamed" ? t("common.unnamed") : action.name).toUpperCase()}
                 </span>
               </Badge>
             ))}
