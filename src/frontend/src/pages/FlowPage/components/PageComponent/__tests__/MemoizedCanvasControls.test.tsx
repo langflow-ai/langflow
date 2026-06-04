@@ -107,7 +107,9 @@ describe("MemoizedCanvasControls", () => {
 
   it("should accept optional isAgentWorking prop without error", () => {
     expect(() =>
-      render(<MemoizedCanvasControls {...defaultProps} isAgentWorking={true} />),
+      render(
+        <MemoizedCanvasControls {...defaultProps} isAgentWorking={true} />,
+      ),
     ).not.toThrow();
     expect(screen.getByTestId("canvas-controls")).toBeInTheDocument();
   });
