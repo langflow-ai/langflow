@@ -240,7 +240,9 @@ export const GetStartedProgress: FC<{
                 />
               </span>
               <ShadTooltip content={t("sidebar.createFlow")} side="right">
-                <span className={cn("truncate text-sm", hasFlows && "line-through")}>
+                <span
+                  className={cn("truncate text-sm", hasFlows && "line-through")}
+                >
                   {t("sidebar.createFlow")}
                 </span>
               </ShadTooltip>
