@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-import time
+import asyncio
 from uuid import UUID, uuid4
 
 import pytest
@@ -29,8 +29,10 @@ def other_flow_id() -> UUID:
 
 
 @pytest.fixture
-def svc(tmp_path):
-    return SQLiteCollaborationEventService(cache_dir=tmp_path / "cache")
+async def svc(tmp_path):
+    service = SQLiteCollaborationEventService(cache_dir=tmp_path / "cache")
+    yield service
+    await service.teardown()
 
 
 def test_factory_returns_sqlite_implementation():
@@ -41,11 +43,15 @@ def test_factory_returns_sqlite_implementation():
     assert isinstance(service, SQLiteCollaborationEventService)
 
 
-def test_publish_and_poll_by_flow_id(svc: SQLiteCollaborationEventService, flow_id: UUID):
-    svc.publish(flow_id, "operation.accepted", {"revision": 1, "forward_ops": []})
-    svc.publish(flow_id, "presence.joined", {"worker_id": "w1", "user": {"user_id": str(uuid4()), "username": "a"}})
+async def test_publish_and_poll_by_flow_id(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    await svc.publish(flow_id, "operation.accepted", {"revision": 1, "forward_ops": []})
+    await svc.publish(
+        flow_id,
+        "presence.joined",
+        {"worker_id": "w1", "user": {"user_id": str(uuid4()), "username": "a"}},
+    )
 
-    events, cursor = svc.poll(flow_id)
+    events, cursor = await svc.poll(flow_id)
     assert len(events) == 2
     assert events[0].type == "operation.accepted"
     assert events[0].payload["revision"] == 1
@@ -54,12 +60,12 @@ def test_publish_and_poll_by_flow_id(svc: SQLiteCollaborationEventService, flow_
     assert cursor.created_at == events[1].created_at
 
 
-def test_flow_isolation(svc: SQLiteCollaborationEventService, flow_id: UUID, other_flow_id: UUID):
-    svc.publish(flow_id, "operation.accepted", {"revision": 1})
-    svc.publish(other_flow_id, "operation.accepted", {"revision": 2})
+async def test_flow_isolation(svc: SQLiteCollaborationEventService, flow_id: UUID, other_flow_id: UUID):
+    await svc.publish(flow_id, "operation.accepted", {"revision": 1})
+    await svc.publish(other_flow_id, "operation.accepted", {"revision": 2})
 
-    events_a, _ = svc.poll(flow_id)
-    events_b, _ = svc.poll(other_flow_id)
+    events_a, _ = await svc.poll(flow_id)
+    events_b, _ = await svc.poll(other_flow_id)
 
     assert len(events_a) == 1
     assert events_a[0].payload["revision"] == 1
@@ -67,11 +73,11 @@ def test_flow_isolation(svc: SQLiteCollaborationEventService, flow_id: UUID, oth
     assert events_b[0].payload["revision"] == 2
 
 
-def test_poll_cursor_skips_seen_events(svc: SQLiteCollaborationEventService, flow_id: UUID):
-    first = svc.publish(flow_id, "operation.accepted", {"revision": 1})
-    svc.publish(flow_id, "operation.accepted", {"revision": 2})
+async def test_poll_cursor_skips_seen_events(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    first = await svc.publish(flow_id, "operation.accepted", {"revision": 1})
+    await svc.publish(flow_id, "operation.accepted", {"revision": 2})
 
-    events, cursor = svc.poll(
+    events, cursor = await svc.poll(
         flow_id,
         cursor=CollaborationPollCursor(created_at=first.created_at, event_id=first.id),
     )
@@ -80,10 +86,10 @@ def test_poll_cursor_skips_seen_events(svc: SQLiteCollaborationEventService, flo
     assert cursor.event_id == events[0].id
 
 
-def test_poll_at_cursor_returns_empty(svc: SQLiteCollaborationEventService, flow_id: UUID):
-    event = svc.publish(flow_id, "operation.accepted", {"revision": 1})
+async def test_poll_at_cursor_returns_empty(svc: SQLiteCollaborationEventService, flow_id: UUID):
+    event = await svc.publish(flow_id, "operation.accepted", {"revision": 1})
 
-    events, cursor = svc.poll(
+    events, cursor = await svc.poll(
         flow_id,
         cursor=CollaborationPollCursor(created_at=event.created_at, event_id=event.id),
     )
@@ -91,78 +97,88 @@ def test_poll_at_cursor_returns_empty(svc: SQLiteCollaborationEventService, flow
     assert cursor == CollaborationPollCursor(created_at=event.created_at, event_id=event.id)
 
 
-def test_ttl_expiry(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_ttl_expiry(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.TTL_SECONDS = 0.1
-    svc.publish(flow_id, "operation.accepted", {"revision": 1})
+    await svc.publish(flow_id, "operation.accepted", {"revision": 1})
 
-    time.sleep(0.15)
+    await asyncio.sleep(0.15)
 
-    events, _ = svc.poll(flow_id)
+    events, _ = await svc.poll(flow_id)
     assert events == []
 
 
-def test_cleanup_removes_expired(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_cleanup_removes_expired(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.TTL_SECONDS = 0.1
-    svc.publish(flow_id, "operation.accepted", {"revision": 1})
+    await svc.publish(flow_id, "operation.accepted", {"revision": 1})
 
-    time.sleep(0.15)
-    svc.cleanup()
+    await asyncio.sleep(0.15)
+    await svc.cleanup()
 
-    events, _ = svc.poll(flow_id)
+    events, _ = await svc.poll(flow_id)
     assert events == []
 
 
-def test_per_flow_cap_eviction(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_per_flow_cap_eviction(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.MAX_EVENTS_PER_FLOW = 3
 
     for revision in range(5):
-        svc.publish(flow_id, "operation.accepted", {"revision": revision})
+        await svc.publish(flow_id, "operation.accepted", {"revision": revision})
 
-    events, _ = svc.poll(flow_id)
+    events, _ = await svc.poll(flow_id)
     assert len(events) == 3
     assert [event.payload["revision"] for event in events] == [2, 3, 4]
 
 
-def test_cross_worker_visibility(tmp_path, flow_id: UUID):
+async def test_cross_worker_visibility(tmp_path, flow_id: UUID):
     """Two service instances sharing a cache_dir see each other's events."""
     shared = tmp_path / "shared"
 
     worker_a = SQLiteCollaborationEventService(cache_dir=shared)
     worker_b = SQLiteCollaborationEventService(cache_dir=shared)
 
-    worker_a.publish(flow_id, "operation.accepted", {"revision": 1})
+    try:
+        await worker_a.publish(flow_id, "operation.accepted", {"revision": 1})
 
-    events, _ = worker_b.poll(flow_id)
-    assert len(events) == 1
-    assert events[0].payload["revision"] == 1
+        events, _ = await worker_b.poll(flow_id)
+        assert len(events) == 1
+        assert events[0].payload["revision"] == 1
 
-    worker_b.publish(flow_id, "selection.updated", {"worker_id": "w2", "user_id": str(uuid4()), "selected": None})
+        await worker_b.publish(
+            flow_id, "selection.updated", {"worker_id": "w2", "user_id": str(uuid4()), "selected": None}
+        )
 
-    events, _ = worker_a.poll(flow_id)
-    assert len(events) == 2
+        events, _ = await worker_a.poll(flow_id)
+        assert len(events) == 2
+    finally:
+        await worker_a.teardown()
+        await worker_b.teardown()
 
 
-def test_cross_worker_flow_isolation(tmp_path, flow_id: UUID, other_flow_id: UUID):
+async def test_cross_worker_flow_isolation(tmp_path, flow_id: UUID, other_flow_id: UUID):
     shared = tmp_path / "shared"
 
     worker_a = SQLiteCollaborationEventService(cache_dir=shared)
     worker_b = SQLiteCollaborationEventService(cache_dir=shared)
 
-    worker_a.publish(flow_id, "operation.accepted", {"revision": 1})
-    worker_b.publish(other_flow_id, "operation.accepted", {"revision": 2})
+    try:
+        await worker_a.publish(flow_id, "operation.accepted", {"revision": 1})
+        await worker_b.publish(other_flow_id, "operation.accepted", {"revision": 2})
 
-    events_a, _ = worker_b.poll(flow_id)
-    events_b, _ = worker_a.poll(other_flow_id)
+        events_a, _ = await worker_b.poll(flow_id)
+        events_b, _ = await worker_a.poll(other_flow_id)
 
-    assert len(events_a) == 1
-    assert events_a[0].payload["revision"] == 1
-    assert len(events_b) == 1
-    assert events_b[0].payload["revision"] == 2
+        assert len(events_a) == 1
+        assert events_a[0].payload["revision"] == 1
+        assert len(events_b) == 1
+        assert events_b[0].payload["revision"] == 2
+    finally:
+        await worker_a.teardown()
+        await worker_b.teardown()
 
 
-def test_publish_requires_event_type(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_publish_requires_event_type(svc: SQLiteCollaborationEventService, flow_id: UUID):
     with pytest.raises(ValueError, match="event_type"):
-        svc.publish(flow_id, "", {})
+        await svc.publish(flow_id, "", {})
 
 
 def test_presence_change_fields_are_mutually_exclusive():
@@ -181,17 +197,17 @@ def test_presence_change_fields_are_mutually_exclusive():
         CollaborationPresenceChange(left_user_id=user_id, selection_updated=selection)
 
 
-def test_list_users_requires_flow_ids(svc: SQLiteCollaborationEventService):
+async def test_list_users_requires_flow_ids(svc: SQLiteCollaborationEventService):
     with pytest.raises(ValueError, match="flow_ids"):
-        svc.list_users([])
+        await svc.list_users([])
 
 
-def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
     conn_a = uuid4()
     conn_b = uuid4()
 
-    joined = svc.add_connection(
+    joined = await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_a,
@@ -202,10 +218,10 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
     assert joined.joined is not None
     assert joined.joined.username == "alice"
 
-    snapshot = svc.list_users([flow_id])[flow_id]
+    snapshot = (await svc.list_users([flow_id]))[flow_id]
     assert len(snapshot.users) == 1
 
-    second = svc.add_connection(
+    second = await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_b,
@@ -213,9 +229,9 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
         profile_image=None,
     )
     assert second is None
-    assert len(svc.list_users([flow_id])[flow_id].users) == 1
+    assert len((await svc.list_users([flow_id]))[flow_id].users) == 1
 
-    change = svc.update_connection(
+    change = await svc.update_connection(
         connection_id=conn_a,
         selected=CollaborationSelectionTarget(kind="node", id="node-1"),
     )
@@ -223,43 +239,43 @@ def test_add_update_remove_and_list_presence(svc: SQLiteCollaborationEventServic
     assert change.selection_updated is not None
     assert change.selection_updated.selected == CollaborationSelectionTarget(kind="node", id="node-1")
 
-    snapshot = svc.list_users([flow_id])[flow_id]
+    snapshot = (await svc.list_users([flow_id]))[flow_id]
     assert snapshot.users[0].selected == CollaborationSelectionTarget(kind="node", id="node-1")
 
-    left = svc.remove_connection(connection_id=conn_a)
+    left = await svc.remove_connection(connection_id=conn_a)
     assert left is not None
     assert left.left_user_id is None
     assert left.selection_updated == CollaborationUserSelection(user_id=user_id, selected=None)
-    assert len(svc.list_users([flow_id])[flow_id].users) == 1
+    assert len((await svc.list_users([flow_id]))[flow_id].users) == 1
 
-    final = svc.remove_connection(connection_id=conn_b)
+    final = await svc.remove_connection(connection_id=conn_b)
     assert final is not None
     assert final.left_user_id == user_id
     assert final.selection_updated is None
-    assert svc.list_users([flow_id])[flow_id].users == []
+    assert (await svc.list_users([flow_id]))[flow_id].users == []
 
 
-def test_remove_connections_batches_presence_changes(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_remove_connections_batches_presence_changes(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
     other_user_id = uuid4()
     conn_a = uuid4()
     conn_b = uuid4()
     conn_c = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_a,
         username="alice",
         profile_image=None,
     )
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_b,
         username="alice",
         profile_image=None,
     )
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=other_user_id,
         connection_id=conn_c,
@@ -267,7 +283,7 @@ def test_remove_connections_batches_presence_changes(svc: SQLiteCollaborationEve
         profile_image=None,
     )
 
-    changes = svc.remove_connections([conn_a, conn_c])
+    changes = await svc.remove_connections([conn_a, conn_c])
 
     assert changes == [
         CollaborationPresenceChangeEnvelope(
@@ -275,25 +291,25 @@ def test_remove_connections_batches_presence_changes(svc: SQLiteCollaborationEve
             change=CollaborationPresenceChange(left_user_id=other_user_id),
         )
     ]
-    assert [user.user_id for user in svc.list_users([flow_id])[flow_id].users] == [user_id]
+    assert [user.user_id for user in (await svc.list_users([flow_id]))[flow_id].users] == [user_id]
 
-    final_changes = svc.remove_connections([conn_b])
+    final_changes = await svc.remove_connections([conn_b])
     assert final_changes == [
         CollaborationPresenceChangeEnvelope(
             flow_id=flow_id,
             change=CollaborationPresenceChange(left_user_id=user_id),
         )
     ]
-    assert svc.list_users([flow_id])[flow_id].users == []
+    assert (await svc.list_users([flow_id]))[flow_id].users == []
 
 
-def test_remove_connections_batches_effective_user_reads(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_remove_connections_batches_effective_user_reads(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_ids = [uuid4() for _ in range(5)]
     connection_ids = []
     for index, user_id in enumerate(user_ids):
         connection_id = uuid4()
         connection_ids.append(connection_id)
-        svc.add_connection(
+        await svc.add_connection(
             flow_id=flow_id,
             user_id=user_id,
             connection_id=connection_id,
@@ -301,12 +317,13 @@ def test_remove_connections_batches_effective_user_reads(svc: SQLiteCollaboratio
             profile_image=None,
         )
 
+    conn = await svc._ensure_conn()
     traced_statements: list[str] = []
-    svc._conn.set_trace_callback(lambda statement: traced_statements.append(statement.strip()))
+    await conn.set_trace_callback(lambda statement: traced_statements.append(statement.strip()))
     try:
-        changes = svc.remove_connections(connection_ids)
+        changes = await svc.remove_connections(connection_ids)
     finally:
-        svc._conn.set_trace_callback(None)
+        await conn.set_trace_callback(None)
 
     connection_reads = [
         statement
@@ -318,30 +335,30 @@ def test_remove_connections_batches_effective_user_reads(svc: SQLiteCollaboratio
     assert {presence_change.change.left_user_id for presence_change in changes} == set(user_ids)
 
 
-def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_presence_ttl_cleanup(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.PRESENCE_TTL_SECONDS = 0.1
     user_id = uuid4()
     conn_id = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_id,
         username="alice",
         profile_image=None,
     )
-    assert len(svc.list_users([flow_id])[flow_id].users) == 1
+    assert len((await svc.list_users([flow_id]))[flow_id].users) == 1
 
-    time.sleep(0.15)
-    svc.cleanup()
+    await asyncio.sleep(0.15)
+    await svc.cleanup()
 
-    assert svc.list_users([flow_id])[flow_id].users == []
+    assert (await svc.list_users([flow_id]))[flow_id].users == []
 
 
-def test_list_users_removes_expired_connections(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_list_users_removes_expired_connections(svc: SQLiteCollaborationEventService, flow_id: UUID):
     svc.PRESENCE_TTL_SECONDS = 0.1
     user_id = uuid4()
     conn_id = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_id,
@@ -349,21 +366,21 @@ def test_list_users_removes_expired_connections(svc: SQLiteCollaborationEventSer
         profile_image=None,
     )
 
-    time.sleep(0.15)
+    await asyncio.sleep(0.15)
 
-    snapshots = svc.list_users([flow_id])
+    snapshots = await svc.list_users([flow_id])
     assert snapshots[flow_id].users == []
-    assert svc.list_users([flow_id])[flow_id].users == []
+    assert (await svc.list_users([flow_id]))[flow_id].users == []
 
 
-def test_poll_does_not_consume_expired_presence_before_list_users(
+async def test_poll_does_not_consume_expired_presence_before_list_users(
     svc: SQLiteCollaborationEventService,
     flow_id: UUID,
 ):
     svc.PRESENCE_TTL_SECONDS = 0.1
     user_id = uuid4()
     conn_id = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_id,
@@ -371,15 +388,15 @@ def test_poll_does_not_consume_expired_presence_before_list_users(
         profile_image=None,
     )
 
-    time.sleep(0.15)
-    svc.publish(flow_id, "operation.accepted", {"revision": 1})
-    svc.poll(flow_id)
+    await asyncio.sleep(0.15)
+    await svc.publish(flow_id, "operation.accepted", {"revision": 1})
+    await svc.poll(flow_id)
 
-    snapshots = svc.list_users([flow_id])
+    snapshots = await svc.list_users([flow_id])
     assert snapshots[flow_id].users == []
 
 
-def test_list_users_batches_flow_snapshots(
+async def test_list_users_batches_flow_snapshots(
     svc: SQLiteCollaborationEventService,
     flow_id: UUID,
     other_flow_id: UUID,
@@ -389,7 +406,7 @@ def test_list_users_batches_flow_snapshots(
     active_user_id = uuid4()
     expired_conn_id = uuid4()
     active_conn_id = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=expired_user_id,
         connection_id=expired_conn_id,
@@ -397,7 +414,7 @@ def test_list_users_batches_flow_snapshots(
         profile_image=None,
     )
     svc.PRESENCE_TTL_SECONDS = 30.0
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=other_flow_id,
         user_id=active_user_id,
         connection_id=active_conn_id,
@@ -405,63 +422,63 @@ def test_list_users_batches_flow_snapshots(
         profile_image=None,
     )
 
-    time.sleep(0.15)
+    await asyncio.sleep(0.15)
 
-    snapshots = svc.list_users([flow_id, other_flow_id])
+    snapshots = await svc.list_users([flow_id, other_flow_id])
     assert snapshots[flow_id].users == []
     assert len(snapshots[other_flow_id].users) == 1
     assert snapshots[other_flow_id].users[0].user_id == active_user_id
 
 
-def test_effective_selection_uses_latest_connection(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_effective_selection_uses_latest_connection(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
     conn_a = uuid4()
     conn_b = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_a,
         username="alice",
         profile_image=None,
     )
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_b,
         username="alice",
         profile_image=None,
     )
-    svc.update_connection(
+    await svc.update_connection(
         connection_id=conn_a,
         selected=CollaborationSelectionTarget(kind="node", id="old"),
     )
-    time.sleep(0.01)
-    svc.update_connection(
+    await asyncio.sleep(0.01)
+    await svc.update_connection(
         connection_id=conn_b,
         selected=CollaborationSelectionTarget(kind="edge", id="new"),
     )
 
-    snapshot = svc.list_users([flow_id])[flow_id]
+    snapshot = (await svc.list_users([flow_id]))[flow_id]
     assert snapshot.users[0].selected == CollaborationSelectionTarget(kind="edge", id="new")
 
 
-def test_initial_connection_counts_as_currently_unselected(svc: SQLiteCollaborationEventService, flow_id: UUID):
+async def test_initial_connection_counts_as_currently_unselected(svc: SQLiteCollaborationEventService, flow_id: UUID):
     user_id = uuid4()
     conn_a = uuid4()
     conn_b = uuid4()
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_a,
         username="alice",
         profile_image=None,
     )
-    svc.update_connection(
+    await svc.update_connection(
         connection_id=conn_a,
         selected=CollaborationSelectionTarget(kind="node", id="old"),
     )
-    time.sleep(0.01)
-    svc.add_connection(
+    await asyncio.sleep(0.01)
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=user_id,
         connection_id=conn_b,
@@ -469,11 +486,11 @@ def test_initial_connection_counts_as_currently_unselected(svc: SQLiteCollaborat
         profile_image=None,
     )
 
-    snapshot = svc.list_users([flow_id])[flow_id]
+    snapshot = (await svc.list_users([flow_id]))[flow_id]
     assert snapshot.users[0].selected is None
 
 
-def test_new_distinct_user_snapshot_preserves_existing_user_selection(
+async def test_new_distinct_user_snapshot_preserves_existing_user_selection(
     svc: SQLiteCollaborationEventService,
     flow_id: UUID,
 ):
@@ -482,19 +499,19 @@ def test_new_distinct_user_snapshot_preserves_existing_user_selection(
     selected_conn_id = uuid4()
     joining_conn_id = uuid4()
 
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=selected_user_id,
         connection_id=selected_conn_id,
         username="selected-user",
         profile_image=None,
     )
-    svc.update_connection(
+    await svc.update_connection(
         connection_id=selected_conn_id,
         selected=CollaborationSelectionTarget(kind="node", id="node-1"),
     )
 
-    svc.add_connection(
+    await svc.add_connection(
         flow_id=flow_id,
         user_id=joining_user_id,
         connection_id=joining_conn_id,
@@ -502,14 +519,14 @@ def test_new_distinct_user_snapshot_preserves_existing_user_selection(
         profile_image=None,
     )
 
-    snapshot = svc.list_users([flow_id])[flow_id]
+    snapshot = (await svc.list_users([flow_id]))[flow_id]
     users_by_id = {user.user_id: user for user in snapshot.users}
 
     assert users_by_id[selected_user_id].selected == CollaborationSelectionTarget(kind="node", id="node-1")
     assert users_by_id[joining_user_id].selected is None
 
 
-def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
+async def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
     shared = tmp_path / "shared"
     user_id = uuid4()
     conn_id = uuid4()
@@ -517,14 +534,18 @@ def test_cross_worker_presence_visibility(tmp_path, flow_id: UUID):
     worker_a = SQLiteCollaborationEventService(cache_dir=shared)
     worker_b = SQLiteCollaborationEventService(cache_dir=shared)
 
-    worker_a.add_connection(
-        flow_id=flow_id,
-        user_id=user_id,
-        connection_id=conn_id,
-        username="bob",
-        profile_image=None,
-    )
+    try:
+        await worker_a.add_connection(
+            flow_id=flow_id,
+            user_id=user_id,
+            connection_id=conn_id,
+            username="bob",
+            profile_image=None,
+        )
 
-    snapshot = worker_b.list_users([flow_id])[flow_id]
-    assert len(snapshot.users) == 1
-    assert snapshot.users[0].username == "bob"
+        snapshot = (await worker_b.list_users([flow_id]))[flow_id]
+        assert len(snapshot.users) == 1
+        assert snapshot.users[0].username == "bob"
+    finally:
+        await worker_a.teardown()
+        await worker_b.teardown()

@@ -143,18 +143,25 @@ class FlowCollaborationConnection:
             )
         except CollaborationConnectionLimitExceededError as exc:
             await self.websocket.close(code=status.WS_1013_TRY_AGAIN_LATER, reason=str(exc))
+            await logger.awarning("Collaboration connection limit exceeded for flow %s: %s", self.flow_id, exc)
             raise _CollaborationConnectionClosedError from exc
         self._registered_connection_id = connection_id
+        await logger.ainfo(
+            "Collaboration session started for flow %s by user %s (connection_id: %s)",
+            self.flow_id,
+            self.current_user.id,
+            connection_id,
+        )
         await start_collaboration_background_tasks()
 
-        presence_change = self._event_service.add_connection(
+        presence_change = await self._event_service.add_connection(
             flow_id=self.flow_id,
             user_id=self.current_user.id,
             connection_id=connection_id,
             username=self.current_user.username,
             profile_image=self.current_user.profile_image,
         )
-        snapshot = self._event_service.list_users([self.flow_id])[self.flow_id]
+        snapshot = (await self._event_service.list_users([self.flow_id]))[self.flow_id]
 
         await self.websocket.send_json(
             CollaborationSessionReadyMessage(
@@ -171,6 +178,7 @@ class FlowCollaborationConnection:
         try:
             submit = CollaborationOperationSubmitMessage.model_validate(raw)
         except ValidationError as exc:
+            await logger.awarning("Invalid operation submit payload for flow %s: %s", self.flow_id, exc)
             await self._send_operation_rejected(
                 request_id=raw.get("request_id") if isinstance(raw, dict) else None,
                 status_code=400,
@@ -181,6 +189,7 @@ class FlowCollaborationConnection:
         try:
             accepted = await self._apply_operation(submit)
         except FlowOperationApplyError as exc:
+            await logger.awarning("Operation rejected for flow %s: %s", self.flow_id, exc.detail)
             await self._send_operation_rejected(
                 request_id=submit.request_id,
                 status_code=exc.status_code,
@@ -189,9 +198,10 @@ class FlowCollaborationConnection:
             )
             return
 
+        await logger.adebug("Operation accepted for flow %s (revision: %s)", self.flow_id, accepted.revision)
         await self._send_operation_accepted(submit.request_id, accepted)
         await self._broadcast_operation(accepted)
-        self._publish_operation_accepted(accepted)
+        await self._publish_operation_accepted(accepted)
 
     async def _apply_operation(
         self,
@@ -273,7 +283,7 @@ class FlowCollaborationConnection:
             exclude_connection_id=self.connection_id,
         )
 
-    def _publish_operation_accepted(self, accepted: AcceptedFlowOperation) -> None:
+    async def _publish_operation_accepted(self, accepted: AcceptedFlowOperation) -> None:
         event_payload = {
             "worker_id": WORKER_ID,
             "revision": accepted.revision,
@@ -282,7 +292,7 @@ class FlowCollaborationConnection:
             "forward_ops": accepted.forward_ops,
             "created_at": accepted.created_at.isoformat(),
         }
-        self._event_service.publish(self.flow_id, "operation.accepted", event_payload)
+        await self._event_service.publish(self.flow_id, "operation.accepted", event_payload)
 
     async def _handle_selection_update(self, raw: Any) -> None:
         try:
@@ -296,7 +306,7 @@ class FlowCollaborationConnection:
             return
 
         connection_id = self.connection_id
-        change = self._event_service.update_connection(
+        change = await self._event_service.update_connection(
             connection_id=connection_id,
             selected=update.selected,
         )
@@ -322,8 +332,13 @@ class FlowCollaborationConnection:
 
     async def _cleanup(self) -> None:
         if self._registered_connection_id is not None:
+            await logger.ainfo(
+                "Collaboration connection closed for flow %s (connection_id: %s)",
+                self.flow_id,
+                self._registered_connection_id,
+            )
             await self.manager.unregister(self._registered_connection_id)
-            change = self._event_service.remove_connection(
+            change = await self._event_service.remove_connection(
                 connection_id=self._registered_connection_id,
             )
             await self._emit_presence_change(change)

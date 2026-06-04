@@ -79,13 +79,13 @@ async def test_valid_pong_clears_deadline_and_refreshes_presence(manager, flow_i
     conn = manager.rooms.get_connection(conn_id)
     assert conn is not None
     conn.pong_deadline_at = time.time() + 10.0
-    event_service = Mock()
+    event_service = AsyncMock()
 
     with patch("langflow.api.v1.collaboration_manager.time.time", return_value=1000.0):
         await manager.handle_heartbeat_pong(flow_id, conn_id, event_service)
 
     assert conn.pong_deadline_at is None
-    event_service.update_connection.assert_called_once_with(connection_id=conn_id)
+    event_service.update_connection.assert_awaited_once_with(connection_id=conn_id)
 
 
 @pytest.mark.asyncio
@@ -94,12 +94,12 @@ async def test_late_pong_does_not_refresh_presence(manager, flow_id, user_id):
     conn = manager.rooms.get_connection(conn_id)
     assert conn is not None
     conn.pong_deadline_at = 500.0
-    event_service = Mock()
+    event_service = AsyncMock()
 
     with patch("langflow.api.v1.collaboration_manager.time.time", return_value=1000.0):
         await manager.handle_heartbeat_pong(flow_id, conn_id, event_service)
 
-    event_service.update_connection.assert_not_called()
+    event_service.update_connection.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -108,30 +108,31 @@ async def test_expired_deadline_disconnects_and_emits_presence_left(manager, flo
     conn = manager.rooms.get_connection(conn_id)
     assert conn is not None
     conn.pong_deadline_at = 1.0
-    event_service = Mock()
-    event_service.remove_connections.return_value = [
-        CollaborationPresenceChangeEnvelope(
-            flow_id=flow_id,
-            change=CollaborationPresenceChange(left_user_id=user_id),
-        )
-    ]
+    event_service = AsyncMock()
+    event_service.remove_connections = AsyncMock(
+        return_value=[
+            CollaborationPresenceChangeEnvelope(
+                flow_id=flow_id,
+                change=CollaborationPresenceChange(left_user_id=user_id),
+            )
+        ]
+    )
 
     with patch("langflow.api.v1.collaboration_manager.time.time", return_value=1000.0):
         await manager.disconnect_expired_heartbeats(event_service)
 
     assert flow_id not in manager.rooms.active_flow_ids()
-    event_service.remove_connections.assert_called_once_with([conn_id])
+    event_service.remove_connections.assert_awaited_once_with([conn_id])
     ws.close.assert_called_once()
 
 
 @pytest.mark.asyncio
 async def test_disconnect_connection_is_idempotent(manager):
-    event_service = Mock()
-    event_service.remove_connection.return_value = None
+    event_service = AsyncMock()
+    event_service.remove_connections = AsyncMock(return_value=[])
 
     await manager.disconnect_connection(uuid4(), event_service)
-    event_service.remove_connection.assert_not_called()
-    event_service.remove_connections.assert_not_called()
+    event_service.remove_connections.assert_not_awaited()
 
 
 @pytest.mark.asyncio
@@ -206,10 +207,10 @@ def test_collaboration_settings_reject_invalid_scheduler(monkeypatch, tmp_path):
 async def test_heartbeat_pong_handler_checks_access_before_refresh(monkeypatch):
     import langflow.api.utils.collab.connection as connection_module
 
-    monkeypatch.setattr(connection_module, "get_collaboration_events_service", Mock(return_value=Mock()))
+    monkeypatch.setattr(connection_module, "get_collaboration_events_service", Mock(return_value=AsyncMock()))
     websocket = AsyncMock()
     manager = CollaborationManager()
-    monkeypatch.setattr(connection_module, "get_collaboration_manager", Mock(return_value=manager))
+    monkeypatch.setattr(connection_module, "get_collaboration_manager", lambda: manager)
     current_user = _user_read()
     conn_id = await manager.register(
         websocket=websocket,
@@ -240,10 +241,10 @@ async def test_heartbeat_pong_handler_checks_access_before_refresh(monkeypatch):
 async def test_heartbeat_pong_rejects_extra_fields(monkeypatch):
     import langflow.api.utils.collab.connection as connection_module
 
-    monkeypatch.setattr(connection_module, "get_collaboration_events_service", Mock(return_value=Mock()))
+    monkeypatch.setattr(connection_module, "get_collaboration_events_service", Mock(return_value=AsyncMock()))
     websocket = AsyncMock()
     manager = CollaborationManager()
-    monkeypatch.setattr(connection_module, "get_collaboration_manager", Mock(return_value=manager))
+    monkeypatch.setattr(connection_module, "get_collaboration_manager", lambda: manager)
     connection = connection_module.FlowCollaborationConnection(
         websocket=websocket,
         flow_id=UUID("00000000-0000-0000-0000-000000000001"),
@@ -265,10 +266,10 @@ async def test_heartbeat_pong_rejects_extra_fields(monkeypatch):
 async def test_heartbeat_pong_skipped_when_access_denied(monkeypatch):
     import langflow.api.utils.collab.connection as connection_module
 
-    monkeypatch.setattr(connection_module, "get_collaboration_events_service", Mock(return_value=Mock()))
+    monkeypatch.setattr(connection_module, "get_collaboration_events_service", Mock(return_value=AsyncMock()))
     websocket = AsyncMock()
     manager = CollaborationManager()
-    monkeypatch.setattr(connection_module, "get_collaboration_manager", Mock(return_value=manager))
+    monkeypatch.setattr(connection_module, "get_collaboration_manager", lambda: manager)
     connection = connection_module.FlowCollaborationConnection(
         websocket=websocket,
         flow_id=UUID("00000000-0000-0000-0000-000000000001"),

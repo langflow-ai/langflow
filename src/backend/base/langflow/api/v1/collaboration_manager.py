@@ -149,11 +149,25 @@ class CollaborationManager:
                 )
                 raise CollaborationConnectionLimitExceededError(msg)
             self.rooms.add(conn)
+        await logger.adebug(
+            "Registered collaboration connection %s for flow %s (user_id: %s)",
+            connection_id,
+            flow_id,
+            user_id,
+        )
         return connection_id
 
     async def unregister(self, connection_id: UUID) -> FlowConnection | None:
         async with self._lock:
-            return self.rooms.remove(connection_id)
+            conn = self.rooms.remove(connection_id)
+        if conn is not None:
+            await logger.adebug(
+                "Unregistered collaboration connection %s for flow %s (user_id: %s)",
+                connection_id,
+                conn.flow_id,
+                conn.user_id,
+            )
+        return conn
 
     async def local_connections_snapshot(self) -> list[FlowConnection]:
         async with self._lock:
@@ -207,7 +221,7 @@ class CollaborationManager:
                 return
             conn.pong_deadline_at = None
 
-        event_service.update_connection(connection_id=connection_id)
+        await event_service.update_connection(connection_id=connection_id)
 
     async def disconnect_connection(
         self,
@@ -244,10 +258,13 @@ class CollaborationManager:
             except Exception as exc:  # noqa: BLE001
                 await logger.adebug("Failed to close collaboration socket after heartbeat timeout: %s", exc)
 
+        if removed_connections:
+            await logger.adebug("Disconnected %d expired collaboration connections", len(removed_connections))
+
         if not store_connection_ids:
             return
 
-        for presence_change in event_service.remove_connections(store_connection_ids):
+        for presence_change in await event_service.remove_connections(store_connection_ids):
             await self.emit_presence_change(presence_change.flow_id, presence_change.change, event_service)
 
     def presence_snapshot_message(self, snapshot: CollaborationPresenceSnapshot) -> dict[str, Any]:
@@ -294,6 +311,9 @@ class CollaborationManager:
     ) -> None:
         async with self._lock:
             connections = self.rooms.connections_for_flow(flow_id)
+
+        await logger.adebug("Broadcasting message to %d connections for flow %s", len(connections), flow_id)
+
         for conn in connections:
             if exclude_connection_id and conn.connection_id == exclude_connection_id:
                 continue
@@ -338,7 +358,7 @@ class CollaborationManager:
                 message,
                 exclude_connection_id=exclude_connection_id,
             )
-            event_service.publish(
+            await event_service.publish(
                 flow_id,
                 "presence.joined",
                 {
@@ -354,7 +374,7 @@ class CollaborationManager:
         if change.left_user_id:
             message = self.presence_left_message(change.left_user_id)
             await self.broadcast_json(flow_id, message)
-            event_service.publish(
+            await event_service.publish(
                 flow_id,
                 "presence.left",
                 {
@@ -393,7 +413,7 @@ class CollaborationManager:
             "user_id": str(change.selection_updated.user_id),
             "selected": {"kind": selected.kind, "id": selected.id} if selected is not None else None,
         }
-        event_service.publish(flow_id, "selection.updated", payload)
+        await event_service.publish(flow_id, "selection.updated", payload)
 
     async def _handle_operation_accepted_backplane_event(
         self,
@@ -538,11 +558,14 @@ async def _poll_collaboration_events() -> None:
     manager = get_collaboration_manager()
     event_service: CollaborationEventService = get_collaboration_events_service()
     settings_service = get_settings_service()
+    snapshot_interval = settings_service.settings.collaboration_presence_snapshot_interval
     cursors: dict[UUID, CollaborationPollCursor] = {}
     next_users_snapshot_at = time.monotonic()
 
     while True:
-        flow_ids = manager.rooms.active_flow_ids()
+        # get immutable view of flow room keys via tuple;
+        # active roooms can change between this initial fetch and aysnc calls
+        flow_ids: tuple[UUID, ...] = tuple(manager.rooms.active_flow_ids())
         if not flow_ids:
             await asyncio.sleep(0.5)
             continue
@@ -550,18 +573,15 @@ async def _poll_collaboration_events() -> None:
         now = time.monotonic()
         should_fetch_users = now >= next_users_snapshot_at
         if should_fetch_users:
-            snapshot_interval = settings_service.settings.collaboration_presence_snapshot_interval
             next_users_snapshot_at = now + snapshot_interval
 
-            snapshots = event_service.list_users(flow_ids)
-            for flow_id, snapshot in snapshots.items():
-                await manager.broadcast_json(flow_id, manager.presence_snapshot_message(snapshot))
+            users_per_flow_room = await event_service.list_users(list(flow_ids))
+            for flow_id, users_in_flow_room in users_per_flow_room.items():
+                await manager.broadcast_json(flow_id, manager.presence_snapshot_message(users_in_flow_room))
 
-        # This loop awaits while processing events, so snapshot flow ids to avoid
-        # iterating over a live dict view if rooms change mid-iteration.
-        for flow_id in tuple(flow_ids):
+        for flow_id in flow_ids:
             cursor = cursors.get(flow_id)
-            events, new_cursor = event_service.poll(flow_id, cursor=cursor)
+            events, new_cursor = await event_service.poll(flow_id, cursor=cursor)
             cursors[flow_id] = new_cursor
             for event in events:
                 await manager.handle_backplane_event(event)

@@ -31,11 +31,11 @@ class CollaborationEventService(Service, ABC):
     name = "collaboration_events_service"
 
     @abstractmethod
-    def publish(self, flow_id: UUID, event_type: str, payload: dict) -> CollaborationEvent:
+    async def publish(self, flow_id: UUID, event_type: str, payload: dict) -> CollaborationEvent:
         """Push an event for cross-worker fanout."""
 
     @abstractmethod
-    def poll(
+    async def poll(
         self,
         flow_id: UUID,
         *,
@@ -45,11 +45,11 @@ class CollaborationEventService(Service, ABC):
         """Return events after ``cursor`` and the updated poll cursor."""
 
     @abstractmethod
-    def cleanup(self) -> None:
+    async def cleanup(self) -> None:
         """Force-evict expired events and presence rows. Useful for tests and ops scripts."""
 
     @abstractmethod
-    def add_connection(
+    async def add_connection(
         self,
         *,
         flow_id: UUID,
@@ -61,7 +61,7 @@ class CollaborationEventService(Service, ABC):
         """Create or replace one active connection row."""
 
     @abstractmethod
-    def update_connection(
+    async def update_connection(
         self,
         *,
         connection_id: UUID,
@@ -70,7 +70,7 @@ class CollaborationEventService(Service, ABC):
         """Refresh the connection TTL and optionally update its selection columns."""
 
     @abstractmethod
-    def remove_connection(
+    async def remove_connection(
         self,
         *,
         connection_id: UUID,
@@ -78,9 +78,9 @@ class CollaborationEventService(Service, ABC):
         """Remove one active connection row."""
 
     @abstractmethod
-    def remove_connections(self, connection_ids: list[UUID]) -> list[CollaborationPresenceChangeEnvelope]:
+    async def remove_connections(self, connection_ids: list[UUID]) -> list[CollaborationPresenceChangeEnvelope]:
         """Remove active connection rows and return user-visible presence changes keyed by flow id."""
 
     @abstractmethod
-    def list_users(self, flow_ids: list[UUID]) -> dict[UUID, CollaborationPresenceSnapshot]:
+    async def list_users(self, flow_ids: list[UUID]) -> dict[UUID, CollaborationPresenceSnapshot]:
         """Return active deduped users plus effective per-user selections keyed by flow id."""

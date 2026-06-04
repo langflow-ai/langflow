@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from unittest.mock import AsyncMock, Mock
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
@@ -233,7 +233,7 @@ async def test_emit_presence_change_broadcasts_and_publishes_left(manager, flow_
     peer_conn = manager.rooms.get_connection(peer_id)
     assert peer_conn is not None
     peer_ws = peer_conn.websocket
-    event_service = Mock()
+    event_service = AsyncMock()
 
     await manager.emit_presence_change(flow_id, CollaborationPresenceChange(left_user_id=user_a), event_service)
 
@@ -241,7 +241,7 @@ async def test_emit_presence_change_broadcasts_and_publishes_left(manager, flow_
     payload = peer_ws.send_json.call_args.args[0]
     assert payload["type"] == "presence.left"
     assert payload["user_id"] == str(user_a)
-    event_service.publish.assert_called_once_with(
+    event_service.publish.assert_awaited_once_with(
         flow_id,
         "presence.left",
         {"worker_id": collaboration_manager_module.WORKER_ID, "user_id": str(user_a)},
