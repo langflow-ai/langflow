@@ -3,6 +3,7 @@ import json
 import time
 import uuid
 from collections.abc import AsyncGenerator
+from contextlib import suppress
 from typing import Annotated, Any
 
 from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
@@ -27,11 +28,25 @@ from langflow.services.auth.utils import api_key_security
 from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_telemetry_service
+from langflow.services.deps import get_settings_service, get_telemetry_service
 from langflow.services.telemetry.schema import RunPayload
 from langflow.services.telemetry.service import TelemetryService
 
 router = APIRouter(tags=["OpenAI Responses API"])
+DEFAULT_OPENAI_RESPONSES_TIMEOUT_SECONDS = 300
+
+
+def _get_openai_responses_timeout_seconds() -> float:
+    timeout = getattr(get_settings_service().settings, "worker_timeout", DEFAULT_OPENAI_RESPONSES_TIMEOUT_SECONDS)
+    try:
+        timeout = float(timeout)
+    except (TypeError, ValueError):
+        return DEFAULT_OPENAI_RESPONSES_TIMEOUT_SECONDS
+    return timeout if timeout > 0 else DEFAULT_OPENAI_RESPONSES_TIMEOUT_SECONDS
+
+
+def _openai_responses_timeout_message(timeout_seconds: float) -> str:
+    return f"OpenAI Responses request exceeded {timeout_seconds:g} seconds"
 
 
 def has_chat_input(flow_data: dict | None) -> bool:
@@ -57,6 +72,7 @@ async def run_flow_for_openai_responses(
     *,
     stream: bool = False,
     variables: dict[str, str] | None = None,
+    timeout_seconds: float = DEFAULT_OPENAI_RESPONSES_TIMEOUT_SECONDS,
 ) -> OpenAIResponsesResponse | StreamingResponse:
     """Run a flow for OpenAI Responses API compatibility."""
     # Check if flow has chat input
@@ -114,6 +130,7 @@ async def run_flow_for_openai_responses(
                     context=context,
                 )
             )
+            stream_events: AsyncGenerator[Any, None] | None = None
 
             try:
                 await logger.adebug(
@@ -136,7 +153,17 @@ async def run_flow_for_openai_responses(
                 previous_content = ""  # Track content already sent to calculate deltas
                 stream_usage_data = None  # Track usage from completed message
 
-                async for event_data in consume_and_yield(asyncio_queue, asyncio_queue_client_consumed):
+                stream_events = consume_and_yield(asyncio_queue, asyncio_queue_client_consumed)
+                stream_deadline = asyncio.get_running_loop().time() + timeout_seconds
+                while True:
+                    remaining_timeout = stream_deadline - asyncio.get_running_loop().time()
+                    if remaining_timeout <= 0:
+                        raise TimeoutError
+                    try:
+                        event_data = await asyncio.wait_for(stream_events.__anext__(), timeout=remaining_timeout)
+                    except StopAsyncIteration:
+                        break
+
                     if event_data is None:
                         await logger.adebug("[OpenAIResponses][stream] received None event_data; breaking loop")
                         break
@@ -147,8 +174,6 @@ async def run_flow_for_openai_responses(
                     # Parse byte string events as JSON
                     if isinstance(event_data, bytes):
                         try:
-                            import json
-
                             event_str = event_data.decode("utf-8")
                             parsed_event = json.loads(event_str)
 
@@ -430,6 +455,17 @@ async def run_flow_for_openai_responses(
                     stream_usage_data,
                 )
 
+            except (TimeoutError, asyncio.TimeoutError):
+                timeout_message = _openai_responses_timeout_message(timeout_seconds)
+                logger.error(timeout_message)
+                error_chunk = create_openai_error_chunk(
+                    response_id=response_id,
+                    created_timestamp=created_timestamp,
+                    model=request.model,
+                    error_message=timeout_message,
+                )
+                yield f"data: {error_chunk.model_dump_json()}\n\n"
+                yield "data: [DONE]\n\n"
             except Exception as e:  # noqa: BLE001
                 logger.error(f"Error in stream generator: {e}")
                 # Send error as content chunk with finish_reason="error"
@@ -442,8 +478,19 @@ async def run_flow_for_openai_responses(
                 yield f"data: {error_chunk.model_dump_json()}\n\n"
                 yield "data: [DONE]\n\n"
             finally:
+                if stream_events is not None:
+                    with suppress(Exception):
+                        await stream_events.aclose()
                 if not main_task.done():
                     main_task.cancel()
+                    try:
+                        await asyncio.wait_for(main_task, timeout=1)
+                    except asyncio.CancelledError:
+                        pass
+                    except TimeoutError:
+                        await logger.awarning("[OpenAIResponses][stream] timed out waiting for cancelled flow task")
+                    except Exception as exc:  # noqa: BLE001
+                        await logger.awarning("[OpenAIResponses][stream] cancelled flow task failed: %s", exc)
 
         return StreamingResponse(
             openai_stream_generator(),
@@ -456,12 +503,15 @@ async def run_flow_for_openai_responses(
         )
 
     # Handle non-streaming response
-    result = await simple_run_flow(
-        flow=flow,
-        input_request=simplified_request,
-        stream=False,
-        api_key_user=api_key_user,
-        context=context,
+    result = await asyncio.wait_for(
+        simple_run_flow(
+            flow=flow,
+            input_request=simplified_request,
+            stream=False,
+            api_key_user=api_key_user,
+            context=context,
+        ),
+        timeout=timeout_seconds,
     )
 
     # Extract output text, tool calls, and usage from result
@@ -673,13 +723,37 @@ async def create_response(
 
     try:
         # Process the request
+        timeout_seconds = _get_openai_responses_timeout_seconds()
         result = await run_flow_for_openai_responses(
             flow=flow,
             request=request,
             api_key_user=api_key_user,
             stream=request.stream,
             variables=variables,
+            timeout_seconds=timeout_seconds,
         )
+
+    except (TimeoutError, asyncio.TimeoutError):
+        timeout_message = _openai_responses_timeout_message(timeout_seconds)
+        logger.error(timeout_message)
+
+        background_tasks.add_task(
+            telemetry_service.log_package_run,
+            RunPayload(
+                run_is_webhook=False,
+                run_seconds=int(time.perf_counter() - start_time),
+                run_success=False,
+                run_error_message=timeout_message,
+                run_id=None,
+            ),
+        )
+
+        error_response = create_openai_error(
+            message=timeout_message,
+            type_="request_timeout",
+            code="request_timeout",
+        )
+        return OpenAIErrorResponse(error=error_response["error"])
 
     except CustomComponentValidationError as exc:
         error_response = create_openai_error(
