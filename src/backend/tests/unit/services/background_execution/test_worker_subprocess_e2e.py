@@ -121,7 +121,9 @@ async def test_real_worker_kill9_midjob_reconciled_by_watchdog():
         if job.status == JobStatus.COMPLETED:
             pytest.skip("graph completed before we could kill the worker mid-flight (too fast on this host)")
 
-        os.kill(proc.pid, signal.SIGKILL)
+        # kill -9 the WHOLE worker group: ``uv run`` spawns a child python that
+        # survives a SIGKILL aimed only at ``uv``, so we signal the process group.
+        harness.signal_group(proc, signal.SIGKILL)
         proc.wait(timeout=10)
         assert proc.returncode is not None, "worker did not die on SIGKILL"
         # The durable row is now a stranded IN_PROGRESS orphan with a live lease on

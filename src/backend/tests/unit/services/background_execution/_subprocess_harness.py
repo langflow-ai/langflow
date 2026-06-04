@@ -152,14 +152,24 @@ class WorkerHarness:
         env["DO_NOT_TRACK"] = "true"
         # A REAL OS subprocess is the whole point of this proof (closes the Phase
         # 4 in-process caveat); the argv is a fixed literal, not untrusted input.
+        # ``start_new_session`` puts the worker in its OWN process group: ``uv run``
+        # spawns a child python that does NOT inherit a SIGTERM sent to ``uv``, so
+        # we signal the whole group (see ``_kill_proc``) to avoid leaking workers.
         proc = subprocess.Popen(  # noqa: S603
             ["uv", "run", "langflow", "worker", "--idle-block-ms", str(idle_block_ms)],  # noqa: S607
             env=env,
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
+            start_new_session=True,
         )
         self.procs.append(proc)
         return proc
+
+    @staticmethod
+    def signal_group(proc: subprocess.Popen, sig: int) -> None:
+        """Send ``sig`` to the subprocess's whole process group (kills uv + python)."""
+        with contextlib.suppress(ProcessLookupError, PermissionError):
+            os.killpg(os.getpgid(proc.pid), sig)
 
     async def wait_for_status(self, job_id: uuid.UUID, targets: set, *, timeout: float = 60.0):
         """Poll the durable job row until its status is in ``targets``, bounded by ``timeout``.
@@ -200,16 +210,18 @@ class WorkerHarness:
         return "\n".join(chunks) if chunks else "(no worker output captured)"
 
     async def teardown(self) -> None:
+        import signal
+
         for proc in self.procs:
-            with contextlib.suppress(Exception):
-                if proc.poll() is None:
-                    proc.terminate()
+            if proc.poll() is None:
+                # Signal the whole group so the ``uv run`` child python dies too.
+                self.signal_group(proc, signal.SIGTERM)
         for proc in self.procs:
             with contextlib.suppress(Exception):
                 proc.wait(timeout=10)
             if proc.poll() is None:
+                self.signal_group(proc, signal.SIGKILL)
                 with contextlib.suppress(Exception):
-                    proc.kill()
                     proc.wait(timeout=5)
         if self._client is not None:
             with contextlib.suppress(Exception):
