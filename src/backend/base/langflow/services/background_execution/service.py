@@ -44,6 +44,11 @@ if TYPE_CHECKING:
 # adapter + flow; tests inject a scripted generator.
 FrameSourceFactory = Callable[..., Any]
 
+# Durable statuses that mean the run is over. ``events()`` keys off these (not the
+# process-local live bus) so a reattach to a finished job replays and returns
+# instead of tailing a bus that will never produce another frame.
+_TERMINAL_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT})
+
 
 class BackgroundExecutionService(Service):
     name = "background_execution_service"
@@ -163,13 +168,24 @@ class BackgroundExecutionService(Service):
         last_event_id: str | None,
         user: UserRead,
     ) -> AsyncIterator[bytes]:
-        await self._validate(job_id, user)
+        job = await self._validate(job_id, user)
         job_service = get_job_service()
         last_seq = self._parse_last_event_id(last_event_id)
 
         async def read_durable(after_seq: int) -> list[LiveFrame]:
             rows = await job_service.read_events(job_id, after_seq=after_seq)
             return [LiveFrame(seq=r.seq, data=self._row_to_frame(r)) for r in rows]
+
+        # Terminal jobs must be answered from the DURABLE log alone. The live bus
+        # is process-local: after a restart it is fresh and its ``_closed`` marker
+        # is empty, so ``reattach`` would replay durable rows then block forever on
+        # ``while True: queue.get()`` waiting for a live tail that will never come.
+        # Decide "finished" off the persisted status (the cross-restart source of
+        # truth), replay, and return.
+        if job.status in _TERMINAL_STATUSES:
+            for frame in await read_durable(last_seq):
+                yield frame.data
+            return
 
         async for frame in self._bus.reattach(str(job_id), last_seq=last_seq, read_durable=read_durable):
             yield frame.data
@@ -326,6 +342,12 @@ class BackgroundExecutionService(Service):
 
     @staticmethod
     def _row_to_frame(row: JobEvent) -> bytes:
-        # Re-frame the durable payload as the same JSON-shaped bytes a live
-        # subscriber would receive. ``payload`` is the {"event","data"} object.
-        return json.dumps(row.payload).encode("utf-8")
+        # Re-frame the durable payload through the SAME SSE formatter the live
+        # path uses (``format_sse_event(data_str=..., id=str(seq))``) so replayed
+        # bytes are byte-compatible with live frames and a client's
+        # ``Last-Event-ID`` resume works across the replay/tail boundary. The
+        # live path passes the payload's JSON string as ``data_str``; ``seq`` is
+        # the durable row seq, matching the live frame's ``id``.
+        from fastapi.sse import format_sse_event
+
+        return format_sse_event(data_str=json.dumps(row.payload), id=str(row.seq))

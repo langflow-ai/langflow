@@ -253,6 +253,99 @@ async def test_requeued_queued_job_replays_original_input(hard_proof_job_service
     assert echoed == [original_input]
 
 
+async def test_events_reattach_after_restart_returns_on_terminal_job(hard_proof_job_service):
+    """Reattaching to an already-terminal job after a restart MUST NOT hang.
+
+    Models a process restart: a job runs to COMPLETED, persisting durable
+    milestones, then the process dies. A brand-new facade (fresh in-memory live
+    bus, empty ``_closed`` markers) is created bound to the SAME DB and a client
+    reattaches via ``events()``. The facade must consult the DURABLE job status,
+    see it is terminal, replay the durable milestones, and RETURN — not block on
+    ``while True: queue.get()`` waiting for a live tail that will never come.
+
+    The ``asyncio.wait_for`` guard turns the hang into a test failure rather than
+    a hung suite. Proven on real SQLite and real Postgres.
+    """
+    import asyncio
+
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = hard_proof_job_service
+    user_id = uuid4()
+    flow_id = uuid4()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end_vertex", {"id": "n1"})
+        yield _frame("end", {})
+
+    # Run to terminal on a first bus (the "pre-restart" process).
+    bus = InMemoryLiveBus()
+    await _runner(job_service, bus, job_id, source).run(job_id=job_id, source_kwargs={})
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED
+
+    # Restart: a fresh facade with an empty in-memory bus, bound to the same DB.
+    restart_svc = BackgroundExecutionService(settings_service=get_settings_service())
+    user = _StubUser(user_id)
+
+    async def _collect() -> list[bytes]:
+        return [frame async for frame in restart_svc.events(job_id, None, user)]
+
+    # A hang here (the bug) is caught by wait_for instead of stalling the suite.
+    frames = await asyncio.wait_for(_collect(), timeout=5.0)
+
+    body = b"".join(frames)
+    assert b"build_start" in body
+    assert b"end_vertex" in body
+    assert b"end" in body
+
+
+async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
+    """Durable replay must emit SSE-framed bytes byte-compatible with live frames.
+
+    Live frames are pre-SSE-framed with a ``data:`` line followed by an ``id:``
+    line. A reattach to a terminal job replays durable rows; those replayed bytes
+    must be the SAME wire shape so a client's ``Last-Event-ID`` resume works and
+    the frames are not a different (bare-JSON) format. We assert each replayed
+    frame starts with ``data:`` and carries ``id: <seq>``. Real SQLite and real
+    Postgres.
+    """
+    import asyncio
+
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = hard_proof_job_service
+    user_id = uuid4()
+    flow_id = uuid4()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end_vertex", {"id": "n1"})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    await _runner(job_service, bus, job_id, source).run(job_id=job_id, source_kwargs={})
+
+    svc = BackgroundExecutionService(settings_service=get_settings_service())
+    user = _StubUser(user_id)
+
+    async def _collect() -> list[bytes]:
+        return [frame async for frame in svc.events(job_id, None, user)]
+
+    frames = await asyncio.wait_for(_collect(), timeout=5.0)
+    assert len(frames) == 3
+    for seq, frame in enumerate(frames, start=1):
+        assert frame.startswith(b"data:"), f"replayed frame not SSE-framed: {frame!r}"
+        assert f"id: {seq}".encode() in frame, f"replayed frame missing id: {frame!r}"
+
+
 class _StubUser:
     """Minimal user carrying only ``id`` (all the facade submit path reads)."""
 
