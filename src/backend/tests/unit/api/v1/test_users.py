@@ -71,9 +71,7 @@ async def test_add_user_public_signup_disabled_blocks_invalid_credentials(client
     assert response.json()["detail"] == "Public user registration is disabled."
 
 
-async def test_add_user_public_signup_disabled_blocks_normal_user(
-    client: AsyncClient, logged_in_headers, monkeypatch
-):
+async def test_add_user_public_signup_disabled_blocks_normal_user(client: AsyncClient, logged_in_headers, monkeypatch):
     """Disabling public signup should not let a non-superuser create more users."""
     monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
 

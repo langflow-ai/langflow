@@ -41,9 +41,7 @@ def _can_create_user(current_user: User | None, request: Request) -> bool:
     "/",
     response_model=UserRead,
     status_code=201,
-    openapi_extra={
-        "security": [{}, {"OAuth2PasswordBearerCookie": []}, {"API key query": []}, {"API key header": []}]
-    },
+    openapi_extra={"security": [{}, {"OAuth2PasswordBearerCookie": []}, {"API key query": []}, {"API key header": []}]},
 )
 async def add_user(
     user: UserCreate,
