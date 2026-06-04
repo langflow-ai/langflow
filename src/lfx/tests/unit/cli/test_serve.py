@@ -678,13 +678,8 @@ def test_startup_scan_store_flows_accessible_lazily(tmp_path):
     assert result[1].title == "Pre-existing"
 
 
-def test_serve_command_passes_workers_to_gunicorn():
-    """--workers N must be forwarded to the gunicorn launcher as workers.
-
-    Multi-worker serving runs gunicorn with preload + max_requests=1 so each
-    request executes in a freshly-forked, recycled worker. The app is loaded by
-    the preload master via the ``serve_preloaded_app`` import string.
-    """
+def _run_serve_capturing_gunicorn(*, workers, max_requests, captured, limit_concurrency=None):
+    """Run serve_command under a stubbed gunicorn launcher, capturing options + launch env."""
     import json
     import os
     import tempfile
@@ -697,15 +692,13 @@ def test_serve_command_passes_workers_to_gunicorn():
     mock_graph = MagicMock()
     mock_graph.context = {}
 
-    captured: dict = {}
-
     class FakeGunicornApp:
         def __init__(self, app_import_string, options):
             captured["app_import_string"] = app_import_string
             captured["options"] = options
 
         def run(self):
-            pass
+            captured["env"] = dict(os.environ)  # capture env set before launch
 
     with tempfile.TemporaryDirectory() as tmp:
         p = Path(tmp) / "flow.json"
@@ -715,11 +708,13 @@ def test_serve_command_passes_workers_to_gunicorn():
             patch("lfx.cli.commands.load_flow_from_json", return_value=mock_graph),
             patch("lfx.cli.serve_gunicorn.LFXGunicornApp", FakeGunicornApp),
         ):
+            # Direct call (not via CLI): typer defaults are not applied, so pass
+            # max_requests / limit_concurrency explicitly even when None.
             serve_command(
                 script_paths=[str(p)],
                 host="127.0.0.1",
                 port=9999,
-                workers=4,
+                workers=workers,
                 verbose=False,
                 env_file=None,
                 log_level="warning",
@@ -728,14 +723,63 @@ def test_serve_command_passes_workers_to_gunicorn():
                 stdin=False,
                 check_variables=False,
                 no_env_fallback=False,
+                max_requests=max_requests,
+                limit_concurrency=limit_concurrency,
             )
+
+
+def test_serve_command_passes_workers_to_gunicorn():
+    """--workers N is forwarded to gunicorn; default --max-requests means no recycling.
+
+    Multi-worker serving runs gunicorn with preload; the app is loaded by the
+    preload master via the ``serve_preloaded_app`` import string. With no
+    --max-requests, max_requests defaults to 0 (gunicorn: never recycle, no
+    per-request isolation).
+    """
+    captured: dict = {}
+    _run_serve_capturing_gunicorn(workers=4, max_requests=None, captured=captured)
 
     assert captured["options"]["workers"] == 4
     # The preload master loads the warm app from this import string, not a factory.
     assert captured["app_import_string"] == "lfx.cli.serve_preloaded_app:app"
-    # Per-request isolation: preload + recycle-after-one-request.
     assert captured["options"]["preload_app"] is True
+    # Default: no recycling (0), so workers persist (no per-request isolation).
+    assert captured["options"]["max_requests"] == 0
+    # The custom worker (applies limit_concurrency) is used, not the stock one.
+    assert captured["options"]["worker_class"] == "lfx.cli.serve_gunicorn.LFXUvicornWorker"
+
+
+def test_serve_command_max_requests_propagates_to_gunicorn():
+    """--max-requests N is forwarded to gunicorn as max_requests (per-request recycling)."""
+    captured: dict = {}
+    _run_serve_capturing_gunicorn(workers=4, max_requests=1, captured=captured)
+
     assert captured["options"]["max_requests"] == 1
+    assert captured["options"]["preload_app"] is True
+
+
+def test_serve_command_limit_concurrency_sets_env_for_workers():
+    """--limit-concurrency N is exported so each LFXUvicornWorker applies it."""
+    from lfx.cli.serve_app import _SERVE_LIMIT_CONCURRENCY_ENV
+
+    captured: dict = {}
+    _run_serve_capturing_gunicorn(workers=4, max_requests=1, limit_concurrency=1, captured=captured)
+
+    # Set in the environment before launch (inherited by forked workers), then cleaned up.
+    assert captured["env"].get(_SERVE_LIMIT_CONCURRENCY_ENV) == "1"
+    import os as _os
+
+    assert _SERVE_LIMIT_CONCURRENCY_ENV not in _os.environ  # cleaned up after launch
+
+
+def test_serve_command_no_limit_concurrency_leaves_env_unset():
+    """Without --limit-concurrency, the env var is never set."""
+    from lfx.cli.serve_app import _SERVE_LIMIT_CONCURRENCY_ENV
+
+    captured: dict = {}
+    _run_serve_capturing_gunicorn(workers=4, max_requests=None, limit_concurrency=None, captured=captured)
+
+    assert _SERVE_LIMIT_CONCURRENCY_ENV not in captured["env"]
 
 
 def test_serve_command_sets_startup_paths_env_for_multi_worker(tmp_path):

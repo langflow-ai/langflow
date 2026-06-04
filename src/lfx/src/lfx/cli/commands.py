@@ -180,6 +180,27 @@ def serve_command(
             "Defaults to in-memory only when omitted."
         ),
     ),
+    max_requests: int | None = typer.Option(
+        None,
+        "--max-requests",
+        help=(
+            "Recycle each worker after this many requests (gunicorn, Unix-only, --workers > 1). "
+            "Set to 1 for per-request worker recycling. Default (unset) means workers are never "
+            "recycled. Not supported on Windows, where multi-worker serving uses uvicorn. "
+            "For full per-request isolation, combine with --limit-concurrency 1."
+        ),
+    ),
+    limit_concurrency: int | None = typer.Option(
+        None,
+        "--limit-concurrency",
+        help=(
+            "Max in-flight requests per worker (--workers > 1); excess get HTTP 503. "
+            "Recycling alone does NOT stop a worker from accepting a 2nd concurrent request, so "
+            "without this two requests may share one process/os.environ. Set to 1 (with "
+            "--max-requests 1) so each worker handles exactly one request in its own process — "
+            "strict cross-request isolation. Default (unset) means unlimited concurrency."
+        ),
+    ),
     *,
     stdin: bool = typer.Option(
         False,  # noqa: FBT003
@@ -255,10 +276,9 @@ def serve_command(
     if workers > 1 and flow_dir is None:
         typer.echo(
             "Warning: --workers > 1 without --flow-dir means each worker has an isolated "
-            "in-memory registry. Flows uploaded to one worker will not be visible to others, "
-            "and because workers are recycled after each request for per-request isolation, "
-            "uploaded flows do not survive at all without a shared store. "
-            "Pass --flow-dir to enable shared flow storage across workers.",
+            "in-memory registry. Flows uploaded to one worker will not be visible to others "
+            "(and with --max-requests recycling, uploaded flows do not survive worker recycling "
+            "at all). Pass --flow-dir to enable shared flow storage across workers.",
             err=True,
         )
 
@@ -361,6 +381,8 @@ def serve_command(
                     script_paths=script_paths,
                     temp_file_to_cleanup=temp_file_to_cleanup,
                     verbose_print=verbose_print,
+                    max_requests=max_requests,
+                    limit_concurrency=limit_concurrency,
                 )
             else:
                 serve_app = create_multi_serve_app(registry=registry)
@@ -389,34 +411,40 @@ def _launch_workers(
     script_paths: list[str] | None,
     temp_file_to_cleanup: str | None,
     verbose_print: Callable[[str], None],
+    max_requests: int | None,
+    limit_concurrency: int | None,
 ) -> None:
-    """Launch ``workers`` isolated worker processes for ``lfx serve --workers N``.
+    """Launch ``workers`` worker processes for ``lfx serve --workers N``.
 
     On Unix this runs gunicorn with ``preload_app=True`` (the master builds the
-    warm app once and forks workers via copy-on-write) and ``max_requests=1`` so
-    each request executes in a freshly-forked worker that is recycled after one
-    request — making cross-request ``os.environ`` credential leakage structurally
+    warm app once and forks workers via copy-on-write). ``max_requests`` controls
+    per-request recycling: ``None`` (the default) maps to gunicorn's ``0`` (workers
+    are never recycled — warm and shared, but no per-request isolation), while
+    ``--max-requests 1`` recycles each worker after one request.
+
+    ``limit_concurrency`` caps the in-flight requests a single worker accepts
+    (excess get HTTP 503). Recycling alone does NOT prevent a worker from accepting
+    a second concurrent request — two requests can then share one process /
+    ``os.environ``. ``--limit-concurrency 1`` together with ``--max-requests 1``
+    closes that window: each worker handles exactly one request, in its own process,
+    then recycles — making cross-request ``os.environ`` leakage structurally
     impossible.
 
-    gunicorn is Unix-only, so on Windows multi-worker serving is refused with a
-    clear message; run with ``--workers 1`` or deploy on Linux/macOS instead.
+    gunicorn is Unix-only. On Windows it cannot run at all, so multi-worker serving
+    falls back to uvicorn's own multi-worker supervisor (no preload, no per-request
+    recycling). ``--limit-concurrency`` is still honored there (uvicorn-native), but
+    ``--max-requests`` (recycling) is refused, since it cannot be supported.
     """
     from lfx.cli.serve_app import (
         _SERVE_FLOW_DIR_ENV,
+        _SERVE_LIMIT_CONCURRENCY_ENV,
         _SERVE_NO_ENV_FALLBACK_ENV,
         _SERVE_STARTUP_PATHS_ENV,
     )
 
-    if sys.platform == "win32":
-        verbose_print(
-            "Multi-worker isolated serving uses gunicorn, which is not available on "
-            "Windows. Run with --workers 1 (single worker, no per-request process "
-            "recycling) or deploy on Linux/macOS for full isolation."
-        )
-        raise typer.Exit(1)
-
-    # Set env vars so the gunicorn preload master's build_registry_from_env() can
-    # reconstruct config. When flow_dir is set, startup flows are already in the
+    # Set env vars so each worker can reconstruct config: the gunicorn preload
+    # master via build_registry_from_env(), or each uvicorn factory worker via
+    # create_serve_app(). When flow_dir is set, startup flows are already in the
     # store (written by _build_serve_registry) so workers load them via
     # warm_from_store(). When flow_dir is NOT set, workers re-read original files.
     os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
@@ -428,29 +456,68 @@ def _launch_workers(
         elif temp_file_to_cleanup:
             startup_paths_for_workers = [temp_file_to_cleanup]
     os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths_for_workers)
+    # Read per worker by LFXUvicornWorker (Unix); passed to uvicorn.run on Windows.
+    if limit_concurrency is not None:
+        os.environ[_SERVE_LIMIT_CONCURRENCY_ENV] = str(limit_concurrency)
 
     try:
-        from lfx.cli.serve_gunicorn import LFXGunicornApp
+        if sys.platform == "win32":
+            if max_requests is not None:
+                verbose_print(
+                    "Error: --max-requests enables per-request worker recycling via gunicorn, "
+                    "which is not available on Windows. Omit --max-requests to run multi-worker "
+                    "without isolation, or deploy on Linux/macOS for per-request isolation."
+                )
+                raise typer.Exit(1)
+            # gunicorn cannot run on Windows; fall back to uvicorn's multi-worker
+            # supervisor. No preload/COW and no per-request recycling (no isolation),
+            # though --limit-concurrency is still honored (uvicorn-native).
+            verbose_print(
+                "Note: multi-worker serving on Windows uses uvicorn (no per-request recycling); "
+                "deploy on Linux/macOS and pass --max-requests 1 for full isolation."
+            )
+            # +1: uvicorn counts the active connection, so its limit must exceed the
+            # desired in-flight count (limit_concurrency=1 would reject everything).
+            uvicorn_limit = (limit_concurrency + 1) if limit_concurrency is not None else None
+            uvicorn.run(
+                "lfx.cli.serve_app:create_serve_app",
+                host=host,
+                port=port,
+                workers=workers,
+                log_level=log_level,
+                factory=True,
+                limit_concurrency=uvicorn_limit,
+            )
+        else:
+            from lfx.cli.serve_gunicorn import LFXGunicornApp
 
-        LFXGunicornApp(
-            "lfx.cli.serve_preloaded_app:app",
-            {
-                "bind": f"{host}:{port}",
-                "workers": workers,
-                "worker_class": "uvicorn.workers.UvicornWorker",
-                "preload_app": True,
-                "max_requests": 1,
-                "max_requests_jitter": 0,
-                "loglevel": log_level,
-                # Sized for long synchronous flows; gunicorn's default 30s timeout
-                # would kill long LLM flows. Expose --timeout later if needed (D4).
-                "timeout": 120,
-            },
-        ).run()
+            LFXGunicornApp(
+                "lfx.cli.serve_preloaded_app:app",
+                {
+                    "bind": f"{host}:{port}",
+                    "workers": workers,
+                    # Custom worker applies LFX_SERVE_LIMIT_CONCURRENCY (gunicorn's
+                    # UvicornWorker cannot forward uvicorn's limit_concurrency).
+                    "worker_class": "lfx.cli.serve_gunicorn.LFXUvicornWorker",
+                    "preload_app": True,
+                    # None -> 0 (gunicorn's default: never recycle). 1 -> recycle per request.
+                    "max_requests": max_requests if max_requests is not None else 0,
+                    "max_requests_jitter": 0,
+                    "loglevel": log_level,
+                    # Sized for long synchronous flows; gunicorn's default 30s timeout
+                    # would kill long LLM flows. Expose --timeout later if needed.
+                    "timeout": 120,
+                },
+            ).run()
     finally:
         # Only remove the keys we set above — a prefix sweep would also delete any
         # LFX_SERVE_* var the operator intentionally exported before launch.
-        for k in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_STARTUP_PATHS_ENV):
+        for k in (
+            _SERVE_FLOW_DIR_ENV,
+            _SERVE_NO_ENV_FALLBACK_ENV,
+            _SERVE_STARTUP_PATHS_ENV,
+            _SERVE_LIMIT_CONCURRENCY_ENV,
+        ):
             os.environ.pop(k, None)
 
 

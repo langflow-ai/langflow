@@ -5,7 +5,7 @@ database lookup, fills any still-missing provider keys from ``os.environ`` (so a
 ``SECRET_KEY`` rotation that silently drops decrypted values doesn't leave the
 assistant rejecting requests). That loop must honor the request's
 ``no_env_fallback`` contract — a served flow under ``no_env_fallback`` must stay
-isolated from process-wide credentials (concerns A3).
+isolated from process-wide credentials.
 
 These tests drive the ``user_id``-not-None path (the only one reaching the
 post-async fallback) with a forced DB miss by monkeypatching ``run_until_complete``

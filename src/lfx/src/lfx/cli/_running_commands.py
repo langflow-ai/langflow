@@ -136,6 +136,27 @@ def register(app: typer.Typer) -> None:
                 "Defaults to in-memory only when omitted."
             ),
         ),
+        max_requests: int | None = typer.Option(
+            None,
+            "--max-requests",
+            help=(
+                "Recycle each worker after this many requests (gunicorn, Unix-only, --workers > 1). "
+                "Set to 1 for per-request worker recycling. Default (unset) means workers are never "
+                "recycled. Not supported on Windows, where multi-worker serving uses uvicorn. "
+                "For full per-request isolation, combine with --limit-concurrency 1."
+            ),
+        ),
+        limit_concurrency: int | None = typer.Option(
+            None,
+            "--limit-concurrency",
+            help=(
+                "Max in-flight requests per worker (--workers > 1); excess get HTTP 503. "
+                "Recycling alone does NOT stop a worker from accepting a 2nd concurrent request, so "
+                "without this two requests may share one process/os.environ. Set to 1 (with "
+                "--max-requests 1) so each worker handles exactly one request in its own process — "
+                "strict cross-request isolation. Default (unset) means unlimited concurrency."
+            ),
+        ),
         *,
         stdin: bool = typer.Option(
             False,
@@ -178,4 +199,6 @@ def register(app: typer.Typer) -> None:
             stdin=stdin,
             check_variables=check_variables,
             no_env_fallback=no_env_fallback,
+            max_requests=max_requests,
+            limit_concurrency=limit_concurrency,
         )

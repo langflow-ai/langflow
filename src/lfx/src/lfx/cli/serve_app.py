@@ -54,14 +54,17 @@ _SERVE_ENV_PREFIX = "LFX_SERVE_"
 _SERVE_FLOW_DIR_ENV = f"{_SERVE_ENV_PREFIX}FLOW_DIR"
 _SERVE_NO_ENV_FALLBACK_ENV = f"{_SERVE_ENV_PREFIX}NO_ENV_FALLBACK"
 _SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
+# uvicorn limit_concurrency applied per worker by LFXUvicornWorker (gunicorn's
+# UvicornWorker doesn't expose it). Set by serve_command; read in each worker.
+_SERVE_LIMIT_CONCURRENCY_ENV = f"{_SERVE_ENV_PREFIX}LIMIT_CONCURRENCY"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
-# One in-flight flow execution per worker process. With gunicorn max_requests=1 a
-# worker is recycled after a single request, but an async UvicornWorker can accept
-# a second connection before recycling; this guard ensures the env-sensitive
-# execution section (where request-scoped vars are active and flow code may touch
-# os.environ) is never entered by two requests in the same process at once.
+# One in-flight flow execution per worker process. An async UvicornWorker can
+# accept a second connection while one request is mid-flight; this guard ensures
+# the env-sensitive execution section (where request-scoped vars are active and
+# flow code may touch os.environ) is never entered by two requests in the same
+# process at once. Matters most with per-request recycling (--max-requests 1).
 _EXECUTE_GUARD = asyncio.Semaphore(1)
 
 
@@ -304,10 +307,9 @@ class FlowRegistry:
         raw_json = self._store.read(flow_id)
         if raw_json is None:
             return None
-        # Cache-miss reconstruction from the store. Under gunicorn max_requests=1
-        # (per-request worker recycling), a flow not folded into the preload image
-        # pays this graph-rebuild cost on every request — log it so that per-request
-        # overhead is observable (concerns B2).
+        # Cache-miss reconstruction from the store. With per-request worker recycling
+        # (gunicorn --max-requests 1), a flow not folded into the preload image pays
+        # this graph-rebuild cost on every request — log it so the overhead is observable.
         logger.info(f"Reconstructing flow '{flow_id}' from store on cache miss")
         graph, meta = self._reconstruct(flow_id, raw_json)
         # Cache under the authoritative JSON id so requests by UUID find it.
