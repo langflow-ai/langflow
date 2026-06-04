@@ -88,6 +88,18 @@ class RedisBackgroundQueue:
         """Hand a queued job id to a worker process via the claim queue."""
         await self.claim_queue.enqueue(job_id)
 
+    async def teardown(self) -> None:
+        """Close the redis client so the API replica does not leak its pool.
+
+        The worker process closes its own client on shutdown; the API-side facade
+        must close the one it built for this backend too (matches build_worker's
+        explicit ``aclose``). Best-effort: a close error must not mask shutdown.
+        """
+        client = self._client
+        if client is not None and hasattr(client, "aclose"):
+            with contextlib.suppress(Exception):
+                await client.aclose()
+
     # ----------------------------------------------------------- worker claim
 
     async def claim(self, *, block_ms: int = 1000) -> str | None:

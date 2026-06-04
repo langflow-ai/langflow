@@ -120,6 +120,13 @@ class BackgroundExecutionService(Service):
 
     async def teardown(self) -> None:
         await self.stop()
+        # Scaled mode: close the redis client this facade built for the backend so
+        # the API replica does not leak its background-execution connection pool on
+        # shutdown (the worker process closes its own client on teardown). Default
+        # mode has no backend, so this is a no-op.
+        backend = self._backend
+        if backend is not None and hasattr(backend, "teardown"):
+            await backend.teardown()
 
     # ------------------------------------------------------------------ submit
 
