@@ -15,13 +15,32 @@ contract so the cutover stays backward compatible:
 Real client + real flows, no mocking of our own code.
 """
 
+import asyncio
 import json
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import pytest
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
+
+
+async def _wait_terminal(job_id: str) -> "object":
+    """Poll the durable Job row until it reaches a terminal state.
+
+    Condition-based (not a fixed sleep): returns the final status enum.
+    """
+    from langflow.services.database.models.jobs.model import Job, JobStatus
+
+    terminal = {JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED, JobStatus.TIMED_OUT}
+    for _ in range(200):
+        async with session_scope() as session:
+            row = await session.get(Job, UUID(job_id))
+        if row is not None and row.status in terminal:
+            return row.status
+        await asyncio.sleep(0.05)
+    pytest.fail(f"job {job_id} did not reach a terminal state")
+    return None
 
 
 def _body(flow_id, *, message: str = "hello", mode: str = "background", protocol: str = "langflow") -> dict:
@@ -84,3 +103,93 @@ class TestBackgroundSubmitContract:
         assert result["links"]["stop"] == "/api/v2/workflows/stop"
         # New additive link: re-attach events URL must point at the job.
         assert result["links"]["events"] == f"/api/v2/workflows/{result['job_id']}/events"
+
+
+class TestStatusDurableResultError:
+    """GET status reads durable result/error written by the runner, additively."""
+
+    async def test_completed_background_run_status_returns_completed(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """A finished background run reports completed via GET status (not a 500).
+
+        The background path does not persist vertex_build rows keyed by job_id,
+        so the status endpoint must fall back to the durable Job.result rather
+        than 500 on an empty vertex-build reconstruction.
+        """
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_body(chatbot_flow, mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        from langflow.services.database.models.jobs.model import JobStatus
+
+        assert await _wait_terminal(job_id) == JobStatus.COMPLETED
+
+        status_resp = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+        assert status_resp.status_code == 200, status_resp.text
+        result = status_resp.json()
+        assert result["status"] == "completed"
+        assert result["flow_id"] == str(chatbot_flow)
+
+    async def test_failed_background_run_status_carries_durable_error(
+        self,
+        client: AsyncClient,
+        created_api_key,
+    ):
+        """A failed run surfaces the durable error JSON additively in the detail.
+
+        The top-level ``error`` string stays unchanged; the stored error blob the
+        runner persisted rides under ``error_detail`` so the wire contract is
+        additive-only.
+        """
+        headers = {"x-api-key": created_api_key.api_key}
+        # A flow whose data is corrupt fails during the background run; the runner
+        # persists the durable error which status echoes additively.
+        bad_flow = uuid4()
+        async with session_scope() as session:
+            flow = Flow(
+                id=bad_flow,
+                name="Facade Bad Flow",
+                description="Corrupt flow that fails at build time",
+                data={"nodes": [{"id": "broken"}], "edges": []},
+                user_id=created_api_key.user_id,
+            )
+            session.add(flow)
+            await session.flush()
+
+        try:
+            start = await client.post(
+                "api/v2/workflows",
+                json=_body(bad_flow, mode="background"),
+                headers=headers,
+            )
+            assert start.status_code == 200
+            job_id = start.json()["job_id"]
+
+            from langflow.services.database.models.jobs.model import JobStatus
+
+            assert await _wait_terminal(job_id) == JobStatus.FAILED
+
+            status_resp = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+
+            assert status_resp.status_code == 500
+            detail = status_resp.json()["detail"]
+            assert detail["code"] == "JOB_FAILED"
+            assert detail["job_id"] == job_id
+            # Unchanged top-level error string + additive durable error blob.
+            assert detail["error"] == "Job failed"
+            assert detail["error_detail"] is not None
+        finally:
+            async with session_scope() as session:
+                flow = await session.get(Flow, bad_flow)
+                if flow:
+                    await session.delete(flow)

@@ -932,15 +932,29 @@ async def get_workflow_status(
                 folder_id=getattr(flow, "folder_id", None),
             )
 
-            # Reconstruct response from vertex_build table
-            return await reconstruct_workflow_response_from_job_id(
-                session=session,
-                flow=flow,
-                job_id=job_id_str,
-                user_id=str(current_user.id),
-            )
+            # Reconstruct response from vertex_build table (sync path persists
+            # those keyed by job_id). Background runs do not write vertex_builds
+            # keyed by job_id, so reconstruction finds nothing and raises
+            # ValueError — fall back to the durable Job.result the runner wrote
+            # so a completed background run reports completed instead of 500ing.
+            try:
+                return await reconstruct_workflow_response_from_job_id(
+                    session=session,
+                    flow=flow,
+                    job_id=job_id_str,
+                    user_id=str(current_user.id),
+                )
+            except ValueError:
+                return WorkflowExecutionResponse(
+                    flow_id=flow_id_str,
+                    job_id=job_id_str,
+                    status=JobStatus.COMPLETED,
+                )
 
         if job.status == JobStatus.FAILED:
+            # Surface the durable error JSON the runner persisted, additively.
+            # The error column is nullable (a crash before the runner could write
+            # one leaves it None); the static detail still applies in that case.
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail={
@@ -948,6 +962,7 @@ async def get_workflow_status(
                     "code": "JOB_FAILED",
                     "message": f"Job {job_id_str} has failed execution.",
                     "job_id": job_id_str,
+                    "error_detail": job.error,
                 },
             )
 
