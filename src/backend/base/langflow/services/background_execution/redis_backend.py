@@ -20,6 +20,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Any
 
 from langflow.services.background_execution.redis_queue import RedisJobClaimQueue
+from langflow.services.database.models.jobs.model import JobStatus
 from langflow.services.job_queue.service import RedisQueueWrapper
 
 if TYPE_CHECKING:
@@ -62,6 +63,64 @@ class RedisBackgroundQueue:
 
     async def enqueue(self, job_id: str) -> None:
         """Hand a queued job id to a worker process via the claim queue."""
+        await self.claim_queue.enqueue(job_id)
+
+    # ------------------------------------------------------------- watchdog
+
+    async def requeue_lost(self) -> list[str]:
+        """Reconcile orphaned processing-list ids per the at-most-once policy.
+
+        For each id still on the processing list (claimed by a worker that did
+        not complete it):
+
+        * QUEUED          -> never started; safe to requeue (at-least-once).
+        * IN_PROGRESS     -> in-flight when the worker died. By default this is
+          at-most-once: mark FAILED with error {"type": "worker_lost"}. Flows
+          that opt in via job_metadata.retry_safe are requeued, bumping
+          job_metadata.attempt, until attempt reaches max_attempts.
+        * terminal states -> just drop from the processing list.
+
+        Returns the ids that were requeued onto the pending list.
+        """
+        requeued: list[str] = []
+        for job_id in await self.claim_queue.processing_ids():
+            job = await self._job_service.get_job_by_job_id(job_id)
+            if job is None:
+                # No durable row — nothing to reconcile; drop the stale id.
+                await self.claim_queue.complete(job_id)
+                continue
+
+            if job.status == JobStatus.QUEUED:
+                await self._requeue(job_id)
+                requeued.append(job_id)
+                continue
+
+            if job.status == JobStatus.IN_PROGRESS:
+                meta = job.job_metadata or {}
+                if meta.get("retry_safe"):
+                    attempt = int(meta.get("attempt", 1))
+                    max_attempts = int(meta.get("max_attempts", 1))
+                    if attempt < max_attempts:
+                        await self._job_service.update_job_metadata(job.job_id, {"attempt": attempt + 1})
+                        await self._job_service.update_job_status(job.job_id, JobStatus.QUEUED)
+                        await self._requeue(job_id)
+                        requeued.append(job_id)
+                        continue
+                # Default at-most-once, or retries exhausted: fail worker_lost.
+                # set_error only stores the blob, so flip the status to FAILED
+                # (with a finished timestamp) explicitly.
+                await self._job_service.update_job_status(job.job_id, JobStatus.FAILED, finished_timestamp=True)
+                await self._job_service.set_error(job.job_id, {"type": "worker_lost"})
+                await self.claim_queue.complete(job_id)
+                continue
+
+            # Terminal (COMPLETED / FAILED / CANCELLED / TIMED_OUT): drop the id.
+            await self.claim_queue.complete(job_id)
+        return requeued
+
+    async def _requeue(self, job_id: str) -> None:
+        """Move an id from the processing list back to pending for re-claim."""
+        await self.claim_queue.complete(job_id)
         await self.claim_queue.enqueue(job_id)
 
     async def events(self, job_id: str, last_event_id: int = 0) -> AsyncIterator[Any]:
