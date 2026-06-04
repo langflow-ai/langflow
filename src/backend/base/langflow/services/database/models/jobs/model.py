@@ -85,6 +85,19 @@ class JobBase(SQLModel):
         sa_column=Column(JsonVariant, nullable=True),
     )
 
+    # Durable terminal payloads for background workflow runs. result holds
+    # the final output blob on COMPLETED; error holds {type, message, ...}
+    # on FAILED/TIMED_OUT. Both nullable so non-workflow jobs and in-flight
+    # rows stay readable.
+    result: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JsonVariant, nullable=True),
+    )
+    error: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JsonVariant, nullable=True),
+    )
+
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]
     __tablename__ = "job"
