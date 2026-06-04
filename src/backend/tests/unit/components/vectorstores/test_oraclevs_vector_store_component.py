@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.documents import Document
 from langchain_oracledb.vectorstores.oraclevs import drop_table_purge
-from pydantic import BaseModel
-
 from lfx.components.oracledb import OracleVectorStoreComponent
 from lfx.components.oracledb.connection import build_connection_params, split_credentialized_dsn
 from lfx.schema.data import Data
+from pydantic import BaseModel
+
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 from tests.oracle_test_utils import (
     get_oracle_connection_inputs,
