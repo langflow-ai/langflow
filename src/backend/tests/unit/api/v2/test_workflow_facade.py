@@ -231,3 +231,95 @@ class TestIdempotentSubmit:
         second = await client.post("api/v2/workflows", json=body, headers=headers)
 
         assert first.json()["job_id"] != second.json()["job_id"]
+
+
+class TestNoBreakingChange:
+    """Pin the wire contract so the facade additions stay backward compatible."""
+
+    async def test_job_response_field_set_is_unchanged(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """The WorkflowJobResponse top-level keys are exactly the documented set.
+
+        Additions live under ``links`` (the new ``events`` URL); no top-level key
+        was added, removed, or renamed, so existing background clients keep
+        parsing the same shape.
+        """
+        headers = {"x-api-key": created_api_key.api_key}
+        response = await client.post(
+            "api/v2/workflows",
+            json=_body(chatbot_flow, mode="background"),
+            headers=headers,
+        )
+        assert response.status_code == 200
+        result = response.json()
+        assert set(result.keys()) == {
+            "job_id",
+            "flow_id",
+            "object",
+            "created_timestamp",
+            "status",
+            "links",
+            "errors",
+            "globals",
+        }
+        # links is additive-only: status + stop preserved, events added.
+        assert set(result["links"].keys()) == {"status", "events", "stop"}
+
+    async def test_submit_events_link_serves_the_stream_with_sse_ids(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """The links.events URL replays the run as an SSE stream carrying id: lines.
+
+        Pins the Last-Event-ID resume contract: each durable frame carries a
+        monotonic ``id:`` line so a dropped client resumes from where it left off.
+        """
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_body(chatbot_flow, mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        events_link = start.json()["links"]["events"].lstrip("/")
+
+        response = await client.get(events_link, headers=headers)
+
+        assert response.status_code == 200
+        assert "text/event-stream" in response.headers["content-type"]
+        body = response.text
+        event_ids = [int(line.removeprefix("id:").strip()) for line in body.splitlines() if line.startswith("id:")]
+        # Monotonic, gap-free ids (Last-Event-ID resume contract). The langflow
+        # protocol's first durable frame is id:0; assert contiguity from there.
+        assert event_ids, "expected durable SSE frames to carry id: lines"
+        assert event_ids == list(range(event_ids[0], event_ids[0] + len(event_ids)))
+
+    async def test_last_event_id_skips_already_delivered(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """Re-attaching with Last-Event-ID=0 must not replay the first event again."""
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_body(chatbot_flow, mode="background"),
+            headers=headers,
+        )
+        job_id = start.json()["job_id"]
+
+        response = await client.get(
+            f"api/v2/workflows/{job_id}/events",
+            headers={**headers, "Last-Event-ID": "0"},
+        )
+
+        assert response.status_code == 200
+        event_ids = [line.removeprefix("id:").strip() for line in response.text.splitlines() if line.startswith("id:")]
+        assert "0" not in event_ids
