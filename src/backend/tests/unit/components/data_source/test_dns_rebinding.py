@@ -372,3 +372,57 @@ class TestDNSRebindingProtection:
             # Verify the result (should succeed with second IP)
             assert isinstance(result, Data)
             assert result.data is not None
+
+    @pytest.mark.asyncio
+    async def test_dns_pinning_applies_to_redirect_hops(self, component):
+        """Test that DNS pinning is enforced on every redirect hop, not just the first.
+
+        Simulates a redirect from a validated public host to a second host. With
+        per-hop validation + pinning, both connections must go to the validated public
+        IP - a rebinding attacker who flips the redirect target to 127.0.0.1 after
+        validation can never cause a connection to the internal address.
+        """
+        component.url_input = "http://public.example.com/start"
+        component.follow_redirects = True
+
+        resolved = []
+
+        def mock_getaddrinfo(host, *_args, **_kwargs):
+            """Every host resolves to a public IP at validation time."""
+            resolved.append(host)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
+
+        connect_calls = []
+        redirect_response = [
+            b"HTTP/1.1 302 Found\r\n",
+            b"Location: http://rebind.example.com/secret\r\n",
+            b"Content-Length: 0\r\n",
+            b"\r\n",
+        ]
+        final_response = [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: application/json\r\n",
+            b"Content-Length: 15\r\n",
+            b"\r\n",
+            b'{"status":"ok"}',
+        ]
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture every IP connected to; first hop redirects, second succeeds."""
+            connect_calls.append(host)
+            stream = redirect_response if len(connect_calls) == 1 else final_response
+            return httpcore.AsyncMockStream(list(stream))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        # Both the initial request and the redirect hop connected to the pinned public IP.
+        assert connect_calls == ["8.8.8.8", "8.8.8.8"], connect_calls
+        # The redirect target was resolved exactly once (validation only); httpx never
+        # re-resolved it, so a rebinding flip after validation has no effect.
+        assert resolved.count("rebind.example.com") == 1, resolved

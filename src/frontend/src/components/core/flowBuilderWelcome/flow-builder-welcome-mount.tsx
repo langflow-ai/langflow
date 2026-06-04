@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { type SidebarSection, useSidebar } from "@/components/ui/sidebar";
+import useDeleteFlow from "@/hooks/flows/use-delete-flow";
 import useAssistantManagerStore from "@/stores/assistantManagerStore";
 import useFlowBuilderWelcomeStore from "@/stores/flowBuilderWelcomeStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -30,11 +31,20 @@ export function FlowBuilderWelcomeMount() {
     (state) => state.setPendingMessage,
   );
   const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
+  const flows = useFlowsManagerStore((state) => state.flows);
+  const { deleteFlow } = useDeleteFlow();
 
   // If the user navigates to a different flow while the welcome is open
   // (e.g. picks a template in the TemplatesModal that spins up a fresh
   // flow), auto-close it. Without this guard the welcome lingers on top of
   // the freshly-loaded canvas it doesn't belong to.
+  //
+  // The "New Flow" entry point eagerly creates an empty placeholder flow for
+  // the welcome to overlay. When the user instead picks a template via "Browse
+  // more…", a SECOND flow spins up and we navigate to it — orphaning the blank
+  // placeholder. Delete that placeholder here so the user is left with a SINGLE
+  // flow (the template they chose) instead of two. Guarded to only remove a
+  // still-blank placeholder so we never discard a flow the user built on.
   useEffect(() => {
     if (
       isOpen &&
@@ -42,9 +52,16 @@ export function FlowBuilderWelcomeMount() {
       currentFlowId &&
       currentFlowId !== openedForFlowId
     ) {
+      const placeholder = flows?.find((flow) => flow.id === openedForFlowId);
+      const isBlankPlaceholder =
+        !!placeholder && (placeholder.data?.nodes?.length ?? 0) === 0;
+      if (isBlankPlaceholder) {
+        // Fire-and-forget: a failed cleanup must not block the close handoff.
+        void deleteFlow({ id: openedForFlowId }).catch(() => {});
+      }
       close();
     }
-  }, [isOpen, openedForFlowId, currentFlowId, close]);
+  }, [isOpen, openedForFlowId, currentFlowId, close, flows, deleteFlow]);
   const setAssistantSidebarOpen = useAssistantManagerStore(
     (state) => state.setAssistantSidebarOpen,
   );

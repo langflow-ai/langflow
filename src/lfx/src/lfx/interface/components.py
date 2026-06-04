@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 import hashlib
 import importlib
 import inspect
@@ -37,6 +38,11 @@ if TYPE_CHECKING:
 MIN_MODULE_PARTS = 2
 MIN_MODULE_PARTS_WITH_FILENAME = 4  # Minimum parts needed to have a module filename (lfx.components.type.filename)
 EXPECTED_RESULT_LENGTH = 2  # Expected length of the tuple returned by _process_single_module
+
+# Third-party modules whose package __init__ and a submodule import each other.
+# These must be imported single-threaded before any concurrent import fan-out --
+# see ``_warm_circular_imports`` for the full deadlock explanation.
+MODULES_WITH_INTERNAL_CIRCULAR_IMPORTS = ("toolguard.runtime", "toolguard.runtime.runtime")
 
 
 # Create a class to manage component cache instead of using globals
@@ -357,6 +363,33 @@ async def _load_from_index_or_cache(
     return modules_dict, None
 
 
+def _warm_circular_imports() -> None:
+    """Pre-import third-party modules that contain an *internal* circular import.
+
+    ``toolguard.runtime`` (package __init__) and its ``toolguard.runtime.runtime``
+    submodule import each other: the __init__ does ``from .runtime import ...`` while
+    runtime.py does ``from toolguard.runtime import IToolInvoker``. That cycle resolves
+    cleanly when first imported from a single thread, but the lfx policy modules reach
+    it from two different entry points -- ``policies.tool_invoker`` enters at the
+    ``toolguard.runtime`` package while ``policies.guard_sync_utils`` enters at the
+    ``toolguard.runtime.runtime`` submodule. When those two land on separate worker
+    threads at the same time (the ``asyncio.to_thread`` fan-out in
+    ``_load_components_dynamically``), one thread holds the package lock and waits for
+    the submodule lock while the other holds the submodule lock and waits for the
+    package lock, so CPython's import machinery raises ``_DeadlockError``.
+
+    Warming these single-threaded populates ``sys.modules`` so the threaded fan-out
+    only ever hits the import cache and can never enter the cycle concurrently. Full
+    coverage is preserved -- every component module is still imported below; this only
+    front-loads the shared cycle instead of skipping any module.
+    """
+    for modname in MODULES_WITH_INTERNAL_CIRCULAR_IMPORTS:
+        # Optional dependency: when toolguard isn't installed, the dependent component
+        # modules are skipped/reported by the fan-out as usual.
+        with contextlib.suppress(ImportError):
+            importlib.import_module(modname)
+
+
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -405,6 +438,11 @@ async def _load_components_dynamically(
 
     if not module_names:
         return modules_dict
+
+    # Warm third-party modules with internal circular imports single-threaded before
+    # the concurrent fan-out below, otherwise two worker threads can each grab one half
+    # of the cycle and CPython raises an import ``_DeadlockError``.
+    _warm_circular_imports()
 
     # Create tasks for parallel module processing
     tasks = [asyncio.to_thread(_process_single_module, modname) for modname in module_names]

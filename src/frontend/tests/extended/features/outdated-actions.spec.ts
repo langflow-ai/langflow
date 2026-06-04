@@ -47,7 +47,7 @@ test("user must be able to update outdated components by update all button", asy
   await droppedCard.waitFor({ state: "visible", timeout: 30000 });
   await droppedCard.click();
 
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
@@ -140,7 +140,7 @@ test("user must be able to update outdated components by each outdated component
   await droppedCard.waitFor({ state: "visible", timeout: 30000 });
   await droppedCard.click();
 
-  await expect(page.getByText("Updates are available for 5")).toBeVisible({
+  await expect(page.getByText("5 components need updates")).toBeVisible({
     timeout: 30000,
   });
 
@@ -172,7 +172,7 @@ test("user must be able to update outdated components by each outdated component
     timeout: 5000,
   });
 
-  await expect(page.getByText("Updates are available for 4")).toBeVisible({
+  await expect(page.getByText("4 components need updates")).toBeVisible({
     timeout: 30000,
   });
 

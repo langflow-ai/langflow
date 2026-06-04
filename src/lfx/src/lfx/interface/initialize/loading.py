@@ -15,6 +15,8 @@ from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
 
+TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
+
 if TYPE_CHECKING:
     from lfx.custom.custom_component.component import Component
     from lfx.custom.custom_component.custom_component import CustomComponent
@@ -112,13 +114,14 @@ def convert_kwargs(params):
 
 
 def load_from_env_vars(params, load_from_db_fields, context=None):
+    no_env_fallback = bool(context and context.get("no_env_fallback"))
     for field in load_from_db_fields:
         if field not in params or not params[field]:
             continue
         variable_name = params[field]
         key = None
 
-        # Check request_variables in context
+        # Check request_variables in context first
         if context and "request_variables" in context:
             request_variables = context["request_variables"]
             if variable_name in request_variables:
@@ -126,14 +129,20 @@ def load_from_env_vars(params, load_from_db_fields, context=None):
                 logger.debug(f"Found context override for variable '{variable_name}'")
 
         if key is None:
-            key = os.getenv(variable_name)
-            if key:
-                logger.info(f"Using environment variable {variable_name} for {field}")
+            if no_env_fallback:
+                logger.warning(
+                    f"Variable '{variable_name}' not found in request_variables and "
+                    f"env fallback is disabled. Setting to None."
+                )
             else:
-                logger.error(f"Environment variable {variable_name} is not set.")
-        params[field] = key if key is not None else None
-        if key is None:
-            logger.warning(f"Could not get value for {field}. Setting it to None.")
+                key = os.getenv(variable_name)
+                if key:
+                    logger.info(f"Using environment variable {variable_name} for {field}")
+                else:
+                    logger.error(f"Environment variable {variable_name} is not set.")
+                    logger.warning(f"Could not get value for {field}. Setting it to None.")
+
+        params[field] = key
     return params
 
 
@@ -153,10 +162,20 @@ async def update_table_params_with_load_from_db_fields(
     if not table_data or not load_from_db_columns:
         return params
 
+    def cell_load_from_db(row_metadata: Any, column_name: str) -> bool | None:
+        if isinstance(row_metadata, dict):
+            return bool(row_metadata[column_name]) if column_name in row_metadata else None
+        if isinstance(row_metadata, list):
+            return column_name in row_metadata
+        return None
+
     # Extract context once for use throughout the function
     context = None
     if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
         context = custom_component.graph.context
+    # Honor the same no-env-fallback contract as load_from_env_vars so a served flow under
+    # no_env_fallback never resolves table columns from process-wide os.environ.
+    no_env_fallback = bool(context and context.get("no_env_fallback"))
 
     async with session_scope() as session:
         settings_service = get_settings_service()
@@ -172,10 +191,15 @@ async def update_table_params_with_load_from_db_fields(
                 continue
 
             updated_row = row.copy()
+            row_load_from_db_fields = updated_row.pop(TABLE_LOAD_FROM_DB_FIELDS, None)
 
             # Process each column that needs database loading
             for column_name in load_from_db_columns:
                 if column_name not in updated_row:
+                    continue
+
+                should_load_from_db = cell_load_from_db(row_load_from_db_fields, column_name)
+                if should_load_from_db is False:
                     continue
 
                 # The column value should be the name of the global variable to lookup
@@ -194,7 +218,7 @@ async def update_table_params_with_load_from_db_fields(
                                 key = request_variables[variable_name]
                                 logger.debug(f"Found context override for variable '{variable_name}'")
 
-                        if key is None:
+                        if key is None and not no_env_fallback:
                             key = os.getenv(variable_name)
                             if key:
                                 logger.info(
@@ -215,19 +239,28 @@ async def update_table_params_with_load_from_db_fields(
                     key = None
 
                 # If we couldn't get from database and fallback is enabled, try environment
-                if fallback_to_env_vars and key is None:
+                if fallback_to_env_vars and key is None and not no_env_fallback:
                     key = os.getenv(variable_name)
                     if key:
                         logger.info(f"Using environment variable {variable_name} for table column {column_name}")
                     else:
                         logger.error(f"Environment variable {variable_name} is not set.")
 
-                # Update the column value with the resolved value
-                updated_row[column_name] = key if key is not None else None
                 if key is None:
-                    logger.warning(
-                        f"Could not get value for {variable_name} in table column {column_name}. Setting it to None."
-                    )
+                    if should_load_from_db is None:
+                        logger.debug(
+                            "Could not get global variable %s for table column %s. Keeping the literal value.",
+                            variable_name,
+                            column_name,
+                        )
+                    else:
+                        updated_row[column_name] = None
+                        logger.warning(
+                            f"Could not get value for {variable_name} in table column {column_name}. "
+                            "Setting it to None."
+                        )
+                else:
+                    updated_row[column_name] = key
 
             updated_table_data.append(updated_row)
 
