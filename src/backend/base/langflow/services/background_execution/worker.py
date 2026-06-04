@@ -136,3 +136,50 @@ async def run_worker_loop(
             # whether the work should be retried; a stuck processing-list entry
             # would block reconcile forever.
             await backend.complete(job_id)
+
+
+def _build_redis_client(settings: Settings) -> Any:
+    """Construct a StrictRedis client for the job queue, mirroring RedisJobQueueService.
+
+    URL wins; otherwise host/port fall back to the cache redis settings and the
+    job-queue DB (default 1). The worker shares this exact resolution so its
+    claim queue + Streams bus point at the same redis the API enqueues to.
+    """
+    from redis.asyncio import StrictRedis
+
+    if settings.redis_queue_url:
+        return StrictRedis.from_url(settings.redis_queue_url)
+    host = settings.redis_queue_host or settings.redis_host
+    port = settings.redis_queue_port or settings.redis_port
+    return StrictRedis(host=host, port=port, db=settings.redis_queue_db)
+
+
+async def build_worker():
+    """Construct the redis backend, the WorkerJobRunner, and a teardown callable.
+
+    Reads the live services (settings, jobs, redis client) so the worker process
+    shares the same configuration as the API. The runner publishes live frames to
+    the redis Streams bus (RedisStreamLiveBus) so any API replica can reattach.
+    Returns ``(backend, runner, teardown)``.
+    """
+    from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
+    from langflow.services.background_execution.redis_live_bus import RedisStreamLiveBus
+    from langflow.services.deps import get_job_service, get_settings_service
+
+    settings = get_settings_service().settings
+    client = _build_redis_client(settings)
+    job_service = get_job_service()
+
+    backend = RedisBackgroundQueue(
+        client=client,
+        job_service=job_service,
+        stream_ttl=settings.redis_queue_ttl,
+        startup_grace_s=settings.redis_queue_startup_grace_s,
+    )
+    live_bus = RedisStreamLiveBus(client, ttl=settings.redis_queue_ttl)
+    runner = WorkerJobRunner(settings=settings, live_bus=live_bus)
+
+    async def teardown() -> None:
+        await client.aclose()
+
+    return backend, runner, teardown
