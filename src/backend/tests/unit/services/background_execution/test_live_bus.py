@@ -60,6 +60,32 @@ async def test_reattach_replays_durable_then_tails_live():
     await bus.close("job-1")
 
 
+async def test_closed_marker_is_bounded_not_leaked():
+    """``_closed`` must not grow one permanent entry per completed job.
+
+    The bus is a single long-lived per-process object; close(job_id) used to set
+    ``_closed[job_id]=True`` and never evict it, leaking one key per job for the
+    process lifetime. Drive many jobs through subscribe->publish->drain->close and
+    assert the marker map does not retain an entry per finished job once its last
+    subscriber has drained.
+    """
+    bus = InMemoryLiveBus()
+    for i in range(200):
+        job_id = f"job-{i}"
+        sub = bus.subscribe(job_id)
+        await bus.publish(job_id, LiveFrame(seq=1, data=b"x"))
+        frame = await asyncio.wait_for(sub.__anext__(), timeout=2)
+        assert frame.data == b"x"
+        await bus.close(job_id)
+        # Drain to end-of-stream so the subscriber generator's finally runs.
+        with pytest.raises(StopAsyncIteration):
+            await asyncio.wait_for(sub.__anext__(), timeout=2)
+
+    # No subscribers remain; the closed-marker map must not retain 200 entries.
+    assert len(bus._subscribers) == 0
+    assert len(bus._closed) == 0, f"_closed leaked {len(bus._closed)} entries"
+
+
 async def test_reattach_dedupes_overlap_between_durable_and_live():
     """A frame that lands in live while we replay durable must not double-emit."""
     bus = InMemoryLiveBus()

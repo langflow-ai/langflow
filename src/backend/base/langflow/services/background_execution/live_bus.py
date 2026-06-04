@@ -61,6 +61,14 @@ class InMemoryLiveBus:
             subs.discard(queue)
             if not subs:
                 self._subscribers.pop(job_id, None)
+                # Evict the closed-marker with the last subscriber so a long-lived
+                # API process does not leak one key per completed job. The marker
+                # only needs to outlive close() until existing subscribers drain;
+                # a LATER reattach to a finished job is gated on the persisted
+                # JobStatus by the facade (the cross-restart source of truth), not
+                # on this in-process flag, so dropping it here cannot make a late
+                # reattacher block on a tail that never produces.
+                self._closed.pop(job_id, None)
 
     async def publish(self, job_id: str, frame: LiveFrame) -> None:
         """Push ``frame`` to every live subscriber for ``job_id``."""
@@ -72,9 +80,21 @@ class InMemoryLiveBus:
                 queue.put_nowait(frame)
 
     async def close(self, job_id: str) -> None:
-        """Mark the job's stream ended and wake every subscriber."""
+        """Mark the job's stream ended and wake every subscriber.
+
+        The ``_closed`` marker is set only when there are live subscribers to
+        end: it exists so a subscriber attached just before close ends promptly,
+        and so a reattach racing close (between this call and the subscriber's
+        drain) short-circuits. With NO subscribers there is nothing to wake and a
+        later reattach is gated on the persisted JobStatus by the facade, so
+        setting the marker would only leak a key per completed job. It is evicted
+        with the last subscriber in ``_drop_queue``.
+        """
+        subs = list(self._subscribers.get(job_id, set()))
+        if not subs:
+            return
         self._closed[job_id] = True
-        for queue in list(self._subscribers.get(job_id, set())):
+        for queue in subs:
             with contextlib.suppress(asyncio.QueueFull):
                 queue.put_nowait(_CLOSED)
 
