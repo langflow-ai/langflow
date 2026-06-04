@@ -57,6 +57,23 @@ _SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
+# One in-flight flow execution per worker process. With gunicorn max_requests=1 a
+# worker is recycled after a single request, but an async UvicornWorker can accept
+# a second connection before recycling; this guard ensures the env-sensitive
+# execution section (where request-scoped vars are active and flow code may touch
+# os.environ) is never entered by two requests in the same process at once.
+_EXECUTE_GUARD = asyncio.Semaphore(1)
+
+
+async def guarded_execute(graph_copy, input_value, session_id=None):
+    """Run ``execute_graph_with_capture`` under the per-worker single-in-flight guard.
+
+    Serializes the env-sensitive execution section so two concurrent requests in
+    the same async worker can never overlap a flow run before the worker recycles.
+    """
+    async with _EXECUTE_GUARD:
+        return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id)
+
 
 def verify_api_key(
     query_param: Annotated[str | None, Security(api_key_query)],
@@ -287,6 +304,11 @@ class FlowRegistry:
         raw_json = self._store.read(flow_id)
         if raw_json is None:
             return None
+        # Cache-miss reconstruction from the store. Under gunicorn max_requests=1
+        # (per-request worker recycling), a flow not folded into the preload image
+        # pays this graph-rebuild cost on every request — log it so that per-request
+        # overhead is observable (concerns B2).
+        logger.info(f"Reconstructing flow '{flow_id}' from store on cache miss")
         graph, meta = self._reconstruct(flow_id, raw_json)
         # Cache under the authoritative JSON id so requests by UUID find it.
         self._flows[meta.id] = (graph, meta)
@@ -519,9 +541,9 @@ async def run_flow_generator_for_serve(
         # For the serve app, we'll use execute_graph_with_capture with streaming
         # Note: This is a simplified version. In a full implementation, you might want
         # to integrate with the full LFX streaming pipeline from endpoints.py
-        results, logs = await execute_graph_with_capture(
-            graph, input_request.input_value, session_id=input_request.session_id
-        )
+        # Routed through the single-in-flight guard so a streaming run can never
+        # overlap another run/stream in the same worker (see _EXECUTE_GUARD).
+        results, logs = await guarded_execute(graph, input_request.input_value, session_id=input_request.session_id)
         result_data = extract_result_data(results, logs)
 
         # Send the final result
@@ -684,6 +706,13 @@ def create_multi_serve_app(
         dependencies=[Depends(verify_api_key)],
     )
     async def run_flow(flow_id: str, request: RunRequest) -> RunResponse:
+        """Execute the flow synchronously and return its completed result.
+
+        This endpoint runs the flow to completion within the request and returns a
+        populated ``RunResponse`` (``result`` / ``success``) — it is NOT a
+        job-submission endpoint and never returns a task/job id to poll. Clients
+        that need incremental output should use ``POST /flows/{flow_id}/stream``.
+        """
         graph, _ = _get_flow_or_404(flow_id)
         try:
             validate_flow_for_current_settings(graph)
@@ -691,9 +720,7 @@ def create_multi_serve_app(
             # deepcopy() drops graph.context; re-apply the registry's env policy.
             registry.stamp(graph_copy)
             apply_global_vars_to_graph(graph_copy, request.global_vars)
-            results, logs = await execute_graph_with_capture(
-                graph_copy, request.input_value, session_id=request.session_id
-            )
+            results, logs = await guarded_execute(graph_copy, request.input_value, session_id=request.session_id)
             result_data = extract_result_data(results, logs)
 
             if not result_data.get("success", True):
@@ -784,17 +811,16 @@ def create_multi_serve_app(
     return app
 
 
-def create_serve_app() -> FastAPI:
-    """ASGI app factory called by each uvicorn worker in multi-worker mode.
+def build_registry_from_env() -> FlowRegistry:
+    """Build and warm a ``FlowRegistry`` from the ``LFX_SERVE_*`` environment.
 
-    Workers cannot inherit the parent's in-memory app object. Instead, each
-    worker calls this factory, which reads ``LFX_SERVE_FLOW_DIR`` and
-    ``LFX_SERVE_NO_ENV_FALLBACK`` from the environment, pre-warms its own
-    in-memory cache from the shared ``FilesystemFlowStore``, and returns a
-    ready FastAPI app.
+    Reads ``LFX_SERVE_FLOW_DIR`` / ``LFX_SERVE_NO_ENV_FALLBACK`` /
+    ``LFX_SERVE_STARTUP_PATHS``. Safe to call at module-import time in a gunicorn
+    ``--preload`` master: the result is read-only after warming and is inherited
+    by forked workers via copy-on-write.
 
-    The parent process must set those env vars **before** calling
-    ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
+    The parent process must set those env vars **before** the worker (or the
+    preload master) calls this function.
     """
     import asyncio
     import os
@@ -816,10 +842,11 @@ def create_serve_app() -> FastAPI:
         # When flow_dir IS set the parent already persisted startup JSON flows to the store;
         # workers pick them up via warm_from_store() below — no need to re-read files.
         #
-        # ``create_serve_app`` is called by uvicorn as an ASGI app factory while an
-        # event loop is already running in the worker process.  ``asyncio.run()``
-        # raises RuntimeError in that situation.  Running the coroutine in a fresh
-        # thread gives it a clean event loop with no interference.
+        # This is called by uvicorn as an ASGI app factory (or by the gunicorn
+        # preload master) while an event loop may already be running.
+        # ``asyncio.run()`` raises RuntimeError in that situation.  Running the
+        # coroutine in a fresh thread gives it a clean event loop with no
+        # interference.
         import concurrent.futures
 
         from lfx.cli.commands import build_registry_from_directory, build_registry_from_paths
@@ -847,4 +874,18 @@ def create_serve_app() -> FastAPI:
         registry = FlowRegistry(no_env_fallback=no_env_fallback, store=flow_store)
 
     registry.warm_from_store()
-    return create_multi_serve_app(registry=registry)
+    return registry
+
+
+def create_serve_app() -> FastAPI:
+    """ASGI app factory called by each uvicorn worker in multi-worker mode.
+
+    Workers cannot inherit the parent's in-memory app object. Instead, each
+    worker calls this factory, which reads the ``LFX_SERVE_*`` environment via
+    :func:`build_registry_from_env`, pre-warms its own in-memory cache from the
+    shared ``FilesystemFlowStore``, and returns a ready FastAPI app.
+
+    The parent process must set those env vars **before** calling
+    ``uvicorn.run("lfx.cli.serve_app:create_serve_app", workers=N, ...)``.
+    """
+    return create_multi_serve_app(registry=build_registry_from_env())

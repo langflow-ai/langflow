@@ -255,7 +255,9 @@ def serve_command(
     if workers > 1 and flow_dir is None:
         typer.echo(
             "Warning: --workers > 1 without --flow-dir means each worker has an isolated "
-            "in-memory registry. Flows uploaded to one worker will not be visible to others. "
+            "in-memory registry. Flows uploaded to one worker will not be visible to others, "
+            "and because workers are recycled after each request for per-request isolation, "
+            "uploaded flows do not survive at all without a shared store. "
             "Pass --flow-dir to enable shared flow storage across workers.",
             err=True,
         )
@@ -349,43 +351,17 @@ def serve_command(
 
         try:
             if workers > 1:
-                # uvicorn requires an import string (not an app object) for multi-worker mode.
-                # Set env vars so each worker's create_serve_app() factory can reconstruct config.
-                # The parent's in-memory app is never passed to workers — each worker calls
-                # create_serve_app() fresh, so we skip building the app here.
-                from lfx.cli.serve_app import (
-                    _SERVE_FLOW_DIR_ENV,
-                    _SERVE_NO_ENV_FALLBACK_ENV,
-                    _SERVE_STARTUP_PATHS_ENV,
+                _launch_workers(
+                    host=host,
+                    port=port,
+                    workers=workers,
+                    log_level=log_level,
+                    flow_dir=flow_dir,
+                    no_env_fallback=no_env_fallback,
+                    script_paths=script_paths,
+                    temp_file_to_cleanup=temp_file_to_cleanup,
+                    verbose_print=verbose_print,
                 )
-
-                os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
-                os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
-
-                # When flow_dir is set, startup flows are already in the store (written by
-                # _build_serve_registry above) so workers load them via warm_from_store().
-                # When flow_dir is NOT set, workers must re-read the original files.
-                startup_paths_for_workers: list[str] = []
-                if not flow_dir:
-                    if script_paths:
-                        startup_paths_for_workers = [str(Path(p).resolve()) for p in script_paths]
-                    elif temp_file_to_cleanup:
-                        startup_paths_for_workers = [temp_file_to_cleanup]
-                os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths_for_workers)
-                try:
-                    uvicorn.run(
-                        "lfx.cli.serve_app:create_serve_app",
-                        host=host,
-                        port=port,
-                        workers=workers,
-                        log_level=log_level,
-                        factory=True,
-                    )
-                finally:
-                    # Only remove the keys we set above — a prefix sweep would also delete
-                    # any LFX_SERVE_* var the operator intentionally exported before launch.
-                    for k in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_STARTUP_PATHS_ENV):
-                        os.environ.pop(k, None)
             else:
                 serve_app = create_multi_serve_app(registry=registry)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
@@ -400,6 +376,82 @@ def serve_command(
         if temp_file_to_cleanup:
             with contextlib.suppress(OSError):
                 Path(temp_file_to_cleanup).unlink()
+
+
+def _launch_workers(
+    *,
+    host: str,
+    port: int,
+    workers: int,
+    log_level: str,
+    flow_dir: Path | None,
+    no_env_fallback: bool,
+    script_paths: list[str] | None,
+    temp_file_to_cleanup: str | None,
+    verbose_print: Callable[[str], None],
+) -> None:
+    """Launch ``workers`` isolated worker processes for ``lfx serve --workers N``.
+
+    On Unix this runs gunicorn with ``preload_app=True`` (the master builds the
+    warm app once and forks workers via copy-on-write) and ``max_requests=1`` so
+    each request executes in a freshly-forked worker that is recycled after one
+    request — making cross-request ``os.environ`` credential leakage structurally
+    impossible.
+
+    gunicorn is Unix-only, so on Windows multi-worker serving is refused with a
+    clear message; run with ``--workers 1`` or deploy on Linux/macOS instead.
+    """
+    from lfx.cli.serve_app import (
+        _SERVE_FLOW_DIR_ENV,
+        _SERVE_NO_ENV_FALLBACK_ENV,
+        _SERVE_STARTUP_PATHS_ENV,
+    )
+
+    if sys.platform == "win32":
+        verbose_print(
+            "Multi-worker isolated serving uses gunicorn, which is not available on "
+            "Windows. Run with --workers 1 (single worker, no per-request process "
+            "recycling) or deploy on Linux/macOS for full isolation."
+        )
+        raise typer.Exit(1)
+
+    # Set env vars so the gunicorn preload master's build_registry_from_env() can
+    # reconstruct config. When flow_dir is set, startup flows are already in the
+    # store (written by _build_serve_registry) so workers load them via
+    # warm_from_store(). When flow_dir is NOT set, workers re-read original files.
+    os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
+    os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
+    startup_paths_for_workers: list[str] = []
+    if not flow_dir:
+        if script_paths:
+            startup_paths_for_workers = [str(Path(p).resolve()) for p in script_paths]
+        elif temp_file_to_cleanup:
+            startup_paths_for_workers = [temp_file_to_cleanup]
+    os.environ[_SERVE_STARTUP_PATHS_ENV] = json.dumps(startup_paths_for_workers)
+
+    try:
+        from lfx.cli.serve_gunicorn import LFXGunicornApp
+
+        LFXGunicornApp(
+            "lfx.cli.serve_preloaded_app:app",
+            {
+                "bind": f"{host}:{port}",
+                "workers": workers,
+                "worker_class": "uvicorn.workers.UvicornWorker",
+                "preload_app": True,
+                "max_requests": 1,
+                "max_requests_jitter": 0,
+                "loglevel": log_level,
+                # Sized for long synchronous flows; gunicorn's default 30s timeout
+                # would kill long LLM flows. Expose --timeout later if needed (D4).
+                "timeout": 120,
+            },
+        ).run()
+    finally:
+        # Only remove the keys we set above — a prefix sweep would also delete any
+        # LFX_SERVE_* var the operator intentionally exported before launch.
+        for k in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_STARTUP_PATHS_ENV):
+            os.environ.pop(k, None)
 
 
 async def _load_graph_and_meta(
