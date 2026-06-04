@@ -126,3 +126,48 @@ class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]
         default_factory=lambda: datetime.now(timezone.utc),
         sa_column=Column(DateTime(timezone=True), nullable=False),
     )
+
+
+class SignalType(str, Enum):
+    """Cooperative control signals delivered to a running job.
+
+    Only STOP is implemented today; PAUSE/RESUME are intentionally left
+    out of the enum until they're wired so we don't ship dead values.
+    """
+
+    STOP = "stop"
+
+
+class ExecutionSignal(SQLModel, table=True):  # type: ignore[call-arg]
+    """A control signal row for a job.
+
+    The runner polls unconsumed rows at vertex boundaries and stamps
+    ``consumed_at`` once acted upon.
+    """
+
+    __tablename__ = "execution_signals"
+
+    id: UUID = Field(default_factory=uuid4, primary_key=True, index=True)
+    job_id: UUID = Field(index=True, nullable=False)
+    signal_type: SignalType = Field(
+        sa_column=Column(
+            SQLEnum(
+                SignalType,
+                name="execution_signal_type_enum",
+                values_callable=lambda obj: [item.value for item in obj],
+            ),
+            nullable=False,
+        ),
+    )
+    data: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JsonVariant, nullable=True),
+    )
+    created_at: datetime = Field(
+        default_factory=lambda: datetime.now(timezone.utc),
+        sa_column=Column(DateTime(timezone=True), nullable=False),
+    )
+    consumed_at: datetime | None = Field(
+        default=None,
+        sa_column=Column(DateTime(timezone=True), nullable=True),
+    )

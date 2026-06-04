@@ -44,3 +44,26 @@ def test_job_events_table_and_unique_seq(db_url):  # noqa: F811
             assert any(set(u["column_names"]) == {"job_id", "seq"} for u in unique)
     finally:
         engine.dispose()
+
+
+def test_execution_signals_table(db_url):  # noqa: F811
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "head")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            inspector = inspect(connection)
+            assert "execution_signals" in inspector.get_table_names()
+            columns = {c["name"] for c in inspector.get_columns("execution_signals")}
+            assert {"id", "job_id", "signal_type", "data", "created_at", "consumed_at"} <= columns
+            indexes = inspector.get_indexes("execution_signals")
+            assert any(idx["column_names"] == ["job_id"] for idx in indexes)
+    finally:
+        engine.dispose()
+
+
+def test_signal_type_enum_has_stop():
+    from langflow.services.database.models.jobs.model import SignalType
+
+    assert SignalType.STOP.value == "stop"
