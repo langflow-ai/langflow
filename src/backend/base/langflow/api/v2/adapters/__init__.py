@@ -76,6 +76,16 @@ class StreamAdapter(Protocol):
         via event type; the buffer task falls back to other signals.
         """
 
+    def is_durable(self, event_type: str) -> bool:
+        """True when a frame of ``event_type`` must be persisted to the durable log.
+
+        Durable frames (milestones) are appended to ``job_events`` so a
+        reattaching client can rebuild state after the live bus is gone.
+        Ephemeral frames (token deltas) are published to the live bus only.
+        Unknown types default to ephemeral — a new milestone must opt in
+        explicitly rather than silently bloat the durable log.
+        """
+
 
 StreamAdapterFactory = Callable[[StreamAdapterContext], StreamAdapter]
 

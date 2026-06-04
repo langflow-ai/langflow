@@ -85,10 +85,20 @@ from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_job_service, get_memory_base_service, get_queue_service, get_task_service
+from langflow.services.deps import (
+    get_background_execution_service,
+    get_job_service,
+    get_memory_base_service,
+    get_task_service,
+)
+from langflow.services.jobs.exceptions import DuplicateJobError
 
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
+
+# Finished states a late /stop must not rewrite (CANCELLED is handled separately
+# with its own idempotent early return).
+_TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT})
 
 
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
@@ -241,10 +251,10 @@ async def execute_workflow(
             )
 
         if parsed.mode == "background":
-            # Background owns its own adapter construction inside
-            # ``_buffer_background_run`` because the fire-and-forget coroutine
-            # needs its own ``StreamAdapterContext`` (different ``run_id``).
-            # The name-only check above already covered the 422 contract.
+            # Background runs are delegated to BackgroundExecutionService via
+            # ``execute_workflow_background``. The facade creates the durable job
+            # row, persists the request, enqueues the work, and owns ownership /
+            # IDOR. The name-only check above already covered the 422 contract.
             return await execute_workflow_background(
                 parsed=parsed,
                 flow=flow,
@@ -252,6 +262,7 @@ async def execute_workflow(
                 current_user=current_user,
                 http_request=http_request,
                 stream_protocol=request.stream_protocol,
+                idempotency_key=request.idempotency_key,
             )
 
         # Stream mode: the adapter instance drives the SSE frame loop, so we
@@ -728,293 +739,123 @@ def _execute_streaming_workflow(
     )
 
 
-class _BackgroundRun:
-    """In-memory buffer of a background run's protocol-native SSE frames for re-attach.
-
-    The buffer lives in the process; restarts drop it. Multiple readers can
-    re-attach concurrently and tail until the run ends. The frames are
-    already serialized in the protocol the original POST requested via
-    ``stream_protocol``; re-attach replays them as-is. Mixing protocols
-    across a single run is not supported.
-
-    Per-run frame count is bounded by ``_MAX_FRAMES_PER_BACKGROUND_RUN`` so a
-    long verbose run (token-by-token streams, repeated tool calls) cannot
-    exhaust process memory while ``_MAX_BACKGROUND_RUNS`` only caps the
-    number of buffers. When the cap is reached the oldest frames are
-    evicted; re-attach with ``Last-Event-ID`` past that point will start
-    from the new buffer head (replay loss is preferred over OOM).
-    """
-
-    def __init__(self, user_id: str) -> None:
-        self.user_id = user_id
-        self.frames: list[bytes] = []
-        # Index of the first frame still in ``frames`` (monotonic across the
-        # life of the buffer). Once eviction starts, ``frames[i]`` corresponds
-        # to logical event id ``base_index + i``.
-        self.base_index = 0
-        self.done = False
-        self._cond = asyncio.Condition()
-
-    async def append(self, frame: bytes) -> None:
-        async with self._cond:
-            self.frames.append(frame)
-            overflow = len(self.frames) - _MAX_FRAMES_PER_BACKGROUND_RUN
-            if overflow > 0:
-                del self.frames[:overflow]
-                self.base_index += overflow
-            self._cond.notify_all()
-
-    async def finish(self) -> None:
-        async with self._cond:
-            self.done = True
-            self._cond.notify_all()
-
-    async def replay(self, start_index: int) -> AsyncIterator[bytes]:
-        """Yield buffered frames from ``start_index`` and tail until done.
-
-        ``start_index`` is in logical event-id space (matches what was emitted
-        on ``id:`` lines). If the caller's ``Last-Event-ID`` points before the
-        buffer's current head (frames evicted under memory pressure), we
-        replay from the head and the caller observes a gap.
-        """
-        idx = max(start_index, 0)
-        while True:
-            async with self._cond:
-                head = self.base_index
-                tail = head + len(self.frames)
-                idx = max(idx, head)
-                while idx >= tail and not self.done:
-                    await self._cond.wait()
-                    head = self.base_index
-                    tail = head + len(self.frames)
-                    idx = max(idx, head)
-                snapshot = self.frames[idx - head :]
-                finished = self.done
-            for frame in snapshot:
-                yield frame
-            idx += len(snapshot)
-            if finished and idx >= self.base_index + len(self.frames):
-                return
-
-
-# Process-local registry of background runs keyed by job_id, bounded by
-# ``_MAX_BACKGROUND_RUNS`` (oldest evicted first). Re-attach reads this.
-_MAX_BACKGROUND_RUNS = 100
-# Per-run frame ceiling. Caps memory for a single long/verbose run so a
-# token-streaming flow can't exhaust the process. 10k frames covers minutes
-# of dense token streams with room to spare; beyond that we evict oldest.
-_MAX_FRAMES_PER_BACKGROUND_RUN = 10_000
 # Inline stream queue between the build loop and the SSE consumer. Bounded
 # so a slow consumer applies backpressure to the build loop instead of
 # letting frames accumulate without bound when the network is slow.
 _EVENT_QUEUE_MAX_SIZE = 256
-_BACKGROUND_RUNS: dict[str, _BackgroundRun] = {}
 
 
-async def _finalize_job_status(job_uuid: UUID, terminal_status: JobStatus) -> None:
-    """Update job status to a terminal value, but never overwrite CANCELLED.
+def _default_frame_source_factory(*, request, flow_id, user, adapter, **_extra):
+    """Bind the v1 build loop (``_stream_event_frames``) as the runner's source.
 
-    ``stop_workflow`` sets the job to CANCELLED. The buffer task runs in
-    parallel and reaches its ``finally`` block shortly after; if it
-    unconditionally wrote COMPLETED/FAILED it would race with the cancellation
-    and silently overwrite the user's stop intent. Re-read the row first and
-    skip the update if a cancellation already landed.
+    Returns a zero-extra-kwargs async-generator callable so the runner can call
+    it with ``**source_kwargs``. The flow row is re-fetched lazily inside the
+    closure so ``submit()`` stays cheap and the build happens on the worker.
+
+    The memory-base ``on_flow_output`` hook is fired on a clean run (no terminal
+    error event) so background mode keeps the auto-capture wiring sync mode and
+    the v1 build pipeline have; without it every background run would silently
+    miss it.
     """
-    job_service = get_job_service()
-    try:
-        job = await job_service.get_job_by_job_id(job_id=job_uuid)
-    except Exception:  # noqa: BLE001
-        job = None
-    if job is not None and job.status == JobStatus.CANCELLED:
-        return
-    with contextlib.suppress(Exception):
-        await job_service.update_job_status(
-            job_uuid,
-            terminal_status,
-            finished_timestamp=True,
-        )
-
-
-async def _clear_background_run(job_id: str) -> None:
-    """Pop the background run registry entry and wake any re-attach waiters.
-
-    Called from ``stop_workflow`` after revoking the buffer task. Without
-    this, ``_cond.wait()`` inside ``_BackgroundRun.replay`` can hang
-    indefinitely (the buffer is never marked done because the task that
-    would have called ``finish()`` was cancelled mid-execution), and the
-    cancelled ``_BackgroundRun`` lingers in memory until LRU evicts it.
-    """
-    bg_run = _BACKGROUND_RUNS.pop(job_id, None)
-    if bg_run is not None:
-        await bg_run.finish()
-
-
-def _register_background_run(job_id: str, bg_run: _BackgroundRun) -> None:
-    """Register a background run, evicting a completed entry when full.
-
-    Prefer evicting the oldest *completed* run so a long-running job's
-    re-attach handle survives. If every slot is still active, evict the
-    oldest one anyway to keep the registry bounded, and log a warning.
-    """
-    if len(_BACKGROUND_RUNS) >= _MAX_BACKGROUND_RUNS:
-        evict_key = next(
-            (key for key, run in _BACKGROUND_RUNS.items() if run.done),
-            None,
-        )
-        if evict_key is None:
-            evict_key = next(iter(_BACKGROUND_RUNS))
-            logger.warning(
-                "Background run registry full with no completed entries; "
-                "evicting still-running job %s to make room for %s",
-                evict_key,
-                job_id,
-            )
-        _BACKGROUND_RUNS.pop(evict_key, None)
-    _BACKGROUND_RUNS[job_id] = bg_run
-
-
-async def _buffer_background_run(
-    *,
-    bg_run: _BackgroundRun,
-    flow: FlowRead,
-    parsed: ParsedWorkflowRun,
-    job_id: str,
-    current_user: UserRead,
-    stream_protocol: str,
-) -> None:
-    """Run a background flow, buffer its frames, and finalize job status.
-
-    The adapter is resolved from ``stream_protocol`` so re-attach replays
-    frames in the protocol the caller requested. Validation of
-    ``stream_protocol`` happens at the route handler; this function still
-    guards against ``UnknownStreamProtocolError`` because it runs as a
-    fire-and-forget background coroutine. If adapter registration breaks
-    between the route's check and this call (e.g. a registry mutation), we
-    flip the job to FAILED and exit cleanly rather than dying silently and
-    leaving the job stuck at QUEUED.
-
-    The buffer's terminal-status detection keys off
-    ``adapter.terminal_error_type``.
-    """
-    try:
-        adapter = get_stream_adapter(
-            stream_protocol,
-            StreamAdapterContext(
-                run_id=parsed.run_id or job_id,
-                thread_id=parsed.session_id or str(flow.id),
-            ),
-        )
-    except UnknownStreamProtocolError:
-        # Fire-and-forget coroutine: do not raise, the route already returned.
-        await bg_run.finish()
-        job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
-        await _finalize_job_status(job_uuid, JobStatus.FAILED)
-        return
-
+    parsed = parse_workflow_run_request(WorkflowRunRequest(**request))
     terminal_error_type = adapter.terminal_error_type
-    fresh_background_tasks = BackgroundTasks()
-    errored = False
-    try:
-        async for frame, event_type in _stream_event_frames(
-            adapter=adapter,
-            flow_id=flow.id,
-            flow_name=flow.name,
-            background_tasks=fresh_background_tasks,
-            parsed=parsed,
-            current_user=current_user,
-        ):
-            if terminal_error_type is not None and event_type == terminal_error_type:
-                errored = True
-            await bg_run.append(frame)
-    finally:
-        await bg_run.finish()
-        # ``generate_flow_events`` queues telemetry, tracing teardown, and
-        # other callbacks on this ``BackgroundTasks`` instance. In FastAPI's
-        # request lifecycle those run after the response is sent; the
-        # background path has no response carrying them, so drain the queue
-        # explicitly. Suppressed so a single failing telemetry callback does
-        # not derail job-status finalization.
-        with contextlib.suppress(Exception):
-            await fresh_background_tasks()
-        # ``update_job_status`` queries the Job table by its UUID primary key;
-        # passing the raw string would silently miss every row.
-        job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
-        await _finalize_job_status(job_uuid, JobStatus.FAILED if errored else JobStatus.COMPLETED)
-        # Fire memory-base auto-capture hook on successful runs only. Matches
-        # the sync mode wiring above and the v1 build-pipeline wiring in
-        # ``api/build.py``. ``fire_and_forget_task`` because we are already a
-        # background coroutine and the hook must not block job finalization.
-        if not errored:
-            try:
-                await get_task_service().fire_and_forget_task(
-                    get_memory_base_service().on_flow_output,
-                    flow_id=flow.id,
-                    session_id=parsed.session_id or str(flow.id),
-                    job_id=job_uuid,
-                )
-            except (RuntimeError, ValueError, OSError):
-                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
+    async def _source(*, job_id=None, **_kwargs):
+        flow = await get_flow_by_id_or_endpoint_name(str(flow_id), user.id, widen_for_shares=True)
+        fresh_background_tasks = BackgroundTasks()
+        errored = False
+        try:
+            async for frame, event_type in _stream_event_frames(
+                adapter=adapter,
+                flow_id=flow.id,
+                flow_name=flow.name,
+                background_tasks=fresh_background_tasks,
+                parsed=parsed,
+                current_user=user,
+            ):
+                if terminal_error_type is not None and event_type == terminal_error_type:
+                    errored = True
+                yield frame, event_type
+        finally:
+            # ``generate_flow_events`` queues telemetry / tracing teardown on
+            # this ``BackgroundTasks``; the background path has no response to
+            # carry them, so drain explicitly. Suppressed so one failing
+            # callback cannot derail the run.
+            with contextlib.suppress(Exception):
+                await fresh_background_tasks()
+            if not errored:
+                try:
+                    await get_task_service().fire_and_forget_task(
+                        get_memory_base_service().on_flow_output,
+                        flow_id=flow.id,
+                        session_id=parsed.session_id or str(flow.id),
+                        job_id=job_id,
+                    )
+                except (RuntimeError, ValueError, OSError):
+                    await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
+
+    return _source
 
 
 async def execute_workflow_background(
     parsed: ParsedWorkflowRun,
     flow: FlowRead,
-    job_id: JobId,
+    job_id: JobId,  # noqa: ARG001
     current_user: UserRead,
     http_request: Request,  # noqa: ARG001
     stream_protocol: str,
+    idempotency_key: str | None = None,
 ) -> WorkflowJobResponse:
-    """Run a workflow in the background, buffering protocol-native events for re-attach.
+    """Queue a background run through the BackgroundExecutionService facade.
 
-    A job row is created so ``GET /workflows`` and ``POST /workflows/stop`` keep
-    working. The buffer task is scheduled through the queue service under
-    ``job_id`` so ``/stop`` can revoke it. Graph construction happens inside
-    the v1 build-vertex loop driven by ``_stream_event_frames`` with the
-    adapter selected by ``stream_protocol``; re-attach replays the frames in
-    that same protocol's wire shape.
+    The facade owns job-row creation, durable event persistence, the live bus,
+    and terminal-state finalization. We pass the original request fields so the
+    runner re-parses them on the worker (the build happens off the request
+    path) and replays durable milestones from ``job_events`` on re-attach.
+
+    An optional ``idempotency_key`` dedupes submits: a retried POST with the
+    same key returns the existing job_id rather than queuing duplicate work.
     """
     try:
-        flow_id_str = str(flow.id)
-        job_id_str = str(job_id)
-
-        await get_job_service().create_job(
-            job_id=job_id,
-            flow_id=flow_id_str,
-            user_id=current_user.id,
-        )
-
-        bg_run = _BackgroundRun(user_id=str(current_user.id))
-        _register_background_run(job_id_str, bg_run)
-
-        try:
-            queue_service = get_queue_service()
-            queue_service.create_queue(job_id_str)
-            queue_service.start_job(
-                job_id_str,
-                _buffer_background_run(
-                    bg_run=bg_run,
-                    flow=flow,
-                    parsed=parsed,
-                    job_id=job_id_str,
-                    current_user=current_user,
-                    stream_protocol=stream_protocol,
-                ),
-            )
-        except BaseException:
-            # If queue creation or scheduling fails after the bg_run is
-            # registered, the buffer would stay live with ``done=False`` and
-            # any re-attach client would block on ``_cond.wait()`` forever
-            # (the task that would call ``finish()`` was never scheduled).
-            # Clear the registry, mark the job FAILED, then re-raise.
-            await _clear_background_run(job_id_str)
-            await _finalize_job_status(job_id, JobStatus.FAILED)
-            raise
-        return WorkflowJobResponse(job_id=job_id_str, flow_id=parsed.flow_id, status=JobStatus.QUEUED)
+        service = get_background_execution_service()
+        if service._frame_source_factory is None:  # noqa: SLF001
+            service._frame_source_factory = _default_frame_source_factory  # noqa: SLF001
+        request_dict = {
+            "flow_id": str(flow.id),
+            "mode": "background",
+            "stream_protocol": stream_protocol,
+            "input_value": parsed.input_value,
+            "session_id": parsed.session_id,
+            "tweaks": parsed.tweaks,
+            "globals": parsed.globals,
+            "output_ids": parsed.output_ids,
+            "data": parsed.data,
+            "files": parsed.files,
+            "start_component_id": parsed.start_component_id,
+            "stop_component_id": parsed.stop_component_id,
+            "idempotency_key": idempotency_key,
+        }
+        job_id_new = await service.submit(flow_id=flow.id, request=request_dict, user=current_user)
+        return WorkflowJobResponse(job_id=str(job_id_new), flow_id=parsed.flow_id, status=JobStatus.QUEUED)
 
     except (WorkflowResourceError, WorkflowServiceUnavailableError, WorkflowQueueFullError):
         raise
     except MemoryError as exc:
         raise WorkflowResourceError from exc
+    except DuplicateJobError as exc:
+        # Defense-in-depth for the residual create/lookup race: a still-active
+        # job already exists for this user's idempotency_key. Map to a 409 with a
+        # generic body so the key is not echoed back (no existence leak) instead
+        # of bubbling to the outer 500 handler.
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Duplicate request",
+                "code": "DUPLICATE_REQUEST",
+                "message": "A job with this idempotency_key is already in progress.",
+                "flow_id": parsed.flow_id,
+            },
+        ) from exc
 
 
 @router.get(
@@ -1116,15 +957,29 @@ async def get_workflow_status(
                 folder_id=getattr(flow, "folder_id", None),
             )
 
-            # Reconstruct response from vertex_build table
-            return await reconstruct_workflow_response_from_job_id(
-                session=session,
-                flow=flow,
-                job_id=job_id_str,
-                user_id=str(current_user.id),
-            )
+            # Reconstruct response from vertex_build table (sync path persists
+            # those keyed by job_id). Background runs do not write vertex_builds
+            # keyed by job_id, so reconstruction finds nothing and raises
+            # ValueError — fall back to the durable Job.result the runner wrote
+            # so a completed background run reports completed instead of 500ing.
+            try:
+                return await reconstruct_workflow_response_from_job_id(
+                    session=session,
+                    flow=flow,
+                    job_id=job_id_str,
+                    user_id=str(current_user.id),
+                )
+            except ValueError:
+                return WorkflowExecutionResponse(
+                    flow_id=flow_id_str,
+                    job_id=job_id_str,
+                    status=JobStatus.COMPLETED,
+                )
 
         if job.status == JobStatus.FAILED:
+            # Surface the durable error JSON the runner persisted, additively.
+            # The error column is nullable (a crash before the runner could write
+            # one leaves it None); the static detail still applies in that case.
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail={
@@ -1132,6 +987,7 @@ async def get_workflow_status(
                     "code": "JOB_FAILED",
                     "message": f"Job {job_id_str} has failed execution.",
                     "job_id": job_id_str,
+                    "error_detail": job.error,
                 },
             )
 
@@ -1247,13 +1103,22 @@ async def stop_workflow(
 
     if job.status == JobStatus.CANCELLED:
         return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} is already cancelled.")
+    # A late stop on a job that already finished must not rewrite its terminal
+    # status: flipping a COMPLETED/FAILED/TIMED_OUT row to CANCELLED would strand
+    # the result/error blob the run already wrote. Report the existing state.
+    if job.status in _TERMINAL_JOB_STATUSES:
+        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} already finished ({job.status.value}).")
 
     try:
         revoked = await task_service.revoke_task(job_id)
+        # Write the durable STOP signal + cancel the in-flight executor task
+        # BEFORE flipping the row to CANCELLED. The signal is the marker the
+        # runner's terminal reconcile keys off, so persisting it first means an
+        # in-flight runner racing to a terminal state reliably observes the stop
+        # and finalizes CANCELLED rather than overwriting it with COMPLETED/FAILED.
+        with contextlib.suppress(Exception):
+            await get_background_execution_service().stop_job(job_id, current_user)
         await job_service.update_job_status(job_id, JobStatus.CANCELLED)
-        # Release the in-memory buffer and wake any re-attach waiters so they
-        # see a clean stream-end instead of hanging on ``_cond.wait()``.
-        await _clear_background_run(str(job_id))
 
         message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."
         return WorkflowStopResponse(job_id=str(job_id), message=message)
@@ -1285,41 +1150,42 @@ async def stop_workflow(
     "/{job_id}/events",
     response_model=None,
     summary="Re-attach to a background run",
-    description="Replay the buffered protocol-native events for a background run and tail until it ends.",
+    description="Replay durable events for a background run from Last-Event-ID and tail until it ends.",
 )
 async def reattach_workflow_events(
     job_id: str,
     http_request: Request,
     current_user: Annotated[UserRead, Depends(get_current_user_for_workflow)],
 ) -> EventSourceResponse:
-    """Stream a background run's buffered events, replaying from ``Last-Event-ID``.
+    """Re-attach to a background run.
 
-    The buffer is process-local and frames are already serialized in the
-    protocol the original POST requested via ``stream_protocol``; this handler
-    replays them as-is. Cross-user access is rejected with 404 to avoid
-    leaking the existence of other users' runs.
+    Replays durable milestones from the ``job_events`` log (after
+    ``Last-Event-ID``) then tails the live bus until the run ends.
+
+    Ownership is enforced by the facade; a cross-user or unknown job maps to a
+    404 to avoid leaking the existence of other users' runs. The pre-check runs
+    before streaming starts so the error body is a clean JSON 404 rather than a
+    half-open SSE stream.
     """
-    bg_run = _BACKGROUND_RUNS.get(job_id)
-    if bg_run is None or bg_run.user_id != str(current_user.id):
+    service = get_background_execution_service()
+    last_event_id = http_request.headers.get("Last-Event-ID")
+
+    try:
+        # Pre-validate ownership/existence so a deny surfaces as a 404 before
+        # the SSE stream opens. ``events`` re-validates as defense-in-depth.
+        await service.status(UUID(job_id), current_user)
+    except (PermissionError, ValueError) as exc:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "Background run not found",
                 "code": "JOB_NOT_FOUND",
-                "message": f"No buffered events for job {job_id}.",
+                "message": f"No background run for job {job_id}.",
                 "job_id": job_id,
             },
-        )
-
-    last_event_id = http_request.headers.get("Last-Event-ID")
-    start_index = 0
-    if last_event_id:
-        try:
-            start_index = int(last_event_id) + 1
-        except ValueError:
-            start_index = 0
+        ) from exc
 
     return EventSourceResponse(
-        bg_run.replay(start_index),
+        service.events(UUID(job_id), last_event_id=last_event_id, user=current_user),
         headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
     )

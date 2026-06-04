@@ -168,6 +168,13 @@ unit_tests: ## run unit tests
 unit_tests_looponfail:
 	@make unit_tests args="-f"
 
+hard_proof_tests: ## run real-instance hard-proof tests (needs LANGFLOW_TEST_DATABASE_URI + LANGFLOW_TEST_REDIS_URL)
+	@uv sync --frozen
+	uv run pytest src/backend/tests/unit \
+	--ignore=src/backend/tests/integration \
+	--ignore=src/backend/tests/unit/template \
+	-m hard_proof -ra $(args)
+
 lfx_tests: ## run lfx package unit tests
 	@echo 'Running LFX Package Tests...'
 	@cd src/lfx && \

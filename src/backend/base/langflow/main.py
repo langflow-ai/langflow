@@ -42,6 +42,7 @@ from langflow.plugin_routes import load_plugin_routes
 from langflow.services.database.models.deployment.exceptions import DeploymentGuardError
 from langflow.services.database.service import UnsupportedPostgreSQLVersionError
 from langflow.services.deps import (
+    get_background_execution_service,
     get_queue_service,
     get_service,
     get_settings_service,
@@ -388,6 +389,12 @@ def get_lifespan(*, fix_migration=False, version=None):
             queue_service = get_queue_service()
             if not queue_service.is_started():
                 queue_service.start()
+
+            # Reconcile background-execution jobs left behind by a crashed worker:
+            # fail orphaned IN_PROGRESS rows, re-enqueue QUEUED rows. Best-effort
+            # so a reconcile hiccup never blocks boot.
+            with suppress(Exception):
+                await get_background_execution_service().sweep_orphans_on_startup()
 
             total_time = asyncio.get_event_loop().time() - start_time
             await logger.adebug(f"Total initialization time: {total_time:.2f}s")

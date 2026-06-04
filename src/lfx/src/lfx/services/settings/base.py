@@ -286,6 +286,38 @@ class Settings(BaseSettings):
     The watchdog only checks jobs this worker owns (entries in self._queues).
     Must be > 0 so the scan loop makes progress."""
 
+    # Background execution (v2 workflows background mode)
+    background_max_concurrency: int = Field(default=5, gt=0)
+    """Max number of background workflow jobs the in-process executor runs
+    concurrently. Jobs beyond this queue and start as workers free up. Kept
+    small by default so background runs cannot starve the request event loop;
+    raise it for dedicated worker processes. The redis backend ignores this in
+    favor of its own worker-process pool. Must be > 0."""
+    background_job_timeout: float | None = None
+    """Wall-clock seconds a single background job may run before it is marked
+    TIMED_OUT. ``None`` (default) means no timeout. Applies per job, enforced by
+    the runner via ``asyncio.wait_for`` around the build loop."""
+    background_lease_ttl_s: float = Field(default=45.0, gt=0)
+    """Liveness lease window for a running background job. The running owner
+    refreshes a heartbeat on the job row; a reconciler (startup sweep / scaled
+    watchdog) only fails or requeues an IN_PROGRESS job whose heartbeat is older
+    than this TTL (or never recorded). Must comfortably exceed
+    ``background_heartbeat_interval_s`` so a healthy owner never looks stale."""
+    background_heartbeat_interval_s: float = Field(default=15.0, gt=0)
+    """How often a running background job refreshes its liveness heartbeat. Kept
+    well below ``background_lease_ttl_s`` so a brief stall does not trip the
+    reconciler. Must be > 0."""
+    background_watchdog_interval_s: float = Field(default=15.0, gt=0)
+    """How often the scaled worker's periodic watchdog scans for orphaned leases
+    (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
+    restart. Must be > 0."""
+    test_redis_url: str | None = Field(default=None)
+    """Redis URL used by tests that exercise the scaled background backend.
+
+    Mirrors LANGFLOW_TEST_DATABASE_URI: when set, lease/watchdog/Streams/pubsub
+    timing tests run against this real Redis; when unset they skip. Read from
+    the LANGFLOW_TEST_REDIS_URL environment variable via the env_prefix."""
+
     # Sentry
     sentry_dsn: str | None = None
     sentry_traces_sample_rate: float | None = 1.0
@@ -877,6 +909,17 @@ class Settings(BaseSettings):
             return False
         else:
             return True
+
+    @property
+    def background_backend_is_scaled(self) -> bool:
+        """True when the background executor should use the redis-backed queue.
+
+        Backend selection follows the existing job_queue_type/redis settings:
+        a redis job queue means a separate `langflow worker` process drains
+        jobs, so the scaled background backend is used. Otherwise the default
+        in-process executor runs jobs inside the API process.
+        """
+        return self.job_queue_type == "redis"
 
     @classmethod
     @override

@@ -177,6 +177,9 @@ class TestWorkflowStatus:
         mock_job.status = JobStatus.FAILED
         mock_job.type = JobType.WORKFLOW
         mock_job.user_id = None
+        # The FAILED branch now surfaces the durable Job.error additively under
+        # ``error_detail``; give the mock a realistic serializable error blob.
+        mock_job.error = {"type": "build_error", "error": "boom"}
 
         with patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service:
             mock_service = MagicMock()
@@ -190,6 +193,9 @@ class TestWorkflowStatus:
             result = response.json()
             assert result["detail"]["code"] == "JOB_FAILED"
             assert result["detail"]["job_id"] == str(job_id)
+            # Additive durable error blob; top-level error string unchanged.
+            assert result["detail"]["error"] == "Job failed"
+            assert result["detail"]["error_detail"] == {"type": "build_error", "error": "boom"}
 
     async def test_get_status_completed_reconstruction(
         self,
