@@ -162,8 +162,7 @@ class OracleVectorStoreComponent(LCVectorStoreComponent):
                 vs = OracleVS(embedding_function=self.embedding, **params)
 
             if self.create_index:
-                # DictInput supplies a dict here; invalid None values are rejected before execution.
-                index_params = self.index_params.copy()
+                index_params = (self.index_params or {}).copy()
 
                 if "idx_name" not in index_params:
                     params_str = json.dumps(index_params, sort_keys=True)

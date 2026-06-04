@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from typing import Any
 
 _SENSITIVE_CONNECTION_PARAM_KEYS = {
@@ -24,7 +25,12 @@ _SENSITIVE_CONNECTION_PARAM_KEYS = {
 
 
 def _is_sensitive_connection_param_key(key: str) -> bool:
-    return key.lower() in _SENSITIVE_CONNECTION_PARAM_KEYS
+    normalized_key = re.sub(r"[^0-9a-zA-Z]+", "_", key.strip().lower()).strip("_")
+    compact_key = normalized_key.replace("_", "")
+    return any(
+        normalized_key == sensitive_key or compact_key == sensitive_key.replace("_", "")
+        for sensitive_key in _SENSITIVE_CONNECTION_PARAM_KEYS
+    )
 
 
 def split_credentialized_dsn(dsn: str) -> tuple[str | None, str | None, str]:

@@ -5,11 +5,11 @@ from unittest.mock import MagicMock, patch
 import pytest
 from langchain_core.documents import Document
 from langchain_oracledb.vectorstores.oraclevs import drop_table_purge
+from pydantic import BaseModel
+
 from lfx.components.oracledb import OracleVectorStoreComponent
 from lfx.components.oracledb.connection import build_connection_params, split_credentialized_dsn
 from lfx.schema.data import Data
-from pydantic import BaseModel
-
 from tests.base import ComponentTestBaseWithoutClient, VersionComponentMapping
 from tests.oracle_test_utils import (
     get_oracle_connection_inputs,
@@ -53,6 +53,14 @@ def test_connection_params_rejects_sensitive_keys() -> None:
     ):
         build_connection_params(
             {"connection_string": "user/password@host/service", "config_dir": "/wallet/config", "private_key": "key"},
+            dsn="host/service",
+        )
+
+
+def test_connection_params_rejects_normalized_sensitive_keys() -> None:
+    with pytest.raises(ValueError, match="connection_params contains sensitive keys"):
+        build_connection_params(
+            {"password ": "secret", "wallet-password": "wallet-secret"},
             dsn="host/service",
         )
 
@@ -489,6 +497,25 @@ class TestOracleVectorStoreComponent(ComponentTestBaseWithoutClient):
         assert index_params["idx_type"] == "HNSW"
         assert index_params["idx_name"].startswith(f"{default_kwargs['table_name']}_idx_")
         assert "" not in index_params
+
+    def test_build_vector_store_defaults_none_index_params(
+        self, component_class: type[OracleVectorStoreComponent], default_kwargs: dict[str, Any]
+    ) -> None:
+        component: OracleVectorStoreComponent = component_class().set(**default_kwargs)
+        component.index_params = None
+        vector_store = MagicMock()
+
+        with (
+            patch("lfx.components.oracledb.oraclevs.oracledb.connect", return_value=MagicMock()),
+            patch("lfx.components.oracledb.oraclevs.OracleVS", return_value=vector_store),
+            patch("lfx.components.oracledb.oraclevs.create_index") as mock_create_index,
+            patch("lfx.components.oracledb.oraclevs.version", return_value="1.1.0", create=True),
+        ):
+            assert component.build_vector_store() is vector_store
+
+        index_params = mock_create_index.call_args.args[2]
+        assert index_params["idx_type"] == "HNSW"
+        assert index_params["idx_name"].startswith(f"{default_kwargs['table_name']}_idx_")
 
     def test_build_vector_store_omits_mutate_on_duplicate_for_langchain_1_0(
         self, component_class: type[OracleVectorStoreComponent], default_kwargs: dict[str, Any]
