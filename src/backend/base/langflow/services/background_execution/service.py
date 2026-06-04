@@ -16,6 +16,7 @@ these same methods.
 
 from __future__ import annotations
 
+import contextlib
 import json
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
@@ -174,6 +175,81 @@ class BackgroundExecutionService(Service):
         # COMPLETED — the durable STOP is what makes the reconcile win.
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
+
+    # ----------------------------------------------------------- startup sweep
+
+    async def sweep_orphans_on_startup(self) -> None:
+        """Reconcile jobs left mid-flight by a crashed process.
+
+        ``JobService.sweep_orphans`` does the durable reconcile (it marks
+        orphaned IN_PROGRESS rows FAILED with ``{type: worker_lost}`` and writes
+        a terminal event). QUEUED workflow rows never started, so under
+        at-least-once we re-enqueue them onto this worker's executor with a
+        reconstructed request. Best-effort per job so one bad row can't block
+        the rest. Redis backend reconciles via its own watchdog (Phase 3).
+        """
+        if self._is_redis:
+            return
+        await self.start()
+        job_service = get_job_service()
+        # Fail orphaned IN_PROGRESS rows (at-most-once for in-flight work).
+        await job_service.sweep_orphans()
+        # Re-enqueue QUEUED workflow rows (at-least-once for not-yet-started work).
+        for job in await self._queued_workflow_jobs():
+            request_dict = self._reconstruct_request(job)
+            user = self._user_stub(job.user_id)
+            with contextlib.suppress(Exception):
+                await self._enqueue(
+                    job_id=job.job_id,
+                    flow_id=job.flow_id,
+                    request=request_dict,
+                    user=user,
+                )
+
+    @staticmethod
+    async def _queued_workflow_jobs() -> list[Job]:
+        from sqlmodel import select
+
+        from langflow.services.database.models.jobs.model import Job as JobModel
+        from langflow.services.deps import session_scope
+
+        async with session_scope() as session:
+            stmt = select(JobModel).where(
+                JobModel.status == JobStatus.QUEUED,
+                JobModel.type == JobType.WORKFLOW,
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
+
+    @staticmethod
+    def _reconstruct_request(job: Job) -> dict[str, Any]:
+        """Rebuild the minimal request dict for a re-enqueued QUEUED job.
+
+        The original request body is not persisted on the job row, so re-enqueue
+        runs with defaults (langflow protocol, no chat input). ``job_metadata``
+        may carry the original protocol/session if a future task persists it.
+        """
+        meta = job.job_metadata or {}
+        return {
+            "flow_id": str(job.flow_id),
+            "mode": "background",
+            "stream_protocol": meta.get("stream_protocol", "langflow"),
+            "session_id": meta.get("session_id"),
+            "input_value": meta.get("input_value", ""),
+        }
+
+    @staticmethod
+    def _user_stub(user_id: UUID | None) -> UserRead | None:
+        """A minimal UserRead carrying only ``id``.
+
+        The default frame source only reads ``user.id`` (to fetch the flow), so
+        a partial object is sufficient. Returns None for legacy ownerless jobs.
+        """
+        if user_id is None:
+            return None
+        from langflow.services.database.models.user.model import UserRead
+
+        return UserRead.model_construct(id=user_id)
 
     # ----------------------------------------------------------------- helpers
 
