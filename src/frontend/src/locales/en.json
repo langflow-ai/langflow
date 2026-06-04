@@ -1185,6 +1185,7 @@
   "assistant.noPreviousSessions": "No previous sessions",
   "assistant.messageCounts": "{{count}} msgs",
   "assistant.workingOnIt": "Working on it...",
+  "assistant.mentionNoMatches": "No matching components on the canvas",
   "assistant.title": "Langflow Assistant",
   "assistant.user": "User",
   "sidebar.mcpNewBadge": "New",

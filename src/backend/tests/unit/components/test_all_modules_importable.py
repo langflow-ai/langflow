@@ -14,12 +14,12 @@ system functionality AND the actual module code quality are validated.
 """
 
 import asyncio
-import contextlib
 import importlib
 import pkgutil
 
 import pytest
 from langflow import components
+from lfx.interface.components import _warm_circular_imports
 
 
 class TestAllModulesImportable:
@@ -419,30 +419,12 @@ class TestDirectModuleImports:
             else:
                 return ("success", modname, None)
 
-        # Pre-import third-party modules that contain an *internal* circular
-        # import, single-threaded, before the concurrent fan-out below.
-        #
-        # ``toolguard.runtime`` (package __init__) and its
-        # ``toolguard.runtime.runtime`` submodule import each other: the __init__
-        # does ``from .runtime import ...`` while runtime.py does
-        # ``from toolguard.runtime import IToolInvoker``. That cycle resolves
-        # cleanly when first imported from a single thread. The trouble is that
-        # the lfx policy modules reach it from two different entry points --
-        # ``...policies.tool_invoker`` enters at the ``toolguard.runtime`` package
-        # while ``...policies.guard_sync_utils`` enters at the
-        # ``toolguard.runtime.runtime`` submodule. When those two land on separate
-        # worker threads at the same time, one thread holds the package lock and
-        # waits for the submodule lock while the other holds the submodule lock and
-        # waits for the package lock, so CPython's import machinery raises
-        # ``_DeadlockError``. Warming these here populates ``sys.modules`` so the
-        # threaded fan-out only ever hits the cache and can never enter the cycle
-        # concurrently. This keeps the parallelism (and full coverage -- every
-        # module is still imported below) instead of skipping the module.
-        for circular_modname in ("toolguard.runtime", "toolguard.runtime.runtime"):
-            # Optional dependency: in environments without it, fall through to the
-            # fan-out below, which skips or reports the dependent modules as usual.
-            with contextlib.suppress(ImportError):
-                importlib.import_module(circular_modname)
+        # Pre-import third-party modules with internal circular imports single-threaded
+        # before the concurrent fan-out below. This reuses the exact warm-up the
+        # production loader (``_load_components_dynamically``) runs, so the test and
+        # production stay in lockstep -- see ``_warm_circular_imports`` for the full
+        # deadlock explanation.
+        _warm_circular_imports()
 
         # Import all modules in parallel
         results = await asyncio.gather(*[import_module_async(modname) for modname in module_names])
