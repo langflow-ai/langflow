@@ -95,6 +95,10 @@ from langflow.services.deps import (
 # Configuration constants
 EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
 
+# Finished states a late /stop must not rewrite (CANCELLED is handled separately
+# with its own idempotent early return).
+_TERMINAL_JOB_STATUSES = frozenset({JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.TIMED_OUT})
+
 
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
 
@@ -1084,6 +1088,11 @@ async def stop_workflow(
 
     if job.status == JobStatus.CANCELLED:
         return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} is already cancelled.")
+    # A late stop on a job that already finished must not rewrite its terminal
+    # status: flipping a COMPLETED/FAILED/TIMED_OUT row to CANCELLED would strand
+    # the result/error blob the run already wrote. Report the existing state.
+    if job.status in _TERMINAL_JOB_STATUSES:
+        return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} already finished ({job.status.value}).")
 
     try:
         revoked = await task_service.revoke_task(job_id)
