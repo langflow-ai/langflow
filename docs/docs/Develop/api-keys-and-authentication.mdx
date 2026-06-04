@@ -459,6 +459,17 @@ SSRF protection prevents requests to internal or private network resources, such
 | `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 
+### Login rate limiting {#login-rate-limiting}
+
+The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.
+When the limit is exceeded, Langflow returns HTTP 429 with a `Retry-After: 60` header.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_RATE_LIMIT_PER_MINUTE` | Integer | `5` | Maximum number of login attempts allowed per minute from a single IP address. |
+| `LANGFLOW_RATE_LIMIT_STORAGE_URI` | String | `memory://` | Storage backend for rate limit counters. Use `memory://` for single-server deployments or `redis://host:port` for multi-server deployments where the limit should be shared across instances. |
+| `LANGFLOW_RATE_LIMIT_TRUST_PROXY` | Boolean | `False` | When `true`, Langflow reads the client IP from the rightmost `X-Forwarded-For` header entry instead of the direct connection IP. Enable only when Langflow is behind a trusted reverse proxy or load balancer. Do not enable if users can reach Langflow directly, as this allows header spoofing. |
+
 ### LANGFLOW_WEBHOOK_AUTH_ENABLE {#langflow-webhook-auth-enable}
 
 This variable controls whether API key authentication is required for webhook endpoints.
