@@ -323,3 +323,28 @@ class TestNoBreakingChange:
         assert response.status_code == 200
         event_ids = [line.removeprefix("id:").strip() for line in response.text.splitlines() if line.startswith("id:")]
         assert "0" not in event_ids
+
+
+class TestDeadMachineryRemoved:
+    """The process-local background buffer machinery is gone after the cutover.
+
+    ``execute_workflow_background`` is intentionally kept: it is now a thin
+    facade-delegating wrapper (builds the request dict, threads idempotency_key),
+    not the old in-memory run loop, so it is NOT in this list.
+    """
+
+    def test_in_memory_background_machinery_is_deleted(self):
+        """The old _BackgroundRun buffer and its helpers no longer exist."""
+        from langflow.api.v2 import workflow as wf
+
+        for name in (
+            "_BackgroundRun",
+            "_BACKGROUND_RUNS",
+            "_register_background_run",
+            "_clear_background_run",
+            "_buffer_background_run",
+            "_finalize_job_status",
+            "_MAX_BACKGROUND_RUNS",
+            "_MAX_FRAMES_PER_BACKGROUND_RUN",
+        ):
+            assert not hasattr(wf, name), f"{name} should have been deleted in the facade cutover"

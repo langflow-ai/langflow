@@ -246,10 +246,10 @@ async def execute_workflow(
             )
 
         if parsed.mode == "background":
-            # Background owns its own adapter construction inside
-            # ``_buffer_background_run`` because the fire-and-forget coroutine
-            # needs its own ``StreamAdapterContext`` (different ``run_id``).
-            # The name-only check above already covered the 422 contract.
+            # Background runs are delegated to BackgroundExecutionService via
+            # ``execute_workflow_background``. The facade creates the durable job
+            # row, persists the request, enqueues the work, and owns ownership /
+            # IDOR. The name-only check above already covered the 422 contract.
             return await execute_workflow_background(
                 parsed=parsed,
                 flow=flow,
