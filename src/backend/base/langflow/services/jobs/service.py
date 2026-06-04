@@ -343,6 +343,73 @@ class JobService(Service):
             await session.flush()
             return len(rows)
 
+    async def heartbeat(self, job_id: UUID, owner: str) -> None:
+        """Stamp the running owner + a fresh heartbeat on the job row.
+
+        This is the liveness signal a reconciler reads to tell a live in-flight
+        run from a genuinely orphaned one: only the running owner refreshes it,
+        and a reconciler only fails/requeues a job whose heartbeat is STALE
+        (``is_lease_stale``). Stored in ``job_metadata`` (no new column, matching
+        the attempt-accounting decision in the design) via a shallow merge so the
+        persisted request / retry flags are preserved.
+        """
+        now = datetime.now(timezone.utc).isoformat()
+        await self.update_job_metadata(job_id, {"owner": owner, "heartbeat_at": now})
+
+    @staticmethod
+    def is_lease_stale(job: Job, *, lease_ttl_s: float) -> bool:
+        """True when a job's heartbeat is older than ``lease_ttl_s`` (or absent).
+
+        An absent heartbeat means the owner never recorded liveness (it died in
+        the QUEUED->IN_PROGRESS window, or this is a legacy row), so it is
+        treated as stale and reconcilable. A fresh heartbeat (within the TTL)
+        means a live owner is running the job and a reconciler must NOT touch it.
+        """
+        meta = job.job_metadata or {}
+        raw = meta.get("heartbeat_at")
+        if not raw:
+            return True
+        try:
+            hb = datetime.fromisoformat(raw)
+        except (TypeError, ValueError):
+            return True
+        if hb.tzinfo is None:
+            hb = hb.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - hb).total_seconds()
+        return age > lease_ttl_s
+
+    async def increment_attempt_if(self, job_id: UUID, *, expected: int, new: int) -> bool:
+        """Atomically bump ``job_metadata.attempt`` from ``expected`` to ``new``.
+
+        Returns True only for the single caller whose read-modify-write observed
+        ``attempt == expected`` and committed. Concurrent reconcilers reading the
+        same ``expected`` race on the row, but UNIQUE row identity + a re-read
+        under the write lock means only one transaction's conditional UPDATE
+        matches: every other sees ``rowcount == 0`` and returns False. This
+        closes the lost-update window where two reconcilers both bumped 1->2 and
+        each requeued, pushing a job past ``max_attempts``.
+
+        Portable across SQLite and Postgres: the conditional UPDATE matches the
+        JSON-extracted attempt cast to integer, the same single-row-conditional
+        primitive ``claim_queued_job`` relies on.
+        """
+        from sqlalchemy import Integer
+        from sqlalchemy import cast as sa_cast
+        from sqlmodel import update
+
+        attempt_expr = sa_cast(col(Job.job_metadata)["attempt"].as_string(), Integer)
+        async with session_scope() as session:
+            # Read the current metadata so we can write back a full merged blob
+            # (JSON columns are replaced wholesale, not patched in place).
+            job = await session.get(Job, job_id)
+            if job is None:
+                return False
+            merged = {**(job.job_metadata or {}), "attempt": new}
+            stmt = update(Job).where(Job.job_id == job_id, attempt_expr == expected).values(job_metadata=merged)
+            result = await session.exec(stmt)  # type: ignore[call-overload]
+            await session.flush()
+            return result.rowcount == 1
+
     async def claim_queued_job(self, job_id: UUID) -> bool:
         """Atomically claim a QUEUED job for execution. Returns True if we won.
 
