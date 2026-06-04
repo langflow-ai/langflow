@@ -155,9 +155,18 @@ class BackgroundExecutionService(Service):
             raise
         # Persist the submit request on the job row so a QUEUED job that survives
         # a restart is re-enqueued with its ORIGINAL inputs (input_value, tweaks,
-        # globals, etc.), not a reconstructed default. The worker / startup sweep
-        # read it back via ``_reconstruct_request``.
-        await job_service.update_job_metadata(job_id, {"request": request})
+        # etc.), not a reconstructed default. The worker / startup sweep read it
+        # back via ``_reconstruct_request``.
+        #
+        # Request-level ``globals`` are REDACTED from the persisted copy: they can
+        # carry inline secrets (API keys), and storing them plaintext in the
+        # durable ``job`` table (JSONB on Postgres) widens the blast radius of any
+        # DB read (backup, ops access, a SQL-injection elsewhere) beyond the
+        # live-only handling globals get on the sync path. Tradeoff: a background
+        # re-enqueue after a restart drops inline globals — reference STORED global
+        # variables by name for background runs rather than passing secrets inline.
+        # The live in-memory run below still uses the full ``request``.
+        await job_service.update_job_metadata(job_id, {"request": self._redact_request(request)})
         if self._scaled:
             # Scaled mode: hand the QUEUED job id to a worker via the redis claim
             # queue. The DB row stays the system of record; the API does NOT run
@@ -166,6 +175,21 @@ class BackgroundExecutionService(Service):
         else:
             await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
         return job_id
+
+    @staticmethod
+    def _redact_request(request: dict[str, Any]) -> dict[str, Any]:
+        """Return a copy of ``request`` with secret-bearing ``globals`` removed.
+
+        Returns a shallow copy so the caller's dict (used for the live run) is not
+        mutated. Only ``globals`` is dropped; everything else round-trips for a
+        faithful replay. See ``submit`` for the durable-plaintext rationale and
+        the inline-globals tradeoff.
+        """
+        if "globals" not in request:
+            return request
+        redacted = dict(request)
+        redacted.pop("globals", None)
+        return redacted
 
     @staticmethod
     async def _existing_job_for_dedupe(dedupe_key: str | None, user_id: UUID | None) -> UUID | None:

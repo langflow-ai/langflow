@@ -197,6 +197,48 @@ async def test_submit_persists_request_for_faithful_requeue(hard_proof_job_servi
     assert persisted == request
 
 
+async def test_submit_redacts_inline_globals_from_persisted_request(hard_proof_job_service):
+    """Inline ``globals`` (request-level secrets) must NOT land plaintext on the row.
+
+    ``submit`` persists the request body for faithful replay, but request-level
+    ``globals`` can carry inline secrets (API keys). Storing them plaintext in the
+    durable ``job`` table widens the blast radius of any DB read (backup, ops
+    access, SQL-injection elsewhere). The persisted replay request must omit
+    ``globals``; the live in-memory run still has them. Tradeoff: a background
+    re-enqueue after a restart drops inline globals — reference stored global
+    variables by name for background runs instead of passing secrets inline.
+    Real SQLite and Postgres.
+    """
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = hard_proof_job_service
+    flow_id = uuid4()
+    secret = f"sk-secret-{uuid4()}"
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+    )
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": "hi",
+        "globals": {"OPENAI_API_KEY": secret},
+    }
+    job_id = await svc.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
+    await svc.stop()
+
+    job = await job_service.get_job_by_job_id(job_id)
+    persisted = job.job_metadata.get("request") or {}
+    # The secret must not appear anywhere in the persisted request blob.
+    assert "globals" not in persisted, "inline globals persisted plaintext on the job row"
+    assert secret not in json.dumps(job.job_metadata), "inline secret leaked into job_metadata"
+    # The caller's original request dict is not mutated as a side effect.
+    assert request["globals"] == {"OPENAI_API_KEY": secret}
+
+
 async def test_requeued_queued_job_replays_original_input(hard_proof_job_service):
     """A QUEUED job that survives a restart re-runs with its ORIGINAL input.
 
