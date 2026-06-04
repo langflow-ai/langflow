@@ -121,12 +121,14 @@ class JobRunner:
         last_durable_seq = 0
         errored_payload: dict[str, Any] | None = None
         async for frame_bytes, event_type in self._frame_source(**source_kwargs):
-            # Vertex-boundary cooperative cancel: a STOP written to the durable
-            # signal table flips the job at the next frame.
-            if await self._stop_requested(job_id):
-                raise self._user_cancelled()
-
             if self._adapter.is_durable(event_type):
+                # Vertex/milestone-boundary cooperative cancel: a STOP written to
+                # the durable signal table flips the job at the next durable
+                # frame. Poll only here (not on every ephemeral token): a stop is
+                # honored at boundaries anyway, so a per-token DB read is wasted
+                # work that scales with the token stream.
+                if await self._stop_requested(job_id):
+                    raise self._user_cancelled()
                 payload = self._decode_payload(frame_bytes)
                 seq = await self._jobs.append_event(job_id, event_type, payload)
                 last_durable_seq = seq

@@ -434,6 +434,51 @@ async def test_executor_stop_applies_terminal_reconcile(hard_proof_job_service):
     assert job.status == JobStatus.CANCELLED
 
 
+async def test_stop_poll_only_on_durable_frames(hard_proof_job_service):
+    """The runner polls the STOP signal only on DURABLE frames, not every token.
+
+    Polling ``unconsumed_signals`` (a DB read) on every ephemeral token is wasted
+    work — a stop is only honored at vertex/milestone boundaries anyway. We count
+    real ``unconsumed_signals`` DB calls (a thin instrumented subclass that still
+    hits the real DB) while driving a source with many ephemeral tokens and a few
+    durable frames, and assert the poll count tracks the durable frames, not the
+    token flood. Real SQLite and Postgres.
+    """
+    job_service = hard_proof_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    class _CountingJobService(type(job_service)):
+        poll_count = 0
+
+        async def unconsumed_signals(self, jid):
+            type(self).poll_count += 1
+            return await super().unconsumed_signals(jid)
+
+    counting = _CountingJobService()
+
+    n_tokens = 20
+    n_durable = 3  # build_start, end_vertex, end
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        for i in range(n_tokens):
+            yield _frame("token", {"chunk": str(i)})  # ephemeral
+        yield _frame("end_vertex", {"id": "n1"})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    await _runner(counting, bus, job_id, source).run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED
+    # Polls must not scale with the token flood. Allow the durable-frame polls
+    # plus the runner's final post-loop / reconcile checks, but never one-per-token.
+    assert _CountingJobService.poll_count <= n_durable + 3, (
+        f"stop polled {_CountingJobService.poll_count} times for {n_tokens} tokens (per-token poll)"
+    )
+
+
 async def test_stop_signal_is_marked_consumed(hard_proof_job_service):
     """When the runner acts on a STOP, the signal row is stamped ``consumed_at``.
 
