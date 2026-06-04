@@ -151,6 +151,7 @@ class BackgroundExecutionService(Service):
             live_bus=self._bus,
             adapter=adapter,
             frame_source=source,
+            job_timeout=self._settings.background_job_timeout,
         )
 
         async def _coro() -> None:

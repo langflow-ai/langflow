@@ -45,19 +45,33 @@ class JobRunner:
         live_bus: InMemoryLiveBus,
         adapter: StreamAdapter,
         frame_source: FrameSource,
+        job_timeout: float | None = None,
     ) -> None:
         self._jobs = job_service
         self._bus = live_bus
         self._adapter = adapter
         self._frame_source = frame_source
+        # When set, the whole run is bounded by this wall-clock budget; an overrun
+        # surfaces as asyncio.TimeoutError, which execute_with_status maps to
+        # TIMED_OUT. None means unbounded (the prior behaviour).
+        self._job_timeout = job_timeout
 
     async def run(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """Execute one background job to a terminal state."""
 
         # Bind job_id into the wrapped coroutine so ``execute_with_status``'s
-        # own ``job_id`` parameter is not shadowed by a forwarded kwarg.
+        # own ``job_id`` parameter is not shadowed by a forwarded kwarg. When a
+        # job timeout is configured, bound the drive with ``asyncio.wait_for`` so
+        # an overrun raises ``asyncio.TimeoutError``; ``execute_with_status``
+        # turns that into TIMED_OUT (the single source of truth for the mapping).
         async def _wrapped() -> None:
-            await self._drive(job_id=job_id, source_kwargs=source_kwargs)
+            if self._job_timeout is not None:
+                await asyncio.wait_for(
+                    self._drive(job_id=job_id, source_kwargs=source_kwargs),
+                    timeout=self._job_timeout,
+                )
+            else:
+                await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
         try:
             await self._jobs.execute_with_status(job_id, _wrapped)

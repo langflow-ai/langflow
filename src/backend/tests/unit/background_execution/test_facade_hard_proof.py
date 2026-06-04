@@ -253,6 +253,41 @@ async def test_requeued_queued_job_replays_original_input(hard_proof_job_service
     assert echoed == [original_input]
 
 
+async def test_job_timeout_marks_timed_out(hard_proof_job_service):
+    """A run that overruns ``background_job_timeout`` ends TIMED_OUT.
+
+    The runner wraps the drive in ``asyncio.wait_for(timeout=...)``;
+    ``execute_with_status`` maps ``asyncio.TimeoutError`` to TIMED_OUT. We use a
+    scripted source that sleeps far longer than the short configured timeout, so
+    the timeout fires deterministically without any LLM call. The durable log
+    must carry a terminal milestone too. Real SQLite and real Postgres.
+    """
+    import asyncio
+
+    job_service = hard_proof_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+
+    async def slow_source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        # Overrun the configured timeout by a wide margin.
+        await asyncio.sleep(30)
+        yield _frame("end", {})
+
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(
+        job_service=job_service,
+        live_bus=InMemoryLiveBus(),
+        adapter=adapter,
+        frame_source=slow_source,
+        job_timeout=0.2,
+    )
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.TIMED_OUT
+
+
 async def test_events_reattach_after_restart_returns_on_terminal_job(hard_proof_job_service):
     """Reattaching to an already-terminal job after a restart MUST NOT hang.
 
