@@ -21,6 +21,7 @@ import contextlib
 import uuid
 from typing import TYPE_CHECKING, Any
 
+from langflow.services.background_execution import metrics as bg_metrics
 from langflow.services.background_execution.redis_queue import RedisJobClaimQueue
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
 from langflow.services.job_queue.service import RedisQueueWrapper
@@ -200,6 +201,10 @@ class RedisBackgroundQueue:
             # (with a finished timestamp) explicitly.
             await self._job_service.update_job_status(job.job_id, JobStatus.FAILED, finished_timestamp=True)
             await self._job_service.set_error(job.job_id, {"type": "worker_lost"})
+            # One emit pair per reconciled orphan (best-effort, never raises).
+            # This path only runs in scaled mode, so the backend label is literal.
+            bg_metrics.emit_job_failed(reason="worker_lost", backend="scaled")
+            bg_metrics.emit_orphan_reconciled(backend="scaled")
             await self.claim_queue.complete(job_id)
         return requeued
 

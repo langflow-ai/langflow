@@ -569,11 +569,20 @@ class JobService(Service):
                 session.add(job)
                 reconciled.append(job.job_id)
             await session.flush()
+        # Function-local import: background_execution imports from jobs, so a
+        # module-level import here would risk a cycle. The metrics module itself
+        # only pulls in deps + logger, so the local import is cheap and safe.
+        from langflow.services.background_execution import metrics as bg_metrics
+
+        backend = bg_metrics.current_backend()
         # Append the terminal milestone via append_event (its own session) so the
         # IntegrityError/seq-collision retry applies: a seq collision with a
         # concurrent appender can no longer roll back the whole sweep.
         for job_id in reconciled:
             await self.append_event(job_id, "run_failed", dict(error_payload))
+            # One emit pair per reconciled orphan (best-effort, never raises).
+            bg_metrics.emit_job_failed(reason="worker_lost", backend=backend)
+            bg_metrics.emit_orphan_reconciled(backend=backend)
         return reconciled
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:

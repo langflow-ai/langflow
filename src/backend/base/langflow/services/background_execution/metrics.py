@@ -7,6 +7,16 @@ from lfx.log.logger import logger
 from langflow.services.deps import get_telemetry_service
 
 
+def current_backend() -> str:
+    """Best-effort: 'scaled' when the redis job queue is active, else 'default'. Never raises."""
+    try:
+        from langflow.services.deps import get_settings_service
+
+        return "scaled" if get_settings_service().settings.background_backend_is_scaled else "default"
+    except Exception:  # noqa: BLE001
+        return "default"
+
+
 def _emit(fn_name: str, name: str, labels: dict, value: float | None = None) -> None:
     try:
         ot = get_telemetry_service().ot
