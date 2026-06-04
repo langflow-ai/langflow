@@ -834,6 +834,65 @@ def print_banner(host: str, port: int, protocol: str) -> None:
 
 
 @app.command()
+def worker(
+    log_level: str | None = typer.Option(None, help="Logging level."),
+    env_file: Path | None = typer.Option(None, help="Path to the .env file."),
+    idle_block_ms: int = typer.Option(1000, help="Claim blocking-pop window in milliseconds."),
+) -> None:
+    """Run a Langflow background worker that drains the redis job-claim queue.
+
+    Requires LANGFLOW_JOB_QUEUE_TYPE=redis. Each worker claims queued jobs, runs
+    them through the background JobRunner (publishing live frames to redis
+    Streams so any API replica can reattach), and releases the lease. Run as many
+    worker processes as you need horizontal capacity for.
+    """
+    if env_file:
+        load_dotenv(env_file, override=True)
+    if log_level:
+        configure(log_level=log_level)
+
+    async def _run_worker() -> None:
+        from langflow.services.background_execution.worker import build_worker, run_worker_loop
+
+        await initialize_services()
+        settings = get_settings_service().settings
+        if not settings.background_backend_is_scaled:
+            typer.echo("LANGFLOW_JOB_QUEUE_TYPE must be 'redis' to run a worker.")
+            raise typer.Exit(code=1)
+
+        from uuid import uuid4
+
+        from langflow.services.deps import get_job_service
+
+        # Process-unique owner so this worker's heartbeats are attributable, and
+        # a periodic watchdog so a dead worker's in-flight job is reaped under a
+        # steady fleet WITHOUT requiring a restart.
+        owner = f"worker:{os.getpid()}:{uuid4().hex[:8]}"
+        backend, worker_runner, teardown = await build_worker(owner=owner)
+        stop_event = asyncio.Event()
+        loop = asyncio.get_running_loop()
+        for sig in (signal.SIGTERM, signal.SIGINT):
+            with suppress(NotImplementedError):
+                loop.add_signal_handler(sig, stop_event.set)
+        logger.info("Langflow worker started; draining the redis job-claim queue.")
+        try:
+            await run_worker_loop(
+                backend,
+                worker_runner,
+                stop_event=stop_event,
+                idle_block_ms=idle_block_ms,
+                job_service=get_job_service(),
+                owner=owner,
+                lease_ttl_s=settings.background_lease_ttl_s,
+                watchdog_interval_s=settings.background_watchdog_interval_s,
+            )
+        finally:
+            await teardown()
+
+    asyncio.run(_run_worker())
+
+
+@app.command()
 def superuser(
     username: str = typer.Option(
         None, help="Username for the superuser. Defaults to 'langflow' when AUTO_LOGIN is enabled."
