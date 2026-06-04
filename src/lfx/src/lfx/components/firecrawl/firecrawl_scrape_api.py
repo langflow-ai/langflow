@@ -14,10 +14,11 @@ _CAMEL_TO_SNAKE_RE = re.compile(r"(?<!^)(?=[A-Z])")
 
 
 def _to_snake_case_kwargs(params: dict) -> dict:
-    """Convert camelCase option keys (the firecrawl-py v1 convention) to the snake_case
-    keyword arguments expected by the firecrawl-py v2 SDK.
+    """Convert camelCase option keys to snake_case keyword arguments.
 
-    Keys that are already snake_case are passed through unchanged.
+    The firecrawl-py v1 convention uses camelCase, while the v2 SDK expects
+    snake_case keyword arguments. Keys that are already snake_case are passed
+    through unchanged.
     """
     return {_CAMEL_TO_SNAKE_RE.sub("_", key).lower(): value for key, value in params.items()}
 
