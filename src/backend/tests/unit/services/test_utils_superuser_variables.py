@@ -194,6 +194,7 @@ async def test_auto_login_false_variable_initialization_failure_does_not_fail_su
     settings_service,
 ) -> None:
     """Keep superuser setup successful when variable bootstrap raises."""
+
     class FailingVariableService:
         """Variable service that fails before writing anything."""
 
@@ -218,6 +219,7 @@ async def test_auto_login_false_variable_initialization_db_failure_rolls_back_on
     settings_service,
 ) -> None:
     """Rollback only partial variable writes when bootstrap fails after flush."""
+
     class FailingAfterFlushVariableService:
         """Variable service that writes a row and then fails."""
 
@@ -300,6 +302,7 @@ async def test_auto_login_true_fresh_variable_initialization_db_failure_keeps_su
     settings_service,
 ) -> None:
     """Keep AUTO_LOGIN superuser creation when variable bootstrap rolls back."""
+
     class FailingAfterFlushVariableService:
         """Variable service that writes a row and then fails."""
 
