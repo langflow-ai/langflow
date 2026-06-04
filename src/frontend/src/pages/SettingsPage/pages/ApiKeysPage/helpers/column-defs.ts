@@ -1,5 +1,7 @@
 import TableAutoCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAutoCellRender";
+import CreatedAtCellRender from "../components/CreatedAtCellRender";
 import ExpiryDateCellRender from "../components/ExpiryDateCellRender";
+import LastUsedAtCellRender from "../components/LastUsedAtCellRender";
 
 export const getColumnDefs = (t: (key: string) => string) => {
   return [
@@ -21,13 +23,13 @@ export const getColumnDefs = (t: (key: string) => string) => {
     {
       headerName: t("settings.apiKeys.columnCreated"),
       field: "created_at",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: CreatedAtCellRender,
       flex: 1,
     },
     {
       headerName: t("settings.apiKeys.columnLastUsed"),
       field: "last_used_at",
-      cellRenderer: TableAutoCellRender,
+      cellRenderer: LastUsedAtCellRender,
       flex: 1,
     },
     {

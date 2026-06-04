@@ -9,27 +9,40 @@ ARGUMENT_NUMBER = 3
 
 
 def update_pyproject_name(pyproject_path: str, new_project_name: str) -> None:
-    """Update the project name in pyproject.toml."""
+    """Update the project name in pyproject.toml.
+
+    Also rewrites this package's own ``"<name>[extra]"`` self-references (e.g. in
+    ``complete`` / ``all`` / ``image-description`` extras) to the new name. Without
+    this, a renamed package's extras keep pointing at the old (PyPI) distribution
+    and fail to resolve during nightly builds — e.g. the docling bundle's ``all``
+    extra (``"lfx-docling[local,chunking,image-description]"``) would still demand
+    the stable ``lfx-docling`` after the package became ``lfx-docling-nightly``.
+    """
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
     # Regex to match the name field only within the [project] section.
     # This avoids replacing 'name' in other sections like [[tool.uv.index]].
-    # Pattern matches: [project] + any content (non-greedy) + name = "value"
-    pattern = re.compile(r'(\[project\]\s*\n(?:[^\[]*?))(name = ")[^"]+(")', re.DOTALL)
+    # Pattern matches: [project] + any content (non-greedy) + name = "value".
+    # The old name is captured (group 2) so we can rewrite self-references below.
+    pattern = re.compile(r'(\[project\]\s*\n(?:[^\[]*?)name = ")([^"]+)(")', re.DOTALL)
 
-    if not pattern.search(content):
+    match = pattern.search(content)
+    if not match:
         msg = f'Project name not found in "{filepath}"'
         raise ValueError(msg)
-    content = pattern.sub(rf"\1\g<2>{new_project_name}\3", content)
+    old_project_name = match.group(2)
+    content = pattern.sub(rf"\1{new_project_name}\3", content)
 
-    # Update extra references in [complete] and [all] extras for nightly builds
-    if new_project_name == "langflow-base-nightly":
-        # Replace langflow-base[extra] with langflow-base-nightly[extra] in optional dependencies
-        content = re.sub(r'"langflow-base\[([^\]]+)\]"', r'"langflow-base-nightly[\1]"', content)
-    elif new_project_name == "langflow-nightly":
-        # Replace langflow[extra] with langflow-nightly[extra] in optional dependencies
-        content = re.sub(r'"langflow\[([^\]]+)\]"', r'"langflow-nightly[\1]"', content)
+    # Rewrite this package's own `"<old name>[extra]"` self-references to the new
+    # name so extras resolve against the renamed workspace member instead of
+    # leaking the old name to PyPI. This generalizes the previous hardcoded
+    # langflow-base / langflow handling to every renamed package (lfx, the SDK,
+    # and each `lfx-*` bundle). The leading quote + escaped exact name keep
+    # `"lfx[..."` from matching `"lfx-docling[..."`.
+    if old_project_name != new_project_name:
+        self_ref_pattern = re.compile(rf'"{re.escape(old_project_name)}\[([^\]]+)\]"')
+        content = self_ref_pattern.sub(rf'"{new_project_name}[\1]"', content)
 
     filepath.write_text(content, encoding="utf-8")
 

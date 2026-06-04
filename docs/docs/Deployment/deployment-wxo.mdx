@@ -1,19 +1,26 @@
 ---
-title: Deploy Langflow on watsonx Orchestrate
+title: Deploy flows on watsonx Orchestrate
 slug: /deployment-wxo
 ---
 
 import Icon from "@site/src/components/icon";
 import Tabs from '@theme/Tabs';
 import TabItem from '@theme/TabItem';
-import PartialGlobalModelProviders from '@site/docs/_partial-global-model-providers.mdx';
+
+:::tip
+As of Langflow 1.10.x, the IBM watsonx Orchestrate deployments feature is behind a feature flag. To enable it, set the following environment variable before starting Langflow:
+
+```bash
+LANGFLOW_FEATURE_WXO_DEPLOYMENTS=true
+```
+:::
 
 Create a flow and deploy it to [IBM watsonx Orchestrate](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=getting-started-watsonx-orchestrate).
 
 Deploying a flow on IBM watsonx Orchestrate is different from the other Langflow deployment options.
 This workflow **does not** deploy a full-featured Langflow server and flow builder UI.
-Instead, Langflow packages your selected flow and flow version, and then publishes it to IBM watsonx Orchestrate as a tool that an IBM watsonx Orchestrate agent can call.
-Langflow is used to build and configure the flow, while IBM watsonx Orchestrate hosts the agent experience and invokes the deployed flow as part of that agent's toolset.
+Instead, Langflow packages your selected flow and flow version, and then publishes it to IBM watsonx Orchestrate as a wxO Tool that a wxO Agent can execute.
+Langflow is used to build and configure the flow, while IBM watsonx Orchestrate hosts the wxO Agent experience and invokes the deployed flow as part of that wxO Agent's toolset.
 
 ## Prerequisites
 
@@ -25,7 +32,7 @@ Langflow is used to build and configure the flow, while IBM watsonx Orchestrate 
 
 1. Create a flow in the Langflow UI, such as the Simple Agent starter flow in the [Quickstart](/get-started-quickstart).
 
-2. Click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
+2. To deploy this flow to watsonx Orchestrate, click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
 The **Provider** pane opens.
 
 3. Enter the **Name**, **Service Instance URL**, and **API Key** from your IBM watsonx Orchestrate instance.
@@ -40,18 +47,29 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
 
 4. Click **Next**.
    The **Deployment Type** pane opens.
-5. Enter a **Type**, **Agent Name**, **Model**, and **Description**.
+5. Enter a **Type**, **Name**, **Model**, and **Description** for your wxO Agent, and then click **Next**.
 
-    The **Type** is always **Agent**. The deployed flow is an IBM watsonx Orchestrate agent with your flow available as a tool the agent can call.
+    The **Type** is always **Agent**. The deployed flow is a wxO Agent with your flow available as a wxO Tool the wxO Agent can call.
 
     The **Model** list is populated from the connected watsonx Orchestrate instance, not Langflow.
 
-6. To open the **Attach Flows** pane, click the **Attach Flows** tab. Select a flow and flow version to deploy.
-7. To open the **Create Connections** pane, click the **Create Connections** tab. Create a new connection, or select an existing connection to bind to the flow.
+6. In the **Flows** pane, in the **Available** list, select a flow and flow version to deploy.
+    For this example, select the simple agent flow you created.
+    By default, the flow is version 1.
+
+    Optionally, to attach an additional version, select the same flow again from the list and choose a different version.
+    You can attach multiple versions of the same flow to a single wxO Agent.
+    Each flow version is deployed as a separate wxO Tool with a unique name to prevent naming collisions in watsonx Orchestrate.
+
+
+7. To configure the watsonx Orchestrate connection, click **Create Connection**.
+   In this tab, you can create a new connection, or select an existing connection to bind to the flow.
 
    To create a new connection, do the following:
 
-      1. Enter a **Connection Name** and any environment variables the flow requires, such as the `OPENAI_API_KEY`. Langflow auto-detects global variables from the flow JSON file, and you can add additional variables.
+      1. Enter a **Connection Name** and any environment variables the flow requires, such as the `OPENAI_API_KEY` for the simple agent flow.
+      Langflow auto-detects global variables from the flow JSON file.
+      Click <Icon name="Plus" aria-hidden="true"/> **Add variable** to add any additional environment variables.
 
       2. To add the new connection to the list of available connections, click **Create Connection**.
 
@@ -60,8 +78,6 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
    :::tip
    To bind the connection to the flow **without** environment variable binding, click **Skip**, and then click **Next**.
    :::
-
-   For more information, see [Build flows](../Flows/concepts-flows.mdx#save-and-restore-flow-versions).
 8. Click **Next**. The **Review & Confirm** pane opens.
 9. Confirm the deployment values are correct, and then click <Icon name="Rocket" aria-hidden="true"/> **Deploy**.
 
@@ -70,12 +86,20 @@ These values are found in the **Settings** page of your IBM watsonx Orchestrate 
     In the Langflow UI, `Deployment successful` indicates your deployment succeeded.
 
     :::tip
-    If you get an error that the tool name already exists on your deployment, click <Icon name="Pencil" aria-hidden="true"/> **Edit** to change the tool name.
+    If you get an error that the wxO Tool name already exists on your deployment, click <Icon name="Pencil" aria-hidden="true"/> **Edit** to change the wxO Tool name.
     :::
 
-10. Click **Test** to open a chat window with your agent on watsonx Orchestrate.
-    Enter a question, and the agent responds using the connected flow as a tool.
-11. Navigate to your IBM watsonx Orchestrate deployment, and then confirm that your Langflow flow is listed as an agent.
+10. Click **Test** to open a chat window with your wxO Agent on watsonx Orchestrate.
+    Enter a question, and the wxO Agent responds using the connected flow as a wxO Tool.
+11. In your IBM watsonx Orchestrate deployment, navigate to **Agent chat** > **Manage Agents**, and confirm that a new wxO Agent is listed with your Langflow flow attached as a wxO Tool.
+12. To test the wxO Agent in watsonx Orchestrate, click **Talk to agent**, and then enter a question.
+    The wxO Agent responds using your Langflow flow as a wxO Tool.
+13. To deploy the wxO Agent to a live environment, click **Deploy**.
+14. Optionally, click **Activate agent monitoring**.
+15. To view your wxO Agent's metrics, click **Agent chat** > **Agent analytics**, and then select your wxO Agent.
+    This page includes metrics for your wxO Agent, such as Total messages, Failed messages, and Latency average.
+    To view traces for each wxO Agent request, click **Trace Detail**.
+    For more information, see [Monitoring agents](https://www.ibm.com/docs/en/watsonx/watson-orchestrate/base?topic=monitoring-agents).
 
 ## Manage deployments in Langflow
 
@@ -83,7 +107,7 @@ From the **Projects** page, click **Deployments** to open the deployment managem
 
 * **Deployments**:
 
-   A **Deployment** is a published watsonx Orchestrate agent created from a specific Langflow flow version. Deployment details include the agent name, type, attached flows, model, and the IBM watsonx Orchestrate environment it belongs to.
+   A **Deployment** is a published wxO Agent equipped with one or more Langflow flows as wxO Tools. Deployment details include the wxO Agent name, type, attached flows, model, and the IBM watsonx Orchestrate environment it belongs to.
 
    Use the **Deployments** tab to create, update, view, and delete flow deployments in Langflow.
 
@@ -97,18 +121,22 @@ From the **Projects** page, click **Deployments** to open the deployment managem
 
 ## Send requests to your flow
 
-After you deploy your flow to IBM watsonx Orchestrate, you can connect to it through the Langflow deployment run endpoints.
+After you deploy your flow to IBM watsonx Orchestrate, you can chat with the wxO Agent through the Langflow deployment run endpoints.
 
 Don't use the `/run` endpoint for flows deployed to IBM watsonx Orchestrate.
 Instead use `POST /api/v1/deployments/{deployment_id}/runs` to start a run, and `GET /api/v1/deployments/{deployment_id}/runs/{run_id}` to check its status.
 
 Endpoint paths must be prefixed with your Langflow server URL, such as `http://localhost:7860`.
 
+To find your `deployment_id`, navigate to the **Projects** page, click **Deployments**, and select the deployment. The ID is displayed in the deployment details.
+
+These endpoints require a Langflow API key passed in the `x-api-key` header. To create one, see [API keys and authentication](/api-keys-and-authentication).
+
 ### Create deployment run endpoint
 
 **Endpoint:** `POST /api/v1/deployments/{deployment_id}/runs`
 
-**Description:** Start a run for a deployed flow and return a provider-owned run ID that you can poll for status.
+**Description:** Start a run for a deployed wxO Agent and return a provider-owned run ID that you can poll for status.
 
 #### Example request
 
@@ -187,7 +215,7 @@ curl --request POST \
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `provider_data.input` | `string` | Yes | The prompt or message content to send to the deployed agent. |
+| `provider_data.input` | `string` | Yes | The prompt or message content to send to the deployed wxO Agent. |
 | `provider_data.thread_id` | `string` | No | Optional thread identifier to continue an existing conversation. |
 
 #### Example response
@@ -306,3 +334,5 @@ curl --request GET \
 
 Check `provider_data.status` to determine whether the run is still processing or has finished.
 When the status is `completed`, read the output from `provider_data.result`.
+
+If `provider_data.status` is `failed`, the `provider_data.failed_at` timestamp and `provider_data.last_error` field contain details about what went wrong.

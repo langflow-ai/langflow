@@ -6,6 +6,7 @@ import { cleanAllFlows } from "../../utils/clean-all-flows";
 import { cleanOldFolders } from "../../utils/clean-old-folders";
 
 import { TEXTS } from "../../utils/constants/texts";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test(
   "admin user must be able to track their progress in getting started",
@@ -80,7 +81,7 @@ async function progressTrackTestFn(
   await expect(page.getByTestId("mainpage_title")).toBeVisible();
   await expect(page.getByTestId("empty_page_description")).toBeVisible();
 
-  await page.getByTestId("new_project_btn_empty_page").click();
+  await openTemplatesModal(page, { fromEmptyPage: true });
 
   await page.getByTestId("side_nav_options_all-templates").click();
   await page
