@@ -111,7 +111,40 @@ class JobRunner:
             with contextlib.suppress(Exception):
                 if await asyncio.shield(self._reconcile_stop(job_id)):
                     await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
+            # Every terminal path writes result/error + a terminal job_events row
+            # (design §8). COMPLETED/FAILED already do via _drive; TIMED_OUT and
+            # CANCELLED do not, so backfill their error blob + terminal milestone
+            # here (after the stop reconcile so a late-stop CANCELLED is included).
+            with contextlib.suppress(Exception):
+                await asyncio.shield(self._finalize_terminal_event(job_id))
             await self._bus.close(str(job_id))
+
+    async def _finalize_terminal_event(self, job_id: UUID) -> None:
+        """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.
+
+        ``execute_with_status`` writes the TIMED_OUT/CANCELLED status but no
+        durable error blob or terminal ``job_events`` row, so a consumer keying
+        on a terminal event TYPE (not just stream close) would not find one. This
+        appends ``run_timed_out`` / ``run_cancelled`` and, for a CANCELLED row
+        that a racing completion left with a populated ``result``, clears the
+        result and sets ``error={type: cancelled}`` so the terminal state is
+        internally consistent (no CANCELLED row carrying a completed-run result).
+        """
+        job = await self._jobs.get_job_by_job_id(job_id)
+        if job is None:
+            return
+        if job.status == JobStatus.TIMED_OUT:
+            if job.error is None:
+                await self._jobs.set_error(job_id, {"type": "timed_out"})
+            await self._jobs.append_event(job_id, "run_timed_out", {"type": "timed_out"})
+        elif job.status == JobStatus.CANCELLED:
+            # A late stop that won over a genuine completion may have left a
+            # completed-run result behind — overwrite it so the row is consistent.
+            if job.result is not None:
+                await self._jobs.set_result(job_id, None)
+            if job.error is None:
+                await self._jobs.set_error(job_id, {"type": "cancelled"})
+            await self._jobs.append_event(job_id, "run_cancelled", {"type": "cancelled"})
 
     def _start_heartbeat(self, job_id: UUID) -> asyncio.Task | None:
         """Spawn the periodic heartbeat task for a run (None when owner unset).

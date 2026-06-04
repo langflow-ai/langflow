@@ -99,6 +99,91 @@ async def test_runner_finalizes_failed_and_writes_error(active_user):
     assert job.error is not None
 
 
+async def test_runner_timeout_writes_terminal_event_and_error(active_user):
+    """TIMED_OUT must write an error blob AND a terminal job_events row (design §8)."""
+    job_service = get_job_service()
+    job_id = await _make_job(uuid4(), active_user.id)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        # Run past the job timeout so asyncio.wait_for raises TimeoutError.
+        await asyncio.sleep(5)
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source, job_timeout=0.2)
+
+    await asyncio.wait_for(runner.run(job_id=job_id, source_kwargs={}), timeout=10)
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.TIMED_OUT
+    # Error blob is populated on timeout (was NULL before the fix).
+    assert job.error is not None
+    assert job.error.get("type") == "timed_out"
+    # A terminal milestone is on the durable log.
+    events = await job_service.read_events(job_id)
+    assert any(e.event_type == "run_timed_out" for e in events)
+
+
+async def test_runner_cancel_writes_terminal_event(active_user):
+    """CANCELLED must write a terminal job_events row (design §8)."""
+    job_service = get_job_service()
+    job_id = await _make_job(uuid4(), active_user.id)
+
+    from langflow.services.database.models.jobs.model import SignalType
+
+    gate = asyncio.Event()
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        await gate.wait()
+        yield _frame("end_vertex", {"id": "n1"})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
+
+    run_task = asyncio.create_task(runner.run(job_id=job_id, source_kwargs={}))
+    await asyncio.sleep(0.1)
+    await job_service.write_signal(job_id, SignalType.STOP)
+    gate.set()
+    await asyncio.wait_for(run_task, timeout=5)
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.CANCELLED
+    events = await job_service.read_events(job_id)
+    assert any(e.event_type == "run_cancelled" for e in events)
+
+
+async def test_late_stop_after_completion_clears_result(active_user):
+    """A stop reconciled to CANCELLED after a genuine completion must not keep result."""
+    job_service = get_job_service()
+    job_id = await _make_job(uuid4(), active_user.id)
+
+    from langflow.services.database.models.jobs.model import SignalType
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        # The flow completes cleanly (set_result + COMPLETED), but a STOP lands in
+        # the race window before the runner's terminal reconcile.
+        await job_service.write_signal(job_id, SignalType.STOP)
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
+
+    await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    # Stop wins over the racing completion...
+    assert job.status == JobStatus.CANCELLED
+    # ...and the terminal state is internally consistent: no completed result blob.
+    assert job.result is None
+    assert (job.error or {}).get("type") == "cancelled"
+
+
 async def test_runner_stops_at_signal_boundary(active_user):
     job_service = get_job_service()
     job_id = await _make_job(uuid4(), active_user.id)

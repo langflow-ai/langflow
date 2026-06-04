@@ -225,8 +225,12 @@ class JobService(Service):
             await session.flush()
             return job
 
-    async def set_result(self, job_id: UUID, result: dict) -> Job | None:
+    async def set_result(self, job_id: UUID, result: dict | None) -> Job | None:
         """Persist the durable terminal result blob for a job.
+
+        ``None`` clears a previously-written result (used when a late stop
+        reconciles a racing completion to CANCELLED and the completed-run result
+        must not linger on the terminal row).
 
         Returns the updated Job, or None if the row does not exist.
         """
