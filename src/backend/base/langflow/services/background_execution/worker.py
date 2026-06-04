@@ -11,9 +11,91 @@ the watchdog reconciles the durable job row separately.
 from __future__ import annotations
 
 import asyncio
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
+
+from langflow.services.background_execution.runner import JobRunner
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    from lfx.services.settings.base import Settings
+
+
+class WorkerJobRunner:
+    """Run one durable job to terminal state inside a worker process.
+
+    Given only a ``job_id``, this hydrates the persisted request + owner from the
+    durable job row (exactly what ``submit`` stored under
+    ``job_metadata['request']``), builds the SAME StreamAdapter + frame source the
+    API would have used, and drives the SAME ``JobRunner`` — but publishing live
+    frames to the redis Streams bus so any API replica can reattach.
+
+    The frame source factory is injected so tests can script a build; production
+    passes the v1 build loop (``_default_frame_source_factory``).
+    """
+
+    def __init__(
+        self,
+        *,
+        settings: Settings,
+        live_bus: Any,
+        frame_source_factory: Callable[..., Any] | None = None,
+    ) -> None:
+        self._settings = settings
+        self._live_bus = live_bus
+        self._frame_source_factory = frame_source_factory
+
+    def _resolve_frame_source_factory(self) -> Callable[..., Any]:
+        if self._frame_source_factory is not None:
+            return self._frame_source_factory
+        # Default to the v1 build loop binding used by the API path.
+        from langflow.api.v2.workflow import _default_frame_source_factory
+
+        return _default_frame_source_factory
+
+    async def run(self, job_id: str) -> None:
+        """Hydrate the durable job and drive it to a terminal state."""
+        from uuid import UUID
+
+        from langflow.services.background_execution.service import BackgroundExecutionService
+        from langflow.services.deps import get_job_service
+
+        job_uuid = job_id if isinstance(job_id, UUID) else UUID(job_id)
+        job_service = get_job_service()
+        job = await job_service.get_job_by_job_id(job_uuid)
+        if job is None:
+            await logger.aerror(f"Worker: job {job_id} not found; skipping")
+            return
+
+        request = BackgroundExecutionService._reconstruct_request(job)  # noqa: SLF001
+        user = BackgroundExecutionService._user_stub(job.user_id)  # noqa: SLF001
+        adapter = self._build_adapter(request, job_uuid, job.flow_id)
+        factory = self._resolve_frame_source_factory()
+        source = factory(request=request, flow_id=job.flow_id, user=user, adapter=adapter)
+
+        runner = JobRunner(
+            job_service=job_service,
+            live_bus=self._live_bus,
+            adapter=adapter,
+            frame_source=source,
+            job_timeout=self._settings.background_job_timeout,
+        )
+        await runner.run(job_id=job_uuid, source_kwargs={"job_id": job_uuid})
+
+    @staticmethod
+    def _build_adapter(request: dict[str, Any], job_id: Any, flow_id: Any) -> Any:
+        from langflow.api.v2.adapters import StreamAdapterContext, get_stream_adapter
+
+        protocol = request.get("stream_protocol", "langflow")
+        return get_stream_adapter(
+            protocol,
+            StreamAdapterContext(
+                run_id=str(job_id),
+                thread_id=request.get("session_id") or str(flow_id),
+            ),
+        )
 
 
 async def run_worker_loop(
