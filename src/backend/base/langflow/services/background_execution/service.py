@@ -90,6 +90,11 @@ class BackgroundExecutionService(Service):
             user_id=user.id,
             dedupe_key=dedupe_key,
         )
+        # Persist the submit request on the job row so a QUEUED job that survives
+        # a restart is re-enqueued with its ORIGINAL inputs (input_value, tweaks,
+        # globals, etc.), not a reconstructed default. The startup sweep reads it
+        # back via ``_reconstruct_request``.
+        await job_service.update_job_metadata(job_id, {"request": request})
         await self._enqueue(job_id=job_id, flow_id=flow_id, request=request, user=user)
         return job_id
 
@@ -214,13 +219,18 @@ class BackgroundExecutionService(Service):
 
     @staticmethod
     def _reconstruct_request(job: Job) -> dict[str, Any]:
-        """Rebuild the minimal request dict for a re-enqueued QUEUED job.
+        """Rebuild the request dict for a re-enqueued QUEUED job.
 
-        The original request body is not persisted on the job row, so re-enqueue
-        runs with defaults (langflow protocol, no chat input). ``job_metadata``
-        may carry the original protocol/session if a future task persists it.
+        ``submit`` persists the original request body under
+        ``job_metadata["request"]`` so re-enqueue replays the ORIGINAL inputs
+        (input_value, tweaks, globals, files, partial-run ids, ...). Falls back
+        to a minimal default only for legacy rows written before the request was
+        persisted, so a pre-existing QUEUED job still re-runs rather than blocks.
         """
         meta = job.job_metadata or {}
+        persisted = meta.get("request")
+        if isinstance(persisted, dict) and persisted:
+            return persisted
         return {
             "flow_id": str(job.flow_id),
             "mode": "background",

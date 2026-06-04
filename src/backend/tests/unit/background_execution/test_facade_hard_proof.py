@@ -140,3 +140,121 @@ async def test_sweep_orphans_fails_in_progress(hard_proof_job_service):
     assert job.status == JobStatus.FAILED
     assert job.error is not None
     assert job.error.get("type") == "worker_lost"
+
+
+def _echo_input_factory(*, request, **_kwargs):
+    """Frame source that echoes ``request['input_value']`` into a durable event.
+
+    Proves the re-enqueued QUEUED job replays its ORIGINAL inputs: the input it
+    actually runs with shows up in the durable ``job_events`` log, so a restart
+    that lost the in-memory request body would surface a different (defaulted)
+    value here.
+    """
+    input_value = request.get("input_value")
+
+    async def _source(**_kw):
+        # ``add_message`` is a durable langflow event, so it lands in job_events
+        # and survives for the post-run assertion.
+        yield _frame("add_message", {"input_value": input_value})
+        yield _frame("end", {})
+
+    return _source
+
+
+async def test_submit_persists_request_for_faithful_requeue(hard_proof_job_service):
+    """``submit`` persists the request body on the job row (job_metadata.request).
+
+    This is the durable record the startup sweep reads to replay original inputs.
+    Proven on both real SQLite and real Postgres. The executor is stopped right
+    after submit so no run interferes with reading the persisted row.
+    """
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = hard_proof_job_service
+    original_input = f"original-input-{uuid4()}"
+    flow_id = uuid4()
+
+    svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+    )
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": original_input,
+        "session_id": "thread-restart",
+        "tweaks": {"ChatInput-x": {"foo": "bar"}},
+    }
+    job_id = await svc.submit(flow_id=flow_id, request=request, user=_StubUser(uuid4()))
+    await svc.stop()
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.job_metadata is not None
+    persisted = job.job_metadata.get("request")
+    # The whole request round-trips, not just input_value.
+    assert persisted == request
+
+
+async def test_requeued_queued_job_replays_original_input(hard_proof_job_service):
+    """A QUEUED job that survives a restart re-runs with its ORIGINAL input.
+
+    Models "queued, never started, then the process died": the durable row is
+    QUEUED with the request persisted exactly as ``submit`` writes it (create_job
+    + update_job_metadata(request)). A *fresh* facade (empty in-memory state, as
+    after a restart) sweeps and re-enqueues, and the run replays the ORIGINAL
+    ``input_value`` — visible in the durable ``job_events`` log. On both real
+    SQLite and real Postgres.
+    """
+    import asyncio
+
+    from langflow.services.background_execution.service import BackgroundExecutionService
+    from langflow.services.deps import get_settings_service
+
+    job_service = hard_proof_job_service
+    original_input = f"original-input-{uuid4()}"
+    user_id = uuid4()
+    flow_id = uuid4()
+    job_id = uuid4()
+    request = {
+        "flow_id": str(flow_id),
+        "mode": "background",
+        "stream_protocol": "langflow",
+        "input_value": original_input,
+        "session_id": "thread-restart",
+    }
+    # Durable state a restart finds: a QUEUED row carrying the persisted request,
+    # written exactly the way ``submit`` writes it.
+    await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
+    await job_service.update_job_metadata(job_id, {"request": request})
+
+    # Restart: a brand-new facade with empty in-memory state sweeps + re-enqueues.
+    restart_svc = BackgroundExecutionService(
+        settings_service=get_settings_service(),
+        frame_source_factory=_echo_input_factory,
+    )
+    await restart_svc.start()
+    try:
+        await restart_svc.sweep_orphans_on_startup()
+        job = None
+        for _ in range(100):
+            job = await job_service.get_job_by_job_id(job_id)
+            if job.status == JobStatus.COMPLETED:
+                break
+            await asyncio.sleep(0.05)
+        assert job.status == JobStatus.COMPLETED
+    finally:
+        await restart_svc.stop()
+
+    # The re-enqueued run replayed the ORIGINAL input, not a default.
+    events = await job_service.read_events(job_id, after_seq=0)
+    echoed = [e.payload.get("data", {}).get("input_value") for e in events if e.event_type == "add_message"]
+    assert echoed == [original_input]
+
+
+class _StubUser:
+    """Minimal user carrying only ``id`` (all the facade submit path reads)."""
+
+    def __init__(self, user_id):
+        self.id = user_id
