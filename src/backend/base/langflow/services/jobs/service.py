@@ -295,6 +295,43 @@ class JobService(Service):
             result = await session.exec(stmt)
             return list(result.all())
 
+    async def sweep_orphans(self) -> list[UUID]:
+        """Reconcile IN_PROGRESS jobs left behind by a crashed worker.
+
+        Under the default at-most-once policy an in-flight job whose worker
+        died is unrecoverable, so we mark it FAILED with a worker_lost error,
+        stamp finished_timestamp, and append a terminal ``run_failed`` event so
+        a reattacher always sees a clean end. QUEUED jobs are intentionally
+        untouched (at-least-once: they get re-picked by a fresh worker).
+
+        Returns the ids of the jobs transitioned to FAILED.
+        """
+        error_payload = {"type": "worker_lost"}
+        async with session_scope() as session:
+            stmt = select(Job).where(Job.status == JobStatus.IN_PROGRESS)
+            result = await session.exec(stmt)
+            orphans = list(result.all())
+            if not orphans:
+                return []
+            now = datetime.now(timezone.utc)
+            for job in orphans:
+                job.status = JobStatus.FAILED
+                job.error = dict(error_payload)
+                job.finished_timestamp = now
+                session.add(job)
+                # Terminal milestone on the durable log so reattach sees an end.
+                max_stmt = select(func.max(JobEvent.seq)).where(JobEvent.job_id == job.job_id)
+                current_max = (await session.exec(max_stmt)).one()
+                event = JobEvent(
+                    job_id=job.job_id,
+                    seq=(current_max or 0) + 1,
+                    event_type="run_failed",
+                    payload=dict(error_payload),
+                )
+                session.add(event)
+            await session.flush()
+            return [job.job_id for job in orphans]
+
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
 

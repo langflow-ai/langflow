@@ -135,3 +135,50 @@ async def test_unconsumed_signals_empty_when_none_written():
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
     assert await service.unconsumed_signals(job_id) == []
+
+
+@pytest.mark.usefixtures("client")
+async def test_sweep_orphans_fails_in_progress_jobs():
+    """On startup, any IN_PROGRESS job is an orphan from a crashed worker.
+
+    The default at-most-once policy marks it FAILED with a worker_lost error.
+    QUEUED jobs are left alone (at-least-once: they get re-picked).
+    """
+    service = JobService()
+    orphan = uuid4()
+    queued = uuid4()
+    flow_id = uuid4()
+    user_id = uuid4()
+    await service.create_job(job_id=orphan, flow_id=flow_id, user_id=user_id)
+    await service.update_job_status(orphan, JobStatus.IN_PROGRESS)
+    await service.create_job(job_id=queued, flow_id=flow_id, user_id=user_id)
+
+    swept = await service.sweep_orphans()
+    assert orphan in swept
+    assert queued not in swept
+
+    orphan_job = await service.get_job_by_job_id(orphan)
+    assert orphan_job.status == JobStatus.FAILED
+    assert orphan_job.error == {"type": "worker_lost"}
+    assert orphan_job.finished_timestamp is not None
+
+    # A reattacher must see a clean terminal event on the durable log.
+    orphan_events = await service.read_events(orphan)
+    assert len(orphan_events) == 1
+    assert orphan_events[0].event_type == "run_failed"
+    assert orphan_events[0].payload == {"type": "worker_lost"}
+
+    queued_job = await service.get_job_by_job_id(queued)
+    assert queued_job.status == JobStatus.QUEUED
+    # QUEUED jobs are untouched: no terminal event.
+    assert await service.read_events(queued) == []
+
+
+@pytest.mark.usefixtures("client")
+async def test_sweep_orphans_noop_when_clean():
+    service = JobService()
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+
+    assert await service.sweep_orphans() == []
