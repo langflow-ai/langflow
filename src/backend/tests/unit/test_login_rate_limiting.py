@@ -214,16 +214,22 @@ class TestRateLimitIntegration:
 
     @pytest.mark.asyncio
     async def test_login_endpoint_has_rate_limiter_applied(self, enable_rate_limiting):  # noqa: ARG002
-        """Test that the login endpoint has rate limiting decorator applied."""
-        from langflow.api.v1.login import limiter, login_to_get_access_token
+        """Test that the login endpoint has rate limiting applied via app.state.limiter."""
+        from langflow.api.v1.login import get_limiter_from_app, login_to_get_access_token
+        from langflow.main import create_app
 
-        # Verify limiter is initialized
-        assert limiter is not None
-        assert limiter.enabled is True
+        # Create app to ensure limiter is attached to app.state
+        app = create_app()
 
-        # Verify the endpoint function exists and is decorated
+        # Verify limiter is attached to app.state
+        assert hasattr(app.state, "limiter")
+        assert app.state.limiter is not None
+        assert app.state.limiter.enabled is True
+
+        # Verify the endpoint function exists
         assert login_to_get_access_token is not None
-        assert hasattr(login_to_get_access_token, "__wrapped__")  # Decorated function
+        # Verify get_limiter_from_app helper exists
+        assert get_limiter_from_app is not None
 
     @pytest.mark.asyncio
     async def test_successful_login_within_reasonable_limit(self, enable_rate_limiting, client, active_user):  # noqa: ARG002
