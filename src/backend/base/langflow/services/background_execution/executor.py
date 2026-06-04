@@ -80,12 +80,13 @@ class InProcessExecutor:
                 await task
             except asyncio.CancelledError:
                 # A cancelled job must not take the worker down with it — but a
-                # cancel aimed at the WORKER (stop()) must. ``cancelling()`` is
-                # >0 only when this worker task itself was cancelled, so we can
-                # tell ``cancel(key)`` (job-only) apart from ``stop()`` (worker)
-                # and re-raise to exit cleanly in the latter case.
-                worker_task = asyncio.current_task()
-                if worker_task is not None and worker_task.cancelling() > 0:
+                # cancel aimed at the WORKER (stop()) must. ``Task.cancelling()``
+                # is Python 3.11+; the project supports 3.10, so we distinguish
+                # the two with an explicit ``_closed`` flag set by ``stop()``
+                # rather than that version-specific API. When ``stop()`` ran, the
+                # cancel targets the worker — re-raise to exit. Otherwise it was
+                # a ``cancel(key)`` aimed at the job — swallow and keep serving.
+                if self._closed:
                     raise
                 await logger.adebug(f"Background job {key} cancelled on worker {worker_id}")
             except Exception as exc:  # noqa: BLE001
