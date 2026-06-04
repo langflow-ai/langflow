@@ -7,9 +7,9 @@ fakes:
   (only when ``LANGFLOW_TEST_DATABASE_URI`` is set; CI always sets it).
 - ``hard_proof_redis_url`` yields a real Redis URL from ``LANGFLOW_TEST_REDIS_URL``
   (skips when unset), flushed clean before and after each test.
-
-Phase 0 keeps these minimal: they yield connectable URLs. Later phases extend
-``hard_proof_db_url`` to create the background-execution tables.
+- ``hard_proof_job_service`` runs the real Alembic migrations against
+  ``hard_proof_db_url`` and binds ``session_scope()`` to it, so store methods are
+  exercised on both real SQLite and real Postgres.
 """
 
 from __future__ import annotations
@@ -24,6 +24,8 @@ import pytest
 
 if TYPE_CHECKING:
     from collections.abc import AsyncGenerator
+
+    from langflow.services.jobs.service import JobService
 
 
 def _async_pg_url(raw: str) -> str:
@@ -58,6 +60,43 @@ async def hard_proof_db_url(request: pytest.FixtureRequest) -> AsyncGenerator[st
         if not raw:
             pytest.skip("LANGFLOW_TEST_DATABASE_URI not set")
         yield _async_pg_url(raw)
+
+
+@pytest.fixture
+async def hard_proof_job_service(hard_proof_db_url: str) -> AsyncGenerator[JobService, None]:
+    """Yield a JobService whose ``session_scope()`` is bound to a real, migrated DB.
+
+    Runs the real Alembic migrations against ``hard_proof_db_url`` (sqlite + postgres)
+    through the production ``DatabaseService`` path, then swaps that service into the
+    service manager so ``JobService``'s ``session_scope()`` resolves to it. This proves
+    the store methods on BOTH real SQLite and real Postgres, and that the migrations
+    themselves apply on both engines.
+    """
+    from langflow.services.database.factory import DatabaseServiceFactory
+    from langflow.services.deps import get_settings_service
+    from langflow.services.jobs.service import JobService
+    from lfx.services.manager import get_service_manager
+    from lfx.services.schema import ServiceType
+
+    manager = get_service_manager()
+    settings_service = get_settings_service()
+    original_url = settings_service.settings.database_url
+    original_db_service = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+
+    settings_service.settings.database_url = hard_proof_db_url
+    db_service = DatabaseServiceFactory().create(settings_service)
+    manager.services[ServiceType.DATABASE_SERVICE] = db_service
+
+    try:
+        await db_service.run_migrations()
+        yield JobService()
+    finally:
+        manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+        with contextlib.suppress(Exception):
+            await db_service.teardown()
+        settings_service.settings.database_url = original_url
+        if original_db_service is not None:
+            manager.services[ServiceType.DATABASE_SERVICE] = original_db_service
 
 
 @pytest.fixture
