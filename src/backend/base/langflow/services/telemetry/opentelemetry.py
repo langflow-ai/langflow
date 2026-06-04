@@ -140,6 +140,62 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             metric_type=MetricType.COUNTER,
             labels={"flow_id": mandatory_label},
         )
+        self._add_metric(
+            name="langflow_bg_jobs",
+            description="Current count of non-terminal background jobs",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"status": mandatory_label, "backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_oldest_queued_seconds",
+            description="Age of the oldest queued background job",
+            unit="s",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_alive_workers",
+            description="Distinct background workers heartbeating within the lease window",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_jobs_started_total",
+            description="Background jobs started",
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_jobs_completed_total",
+            description="Background jobs completed",
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_jobs_failed_total",
+            description="Background jobs failed",
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"reason": mandatory_label, "backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_orphans_reconciled_total",
+            description="Orphaned background jobs reconciled by the watchdog",
+            unit="",
+            metric_type=MetricType.COUNTER,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_job_duration_seconds",
+            description="Background job run duration",
+            unit="s",
+            metric_type=MetricType.HISTOGRAM,
+            labels={"outcome": mandatory_label, "backend": mandatory_label},
+        )
 
     def __init__(self, *, prometheus_enabled: bool = True):
         # Only initialize once
