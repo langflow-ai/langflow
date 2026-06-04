@@ -457,6 +457,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "OpenRouter", name: "openrouter", icon: "OpenRouter" },
   { display_name: "Perplexity", name: "perplexity", icon: "Perplexity" },
   { display_name: "pgvector", name: "pgvector", icon: "cpu" },
+  { display_name: "Oracle", name: "oracledb", icon: "Oracle" },
   { display_name: "Pinecone", name: "pinecone", icon: "Pinecone" },
   { display_name: "Qdrant", name: "qdrant", icon: "Qdrant" },
   { display_name: "Redis", name: "redis", icon: "Redis" },
