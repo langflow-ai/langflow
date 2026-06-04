@@ -201,6 +201,34 @@ class JobService(Service):
             await session.flush()
             return job
 
+    async def set_result(self, job_id: UUID, result: dict) -> Job | None:
+        """Persist the durable terminal result blob for a job.
+
+        Returns the updated Job, or None if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            job.result = result
+            session.add(job)
+            await session.flush()
+            return job
+
+    async def set_error(self, job_id: UUID, error: dict) -> Job | None:
+        """Persist the durable terminal error blob for a job.
+
+        Returns the updated Job, or None if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            job.error = error
+            session.add(job)
+            await session.flush()
+            return job
+
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
         """Get the latest job for each asset ID in a single batch query.
 

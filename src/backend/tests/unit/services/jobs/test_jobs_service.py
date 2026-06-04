@@ -32,3 +32,36 @@ async def test_get_jobs_by_flow_id_orders_by_created_timestamp():
     assert second in returned_ids
     # created_timestamp is the ordering key; both rows present is the core assertion.
     assert all(job.status == JobStatus.QUEUED for job in jobs)
+
+
+@pytest.mark.usefixtures("client")
+async def test_set_result_persists_blob():
+    service = JobService()
+    job_id = uuid4()
+    flow_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=flow_id, user_id=uuid4())
+
+    updated = await service.set_result(job_id, {"output_text": "hello", "session_id": "s1"})
+    assert updated is not None
+    assert updated.result == {"output_text": "hello", "session_id": "s1"}
+
+    fetched = await service.get_job_by_job_id(job_id)
+    assert fetched.result == {"output_text": "hello", "session_id": "s1"}
+
+
+@pytest.mark.usefixtures("client")
+async def test_set_error_persists_blob():
+    service = JobService()
+    job_id = uuid4()
+    flow_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=flow_id, user_id=uuid4())
+
+    updated = await service.set_error(job_id, {"type": "worker_lost", "message": "crash"})
+    assert updated is not None
+    assert updated.error == {"type": "worker_lost", "message": "crash"}
+
+
+@pytest.mark.usefixtures("client")
+async def test_set_result_returns_none_for_missing_job():
+    service = JobService()
+    assert await service.set_result(uuid4(), {"x": 1}) is None
