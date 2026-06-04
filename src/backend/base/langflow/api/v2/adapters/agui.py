@@ -19,6 +19,27 @@ from langflow.api.v2.adapters import (
 )
 from langflow.api.v2.agui_translator import AGUITranslator
 
+# Durable AG-UI milestones. ``TEXT_MESSAGE_CONTENT`` is the per-token delta and
+# is ephemeral; the START/END lifecycle frames around it are durable so a
+# reattaching client knows a message happened even without the token stream.
+_AGUI_DURABLE_EVENTS: frozenset[str] = frozenset(
+    {
+        "RUN_STARTED",
+        "RUN_FINISHED",
+        "RUN_ERROR",
+        "STEP_STARTED",
+        "STEP_FINISHED",
+        "TEXT_MESSAGE_START",
+        "TEXT_MESSAGE_END",
+        "TOOL_CALL_START",
+        "TOOL_CALL_ARGS",
+        "TOOL_CALL_END",
+        "STATE_SNAPSHOT",
+        "STATE_DELTA",
+        "CUSTOM",
+    }
+)
+
 
 def _to_stream_event(event: BaseEvent) -> StreamEvent:
     """Frame one AG-UI event for SSE consumption."""
@@ -61,6 +82,9 @@ class AGUIAdapter:
     @property
     def terminal_error_type(self) -> str | None:
         return "RUN_ERROR"
+
+    def is_durable(self, event_type: str) -> bool:
+        return event_type in _AGUI_DURABLE_EVENTS
 
 
 register_stream_adapter("agui", AGUIAdapter)

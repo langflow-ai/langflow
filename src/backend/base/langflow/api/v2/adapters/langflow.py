@@ -20,6 +20,23 @@ from langflow.api.v2.adapters import (
 )
 from langflow.api.v2.converters import build_component_output, resolve_output_type
 
+# Durable milestones for the langflow wire protocol. ``token`` is the only
+# high-volume ephemeral type; everything else the build loop emits is a
+# milestone worth persisting for reattach.
+_LANGFLOW_DURABLE_EVENTS: frozenset[str] = frozenset(
+    {
+        "build_start",
+        "build_end",
+        "vertices_sorted",
+        "end_vertex",
+        "output",
+        "add_message",
+        "remove_message",
+        "error",
+        "end",
+    }
+)
+
 
 class LangflowAdapter:
     """Passthrough adapter: each EventManager event becomes one wire event.
@@ -90,6 +107,9 @@ class LangflowAdapter:
     @property
     def terminal_error_type(self) -> str | None:
         return "error"
+
+    def is_durable(self, event_type: str) -> bool:
+        return event_type in _LANGFLOW_DURABLE_EVENTS
 
 
 register_stream_adapter("langflow", LangflowAdapter)
