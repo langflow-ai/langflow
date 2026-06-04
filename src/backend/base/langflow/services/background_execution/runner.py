@@ -102,10 +102,18 @@ class JobRunner:
             await self._bus.close(str(job_id))
 
     async def _reconcile_stop(self, job_id: UUID) -> bool:
-        """Force CANCELLED when a STOP signal exists. Returns True if it acted."""
+        """Force CANCELLED when a STOP signal exists. Returns True if it acted.
+
+        Also stamps the STOP signal ``consumed_at`` so it does not linger: an
+        unconsumed STOP would grow the signals table and make a later re-enqueued
+        run of the same job self-cancel off the stale signal. This runs in the
+        runner's ``finally`` (shielded), so it is the single point where a stop is
+        finalized — the right place to mark it consumed.
+        """
         if not await self._stop_requested(job_id):
             return False
         await self._jobs.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+        await self._jobs.consume_signals(job_id, SignalType.STOP)
         return True
 
     async def _drive(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:

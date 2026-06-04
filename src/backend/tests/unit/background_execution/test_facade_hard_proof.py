@@ -381,6 +381,49 @@ async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
         assert f"id: {seq}".encode() in frame, f"replayed frame missing id: {frame!r}"
 
 
+async def test_stop_signal_is_marked_consumed(hard_proof_job_service):
+    """When the runner acts on a STOP, the signal row is stamped ``consumed_at``.
+
+    Otherwise the execution_signals table grows unbounded and, worse, a
+    re-enqueued job self-cancels off the stale STOP. We assert two things:
+    (1) after a stopped run the STOP row has ``consumed_at`` set, and
+    (2) a fresh run of the SAME job_id afterwards does NOT instantly cancel —
+    it completes, because the stale STOP was consumed. Real SQLite and Postgres.
+    """
+    job_service = hard_proof_job_service
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await job_service.write_signal(job_id, SignalType.STOP)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    await _runner(job_service, bus, job_id, source).run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.CANCELLED
+
+    # The STOP signal must now be consumed (no unconsumed rows remain).
+    remaining = await job_service.unconsumed_signals(job_id)
+    assert remaining == [], "STOP signal was not stamped consumed_at"
+
+    # Re-enqueue path: bring the row back to QUEUED and re-run. A stale STOP would
+    # instantly cancel it; since it was consumed, the fresh run completes.
+    await job_service.update_job_status(job_id, JobStatus.QUEUED)
+
+    async def source2(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end", {})
+
+    bus2 = InMemoryLiveBus()
+    await _runner(job_service, bus2, job_id, source2).run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED, "re-run self-cancelled off a stale STOP"
+
+
 def _side_effect_factory(*, request, **_kwargs):  # noqa: ARG001
     """Frame source that emits exactly one durable ``add_message`` side effect.
 

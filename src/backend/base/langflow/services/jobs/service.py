@@ -318,6 +318,31 @@ class JobService(Service):
             result = await session.exec(stmt)
             return list(result.all())
 
+    async def consume_signals(self, job_id: UUID, signal_type: SignalType) -> int:
+        """Stamp ``consumed_at`` on a job's unconsumed signals of ``signal_type``.
+
+        The runner calls this once it has acted on a STOP so the signal does not
+        linger: ``unconsumed_signals`` filters on ``consumed_at IS NULL``, so an
+        unstamped STOP would (a) grow the table forever and (b) make a later
+        re-enqueued run of the same job self-cancel off the stale signal. Returns
+        the number of rows stamped.
+        """
+        now = datetime.now(timezone.utc)
+        async with session_scope() as session:
+            stmt = (
+                select(ExecutionSignal)
+                .where(ExecutionSignal.job_id == job_id)
+                .where(ExecutionSignal.signal_type == signal_type)
+                .where(col(ExecutionSignal.consumed_at).is_(None))
+            )
+            result = await session.exec(stmt)
+            rows = list(result.all())
+            for row in rows:
+                row.consumed_at = now
+                session.add(row)
+            await session.flush()
+            return len(rows)
+
     async def claim_queued_job(self, job_id: UUID) -> bool:
         """Atomically claim a QUEUED job for execution. Returns True if we won.
 
