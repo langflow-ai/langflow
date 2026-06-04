@@ -64,6 +64,9 @@ class WorkerHarness:
     _client: object | None = None
     _prior_db_env: str | None = None
     _prior_db_env_set: bool = False
+    _prior_db_service: object | None = None
+    _prior_settings_url: str | None = None
+    _db_service: object | None = None
 
     async def seed_real_flow(self, *, input_value: str = "hello") -> tuple[uuid.UUID, uuid.UUID]:
         """Seed a real user + a real ChatInput->ChatOutput flow; return (user_id, flow_id).
@@ -213,7 +216,21 @@ class WorkerHarness:
                 await self._client.flushdb()
             with contextlib.suppress(Exception):
                 await self._client.aclose()
-        # Restore the LANGFLOW_DATABASE_URL env so it does not leak to later tests.
+        # Tear down the pg engine and restore the manager's DB service + settings
+        # url + env var so this harness does not leak state to later tests.
+        from langflow.services.deps import get_settings_service
+        from lfx.services.manager import get_service_manager
+        from lfx.services.schema import ServiceType
+
+        manager = get_service_manager()
+        manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+        if self._db_service is not None:
+            with contextlib.suppress(Exception):
+                await self._db_service.teardown()
+        if self._prior_db_service is not None:
+            manager.services[ServiceType.DATABASE_SERVICE] = self._prior_db_service
+        if self._prior_settings_url is not None:
+            get_settings_service().settings.database_url = self._prior_settings_url
         if self._prior_db_env_set:
             os.environ["LANGFLOW_DATABASE_URL"] = self._prior_db_env  # type: ignore[assignment]
         else:
@@ -245,9 +262,10 @@ async def setup_worker_harness(pg_uri: str, redis_base_url: str, *, redis_db: in
     os.environ["LANGFLOW_DATABASE_URL"] = db_url
 
     settings_service = get_settings_service()
+    prior_settings_url = settings_service.settings.database_url
     settings_service.settings.database_url = db_url
     manager = get_service_manager()
-    manager.services.pop(ServiceType.DATABASE_SERVICE, None)
+    prior_db_service = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
     db_service = DatabaseServiceFactory().create(settings_service)
     manager.services[ServiceType.DATABASE_SERVICE] = db_service
     await db_service.create_db_and_tables()
@@ -258,6 +276,9 @@ async def setup_worker_harness(pg_uri: str, redis_base_url: str, *, redis_db: in
         job_service=JobService(),
         _prior_db_env=prior_db_env,
         _prior_db_env_set=prior_db_env_set,
+        _prior_db_service=prior_db_service,
+        _prior_settings_url=prior_settings_url,
+        _db_service=db_service,
     )
     # Flush the dedicated redis DB so a prior run cannot leak claim-queue ids.
     await harness.client.flushdb()
