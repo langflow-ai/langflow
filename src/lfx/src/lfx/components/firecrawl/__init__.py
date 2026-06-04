@@ -9,12 +9,14 @@ if TYPE_CHECKING:
     from .firecrawl_extract_api import FirecrawlExtractApi
     from .firecrawl_map_api import FirecrawlMapApi
     from .firecrawl_scrape_api import FirecrawlScrapeApi
+    from .firecrawl_search_api import FirecrawlSearchApi
 
 _dynamic_imports = {
     "FirecrawlCrawlApi": "firecrawl_crawl_api",
     "FirecrawlExtractApi": "firecrawl_extract_api",
     "FirecrawlMapApi": "firecrawl_map_api",
     "FirecrawlScrapeApi": "firecrawl_scrape_api",
+    "FirecrawlSearchApi": "firecrawl_search_api",
 }
 
 __all__ = [
@@ -22,6 +24,7 @@ __all__ = [
     "FirecrawlExtractApi",
     "FirecrawlMapApi",
     "FirecrawlScrapeApi",
+    "FirecrawlSearchApi",
 ]
 
 
