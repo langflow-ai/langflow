@@ -13,7 +13,6 @@ from unittest.mock import MagicMock
 
 import pytest
 from lfx.components.firecrawl.firecrawl_crawl_api import FirecrawlCrawlApi
-from lfx.components.firecrawl.firecrawl_extract_api import FirecrawlExtractApi
 from lfx.components.firecrawl.firecrawl_map_api import FirecrawlMapApi
 from lfx.components.firecrawl.firecrawl_scrape_api import FirecrawlScrapeApi
 from lfx.components.firecrawl.firecrawl_search_api import FirecrawlSearchApi
