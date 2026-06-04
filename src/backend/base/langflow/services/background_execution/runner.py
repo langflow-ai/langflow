@@ -16,6 +16,7 @@ reused from the single source of truth.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 from collections.abc import AsyncIterator, Callable
 from typing import TYPE_CHECKING, Any
@@ -62,26 +63,36 @@ class JobRunner:
             await self._jobs.execute_with_status(job_id, _wrapped)
         except asyncio.CancelledError as exc:
             # A cooperative STOP that we raised ourselves ends the run cleanly
-            # (execute_with_status already wrote CANCELLED). A REAL external
-            # task cancel (executor stop()) arrives untagged: if a durable STOP
-            # was written by ``stop_job`` before the cancel, the user asked to
-            # stop, so correct the status to CANCELLED (execute_with_status
-            # wrote FAILED for the untagged cancel) and swallow. Otherwise it is
-            # a genuine system cancel — re-raise so asyncio semantics hold.
+            # (execute_with_status already wrote CANCELLED). A genuine system
+            # cancel with no STOP signal re-raises so asyncio semantics hold; a
+            # cancel that carries a STOP signal is a user stop and is reconciled
+            # to CANCELLED in the finally below.
             user_tagged = bool(exc.args) and exc.args[0] == "LANGFLOW_USER_CANCELLED"
-            if user_tagged:
-                await logger.adebug(f"Background job {job_id} stopped cooperatively")
-            elif await self._stop_requested(job_id):
-                await self._jobs.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
-                await logger.adebug(f"Background job {job_id} cancelled via STOP signal")
-            else:
+            if not user_tagged and not await self._stop_requested(job_id):
                 raise
+            await logger.adebug(f"Background job {job_id} stopped")
         except Exception as exc:  # noqa: BLE001
             # Terminal error / runtime failure already routed to FAILED by
             # execute_with_status; log and swallow so the worker survives.
             await logger.aerror(f"Background job {job_id} runner error: {exc}", exc_info=True)
         finally:
+            # Last-writer reconcile: a ``/stop`` that raced terminal finalization
+            # (execute_with_status writes COMPLETED/FAILED unconditionally) must
+            # not be silently overwritten. If a durable STOP signal exists, force
+            # CANCELLED as the runner's final write. Shielded so an executor task
+            # cancel cannot abort the correction. Mirrors the old
+            # _finalize_job_status "never overwrite CANCELLED" guard.
+            with contextlib.suppress(Exception):
+                if await asyncio.shield(self._reconcile_stop(job_id)):
+                    await logger.adebug(f"Background job {job_id} reconciled to CANCELLED after a racing stop")
             await self._bus.close(str(job_id))
+
+    async def _reconcile_stop(self, job_id: UUID) -> bool:
+        """Force CANCELLED when a STOP signal exists. Returns True if it acted."""
+        if not await self._stop_requested(job_id):
+            return False
+        await self._jobs.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
+        return True
 
     async def _drive(self, *, job_id: UUID, source_kwargs: dict[str, Any]) -> None:
         """The wrapped coroutine: stream frames, persist, publish, finalize result/error."""
@@ -102,6 +113,14 @@ class JobRunner:
                     errored_payload = payload
             else:
                 await self._bus.publish(str(job_id), LiveFrame(seq=last_durable_seq, data=frame_bytes))
+
+        # Final cooperative-stop check: a STOP that lands after the last frame
+        # (or while a fast flow was finishing) must still win over a clean
+        # completion, so a user's stop intent is never silently overwritten with
+        # COMPLETED. Mirrors the old _finalize_job_status "never overwrite
+        # CANCELLED" guard.
+        if await self._stop_requested(job_id):
+            raise self._user_cancelled()
 
         if errored_payload is not None:
             await self._jobs.set_error(job_id, errored_payload.get("data", errored_payload))

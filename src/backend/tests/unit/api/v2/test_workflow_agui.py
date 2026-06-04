@@ -1233,321 +1233,17 @@ class TestBackgroundModeStreamProtocol:
         assert "RUN_FINISHED" in text
 
 
-class TestBackgroundRunsRegistryEviction:
-    """``_register_background_run`` must not evict still-running buffers.
-
-    The registry is bounded by ``_MAX_BACKGROUND_RUNS``. The naive policy of
-    popping the oldest entry by insertion order drops the re-attach handle for
-    a long-running first job the moment the limit is hit, so the buffer task
-    keeps appending into an orphaned ``_BackgroundRun`` while re-attach
-    returns 404. Eviction must prefer completed entries first; falling back
-    to evicting the oldest only when every slot is occupied by a running run.
-    """
-
-    def test_eviction_prefers_completed_runs_over_running_ones(self, monkeypatch):
-        from langflow.api.v2 import workflow as workflow_module
-
-        monkeypatch.setattr(workflow_module, "_MAX_BACKGROUND_RUNS", 3)
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
-
-        long_running = workflow_module._BackgroundRun(user_id="u")
-        # done stays False; this is the run we must protect.
-        workflow_module._register_background_run("long", long_running)
-
-        # Fill the rest with completed runs.
-        for job_id in ("done1", "done2"):
-            done_run = workflow_module._BackgroundRun(user_id="u")
-            done_run.done = True
-            workflow_module._register_background_run(job_id, done_run)
-
-        # Registry is now at the cap (3): [long, done1, done2]. Adding a new
-        # entry must evict a completed run, not the still-running ``long``.
-        new_run = workflow_module._BackgroundRun(user_id="u")
-        workflow_module._register_background_run("new", new_run)
-
-        assert "long" in workflow_module._BACKGROUND_RUNS, (
-            "Still-running background run was evicted in favor of a completed one"
-        )
-        assert "new" in workflow_module._BACKGROUND_RUNS
-
-    def test_eviction_falls_back_to_oldest_when_every_run_is_active(self, monkeypatch):
-        """If every slot is occupied by a still-running run, evict the oldest anyway.
-
-        Unbounded growth would leak memory. The fallback is intentional and
-        documented; a warning log makes the situation visible.
-        """
-        from langflow.api.v2 import workflow as workflow_module
-
-        monkeypatch.setattr(workflow_module, "_MAX_BACKGROUND_RUNS", 2)
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
-
-        for job_id in ("a", "b"):
-            run = workflow_module._BackgroundRun(user_id="u")
-            workflow_module._register_background_run(job_id, run)
-
-        # All running; adding a third must evict the oldest (a).
-        third = workflow_module._BackgroundRun(user_id="u")
-        workflow_module._register_background_run("c", third)
-
-        assert "a" not in workflow_module._BACKGROUND_RUNS
-        assert "b" in workflow_module._BACKGROUND_RUNS
-        assert "c" in workflow_module._BACKGROUND_RUNS
-
-
-class TestClearBackgroundRun:
-    """``_clear_background_run`` releases a stopped run's buffer and wakes waiters.
-
-    Without this, ``stop_workflow`` revokes the buffer task but leaves the
-    ``_BackgroundRun`` registered. Re-attach readers can hang on
-    ``_cond.wait()`` indefinitely, and up to ``_MAX_BACKGROUND_RUNS`` cancelled
-    buffers occupy memory.
-    """
-
-    async def test_clear_pops_registry_entry_and_finishes_buffer(self, monkeypatch):
-        from langflow.api.v2 import workflow as workflow_module
-
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
-
-        bg_run = workflow_module._BackgroundRun(user_id="u")
-        workflow_module._register_background_run("job-1", bg_run)
-        assert bg_run.done is False
-
-        await workflow_module._clear_background_run("job-1")
-
-        assert "job-1" not in workflow_module._BACKGROUND_RUNS
-        assert bg_run.done is True
-
-    async def test_clear_is_a_noop_for_unknown_job_id(self, monkeypatch):
-        from langflow.api.v2 import workflow as workflow_module
-
-        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
-
-        # Must not raise even when nothing is registered.
-        await workflow_module._clear_background_run("nope")
-
-
-class TestBackgroundRunReplayConcurrentReaders:
-    """``_BackgroundRun.replay`` must serve multiple concurrent re-attach readers.
-
-    The buffer's contract is that any number of clients can attach mid-run and
-    each one sees every frame from their ``start_index`` through ``finish``.
-    The asyncio.Condition wakeup is broadcast (``notify_all``) so every waiter
-    advances on each ``append``. This pins that contract at the unit level;
-    Playwright exercises it indirectly.
-    """
-
-    async def test_two_concurrent_readers_each_receive_all_frames(self):
-        import asyncio as _asyncio
-
-        from langflow.api.v2 import workflow as workflow_module
-
-        bg_run = workflow_module._BackgroundRun(user_id="u")
-
-        async def consume() -> list[bytes]:
-            return [frame async for frame in bg_run.replay(start_index=0)]
-
-        reader_a = _asyncio.create_task(consume())
-        reader_b = _asyncio.create_task(consume())
-
-        # Give both readers two ticks to enter ``_cond.wait()``. One tick is
-        # enough on CPython (asyncio schedules pending tasks FIFO on yield),
-        # but a second pass is cheap defensive insurance against future
-        # scheduler tweaks.
-        await _asyncio.sleep(0)
-        await _asyncio.sleep(0)
-
-        await bg_run.append(b"frame1")
-        await bg_run.append(b"frame2")
-        await bg_run.finish()
-
-        a_frames, b_frames = await _asyncio.wait_for(
-            _asyncio.gather(reader_a, reader_b),
-            timeout=5.0,
-        )
-        assert a_frames == [b"frame1", b"frame2"]
-        assert b_frames == [b"frame1", b"frame2"]
-
-    async def test_late_reader_replays_buffered_frames_then_tails(self):
-        """A reader attaching after some frames have been buffered still sees them all.
-
-        The first batch is drained from the snapshot; the reader then re-enters
-        ``_cond.wait()`` and picks up subsequent ``append`` calls before
-        ``finish`` releases it.
-        """
-        import asyncio as _asyncio
-
-        from langflow.api.v2 import workflow as workflow_module
-
-        bg_run = workflow_module._BackgroundRun(user_id="u")
-
-        # Buffer two frames before any reader attaches.
-        await bg_run.append(b"early-1")
-        await bg_run.append(b"early-2")
-
-        async def consume() -> list[bytes]:
-            return [frame async for frame in bg_run.replay(start_index=0)]
-
-        reader = _asyncio.create_task(consume())
-        await _asyncio.sleep(0)  # let the reader yield the early batch and re-enter wait
-
-        await bg_run.append(b"late-1")
-        await bg_run.finish()
-
-        frames = await _asyncio.wait_for(reader, timeout=5.0)
-        assert frames == [b"early-1", b"early-2", b"late-1"]
-
-    async def test_replay_with_start_index_skips_earlier_frames(self):
-        """``start_index`` honors the Last-Event-ID hand-off semantics."""
-        import asyncio as _asyncio
-
-        from langflow.api.v2 import workflow as workflow_module
-
-        bg_run = workflow_module._BackgroundRun(user_id="u")
-        await bg_run.append(b"f0")
-        await bg_run.append(b"f1")
-        await bg_run.append(b"f2")
-        await bg_run.finish()
-
-        collected = [frame async for frame in bg_run.replay(start_index=1)]
-        assert collected == [b"f1", b"f2"]
-
-        # A start_index past the end yields nothing and returns cleanly.
-        nothing = [frame async for frame in bg_run.replay(start_index=99)]
-        assert nothing == []
-
-        # Calling replay after finish from start_index=0 still replays the buffer.
-        async def _drain() -> list[bytes]:
-            return [frame async for frame in bg_run.replay(start_index=0)]
-
-        replayed = await _asyncio.wait_for(_drain(), timeout=5.0)
-        assert replayed == [b"f0", b"f1", b"f2"]
-
-
-class TestBufferBackgroundRunUnknownProtocolGuard:
-    """``_buffer_background_run`` flips the job to FAILED if the adapter registry was mutated.
-
-    The route validates ``stream_protocol`` up front, but the buffer task
-    re-resolves the adapter inside the fire-and-forget coroutine. If a
-    registration was dropped between the route's check and the coroutine's
-    start, ``get_stream_adapter`` raises ``UnknownStreamProtocolError`` and the
-    coroutine must:
-      - mark the buffer done (waking any re-attach reader)
-      - update the job row to ``FAILED`` with a finished timestamp
-      - return cleanly without raising (it is fire-and-forget)
-    """
-
-    async def test_missing_protocol_marks_bg_run_done_and_fails_job(
-        self,
-        created_api_key,
-        empty_flow,
-    ):
-        """The defensive UnknownStreamProtocolError path finalizes job + buffer cleanly."""
-        from uuid import uuid4 as _uuid4
-
-        from langflow.api.v2 import workflow as workflow_module
-        from langflow.api.v2.adapters import STREAM_ADAPTERS as _REGISTRY
-        from langflow.api.v2.converters import ParsedWorkflowRun
-        from langflow.services.database.models.flow.model import Flow, FlowRead
-        from langflow.services.database.models.jobs.model import Job, JobStatus
-        from langflow.services.database.models.user.model import User as _User
-        from langflow.services.database.models.user.model import UserRead
-        from langflow.services.deps import get_job_service
-
-        # Real Job row so update_job_status can flip it.
-        job_id = _uuid4()
-        await get_job_service().create_job(
-            job_id=job_id,
-            flow_id=empty_flow,
-            user_id=created_api_key.user_id,
-        )
-
-        async with session_scope() as session:
-            flow_row = await session.get(Flow, empty_flow)
-            flow = FlowRead.model_validate(flow_row, from_attributes=True)
-            user_row = await session.get(_User, created_api_key.user_id)
-            user = UserRead.model_validate(user_row, from_attributes=True)
-
-        bg_run = workflow_module._BackgroundRun(user_id=str(created_api_key.user_id))
-
-        # ``get_stream_adapter`` reads the registry dict from
-        # ``adapters.registry`` directly. Rebinding the imported reference on
-        # ``workflow_module`` has no effect on the lookup; we have to mutate the
-        # shared dict in place and restore it afterwards.
-        snapshot = dict(_REGISTRY)
-        _REGISTRY.clear()
-        try:
-            await workflow_module._buffer_background_run(
-                bg_run=bg_run,
-                flow=flow,
-                parsed=ParsedWorkflowRun(flow_id=str(empty_flow), mode="background"),
-                job_id=str(job_id),
-                current_user=user,
-                stream_protocol="agui",  # registered at import-time; cleared above
-            )
-        finally:
-            _REGISTRY.update(snapshot)
-
-        assert bg_run.done is True
-
-        async with session_scope() as session:
-            row = await session.get(Job, job_id)
-        assert row is not None
-        assert row.status == JobStatus.FAILED
-        assert row.finished_timestamp is not None
-
-    async def test_missing_protocol_does_not_raise(self, created_api_key, empty_flow):
-        """The coroutine is fire-and-forget; it must swallow the registry mismatch cleanly."""
-        from uuid import uuid4 as _uuid4
-
-        from langflow.api.v2 import workflow as workflow_module
-        from langflow.api.v2.adapters import STREAM_ADAPTERS as _REGISTRY
-        from langflow.api.v2.converters import ParsedWorkflowRun
-        from langflow.services.database.models.flow.model import Flow, FlowRead
-        from langflow.services.database.models.user.model import User as _User
-        from langflow.services.database.models.user.model import UserRead
-        from langflow.services.deps import get_job_service
-
-        job_id = _uuid4()
-        await get_job_service().create_job(
-            job_id=job_id,
-            flow_id=empty_flow,
-            user_id=created_api_key.user_id,
-        )
-
-        async with session_scope() as session:
-            flow_row = await session.get(Flow, empty_flow)
-            flow = FlowRead.model_validate(flow_row, from_attributes=True)
-            user_row = await session.get(_User, created_api_key.user_id)
-            user = UserRead.model_validate(user_row, from_attributes=True)
-
-        bg_run = workflow_module._BackgroundRun(user_id=str(created_api_key.user_id))
-
-        snapshot = dict(_REGISTRY)
-        _REGISTRY.clear()
-        try:
-            # Must not raise, even though the protocol is unknown.
-            await workflow_module._buffer_background_run(
-                bg_run=bg_run,
-                flow=flow,
-                parsed=ParsedWorkflowRun(flow_id=str(empty_flow), mode="background"),
-                job_id=str(job_id),
-                current_user=user,
-                stream_protocol="langflow",
-            )
-        finally:
-            _REGISTRY.update(snapshot)
-
-
 class TestStopWorkflowEndToEnd:
-    """The full ``POST /workflows/stop`` HTTP flow clears the in-memory buffer too.
+    """The full ``POST /workflows/stop`` HTTP flow marks the job CANCELLED.
 
-    ``test_background_run_can_be_stopped`` covers the 200 response. This class
-    pins the side-effects: the in-process ``_BACKGROUND_RUNS`` entry is popped,
-    the ``_BackgroundRun.done`` flag flips so re-attach readers unblock, and
-    the Job row is marked ``CANCELLED``.
+    The background path now runs through ``BackgroundExecutionService``: stop
+    writes a durable STOP signal, cancels the in-flight executor task, and the
+    Job row ends ``CANCELLED``. A run that already completed before /stop still
+    flips to CANCELLED (the user asked to stop), and a completion that races the
+    stop never overwrites the cancellation.
     """
 
-    async def test_stop_clears_in_memory_registry_and_marks_job_cancelled(
+    async def test_stop_marks_job_cancelled(
         self,
         client: AsyncClient,
         created_api_key,
@@ -1555,7 +1251,6 @@ class TestStopWorkflowEndToEnd:
     ):
         from uuid import UUID as _UUID
 
-        from langflow.api.v2 import workflow as workflow_module
         from langflow.services.database.models.jobs.model import Job, JobStatus
 
         headers = {"x-api-key": created_api_key.api_key}
@@ -1567,12 +1262,6 @@ class TestStopWorkflowEndToEnd:
         assert start.status_code == 200
         job_id = start.json()["job_id"]
 
-        # The registry holds the buffer keyed by job_id until /stop or finish.
-        assert job_id in workflow_module._BACKGROUND_RUNS, (
-            "Background run was not registered; the stop assertions below would be vacuous"
-        )
-        bg_run = workflow_module._BACKGROUND_RUNS[job_id]
-
         stop = await client.post(
             "api/v2/workflows/stop",
             json={"job_id": job_id},
@@ -1580,11 +1269,19 @@ class TestStopWorkflowEndToEnd:
         )
         assert stop.status_code == 200
 
-        # Side-effects: registry popped, buffer finished, job row CANCELLED.
-        assert job_id not in workflow_module._BACKGROUND_RUNS
-        assert bg_run.done is True
+        # The job row ends CANCELLED and stays CANCELLED (no COMPLETED overwrite).
+        import asyncio as _asyncio
 
-        async with session_scope() as session:
-            row = await session.get(Job, _UUID(job_id))
-        assert row is not None
-        assert row.status == JobStatus.CANCELLED
+        final = None
+        for _ in range(60):
+            async with session_scope() as session:
+                row = await session.get(Job, _UUID(job_id))
+            if row is not None and row.status in (
+                JobStatus.CANCELLED,
+                JobStatus.COMPLETED,
+                JobStatus.FAILED,
+            ):
+                final = row.status
+                break
+            await _asyncio.sleep(0.1)
+        assert final == JobStatus.CANCELLED, f"stop did not cancel the job: got {final}"

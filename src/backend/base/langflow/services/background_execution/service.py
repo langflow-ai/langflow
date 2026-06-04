@@ -42,11 +42,13 @@ if TYPE_CHECKING:
 # adapter + flow; tests inject a scripted generator.
 FrameSourceFactory = Callable[..., Any]
 
-# Statuses past which a job is terminal and stop/resubmit are no-ops.
-_TERMINAL_STATUSES = {
+# Statuses where the run has genuinely finished, so a STOP is pointless.
+# CANCELLED is intentionally excluded: ``stop_workflow`` flips the row to
+# CANCELLED before calling ``stop_job``, but the in-flight runner may still be
+# racing to COMPLETED — we must still write the STOP signal and cancel the task.
+_FINISHED_STATUSES = {
     JobStatus.COMPLETED,
     JobStatus.FAILED,
-    JobStatus.CANCELLED,
     JobStatus.TIMED_OUT,
 }
 
@@ -85,6 +87,9 @@ class BackgroundExecutionService(Service):
     # ------------------------------------------------------------------ submit
 
     async def submit(self, *, flow_id: UUID, request: dict[str, Any], user: UserRead) -> UUID:
+        # Lazy-start the executor so the facade works whether or not the app
+        # lifespan called start() first. start() is idempotent.
+        await self.start()
         job_service = get_job_service()
         job_id = uuid4()
         dedupe_key = request.get("idempotency_key")
@@ -110,7 +115,9 @@ class BackgroundExecutionService(Service):
         )
 
         async def _coro() -> None:
-            await runner.run(job_id=job_id, source_kwargs={})
+            # job_id reaches the frame source via source_kwargs so the default
+            # build-loop source can tag its memory-base hook with the run's job.
+            await runner.run(job_id=job_id, source_kwargs={"job_id": job_id})
 
         await self._executor.submit(str(job_id), _coro)
 
@@ -157,11 +164,14 @@ class BackgroundExecutionService(Service):
 
     async def stop_job(self, job_id: UUID, user: UserRead) -> None:
         job = await self._validate(job_id, user)
-        if job.status in _TERMINAL_STATUSES:
+        if job.status in _FINISHED_STATUSES:
             return
         job_service = get_job_service()
-        # Durable STOP so the runner's vertex-boundary poll sees it even if the
-        # in-flight task cancel races; then cancel the local task for promptness.
+        # Durable STOP so the runner's boundary poll (and its terminal reconcile)
+        # sees the stop even if the in-flight task cancel races; then cancel the
+        # local task for promptness. Written even when the row is already
+        # CANCELLED because the runner may still be mid-flight racing to
+        # COMPLETED — the durable STOP is what makes the reconcile win.
         await job_service.write_signal(job_id, SignalType.STOP)
         await self._executor.cancel(str(job_id))
 
