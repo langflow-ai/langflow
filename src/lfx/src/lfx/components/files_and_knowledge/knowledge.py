@@ -1664,17 +1664,22 @@ class KnowledgeComponent(Component):
                 ]
                 results = results[: self.top_k]
 
-            id_to_embedding: dict[str, list[float]] = {}
+            embeddings_by_key: dict[tuple[str, str], list[float]] = {}
             if self.include_embeddings and results:
-                doc_ids = {doc.metadata.get("_id") for doc, _score in results if doc.metadata.get("_id")}
-                if doc_ids:
-                    async for batch in backend.iter_documents(include_embeddings=True):
-                        for entry in batch:
-                            doc_id = entry.metadata.get("_id")
-                            if doc_id in doc_ids and entry.embedding is not None:
-                                id_to_embedding[doc_id] = entry.embedding
-                        if len(id_to_embedding) == len(doc_ids):
-                            break
+                # Join each retrieved chunk to its stored embedding. We key on
+                # ``_id`` when present and fall back to page content otherwise,
+                # so KBs populated by direct file upload — whose chunks carry no
+                # ``_id`` — still resolve. See ``_embedding_match_key``.
+                wanted_keys = {_embedding_match_key(doc.page_content, doc.metadata) for doc, _score in results}
+                async for batch in backend.iter_documents(include_embeddings=True):
+                    for entry in batch:
+                        if entry.embedding is None:
+                            continue
+                        key = _embedding_match_key(entry.content, entry.metadata)
+                        if key in wanted_keys:
+                            embeddings_by_key[key] = entry.embedding
+                    if len(embeddings_by_key) == len(wanted_keys):
+                        break
 
             data_list: list[Data] = []
             for doc, score in results:
@@ -1684,12 +1689,34 @@ class KnowledgeComponent(Component):
                 if self.include_metadata:
                     kwargs.update(doc.metadata)
                 if self.include_embeddings:
-                    kwargs["_embeddings"] = id_to_embedding.get(doc.metadata.get("_id"))
+                    kwargs["_embeddings"] = embeddings_by_key.get(_embedding_match_key(doc.page_content, doc.metadata))
                 data_list.append(Data(**kwargs))
 
             return DataFrame(data=data_list)
         finally:
             await backend.teardown()
+
+
+def _embedding_match_key(content: str, metadata: dict[str, Any] | None) -> tuple[str, str]:
+    """Build a stable key for aligning a retrieved chunk with its stored embedding.
+
+    Embeddings are gathered separately (via ``iter_documents``) and then joined
+    back onto the search results. Component-driven ingestion stamps a
+    content-hash ``_id`` on every chunk, but direct file-upload ingestion
+    (``KBIngestionHelper.perform_ingestion``) does not. Keying the join purely on
+    ``_id`` therefore left every upload-populated KB with ``_embeddings: None``.
+
+    We prefer ``_id`` when present (so legitimately distinct chunks that happen to
+    share text aren't collapsed) and fall back to the chunk's page content
+    otherwise. The content fallback is exact for the embedding use case: two
+    chunks with identical text necessarily share the same embedding vector. The
+    leading ``"id"`` / ``"content"`` tag namespaces the two key spaces so a mixed
+    KB (some chunks with ``_id``, some without) never cross-matches.
+    """
+    doc_id = metadata.get("_id") if metadata else None
+    if doc_id:
+        return ("id", str(doc_id))
+    return ("content", content or "")
 
 
 def _parse_metadata_filter(raw: str | None) -> dict[str, list[str]]:

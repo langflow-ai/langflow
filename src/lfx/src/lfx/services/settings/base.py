@@ -9,7 +9,7 @@ from typing import Any, Literal
 import aiofiles
 import orjson
 import yaml
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -68,6 +68,16 @@ class Settings(BaseSettings):
 
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
+
+    kb_allowed_folder_roots: list[str] = []
+    """Allow-list of directories the folder-ingestion endpoint may read from.
+
+    Comma-separated when set via env (``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS``),
+    e.g. ``/srv/docs,/data/shared``. Empty by default — operators must opt in.
+    ``POST /api/v1/knowledge_bases/{kb_name}/ingest/folder`` refuses to walk any
+    directory that is not equal to or inside one of these roots; symlink escapes
+    are blocked because the path is resolved before the containment check. Leave
+    empty in multi-tenant cloud deployments to refuse arbitrary-path access."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -244,6 +254,16 @@ class Settings(BaseSettings):
     redis_db: int = 0
     redis_url: str | None = None
     redis_cache_expire: int = 3600
+
+    # Rate Limiting
+    rate_limit_enabled: bool = True
+    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    rate_limit_per_minute: int = 5
+    """Number of login attempts allowed per minute per IP."""
+    rate_limit_storage_uri: str = "memory://"
+    """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
+    rate_limit_trust_proxy: bool = False
+    """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
 
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
@@ -474,14 +494,28 @@ class Settings(BaseSettings):
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
     as a safety measure.
 
-    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
-    that will be allowed to execute, even when allow_custom_components is False.
+    Note: LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH can be used to define
+    an allow-list of custom components that will be allowed to execute, even when
+    allow_custom_components is False. That bypass can be disabled with
+    allow_components_paths_override.
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
     custom_component_admin_only: bool = False
     """If set to True, only admin users can edit custom component code. Regular editors
     are blocked from modifying custom component templates."""
+
+    allow_components_paths_override: bool = True
+    """If set to False, LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH will
+    not bypass the allow_custom_components=False restriction — only components matching
+    built-in server templates will be executable.
+
+    Default is True, which preserves the existing behavior: components loaded from those
+    env-var paths act as an admin-curated allow-list that remains executable even when
+    allow_custom_components is False.
+
+    Has no effect when allow_custom_components is True (the flag is not blocking anything
+    to override)."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = True
@@ -830,6 +864,56 @@ class Settings(BaseSettings):
         elif isinstance(value, list):
             value = [str(p) if isinstance(p, Path) else p for p in value]
         return value
+
+    @model_validator(mode="after")
+    def _enforce_components_paths_override(self):
+        """Strip env-var-provided component paths when their bypass is disabled.
+
+        When ``allow_custom_components`` is False the server only trusts components
+        matching built-in templates. By default ``LANGFLOW_COMPONENTS_PATH`` and
+        ``LANGFLOW_COMPONENTS_INDEX_PATH`` still contribute to that trust set (an
+        admin-curated allow-list). Setting ``allow_components_paths_override=False``
+        disables that bypass: here we remove the env-contributed entries so nothing
+        downstream loads or trusts them.
+        """
+        if self.allow_custom_components or self.allow_components_paths_override:
+            return self
+
+        env_components_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
+        if env_components_path:
+            # The env var may be a comma-separated list; CustomSource splits it
+            # before the field validator runs, so self.components_path contains
+            # individual entries rather than the raw comma-joined string.
+            # In-place removal avoids re-triggering ``set_components_path``, which
+            # would re-read LANGFLOW_COMPONENTS_PATH and append the paths again.
+            env_paths = [p.strip() for p in env_components_path.split(",") if p.strip()]
+            stripped_any = False
+            for env_path in env_paths:
+                while env_path in self.components_path:
+                    self.components_path.remove(env_path)
+                    stripped_any = True
+            if stripped_any:
+                logger.warning(
+                    "Ignoring LANGFLOW_COMPONENTS_PATH=%s: "
+                    "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                    "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                    env_components_path,
+                )
+
+        # Only strip the index path when it came from the env var, mirroring the
+        # components_path handling above. A value set via config/YAML is not part of
+        # the env-var bypass this flag governs, so leave it untouched.
+        env_components_index_path = os.getenv("LANGFLOW_COMPONENTS_INDEX_PATH")
+        if env_components_index_path and self.components_index_path == env_components_index_path:
+            logger.warning(
+                "Ignoring LANGFLOW_COMPONENTS_INDEX_PATH=%s: "
+                "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                self.components_index_path,
+            )
+            self.components_index_path = None
+
+        return self
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

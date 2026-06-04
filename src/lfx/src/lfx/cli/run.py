@@ -49,7 +49,7 @@ def _check_langchain_version_compatibility(error_message: str) -> str | None:
 
 @partial(syncify, raise_sync_error=False)
 async def run(
-    script_path: Path | None = typer.Argument(  # noqa: B008
+    script_path: Path | None = typer.Argument(
         None, help="Path to the Python script (.py) or JSON flow (.json) containing a graph"
     ),
     input_value: str | None = typer.Argument(None, help="Input value to pass to the graph"),

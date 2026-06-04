@@ -466,7 +466,7 @@ describe("usePrepareDeploy — handleUpdateComplete", () => {
     });
 
     expect(mockSetSuccessData).toHaveBeenCalledWith({
-      title: 'Deployment "Sales Bot" updated successfully',
+      title: '"Sales Bot" has been updated.',
     });
   });
 });

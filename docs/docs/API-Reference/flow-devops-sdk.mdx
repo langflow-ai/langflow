@@ -135,7 +135,7 @@ Instead of manually exporting, sharing, and importing flow JSON files from the L
 The Flow DevOps SDK can validate that local flows are correctly formed before pushing to the Langflow with `lfx validate`.
 
 1. To test the Simple Agent starter flow, pass the flow JSON path to the `lfx validate` command:
-    ```
+    ```bash
     lfx validate flows/Simple_Agent.json
     ```
 2. Once validated, push flow changes to the server with `lfx push`.
@@ -150,13 +150,13 @@ Generate a `requirements.txt` file to capture the minimal Python dependencies, s
 1. From your project directory, point `lfx requirements` at a flow JSON file.
    To print the requirements to the terminal:
 
-   ```
+   ```bash
    lfx requirements flows/Simple_Agent.json
    ```
 
    To write a `requirements.txt` file instead of printing, use `-o` or `--output`:
 
-   ```
+   ```bash
    lfx requirements flows/Simple_Agent.json -o requirements.txt
    ```
 
@@ -164,12 +164,12 @@ Generate a `requirements.txt` file to capture the minimal Python dependencies, s
    To serve the flow without the Langflow UI, do the following:
 
    1. Create a virtual environment:
-   ```
+   ```bash
    uv venv VENV_NAME
    ```
 
    2. Activate the virtual environment.
-   ```
+   ```bash
    source VENV_NAME/bin/activate
    ```
 
@@ -179,12 +179,12 @@ Generate a `requirements.txt` file to capture the minimal Python dependencies, s
    ```
 
    4. To set a Langflow API key, run:
-   ```
+   ```bash
    export LANGFLOW_API_KEY=LANGFLOW_API_KEY
    ```
 
    5. To serve the flow without the Langflow UI, pass the flow JSON path to the `lfx serve` command:
-   ```
+   ```bash
    lfx serve flows/Simple_Agent.json
    ```
 
