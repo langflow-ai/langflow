@@ -27,7 +27,7 @@ keywords = [
 # the Graph RAG component, and ``orjson`` is used by ``astradb_graph``
 # for vector store serialization.
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx>=1.10.0,<2.0.0",
     "astrapy>=2.1.0,<3.0.0",
     "langchain-astradb~=1.0.0",
     "langchain-graph-retriever==0.8.0",

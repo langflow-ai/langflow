@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "pinecone"]
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx>=1.10.0,<2.0.0",
     "langchain-pinecone~=0.2.13; python_version < '3.14'",
     "langchain-core>=1.3.3,<2.0.0",
     "numpy",

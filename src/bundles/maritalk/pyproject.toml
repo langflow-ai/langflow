@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "maritalk"]
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx>=1.10.0,<2.0.0",
     "langchain-community~=0.4.1",
 ]
 

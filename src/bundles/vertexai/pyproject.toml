@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "vertexai"]
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx>=1.10.0,<2.0.0",
     "langchain-google-vertexai>=3.2.0",
     "google-cloud-aiplatform>=1.60.0",
 ]

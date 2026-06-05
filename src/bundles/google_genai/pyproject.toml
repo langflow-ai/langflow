@@ -11,7 +11,7 @@ authors = [
 keywords = ["langflow", "lfx", "extension", "bundle", "google", "google_genai"]
 
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx>=1.10.0,<2.0.0",
     "langchain-google-genai~=4.1.2",
     "pydantic>=2.10,<3.0",
 ]

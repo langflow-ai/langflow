@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "crewai"]
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
 dependencies = [
-    "lfx>=0.5.0",
+    "lfx>=1.10.0,<2.0.0",
     # crewai is intentionally NOT pinned here because the workspace's
     # ``langflow-base[ag2]`` extra pulls in ag2 which transitively pulls
     # crewai at a different version (httpx conflict).  Pre-extraction
