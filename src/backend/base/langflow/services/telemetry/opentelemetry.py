@@ -210,8 +210,11 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             # Get existing meter provider if any
             existing_provider = metrics.get_meter_provider()
 
-            # Check if FastAPI instrumentation is already set up
-            if hasattr(existing_provider, "get_meter") and existing_provider.get_meter("http.server"):
+            # Reuse an existing *real* SDK MeterProvider (one configured elsewhere with
+            # its own readers). A proxy/no-op provider must NOT be reused: it answers
+            # get_meter() truthily but carries no PrometheusMetricReader, so OTel metrics
+            # would never reach the Prometheus exposition.
+            if isinstance(existing_provider, MeterProvider):
                 self._meter_provider = existing_provider
             else:
                 resource = Resource.create({"service.name": "langflow"})
