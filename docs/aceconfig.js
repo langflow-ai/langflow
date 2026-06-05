@@ -1,8 +1,9 @@
 // IBM Equal Access accessibility-checker configuration
 // https://github.com/IBMa/equal-access/tree/master/accessibility-checker
 module.exports = {
-  // Latest deployed rule archive
-  ruleArchive: "latest",
+  // Pinned rule archive — keeps CI deterministic (IBM updates "latest"
+  // independently of this repo). Bump deliberately, like any dependency.
+  ruleArchive: "19May2026",
   // IBM_Accessibility maps to WCAG 2.1 AA + IBM requirements
   policies: ["IBM_Accessibility"],
   // Fail levels: what makes the scan exit non-zero (kept to real violations)
