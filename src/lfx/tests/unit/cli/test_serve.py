@@ -709,7 +709,8 @@ def _run_serve_capturing_gunicorn(*, workers, max_requests, captured, limit_conc
             patch("lfx.cli.serve_gunicorn.LFXGunicornApp", FakeGunicornApp),
         ):
             # Direct call (not via CLI): typer defaults are not applied, so pass
-            # max_requests / limit_concurrency explicitly even when None.
+            # max_requests / limit_concurrency / reset_environ / sync_workers
+            # explicitly even when None/False (OptionInfo sentinels are truthy).
             serve_command(
                 script_paths=[str(p)],
                 host="127.0.0.1",
@@ -725,6 +726,8 @@ def _run_serve_capturing_gunicorn(*, workers, max_requests, captured, limit_conc
                 no_env_fallback=False,
                 max_requests=max_requests,
                 limit_concurrency=limit_concurrency,
+                reset_environ=False,
+                sync_workers=False,
             )
 
 
@@ -828,6 +831,8 @@ def test_serve_command_sets_startup_paths_env_for_multi_worker(tmp_path):
             stdin=False,
             check_variables=False,
             no_env_fallback=False,
+            reset_environ=False,
+            sync_workers=False,
         )
 
     assert _SERVE_STARTUP_PATHS_ENV in captured_env, "LFX_SERVE_STARTUP_PATHS must be set before the launch"
@@ -886,6 +891,8 @@ def test_serve_command_does_not_set_startup_paths_when_flow_dir_set(tmp_path):
             stdin=False,
             check_variables=False,
             no_env_fallback=False,
+            reset_environ=False,
+            sync_workers=False,
         )
 
     assert _SERVE_STARTUP_PATHS_ENV in captured_env, "env var must still be set (to empty list)"
@@ -938,6 +945,8 @@ def test_serve_command_warns_when_workers_gt1_without_flow_dir():
                 stdin=False,
                 check_variables=False,
                 no_env_fallback=False,
+                reset_environ=False,
+                sync_workers=False,
             )
 
     assert any("--flow-dir" in msg for msg in stderr_output), (
@@ -978,6 +987,8 @@ def test_serve_command_rejects_py_with_multiple_workers(tmp_path):
                 stdin=False,
                 check_variables=False,
                 no_env_fallback=False,
+                reset_environ=False,
+                sync_workers=False,
             )
 
     assert any(".py" in msg and "cannot be used" in msg for msg in stderr_output), stderr_output
@@ -1031,6 +1042,8 @@ def test_serve_command_allows_py_with_multiple_workers_no_flow_dir(tmp_path):
             stdin=False,
             check_variables=False,
             no_env_fallback=False,
+            reset_environ=False,
+            sync_workers=False,
         )
 
     # LFX_SERVE_STARTUP_PATHS must contain the .py path so workers can reload it
@@ -1084,6 +1097,8 @@ def test_serve_command_no_warning_when_workers_gt1_with_flow_dir(tmp_path):
                 stdin=False,
                 check_variables=False,
                 no_env_fallback=False,
+                reset_environ=False,
+                sync_workers=False,
             )
 
     assert not any("--flow-dir" in msg for msg in stderr_output)

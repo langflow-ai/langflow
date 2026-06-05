@@ -129,7 +129,12 @@ class LFXGunicornApp(BaseApplication):
                 self.cfg.set(key, value)
 
     def load(self):
-        # preload_app=True -> gunicorn imports this string in the master pre-fork.
-        from lfx.cli.serve_preloaded_app import app
+        # preload_app=True -> gunicorn imports this "module:attr" string in the master
+        # pre-fork. The async path passes the ASGI app ("...:app"); --sync-workers
+        # passes the WSGI bridge ("...:wsgi_application"). Honor whichever was given
+        # rather than hardcoding one, so the worker gets the callable it expects.
+        import importlib
 
-        return app
+        module_str, _, attr = self._app_import_string.partition(":")
+        module = importlib.import_module(module_str)
+        return getattr(module, attr)

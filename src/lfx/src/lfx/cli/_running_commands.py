@@ -177,6 +177,25 @@ def register(app: typer.Typer) -> None:
                 "instead of reading from the process environment."
             ),
         ),
+        reset_environ: bool = typer.Option(
+            False,
+            "--reset-environ/--no-reset-environ",
+            help=(
+                "Snapshot os.environ before each flow run and restore it afterward, so a "
+                "flow's environment mutations (or request-scoped credentials) cannot leak "
+                "into the next request served by the same warm worker. Off by default."
+            ),
+        ),
+        sync_workers: bool = typer.Option(
+            False,
+            "--sync-workers/--no-sync-workers",
+            help=(
+                "Use gunicorn's blocking 'sync' worker (Unix, --workers > 1) so the kernel "
+                "routes each request to an idle worker instead of queueing it behind an "
+                "in-flight request on a busy async worker. Requires the 'a2wsgi' package. "
+                "Off by default (async worker)."
+            ),
+        ),
     ) -> None:
         """Serve LFX flows as a web API (lazy-loaded)."""
         from pathlib import Path
@@ -201,4 +220,6 @@ def register(app: typer.Typer) -> None:
             no_env_fallback=no_env_fallback,
             max_requests=max_requests,
             limit_concurrency=limit_concurrency,
+            reset_environ=reset_environ,
+            sync_workers=sync_workers,
         )

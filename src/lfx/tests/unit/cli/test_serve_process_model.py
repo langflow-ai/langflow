@@ -16,6 +16,7 @@ Covers the preload/warm/guard/fork-safety pieces of the gunicorn
 """
 
 import json
+import os
 import sys
 from pathlib import Path
 
@@ -430,3 +431,129 @@ def test_pre_fork_flags_ghost_thread_but_not_benign():
     blob = "\n".join(warnings)
     assert "Ghost threads" in blob and "EvilGhostThread" in blob, warnings
     assert "OTel-benign" not in blob  # benign-named threads are filtered out
+
+
+# ---------------------------------------------------------------------------
+# Opt-in flags: --reset-environ (os.environ snapshot/restore) and --sync-workers
+# (gunicorn sync worker + a2wsgi bridge). Both default OFF so the committed
+# behavior is unchanged; these tests assert the opt-in wiring.
+# ---------------------------------------------------------------------------
+
+
+async def test_guarded_execute_restores_environ_when_enabled(monkeypatch):
+    """With LFX_SERVE_RESET_ENVIRON=1, a flow's os.environ mutation is rolled back."""
+    from lfx.cli import serve_app
+
+    monkeypatch.setenv(serve_app._SERVE_RESET_ENVIRON_ENV, "1")
+    monkeypatch.delenv("LEAKED_BY_FLOW", raising=False)
+
+    async def fake_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        os.environ["LEAKED_BY_FLOW"] = "secret"
+        return ([], "")
+
+    monkeypatch.setattr(serve_app, "execute_graph_with_capture", fake_capture)
+    await serve_app.guarded_execute(object(), "a", None)
+
+    # The mutation made during the run is restored after it (no cross-request leak).
+    assert "LEAKED_BY_FLOW" not in os.environ
+
+
+async def test_guarded_execute_does_not_reset_environ_by_default(monkeypatch):
+    """Default (flag off): os.environ mutations persist — committed behavior is unchanged."""
+    from lfx.cli import serve_app
+
+    monkeypatch.delenv(serve_app._SERVE_RESET_ENVIRON_ENV, raising=False)
+    monkeypatch.delenv("LEAKED_BY_FLOW", raising=False)
+
+    async def fake_capture(graph, input_value, session_id=None):  # noqa: ARG001
+        os.environ["LEAKED_BY_FLOW"] = "secret"
+        return ([], "")
+
+    monkeypatch.setattr(serve_app, "execute_graph_with_capture", fake_capture)
+    try:
+        await serve_app.guarded_execute(object(), "a", None)
+        assert os.environ.get("LEAKED_BY_FLOW") == "secret"  # not restored
+    finally:
+        monkeypatch.delenv("LEAKED_BY_FLOW", raising=False)
+
+
+def _capture_gunicorn_launch(monkeypatch, **launch_overrides):
+    """Run ``_launch_workers`` on the Unix gunicorn path with a fake LFXGunicornApp.
+
+    Returns a dict with the captured ``app_import_string``, gunicorn ``options``,
+    and a snapshot of ``os.environ`` taken inside ``run()`` (i.e. what forked
+    workers would inherit).
+    """
+    from lfx.cli import commands
+
+    captured: dict = {}
+
+    class FakeGunicornApp:
+        def __init__(self, app_import_string, options):
+            captured["app_import_string"] = app_import_string
+            captured["options"] = options
+
+        def run(self):
+            captured["env"] = dict(os.environ)
+
+    monkeypatch.setattr("lfx.cli.serve_gunicorn.LFXGunicornApp", FakeGunicornApp)
+    kwargs = {
+        "host": "127.0.0.1",
+        "port": 8000,
+        "workers": 2,
+        "log_level": "warning",
+        "flow_dir": None,
+        "no_env_fallback": False,
+        "script_paths": None,
+        "temp_file_to_cleanup": None,
+        "verbose_print": lambda *_a, **_k: None,
+        "max_requests": None,
+        "limit_concurrency": None,
+    }
+    kwargs.update(launch_overrides)
+    commands._launch_workers(**kwargs)
+    return captured
+
+
+def test_launch_workers_default_uses_async_uvicorn_worker(monkeypatch):
+    """Default (no --sync-workers): the async LFXUvicornWorker serves the ASGI app."""
+    captured = _capture_gunicorn_launch(monkeypatch)
+    assert captured["app_import_string"] == "lfx.cli.serve_preloaded_app:app"
+    assert captured["options"]["worker_class"] == "lfx.cli.serve_gunicorn.LFXUvicornWorker"
+
+
+def test_launch_workers_sync_workers_uses_sync_worker(monkeypatch):
+    """--sync-workers swaps in gunicorn's sync worker serving the a2wsgi WSGI bridge."""
+    captured = _capture_gunicorn_launch(monkeypatch, sync_workers=True)
+    assert captured["app_import_string"] == "lfx.cli.serve_preloaded_app:wsgi_application"
+    assert captured["options"]["worker_class"] == "sync"
+
+
+def test_launch_workers_sync_workers_without_a2wsgi_errors(monkeypatch):
+    """--sync-workers fails fast in the parent when a2wsgi is not installed."""
+    import typer
+
+    monkeypatch.setitem(sys.modules, "a2wsgi", None)  # forces `import a2wsgi` to raise ImportError
+    with pytest.raises(typer.Exit):
+        _capture_gunicorn_launch(monkeypatch, sync_workers=True)
+    # env vars set before the failed launch are still cleaned up
+    from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
+
+    assert _SERVE_RESET_ENVIRON_ENV not in os.environ
+
+
+def test_launch_workers_reset_environ_exports_env_for_workers(monkeypatch):
+    """--reset-environ exports LFX_SERVE_RESET_ENVIRON=1 (inherited by workers), then cleans up."""
+    from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
+
+    captured = _capture_gunicorn_launch(monkeypatch, reset_environ=True)
+    assert captured["env"].get(_SERVE_RESET_ENVIRON_ENV) == "1"
+    assert _SERVE_RESET_ENVIRON_ENV not in os.environ  # cleaned up after launch
+
+
+def test_launch_workers_reset_environ_off_by_default(monkeypatch):
+    """Without --reset-environ, the env var is exported as "0" (snapshot/restore disabled)."""
+    from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
+
+    captured = _capture_gunicorn_launch(monkeypatch)
+    assert captured["env"].get(_SERVE_RESET_ENVIRON_ENV) == "0"

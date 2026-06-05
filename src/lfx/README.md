@@ -259,6 +259,13 @@ To view the LFX server's API docs and schema, see the `/docs` endpoint at `http:
 | `--verbose`, `-v` | Show diagnostic output and execution details. |
 | `--flow-json` | Read inline flow JSON content as a string. Example: `uv run lfx serve --flow-json '{...}'`. |
 | `--stdin` | Read JSON flow content from `stdin`. Example: `cat flow.json | uv run lfx serve --stdin`. |
+| `--workers`, `-w` | Number of worker processes. Use with `--flow-dir` for multi-worker flow sharing. Default: `1`. |
+| `--flow-dir` | Directory for filesystem-backed flow storage shared across workers (e.g. `/tmp/lfx-flows` for single-pod, or a PVC mount for cross-pod). Defaults to in-memory only when omitted. |
+| `--max-requests` | Recycle each worker after this many requests (gunicorn, Unix-only, `--workers > 1`); `1` gives per-request recycling. Default: unset (workers are never recycled). |
+| `--limit-concurrency` | Max in-flight requests per worker (`--workers > 1`); excess get HTTP 503. Default: unset (unlimited). |
+| `--no-env-fallback` / `--env-fallback` | Disable the `os.environ` fallback for credential variables; variables not supplied via `global_vars` per request resolve to `None` instead of reading the process environment. Default: `--env-fallback` (fallback enabled). |
+| `--reset-environ` / `--no-reset-environ` | Snapshot `os.environ` before each flow run and restore it afterward, so a flow's environment mutations (or request-scoped credentials) cannot leak into the next request served by the same warm worker. Default: `--no-reset-environ` (off). |
+| `--sync-workers` / `--no-sync-workers` | Multi-worker only (`--workers > 1`, Unix). Use gunicorn's blocking `sync` worker so the kernel routes each request to an idle worker instead of queueing it behind an in-flight request on a busy async worker. Requires the `a2wsgi` package (`pip install a2wsgi`). Default: `--no-sync-workers` (async worker). |
 
 ## Run the simple agent flow with `lfx run`
 

@@ -17,3 +17,26 @@ from lfx.cli.serve_app import build_registry_from_env, create_multi_serve_app
 
 registry = build_registry_from_env()
 app = create_multi_serve_app(registry=registry)
+
+# WSGI bridge entrypoint for the opt-in ``lfx serve --sync-workers`` mode, which
+# runs gunicorn's blocking ``sync`` worker so the kernel routes each request to an
+# idle worker (an async worker keeps accepting connections while busy, which can
+# queue a second request behind an in-flight one even when other workers are idle).
+# The ASGI->WSGI bridge is created LAZILY on first request, never at preload: a2wsgi
+# spins up a background event-loop thread, and threads do not survive fork(), so a
+# bridge built in the preload master would be dead in every forked worker. Building
+# it on first call constructs it inside the (post-fork) worker process instead.
+_bridge = None
+
+
+def wsgi_application(environ, start_response):
+    """Lazily-constructed a2wsgi bridge wrapping the preloaded ASGI ``app``."""
+    global _bridge  # noqa: PLW0603
+    if _bridge is None:
+        try:
+            from a2wsgi import ASGIMiddleware
+        except ImportError as exc:  # pragma: no cover - exercised via --sync-workers without the dep
+            msg = "lfx serve --sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi"
+            raise RuntimeError(msg) from exc
+        _bridge = ASGIMiddleware(app)
+    return _bridge(environ, start_response)

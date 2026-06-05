@@ -221,6 +221,25 @@ def serve_command(
             "instead of reading from the process environment."
         ),
     ),
+    reset_environ: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--reset-environ/--no-reset-environ",
+        help=(
+            "Snapshot os.environ before each flow run and restore it afterward, so a "
+            "flow's environment mutations (or request-scoped credentials) cannot leak "
+            "into the next request served by the same warm worker. Off by default."
+        ),
+    ),
+    sync_workers: bool = typer.Option(
+        False,  # noqa: FBT003
+        "--sync-workers/--no-sync-workers",
+        help=(
+            "Use gunicorn's blocking 'sync' worker (Unix, --workers > 1) so the kernel "
+            "routes each request to an idle worker instead of queueing it behind an "
+            "in-flight request on a busy async worker. Requires the 'a2wsgi' package. "
+            "Off by default (async worker)."
+        ),
+    ),
 ) -> None:
     """Serve LFX flows as a web API.
 
@@ -383,8 +402,16 @@ def serve_command(
                     verbose_print=verbose_print,
                     max_requests=max_requests,
                     limit_concurrency=limit_concurrency,
+                    reset_environ=reset_environ,
+                    sync_workers=sync_workers,
                 )
             else:
+                from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
+
+                # Single worker also serves many requests warm, so honor --reset-environ
+                # here (read per request by guarded_execute). --sync-workers is a
+                # multi-worker routing concern and has no effect with one worker.
+                os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
                 serve_app = create_multi_serve_app(registry=registry)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
@@ -413,6 +440,8 @@ def _launch_workers(
     verbose_print: Callable[[str], None],
     max_requests: int | None,
     limit_concurrency: int | None,
+    reset_environ: bool = False,
+    sync_workers: bool = False,
 ) -> None:
     """Launch ``workers`` worker processes for ``lfx serve --workers N``.
 
@@ -434,11 +463,19 @@ def _launch_workers(
     falls back to uvicorn's own multi-worker supervisor (no preload, no per-request
     recycling). ``--limit-concurrency`` is still honored there (uvicorn-native), but
     ``--max-requests`` (recycling) is refused, since it cannot be supported.
+
+    ``reset_environ`` (``--reset-environ``) is forwarded to the workers via
+    ``LFX_SERVE_RESET_ENVIRON`` so each worker snapshots/restores ``os.environ``
+    around every flow run (see ``guarded_execute``). ``sync_workers``
+    (``--sync-workers``, Unix only) swaps the async worker for gunicorn's blocking
+    ``sync`` worker wrapped by an a2wsgi ASGI->WSGI bridge, so the kernel routes each
+    request to an idle worker. Both default off.
     """
     from lfx.cli.serve_app import (
         _SERVE_FLOW_DIR_ENV,
         _SERVE_LIMIT_CONCURRENCY_ENV,
         _SERVE_NO_ENV_FALLBACK_ENV,
+        _SERVE_RESET_ENVIRON_ENV,
         _SERVE_STARTUP_PATHS_ENV,
     )
 
@@ -459,6 +496,9 @@ def _launch_workers(
     # Read per worker by LFXUvicornWorker (Unix); passed to uvicorn.run on Windows.
     if limit_concurrency is not None:
         os.environ[_SERVE_LIMIT_CONCURRENCY_ENV] = str(limit_concurrency)
+    # Read per request by guarded_execute in each worker. Always set explicitly so a
+    # stray inherited value can't silently flip behavior.
+    os.environ[_SERVE_RESET_ENVIRON_ENV] = "1" if reset_environ else "0"
 
     try:
         if sys.platform == "win32":
@@ -467,6 +507,13 @@ def _launch_workers(
                     "Error: --max-requests enables per-request worker recycling via gunicorn, "
                     "which is not available on Windows. Omit --max-requests to run multi-worker "
                     "without isolation, or deploy on Linux/macOS for per-request isolation."
+                )
+                raise typer.Exit(1)
+            if sync_workers:
+                verbose_print(
+                    "Error: --sync-workers uses gunicorn's sync worker, which is not available on "
+                    "Windows. Omit --sync-workers to run multi-worker on Windows, or deploy on "
+                    "Linux/macOS for idle-worker routing."
                 )
                 raise typer.Exit(1)
             # gunicorn cannot run on Windows; fall back to uvicorn's multi-worker
@@ -491,14 +538,32 @@ def _launch_workers(
         else:
             from lfx.cli.serve_gunicorn import LFXGunicornApp
 
+            if sync_workers:
+                # Fail fast in the parent rather than per-worker on first request.
+                try:
+                    import a2wsgi  # noqa: F401
+                except ImportError as exc:
+                    verbose_print(
+                        "Error: --sync-workers requires the 'a2wsgi' package. Install it with: pip install a2wsgi"
+                    )
+                    raise typer.Exit(1) from exc
+                # gunicorn's blocking sync worker stops accepting while a request runs,
+                # so the kernel routes the next request to an idle worker. It serves the
+                # ASGI app through the a2wsgi WSGI bridge (built lazily, post-fork).
+                app_import_string = "lfx.cli.serve_preloaded_app:wsgi_application"
+                worker_class = "sync"
+            else:
+                # Async worker; applies LFX_SERVE_LIMIT_CONCURRENCY (gunicorn's
+                # UvicornWorker cannot forward uvicorn's limit_concurrency).
+                app_import_string = "lfx.cli.serve_preloaded_app:app"
+                worker_class = "lfx.cli.serve_gunicorn.LFXUvicornWorker"
+
             LFXGunicornApp(
-                "lfx.cli.serve_preloaded_app:app",
+                app_import_string,
                 {
                     "bind": f"{host}:{port}",
                     "workers": workers,
-                    # Custom worker applies LFX_SERVE_LIMIT_CONCURRENCY (gunicorn's
-                    # UvicornWorker cannot forward uvicorn's limit_concurrency).
-                    "worker_class": "lfx.cli.serve_gunicorn.LFXUvicornWorker",
+                    "worker_class": worker_class,
                     "preload_app": True,
                     # None -> 0 (gunicorn's default: never recycle). 1 -> recycle per request.
                     "max_requests": max_requests if max_requests is not None else 0,
@@ -517,6 +582,7 @@ def _launch_workers(
             _SERVE_NO_ENV_FALLBACK_ENV,
             _SERVE_STARTUP_PATHS_ENV,
             _SERVE_LIMIT_CONCURRENCY_ENV,
+            _SERVE_RESET_ENVIRON_ENV,
         ):
             os.environ.pop(k, None)
 

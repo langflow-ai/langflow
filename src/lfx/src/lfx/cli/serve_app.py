@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 import time
 import traceback
 import uuid
@@ -57,6 +58,12 @@ _SERVE_STARTUP_PATHS_ENV = f"{_SERVE_ENV_PREFIX}STARTUP_PATHS"
 # uvicorn limit_concurrency applied per worker by LFXUvicornWorker (gunicorn's
 # UvicornWorker doesn't expose it). Set by serve_command; read in each worker.
 _SERVE_LIMIT_CONCURRENCY_ENV = f"{_SERVE_ENV_PREFIX}LIMIT_CONCURRENCY"
+# Opt-in (`lfx serve --reset-environ`): when "1", guarded_execute snapshots
+# os.environ before each flow run and restores it after, so env mutations made by
+# one request (or request-scoped credentials) cannot leak into the next request
+# served by the same warm worker. Off by default. Set by serve_command; read per
+# request in guarded_execute.
+_SERVE_RESET_ENVIRON_ENV = f"{_SERVE_ENV_PREFIX}RESET_ENVIRON"
 api_key_query = APIKeyQuery(name=API_KEY_NAME, scheme_name="API key query", auto_error=False)
 api_key_header = APIKeyHeader(name=API_KEY_NAME, scheme_name="API key header", auto_error=False)
 
@@ -73,9 +80,22 @@ async def guarded_execute(graph_copy, input_value, session_id=None):
 
     Serializes the env-sensitive execution section so two concurrent requests in
     the same async worker can never overlap a flow run before the worker recycles.
+
+    When ``LFX_SERVE_RESET_ENVIRON`` is "1" (``lfx serve --reset-environ``), the
+    process environment is snapshotted before the run and restored afterward, so a
+    flow's os.environ mutations (or request-scoped credentials) cannot leak into the
+    next request served by the same warm worker. Off by default — the snapshot is
+    skipped entirely unless opted in.
     """
     async with _EXECUTE_GUARD:
-        return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id)
+        reset_environ = os.environ.get(_SERVE_RESET_ENVIRON_ENV) == "1"
+        env_snapshot = dict(os.environ) if reset_environ else None
+        try:
+            return await execute_graph_with_capture(graph_copy, input_value, session_id=session_id)
+        finally:
+            if env_snapshot is not None and os.environ != env_snapshot:
+                os.environ.clear()
+                os.environ.update(env_snapshot)
 
 
 def verify_api_key(
