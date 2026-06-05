@@ -95,7 +95,12 @@ function runPatches() {
 }
 
 export function onRouteDidUpdate({ location }) {
-  if (typeof document === "undefined" || !location.pathname.startsWith("/api")) {
+  // Only Redoc routes (/api, /api/workflow) — a bare startsWith("/api")
+  // would also match regular docs pages like /api-request or /api-keys
+  // and leak a body observer per navigation (Redoc never renders there).
+  const isRedocPage =
+    location.pathname === "/api" || location.pathname.startsWith("/api/");
+  if (typeof document === "undefined" || !isRedocPage) {
     return;
   }
   // Redoc is server-side rendered, so this usually succeeds immediately;

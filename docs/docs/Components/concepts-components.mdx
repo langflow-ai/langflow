@@ -166,6 +166,7 @@ Each component's code includes definitions for inputs and outputs, which are rep
 For example, the `RecursiveCharacterTextSplitter` has four inputs. Each input definition specifies the input type, such as `IntInput`, as well as the encoded name, display name, description, and other parameters for that specific input.
 These values determine the component settings, such as display names and tooltips in the visual editor.
 
+{/* Snippet copied from src/lfx/src/lfx/components/langchain_utilities/recursive_character.py — keep in sync if the component changes. */}
 ```python title="RecursiveCharacterTextSplitter inputs (from recursive_character.py)" showLineNumbers
     inputs = [
         IntInput(
@@ -199,6 +200,7 @@ These values determine the component settings, such as display names and tooltip
 Additionally, components have methods or functions that handle their functionality.
 For example, the `RecursiveCharacterTextSplitter` has two methods:
 
+{/* Snippet copied from src/lfx/src/lfx/components/langchain_utilities/recursive_character.py — keep in sync if the component changes. */}
 ```python title="RecursiveCharacterTextSplitter methods (from recursive_character.py)" showLineNumbers
     def get_data_input(self) -> Any:
         return self.data_input

@@ -32,9 +32,19 @@ export function onRouteDidUpdate() {
   }
   updateCodeBlocks();
   if (!observer) {
-    // Tab switches re-render code blocks without the attributes — re-apply.
     observer = new MutationObserver(updateCodeBlocks);
-    observer.observe(document.body, { childList: true, subtree: true });
+    // childList: re-rendered code blocks arrive without the attributes.
+    // attributeFilter "hidden": Docusaurus tabs toggle panels via the hidden
+    // attribute (no childList mutation) — a scrollable block inside an
+    // initially hidden tab measures scrollWidth 0 and loses its tabindex, so
+    // it must be re-evaluated when its tab becomes visible. The patched
+    // attributes (tabindex/role/aria-label) are not observed — no feedback loop.
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true,
+      attributes: true,
+      attributeFilter: ["hidden"],
+    });
     // Scrollability is viewport-dependent — re-evaluate on resize.
     window.addEventListener("resize", () => {
       clearTimeout(resizeTimer);
