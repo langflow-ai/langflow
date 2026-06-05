@@ -273,6 +273,7 @@ export function ParameterRenderComponent({
             {...baseInputProps}
             helperText={templateData?.helper_text}
             helperMetadata={templateData?.helper_text_metadata}
+            buttonMetadata={templateData?.button_metadata}
             options={templateData?.options}
             searchCategory={templateData?.search_category}
             limit={templateData?.limit}
