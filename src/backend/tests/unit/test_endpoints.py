@@ -151,8 +151,13 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
         for component_name in components
     ]
     json_response = response.json()
+    # Bundle/extension components are namespaced "ext:<bundle>:<Class>@<slot>" and are served
+    # from installed bundle packages (e.g. docling, ibm, arxiv), not from BASE_COMPONENTS_PATH,
+    # so they are not backed by files in that directory. Exclude them before comparing against
+    # the on-disk file count.
+    base_component_names = [name for name in all_names if not name.startswith("ext:")]
     # We need to test the custom nodes
-    assert len(all_names) <= len(
+    assert len(base_component_names) <= len(
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["input_output"]
@@ -383,6 +388,32 @@ async def test_get_vertices_returns_404_for_other_users_private_flow(
     """
     flow_id = added_flow_webhook_test["id"]
     response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
+async def test_get_vertices_with_supplied_data_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """A non-owner cannot pollute another user's graph cache via the deprecated supplied-data path.
+
+    Regression for the reported cache-pollution scenario: a second user POSTs
+    attacker-controlled graph ``data`` for someone else's private flow UUID. The
+    owner-or-public ownership guard runs *before* the build-and-cache branch
+    (``build_and_cache_graph_from_data`` -> ``set_cache(str(flow_id), ...)``), so the
+    request fails closed with 404 and no graph is cached under the victim flow id.
+
+    Complements ``test_get_vertices_returns_404_for_other_users_private_flow`` (which
+    exercises the no-data branch) by covering the supplied-data branch specifically.
+    The payload is a schema-valid ``FlowDataRequest`` so the request clears body
+    validation and actually reaches the ownership guard.
+    """
+    flow_id = added_flow_webhook_test["id"]
+    attacker_data = {
+        "nodes": [{"id": "attacker-node", "data": {"type": "AttackerControlled"}}],
+        "edges": [],
+        "viewport": {"x": 1, "y": 2, "zoom": 0.75},
+    }
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", json=attacker_data, headers=second_user_headers)
     assert response.status_code == 404, response.text
 
 

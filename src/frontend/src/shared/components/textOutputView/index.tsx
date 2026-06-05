@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Textarea } from "../../../components/ui/textarea";
 
 const TextOutputView = ({
@@ -7,6 +8,7 @@ const TextOutputView = ({
   left: boolean | undefined;
   value: any;
 }) => {
+  const { t } = useTranslation();
   if (typeof value === "object" && Object.keys(value).includes("text")) {
     value = value.text;
   }
@@ -18,7 +20,7 @@ const TextOutputView = ({
       {" "}
       <Textarea
         className={`w-full resize-none custom-scroll ${left ? "min-h-32" : "h-full"}`}
-        placeholder={"Empty"}
+        placeholder={t("common.empty")}
         readOnly
         value={value}
       />

@@ -16,7 +16,11 @@ export type APITemplateType = {
 
 export type ComponentDisplayNamesType = Record<
   string,
-  { display_name: string[]; description: string[] }
+  {
+    display_name: string[];
+    description: string[];
+    fields?: Record<string, { display_name: string[] }>;
+  }
 >;
 
 export type APICodeValidateType = {

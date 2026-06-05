@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useErrorAlert } from "./use-error-alert";
 
-interface DeleteWithConfirmation<T extends { id: string; name: string }> {
+interface DeleteWithConfirmation<T extends { id: string }> {
   target: T | null;
   deletingId: string | null;
   requestDelete: (item: T) => void;
@@ -9,10 +9,7 @@ interface DeleteWithConfirmation<T extends { id: string; name: string }> {
   setModalOpen: (open: boolean) => void;
 }
 
-export function useDeleteWithConfirmation<
-  T extends { id: string; name: string },
-  P,
->(
+export function useDeleteWithConfirmation<T extends { id: string }, P>(
   mutateFn: (
     vars: P,
     opts: { onError: (err: unknown) => void; onSettled: () => void },

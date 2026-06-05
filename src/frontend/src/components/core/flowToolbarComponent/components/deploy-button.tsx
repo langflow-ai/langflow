@@ -55,7 +55,9 @@ function DeployButtonInner() {
         flowId={currentFlowId ?? ""}
         snapshotVersionId={pendingSnapshotVersionId}
         snapshotVersionTag={
-          initialVersionByFlow.get(currentFlowId ?? "")?.versionTag ?? ""
+          Array.from(initialVersionByFlow.values()).find(
+            (entry) => entry.flowId === currentFlowId,
+          )?.versionTag ?? ""
         }
         onChooseNew={handleChooseNew}
         onUpdateComplete={handleUpdateComplete}

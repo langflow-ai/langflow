@@ -450,7 +450,10 @@ const config = {
           },
           {
             to: "/legacy-core-components",
-            from: "/directory",
+            from: [
+              "/directory",
+              "/text-input-and-output",
+            ]
           },
           // add more redirects like this
           // {

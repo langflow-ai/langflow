@@ -238,6 +238,7 @@ def test_generic_parametrization_applies_to_provider_fields() -> None:
 def test_generic_parametrization_applies_to_result_and_list_models() -> None:
     typed_create = DeploymentCreateResult[_ResultModel](
         id="dep_1",
+        type=DeploymentType.AGENT,
         provider_result={"external_url": "https://dep.example"},
     )
     typed_operation = DeploymentOperationResult[_ResultModel](

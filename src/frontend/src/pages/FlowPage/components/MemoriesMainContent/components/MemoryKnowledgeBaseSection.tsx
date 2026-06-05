@@ -72,7 +72,7 @@ export function MemoryKnowledgeBaseSection({
             <Tooltip>
               <TooltipTrigger asChild>
                 <span className="cursor-default text-xs text-muted-foreground">
-                  {docsData?.total ?? 0} chunks
+                  {t("memory.chunksCount", { count: docsData?.total ?? 0 })}
                 </span>
               </TooltipTrigger>
               <TooltipContent className="max-w-xs">
@@ -114,11 +114,17 @@ export function MemoryKnowledgeBaseSection({
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-24 text-xs">Sender</TableHead>
-                <TableHead className="w-40 text-xs">Job ID</TableHead>
-                <TableHead className="text-xs">Content</TableHead>
+                <TableHead className="w-24 text-xs">
+                  {t("memory.senderHeader")}
+                </TableHead>
+                <TableHead className="w-40 text-xs">
+                  {t("memory.jobIdHeader")}
+                </TableHead>
+                <TableHead className="text-xs">
+                  {t("memory.contentHeader")}
+                </TableHead>
                 <TableHead className="w-44 text-xs">
-                  Ingestion Timestamp
+                  {t("memory.ingestionTimestampHeader")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -186,7 +192,7 @@ export function MemoryKnowledgeBaseSection({
                   <TableCell colSpan={4} className="py-4">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Loading size={16} className="text-muted-foreground" />
-                      Loading more...
+                      {t("memory.loadingMore")}
                     </div>
                   </TableCell>
                 </TableRow>

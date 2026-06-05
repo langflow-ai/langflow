@@ -30,6 +30,56 @@ router = APIRouter(tags=["MCP"], prefix="/mcp")
 _update_server_locks: dict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
 
 
+def is_mcp_servers_locked(settings: object) -> bool:
+    """Return True only when MCP lock is explicitly enabled.
+
+    Some tests patch settings with MagicMock objects where unknown attributes
+    resolve to truthy placeholders. Using ``is True`` ensures lock enforcement
+    only when the flag is explicitly set to ``True``.
+    """
+    return getattr(settings, "mcp_servers_locked", False) is True
+
+
+def _enforce_immutable_server_name(server_name: str, server_config: dict) -> dict:
+    """Enforce that the server name is owned by the URL path, not the request body.
+
+    ``server_name`` is the immutable identifier for an MCP server: it is both the
+    storage key and the POST/PATCH URL path segment. Because :class:`MCPServerConfig`
+    permits extra fields (``extra="allow"``), a ``name`` in the request body would
+    otherwise be silently persisted as stray config data and — on PATCH — echoed back
+    in the 200 response, falsely implying that a rename succeeded.
+
+    A body ``name`` that disagrees with the URL is rejected with 422 so the constraint
+    is explicit. A redundant but matching ``name`` is dropped so it never pollutes the
+    stored config.
+
+    Args:
+        server_name: The server name from the URL path (the canonical identifier).
+        server_config: The request body dumped to a dict.
+
+    Returns:
+        A config dict with any ``name`` key removed.
+
+    Raises:
+        HTTPException: 422 when ``name`` is present and differs from ``server_name``.
+    """
+    if "name" not in server_config:
+        return server_config
+
+    body_name = server_config["name"]
+    if body_name != server_name:
+        raise HTTPException(
+            status_code=422,
+            detail=(
+                f"Server name is immutable and is determined by the URL path "
+                f"('{server_name}'); it cannot be set or changed via the request body "
+                f"(got '{body_name}'). To rename a server, delete it and create a new one."
+            ),
+        )
+    # Matching name is redundant — drop it so it isn't persisted as stray config.
+    return {key: value for key, value in server_config.items() if key != "name"}
+
+
 async def upload_server_config(
     server_config: dict,
     current_user: CurrentActiveUser,
@@ -335,9 +385,15 @@ async def add_server(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     return await update_server(
         server_name,
-        server_config.model_dump(exclude_unset=True),
+        _enforce_immutable_server_name(server_name, server_config.model_dump(exclude_unset=True)),
         current_user,
         session,
         storage_service,
@@ -356,9 +412,15 @@ async def update_server_endpoint(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     return await update_server(
         server_name,
-        server_config.model_dump(exclude_unset=True),
+        _enforce_immutable_server_name(server_name, server_config.model_dump(exclude_unset=True)),
         current_user,
         session,
         storage_service,
@@ -375,6 +437,12 @@ async def delete_server(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
     settings_service: Annotated[SettingsService, Depends(get_settings_service)],
 ):
+    if is_mcp_servers_locked(settings_service.settings) and not current_user.is_superuser:
+        raise HTTPException(
+            status_code=403,
+            detail="MCP server configuration is locked. Contact an administrator to manage external MCP servers.",
+        )
+
     return await update_server(
         server_name,
         {},

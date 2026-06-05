@@ -155,11 +155,7 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS AMD64
-          - os: macos
-            arch: amd64
-            runner: macos-latest-large
-            python-version: "3.10"
+          # macOS AMD64 (Intel) - Python 3.12 only for cost optimization
           - os: macos
             arch: amd64
             runner: macos-latest-large
@@ -293,7 +289,12 @@ jobs:
             printf 'Installing %s wheel(s):\n' "$label"
             printf '%s\n' "$@"
             refresh_find_links
-            uv pip install --prerelease=allow --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
+            # Use `if-necessary-or-explicit` (not `allow`): nightly langflow* wheels
+            # are .dev pre-releases so we need to allow them explicitly, but `allow`
+            # leaks to transitive deps and resolves pre-release pydantic alphas
+            # (e.g. 2.14.0a1) which break langchain-core's module-level
+            # `RunnablePassthrough()` call at import time.
+            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
           }
 
           SDK_WHEELS=(./sdk-dist/*.whl)
@@ -581,7 +582,8 @@ jobs:
             printf 'Installing %s wheel(s):\n' "$label"
             printf '%s\n' "$@"
             refresh_find_links
-            uv pip install --prerelease=allow --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
+            # See stable job above for rationale on --prerelease=if-necessary-or-explicit.
+            uv pip install --prerelease=if-necessary-or-explicit --python "$PYTHON" "${FIND_LINKS[@]}" "$@"
           }
 
           SDK_WHEELS=(./sdk-dist/*.whl)
@@ -631,7 +633,7 @@ jobs:
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -643,7 +645,7 @@ jobs:
             if [ "${{ inputs.pre_release }}" = "true" ]; then
               NO_DEPS=""
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/Scripts/python.exe "$BASE_WHEEL"
           fi
         shell: bash
 
@@ -668,7 +670,7 @@ jobs:
               if [ "${{ inputs.pre_release }}" = "true" ]; then
                 NO_DEPS=""
               fi
-              uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
+              uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "${INSTALL_WHEELS[@]}"
             fi
           fi
 
@@ -680,7 +682,7 @@ jobs:
             if [ "${{ inputs.pre_release }}" = "true" ]; then
               NO_DEPS=""
             fi
-            uv pip install --force-reinstall $NO_DEPS --prerelease=allow --python ./test-env/bin/python "$BASE_WHEEL"
+            uv pip install --force-reinstall $NO_DEPS --prerelease=if-necessary-or-explicit --python ./test-env/bin/python "$BASE_WHEEL"
           fi
         shell: bash
 

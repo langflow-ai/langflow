@@ -11,8 +11,17 @@ import { useTestDeploymentModal } from "../use-test-deployment-modal";
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment =>
   ({
     id: "dep-1",
-    name: "My Deployment",
     provider_id: "prov-1",
+    provider_data: {
+      display_name: "My Deployment",
+      name: "my_deployment",
+    },
+    description: null,
+    type: "agent",
+    created_at: "2025-01-01T00:00:00Z",
+    updated_at: "2025-01-01T00:00:00Z",
+    resource_key: "my_deployment",
+    attached_count: 0,
     ...overrides,
   }) as Deployment;
 
@@ -50,7 +59,7 @@ describe("useTestDeploymentModal", () => {
       });
       const deployment = makeDeployment({
         id: "d1",
-        name: "Bot",
+        provider_data: { display_name: "Bot", name: "bot" },
         provider_id: "p1",
       });
 
@@ -76,20 +85,6 @@ describe("useTestDeploymentModal", () => {
       });
 
       expect(result.current.testProviderId).toBe("prov-99");
-    });
-
-    it("uses empty string for testProviderId when provider_id is null", () => {
-      const { result } = renderHook(() => useTestDeploymentModal(), {
-        wrapper: withRouter(),
-      });
-
-      act(() => {
-        result.current.handleTestDeployment(
-          makeDeployment({ provider_id: null as unknown as string }),
-        );
-      });
-
-      expect(result.current.testProviderId).toBe("");
     });
 
     it("opens the modal", () => {

@@ -36,7 +36,7 @@ from langflow.agentic.services.provider_service import (
 )
 from langflow.api.utils.core import CurrentActiveUser, DbSession
 
-router = APIRouter(prefix="/agentic", tags=["Agentic"], include_in_schema=False)
+router = APIRouter(prefix="/agentic", tags=["Agentic"])
 
 
 @dataclass(frozen=True)
@@ -130,38 +130,60 @@ async def _resolve_assistant_context(
     )
 
 
+async def _validate_flow_access(flow_id: str | None, user_id: UUID, session: AsyncSession) -> None:
+    """Reject an unknown or not-owned flow_id before the model is invoked.
+
+    A missing flow_id is allowed (the assistant runs with no canvas context).
+    A supplied id must reference a flow the caller can access, mirroring the
+    per-user 404 of the /run and webhook endpoints; not-found and cross-user
+    both surface 404 so a flow's existence is not leaked by id.
+    """
+    if not flow_id:
+        return
+
+    from langflow.services.database.models.flow import Flow
+
+    try:
+        flow_uuid = UUID(flow_id)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid flow_id: not a valid UUID.") from exc
+
+    flow = await session.get(Flow, flow_uuid)
+    if flow is None or (flow.user_id is not None and str(flow.user_id) != str(user_id)):
+        raise HTTPException(status_code=404, detail="Flow not found.")
+
+
 @router.post("/execute/{flow_name}")
-async def execute_named_flow(flow_name: str, request: AssistantRequest, current_user: CurrentActiveUser) -> dict:
-    """Execute a named flow from the flows directory."""
-    user_id = current_user.id
+async def execute_named_flow(
+    flow_name: str,
+    request: AssistantRequest,
+    current_user: CurrentActiveUser,
+    session: DbSession,
+) -> dict:
+    """Execute a named flow from the flows directory.
 
-    global_vars = {
-        "USER_ID": str(user_id),
-        "FLOW_ID": request.flow_id,
-    }
+    Named assistant flows embed an Agent that needs provider/model/api-key
+    context. Resolving it here (instead of running the raw file) turns a
+    silent 500 into a successful run, or a clear 4xx when no provider is set.
+    """
+    ctx = await _resolve_assistant_context(request, current_user.id, session)
 
+    global_vars = dict(ctx.global_vars)
     if request.component_id:
         global_vars["COMPONENT_ID"] = request.component_id
     if request.field_name:
         global_vars["FIELD_NAME"] = request.field_name
 
-    try:
-        # Check for OpenAI variables (required for some assistant features)
-        openai_vars = get_all_variables_for_provider(user_id, "OpenAI")
-        global_vars.update(openai_vars)
-    except (ValueError, HTTPException):
-        logger.debug("OpenAI variables not configured, continuing without them")
-
-    flow_filename = f"{flow_name}.json"
-    # Generate unique session_id per request to isolate memory
-    session_id = str(uuid.uuid4())
-
     return await execute_flow_file(
-        flow_filename=flow_filename,
+        flow_filename=f"{flow_name}.json",
         input_value=request.input_value,
         global_variables=global_vars,
         verbose=True,
-        session_id=session_id,
+        user_id=str(current_user.id),
+        session_id=ctx.session_id,
+        provider=ctx.provider,
+        model_name=ctx.model_name,
+        api_key_var=ctx.api_key_name,
     )
 
 
@@ -184,7 +206,7 @@ async def check_assistant_config(
             providers=enabled_providers,
             include_unsupported=False,
             include_deprecated=False,
-            model_type="language",
+            model_type="llm",
         )
 
         for provider_dict in models_by_provider:
@@ -256,6 +278,7 @@ async def assist(
     session: DbSession,
 ) -> dict:
     """Chat with the Langflow Assistant."""
+    await _validate_flow_access(request.flow_id, current_user.id, session)
     ctx = await _resolve_assistant_context(request, current_user.id, session)
 
     logger.info(f"Executing {LANGFLOW_ASSISTANT_FLOW} with {ctx.provider}/{ctx.model_name}")
@@ -281,6 +304,7 @@ async def assist_stream(
     session: DbSession,
 ) -> StreamingResponse:
     """Chat with the Langflow Assistant with streaming progress updates."""
+    await _validate_flow_access(request.flow_id, current_user.id, session)
     ctx = await _resolve_assistant_context(request, current_user.id, session)
 
     return StreamingResponse(
