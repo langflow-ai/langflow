@@ -157,6 +157,9 @@ class S3StorageService(StorageService):
 
     def _get_client(self):
         """Get or create an S3 client using the async context manager."""
+        endpoint_url = os.getenv("AWS_ENDPOINT_URL_S3")
+        if endpoint_url:
+            return self.session.client("s3", endpoint_url=endpoint_url)
         return self.session.client("s3")
 
     async def save_file(self, flow_id: str, file_name: str, data: bytes, *, append: bool = False) -> None:
