@@ -8796,7 +8796,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "0.5.0"
+version = "1.10.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
