@@ -16,11 +16,16 @@ the lease window (``age <= lease_window``), stale once older.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 from datetime import datetime, timezone
 
+from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
+from langflow.services.background_execution.metrics import current_backend
 from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.deps import get_telemetry_service, session_scope
 
 # Non-terminal statuses: a job in one of these is still occupying the system.
 # QUEUED/IN_PROGRESS are the only non-terminal states; COMPLETED / FAILED /
@@ -97,3 +102,74 @@ async def alive_worker_count(session, now: datetime, lease_window: float) -> int
         if age <= lease_window:
             alive_owners.add(owner)
     return len(alive_owners)
+
+
+class BackgroundMetricsCollector:
+    """Periodically pushes DB-derived bg-execution gauges to the OTel registry.
+
+    The collector owns the clock: each tick computes one aware-UTC ``now``,
+    runs the three query functions against a short-lived session, and writes the
+    gauges via ``get_telemetry_service().ot.update_gauge``. It is the only writer
+    of these gauges; an ObservableGauge reports the last value set per label-set,
+    so each tick zero-fills the canonical non-terminal status set to make a status
+    dropping to 0 overwrite a stale prior value.
+
+    Best-effort: a failing tick logs a warning and returns without raising so the
+    loop keeps running — observability must never crash the service.
+
+    ``lease_window`` defaults to ``45.0`` to match the runtime
+    ``background_lease_ttl_s`` setting that ``sweep_orphans`` / ``requeue_lost``
+    are actually called with, so "alive workers" agrees with what the watchdog
+    reconciles. Task 8 passes ``settings.background_lease_ttl_s`` explicitly.
+    """
+
+    def __init__(self, *, interval: float, lease_window: float = 45.0):
+        self.interval = interval
+        self.lease_window = lease_window
+        self._stopped = False
+        self._task: asyncio.Task | None = None
+
+    async def collect_once(self, session) -> None:
+        """Run the three queries and push the gauges. Never raises."""
+        try:
+            now = datetime.now(timezone.utc)
+            counts = await count_nonterminal_jobs(session)
+            oldest = await oldest_queued_seconds(session, now)
+            alive = await alive_worker_count(session, now, self.lease_window)
+
+            backend = current_backend()
+            ot = get_telemetry_service().ot
+
+            # Zero-fill the canonical non-terminal set so a status that drops to 0
+            # overwrites the gauge's stale prior value (last-value-wins semantics).
+            for status in (JobStatus.QUEUED, JobStatus.IN_PROGRESS):
+                ot.update_gauge(
+                    "langflow_bg_jobs",
+                    counts.get(status.value, 0),
+                    {"status": status.value, "backend": backend},
+                )
+            ot.update_gauge("langflow_bg_oldest_queued_seconds", oldest, {"backend": backend})
+            ot.update_gauge("langflow_bg_alive_workers", alive, {"backend": backend})
+        except Exception as exc:  # noqa: BLE001 - observability must never crash the loop
+            logger.warning(f"bg metrics collection tick skipped: {exc}")
+
+    async def run(self) -> None:
+        """Loop: open a short-lived session per tick, collect, sleep the interval."""
+        while not self._stopped:
+            async with session_scope() as session:
+                await self.collect_once(session)
+            await asyncio.sleep(self.interval)
+
+    def start(self) -> None:
+        """Spawn the collector loop task."""
+        self._stopped = False
+        self._task = asyncio.create_task(self.run())
+
+    async def stop(self) -> None:
+        """Signal stop and cancel/await the loop task."""
+        self._stopped = True
+        if self._task is not None:
+            self._task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._task
+            self._task = None
