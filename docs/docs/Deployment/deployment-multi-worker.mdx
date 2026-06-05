@@ -11,9 +11,9 @@ A flow build started on worker **A** cannot be polled or streamed from worker **
 A multi-worker deployment runs more than one worker process on the same host. Concurrency can be increased by increasing the number of `LANGFLOW_WORKERS`, but each process keeps its own in-memory build queue unless you add a shared store.
 
 A Redis-backed job queue stores build events in [Redis Streams](https://redis.io/docs/latest/develop/data-types/streams/), so any worker can pick up and serve any job's events.
-To configure a multi-worker Langflow, follow the steps to enable the Redis job queue.
+To configure a multi-worker Langflow process, follow the steps to enable the Redis job queue.
 
-After the Redis job queue is configured, you can optionally follow [recommended Gunicorn settings](#recommended-gunicorn-settings) to reduce memory use and keep workers healthy. That tuning applies to **Linux** production hosts only (`langflow run` uses a single Uvicorn process on Windows and macOS).
+After the Redis job queue is configured, you can optionally follow [recommended Gunicorn settings](#recommended-gunicorn-settings) to reduce memory use and keep workers healthy. This tuning applies to Linux production hosts only. On Windows and macOS, `langflow run` uses a single Uvicorn process.
 
 ## Prerequisites
 
@@ -334,11 +334,13 @@ The Redis backend response includes the following fields:
 ## Recommended Gunicorn settings
 
 :::tip
-This step is **optional** and **Linux only**. It does not replace the Redis job queue. On Windows and macOS, `langflow run` uses one Uvicorn process, so `LANGFLOW_GUNICORN_PRELOAD` and `GUNICORN_CMD_ARGS` have no effect.
+This tuning is optional, and it applies to Linux only. It does not replace the Redis job queue.
+
+On Windows and macOS, `langflow run` uses one Uvicorn process, so `LANGFLOW_GUNICORN_PRELOAD` and `GUNICORN_CMD_ARGS` have no effect.
 :::
 
-These recommendations are **starting points** from Langflow engineering benchmarks on Linux multi-worker deployments.
-They should be treated as values to try and then adjust using `htop` or `btop` while you run flows.
+These recommendations are starting points from Langflow engineering benchmarks on Linux multi-worker deployments.
+After you apply these values, monitor performance, and then make adjustments using `htop` or `btop` while you run flows.
 PostgreSQL, Redis, and vector database services also consume RAM on the same host.
 
 Add the starter values to your server's `.env` file after the Redis variables:
@@ -368,4 +370,4 @@ Copy the block that best matches your server, add it to `.env` after the [Redis 
 | **Standard API** (12 GB RAM) | `LANGFLOW_WORKERS=15`<br/>`LANGFLOW_WORKER_TIMEOUT=300`<br/>`LANGFLOW_GUNICORN_PRELOAD=true`<br/>`GUNICORN_CMD_ARGS="--max-requests 250 --max-requests-jitter 50"` | A balanced default for a dedicated Langflow host. |
 | **Heavy multi-agent** (24 GB+ RAM) | `LANGFLOW_WORKERS=30`<br/>`LANGFLOW_WORKER_TIMEOUT=600`<br/>`LANGFLOW_GUNICORN_PRELOAD=true`<br/>`GUNICORN_CMD_ARGS="--max-requests 150 --max-requests-jitter 30"` | Agent loops use more RAM per request, so a lower `--max-requests`  value restarts workers more often to keep long-term usage consistent. |
 
-For more information, see the Langflow [Scaling Langflow blog post](https://www.langflow.org/blog/scaling-langflow).
+For more information, see the [Scaling Langflow blog post](https://www.langflow.org/blog/scaling-langflow).
