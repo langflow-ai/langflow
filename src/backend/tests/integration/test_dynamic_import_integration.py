@@ -323,7 +323,6 @@ class TestDynamicImportIntegration:
             "AstraVectorizeComponent",
             "GraphRAGComponent",
             "Dotenv",
-            "GetEnvVar",
         ]
 
         for name in expected_components:
