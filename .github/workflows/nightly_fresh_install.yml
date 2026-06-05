@@ -183,6 +183,9 @@ jobs:
           echo "INSTALLED_VERSION=$INSTALLED" >> "$GITHUB_ENV"
 
       - name: Assert unpinned install did not silently backtrack
+        working-directory: ${{ runner.temp }}/fresh
+        env:
+          EXPECTED: ${{ needs.resolve-versions.outputs.pypi_version }}
         run: |
           set -euo pipefail
           # The signal we care about is "the unpinned resolver picked a version
@@ -191,17 +194,25 @@ jobs:
           # (installed > snapshot) happens naturally if a fresh nightly lands
           # on PyPI between resolve-versions and this step, and shouldn't fail
           # an otherwise healthy release.
-          EXPECTED="${{ needs.resolve-versions.outputs.pypi_version }}"
-          if [ "$INSTALLED_VERSION" = "$EXPECTED" ]; then
-            exit 0
-          fi
-          NEWER=$(printf '%s\n%s\n' "$INSTALLED_VERSION" "$EXPECTED" | sort -V | tail -1)
-          if [ "$NEWER" = "$INSTALLED_VERSION" ]; then
-            echo "::warning::Unpinned install resolved to $INSTALLED_VERSION, which is newer than the snapshot taken at the start of the run ($EXPECTED). A new nightly likely landed mid-run; not a backtrack."
-            exit 0
-          fi
-          echo "::error::Unpinned 'uv pip install langflow-nightly' silently resolved to $INSTALLED_VERSION (older than PyPI latest $EXPECTED). This usually means the latest release has unsatisfiable dependency pins and the resolver backtracked to an older nightly."
-          exit 1
+          #
+          # Uses packaging.version (PEP 440) via the venv's python — the langflow
+          # install in the previous step pulls packaging as a transitive dep, and
+          # PEP 440 ordering is portable (GNU sort -V handles X.Y.Z.devNN but BSD
+          # sort -V does not, so a shell-only check fails on macOS).
+          source .venv/bin/activate
+          python3 - <<'PY'
+          import os, sys
+          from packaging.version import Version
+          installed = Version(os.environ["INSTALLED_VERSION"])
+          expected  = Version(os.environ["EXPECTED"])
+          if installed == expected:
+              sys.exit(0)
+          if installed > expected:
+              print(f"::warning::Unpinned install resolved to {installed}, which is newer than the snapshot taken at the start of the run ({expected}). A new nightly likely landed mid-run; not a backtrack.")
+              sys.exit(0)
+          print(f"::error::Unpinned 'uv pip install langflow-nightly' silently resolved to {installed} (older than PyPI latest {expected}). This usually means the latest release has unsatisfiable dependency pins and the resolver backtracked to an older nightly.")
+          sys.exit(1)
+          PY
 
       - name: Start Langflow
         working-directory: ${{ runner.temp }}/fresh
