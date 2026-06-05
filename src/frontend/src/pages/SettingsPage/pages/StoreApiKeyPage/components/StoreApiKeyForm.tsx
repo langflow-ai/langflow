@@ -13,7 +13,9 @@ import {
 
 type StoreApiKeyFormComponentProps = {
   apikey: string;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   handleInput: (event: any) => void;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   handleSaveKey: (apikey: string, handleInput: any) => void;
   loadingApiKey: boolean;
   validApiKey: boolean;

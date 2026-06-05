@@ -568,6 +568,16 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
+                    # Drain pending audit writes before services tear down so
+                    # rows scheduled mid-request still land in the DB. We do
+                    # this here (not in teardown_services) because the DB
+                    # session factory must still be alive.
+                    try:
+                        from langflow.services.authorization.utils import drain_pending_audit_writes
+
+                        await drain_pending_audit_writes(timeout=5.0)
+                    except Exception as drain_exc:  # noqa: BLE001 — never block shutdown on audit
+                        await logger.awarning(f"drain_pending_audit_writes failed: {drain_exc}")
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
@@ -764,6 +774,36 @@ def create_app():
             content={"detail": exc.detail},
         )
 
+    # Add rate limit exception handler
+    from slowapi.errors import RateLimitExceeded
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_exception_handler(request: Request, _exc: RateLimitExceeded):
+        """Handle rate limit exceeded errors with structured logging."""
+        from langflow.services.rate_limit.service import get_limiter_key
+
+        # Default to 60 seconds for "/minute" window
+        retry_after_seconds = "60"
+
+        client_ip = get_limiter_key(request)
+        logger.warning(
+            "Rate limit exceeded",
+            auth_event="rate_limit_exceeded",
+            client_ip=client_ip,
+            path=request.url.path,
+            method=request.method,
+        )
+        return JSONResponse(
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
+            content={
+                "detail": "Too many requests. Please try again later.",
+                "retry_after": retry_after_seconds,
+            },
+            headers={
+                "Retry-After": retry_after_seconds,
+            },
+        )
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
@@ -784,6 +824,12 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
+    # Add SlowAPI state to app for rate limiting
+    from langflow.services.rate_limit import get_rate_limiter
+
+    limiter = get_rate_limiter()
+    app.state.limiter = limiter
 
     return app
 

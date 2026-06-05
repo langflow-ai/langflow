@@ -28,9 +28,11 @@ jest.mock("../components/KnowledgeBaseDrawer", () => ({
     isOpen ? <div data-testid="knowledge-base-drawer">Drawer</div> : null,
 }));
 
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 let capturedOnRowClick: ((kb: any) => void) | null = null;
 jest.mock("../components/KnowledgeBasesTab", () => ({
   __esModule: true,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   default: ({ onRowClick }: { onRowClick: (kb: any) => void }) => {
     capturedOnRowClick = onRowClick;
     return (

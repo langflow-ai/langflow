@@ -10,7 +10,7 @@ from sqlalchemy import ForeignKey, UniqueConstraint
 from sqlmodel import Column, DateTime, Field, Relationship, SQLModel, func
 
 from langflow.schema.serialize import UUIDstr
-from langflow.services.database.utils import validate_non_empty_string
+from langflow.services.database.utils import validate_non_empty_string, validate_non_empty_string_preserve_value
 
 if TYPE_CHECKING:
     from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
@@ -21,7 +21,6 @@ if TYPE_CHECKING:
 class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "deployment"
     __table_args__ = (
-        UniqueConstraint("deployment_provider_account_id", "name", name="uq_deployment_name_in_provider"),
         UniqueConstraint(
             "deployment_provider_account_id", "resource_key", name="uq_deployment_resource_key_in_provider"
         ),
@@ -41,7 +40,17 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
             sa.Uuid(), ForeignKey("deployment_provider_account.id", ondelete="CASCADE"), nullable=False, index=True
         )
     )
-    name: str = Field(index=True)
+    workspace_id: UUIDstr | None = Field(
+        default=None,
+        sa_column=Column(sa.Uuid(), nullable=True, index=True),
+    )
+    # TODO: Add DB-level length enforcement for provider-synced display_name and description.
+    # nullable=True at the DB level to keep schema compatibility during migration transitions;
+    # application-layer validation still treats display_name as required.
+    display_name: str = Field(
+        sa_column=Column(sa.String(), nullable=True),
+        description="Deployment name synced from the provider.",
+    )
     description: str | None = Field(
         default=None,
         sa_column=Column(sa.Text(), nullable=True),
@@ -116,10 +125,15 @@ class Deployment(SQLModel, table=True):  # type: ignore[call-arg]
     deployment_provider_account: "DeploymentProviderAccount" = Relationship(back_populates="deployments")
     folder: "Folder" = Relationship(back_populates="deployments")
 
-    @field_validator("name", "resource_key")
+    @field_validator("display_name", "resource_key")
     @classmethod
     def validate_non_empty(cls, v: str, info: object) -> str:
-        return validate_non_empty_string(v, info)
+        validators = {
+            "display_name": validate_non_empty_string_preserve_value,
+            "resource_key": validate_non_empty_string,
+        }
+        validator = validators.get(getattr(info, "field_name", None), validate_non_empty_string)
+        return validator(v, info)
 
 
 class DeploymentRead(SQLModel):
@@ -128,7 +142,7 @@ class DeploymentRead(SQLModel):
     user_id: UUID
     project_id: UUID
     deployment_provider_account_id: UUID
-    name: str
+    display_name: str
     description: str | None = None
     deployment_type: DeploymentType
     created_at: datetime

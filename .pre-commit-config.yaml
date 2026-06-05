@@ -66,6 +66,12 @@ repos:
         language: system
         files: ^src/backend/base/langflow/api/.*\.py$
         pass_filenames: false
+      - id: component-env-writes
+        name: Components must not write to os.environ (process-global; bleeds across requests)
+        entry: python scripts/lint/check_component_env_writes.py
+        language: system
+        files: ^(src/lfx/src/lfx/components/.*\.py|src/backend/base/langflow/components/.*\.py|src/bundles/.*\.py)$
+        pass_filenames: false
   - repo: https://github.com/Yelp/detect-secrets
     rev: v1.5.0
     hooks:

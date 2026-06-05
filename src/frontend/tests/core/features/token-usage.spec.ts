@@ -2,6 +2,7 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test.describe("Token Usage Tracking", () => {
@@ -21,7 +22,9 @@ test.describe("Token Usage Tracking", () => {
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
         timeout: 100000,
       });
@@ -29,7 +32,7 @@ test.describe("Token Usage Tracking", () => {
       await initialGPTsetup(page);
 
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
 
       await page.waitForSelector('[data-testid="input-chat-playground"]', {
@@ -73,7 +76,9 @@ test.describe("Token Usage Tracking", () => {
       await awaitBootstrapTest(page);
 
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
       await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
         timeout: 100000,
       });
@@ -81,7 +86,7 @@ test.describe("Token Usage Tracking", () => {
       await initialGPTsetup(page);
 
       await page
-        .getByRole("button", { name: "Playground", exact: true })
+        .getByRole("button", { name: TEXTS.playground, exact: true })
         .click();
 
       await page.waitForSelector('[data-testid="input-chat-playground"]', {

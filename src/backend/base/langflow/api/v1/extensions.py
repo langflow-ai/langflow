@@ -13,17 +13,30 @@ the runtime guard at the request layer short-circuits with 404 when
 from __future__ import annotations
 
 import asyncio
+from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from lfx.extension.bundle_registry import get_default_registry
 from lfx.extension.errors import ExtensionError
 from lfx.extension.reload import ReloadInProgressError, reload_bundle
 from lfx.log.logger import logger
-from lfx.services.deps import get_settings_service
+from lfx.services.deps import get_extension_events_service, get_settings_service
+from pydantic import BaseModel
 
-from langflow.services.auth.utils import get_current_active_user
+from langflow.api.utils.core import CurrentActiveUser
 
 router = APIRouter(prefix="/extensions", tags=["Extensions"])
+
+
+class ExtensionEventResponse(BaseModel):
+    type: str
+    timestamp: float
+    payload: dict
+
+
+class ExtensionEventsResponse(BaseModel):
+    events: list[ExtensionEventResponse]
+    settled: bool
 
 
 def _typed_http_exception(*, status_code: int, error: ExtensionError) -> HTTPException:
@@ -75,10 +88,13 @@ def _require_extension_reload_enabled() -> None:
     status_code=status.HTTP_200_OK,
     dependencies=[
         Depends(_require_extension_reload_enabled),
-        Depends(get_current_active_user),
     ],
 )
-async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
+async def reload_extension_bundle(
+    extension_id: str,
+    bundle_name: str,
+    current_user: CurrentActiveUser,
+) -> dict:
     """Trigger an atomic-swap reload for a single Bundle.
 
     Returns the typed :class:`~lfx.extension.reload.ReloadResult` body on
@@ -121,7 +137,12 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
         # or large bundle import does not freeze the worker for every other
         # in-flight request.  ``asyncio.to_thread`` propagates the result
         # and any exception (including ReloadInProgressError) back to us.
-        result = await asyncio.to_thread(reload_bundle, registry, bundle_name)
+        result = await asyncio.to_thread(
+            reload_bundle,
+            registry,
+            bundle_name,
+            user_id=str(current_user.id),
+        )
     except ReloadInProgressError as exc:
         # 409 is the conventional "in-progress / conflicting state" code.
         logger.info("extension reload-in-progress collision for %s", exc.bundle)
@@ -168,3 +189,61 @@ async def reload_extension_bundle(extension_id: str, bundle_name: str) -> dict:
         )
 
     return result.to_dict()
+
+
+@router.get(
+    "/events",
+    response_model=ExtensionEventsResponse,
+)
+async def get_extension_events(
+    current_user: CurrentActiveUser,
+    since: Annotated[float, Query(description="UTC epoch timestamp; return events after this cursor")] = 0.0,
+    keyspace: Annotated[
+        str | None,
+        Query(
+            description=(
+                "Reserved. Events are scoped server-side to the authenticated user; "
+                "passing this parameter is rejected with 422."
+            ),
+            include_in_schema=False,
+        ),
+    ] = None,
+) -> ExtensionEventsResponse:
+    """Poll for extension lifecycle events the current user has triggered.
+
+    Events are scoped to the authenticated user via a server-derived keyspace
+    (``user:{user_id}``); there is no client-controllable keyspace, so an
+    authenticated user cannot read another user's flow-migration or
+    bundle-reload events. A client-supplied ``keyspace`` query parameter is
+    rejected with 422 so the contract is explicit -- previously the value was
+    silently dropped, which masked client bugs that assumed it had effect.
+
+    svc.since() uses blocking sqlite3; run in a thread pool so the asyncio
+    event loop is not held while waiting on disk I/O.
+    """
+    if keyspace is not None:
+        raise _typed_http_exception(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            error=ExtensionError(
+                code="extension-events-keyspace-forbidden",
+                message=(
+                    "The 'keyspace' query parameter is not accepted on /extensions/events; "
+                    "events are scoped to the authenticated user automatically."
+                ),
+                location="query.keyspace",
+                content=keyspace,
+                hint=(
+                    "Remove the 'keyspace' query parameter from the request; the server "
+                    "derives the keyspace from the authenticated user."
+                ),
+            ),
+        )
+    svc = get_extension_events_service()
+    if svc is None:
+        return ExtensionEventsResponse(events=[], settled=True)
+    keyspace = f"user:{current_user.id}"
+    events, settled = await asyncio.to_thread(svc.since, since, keyspace)
+    return ExtensionEventsResponse(
+        events=[ExtensionEventResponse(type=e.type, timestamp=e.timestamp, payload=e.payload) for e in events],
+        settled=settled,
+    )

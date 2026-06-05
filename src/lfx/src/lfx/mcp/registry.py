@@ -37,10 +37,23 @@ def search_registry(
     query: str | None = None,
     category: str | None = None,
     output_type: str | None = None,
+    *,
+    include_legacy: bool = False,
 ) -> list[dict[str, Any]]:
-    """Search the registry by name/category/output_type. Pure function."""
+    """Search the registry by name/category/output_type. Pure function.
+
+    LEGACY components are excluded by default: the agent's discovery path
+    must not surface deprecated nodes (screenshot 5: a Legacy Calculator).
+    They stay reachable via ``describe_component`` by exact name, and an
+    explicit ``include_legacy=True`` opt-in still lists them.
+
+    BETA components ARE included (user decision 2026-05-18): they are
+    usable, just newer — only legacy is hidden.
+    """
     results = []
     for name, tmpl in sorted(registry.items()):
+        if not include_legacy and tmpl.get("legacy"):
+            continue
         cat = tmpl.get("category", "")
         if category and cat.lower() != category.lower():
             continue
@@ -71,15 +84,25 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
     tmpl = registry[component_type]
     outputs = [{"name": o["name"], "types": o.get("types", [])} for o in tmpl.get("outputs", [])]
 
-    # If any output supports tool_mode, add component_as_tool as an available output
+    # Component supports tool mode if any INPUT field has tool_mode=True. This
+    # mirrors the runtime authority in Component._handle_tool_mode and matches
+    # what makes the Tool Mode toggle render in the canvas. Output-based
+    # tool_mode is also accepted for backward compat with components that
+    # declared the flag on the output side instead of the input.
+    template_fields = tmpl.get("template", {})
+    tool_mode_inputs = [
+        name for name, fdata in template_fields.items() if isinstance(fdata, dict) and fdata.get("tool_mode")
+    ]
     tool_mode_outputs = [o["name"] for o in tmpl.get("outputs", []) if o.get("tool_mode")]
-    if tool_mode_outputs:
-        uses = ", ".join(tool_mode_outputs)
+    if tool_mode_inputs or tool_mode_outputs:
+        uses = ", ".join(tool_mode_inputs or tool_mode_outputs)
+        label = "tool inputs" if tool_mode_inputs else "uses"
+        description = f"Wraps this component as a Tool ({label}: {uses}). Connect to an Agent's 'tools' input."
         outputs.append(
             {
                 "name": "component_as_tool",
                 "types": ["Tool"],
-                "description": f"Wraps this component as a Tool (uses: {uses}). Connect to an Agent's 'tools' input.",
+                "description": description,
             }
         )
     fields = []
@@ -125,4 +148,11 @@ def describe_component(registry: dict[str, dict], component_type: str) -> dict[s
         result["fields"] = fields
     if advanced_fields:
         result["advanced_fields"] = sorted(advanced_fields)
+    # Surface deprecation flags so the agent knows when it explicitly
+    # named a legacy/beta component (search_registry hides them, but the
+    # agent can still describe one by exact name).
+    if tmpl.get("legacy"):
+        result["legacy"] = True
+    if tmpl.get("beta"):
+        result["beta"] = True
     return result

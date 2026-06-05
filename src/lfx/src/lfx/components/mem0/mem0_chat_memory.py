@@ -1,5 +1,3 @@
-import os
-
 from mem0 import Memory, MemoryClient
 
 from lfx.base.memory.model import LCChatMemoryComponent
@@ -87,12 +85,27 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
         """Initializes a Mem0 memory instance based on provided configuration and API keys."""
         # Check if we're in Astra cloud environment and raise an error if we are.
         raise_error_if_astra_cloud_disable_component(disable_component_in_astra_cloud_msg)
+
+        # Pass the OpenAI key through mem0's config instead of writing os.environ.
+        # os.environ is process-global and persists across requests, so in a shared
+        # serving process (e.g. lfx serve) one caller's key would leak into other
+        # concurrent requests. mem0's OpenAI llm/embedder read config.api_key before
+        # falling back to OPENAI_API_KEY, so config injection keeps it request-scoped.
+        config = dict(self.mem0_config) if self.mem0_config else {}
         if self.openai_api_key:
-            os.environ["OPENAI_API_KEY"] = self.openai_api_key
+            for section in ("llm", "embedder"):
+                sec = dict(config.get(section) or {})
+                if sec.get("provider", "openai") != "openai":
+                    continue  # the OpenAI key is irrelevant to non-OpenAI providers
+                sec["provider"] = "openai"
+                sec_config = dict(sec.get("config") or {})
+                sec_config.setdefault("api_key", self.openai_api_key)
+                sec["config"] = sec_config
+                config[section] = sec
 
         try:
             if not self.mem0_api_key:
-                return Memory.from_config(config_dict=dict(self.mem0_config)) if self.mem0_config else Memory()
+                return Memory.from_config(config_dict=config) if config else Memory()
             if self.mem0_config:
                 return MemoryClient.from_config(api_key=self.mem0_api_key, config_dict=dict(self.mem0_config))
             return MemoryClient(api_key=self.mem0_api_key)
@@ -135,10 +148,10 @@ class Mem0MemoryComponent(LCChatMemoryComponent):
         try:
             if search_query:
                 logger.info("Performing search with query.")
-                related_memories = mem0_memory.search(query=search_query, user_id=user_id)
+                related_memories = mem0_memory.search(query=search_query, filters={"user_id": user_id})
             else:
                 logger.info("Retrieving all memories for user_id: %s", user_id)
-                related_memories = mem0_memory.get_all(user_id=user_id)
+                related_memories = mem0_memory.get_all(filters={"user_id": user_id})
         except Exception:
             logger.exception("Failed to retrieve related memories from Mem0.")
             raise

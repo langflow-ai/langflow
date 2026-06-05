@@ -2,13 +2,8 @@ import {
   getFlowVersionCount,
   getScopedValueForUniqueFlowVersion,
 } from "../../helpers/version-scope";
-import { normalizeWxoName } from "../../helpers/wxo-name";
 import type { ConnectionItem } from "../../types";
 import { getDefaultDeploymentToolName, UNKNOWN_FLOW_NAME } from "../../types";
-import {
-  INVALID_WXO_TOOL_NAME_MESSAGE,
-  isValidWxoName,
-} from "../../utils/wxo-name";
 import type { ReviewFlowItem } from "./types";
 
 function getToolNameForReview(
@@ -25,25 +20,10 @@ function getToolNameForReview(
   )?.trim();
 }
 
-function getInitialToolNameForReview(
-  initialToolNameByFlow: Map<string, string>,
-  attachmentKey: string,
-  flowId: string,
-  items: ReviewFlowItem[],
-) {
-  return getScopedValueForUniqueFlowVersion(
-    initialToolNameByFlow,
-    attachmentKey,
-    flowId,
-    getFlowVersionCount(items, flowId),
-  );
-}
-
 interface BuildReviewFlowsParams {
   allFlows: Array<{ id: string; name: string }>;
   attachedConnectionByFlow: Map<string, string[]>;
   connections: ConnectionItem[];
-  defaultToolNameScopeId: string | null;
   removedFlowIds: Set<string>;
   selectedVersionByFlow: Map<
     string,
@@ -62,7 +42,6 @@ export function buildReviewFlows({
   allFlows,
   attachedConnectionByFlow,
   connections,
-  defaultToolNameScopeId,
   removedFlowIds,
   selectedVersionByFlow,
   toolNameByFlow,
@@ -111,11 +90,7 @@ export function buildReviewFlows({
       });
 
       const flowName = flow?.name ?? entry.flowName ?? UNKNOWN_FLOW_NAME;
-      const defaultToolName = getDefaultDeploymentToolName(
-        flowName,
-        entry.versionId,
-        defaultToolNameScopeId,
-      );
+      const defaultToolName = getDefaultDeploymentToolName(flowName);
 
       return {
         attachmentKey: normalizedAttachmentKey,
@@ -134,120 +109,4 @@ export function buildReviewFlows({
       };
     })
     .filter((item): item is ReviewFlowItem => item !== null);
-}
-
-interface BuildToolNamesToCheckParams {
-  initialToolNameByFlow: Map<string, string>;
-  isEditMode: boolean;
-  preExistingFlowIds: Set<string>;
-  reviewFlows: ReviewFlowItem[];
-}
-
-export function buildToolNamesToCheck({
-  initialToolNameByFlow,
-  isEditMode,
-  preExistingFlowIds,
-  reviewFlows,
-}: BuildToolNamesToCheckParams): string[] {
-  const names: string[] = [];
-
-  for (const item of reviewFlows) {
-    const normalized = normalizeWxoName(item.toolName);
-    if (!normalized) continue;
-
-    if (isEditMode && preExistingFlowIds.has(item.attachmentKey)) {
-      const original = normalizeWxoName(
-        getInitialToolNameForReview(
-          initialToolNameByFlow,
-          item.attachmentKey,
-          item.flowId,
-          reviewFlows,
-        ) ?? "",
-      );
-
-      if (
-        normalized.toLowerCase() === original.toLowerCase() ||
-        normalized.toLowerCase() ===
-          normalizeWxoName(item.defaultToolName).toLowerCase()
-      ) {
-        continue;
-      }
-    }
-
-    names.push(normalized);
-  }
-
-  return names;
-}
-
-interface BuildToolNameErrorsParams {
-  existingToolNames: Set<string>;
-  initialToolNameByFlow: Map<string, string>;
-  isEditMode: boolean;
-  preExistingFlowIds: Set<string>;
-  reviewFlows: ReviewFlowItem[];
-}
-
-export function buildToolNameErrors({
-  existingToolNames,
-  initialToolNameByFlow,
-  isEditMode,
-  preExistingFlowIds,
-  reviewFlows,
-}: BuildToolNameErrorsParams) {
-  const errors = new Map<string, string>();
-  const batchNames = new Map<string, string>();
-
-  for (const item of reviewFlows) {
-    if (!isValidWxoName(item.toolName)) {
-      errors.set(item.attachmentKey, INVALID_WXO_TOOL_NAME_MESSAGE);
-      continue;
-    }
-
-    const normalized = normalizeWxoName(item.toolName).toLowerCase();
-
-    const firstAttachmentKey = batchNames.get(normalized);
-    if (firstAttachmentKey) {
-      errors.set(
-        item.attachmentKey,
-        "Duplicate tool name within this deployment",
-      );
-      if (!errors.has(firstAttachmentKey)) {
-        errors.set(
-          firstAttachmentKey,
-          "Duplicate tool name within this deployment",
-        );
-      }
-    } else {
-      batchNames.set(normalized, item.attachmentKey);
-    }
-
-    if (!errors.has(item.attachmentKey) && existingToolNames.has(normalized)) {
-      let skipProviderCheck = false;
-
-      if (isEditMode && preExistingFlowIds.has(item.attachmentKey)) {
-        const original = normalizeWxoName(
-          getInitialToolNameForReview(
-            initialToolNameByFlow,
-            item.attachmentKey,
-            item.flowId,
-            reviewFlows,
-          ) ?? "",
-        ).toLowerCase();
-
-        skipProviderCheck =
-          normalized === original ||
-          normalized === normalizeWxoName(item.defaultToolName).toLowerCase();
-      }
-
-      if (!skipProviderCheck) {
-        errors.set(
-          item.attachmentKey,
-          "Edit tool name (already exists in provider)",
-        );
-      }
-    }
-  }
-
-  return errors;
 }

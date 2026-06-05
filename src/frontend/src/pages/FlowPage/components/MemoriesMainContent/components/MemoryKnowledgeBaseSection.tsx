@@ -11,6 +11,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { cn } from "@/utils/utils";
 import { formatTimestamp } from "../helpers";
 import { KNOWLEDGE_BASE_SCROLL_THRESHOLD_PX } from "../MemoriesMainContent.constants";
@@ -41,10 +47,39 @@ export function MemoryKnowledgeBaseSection({
     <div className="flex flex-1 flex-col overflow-hidden rounded-lg border border-border bg-background">
       <div className="flex items-center justify-between border-b border-border px-4 py-2">
         <div className="flex items-center gap-2">
-          <h3 className="text-xs font-semibold">{t("memory.memoryBase")}</h3>
-          <span className="text-xs text-muted-foreground">
-            {docsData?.total ?? 0} chunks
-          </span>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <h3 className="cursor-default text-xs font-semibold">
+                  {t("memory.memoryBase")}
+                </h3>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>{t("memory.memoryBaseTooltip")}</p>
+                <a
+                  href="https://docs.langflow.org/memory-bases"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1 flex items-center gap-1 text-xs text-primary underline"
+                >
+                  {t("memory.readTheDocs")}
+                  <IconComponent name="ExternalLink" className="h-3 w-3" />
+                </a>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-default text-xs text-muted-foreground">
+                  {t("memory.chunksCount", { count: docsData?.total ?? 0 })}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                <p>{t("memory.chunksTooltip")}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
       </div>
 
@@ -65,16 +100,31 @@ export function MemoryKnowledgeBaseSection({
             <p className="max-w-xs text-xs text-muted-foreground">
               {t("memory.noChunksRunFlow")}
             </p>
+            <a
+              href="https://docs.langflow.org/memory-bases"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs text-primary underline"
+            >
+              {t("memory.noChunksLearnMore")}
+              <IconComponent name="ExternalLink" className="h-3 w-3" />
+            </a>
           </div>
         ) : (
           <Table>
             <TableHeader>
               <TableRow className="hover:bg-transparent">
-                <TableHead className="w-24 text-xs">Sender</TableHead>
-                <TableHead className="w-40 text-xs">Job ID</TableHead>
-                <TableHead className="text-xs">Content</TableHead>
+                <TableHead className="w-24 text-xs">
+                  {t("memory.senderHeader")}
+                </TableHead>
+                <TableHead className="w-40 text-xs">
+                  {t("memory.jobIdHeader")}
+                </TableHead>
+                <TableHead className="text-xs">
+                  {t("memory.contentHeader")}
+                </TableHead>
                 <TableHead className="w-44 text-xs">
-                  Ingestion Timestamp
+                  {t("memory.ingestionTimestampHeader")}
                 </TableHead>
               </TableRow>
             </TableHeader>
@@ -142,7 +192,7 @@ export function MemoryKnowledgeBaseSection({
                   <TableCell colSpan={4} className="py-4">
                     <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
                       <Loading size={16} className="text-muted-foreground" />
-                      Loading more...
+                      {t("memory.loadingMore")}
                     </div>
                   </TableCell>
                 </TableRow>

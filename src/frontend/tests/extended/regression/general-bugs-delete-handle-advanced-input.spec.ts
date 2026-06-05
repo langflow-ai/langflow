@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -15,6 +17,8 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -40,7 +44,7 @@ test(
     await closeAdvancedOptions(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 2000,
     });

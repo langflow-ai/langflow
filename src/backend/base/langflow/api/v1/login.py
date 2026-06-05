@@ -4,7 +4,10 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
+from limits import parse
 from pydantic import BaseModel
+from slowapi.errors import RateLimitExceeded
+from slowapi.wrappers import Limit
 
 from langflow.api.utils import DbSession
 from langflow.api.v1.schemas import Token
@@ -12,8 +15,43 @@ from langflow.initial_setup.setup import get_or_create_default_folder
 from langflow.services.database.models.user.crud import get_user_by_id
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_auth_service, get_settings_service, get_variable_service
+from langflow.services.rate_limit import get_rate_limit_string
 
 router = APIRouter(tags=["Login"])
+
+
+def get_limiter_from_app(request: Request):
+    """Get the rate limiter from app state (initialized after settings load)."""
+    return request.app.state.limiter
+
+
+def check_rate_limit(request: Request) -> None:
+    """Check and enforce rate limit for the request.
+
+    Retrieves the limiter from app.state (initialized after settings load in main.py)
+    and manually checks the rate limit using the limits library.
+
+    Raises:
+        RateLimitExceeded: If the rate limit is exceeded
+    """
+    limiter = get_limiter_from_app(request)
+
+    # Parse the rate limit string and check if limit is exceeded
+    limit_item = parse(get_rate_limit_string())
+    if not limiter._limiter.hit(limit_item, limiter._key_func(request)):  # noqa: SLF001
+        # Limit exceeded - raise RateLimitExceeded with proper wrapper
+        limit_wrapper = Limit(
+            limit=limit_item,
+            key_func=limiter._key_func,  # noqa: SLF001
+            scope=None,
+            per_method=False,
+            methods=None,
+            error_message=None,
+            exempt_when=None,
+            cost=1,
+            override_defaults=False,
+        )
+        raise RateLimitExceeded(limit_wrapper)
 
 
 class SessionResponse(BaseModel):
@@ -26,14 +64,19 @@ class SessionResponse(BaseModel):
 
 @router.post("/login", response_model=Token, include_in_schema=False)
 async def login_to_get_access_token(
+    request: Request,
     response: Response,
     form_data: Annotated[OAuth2PasswordRequestForm, Depends()],
     db: DbSession,
 ):
+    """Login endpoint with rate limiting applied via app.state.limiter."""
+    # Check rate limit (limiter is initialized in main.py after settings load)
+    check_rate_limit(request)
+
     auth_settings = get_settings_service().auth_settings
     try:
         auth = get_auth_service()
-        user = await auth.authenticate_user(form_data.username, form_data.password, db)
+        user = await auth.authenticate_user(form_data.username, form_data.password, db, request)
     except Exception as exc:
         if isinstance(exc, HTTPException):
             raise

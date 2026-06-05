@@ -1,23 +1,16 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 
 test(
   "should order the visualization (requires store API key)",
   { tag: ["@release"] },
   async ({ page, context }) => {
     test.skip();
-
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page, { skipModal: true });
 
     await page.waitForTimeout(1000);
@@ -40,7 +33,7 @@ test(
     await newPageStore.getByTestId("sidebar-nav-Langflow Store").click();
 
     await newPageStore
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
 
     await newPageStore.getByTestId("api-key-save-button-store").click();
@@ -61,7 +54,7 @@ test(
 
     await newPageStore2.waitForTimeout(1000);
 
-    await expect(newPageStore2.getByText("Basic RAG")).toBeVisible({
+    await expect(newPageStore2.getByText(TEXTS.templateBasicRag)).toBeVisible({
       timeout: 30000,
     });
 
@@ -74,7 +67,7 @@ test(
     await newPageStore2.getByTestId("select-order-store").click();
     await newPageStore2.getByText("Popular").click();
 
-    await newPageStore2.getByText("Basic RAG").isVisible();
+    await newPageStore2.getByText(TEXTS.templateBasicRag).isVisible();
   },
 );
 
@@ -83,13 +76,8 @@ test(
   { tag: ["@release"] },
   async ({ page, context }) => {
     test.skip();
-    test.skip(
-      !process?.env?.STORE_API_KEY,
-      "STORE_API_KEY required to run this test",
-    );
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    skipIfMissing.storeApiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page, { skipModal: true });
 
     await page.waitForSelector('[data-testid="button-store"]', {
@@ -110,7 +98,7 @@ test(
     await newPageStore.getByTestId("sidebar-nav-Langflow Store").click();
 
     await newPageStore
-      .getByPlaceholder("Insert your API Key")
+      .getByPlaceholder(TEXTS.placeholderApiKey)
       .fill(process.env.STORE_API_KEY ?? "");
     await newPageStore.getByTestId("api-key-save-button-store").click();
     await expect(
@@ -179,8 +167,7 @@ test(
       .getByTestId("icon-ToyBrick")
       ?.count();
     await newPageStore2.waitForTimeout(500);
-    if (iconGroupAllCount === 0 || toyBrickAllCount === 0) {
-      expect(false).toBe(true);
-    }
+    expect(iconGroupAllCount).not.toBe(0);
+    expect(toyBrickAllCount).not.toBe(0);
   },
 );

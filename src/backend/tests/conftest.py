@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import shutil
 
 # we need to import tmpdir
@@ -39,6 +40,14 @@ from typer.testing import CliRunner
 from tests.api_keys import get_openai_api_key
 
 load_dotenv()
+
+
+@pytest.fixture(scope="session", autouse=True)
+def disable_rate_limiting():
+    """Disable rate limiting for all tests to prevent 429 errors during test execution."""
+    os.environ["LANGFLOW_RATE_LIMIT_ENABLED"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_RATE_LIMIT_ENABLED", None)
 
 
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
