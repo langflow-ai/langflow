@@ -147,7 +147,7 @@ export function ContentBlockDisplay({
                     <AccordionItem
                       key={toolKey}
                       value={toolKey}
-                      className="overflow-hidden rounded-xl border border-border/70 bg-primary-foreground shadow-sm"
+                      className="overflow-hidden rounded-xl border border-border/70 bg-background shadow-sm"
                     >
                       <AccordionTrigger className="rounded-lg px-4 py-3 hover:bg-background/30 hover:no-underline">
                         <div className="flex items-center justify-between w-full pr-2">
