@@ -18,7 +18,8 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-from datetime import datetime, timezone
+import math
+from datetime import datetime, timedelta, timezone
 from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
@@ -108,6 +109,126 @@ async def alive_worker_count(session, now: datetime, lease_window: float) -> int
     return len(alive_owners)
 
 
+def _error_type_expr(session):
+    """Dialect-aware SQL expression for ``error->>'type'`` as text.
+
+    Postgres uses the raw ``->>`` operator (``error ->> 'type'``) via
+    ``col(Job.error).op("->>")("type")`` — robust regardless of whether the
+    column maps as JSON or JSONB, unlike ``.astext`` which raises on this
+    column's type mapping. SQLite uses ``json_extract(error, '$.type')``. Both
+    return the string value of the ``type`` key (or NULL when ``error`` is NULL
+    or has no ``type``), so the FAILED worker_lost split is computed in SQL
+    rather than reading every FAILED row into Python (unbounded over all time).
+
+    The test DB is sqlite (json_extract branch); the postgres ``->>`` branch is
+    verified live against a real Postgres instance.
+    """
+    dialect = session.get_bind().dialect.name
+    if dialect == "postgresql":
+        return col(Job.error).op("->>")("type")
+    # sqlite (and other JSON-text dialects): json_extract walks the path.
+    return func.json_extract(col(Job.error), "$.type")
+
+
+async def terminal_counts(session) -> dict[str, int]:
+    """Cumulative all-time outcome counts derived from the durable job table.
+
+    Returns ``{"started", "completed", "failed_error", "failed_worker_lost",
+    "timed_out", "cancelled"}``:
+
+    * ``started`` — every job that has begun: ``status != QUEUED`` (IN_PROGRESS
+      plus every terminal state).
+    * ``completed`` — ``status == COMPLETED``.
+    * FAILED jobs split by ``error->>'type'``: ``failed_worker_lost`` is FAILED
+      AND ``type == 'worker_lost'``; ``failed_error`` is every other FAILED row.
+    * ``timed_out`` / ``cancelled`` — the matching terminal statuses.
+
+    The worker_lost split uses a dialect-aware JSON extract (see
+    ``_error_type_expr``) so it stays a single bounded SQL aggregate on both
+    SQLite and Postgres.
+    """
+    started_stmt = select(func.count()).select_from(Job).where(Job.status != JobStatus.QUEUED)
+    completed_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.COMPLETED)
+    timed_out_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.TIMED_OUT)
+    cancelled_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.CANCELLED)
+
+    error_type = _error_type_expr(session)
+    worker_lost_stmt = (
+        select(func.count()).select_from(Job).where(Job.status == JobStatus.FAILED).where(error_type == "worker_lost")
+    )
+
+    started = (await session.exec(started_stmt)).one()
+    completed = (await session.exec(completed_stmt)).one()
+    timed_out = (await session.exec(timed_out_stmt)).one()
+    cancelled = (await session.exec(cancelled_stmt)).one()
+    failed_worker_lost = (await session.exec(worker_lost_stmt)).one()
+    # ``error_type != 'worker_lost'`` is NULL (and thus excluded) for FAILED rows
+    # with a NULL error or no ``type`` key, so count FAILED-not-worker_lost as the
+    # complement of worker_lost to capture those rows too.
+    failed_total = (
+        await session.exec(select(func.count()).select_from(Job).where(Job.status == JobStatus.FAILED))
+    ).one()
+
+    return {
+        "started": int(started),
+        "completed": int(completed),
+        "failed_error": int(failed_total) - int(failed_worker_lost),
+        "failed_worker_lost": int(failed_worker_lost),
+        "timed_out": int(timed_out),
+        "cancelled": int(cancelled),
+    }
+
+
+async def duration_percentiles(session, now: datetime, window_seconds: float) -> tuple[float, float]:
+    """p50/p95 run duration (seconds) over jobs finished within the window.
+
+    Considers rows with ``finished_timestamp`` not null AND
+    ``finished_timestamp >= now - window_seconds``; duration is
+    ``finished_timestamp - created_timestamp``. The window is SQL-bounded so the
+    fetch scales with the window, not the all-time finished-job count, then the
+    durations and percentiles are computed in Python (nearest-rank). Returns
+    ``(0.0, 0.0)`` when no job finished in the window.
+
+    The cutoff is bound per-dialect (reusing ``session.get_bind().dialect.name``)
+    because Postgres stores ``finished_timestamp`` tz-aware (an aware cutoff
+    compares correctly) while SQLite stores it as a naive ISO string (comparing
+    against an aware ``+00:00`` cutoff is a lexicographic mismatch that can drop
+    boundary rows), so SQLite gets a naive-UTC cutoff that matches the stored
+    format. Naive SQLite datetimes are still normalized to aware UTC before
+    subtracting, the same way ``oldest_queued_seconds`` does.
+    """
+    cutoff = now - timedelta(seconds=window_seconds)
+    # Bind the cutoff in the form the stored column uses: aware for postgres,
+    # naive-UTC for sqlite (text datetimes), so the comparison is apples-to-apples.
+    dialect = session.get_bind().dialect.name
+    sql_cutoff = cutoff if dialect == "postgresql" else cutoff.replace(tzinfo=None)
+    stmt = (
+        select(Job.created_timestamp, Job.finished_timestamp)
+        .where(col(Job.finished_timestamp).is_not(None))
+        .where(col(Job.finished_timestamp) >= sql_cutoff)
+    )
+    result = await session.exec(stmt)
+    durations: list[float] = []
+    for created, finished in result.all():
+        if finished is None:
+            continue
+        # SQLite hands back naive datetimes for tz-aware columns; normalize.
+        finished_utc = finished if finished.tzinfo is not None else finished.replace(tzinfo=timezone.utc)
+        created_utc = created if created.tzinfo is not None else created.replace(tzinfo=timezone.utc)
+        durations.append(max((finished_utc - created_utc).total_seconds(), 0.0))
+    if not durations:
+        return 0.0, 0.0
+    durations.sort()
+    return _nearest_rank(durations, 50), _nearest_rank(durations, 95)
+
+
+def _nearest_rank(sorted_values: list[float], percentile: float) -> float:
+    """Nearest-rank percentile over a pre-sorted list (1-indexed rank, clamped)."""
+    n = len(sorted_values)
+    rank = max(1, min(n, math.ceil(percentile / 100 * n)))
+    return sorted_values[rank - 1]
+
+
 class BackgroundMetricsCollector:
     """Periodically pushes DB-derived bg-execution gauges to the OTel registry.
 
@@ -127,9 +248,10 @@ class BackgroundMetricsCollector:
     reconciles. Task 8 passes ``settings.background_lease_ttl_s`` explicitly.
     """
 
-    def __init__(self, *, interval: float, lease_window: float = 45.0):
+    def __init__(self, *, interval: float, lease_window: float = 45.0, duration_window_seconds: float = 300.0):
         self.interval = interval
         self.lease_window = lease_window
+        self.duration_window_seconds = duration_window_seconds
         self._stopped = False
         self._task: asyncio.Task | None = None
 
@@ -154,6 +276,33 @@ class BackgroundMetricsCollector:
                 )
             ot.update_gauge("langflow_bg_oldest_queued_seconds", oldest, {"backend": backend})
             ot.update_gauge("langflow_bg_alive_workers", alive, {"backend": backend})
+
+            # Cumulative all-time throughput/outcome counts, set as observable
+            # counters (last-absolute-value-wins per label-set). The worker runs
+            # in separate processes that never expose :9090, so the API-side
+            # collector is the single writer of these from the durable table.
+            tc = await terminal_counts(session)
+            ot.set_observable_counter("langflow_bg_jobs_started_total", tc["started"], {"backend": backend})
+            ot.set_observable_counter("langflow_bg_jobs_completed_total", tc["completed"], {"backend": backend})
+            # Zero-fill every reason each tick so a reason whose count stops
+            # growing still reports its cumulative value (and a never-seen reason
+            # reports 0 rather than vanishing).
+            for reason, count in (
+                ("error", tc["failed_error"]),
+                ("worker_lost", tc["failed_worker_lost"]),
+                ("timeout", tc["timed_out"]),
+                ("cancelled", tc["cancelled"]),
+            ):
+                ot.set_observable_counter(
+                    "langflow_bg_jobs_failed_total", count, {"reason": reason, "backend": backend}
+                )
+            ot.set_observable_counter(
+                "langflow_bg_orphans_reconciled_total", tc["failed_worker_lost"], {"backend": backend}
+            )
+
+            p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
+            ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
+            ot.update_gauge("langflow_bg_job_duration_p95_seconds", p95, {"backend": backend})
         except Exception as exc:  # noqa: BLE001 - observability must never crash the loop
             logger.warning(f"bg metrics collection tick skipped: {exc}")
 

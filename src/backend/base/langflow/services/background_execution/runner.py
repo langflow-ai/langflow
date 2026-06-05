@@ -24,7 +24,6 @@ from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 
-from langflow.services.background_execution import metrics as bg_metrics
 from langflow.services.background_execution.live_bus import LiveFrame
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
 from langflow.services.deps import get_settings_service
@@ -93,12 +92,12 @@ class JobRunner:
             else:
                 await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
-        bg_metrics.emit_job_started(backend=self._backend)
         # One structured line per transition (Loki/promtail). event_type="bg_job"
         # is the marker key: structlog RESERVES "event" for the message itself, so
         # a custom event= would clobber the message. job_id is the high-cardinality
         # forensic key that belongs on logs (never on metrics). A logging failure
-        # must never break the run, so the emit is guarded.
+        # must never break the run, so the emit is guarded. Throughput counters are
+        # DB-derived in the API-side collector (not emitted in-process here).
         with contextlib.suppress(Exception):
             await logger.ainfo(
                 "background job started",
@@ -113,8 +112,7 @@ class JobRunner:
         started_monotonic = time.monotonic()
 
         # Start the heartbeat INSIDE the try so any failure here still lands in
-        # the finally: emit_job_started already fired, so its terminal partner
-        # (_emit_terminal_metrics) must always run to keep started/terminal paired.
+        # the finally, where the terminal log is written.
         heartbeat_task: asyncio.Task | None = None
         try:
             heartbeat_task = self._start_heartbeat(job_id)
@@ -153,23 +151,23 @@ class JobRunner:
             with contextlib.suppress(Exception):
                 await asyncio.shield(self._finalize_terminal_event(job_id))
             await self._bus.close(str(job_id))
-            # One terminal emit per run, off the authoritative final status (read
-            # after the stop reconcile + finalize so a late-stop CANCELLED counts
-            # as cancelled, not completed). emit_* helpers swallow their own
-            # errors, so no extra guard is needed here.
-            await self._emit_terminal_metrics(job_id, time.monotonic() - started_monotonic)
+            # One terminal log per run, off the authoritative final status (read
+            # after the stop reconcile + finalize so a late-stop CANCELLED logs as
+            # cancelled, not completed).
+            await self._log_terminal_metrics(job_id, time.monotonic() - started_monotonic)
 
-    async def _emit_terminal_metrics(self, job_id: UUID, duration_seconds: float) -> None:
-        """Emit the completed/failed counter + duration histogram once per run.
+    async def _log_terminal_metrics(self, job_id: UUID, duration_seconds: float) -> None:
+        """Write the terminal structured log once per run (no in-process metrics).
 
-        Reads the final job status and maps it to the metric outcome/reason:
+        Reads the final job status and maps it to the log status/reason:
         COMPLETED -> completed; FAILED -> failed(reason=error); TIMED_OUT ->
         failed(reason=timeout); CANCELLED -> failed(reason=cancelled). A missing
         job row (best-effort fetch failure) is skipped silently.
 
         A non-terminal status read here (e.g. a status-write failure left the row
         IN_PROGRESS, or the run was orphaned) is an INTENTIONAL no-op: that run's
-        terminal metric is emitted by the reconciliation path (Task 5), not here.
+        terminal line is logged by the reconciliation path, not here. Throughput/
+        outcome/duration metrics are DB-derived in the API-side collector.
         """
         job = None
         with contextlib.suppress(Exception):
@@ -182,8 +180,6 @@ class JobRunner:
         flow_id = str(job.flow_id) if job.flow_id is not None else None
         user_id = str(job.user_id) if job.user_id is not None else None
         if job.status == JobStatus.COMPLETED:
-            bg_metrics.emit_job_completed(backend=self._backend)
-            bg_metrics.emit_job_duration(seconds=duration_seconds, outcome="completed", backend=self._backend)
             await self._log_terminal(
                 job_id, status="completed", duration_ms=duration_ms, flow_id=flow_id, user_id=user_id
             )
@@ -193,8 +189,6 @@ class JobRunner:
                 JobStatus.TIMED_OUT: "timeout",
                 JobStatus.CANCELLED: "cancelled",
             }[job.status]
-            bg_metrics.emit_job_failed(reason=reason, backend=self._backend)
-            bg_metrics.emit_job_duration(seconds=duration_seconds, outcome="failed", backend=self._backend)
             await self._log_terminal(
                 job_id,
                 status="failed",

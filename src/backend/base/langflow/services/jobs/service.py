@@ -580,7 +580,9 @@ class JobService(Service):
             await session.flush()
         # Function-local import: background_execution imports from jobs, so a
         # module-level import here would risk a cycle. The metrics module itself
-        # only pulls in deps + logger, so the local import is cheap and safe.
+        # only pulls in deps, so the local import is cheap and safe. Only the
+        # backend label for the log is needed — outcome counts are DB-derived in
+        # the API-side collector, not emitted in-process here.
         from lfx.log import logger
 
         from langflow.services.background_execution import metrics as bg_metrics
@@ -591,9 +593,6 @@ class JobService(Service):
         # concurrent appender can no longer roll back the whole sweep.
         for job_id in reconciled:
             await self.append_event(job_id, "run_failed", dict(error_payload))
-            # One emit pair per reconciled orphan (best-effort, never raises).
-            bg_metrics.emit_job_failed(reason="worker_lost", backend=backend)
-            bg_metrics.emit_orphan_reconciled(backend=backend)
             # One structured line per reconciled orphan. event_type="bg_job" is the
             # marker key (structlog reserves "event" for the message); a logging
             # failure must never break the sweep, so the emit is guarded.
