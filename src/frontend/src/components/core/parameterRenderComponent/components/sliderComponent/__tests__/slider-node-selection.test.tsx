@@ -78,7 +78,7 @@ describe("SliderComponent — node-selection isolation", () => {
 
     const sliderRoot = screen.getByTestId("slider_track").parentElement;
 
-    expect(sliderRoot).toHaveClass("nodrag", "nopan", "noflow", "nowheel");
+    expect(sliderRoot).toHaveClass("nodrag", "nopan", "noflow", "nowheel", "nodelete");
   });
 
   it("does not let a pointer-down on the slider bubble to the node wrapper", () => {
