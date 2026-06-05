@@ -448,7 +448,6 @@ class CollaborationManager:
             flow_id=flow_id,
             revision=payload.revision,
             actor_user_id=payload.actor_user_id,
-            actor_delegate=payload.actor_delegate,
             forward_ops=payload.forward_ops,
             created_at=payload.created_at,
         )

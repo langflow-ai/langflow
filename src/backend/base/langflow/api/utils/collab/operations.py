@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import HTTPException
 from lfx.services.flow_operations import FlowDataValidationError, FlowOperationValidationError, parse_flow_operations
-from lfx.services.flow_operations.ops import FlowOperation, FlowOperationActorDelegate
+from lfx.services.flow_operations.ops import FlowOperation
 from sqlmodel import select
 
 from langflow.api.utils.collab.helpers import rollback_and_restore_flow_filesystem, snapshot_flow_filesystem
@@ -32,7 +32,6 @@ class AcceptedFlowOperation:
     revision: int
     forward_ops: list[dict[str, Any]]
     actor_user_id: UUID
-    actor_delegate: FlowOperationActorDelegate
     created_at: datetime
 
 
@@ -64,7 +63,6 @@ async def apply_flow_operation_batch(
     base_revision: int,
     operations: list[dict[str, Any]],
     storage_service: StorageService,
-    actor_delegate: FlowOperationActorDelegate = FlowOperationActorDelegate.SELF,
 ) -> AcceptedFlowOperation:
     """Apply operations atomically after the API layer has authorized the actor."""
     stmt = select(Flow).where(Flow.id == flow_id).with_for_update()
@@ -130,6 +128,5 @@ async def apply_flow_operation_batch(
         revision=new_revision,
         forward_ops=_serialize_forward_ops(apply_result.forward_ops),
         actor_user_id=actor_user_id,
-        actor_delegate=actor_delegate,
         created_at=datetime.now(timezone.utc),
     )

@@ -237,7 +237,6 @@ describe("useFlowCollaboration", () => {
         flow_id: "flow-1",
         revision: 6,
         actor_user_id: "user-1",
-        actor_delegate: "self",
         forward_ops: submit.operations,
         created_at: "2026-05-30T00:00:00Z",
       });
@@ -267,7 +266,6 @@ describe("useFlowCollaboration", () => {
         flow_id: "flow-1",
         revision: 4,
         actor_user_id: "user-1",
-        actor_delegate: "self",
         forward_ops: [{ type: "delete_edges", ids: ["e1"] }],
         created_at: "2026-05-30T00:00:00Z",
       });
@@ -286,7 +284,6 @@ describe("useFlowCollaboration", () => {
       flow_id: "flow-1",
       revision: 8,
       actor_user_id: "user-2",
-      actor_delegate: "self",
       forward_ops: [{ type: "add_nodes", nodes: [{ id: "n2" } as never] }],
       created_at: "2026-05-30T00:00:01Z",
     };
@@ -308,7 +305,6 @@ describe("useFlowCollaboration", () => {
         flow_id: "flow-1",
         revision: 15,
         actor_user_id: "user-2",
-        actor_delegate: "self",
         forward_ops: [],
         created_at: "2026-05-30T00:00:01Z",
       });

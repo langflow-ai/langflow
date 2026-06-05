@@ -6,7 +6,6 @@ from datetime import datetime
 from typing import Any, Literal
 from uuid import UUID
 
-from lfx.services.flow_operations.ops import FlowOperationActorDelegate
 from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 from langflow.services.collaboration_events.schemas import CollaborationSelectionTarget
@@ -43,7 +42,6 @@ class CollaborationOperationAcceptedMessage(BaseModel):
     flow_id: UUID
     revision: int
     actor_user_id: UUID
-    actor_delegate: FlowOperationActorDelegate
     forward_ops: list[dict[str, Any]]
     created_at: datetime
 
@@ -106,7 +104,6 @@ class CollaborationOperationBroadcastMessage(BaseModel):
     flow_id: UUID
     revision: int
     actor_user_id: UUID
-    actor_delegate: FlowOperationActorDelegate
     forward_ops: list[dict[str, Any]]
     created_at: datetime
 
@@ -119,7 +116,6 @@ class CollaborationOperationAcceptedEventPayload(BaseModel):
     worker_id: str
     revision: StrictInt
     actor_user_id: UUID
-    actor_delegate: FlowOperationActorDelegate = FlowOperationActorDelegate.SELF
     forward_ops: list[dict[str, Any]] = Field(default_factory=list)
     created_at: datetime
 

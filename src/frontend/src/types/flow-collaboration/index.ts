@@ -1,7 +1,6 @@
 import type {
   FlowOperation,
   FlowOperationAcceptedPayload,
-  FlowOperationActorDelegate,
 } from "@/types/flow-operations";
 
 export type CollaborationPresenceUser = {
@@ -52,7 +51,6 @@ export type CollaborationOperationBroadcastMessage = {
   flow_id: string;
   revision: number;
   actor_user_id: string;
-  actor_delegate: FlowOperationActorDelegate;
   forward_ops: FlowOperation[];
   created_at: string;
 };

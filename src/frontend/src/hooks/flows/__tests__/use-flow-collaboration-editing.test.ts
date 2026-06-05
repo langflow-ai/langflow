@@ -18,7 +18,6 @@ const mockSubmitOperations = jest.fn((operations: FlowOperation[]) =>
     flow_id: "flow-1",
     revision: 1,
     actor_user_id: "user-1",
-    actor_delegate: "self",
     forward_ops: operations,
     created_at: "2026-05-30T00:00:00Z",
   }),
@@ -80,7 +79,6 @@ describe("useFlowCollaborationEditing", () => {
         flow_id: "flow-1",
         revision: 1,
         actor_user_id: "user-1",
-        actor_delegate: "self",
         forward_ops: operations,
         created_at: "2026-05-30T00:00:00Z",
       }),
@@ -396,7 +394,6 @@ describe("useFlowCollaborationEditing", () => {
         flow_id: "flow-1",
         revision: 2,
         actor_user_id: "user-2",
-        actor_delegate: "self",
         forward_ops: [{ type: "delete_nodes", ids: ["a"] }],
         created_at: "2026-05-30T00:00:00Z",
       });

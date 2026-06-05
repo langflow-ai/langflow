@@ -245,7 +245,6 @@ class FlowCollaborationConnection:
             flow_id=accepted.flow_id,
             revision=accepted.revision,
             actor_user_id=accepted.actor_user_id,
-            actor_delegate=accepted.actor_delegate,
             forward_ops=accepted.forward_ops,
             created_at=accepted.created_at,
         )
@@ -273,7 +272,6 @@ class FlowCollaborationConnection:
             flow_id=accepted.flow_id,
             revision=accepted.revision,
             actor_user_id=accepted.actor_user_id,
-            actor_delegate=accepted.actor_delegate,
             forward_ops=accepted.forward_ops,
             created_at=accepted.created_at,
         )
@@ -288,7 +286,6 @@ class FlowCollaborationConnection:
             "worker_id": WORKER_ID,
             "revision": accepted.revision,
             "actor_user_id": str(accepted.actor_user_id),
-            "actor_delegate": accepted.actor_delegate.value,
             "forward_ops": accepted.forward_ops,
             "created_at": accepted.created_at.isoformat(),
         }

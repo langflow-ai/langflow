@@ -1,8 +1,5 @@
 import type { AllNodeType, EdgeType } from "@/types/flow";
 
-/** Who performed an accepted operation batch (server-derived on accept). */
-export type FlowOperationActorDelegate = "self" | "agent";
-
 export type AddNodesOp = {
   type: "add_nodes";
   nodes: AllNodeType[];
@@ -94,7 +91,6 @@ export type FlowOperationAcceptedPayload = {
   flow_id: string;
   revision: number;
   actor_user_id: string;
-  actor_delegate: FlowOperationActorDelegate;
   forward_ops: FlowOperation[];
   created_at: string;
 };

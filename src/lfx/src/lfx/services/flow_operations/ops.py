@@ -2,19 +2,11 @@
 
 from __future__ import annotations
 
-from enum import StrEnum
 from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError, field_validator, model_validator
 
 from lfx.services.flow_operations.exceptions import FlowOperationValidationError
-
-
-class FlowOperationActorDelegate(StrEnum):
-    """Who performed an accepted operation batch."""
-
-    SELF = "self"
-    AGENT = "agent"
 
 
 class AddNodesOp(BaseModel):
