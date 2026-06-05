@@ -30,11 +30,11 @@ html[data-theme="dark"] {
   --ifm-background-surface-color: #111;
   --ifm-card-background-color: #232328;
   --ifm-card-border-color: #303038;
-  --ifm-font-color-base: #a8a8b0; /* Soft gray text */
-  --ifm-heading-color: #cdcdd4; /* Headings: brighter but still muted */
+  --ifm-font-color-base: #bcbcc4; /* Soft gray text */
+  --ifm-heading-color: #dcdce2; /* Headings: brighter but still muted */
   --ifm-color-emphasis-600: #777;
   --ifm-color-emphasis-700: #8a8a90;
-  --ifm-menu-color: #8a8a92; /* Sidebar text: muted slate */
+  --ifm-menu-color: #9c9ca4; /* Sidebar text: muted slate */
   --ifm-toc-border-color: #2c2c32;
   --ifm-navbar-background-color: #111;
 }
