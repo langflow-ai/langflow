@@ -39,6 +39,9 @@ html[data-theme='light'] .redocusaurus {
   --redoc-text-primary:  #111827;
   --redoc-text-muted:    hsl(240, 4%, 46%);
   --redoc-text-label:    #111827;
+  /* Darkened brand pink — #f471b5 fails WCAG AA on light surfaces;
+     #cd1072 passes 4.5:1 on #fff, #f5f5f5, #ebebec and #f5f3f4 */
+  --redoc-pink-a11y:     #cd1072;
 }
 
 /* ── Sidebar layout ───────────────────────────────────────── */
@@ -93,7 +96,7 @@ html[data-theme='light'] .redocusaurus .menu-content label.active {
 /* ── Sidebar hover ────────────────────────────────────────── */
 
 html[data-theme='light'] .redocusaurus .menu-content label:hover,
-html[data-theme='light'] .redocusaurus .menu-content label:hover span,
+html[data-theme='light'] .redocusaurus .menu-content label:hover span:not([class*="operation-type"]),
 html[data-theme='light'] .redocusaurus .menu-content li:hover > label {
   color: var(--redoc-text-primary) !important;
 }
@@ -336,9 +339,10 @@ html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > 
 }
 
 /* ── Light theme syntax highlighting ──────────────────────── */
+/* All colors pass WCAG AA (4.5:1) on white sample backgrounds */
 
 html[data-theme='light'] .redocusaurus .token.keyword {
-  color: rgb(209, 148, 158) !important;
+  color: #b75868 !important;
 }
 
 html[data-theme='light'] .redocusaurus .token.punctuation {
@@ -347,17 +351,17 @@ html[data-theme='light'] .redocusaurus .token.punctuation {
 
 html[data-theme='light'] .redocusaurus .token.boolean,
 html[data-theme='light'] .redocusaurus .token.null {
-  color: rgb(230, 68, 65) !important;
+  color: #e32c29 !important;
 }
 
 html[data-theme='light'] .redocusaurus .token.number,
 html[data-theme='light'] .redocusaurus .token.constant {
-  color: rgb(74, 139, 179) !important;
+  color: #427ca0 !important;
 }
 
 html[data-theme='light'] .redocusaurus .token.literal-property.property,
 html[data-theme='light'] .redocusaurus .token.string-property.property {
-  color: rgb(74, 139, 179) !important;
+  color: #427ca0 !important;
 }
 
 html[data-theme='light'] .redocusaurus .token.string {
@@ -365,7 +369,7 @@ html[data-theme='light'] .redocusaurus .token.string {
 }
 
 html[data-theme='light'] .redocusaurus .token.operator {
-  color: rgb(245, 184, 61) !important;
+  color: #9f6d08 !important;
 }
 
 html[data-theme='light'] .redocusaurus .token.property {
@@ -376,6 +380,88 @@ html[data-theme='light'] .redocusaurus .token.property {
 
 .redocusaurus .api-content > div:not(:last-of-type)::after {
   display: none !important;
+}
+
+/* ── Light theme WCAG contrast overrides ──────────────────── */
+/* Redoc renders these with #f471b5 / #9c9ca2, which fail 4.5:1 on
+   light surfaces. Dark theme is unaffected (colors pass there). */
+
+/* Inline code in descriptions (typography.code.color from config) */
+html[data-theme='light'] .redocusaurus *:not(pre) > code {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* "required" labels in schema tables (schema.requireLabelColor) */
+html[data-theme='light'] .redocusaurus td[kind='field'] > div {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Classless utility buttons (Expand all / Collapse all, etc.).
+   Redoc dims their wrapper div to 0.7, lightening the effective color —
+   restore full opacity on the wrapper, not the button */
+html[data-theme='light'] .redocusaurus button:not([class]) {
+  color: #6c6c74 !important;
+}
+
+html[data-theme='light'] .redocusaurus div:has(> button:not([class])) {
+  opacity: 1 !important;
+}
+
+/* Links (Download button, server URLs) — primaryColor fails on light */
+html[data-theme='light'] .redocusaurus .api-content a {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Schema tree lines (schema.linesColor #F471B5) — align with the
+   accessible pink on light so all pinks on the page match */
+html[data-theme='light'] .redocusaurus td[kind='field'] {
+  border-left-color: var(--redoc-pink-a11y) !important;
+}
+
+html[data-theme='light'] .redocusaurus td[kind='field'] > span:not(.property-name)::before,
+html[data-theme='light'] .redocusaurus td[kind='field'] > span:not(.property-name)::after {
+  background-color: var(--redoc-pink-a11y) !important;
+}
+
+/* Expandable property names render inside a classless <button> and pick up
+   button colors (gray in light via our rule, Redoc's #333 in dark) — match
+   the non-expandable property names in both themes */
+.redocusaurus td[kind='field'] button span.property-name {
+  color: var(--ifm-font-color-base) !important;
+}
+
+/* Field markers (required / recursive) in schema tables */
+html[data-theme='light'] .redocusaurus td[kind='field'] > span:not(.property-name),
+html[data-theme='light'] .redocusaurus td[kind='field'] > div > div > span {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* "required" badge inside section headings (Request Body schema: ... required) */
+html[data-theme='light'] .redocusaurus .api-content h5 > div {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Field type labels (string, Array of strings) in description cells —
+   they sit on #ebebeb chips, so the gray is darker than the button one */
+html[data-theme='light'] .redocusaurus td:not([kind]) > div > div > span {
+  color: #696971 !important;
+}
+
+/* Constraint chips (>= 1, [ 1 .. 200 ]) — rendered at 0.9 alpha by Redoc */
+html[data-theme='light'] .redocusaurus td span:not([class]) > span {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Active sidebar item — Redoc leaves it white on the light surface.
+   Use the regular text color (no pink); keep HTTP method badges intact */
+html[data-theme='light'] .redocusaurus .menu-content label.active,
+html[data-theme='light'] .redocusaurus .menu-content label.active span:not([class*="operation-type"]) {
+  color: var(--redoc-text-primary) !important;
+}
+
+/* oneOf variant buttons — white text on primaryColor bg fails; dark text passes */
+html[data-theme='light'] .redocusaurus td button {
+  color: #111827 !important;
 }
 
 /* ── Inline code (dark) ───────────────────────────────────── */

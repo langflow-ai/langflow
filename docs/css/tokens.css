@@ -16,7 +16,7 @@
 
 /* Light theme - Pure white background */
 html[data-theme="light"] {
-  --ifm-color-primary: #e44fa0; /* Langflow pink, slightly darkened for contrast on white */
+  --ifm-color-primary: #d11074; /* Lightest brand-hue pink passing WCAG AA on white (5.2:1) and inline-code bg #eeeef5 (4.5:1) */
   --ifm-background-color: var(--ifm-color-white);
   --ifm-background-surface-color: var(--ifm-color-white);
   --ifm-code-background: #eeeef5;

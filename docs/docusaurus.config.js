@@ -11,13 +11,13 @@ const lightNeonPrismTheme = {
     backgroundColor: "#f9f9fd",
   },
   styles: [
-    { types: ["comment"], style: { color: "#94a3b8", fontStyle: "italic" } },
-    { types: ["string", "attr-value"], style: { color: "#059669" } },
-    { types: ["number"], style: { color: "#ea580c" } },
-    { types: ["boolean", "constant"], style: { color: "#d97706" } },
+    { types: ["comment"], style: { color: "#607491", fontStyle: "italic" } },
+    { types: ["string", "attr-value"], style: { color: "#04835c" } },
+    { types: ["number"], style: { color: "#c74b0a" } },
+    { types: ["boolean", "constant"], style: { color: "#ae5f05" } },
     { types: ["keyword-import", "imports", "module"], style: { color: "#7c3aed" } },
-    { types: ["keyword", "tag"], style: { color: "#0891b2" } },
-    { types: ["builtin", "class-name", "function", "attr-name", "property"], style: { color: "#db2777" } },
+    { types: ["keyword", "tag"], style: { color: "#077d9a" } },
+    { types: ["builtin", "class-name", "function", "attr-name", "property"], style: { color: "#d82474" } },
     { types: ["decorator"], style: { color: "#be185d" } },
     { types: ["operator", "punctuation"], style: { color: "#64748b" } },
     { types: ["variable"], style: { color: "#64748b" } },
@@ -214,14 +214,23 @@ const config = {
               backgroundColor: "transparent",
             },
             colors: {
+              // Badge backgrounds carry white text — all pass WCAG AA (4.5:1)
               http: {
-                get: "#3b82f6",
-                post: "#10b981",
-                put: "#f59e0b",
-                delete: "#ef4444",
-                patch: "#8b5cf6",
-                head: "#6366f1",
+                get: "#1e6ff5",
+                post: "#0c875e",
+                put: "#a56a07",
+                delete: "#eb1616",
+                patch: "#8655f6",
+                head: "#6265f1",
                 options: "#6b7280",
+              },
+              // Response chips (2xx green / 4xx-5xx red) — darkened from Redoc
+              // defaults (#1d8127 / #d41f1c) to pass 4.5:1 on their tinted bg
+              success: {
+                main: "#186a20",
+              },
+              error: {
+                main: "#ce1e1b",
               },
             },
             schema: {
@@ -502,7 +511,11 @@ const config = {
       };
     },
   ],
-  clientModules: [require.resolve("./src/clientModules/tocProgress.js")],
+  clientModules: [
+    require.resolve("./src/clientModules/tocProgress.js"),
+    require.resolve("./src/clientModules/redocA11y.js"),
+    require.resolve("./src/clientModules/codeBlockA11y.js"),
+  ],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

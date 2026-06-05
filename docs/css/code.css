@@ -40,17 +40,17 @@ html[data-theme="dark"] {
 html[data-theme="light"] {
   --lf-ch-bg: #f9f9fd;
   --lf-ch-fg: #64748b;
-  --lf-ch-line-num: #94a3b8;
+  --lf-ch-line-num: #607491;
   --lf-ch-selection: #e2e8f0;
   --lf-ch-border: #e2e4f0;
   --lf-ch-title-bg: #f0f0f8;
-  --lf-ch-comment: #94a3b8;
-  --lf-ch-string: #059669;
-  --lf-ch-number: #ea580c;
-  --lf-ch-boolean: #d97706;
+  --lf-ch-comment: #607491;
+  --lf-ch-string: #04835c;
+  --lf-ch-number: #c74b0a;
+  --lf-ch-boolean: #ae5f05;
   --lf-ch-import: #7c3aed;
-  --lf-ch-keyword: #0891b2;
-  --lf-ch-function: #db2777;
+  --lf-ch-keyword: #077d9a;
+  --lf-ch-function: #d82474;
   --lf-ch-decorator: #be185d;
   --lf-ch-variable: #64748b;
 }
