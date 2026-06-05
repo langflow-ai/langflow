@@ -94,6 +94,19 @@ jobs:
             PYPI_VER=$(curl -fsSL https://pypi.org/pypi/langflow-nightly/json \
               | python3 -c "import json,sys;print(json.load(sys.stdin)['info']['version'])")
           fi
+
+          # The nightly tag emitted by create-nightly-tag (used when
+          # nightly_build.yml chains into this workflow) carries a `v` prefix,
+          # but docker-nightly-build.yml strips that `v` before publishing —
+          # so on Docker Hub the tag is `1.10.0.devNN`, not `v1.10.0.devNN`.
+          # Normalise the tag here so the pull, the docker-run scenario, and
+          # the docker-compose scenario all reference a tag that actually
+          # exists on the registry. db-migration-validation.yml does the same
+          # strip in its install step.
+          IMAGE_NAME="${NIGHTLY_TAG%%:*}"
+          TAG_PART="${NIGHTLY_TAG##*:}"
+          NIGHTLY_TAG="${IMAGE_NAME}:${TAG_PART#v}"
+
           docker pull "$NIGHTLY_TAG" >/dev/null
           IMG_VER=$(docker run --rm --entrypoint sh "$NIGHTLY_TAG" \
             -c "pip show langflow-nightly | awk '/^Version:/ {print \$2}'")
@@ -169,13 +182,26 @@ jobs:
           echo "Installed version: $INSTALLED"
           echo "INSTALLED_VERSION=$INSTALLED" >> "$GITHUB_ENV"
 
-      - name: Assert unpinned install resolved to PyPI latest
+      - name: Assert unpinned install did not silently backtrack
         run: |
+          set -euo pipefail
+          # The signal we care about is "the unpinned resolver picked a version
+          # OLDER than what PyPI currently advertises as latest" — the
+          # broken-pins backtrack we want to catch loudly. The opposite case
+          # (installed > snapshot) happens naturally if a fresh nightly lands
+          # on PyPI between resolve-versions and this step, and shouldn't fail
+          # an otherwise healthy release.
           EXPECTED="${{ needs.resolve-versions.outputs.pypi_version }}"
-          if [ "$INSTALLED_VERSION" != "$EXPECTED" ]; then
-            echo "::error::Unpinned 'uv pip install langflow-nightly' silently resolved to $INSTALLED_VERSION (expected PyPI latest $EXPECTED). This usually means the latest release has unsatisfiable dependency pins and the resolver backtracked to an older nightly."
-            exit 1
+          if [ "$INSTALLED_VERSION" = "$EXPECTED" ]; then
+            exit 0
           fi
+          NEWER=$(printf '%s\n%s\n' "$INSTALLED_VERSION" "$EXPECTED" | sort -V | tail -1)
+          if [ "$NEWER" = "$INSTALLED_VERSION" ]; then
+            echo "::warning::Unpinned install resolved to $INSTALLED_VERSION, which is newer than the snapshot taken at the start of the run ($EXPECTED). A new nightly likely landed mid-run; not a backtrack."
+            exit 0
+          fi
+          echo "::error::Unpinned 'uv pip install langflow-nightly' silently resolved to $INSTALLED_VERSION (older than PyPI latest $EXPECTED). This usually means the latest release has unsatisfiable dependency pins and the resolver backtracked to an older nightly."
+          exit 1
 
       - name: Start Langflow
         working-directory: ${{ runner.temp }}/fresh
