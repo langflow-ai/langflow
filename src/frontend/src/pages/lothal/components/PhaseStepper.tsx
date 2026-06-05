@@ -36,7 +36,8 @@ export function PhaseStepper({
           className="mono"
           style={{ fontSize: 11, color: "var(--ink-soft)" }}
         >
-          {String(idx + 1).padStart(2, "0")} / 05
+          {String(idx + 1).padStart(2, "0")} /{" "}
+          {String(PHASES.length).padStart(2, "0")}
         </span>
       </div>
     );

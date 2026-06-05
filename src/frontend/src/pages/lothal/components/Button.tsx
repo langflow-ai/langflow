@@ -25,7 +25,7 @@ const VARIANTS: Record<ButtonVariant, CSSProperties> = {
   },
   accent: {
     background: "var(--accent)",
-    color: "#fff",
+    color: "var(--accent-fg)",
     borderColor: "var(--accent)",
   },
   secondary: {

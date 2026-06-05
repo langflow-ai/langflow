@@ -36,7 +36,7 @@ export function EmptyHint({
         </div>
       )}
       {kbd && (
-        <div
+        <kbd
           className="mono"
           style={{
             fontSize: 11,
@@ -49,7 +49,7 @@ export function EmptyHint({
           }}
         >
           {kbd}
-        </div>
+        </kbd>
       )}
     </div>
   );

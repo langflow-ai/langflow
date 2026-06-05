@@ -22,6 +22,9 @@
   --accent: #c0451f;
   --accent-soft: rgba(192, 69, 31, 0.1);
   --accent-ink: #8a2f14;
+  /* Foreground on the saturated accent — white in both themes (every palette
+     accent is dark/saturated enough that white keeps WCAG-AA contrast). */
+  --accent-fg: #fff;
   --warn: #b06a14;
   --success: #5a7242;
 
