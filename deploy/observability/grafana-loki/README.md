@@ -84,7 +84,7 @@ Each `langflow worker` registers a row in the durable `worker_registry` table on
 The dashboard reads `worker_registry` directly from Postgres (joined with per-owner aggregates from the `job` table). Per-worker detail stays out of Prometheus, so this needs a Postgres datasource rather than a scrape target. It has:
 
 - **Header stats**: online / busy / idle / total registered.
-- **Worker roster table**: every registered worker, online vs offline, uptime, current job, and per-worker processed / succeeded / failed counts.
+- **Worker roster table**: every registered worker, online vs offline, uptime, current job, and per-worker processed / succeeded / failed counts. The roster's online/offline flag uses a fixed 30s window (the default 3x `background_worker_registry_interval_s`); the Prometheus gauges adapt automatically, so if you raise the interval, edit the `30 seconds` literal in the roster SQL to match.
 - **`$worker` drill-down**: a dashboard variable that filters a per-worker table plus the Loki `bg_job` logs for the selected worker (`{job="langflow"} | json | event_type="bg_job" | worker=~"$worker"`). The `bg_job` logs carry a `worker` field on the scaled backend.
 
 Two settings control the registry, both in lfx settings:
