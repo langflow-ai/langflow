@@ -476,6 +476,15 @@ html[data-theme='dark'] .redocusaurus *:not(pre) > code {
   background-color: rgba(255, 255, 255, 0.05) !important;
 }
 
+/* ── Response button code alignment ───────────────────────── */
+/* Redoc sets vertical-align: top + line-height: 20px on the status code
+   ("200") while the description text is baseline-aligned with a taller
+   line-height, leaving the code visually higher than the phrase */
+.redocusaurus button > strong {
+  vertical-align: baseline !important;
+  line-height: inherit !important;
+}
+
 /* ── Dark theme WCAG contrast overrides ───────────────────── */
 
 /* Code sample tokens — Redoc defaults fail on the dark panel (#242426) */
