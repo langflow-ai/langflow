@@ -55,7 +55,7 @@ Open [http://localhost:3000/d/langflow-bg-execution](http://localhost:3000/d/lan
 
 ### Metric catalog
 
-The DB-derived collector (in the Langflow process that owns the metrics port) sets the gauges; the runner and watchdog emit the counters and the duration histogram. All metrics carry a `backend` label (`default` or `scaled`).
+All of these are derived from the durable job tables by a single collector in the Langflow process that owns the metrics port, so they work identically on the in-process default backend and a distributed `langflow worker` fleet (the workers never need their own scrape target). All metrics carry a `backend` label (`default` or `scaled`).
 
 | Metric | Type | Labels | Meaning |
 |---|---|---|---|
@@ -66,7 +66,8 @@ The DB-derived collector (in the Langflow process that owns the metrics port) se
 | `langflow_bg_jobs_completed_total` | counter | `backend` | Jobs completed |
 | `langflow_bg_jobs_failed_total` | counter | `reason`, `backend` | Jobs failed (`reason` in `error`/`timeout`/`worker_lost`/`cancelled`) |
 | `langflow_bg_orphans_reconciled_total` | counter | `backend` | Orphaned jobs reconciled by the watchdog |
-| `langflow_bg_job_duration_seconds` | histogram | `outcome`, `backend` | Run duration (`outcome` in `completed`/`failed`) |
+| `langflow_bg_job_duration_p50_seconds` | gauge | `backend` | Median run duration over a recent window |
+| `langflow_bg_job_duration_p95_seconds` | gauge | `backend` | p95 run duration over a recent window |
 
 Metrics stay aggregate: labels are small enums only. Per-job detail (`job_id`, `flow_id`, `user_id`) lives in the logs, not the metrics. The bg-execution dashboard's logs panel filters those with `{job="langflow"} | json | event_type="bg_job"`, so you can pivot from an aggregate spike to the individual jobs behind it.
 
