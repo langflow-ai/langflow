@@ -313,6 +313,17 @@ class Settings(BaseSettings):
     """How often the scaled worker's periodic watchdog scans for orphaned leases
     (a dead worker's in-flight job) and reconciles them WITHOUT requiring a
     restart. Must be > 0."""
+    background_worker_registry_interval_s: float = Field(default=10.0, gt=0)
+    """How often a ``langflow worker`` refreshes its row in ``worker_registry``
+    (idle or busy). This first-class idle heartbeat keeps ``last_heartbeat`` fresh
+    during a long job and while idle; the online window is a multiple of this. The
+    API-side collector derives the online/busy/idle gauges from these rows. Must
+    be > 0."""
+    background_worker_registry_retention_s: float = Field(default=3600.0, gt=0)
+    """How long a stale ``worker_registry`` row (a crashed worker that never
+    deregistered) is kept before the collector prunes it. Surfaces a crashed
+    worker as offline for this window, then removes it so the roster does not
+    accumulate dead owners across restarts. Must be > 0."""
     test_redis_url: str | None = Field(default=None)
     """Redis URL used by tests that exercise the scaled background backend.
 

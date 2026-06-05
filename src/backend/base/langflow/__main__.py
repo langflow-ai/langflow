@@ -867,6 +867,7 @@ def worker(
 
         from uuid import uuid4
 
+        from langflow.services.background_execution.worker_registry import WorkerRegistryService
         from langflow.services.deps import get_job_service
 
         # Process-unique owner so this worker's heartbeats are attributable, and
@@ -874,6 +875,12 @@ def worker(
         # steady fleet WITHOUT requiring a restart.
         owner = f"worker:{os.getpid()}:{uuid4().hex[:8]}"
         backend, worker_runner, teardown = await build_worker(owner=owner)
+        # Durable presence roster: register/heartbeat/deregister this worker in
+        # worker_registry. pid/host are computed here (at the entrypoint) so the
+        # loop stores stable values. The service is a stateless query helper.
+        worker_registry = WorkerRegistryService()
+        pid = os.getpid()
+        host = socket.gethostname()
         stop_event = asyncio.Event()
         loop = asyncio.get_running_loop()
         for sig in (signal.SIGTERM, signal.SIGINT):
@@ -890,6 +897,10 @@ def worker(
                 owner=owner,
                 lease_ttl_s=settings.background_lease_ttl_s,
                 watchdog_interval_s=settings.background_watchdog_interval_s,
+                worker_registry=worker_registry,
+                pid=pid,
+                host=host,
+                registry_interval_s=settings.background_worker_registry_interval_s,
             )
         finally:
             await teardown()
