@@ -65,6 +65,25 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
+def _current_lfx_floor() -> str:
+    """Return the ``lfx`` dependency floor for a freshly-ported bundle.
+
+    Reads the workspace lfx version from ``src/lfx/pyproject.toml`` and pins
+    ``lfx>=X.Y.0,<(X+1).0.0`` -- floored at the current major.minor line,
+    capped below the next lfx major.  Mirrors ``lfx_floor_spec`` in
+    ``scripts/ci/sync_bundle_lfx_pin.py`` (each script is kept standalone, so
+    keep the two in step); that script re-syncs every existing bundle on
+    ``make patch``.
+    """
+    lfx_pyproject = (REPO_ROOT / "src" / "lfx" / "pyproject.toml").read_text(encoding="utf-8")
+    match = re.search(r'^version = "(\d+)\.(\d+)\.\d+', lfx_pyproject, re.MULTILINE)
+    if not match:
+        msg = "Could not read lfx version from src/lfx/pyproject.toml"
+        raise ValueError(msg)
+    major, minor = int(match.group(1)), int(match.group(2))
+    return f"lfx>={major}.{minor}.0,<{major + 1}.0.0"
+
+
 # ---------------------------------------------------------------------------
 # Templates
 # ---------------------------------------------------------------------------
@@ -86,8 +105,13 @@ keywords = ["langflow", "lfx", "extension", "bundle", "{bundle}"]
 # Runtime deps: lfx (the BUNDLE_API surface) plus any third-party imports
 # the bundle's components rely on.  REVIEW THIS LIST -- the script ports
 # only ``lfx``; add any other deps the moved component(s) import.
+# lfx is floored at the current major.minor line and capped below the next
+# lfx major (e.g. "lfx>=1.10.0,<2.0.0"); the floor is read from
+# src/lfx/pyproject.toml at port time and re-synced on ``make patch`` via
+# scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
+# is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=0.5.0,<0.6.0",
+    "{lfx_floor}",
 ]
 
 [project.urls]
@@ -354,7 +378,7 @@ def _layout_bundle(plan: PortPlan, *, apply: bool) -> list[str]:
     package_reexports, component_reexports = _render_reexports(plan)
     files = {
         plan.bundle_dir / "pyproject.toml": PYPROJECT_TEMPLATE.format(
-            bundle=plan.bundle, display_name=plan.display_name
+            bundle=plan.bundle, display_name=plan.display_name, lfx_floor=_current_lfx_floor()
         ),
         plan.bundle_dir / "README.md": README_TEMPLATE.format(bundle=plan.bundle, display_name=plan.display_name),
         package_dir / "__init__.py": PACKAGE_INIT_TEMPLATE.format(

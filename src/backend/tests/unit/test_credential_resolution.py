@@ -166,3 +166,120 @@ class TestGetApiKeyForProviderDbFallback:
         result = get_api_key_for_provider(None, "IBM WatsonX", None)
 
         assert result is None
+
+
+class TestExplicitVarNameDbPrecedence:
+    """A var-name api_key must resolve the user's DB global variable before env.
+
+    Production bug (P2): .env held an old/revoked OPENAI_API_KEY; the user added
+    a valid key as a DB global variable via Settings → Global Variables. A flow's
+    Agent (which resolves via load_from_db) used the valid DB key, but the
+    Assistant resolved the api_key NAME env-first and authenticated with the
+    revoked .env key → 401. Global variables are per-user and encrypted; the
+    env read silently bypassed that boundary.
+    """
+
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_prefer_db_global_variable_over_env_for_explicit_var_name(self, mock_run, monkeypatch):
+        user_id = str(uuid4())
+        # The user's valid key, stored as a DB global variable (SecretStr).
+        mock_run.return_value = SecretStr("sk-db-valid")
+        # The stale/revoked key in .env that must NOT win.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-env-revoked")
+
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(user_id, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-db-valid"
+
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_fallback_to_env_for_var_name_when_db_has_no_value(self, mock_run, monkeypatch):
+        # Regression guard: DB-first must still fall back to env when the user
+        # has no such DB variable (the value the .env provides is the only one).
+        user_id = str(uuid4())
+        mock_run.return_value = None
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-env-fallback")
+
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(user_id, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-env-fallback"
+
+    def test_should_use_env_for_var_name_when_no_user_id(self, monkeypatch):
+        # lfx run (no user): no DB to consult, so the env var is the source.
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-env-only")
+
+        from lfx.base.models.unified_models.credentials import get_api_key_for_provider
+
+        result = get_api_key_for_provider(None, "OpenAI", "OPENAI_API_KEY")
+
+        assert result == "sk-env-only"
+
+
+class TestGetAllVariablesForProviderDbFallback:
+    """Tests for get_all_variables_for_provider when DB lookup yields nothing.
+
+    Bug: Langflow Assistant rejects requests with
+    `400 Missing required configuration for OpenAI: OPENAI_API_KEY` even when
+    the env var is set, whenever a Variable row exists in the DB but its
+    ciphertext was encrypted with a different SECRET_KEY (Fernet
+    `InvalidToken`). `decrypt_api_key` swallows the exception and returns "".
+    The current `_get_all_variables` only falls back to `os.environ` inside
+    its `except` branch, so the empty-string return slips through and the
+    required key is missing from the resulting dict.
+    """
+
+    @patch("lfx.base.models.unified_models.credentials.get_provider_all_variables")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_fallback_to_env_when_db_lookup_returns_empty_for_required_key(
+        self, mock_run, mock_provider_vars, monkeypatch
+    ):
+        """DB returned no usable value for OPENAI_API_KEY → env value must populate result.
+
+        The inner async function returns an empty dict when every
+        `variable_service.get_variable(...)` call yields an empty value
+        (decryption failed). The outer helper must then consult
+        `os.environ` for the missing required keys, exactly mirroring the
+        post-async env fallback used by `get_api_key_for_provider`.
+        """
+        from lfx.base.models.unified_models.credentials import get_all_variables_for_provider
+
+        user_id = str(uuid4())
+        mock_provider_vars.return_value = [{"variable_key": "OPENAI_API_KEY"}]
+        # Decryption silently failed → inner loop produced an empty dict.
+        mock_run.return_value = {}
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-test-env-key")
+
+        result = get_all_variables_for_provider(user_id, "OpenAI")
+
+        assert result == {"OPENAI_API_KEY": "sk-test-env-key"}
+
+    @patch("lfx.base.models.unified_models.credentials.get_provider_all_variables")
+    @patch("lfx.base.models.unified_models.credentials.run_until_complete")
+    def test_should_fallback_to_env_only_for_keys_missing_from_db(self, mock_run, mock_provider_vars, monkeypatch):
+        """Keys returned by DB win; env only fills the gaps for missing keys.
+
+        Guards against an over-broad fix that lets env values overwrite
+        successfully decrypted DB values.
+        """
+        from lfx.base.models.unified_models.credentials import get_all_variables_for_provider
+
+        user_id = str(uuid4())
+        mock_provider_vars.return_value = [
+            {"variable_key": "OPENAI_API_KEY"},
+            {"variable_key": "OPENAI_ORG_ID"},
+        ]
+        mock_run.return_value = {"OPENAI_API_KEY": "sk-from-db"}
+
+        monkeypatch.setenv("OPENAI_API_KEY", "sk-from-env-should-not-win")
+        monkeypatch.setenv("OPENAI_ORG_ID", "org-from-env")
+
+        result = get_all_variables_for_provider(user_id, "OpenAI")
+
+        assert result == {
+            "OPENAI_API_KEY": "sk-from-db",
+            "OPENAI_ORG_ID": "org-from-env",
+        }

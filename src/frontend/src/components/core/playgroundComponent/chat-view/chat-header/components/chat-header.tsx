@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AnimatedConditional } from "@/components/ui/animated-close";
 import useAlertStore from "@/stores/alertStore";

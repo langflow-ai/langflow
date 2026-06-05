@@ -1,5 +1,5 @@
 import { faCopy } from "@fortawesome/free-solid-svg-icons";
-import { type MenuItem, Mode } from "vanilla-jsoneditor";
+import { type MenuItem } from "vanilla-jsoneditor";
 
 export const filterTextModeItems = (items: MenuItem[]): MenuItem[] => {
   return items.filter((item) => {
@@ -22,6 +22,7 @@ export const hasCopyButton = (items: MenuItem[]): boolean => {
 };
 
 export const createCopyButton = (
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   getEditor: () => any,
   setSuccessData: (data: { title: string }) => void,
   setErrorData: (data: { title: string; list: string[] }) => void,
@@ -103,6 +104,7 @@ export const enhanceExistingCopyButtons = (
 
 export const processTextModeItems = (
   items: MenuItem[],
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   getEditor: () => any,
   setSuccessData: (data: { title: string }) => void,
   setErrorData: (data: { title: string; list: string[] }) => void,

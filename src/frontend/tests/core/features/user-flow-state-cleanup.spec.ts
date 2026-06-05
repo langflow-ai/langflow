@@ -1,4 +1,9 @@
 import { expect, test } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import {
+  openTemplatesModal,
+  waitForNewProjectButton,
+} from "../../utils/flow/new-project-flow";
 import { renameFlow } from "../../utils/rename-flow";
 
 test(
@@ -43,9 +48,15 @@ test(
 
     // Log in as admin and create test user
     await page.goto("/");
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
-    await page.getByPlaceholder("Username").fill("langflow");
-    await page.getByPlaceholder("Password").fill("langflow");
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
@@ -55,7 +66,7 @@ test(
           response.url().includes("/api/v1/login") && response.status() === 200,
         { timeout: 60000 },
       ),
-      page.getByRole("button", { name: "Sign In" }).click(),
+      page.getByRole("button", { name: TEXTS.signIn }).click(),
     ]);
 
     // mainpage_title only renders after the homepage data finishes loading,
@@ -66,13 +77,16 @@ test(
     await page.getByTestId("user-profile-settings").click();
     await page.getByText("Admin Page", { exact: true }).click();
     await page.getByText("New User", { exact: true }).click();
-    await page.getByPlaceholder("Username").last().fill(userAName);
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .last()
+      .fill(userAName);
     await page.locator('input[name="password"]').fill(userAPassword);
     await page.locator('input[name="confirmpassword"]').fill(userAPassword);
     await page.waitForSelector("#is_active", { timeout: 1500 });
     await page.locator("#is_active").click();
     await expect(page.locator("#is_active")).toBeChecked();
-    await page.getByText("Save", { exact: true }).click();
+    await page.getByText(TEXTS.save, { exact: true }).click();
     await page.waitForSelector("text=new user added", { timeout: 30000 });
 
     // Log out from admin
@@ -84,14 +98,16 @@ test(
     await page.evaluate(() => {
       sessionStorage.setItem("testMockAutoLogin", "true");
     });
-    await page.getByText("Logout", { exact: true }).click();
+    await page.getByText(TEXTS.logout, { exact: true }).click();
 
     // ---- USER A SESSION ----
 
     // Log in as User A
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
-    await page.getByPlaceholder("Username").fill(userAName);
-    await page.getByPlaceholder("Password").fill(userAPassword);
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
+    await page.getByPlaceholder(TEXTS.placeholderUsername).fill(userAName);
+    await page.getByPlaceholder(TEXTS.placeholderPassword).fill(userAPassword);
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
@@ -101,11 +117,11 @@ test(
           response.url().includes("/api/v1/login") && response.status() === 200,
         { timeout: 60000 },
       ),
-      page.getByRole("button", { name: "Sign In" }).click(),
+      page.getByRole("button", { name: TEXTS.signIn }).click(),
     ]);
 
     // Create a flow for User A
-    await page.waitForSelector('[id="new-project-btn"]', { timeout: 60000 });
+    await waitForNewProjectButton(page, { timeout: 60000 });
     // Check that User A starts with an empty flows list
     expect(
       (
@@ -119,14 +135,12 @@ test(
       timeout: 30000,
     });
 
-    try {
-      await page.getByTestId("new_project_btn_empty_page").click();
-    } catch (_error) {
-      await page.getByTestId("new-project-btn").click();
-    }
-
-    await page.waitForSelector('[data-testid="modal-title"]', {
-      timeout: 30000,
+    // The empty-page CTA now routes through the welcome overlay before the
+    // templates modal opens; openTemplatesModal handles both the overlay and
+    // direct-modal paths.
+    await openTemplatesModal(page, {
+      fromEmptyPage: true,
+      modalTimeout: 30000,
     });
 
     // Use blank-flow instead of the Basic Prompting template. The template
@@ -159,14 +173,20 @@ test(
     await page.evaluate(() => {
       sessionStorage.setItem("testMockAutoLogin", "true");
     });
-    await page.getByText("Logout", { exact: true }).click();
+    await page.getByText(TEXTS.logout, { exact: true }).click();
 
     // ---- ADMIN SESSION AGAIN ----
 
     // Log in as admin again
-    await page.waitForSelector("text=sign in to langflow", { timeout: 30000 });
-    await page.getByPlaceholder("Username").fill("langflow");
-    await page.getByPlaceholder("Password").fill("langflow");
+    await page.waitForSelector(`text=${TEXTS.authSignInHeader}`, {
+      timeout: 30000,
+    });
+    await page
+      .getByPlaceholder(TEXTS.placeholderUsername)
+      .fill(TEXTS.authDefaultCredential);
+    await page
+      .getByPlaceholder(TEXTS.placeholderPassword)
+      .fill(TEXTS.authDefaultCredential);
     await page.evaluate(() => {
       sessionStorage.removeItem("testMockAutoLogin");
     });
@@ -176,7 +196,7 @@ test(
           response.url().includes("/api/v1/login") && response.status() === 200,
         { timeout: 60000 },
       ),
-      page.getByRole("button", { name: "Sign In" }).click(),
+      page.getByRole("button", { name: TEXTS.signIn }).click(),
     ]);
 
     // Verify admin can't see User A's flow

@@ -169,15 +169,33 @@ async def _load_graph_from_python(
     if "api_key_var" in sig.parameters and api_key_var:
         kwargs["api_key_var"] = api_key_var
 
+    # Building the graph must not run inside the request's tracing context.
+    # When trace_context_var is set, Component.get_langchain_callbacks() attaches
+    # the active LangfuseCallbackHandler (which holds a real LangfuseResourceManager)
+    # to every tool. Any later deepcopy/pickle of those tools triggers
+    # LangfuseResourceManager.__new__() with no kwargs and raises. Tracing belongs
+    # to flow execution, not graph assembly, so we clear it for the duration.
+    trace_token = None
+    try:
+        from langflow.services.tracing.service import trace_context_var
+
+        trace_token = trace_context_var.set(None)
+    except ImportError:
+        trace_token = None
+
     try:
         if inspect.iscoroutinefunction(get_graph_func):
             graph = await get_graph_func(**kwargs)
         else:
             graph = get_graph_func(**kwargs)
     except Exception as e:
-        logger.error(f"Error executing get_graph(): {e}")
+        logger.exception(f"Error executing get_graph(): {e}")
         raise HTTPException(status_code=500, detail=f"Error creating graph: {e}") from e
     finally:
+        if trace_token is not None:
+            from langflow.services.tracing.service import trace_context_var
+
+            trace_context_var.reset(trace_token)
         if module_name in sys.modules:
             del sys.modules[module_name]
 

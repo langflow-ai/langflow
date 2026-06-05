@@ -8,6 +8,7 @@ import { DISCORD_URL, GITHUB_URL } from "@/constants/constants";
 import { useGetUserData, useUpdateUser } from "@/controllers/API/queries/auth";
 import ModalsComponent from "@/pages/MainPage/components/modalsComponent";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { Users } from "@/types/api";
 import { cn } from "@/utils/utils";
 
@@ -23,6 +24,7 @@ export const GetStartedProgress: FC<{
   const [isDiscordJoinedChild, setIsDiscordJoinedChild] =
     useState(isDiscordJoined);
   const [newProjectModal, setNewProjectModal] = useState(false);
+  const hideNewFlowButton = useUtilityStore((state) => state.hideNewFlowButton);
 
   const flows = useFlowsManagerStore((state) => state.flows);
 
@@ -144,7 +146,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md px-2 py-[10px] hover:bg-muted",
+              "flex min-w-0 items-center gap-2 rounded-md px-2 py-[10px] hover:bg-muted",
               isGithubStarredChild && "pointer-events-none",
             )}
           >
@@ -152,13 +154,13 @@ export const GetStartedProgress: FC<{
               <span data-testid="github_starred_icon_get_started">
                 <IconComponent
                   name="Check"
-                  className="h-4 w-4 text-accent-emerald-foreground"
+                  className="h-4 w-4 shrink-0 text-accent-emerald-foreground"
                 />
               </span>
             ) : (
-              <FaGithub className="h-4 w-4" />
+              <FaGithub className="h-4 w-4 shrink-0" />
             )}
-            <ShadTooltip content={t("sidebar.starRepo")} styleClasses="z-50">
+            <ShadTooltip content={t("sidebar.starRepo")} side="right">
               <span
                 className={cn(
                   "truncate text-sm",
@@ -188,7 +190,7 @@ export const GetStartedProgress: FC<{
         >
           <div
             className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
+              "flex min-w-0 items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
               isDiscordJoinedChild && "pointer-events-none",
             )}
           >
@@ -196,16 +198,13 @@ export const GetStartedProgress: FC<{
               <span data-testid="discord_joined_icon_get_started">
                 <IconComponent
                   name="Check"
-                  className="h-4 w-4 text-accent-emerald-foreground"
+                  className="h-4 w-4 shrink-0 text-accent-emerald-foreground"
                 />
               </span>
             ) : (
-              <FaDiscord className="h-4 w-4 text-[#5865F2]" />
+              <FaDiscord className="h-4 w-4 shrink-0 text-[#5865F2]" />
             )}
-            <ShadTooltip
-              content={t("sidebar.joinCommunity")}
-              styleClasses="z-50"
-            >
+            <ShadTooltip content={t("sidebar.joinCommunity")} side="right">
               <span
                 className={cn(
                   "truncate text-sm",
@@ -218,36 +217,38 @@ export const GetStartedProgress: FC<{
           </div>
         </Button>
 
-        <Button
-          unstyled
-          className={cn("w-full", hasFlows && "pointer-events-none")}
-          onClick={() => setNewProjectModal(true)}
-        >
-          <div
-            className={cn(
-              "flex items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
-              hasFlows && "pointer-events-none text-muted-foreground",
-            )}
-            data-testid="create_flow_btn_get_started"
+        {!hideNewFlowButton && (
+          <Button
+            unstyled
+            className={cn("w-full", hasFlows && "pointer-events-none")}
+            onClick={() => setNewProjectModal(true)}
           >
-            <span data-testid="create_flow_icon_get_started">
-              <IconComponent
-                name={hasFlows ? "Check" : "Plus"}
-                className={cn(
-                  "h-4 w-4 text-primary",
-                  hasFlows && "text-accent-emerald-foreground",
-                )}
-              />
-            </span>
-            <ShadTooltip content={t("sidebar.createFlow")} styleClasses="z-50">
-              <span
-                className={cn("truncate text-sm", hasFlows && "line-through")}
-              >
-                {t("sidebar.createFlow")}
+            <div
+              className={cn(
+                "flex min-w-0 items-center gap-2 rounded-md p-2 py-[10px] hover:bg-muted",
+                hasFlows && "pointer-events-none text-muted-foreground",
+              )}
+              data-testid="create_flow_btn_get_started"
+            >
+              <span data-testid="create_flow_icon_get_started">
+                <IconComponent
+                  name={hasFlows ? "Check" : "Plus"}
+                  className={cn(
+                    "h-4 w-4 shrink-0 text-primary",
+                    hasFlows && "text-accent-emerald-foreground",
+                  )}
+                />
               </span>
-            </ShadTooltip>
-          </div>
-        </Button>
+              <ShadTooltip content={t("sidebar.createFlow")} side="right">
+                <span
+                  className={cn("truncate text-sm", hasFlows && "line-through")}
+                >
+                  {t("sidebar.createFlow")}
+                </span>
+              </ShadTooltip>
+            </div>
+          </Button>
+        )}
       </div>
 
       <ModalsComponent

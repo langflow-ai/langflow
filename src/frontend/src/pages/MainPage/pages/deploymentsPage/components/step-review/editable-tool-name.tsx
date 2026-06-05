@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Input } from "@/components/ui/input";
 
@@ -13,6 +14,7 @@ export function EditableToolName({
   placeholder,
   value,
 }: EditableToolNameProps) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(value);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -51,7 +53,7 @@ export function EditableToolName({
         />
         <button
           className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
-          title="Confirm"
+          title={t("deployments.confirmToolName")}
           type="button"
           onClick={confirm}
         >
@@ -69,7 +71,7 @@ export function EditableToolName({
       <button
         className="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground"
         data-testid="edit-tool-name"
-        title="Edit tool name"
+        title={t("deployments.editToolName")}
         type="button"
         onClick={() => {
           setDraft(value);

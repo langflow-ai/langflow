@@ -2,7 +2,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-
+import { TEXTS } from "../../utils/constants/texts";
 import { removeOldApiKeys } from "../../utils/remove-old-api-keys";
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
@@ -20,7 +20,7 @@ test(
     //first component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
 
     await page
       .getByTestId("input_outputText Input")
@@ -32,7 +32,7 @@ test(
     //second component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("url");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchUrl);
 
     await page
       .getByTestId("data_sourceURL")
@@ -65,7 +65,7 @@ test(
     //fifth component
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatOutput);
 
     await page
       .getByTestId("input_outputChat Output")

@@ -43,7 +43,7 @@ The following example uses the **If-Else** component to check incoming chat mess
 
         The **Case True** message is sent from the **True** output port when the match condition evaluates to true.
 
-        No message is set for **Case False** so the component doesn't emit a message when the condition evaluates to false.
+        **Case False** is left blank, so when the condition evaluates to false the component routes the original **Text Input** to the **False** output port.
 
 3. Depending on what you want to happen when the outcome is **True**, add components to your flow to execute that logic:
 
@@ -91,4 +91,13 @@ The chat output should reflect the instructions in your prompts based on the reg
 | default_route  | Dropdown | Input parameter. The route to take when max iterations are reached. Options include `true_result` or `false_result`. The default is `false_result`. |
 | true_result  | Message | Output parameter. The output produced when the condition is true. |
 | false_result | Message | Output parameter. The output produced when the condition is false. |
+
+:::note Case True and Case False behavior
+**Case True** and **Case False** are optional override messages for the **True** and **False** output ports.
+
+- When you set a value, that message is emitted on the matching branch.
+- When you leave one blank, the component routes the original **Text Input** to that branch instead of emitting an empty message.
+
+To emit something other than the input on a matched branch, set the corresponding **Case** message.
+:::
 

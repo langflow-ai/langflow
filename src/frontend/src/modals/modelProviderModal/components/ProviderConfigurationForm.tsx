@@ -255,6 +255,7 @@ const ProviderConfigurationForm = ({
                 ) : (
                   // Render input for text/secret variables
                   <Input
+                    data-testid={`provider-variable-input-${variable.variable_key}`}
                     placeholder={getPlaceholder(
                       variable.variable_name,
                       selectedProvider.provider,

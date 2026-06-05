@@ -1,67 +1,47 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
-import { zoomOut } from "../../utils/zoom-out";
+import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { disableInspectPanel } from "../../utils/open-advanced-options";
+import { sessionMoreMenu } from "../../utils/playground/sessions";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "fresh start playground",
   { tag: ["@release", "@workspace", "@api"] },
   async ({ page }) => {
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
+    loadDotenvIfLocal(__dirname);
 
-    await awaitBootstrapTest(page);
+    await openBlankFlow(page);
 
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await addLegacyComponents(page);
 
     await disableInspectPanel(page);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 100000,
+    await addComponentFromSidebar(page, {
+      search: "chat output",
+      testId: "input_outputChat Output",
+      hoverAdd: true,
     });
-
-    await page
-      .getByTestId("input_outputChat Output")
-      .hover()
-      .then(async () => {
-        await page.getByTestId("add-component-button-chat-output").click();
-      });
 
     await zoomOut(page, 2);
 
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
-    await page.waitForSelector('[data-testid="input_outputChat Input"]', {
-      timeout: 100000,
+    await addComponentFromSidebar(page, {
+      search: "chat input",
+      testId: "input_outputChat Input",
+      position: { x: 100, y: 100 },
     });
 
-    await page
-      .getByTestId("input_outputChat Input")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 100, y: 100 },
-      });
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text output");
-    await page.waitForSelector('[data-testid="input_outputText Output"]', {
-      timeout: 100000,
+    await addComponentFromSidebar(page, {
+      search: "text output",
+      testId: "input_outputText Output",
+      position: { x: 300, y: 300 },
     });
-
-    await page
-      .getByTestId("input_outputText Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 300, y: 300 },
-      });
 
     await adjustScreenView(page);
 
@@ -78,14 +58,16 @@ test(
       .getByTestId("handle-chatoutput-noshownode-inputs-target")
       .click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
-    await page.waitForSelector('[data-testid="input-chat-playground"]', {
-      timeout: 100000,
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
+    await page.waitForSelector(`[data-testid="${TID.inputChatPlayground}"]`, {
+      timeout: TIMEOUTS.componentMount,
     });
 
     //send message
-    await page.getByTestId("input-chat-playground").click();
-    await page.getByTestId("input-chat-playground").fill("message 1");
+    await page.getByTestId(TID.inputChatPlayground).click();
+    await page.getByTestId(TID.inputChatPlayground).fill("message 1");
     await page.keyboard.press("Enter");
     await expect(page.getByTestId("chat-message-User-message 1")).toBeVisible();
     await expect(page.getByTestId("chat-message-AI-message 1")).toBeVisible();
@@ -119,63 +101,57 @@ test(
     await expect(page.getByTestId("chat-message-AI-edit_bot_1")).toBeVisible();
 
     // check table messages view (use sidebar session more menu — header menu hidden in fullscreen)
-    await page
-      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
-      .first()
-      .click();
+    await sessionMoreMenu(page, "first").click();
     await page.getByTestId("message-logs-option").click();
     await expect(page.getByText("Page 1 of 1", { exact: true })).toBeVisible();
-    await page.getByRole("button", { name: "Close" }).click();
+    await page.getByRole("button", { name: TEXTS.close }).click();
 
     // create new session (use sidebar new-chat button)
-    await page.getByTestId("new-chat").click();
+    await page.getByTestId(TID.newChat).click();
     await expect(page.getByTitle("New Session 0")).toBeVisible();
 
     // check rename session
     await page
-      .getByTestId("input-chat-playground")
+      .getByTestId(TID.inputChatPlayground)
       .fill("session_after_delete");
     await page.keyboard.press("Enter");
     await page
       .getByTestId("chat-message-User-session_after_delete")
       .isVisible();
     // Use sidebar session more menu for rename
-    await page
-      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
-      .last()
-      .click();
+    await sessionMoreMenu(page, "last").click();
     await page.getByTestId("rename-session-option").click();
     await page.getByTestId("session-rename-input").fill("my first session");
     await page.keyboard.press("Enter");
     await expect(
-      page.getByTestId("session-selector").getByText("my first session"),
-    ).toBeVisible();
+      page
+        .getByTestId(TID.sessionSelector)
+        .filter({ hasText: "my first session" })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
 
     // check cancel rename (using Escape key)
-    await page
-      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
-      .last()
-      .click();
+    await sessionMoreMenu(page, "last").click();
     await page.getByTestId("rename-session-option").click();
     await page.getByTestId("session-rename-input").fill("cancel name");
     await page.keyboard.press("Escape");
     await expect(
-      page.getByTestId("session-selector").getByText("my first session"),
-    ).toBeVisible();
+      page
+        .getByTestId(TID.sessionSelector)
+        .filter({ hasText: "my first session" })
+        .first(),
+    ).toBeVisible({ timeout: 10000 });
 
     // check delete session
-    await page
-      .locator('[data-testid^="session-"][data-testid$="-more-menu"]')
-      .last()
-      .click();
+    await sessionMoreMenu(page, "last").click();
     await page.getByTestId("delete-session-option").click();
     await expect(page.getByTitle("Default Session")).toBeVisible();
 
     //create new session
-    await page.getByTestId("new-chat").click();
-    await page.getByTestId("input-chat-playground").click();
+    await page.getByTestId(TID.newChat).click();
+    await page.getByTestId(TID.inputChatPlayground).click();
     await page
-      .getByTestId("input-chat-playground")
+      .getByTestId(TID.inputChatPlayground)
       .fill("session_after_delete");
     await page.keyboard.press("Enter");
     await expect(

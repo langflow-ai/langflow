@@ -1,7 +1,7 @@
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
@@ -15,15 +15,8 @@ test(
         !process?.env?.NEEDLE_COLLECTION_ID,
       "OPENAI_API_KEY, NEEDLE_API_KEY, and NEEDLE_COLLECTION_ID required to run this test",
     );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Invoice Summarizer" }).click();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Invoice Summarizer");
 
     await initialGPTsetup(page);
 
@@ -53,14 +46,18 @@ test(
     await page.getByTestId("button_run_chat output").click();
 
     // Wait for the flow to build successfully
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 120000,
+    });
 
     // Switch to Playground
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
     // Wait for the playground to be ready
     const inputPlaceholder = page
-      .getByPlaceholder("Send a message...", { exact: true })
+      .getByPlaceholder(TEXTS.placeholderSendMessage, { exact: true })
       .last();
 
     await expect(inputPlaceholder).toBeVisible({ timeout: 10000 });

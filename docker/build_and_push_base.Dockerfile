@@ -42,7 +42,6 @@ COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 COPY ./pyproject.toml /app/pyproject.toml
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
-COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 # Copy lfx metadata files since it's a workspace member
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
@@ -75,28 +74,16 @@ RUN npm install \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app/src/backend/base
-# ``--extra duckduckgo`` pulls ``ddgs`` (the only dep the bundle adds on
-# top of langflow-base[complete]) at the version recorded in
-# ``src/backend/base/uv.lock``.  Routing the dep through the locked sync
-# instead of an ad-hoc ``uv pip install ddgs`` keeps the base image
-# reproducible across builds and prevents future ``ddgs`` releases from
-# silently drifting from the tested lock state.
+# langflow-base ships the core framework only.  The extension bundles
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# installed in this image: they are dependencies of the full ``langflow``
+# distribution, not of the lean ``langflow-base`` core, and we keep that
+# boundary at the image layer too.  Consumers who want those components
+# should use the ``langflow`` image, or ``pip install`` the bundle (e.g.
+# ``lfx-duckduckgo``) alongside langflow-base.
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
-    uv sync --frozen --no-dev --no-editable --extra postgresql --extra duckduckgo
-
-# Pilot Bundle re-attach (LE-1023): ``langflow-base`` no longer pulls in
-# DuckDuckGo (it moved to the standalone ``lfx-duckduckgo`` distribution
-# whose pyproject lives at ``src/bundles/duckduckgo``).  The base image
-# was the user-facing path for that component before the move; install
-# the extracted bundle so the runtime image keeps the same component
-# set.  ``--no-deps`` is intentional: the bundle's runtime deps (lfx,
-# langchain-community, ddgs) are now all in the langflow-base lockfile
-# above, so installing them here would yank duplicates that fight the
-# locked versions.
-RUN --mount=type=cache,target=/root/.cache/uv \
-    RUSTFLAGS='--cfg reqwest_unstable' \
-    uv pip install --no-deps /app/src/bundles/duckduckgo
+    uv sync --frozen --no-dev --no-editable --extra postgresql
 
 ################################
 # RUNTIME

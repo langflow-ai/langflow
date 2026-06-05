@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useGetProviderAccounts } from "@/controllers/API/queries/deployment-provider-accounts/use-get-provider-accounts";
 import { usePostCreateSnapshot } from "@/controllers/API/queries/flow-version/use-post-create-snapshot";
 import useSaveFlow from "@/hooks/flows/use-save-flow";
+import i18n from "@/i18n";
 import { useErrorAlert } from "@/pages/MainPage/pages/deploymentsPage/hooks/use-error-alert";
 import type {
   DeploymentProvider,
@@ -28,7 +29,8 @@ export function usePrepareDeploy() {
     ProviderAccount | undefined
   >();
 
-  const currentFlowId = useFlowStore((state) => state.currentFlow?.id);
+  const currentFlow = useFlowStore((state) => state.currentFlow);
+  const currentFlowId = currentFlow?.id;
   const saveFlow = useSaveFlow();
   const { mutateAsync: createSnapshot } = usePostCreateSnapshot();
   const { refetch: fetchProviderAccounts } = useGetProviderAccounts(
@@ -41,13 +43,19 @@ export function usePrepareDeploy() {
   const handleDeploy = async () => {
     if (!currentFlowId) return;
     setIsPreparingDeploy(true);
+    setChoiceDialogOpen(false);
+    setDeployModalOpen(false);
+    setStepperInitialProvider(undefined);
+    setStepperInitialInstance(undefined);
     try {
       await saveFlow();
       const snapshot = await createSnapshot({ flowId: currentFlowId });
+      const key = getSelectedFlowVersionKey(currentFlowId, snapshot.id);
       const versionMap = new Map<string, SelectedFlowVersion>();
-      versionMap.set(currentFlowId, {
-        key: getSelectedFlowVersionKey(currentFlowId, snapshot.id),
+      versionMap.set(key, {
+        key,
         flowId: currentFlowId,
+        flowName: currentFlow?.name,
         versionId: snapshot.id,
         versionTag: snapshot.version_tag,
       });
@@ -67,7 +75,7 @@ export function usePrepareDeploy() {
       }
     } catch (err: unknown) {
       setPendingSnapshotVersionId("");
-      showError("Failed to prepare deployment", err);
+      showError(i18n.t("deployments.failedToPrepareDeployment"), err);
     } finally {
       setIsPreparingDeploy(false);
     }
@@ -88,7 +96,7 @@ export function usePrepareDeploy() {
     setProviders([]);
     setPendingSnapshotVersionId("");
     setSuccessData({
-      title: `Deployment "${deploymentName}" updated successfully`,
+      title: i18n.t("deployments.updatedDesc", { name: deploymentName }),
     });
   };
 

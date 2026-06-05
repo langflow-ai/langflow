@@ -104,6 +104,10 @@ def _get_secret_text(input_obj: Any, value: Any) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def _copy_component_template(items: list[Any]) -> list[Any]:
+    return [item.model_copy(deep=True) if isinstance(item, BaseModel) else deepcopy(item) for item in items]
+
+
 class PlaceholderGraph(NamedTuple):
     """A placeholder graph structure for components, providing backwards compatibility.
 
@@ -150,6 +154,9 @@ class Component(CustomComponent):
     code_class_base_inheritance: ClassVar[str] = "Component"
 
     def __init__(self, **kwargs) -> None:
+        self.inputs = _copy_component_template(getattr(self.__class__, "inputs", []))
+        self.outputs = _copy_component_template(getattr(self.__class__, "outputs", []))
+
         # Initialize instance-specific attributes first
         if overlap := self._there_is_overlap_in_inputs_and_outputs():
             msg = f"Inputs and outputs have overlapping names: {overlap}"
@@ -428,10 +435,18 @@ class Component(CustomComponent):
         inputs_raw = getattr(self, "_Component__inputs", {})
 
         kwargs = dict(config)
-        kwargs["inputs"] = dict(inputs_raw)
+        kwargs.update(inputs_raw)
         new_component = type(self)(**kwargs)
+        # Register in memo before the recursive deepcopy calls below so reference
+        # cycles (e.g. components linked through _components) resolve to this same
+        # copy instead of producing a duplicate.
+        memo[id(self)] = new_component
         new_component._code = self._code
-        new_component._outputs_map = self._outputs_map
+        # Must deep-copy so each graph_copy has independent Output objects.
+        # Output.cache=True by default, and output.value is set during execution.
+        # A shallow copy causes all concurrent requests to share the same Output objects,
+        # so the first request's cached output.value is returned to all subsequent requests.
+        new_component._outputs_map = deepcopy(self._outputs_map, memo)
 
         # Safe deepcopy of inputs
         new_inputs = {}
@@ -464,13 +479,16 @@ class Component(CustomComponent):
                 new_inputs[k] = input_copy
 
         new_component._inputs = new_inputs
-        new_component._edges = self._edges
-        new_component._components = self._components
+        # Must deep-copy so each graph_copy has independent component instances.
+        # Shallow copies here caused all concurrent requests to share the same
+        # intermediate component objects (e.g. the LLM node), producing identical
+        # responses for different inputs under concurrent load.
+        new_component._edges = deepcopy(self._edges, memo)
+        new_component._components = deepcopy(self._components, memo)
         new_component._parameters = dict(self._parameters)
         new_component._attributes = dict(self._attributes)
         new_component._output_logs = self._output_logs
         new_component._logs = self._logs  # type: ignore[attr-defined]
-        memo[id(self)] = new_component
         return new_component
 
     def set_class_code(self) -> None:
@@ -944,6 +962,14 @@ class Component(CustomComponent):
         except KeyError:
             input_ = self._get_fallback_input(name=key, display_name=key)
             self._inputs[key] = input_
+            # ``self.inputs`` resolves to the class attribute when the instance
+            # has not shadowed it yet. Appending in that case mutates the
+            # class-level list and leaks fallback values (e.g. a live LLM
+            # client) into every future instance — which then crashes during
+            # ``map_inputs`` deepcopy on the next ``Component()``. Promote to
+            # an instance-local copy before mutating.
+            if "inputs" not in self.__dict__:
+                self.inputs = list(self.inputs) if self.inputs else []
             self.inputs.append(input_)
             return input_
 
@@ -1070,11 +1096,17 @@ class Component(CustomComponent):
     def _map_parameters_on_frontend_node(self, frontend_node: ComponentFrontendNode) -> None:
         for name, value in self._parameters.items():
             frontend_node.set_field_value_in_template(name, value)
+            input_obj = self._inputs.get(name)
+            if input_obj is not None and hasattr(input_obj, "load_from_db"):
+                frontend_node.set_field_load_from_db_in_template(name, bool(input_obj.load_from_db))
 
     def _map_parameters_on_template(self, template: dict) -> None:
         for name, value in self._parameters.items():
             try:
                 template[name]["value"] = value
+                input_obj = self._inputs.get(name)
+                if input_obj is not None and "load_from_db" in template[name] and hasattr(input_obj, "load_from_db"):
+                    template[name]["load_from_db"] = bool(input_obj.load_from_db)
             except KeyError as e:
                 close_match = find_closest_match(name, list(template.keys()))
                 if close_match:

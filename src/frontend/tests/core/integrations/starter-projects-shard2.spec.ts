@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { openTemplatesModal } from "../../utils/flow/new-project-flow";
 
 test(
   "user should be able to use first quarter of starter projects without any outdated components on the flow",
@@ -61,7 +62,7 @@ test(
         await expect(page.getByTestId("mainpage_title")).toBeVisible({
           timeout: 30000,
         });
-        await page.getByTestId("new-project-btn").click();
+        await openTemplatesModal(page);
         await page.waitForLoadState("domcontentloaded");
         await page.getByTestId("side_nav_options_all-templates").click();
         await expect(

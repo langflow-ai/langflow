@@ -97,9 +97,15 @@ class LangflowConverter:
             # Create field mapping from edges for proper UDF input handling
             field_mapping = self._build_field_mapping_from_edges(edges)
 
-            # Create output mapping from edges to track which output is used from
-            # each component
+            # Create output mapping from edges to track which output is used by
+            # each connection. Keyed per (source, target) so that a component
+            # fanning out different outputs to different targets routes correctly.
             output_mapping = self._build_output_mapping_from_edges(edges)
+
+            # Derive, per source node, the distinct outputs it actually fans out.
+            # A node with two or more distinct outputs must materialize one step
+            # per output so each downstream branch receives the correct value.
+            source_outputs = self._build_source_outputs(output_mapping)
 
             # Create node lookup for efficient processing
             node_lookup = {node["id"]: node for node in nodes}
@@ -113,8 +119,12 @@ class LangflowConverter:
             # if input_schema:
             #     builder.set_input_schema(input_schema)
 
-            # Process nodes and collect output references
+            # Process nodes and collect output references.
+            # node_output_refs maps node_id -> its primary (default) output ref.
+            # output_refs_by_handle maps (node_id, output_name) -> output ref so
+            # multi-output fan-out can be wired to the right step per connection.
             node_output_refs: dict[str, Any] = {}  # node_id -> output reference
+            output_refs_by_handle: dict[tuple[str, str], Any] = {}
             processed_nodes = set()
 
             # First, process nodes in execution order
@@ -127,6 +137,8 @@ class LangflowConverter:
                         node_output_refs,
                         field_mapping,
                         output_mapping,
+                        source_outputs,
+                        output_refs_by_handle,
                     )
                     if output_ref is not None:
                         node_output_refs[node_id] = output_ref
@@ -143,12 +155,16 @@ class LangflowConverter:
                         node_output_refs,
                         field_mapping,
                         output_mapping,
+                        source_outputs,
+                        output_refs_by_handle,
                     )
                     if output_ref is not None:
                         node_output_refs[node_id] = output_ref
 
             # Set workflow output using incremental output building
-            self._build_flow_output(builder, nodes, dependencies, node_output_refs)
+            self._build_flow_output(
+                builder, nodes, dependencies, node_output_refs, output_mapping, output_refs_by_handle
+            )
 
             # Set variable schema
             if self.node_processor.variables:
@@ -298,21 +314,28 @@ class LangflowConverter:
 
         return field_mapping
 
-    def _build_output_mapping_from_edges(self, edges: list[dict[str, Any]]) -> dict[str, str]:
-        """Build output mapping from edges to track output usage per component.
+    def _build_output_mapping_from_edges(self, edges: list[dict[str, Any]]) -> dict[tuple[str, str], str]:
+        """Build output mapping from edges to track output usage per connection.
+
+        The mapping is keyed per (source_node_id, target_node_id) rather than per
+        source node alone. Keying only by source node is lossy: when a component
+        fans out *different* outputs to *different* targets, all but the first
+        connection would silently inherit the wrong output. Per-connection keys
+        preserve the output selected by each individual edge.
 
         Args:
             edges: List of Langflow edges
 
         Returns:
-            Dict mapping source_node_id -> output_name
+            Dict mapping (source_node_id, target_node_id) -> output_name
         """
-        output_mapping: dict[str, str] = {}
+        output_mapping: dict[tuple[str, str], str] = {}
 
         for edge in edges:
             source_id = edge.get("source")
+            target_id = edge.get("target")
 
-            if not source_id:
+            if not source_id or not target_id:
                 continue
 
             # Get source output name from edge data
@@ -325,20 +348,35 @@ class LangflowConverter:
             elif isinstance(source_handle, str):
                 # Sometimes sourceHandle is a JSON string - handle this case
                 try:
-                    import json
-
                     source_info = json.loads(source_handle.replace("œ", '"'))
                     output_name = source_info.get("name")
                 except (json.JSONDecodeError, KeyError, TypeError, AttributeError):
                     output_name = None
 
-            # Only store if we found an output name and don't have one already
-            # (first edge wins if component has multiple outgoing edges with
-            # different outputs)
-            if output_name and source_id not in output_mapping:
-                output_mapping[source_id] = output_name
+            if output_name:
+                output_mapping[(source_id, target_id)] = output_name
 
         return output_mapping
+
+    def _build_source_outputs(self, output_mapping: dict[tuple[str, str], str]) -> dict[str, list[str]]:
+        """Group the edge-scoped output mapping by source node.
+
+        Args:
+            output_mapping: Mapping of (source_id, target_id) -> output_name
+
+        Returns:
+            Dict mapping source_node_id -> list of distinct output names it fans
+            out, in first-seen edge order. Used to decide how many steps a node
+            must materialize (one per distinct output).
+        """
+        source_outputs: dict[str, list[str]] = {}
+
+        for (source_id, _target_id), output_name in output_mapping.items():
+            names = source_outputs.setdefault(source_id, [])
+            if output_name not in names:
+                names.append(output_name)
+
+        return source_outputs
 
     def _build_flow_output(
         self,
@@ -346,6 +384,8 @@ class LangflowConverter:
         nodes: list[dict[str, Any]],
         dependencies: dict[str, list[str]],
         node_output_refs: dict[str, Any],
+        output_mapping: dict[tuple[str, str], str],
+        output_refs_by_handle: dict[tuple[str, str], Any],
     ) -> None:
         """Build workflow output using incremental output building API.
 
@@ -353,7 +393,9 @@ class LangflowConverter:
             builder: FlowBuilder instance to add output fields to
             nodes: Original Langflow nodes
             dependencies: Dependency graph
-            node_output_refs: Mapping of node IDs to their output references
+            node_output_refs: Mapping of node IDs to their primary output references
+            output_mapping: Mapping of (source_id, target_id) -> output name
+            output_refs_by_handle: Mapping of (source_id, output_name) -> output ref
         """
         # Look for ChatOutput nodes first
         chat_output_nodes = [n for n in nodes if n.get("data", {}).get("type") == "ChatOutput"]
@@ -365,10 +407,14 @@ class LangflowConverter:
 
             # Check if ChatOutput has dependencies
             if node_id in dependencies and dependencies[node_id]:
-                # ChatOutput depends on another node - use that node's output
+                # ChatOutput depends on another node - use that node's output,
+                # resolved to the specific fanned-out output ChatOutput consumes.
                 dep_node_id = dependencies[node_id][0]
-                if dep_node_id in node_output_refs:
-                    builder.set_output(node_output_refs[dep_node_id])
+                dep_ref = self.node_processor._resolve_dependency_ref(
+                    dep_node_id, node_id, node_output_refs, output_mapping, output_refs_by_handle
+                )
+                if dep_ref is not None:
+                    builder.set_output(dep_ref)
                     return
 
             # ChatOutput has no dependencies or dependencies not found - check if

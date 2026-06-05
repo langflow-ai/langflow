@@ -359,3 +359,46 @@ the deserialize half is covered by
     The HTTP wire contract (``POST /api/v1/extensions/{id}/bundles/
     {name}/reload`` per-bundle) is unchanged; this is a CLI-only
     surface change.
+- **User-scoped extension events.**  Bundle lifecycle events
+  (``bundle_reloaded``, ``bundle_reload_failed``, ``flow_migrated``,
+  ``extension_error``) now publish to a per-user keyspace
+  (``user:<user_id>``) instead of the shared ``"global"`` bucket so
+  flow-migration and reload payloads cannot leak across users via the
+  poll endpoint.
+  - ``reload_bundle`` gains an optional keyword-only ``user_id: str |
+    None = None`` argument.  When supplied, ``bundle_reloaded`` /
+    ``bundle_reload_failed`` events are emitted to keyspace
+    ``user:<user_id>``; ``None`` (CLI / authless dev) keeps the legacy
+    ``"global"`` emission.  Existing positional callers are unaffected.
+  - ``POST /api/v1/extensions/{id}/bundles/{name}/reload`` now resolves
+    the authenticated user and threads its id into ``reload_bundle``, so
+    every reload triggered via HTTP is published to that user's
+    keyspace.  Wire contract (status codes, body shape) unchanged.
+  - ``GET /api/v1/extensions/events`` drops its client-supplied
+    ``keyspace`` query parameter.  The endpoint derives the keyspace
+    from the authenticated user server-side, so an authenticated client
+    can no longer poll another user's keyspace.  Frontends that polled
+    without ``keyspace`` (the in-tree consumer) are unaffected;
+    third-party callers that explicitly passed ``keyspace=...`` will
+    now receive ``422`` from FastAPI's strict parameter validation.
+- **Reload event payload aligned with ``ReloadResult``.**  Both
+  ``bundle_reloaded`` and ``bundle_reload_failed`` events now carry the
+  full ``ReloadResult.to_dict()`` envelope (``ok``, ``bundle``,
+  ``reload_id``, ``components_added``, ``components_removed``,
+  ``components_changed``, ``warnings``, ``errors``) instead of a
+  hand-rolled subset.  Polling clients can now (a) detect body-only
+  edits via ``components_changed`` instead of mis-reporting them as
+  "no source changes detected", and (b) surface a failed reload's
+  ``errors[0].message`` instead of degrading to a generic
+  "check server logs" fallback.  HTTP response shape unchanged.
+- **``GET /api/v1/extensions/events`` rejects ``keyspace`` explicitly.**
+  Previously the endpoint accepted but silently ignored any
+  client-supplied ``keyspace`` query parameter (server-derived from the
+  authenticated user since the prior entry).  Silent drop masked client
+  bugs that assumed the value had effect.  The route now returns ``422
+  Unprocessable Entity`` with a typed
+  ``extension-events-keyspace-forbidden`` error envelope when the
+  parameter is present.  ``extension-events-keyspace-forbidden`` is
+  added to ``ERROR_CODES`` (additive; codes-as-contract semantics
+  preserved).  In-tree polling clients that never sent the parameter
+  are unaffected.

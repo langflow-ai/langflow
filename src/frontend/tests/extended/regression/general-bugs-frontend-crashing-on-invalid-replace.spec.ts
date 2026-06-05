@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "user must be able to use a component with undefined replacement",
@@ -7,13 +8,7 @@ test(
     tag: ["@release"],
   },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.getByTestId("sidebar-custom-component-button").click();
 
@@ -26,7 +21,6 @@ test(
 from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema.data import Data
-
 
 class CustomComponent(Component):
     display_name = "Custom Component"
@@ -60,7 +54,7 @@ class CustomComponent(Component):
     await page.keyboard.press(`ControlOrMeta+A`);
     await page.locator("textarea").fill(problematicCode);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     await page.waitForTimeout(1000);
     await page.waitForSelector("text=No direct replacement", {

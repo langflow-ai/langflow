@@ -13,6 +13,7 @@ and keep the PG enum type names aligned with the migration.
 from __future__ import annotations
 
 import pytest
+from langflow.services.database.models.flow.model import Flow
 from langflow.services.database.models.traces.model import (
     SpanKind,
     SpanStatus,
@@ -24,8 +25,13 @@ from langflow.services.database.models.traces.model import (
     _LegacyCaseEnum,
 )
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy import text
 from sqlalchemy import types as sa_types
 from sqlalchemy.dialects import postgresql
+from sqlalchemy.ext.asyncio import create_async_engine
+from sqlalchemy.pool import StaticPool
+from sqlmodel import SQLModel, select
+from sqlmodel.ext.asyncio.session import AsyncSession
 
 
 def _column_enum(table, column_name: str) -> SQLEnum:
@@ -190,6 +196,127 @@ class TestLegacyCaseEnumResultProcessor:
         decoder = _LegacyCaseEnum(SpanStatus, name="spanstatus")
         with pytest.raises(LookupError):
             decoder.process_result_value("bogus", None)
+
+
+@pytest.fixture(name="traces_db_engine")
+async def _traces_db_engine():
+    """Async in-memory SQLite engine with the flow/trace/span tables created."""
+    engine = create_async_engine(
+        "sqlite+aiosqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.create_all)
+    yield engine
+    async with engine.begin() as conn:
+        await conn.run_sync(SQLModel.metadata.drop_all)
+    await engine.dispose()
+
+
+@pytest.mark.asyncio
+class TestLegacyUppercaseRowsRoundTripThroughOrm:
+    """End-to-end regression for https://github.com/langflow-ai/langflow/issues/13318.
+
+    Before ``values_callable=_enum_values`` shipped in v1.9.2, the trace/span
+    enum columns persisted the enum *names* (``"OK"``, ``"ERROR"``, ``"CHAIN"``).
+    After that fix, SQLAlchemy's ``Enum.result_processor()`` validates the raw
+    DB string against the lowercase values list and raises ``LookupError`` on
+    any pre-v1.9.2 row. ``_LegacyCaseEnum`` normalises legacy strings in
+    ``process_result_value``, but a ``TypeDecorator`` runs the impl's
+    ``result_processor`` *before* ``process_result_value``, so the impl's
+    ``LookupError`` fires first and the normalisation never runs.
+
+    These tests seed rows via the ORM (so UUID/datetime columns get encoded
+    correctly), then UPDATE the enum columns to legacy uppercase strings via
+    raw SQL to mimic pre-v1.9.2 data shape, and finally re-read through the
+    ORM to assert the SELECT decodes them cleanly.
+    """
+
+    async def _seed_flow(self, session: AsyncSession):
+        flow = Flow(name="t", description="test", data={})
+        session.add(flow)
+        await session.commit()
+        await session.refresh(flow)
+        return flow
+
+    @pytest.mark.parametrize(
+        ("legacy_status", "expected"),
+        [
+            ("OK", SpanStatus.OK),
+            ("ERROR", SpanStatus.ERROR),
+            ("UNSET", SpanStatus.UNSET),
+        ],
+    )
+    async def test_trace_with_legacy_uppercase_status_decodes_via_orm(self, traces_db_engine, legacy_status, expected):
+        # Seed a flow + trace through the ORM so UUID/datetime columns get
+        # encoded correctly, then rewrite the status column with raw SQL to
+        # the legacy uppercase form that pre-v1.9.2 versions persisted.
+        async with AsyncSession(traces_db_engine, expire_on_commit=False) as session:
+            flow = await self._seed_flow(session)
+            trace = TraceTable(name="legacy-trace", flow_id=flow.id, session_id="s", status=SpanStatus.OK)
+            session.add(trace)
+            await session.commit()
+            await session.refresh(trace)
+            trace_id = trace.id
+
+            await session.execute(
+                text("UPDATE trace SET status = :status WHERE id = :id"),
+                {"status": legacy_status, "id": trace_id.hex},
+            )
+            await session.commit()
+
+        async with AsyncSession(traces_db_engine, expire_on_commit=False) as fresh:
+            result = await fresh.execute(select(TraceTable).where(TraceTable.id == trace_id))
+            row = result.scalar_one()
+            assert row.status is expected
+
+    @pytest.mark.parametrize(
+        ("legacy_status", "legacy_span_type", "expected_status", "expected_type"),
+        [
+            ("OK", "CHAIN", SpanStatus.OK, SpanType.CHAIN),
+            ("ERROR", "LLM", SpanStatus.ERROR, SpanType.LLM),
+            ("UNSET", "TOOL", SpanStatus.UNSET, SpanType.TOOL),
+        ],
+    )
+    async def test_span_with_legacy_uppercase_enums_decodes_via_orm(
+        self,
+        traces_db_engine,
+        legacy_status,
+        legacy_span_type,
+        expected_status,
+        expected_type,
+    ):
+        async with AsyncSession(traces_db_engine, expire_on_commit=False) as session:
+            flow = await self._seed_flow(session)
+            trace = TraceTable(name="t", flow_id=flow.id, session_id="s", status=SpanStatus.OK)
+            session.add(trace)
+            await session.commit()
+            await session.refresh(trace)
+
+            span = SpanTable(
+                name="legacy-span",
+                trace_id=trace.id,
+                status=SpanStatus.OK,
+                span_type=SpanType.CHAIN,
+                span_kind=SpanKind.INTERNAL,
+            )
+            session.add(span)
+            await session.commit()
+            await session.refresh(span)
+            span_id = span.id
+
+            await session.execute(
+                text("UPDATE span SET status = :status, span_type = :span_type WHERE id = :id"),
+                {"status": legacy_status, "span_type": legacy_span_type, "id": span_id.hex},
+            )
+            await session.commit()
+
+        async with AsyncSession(traces_db_engine, expire_on_commit=False) as fresh:
+            result = await fresh.execute(select(SpanTable).where(SpanTable.id == span_id))
+            row = result.scalar_one()
+            assert row.status is expected_status
+            assert row.span_type is expected_type
 
 
 _TRACE_DEFAULTS: dict = {

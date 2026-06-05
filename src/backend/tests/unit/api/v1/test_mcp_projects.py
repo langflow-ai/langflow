@@ -18,6 +18,7 @@ from langflow.api.v1.mcp_projects import (
     project_mcp_servers,
     project_sse_transports,
 )
+from langflow.api.v2.mcp import is_mcp_servers_locked
 from langflow.services.auth.utils import create_user_longterm_token, get_password_hash
 from langflow.services.database.models.flow import Flow
 from langflow.services.database.models.folder import Folder
@@ -27,6 +28,7 @@ from lfx.base.mcp.constants import MAX_MCP_SERVER_NAME_LENGTH
 from lfx.base.mcp.util import sanitize_mcp_name
 from lfx.services.deps import session_scope
 from lfx.services.mcp_composer.service import COMPOSER_BACKEND_AUTH_HEADER
+from lfx.services.settings.base import Settings
 from mcp.server.sse import SseServerTransport
 from sqlmodel import select
 
@@ -889,6 +891,97 @@ def _prepare_install_test_env(monkeypatch, tmp_path, filename="cursor.json"):
     return config_path
 
 
+async def test_is_mcp_servers_locked_does_not_fire_for_magicmock_settings():
+    settings = MagicMock()
+    # Simulate test fixtures where unknown attrs return truthy MagicMock placeholders.
+    assert is_mcp_servers_locked(settings) is False
+
+
+async def test_is_mcp_servers_locked_respects_explicit_true_flag():
+    settings = SimpleNamespace(mcp_servers_locked=True)
+    assert is_mcp_servers_locked(settings) is True
+
+
+async def test_settings_model_declares_mcp_servers_locked_field(monkeypatch):
+    """Regression guard: mcp lock must be configurable via Settings/env vars."""
+    assert "mcp_servers_locked" in Settings.model_fields
+    monkeypatch.setenv("LANGFLOW_MCP_SERVERS_LOCKED", "true")
+    assert Settings().mcp_servers_locked is True
+
+
+async def test_v2_mcp_servers_locked_blocks_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    server_name = f"lf-lock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+
+
+async def test_v2_mcp_servers_locked_allows_superuser_add_patch_delete(
+    client: AsyncClient,
+    monkeypatch,
+):
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: True)
+
+    username = f"super_lock_{uuid4().hex[:8]}"
+    login_password = f"lfx-{uuid4().hex[:12]}"
+    async with session_scope() as session:
+        super_user = User(
+            username=username,
+            password=get_password_hash(login_password),
+            is_active=True,
+            is_superuser=True,
+        )
+        session.add(super_user)
+
+    login_response = await client.post("api/v1/login", data={"username": username, "password": login_password})
+    assert login_response.status_code == status.HTTP_200_OK
+    access_token = login_response.json()["access_token"]
+    headers = {"Authorization": f"Bearer {access_token}"}
+
+    server_name = f"lf-lock-super-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(
+        f"/api/v2/mcp/servers/{server_name}",
+        json=server_config,
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=headers)
+    assert response.status_code == status.HTTP_200_OK
+
+
 async def test_install_mcp_config_defaults_to_sse_transport(
     client: AsyncClient,
     user_test_project,
@@ -1551,3 +1644,143 @@ async def test_should_report_available_true_when_config_file_has_corrupt_json(
     for entry in results:
         assert entry["available"] is True, f"{entry['name']} should be available (directory exists)"
         assert entry["installed"] is False, f"{entry['name']} should not be installed (JSON is corrupt)"
+
+
+async def test_handle_list_tools_filters_by_user_id_for_defense_in_depth(
+    user_test_project,
+    other_test_project,
+    other_test_user,
+    active_user,
+):
+    """Test that handle_list_tools filters by BOTH folder_id AND user_id for defense-in-depth.
+
+    This test verifies the query-level ownership validation in handle_list_tools() when
+    project_id is provided. While the endpoint-level authentication (verify_project_auth_conditional)
+    already ensures the user owns the project, the database query should ALSO filter by user_id
+    for consistency with other MCP handlers (handle_list_resources, handle_read_resource).
+
+    GIVEN: Two projects owned by different users, each with flows
+    WHEN:  handle_list_tools is called with a project_id and a specific user context
+    THEN:  Only flows from that project AND owned by that user are returned
+    """
+    from langflow.api.v1.mcp_utils import current_user_ctx, handle_list_tools
+
+    # Create flows for both users in their respective projects
+    user_flow_id = uuid4()
+    other_user_flow_id = uuid4()
+
+    async with session_scope() as session:
+        # Create flow for active_user in user_test_project
+        # Include minimal valid data structure to pass json_schema_from_flow validation
+        user_flow = Flow(
+            id=user_flow_id,
+            name="User Flow",
+            description="Flow owned by active user",
+            data={"nodes": [], "edges": []},  # Minimal valid flow structure
+            mcp_enabled=True,
+            action_name="user_action",
+            action_description="User action",
+            folder_id=user_test_project.id,
+            user_id=active_user.id,
+            is_component=False,
+        )
+        session.add(user_flow)
+
+        # Create flow for other_test_user in other_test_project
+        other_user_flow = Flow(
+            id=other_user_flow_id,
+            name="Other User Flow",
+            description="Flow owned by other user",
+            data={"nodes": [], "edges": []},  # Minimal valid flow structure
+            mcp_enabled=True,
+            action_name="other_action",
+            action_description="Other action",
+            folder_id=other_test_project.id,
+            user_id=other_test_user.id,
+            is_component=False,
+        )
+        session.add(other_user_flow)
+        await session.commit()
+
+    try:
+        # Test 1: Active user queries their own project - should see their flow
+        token = current_user_ctx.set(active_user)
+        try:
+            tools = await handle_list_tools(project_id=user_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 1, "Active user should see exactly 1 tool in their project"
+            assert tools[0].name == "user_action", "Should see the user's own flow"
+        finally:
+            current_user_ctx.reset(token)
+
+        # Test 2: Other user queries their own project - should see their flow
+        token = current_user_ctx.set(other_test_user)
+        try:
+            tools = await handle_list_tools(project_id=other_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 1, "Other user should see exactly 1 tool in their project"
+            assert tools[0].name == "other_action", "Should see the other user's flow"
+        finally:
+            current_user_ctx.reset(token)
+
+        # Test 3: Defense-in-depth verification - Active user context with other user's project_id
+        # This simulates a hypothetical scenario where endpoint auth is bypassed (shouldn't happen,
+        # but the query-level filter should still protect against it)
+        token = current_user_ctx.set(active_user)
+        try:
+            tools = await handle_list_tools(project_id=other_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 0, (
+                "Active user should see NO tools when querying other user's project_id. "
+                "The query-level user_id filter provides defense-in-depth protection."
+            )
+        finally:
+            current_user_ctx.reset(token)
+
+        # Test 4: Verify the same defense-in-depth for the other user
+        token = current_user_ctx.set(other_test_user)
+        try:
+            tools = await handle_list_tools(project_id=user_test_project.id, mcp_enabled_only=True)
+            assert len(tools) == 0, (
+                "Other user should see NO tools when querying active user's project_id. "
+                "The query-level user_id filter provides defense-in-depth protection."
+            )
+        finally:
+            current_user_ctx.reset(token)
+
+    finally:
+        # Cleanup
+        async with session_scope() as session:
+            user_flow = await session.get(Flow, user_flow_id)
+            if user_flow:
+                await session.delete(user_flow)
+            other_user_flow = await session.get(Flow, other_user_flow_id)
+            if other_user_flow:
+                await session.delete(other_user_flow)
+            await session.commit()
+
+
+@pytest.mark.usefixtures("active_user")
+async def test_v2_mcp_servers_unlocked_allows_non_superuser_add_patch_delete(
+    client: AsyncClient,
+    logged_in_headers,
+    monkeypatch,
+):
+    """When is_mcp_servers_locked returns False the gate must not block normal users."""
+    monkeypatch.setattr("langflow.api.v2.mcp.is_mcp_servers_locked", lambda _settings: False)
+
+    server_name = f"lf-unlock-test-{uuid4().hex[:8]}"
+    server_config = {
+        "command": "uvx",
+        "args": ["mcp-proxy", "--transport", "sse", "https://langflow.local/sse"],
+    }
+
+    response = await client.post(f"/api/v2/mcp/servers/{server_name}", json=server_config, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.patch(
+        f"/api/v2/mcp/servers/{server_name}",
+        json={"description": "updated"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_200_OK
+
+    response = await client.delete(f"/api/v2/mcp/servers/{server_name}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK

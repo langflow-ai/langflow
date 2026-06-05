@@ -50,6 +50,7 @@ export type noteClassType = Pick<
 > & {
   template: {
     backgroundColor?: string;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     [key: string]: any;
   };
   outputs?: OutputFieldType[];

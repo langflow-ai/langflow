@@ -13,6 +13,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING
 
+from lfx.base.vectorstores.chroma_security import chroma_client_create_collection_kwargs
 from lfx.log.logger import logger
 from sqlmodel import select
 
@@ -108,7 +109,7 @@ async def initialize_kb(
     # Initialize Chroma collection so the directory is non-empty and readable
     try:
         client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-        client.create_collection(name=kb_name)
+        client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
     except (OSError, ValueError, chromadb.errors.ChromaError) as exc:
         await logger.awarning("Initial Chroma setup for %s failed: %s", kb_name, exc)
     finally:

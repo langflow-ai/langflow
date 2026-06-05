@@ -1,10 +1,18 @@
-import { render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import type {
   Deployment,
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+
+jest.mock(
+  "@/components/common/genericIconComponent",
+  () =>
+    function MockIcon({ name }: { name: string }) {
+      return <span data-testid={`icon-${name}`} />;
+    },
+);
 
 // ---------------------------------------------------------------------------
 // Mocks
@@ -17,7 +25,7 @@ const mockShowError = jest.fn();
 
 // Simulate react-query caching: data is undefined until the first enabled
 // fetch, then persists even when the query is later disabled.
-let _deploymentsCache: typeof mockDeploymentsData = undefined;
+let _deploymentsCache: { deployments: Deployment[] } | undefined = undefined;
 
 jest.mock("@/controllers/API/queries/deployments/use-get-deployments", () => ({
   useGetDeployments: (_params: unknown, options?: { enabled?: boolean }) => {
@@ -65,16 +73,6 @@ jest.mock(
   }),
 );
 
-jest.mock(
-  "@/controllers/API/queries/flow-version/use-get-flow-version-entry",
-  () => ({
-    useGetFlowVersionEntry: () => ({
-      data: { version_tag: "v1.0" },
-      isLoading: false,
-    }),
-  }),
-);
-
 // Stub StepDeployStatus to expose phase as text for assertions
 jest.mock(
   "@/pages/MainPage/pages/deploymentsPage/components/step-deploy-status",
@@ -105,24 +103,16 @@ const makeProvider = (
   updated_at: null,
 });
 
-const makeDeployment = (
-  id = "dep-1",
-  name = "My Bot",
-  snapshotId = "snap-1",
-  versionId = "v-1",
-): Deployment => ({
+const makeDeployment = (id = "dep-1", name = "My Bot"): Deployment => ({
   id,
-  name,
+  provider_id: "prov-1",
   description: null,
   type: "agent",
   created_at: "2025-01-01",
   updated_at: "2025-01-01",
-  provider_data: null,
+  provider_data: { display_name: name, name: "my_bot" },
   resource_key: "my_bot",
   attached_count: 1,
-  matched_attachments: [
-    { flow_version_id: versionId, provider_snapshot_id: snapshotId },
-  ],
 });
 
 // ---------------------------------------------------------------------------
@@ -310,33 +300,113 @@ describe("DeployChoiceDialog — deployments phase", () => {
   });
 
   it("calls onChooseNew with provider preselection for known provider key", async () => {
-    const user = userEvent.setup();
     mockDeploymentsData = { deployments: [] };
     const { onChooseNew } = renderDialog({ providers: [makeProvider("p1")] });
 
+    await waitFor(() =>
+      expect(onChooseNew).toHaveBeenCalledWith({
+        provider: {
+          id: "watsonx",
+          type: "watsonx",
+          name: "watsonx Orchestrate",
+          icon: "Bot",
+        },
+        instance: makeProvider("p1"),
+      }),
+    );
+  });
+
+  it("auto-skips deployments phase after provider select when no deployments exist", async () => {
+    const user = userEvent.setup();
+    mockDeploymentsData = { deployments: [] };
+    const { onChooseNew } = renderDialog({
+      providers: [makeProvider("p1"), makeProvider("p2", "WxO Dev")],
+    });
+
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(onChooseNew).toHaveBeenCalledWith({
-      provider: {
-        id: "watsonx",
-        type: "watsonx",
-        name: "watsonx Orchestrate",
-        icon: "Bot",
-      },
-      instance: makeProvider("p1"),
-    });
+    await waitFor(() =>
+      expect(onChooseNew).toHaveBeenCalledWith({
+        provider: {
+          id: "watsonx",
+          type: "watsonx",
+          name: "watsonx Orchestrate",
+          icon: "Bot",
+        },
+        instance: makeProvider("p1"),
+      }),
+    );
+  });
+
+  it("reopens on provider selection after close instead of auto-skipping from stale state", async () => {
+    const user = userEvent.setup();
+    mockDeploymentsData = { deployments: [] };
+    const onChooseNew = jest.fn();
+    const onUpdateComplete = jest.fn();
+    const setOpen = jest.fn();
+
+    const { rerender } = render(
+      <TooltipProvider>
+        <DeployChoiceDialog
+          open
+          setOpen={setOpen}
+          providers={[makeProvider("p1"), makeProvider("p2", "WxO Dev")]}
+          flowId="flow-1"
+          snapshotVersionId="snap-new"
+          snapshotVersionTag="v2.0"
+          onChooseNew={onChooseNew}
+          onUpdateComplete={onUpdateComplete}
+          onTestDeployment={jest.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(onChooseNew).toHaveBeenCalledTimes(1));
+
+    rerender(
+      <TooltipProvider>
+        <DeployChoiceDialog
+          open={false}
+          setOpen={setOpen}
+          providers={[makeProvider("p1"), makeProvider("p2", "WxO Dev")]}
+          flowId="flow-1"
+          snapshotVersionId="snap-new"
+          snapshotVersionTag="v2.0"
+          onChooseNew={onChooseNew}
+          onUpdateComplete={onUpdateComplete}
+          onTestDeployment={jest.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    rerender(
+      <TooltipProvider>
+        <DeployChoiceDialog
+          open
+          setOpen={setOpen}
+          providers={[makeProvider("p1"), makeProvider("p2", "WxO Dev")]}
+          flowId="flow-1"
+          snapshotVersionId="snap-new"
+          snapshotVersionTag="v2.0"
+          onChooseNew={onChooseNew}
+          onUpdateComplete={onUpdateComplete}
+          onTestDeployment={jest.fn()}
+        />
+      </TooltipProvider>,
+    );
+
+    expect(screen.getByText("Select Provider")).toBeInTheDocument();
+    expect(onChooseNew).toHaveBeenCalledTimes(1);
   });
 
   it("calls onChooseNew with undefined when provider key has no mapping", async () => {
-    const user = userEvent.setup();
     mockDeploymentsData = { deployments: [] };
     const { onChooseNew } = renderDialog({
       providers: [makeProvider("p1", "Unknown", "some-unknown-provider")],
     });
 
-    await user.click(screen.getByRole("button", { name: "Continue" }));
-
-    expect(onChooseNew).toHaveBeenCalledWith(undefined);
+    await waitFor(() => expect(onChooseNew).toHaveBeenCalledWith(undefined));
   });
 
   it("auto-selects the single existing attachment", async () => {
@@ -351,7 +421,6 @@ describe("DeployChoiceDialog — deployments phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -366,14 +435,14 @@ describe("DeployChoiceDialog — deployments phase", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
   });
 
   it("advances to review phase when existing attachment selected and continued", async () => {
     const user = userEvent.setup();
     mockDeploymentsData = {
-      deployments: [makeDeployment("dep-1", "My Bot", "snap-1")],
+      deployments: [makeDeployment("dep-1", "My Bot")],
     };
     mockAttachmentsData = {
       flow_versions: [
@@ -384,7 +453,6 @@ describe("DeployChoiceDialog — deployments phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -397,7 +465,7 @@ describe("DeployChoiceDialog — deployments phase", () => {
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
   });
 });
@@ -412,7 +480,7 @@ describe("DeployChoiceDialog — review phase", () => {
 
   beforeEach(async () => {
     mockDeploymentsData = {
-      deployments: [makeDeployment("dep-1", "My Bot", "snap-1", "v-1")],
+      deployments: [makeDeployment("dep-1", "My Bot")],
     };
     mockAttachmentsData = {
       flow_versions: [
@@ -423,7 +491,6 @@ describe("DeployChoiceDialog — review phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -440,12 +507,32 @@ describe("DeployChoiceDialog — review phase", () => {
     // Single attachment auto-selected; Continue goes straight to review
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
   });
 
-  it("shows Review Update title", () => {
-    expect(screen.getByText("Review Update")).toBeInTheDocument();
+  it("shows Update Deployment title", () => {
+    expect(screen.getByText("Update Deployment")).toBeInTheDocument();
+  });
+
+  it("shows spinner while loading review attachment details", async () => {
+    cleanup();
+    mockDeploymentsData = {
+      deployments: [makeDeployment("dep-1", "My Bot", "snap-1", "v-1")],
+    };
+    mockAttachmentsData = undefined;
+    mockIsLoadingAttachments = true;
+
+    const user = userEvent.setup();
+    renderDialog({
+      providers: [makeProvider("p1")],
+      snapshotVersionId: "snap-new",
+      snapshotVersionTag: "v2.0",
+    });
+
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    expect(screen.getByTestId("review-loading-skeleton")).toBeInTheDocument();
   });
 
   it("shows deployment name", () => {
@@ -453,11 +540,18 @@ describe("DeployChoiceDialog — review phase", () => {
   });
 
   it("shows current version tag from API", () => {
-    expect(screen.getByText("v1.0")).toBeInTheDocument();
+    expect(screen.getAllByText("v1").length).toBeGreaterThan(0);
   });
 
   it("shows new version tag from props", () => {
     expect(screen.getByText("v2.0")).toBeInTheDocument();
+  });
+
+  it("shows compact deployed tool summary when there is only one attachment", () => {
+    expect(screen.getByText("My Flow")).toBeInTheDocument();
+    expect(
+      screen.queryByText("Choose deployed version"),
+    ).not.toBeInTheDocument();
   });
 
   it("Back button returns to deployments phase", async () => {
@@ -473,12 +567,73 @@ describe("DeployChoiceDialog — review phase", () => {
   });
 
   it("Update button calls patchSnapshot with correct args", async () => {
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     expect(mockPatchSnapshot).toHaveBeenCalledWith({
       providerSnapshotId: "snap-1",
       flowVersionId: "snap-new",
     });
+  });
+
+  it("lets user choose exact attached version when deployment has many", async () => {
+    cleanup();
+    mockDeploymentsData = {
+      deployments: [makeDeployment("dep-1", "My Bot", "snap-1", "v-1")],
+    };
+    mockAttachmentsData = {
+      flow_versions: [
+        {
+          id: "v-1",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_number: 1,
+          attached_at: "2025-01-01",
+          provider_snapshot_id: "snap-1",
+          provider_data: { tool_name: "My Flow old" },
+        },
+        {
+          id: "v-2",
+          flow_id: "flow-1",
+          flow_name: "My Flow",
+          version_number: 2,
+          attached_at: "2025-01-02",
+          provider_snapshot_id: "snap-2",
+          provider_data: { tool_name: "My Flow current" },
+        },
+      ],
+      page: 1,
+      size: 50,
+      total: 2,
+    };
+
+    const localUser = userEvent.setup();
+    renderDialog({
+      providers: [makeProvider("p1")],
+      snapshotVersionId: "snap-new",
+      snapshotVersionTag: "v3.0",
+    });
+
+    await localUser.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("Select version to replace")).toBeInTheDocument(),
+    );
+
+    await localUser.click(
+      screen.getByRole("radio", { name: /My Flow current/ }),
+    );
+    await localUser.click(
+      screen.getByRole("button", { name: "Replace v2 with v3.0" }),
+    );
+
+    await waitFor(() =>
+      expect(mockPatchSnapshot).toHaveBeenCalledWith({
+        providerSnapshotId: "snap-2",
+        flowVersionId: "snap-new",
+      }),
+    );
   });
 
   it("shows deploying state immediately after clicking Update", async () => {
@@ -490,7 +645,9 @@ describe("DeployChoiceDialog — review phase", () => {
         }),
     );
 
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
       "deploying",
@@ -499,7 +656,9 @@ describe("DeployChoiceDialog — review phase", () => {
   });
 
   it("shows deployed state after patchSnapshot resolves", async () => {
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     await waitFor(() =>
       expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
@@ -511,7 +670,9 @@ describe("DeployChoiceDialog — review phase", () => {
   it("calls showError and returns to review when patchSnapshot fails", async () => {
     mockPatchSnapshot.mockRejectedValue(new Error("Network error"));
 
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
 
     await waitFor(() =>
       expect(mockShowError).toHaveBeenCalledWith(
@@ -519,7 +680,7 @@ describe("DeployChoiceDialog — review phase", () => {
         expect.any(Error),
       ),
     );
-    expect(screen.getByText("Review Update")).toBeInTheDocument();
+    expect(screen.getByText("Update Deployment")).toBeInTheDocument();
   });
 });
 
@@ -533,7 +694,7 @@ describe("DeployChoiceDialog — update phase", () => {
 
   beforeEach(async () => {
     mockDeploymentsData = {
-      deployments: [makeDeployment("dep-1", "My Bot", "snap-1")],
+      deployments: [makeDeployment("dep-1", "My Bot")],
     };
     mockAttachmentsData = {
       flow_versions: [
@@ -544,7 +705,6 @@ describe("DeployChoiceDialog — update phase", () => {
           version_number: 1,
           attached_at: "2025-01-01",
           provider_snapshot_id: "snap-1",
-          tool_name: null,
           provider_data: null,
         },
       ],
@@ -558,9 +718,11 @@ describe("DeployChoiceDialog — update phase", () => {
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await waitFor(() =>
-      expect(screen.getByText("Review Update")).toBeInTheDocument(),
+      expect(screen.getByText("Update Deployment")).toBeInTheDocument(),
     );
-    await user.click(screen.getByRole("button", { name: "Update" }));
+    await user.click(
+      screen.getByRole("button", { name: "Replace v1 with v2.0" }),
+    );
     await waitFor(() =>
       expect(screen.getByTestId("step-deploy-status")).toHaveTextContent(
         "deployed",
