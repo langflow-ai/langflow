@@ -47,6 +47,12 @@ jobs:
         with:
           ref: ${{ inputs.branch || github.ref }}
 
+      - name: Allow Chrome sandbox (Ubuntu 24.04 AppArmor restriction)
+        # Ubuntu 24.04 runners restrict unprivileged user namespaces, which
+        # breaks Chrome's sandbox (used by the IBM checker via puppeteer).
+        # This re-enables them — the documented GitHub Actions workaround.
+        run: sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+
       - name: Setup Node.js
         uses: actions/setup-node@v6
         with:
