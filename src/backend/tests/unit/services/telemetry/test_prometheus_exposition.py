@@ -18,11 +18,10 @@ def test_otel_metrics_reach_prometheus_exposition():
         """
         import asyncio
         from langflow.services.deps import get_telemetry_service
-        from langflow.services.background_execution import metrics as bgm
 
         async def main():
             ts = get_telemetry_service()
-            bgm.emit_job_started(backend="scaled")
+            ts.ot.set_observable_counter("langflow_bg_jobs_started_total", 1, {"backend": "scaled"})
             ts.ot.update_gauge("langflow_bg_alive_workers", 2, {"backend": "scaled"})
             from prometheus_client import generate_latest
             out = generate_latest().decode()
