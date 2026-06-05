@@ -9,22 +9,7 @@ import {
   useDeleteProject,
   useProjects,
 } from "@/controllers/API/queries/lothal";
-
-const PHASE_LABELS: Record<string, string> = {
-  CLARIFICATION: "Clarifying",
-  DIAGRAM_GENERATION: "Generating Diagram",
-  DIAGRAM_REFINEMENT: "Refining Diagram",
-  CODE_GENERATION: "Generating Code",
-  DONE: "Done",
-};
-
-const PHASE_COLORS: Record<string, string> = {
-  CLARIFICATION: "bg-blue-100 text-blue-700",
-  DIAGRAM_GENERATION: "bg-yellow-100 text-yellow-700",
-  DIAGRAM_REFINEMENT: "bg-purple-100 text-purple-700",
-  CODE_GENERATION: "bg-orange-100 text-orange-700",
-  DONE: "bg-green-100 text-green-700",
-};
+import { PHASE_COLORS, PHASE_LABELS } from "../constants";
 
 function formatDate(iso: string) {
   return new Date(iso).toLocaleDateString(undefined, {
@@ -136,6 +121,13 @@ export default function Dashboard() {
     createProject.mutate(name, { onSuccess: () => setShowModal(false) });
   };
 
+  const handleDelete = (project: Project) => {
+    // Deletion is irreversible and there's no undo — confirm first.
+    if (window.confirm(`Delete "${project.name}"? This cannot be undone.`)) {
+      deleteProject.mutate(project.id);
+    }
+  };
+
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b border-gray-200 px-8 py-5">
@@ -212,7 +204,7 @@ export default function Dashboard() {
                 <ProjectCard
                   key={p.id}
                   project={p}
-                  onDelete={(id) => deleteProject.mutate(id)}
+                  onDelete={() => handleDelete(p)}
                 />
               ))}
             </div>

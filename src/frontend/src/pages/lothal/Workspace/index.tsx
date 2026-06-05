@@ -18,19 +18,12 @@ import {
   useSendMessage,
 } from "@/controllers/API/queries/lothal";
 import { nodeTypes } from "@/pages/FlowPage/consts";
+import { PHASE_LABELS } from "../constants";
 
 type ChatMessage = {
   id: string;
   role: "USER" | "ASSISTANT";
   content: string;
-};
-
-const PHASE_LABELS: Record<string, string> = {
-  CLARIFICATION: "Clarifying",
-  DIAGRAM_GENERATION: "Generating Diagram",
-  DIAGRAM_REFINEMENT: "Refining",
-  CODE_GENERATION: "Generating Code",
-  DONE: "Done",
 };
 
 function ChatPanel({ project }: { project: Project }) {
@@ -82,6 +75,17 @@ function ChatPanel({ project }: { project: Project }) {
       setMessages((prev) => [
         ...prev,
         { id: reply.id, role: "ASSISTANT", content: reply.content },
+      ]);
+    } catch {
+      // Surface the failure inline so the user isn't left wondering whether
+      // their message was sent (the send endpoint may not be live yet).
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: `error-${prev.length}`,
+          role: "ASSISTANT",
+          content: "Sorry, something went wrong. Please try again.",
+        },
       ]);
     } finally {
       setSending(false);
@@ -184,13 +188,21 @@ function CanvasPanel() {
 export default function Workspace() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { data: projects } = useProjects();
+  const { data: projects, isLoading } = useProjects();
   const project = projects?.find((p) => p.id === projectId);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-gray-400">
+        Loading…
+      </div>
+    );
+  }
 
   if (!project) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-gray-400">
-        Loading…
+        Project not found.
       </div>
     );
   }
