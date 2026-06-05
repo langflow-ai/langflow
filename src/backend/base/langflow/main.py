@@ -226,11 +226,13 @@ def get_lifespan(*, fix_migration=False, version=None):
             except Exception as exc:  # noqa: BLE001
                 await logger.awarning("Knowledge base reconciliation skipped after startup error: %s", exc)
 
+            prometheus_started = False
             if get_settings_service().settings.prometheus_enabled:
                 try:
                     from prometheus_client import start_http_server
 
                     start_http_server(get_settings_service().settings.prometheus_port)
+                    prometheus_started = True
                     await logger.adebug(
                         f"Started Prometheus server on port {get_settings_service().settings.prometheus_port}"
                     )
@@ -248,6 +250,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         )
                     else:
                         await logger.awarning(f"Failed to start Prometheus server: {e}")
+
+            # Only the process that actually bound the Prometheus port runs the
+            # DB-derived metrics collector, so ``gunicorn -w N`` does not spawn N
+            # collectors all querying the DB while only one process exposes metrics.
+            from langflow.services.background_execution.metrics_collector import maybe_start_metrics_collector
+
+            await maybe_start_metrics_collector(
+                _app, get_settings_service().settings, prometheus_started=prometheus_started
+            )
 
             telemetry_service = get_telemetry_service()
 
@@ -537,6 +548,11 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Stop the background-execution metrics collector (no-op if it
+                    # never started). Defensive: never let a stop error break shutdown.
+                    from langflow.services.background_execution.metrics_collector import stop_metrics_collector
+
+                    await stop_metrics_collector(_app)
                     # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:

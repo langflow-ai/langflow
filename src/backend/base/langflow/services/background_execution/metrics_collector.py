@@ -19,6 +19,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING, Any
 
 from lfx.log.logger import logger
 from sqlmodel import col, func, select
@@ -26,6 +27,9 @@ from sqlmodel import col, func, select
 from langflow.services.background_execution.metrics import current_backend
 from langflow.services.database.models.jobs.model import Job, JobStatus
 from langflow.services.deps import get_telemetry_service, session_scope
+
+if TYPE_CHECKING:
+    from fastapi import FastAPI
 
 # Non-terminal statuses: a job in one of these is still occupying the system.
 # QUEUED/IN_PROGRESS are the only non-terminal states; COMPLETED / FAILED /
@@ -173,3 +177,42 @@ class BackgroundMetricsCollector:
             with contextlib.suppress(asyncio.CancelledError):
                 await self._task
             self._task = None
+
+
+async def maybe_start_metrics_collector(app: FastAPI, settings: Any, *, prometheus_started: bool) -> None:
+    """Start the collector and stash it on ``app.state`` when this process owns metrics.
+
+    Gated on ``prometheus_started`` so only the process that actually bound the
+    Prometheus exposition port runs the collector. With ``gunicorn -w N`` only one
+    worker wins the port (EADDRINUSE for the rest), so only that worker queries the
+    DB and writes the gauges that get scraped. ``prometheus_enabled`` is the feature
+    switch; without it nothing is exposed so there is nothing to collect for.
+
+    Best-effort: never block or crash startup on observability — a failure logs a
+    warning and leaves ``app.state.background_metrics_collector`` as ``None``.
+    """
+    app.state.background_metrics_collector = None
+    if not (prometheus_started and getattr(settings, "prometheus_enabled", False)):
+        return
+    try:
+        collector = BackgroundMetricsCollector(
+            interval=settings.background_metrics_interval,
+            lease_window=settings.background_lease_ttl_s,
+        )
+        collector.start()
+        app.state.background_metrics_collector = collector
+        await logger.adebug("Started background-execution metrics collector")
+    except Exception as exc:  # noqa: BLE001 - never block startup on observability
+        await logger.awarning(f"Background metrics collector not started: {exc}")
+
+
+async def stop_metrics_collector(app: FastAPI) -> None:
+    """Stop the collector if one was started. Defensive: never breaks shutdown.
+
+    The attribute may be unset if startup failed before it ran, so we read it
+    with ``getattr`` and swallow any stop error — shutdown must finish regardless.
+    """
+    collector = getattr(app.state, "background_metrics_collector", None)
+    if collector is not None:
+        with contextlib.suppress(Exception):
+            await collector.stop()
