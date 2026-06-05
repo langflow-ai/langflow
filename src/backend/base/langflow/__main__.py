@@ -848,8 +848,13 @@ def worker(
     """
     if env_file:
         load_dotenv(env_file, override=True)
-    if log_level:
-        configure(log_level=log_level)
+    # Configure logging unconditionally so a worker honors LANGFLOW_LOG_FILE /
+    # LANGFLOW_LOG_ENV / LANGFLOW_LOG_LEVEL (configure() reads them from env when
+    # the args are None). Without this a worker never sets up its file/stdout
+    # sink, so its structured bg_job lifecycle logs never reach the log file the
+    # API and Promtail tail. In the scaled backend the runs happen in workers,
+    # so this is where the per-job log forensics actually come from.
+    configure(log_level=log_level)
 
     async def _run_worker() -> None:
         from langflow.services.background_execution.worker import build_worker, run_worker_loop
