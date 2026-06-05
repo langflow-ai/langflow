@@ -148,7 +148,7 @@ class BackgroundWorkflowUser(FastHttpUser):
 
 
 @events.quitting.add_listener
-def _print_counts(_environment, **_kwargs) -> None:
+def _print_counts(**_kwargs) -> None:
     with _lock:
         snap = dict(COUNTS)
     total = snap["submitted"] or 1
