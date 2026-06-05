@@ -48,6 +48,9 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
+const LothalDashboard = lazy(() => import("./pages/lothal/Dashboard"));
+const LothalWorkspace = lazy(() => import("./pages/lothal/Workspace"));
+
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 
 const router = createBrowserRouter(
@@ -184,6 +187,8 @@ const router = createBrowserRouter(
                   }
                 />
               </Route>
+              <Route path="lothal" element={<LothalDashboard />} />
+              <Route path="lothal/:projectId" element={<LothalWorkspace />} />
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>
                   <Route path="folder/:folderId/" element={<FlowPage />} />
