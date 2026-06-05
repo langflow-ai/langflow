@@ -378,6 +378,15 @@ html[data-theme='light'] .redocusaurus .token.property {
   display: none !important;
 }
 
+/* ── Inline code (dark) ───────────────────────────────────── */
+/* Redoc's default typography.code.backgroundColor is rgba(38, 50, 56, 0.05),
+   nearly invisible over the dark background — lighten it for contrast.
+   :not(pre) keeps code sample blocks (pre > code) unaffected. */
+
+html[data-theme='dark'] .redocusaurus *:not(pre) > code {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
 /* ── Dark theme misc ──────────────────────────────────────── */
 
 html[data-theme='dark'] .redocusaurus [class*="OperationTitle"],
