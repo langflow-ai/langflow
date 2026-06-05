@@ -61,6 +61,39 @@ function patchDarkChipColors() {
   }
 }
 
+function patchRedocSemantics() {
+  const redoc = document.querySelector(".redocusaurus");
+  if (!redoc) {
+    return;
+  }
+  // Decorative chevrons/arrows — Redoc ships them with no accessible name.
+  for (const svg of redoc.querySelectorAll(
+    "svg:not([aria-hidden]):not([aria-label]):not([role])"
+  )) {
+    svg.setAttribute("aria-hidden", "true");
+  }
+  // Content-type dropdowns render as bare <select> elements.
+  for (const select of redoc.querySelectorAll(
+    "select.dropdown-select:not([aria-label])"
+  )) {
+    select.setAttribute("aria-label", "Content type");
+  }
+  // Redoc lays out schema fields as 2-column <table>s (name | description)
+  // with no <th> anywhere — they are layout tables, so take them out of
+  // table semantics; content still reads in DOM order (name, description).
+  // role="rowheader" on the name <td> is NOT valid ARIA inside a native table.
+  for (const table of redoc.querySelectorAll("table:not([role])")) {
+    if (!table.querySelector("th")) {
+      table.setAttribute("role", "presentation");
+    }
+  }
+}
+
+function runPatches() {
+  patchDarkChipColors();
+  patchRedocSemantics();
+}
+
 export function onRouteDidUpdate({ location }) {
   if (typeof document === "undefined" || !location.pathname.startsWith("/api")) {
     return;
@@ -76,7 +109,7 @@ export function onRouteDidUpdate({ location }) {
     observer.observe(document.body, { childList: true, subtree: true });
   }
 
-  patchDarkChipColors();
+  runPatches();
   if (!observersStarted) {
     observersStarted = true;
     // Re-patch when the user toggles the color mode.
@@ -84,12 +117,21 @@ export function onRouteDidUpdate({ location }) {
       attributes: true,
       attributeFilter: ["data-theme"],
     });
-    // Redoc lazy-renders operations on scroll/expand — re-patch (cheap when
-    // nothing matches) with a debounce.
+    // Redoc lazy-renders operations on scroll/expand — re-patch on changes.
+    // Semantics patches are cheap/idempotent: run on the next frame so late
+    // renders are covered immediately; the (heavier) color patch is debounced.
     let timer;
+    let frameQueued = false;
     new MutationObserver(() => {
+      if (!frameQueued) {
+        frameQueued = true;
+        window.requestAnimationFrame(() => {
+          frameQueued = false;
+          patchRedocSemantics();
+        });
+      }
       clearTimeout(timer);
-      timer = setTimeout(patchDarkChipColors, 300);
+      timer = setTimeout(runPatches, 300);
     }).observe(document.body, { childList: true, subtree: true });
   }
 }
