@@ -1,0 +1,209 @@
+/* Lothal design-system theme — the "dockyard" look: rust + Ubuntu aubergine.
+ *
+ * Ported from the Claude Design bundle. Everything is scoped under
+ * `.lothal-surface` so the rest of Langflow keeps its own theme untouched —
+ * there is deliberately no `:root` / global `body` rule here. Light is the
+ * base palette; `[data-theme="dark"]` overrides it (dark is the design
+ * default); `[data-density]` adjusts the spacing tokens. */
+
+.lothal-surface {
+  /* Palette tokens — light (warm aubergine-tinted paper) */
+  --paper: #f3ece6;
+  --paper-deep: #ebe1da;
+  --surface: #faf5f0;
+  --surface-2: #f5ede7;
+  --ink: #2c001e;
+  --ink-90: rgba(44, 0, 30, 0.9);
+  --ink-mute: rgba(44, 0, 30, 0.6);
+  --ink-soft: rgba(44, 0, 30, 0.4);
+  --ink-faint: rgba(44, 0, 30, 0.2);
+  --border: rgba(44, 0, 30, 0.11);
+  --border-strong: rgba(44, 0, 30, 0.19);
+  --accent: #c0451f;
+  --accent-soft: rgba(192, 69, 31, 0.1);
+  --accent-ink: #8a2f14;
+  --warn: #b06a14;
+  --success: #5a7242;
+
+  --serif: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --sans: "Geist", ui-sans-serif, system-ui, sans-serif;
+  --mono: "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* Density-driven spacing */
+  --pad: 16px;
+  --gap: 12px;
+  --radius: 10px;
+  --radius-lg: 14px;
+  --row-h: 36px;
+
+  position: relative;
+  height: 100%;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: 14px;
+  line-height: 1.5;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Dark — deep Ubuntu aubergine ground */
+.lothal-surface[data-theme="dark"] {
+  --paper: #2c001e;
+  --paper-deep: #1f0015;
+  --surface: #3a0f2b;
+  --surface-2: #451636;
+  --ink: #f6e8ef;
+  --ink-90: rgba(246, 232, 239, 0.92);
+  --ink-mute: rgba(246, 232, 239, 0.62);
+  --ink-soft: rgba(246, 232, 239, 0.4);
+  --ink-faint: rgba(246, 232, 239, 0.2);
+  --border: rgba(246, 232, 239, 0.12);
+  --border-strong: rgba(246, 232, 239, 0.22);
+  --accent: #e95420;
+  --accent-soft: rgba(233, 84, 32, 0.16);
+  --accent-ink: #f4a07a;
+}
+
+/* Density variants */
+.lothal-surface[data-density="compact"] {
+  --pad: 12px;
+  --gap: 8px;
+  --row-h: 30px;
+}
+.lothal-surface[data-density="comfy"] {
+  --pad: 22px;
+  --gap: 16px;
+  --row-h: 42px;
+}
+
+/* Content sits above the paper grain. */
+.lothal-surface__content {
+  position: relative;
+  z-index: 1;
+  height: 100%;
+}
+
+/* Subtle paper grain behind the content. */
+.lothal-surface::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(
+      1px 1px at 25% 30%,
+      rgba(0, 0, 0, 0.025) 1px,
+      transparent 1px
+    ),
+    radial-gradient(
+      1px 1px at 75% 65%,
+      rgba(0, 0, 0, 0.018) 1px,
+      transparent 1px
+    );
+  background-size:
+    240px 240px,
+    320px 320px;
+  opacity: 0.9;
+  z-index: 0;
+}
+.lothal-surface[data-theme="dark"]::before {
+  opacity: 0.35;
+}
+
+/* Headings use the serif display face. */
+.lothal-surface :is(h1, h2, h3, h4) {
+  font-family: var(--serif);
+  font-weight: 400;
+  letter-spacing: -0.005em;
+  margin: 0;
+}
+.lothal-surface ::selection {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+/* Scrollbars */
+.lothal-surface *::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.lothal-surface *::-webkit-scrollbar-track {
+  background: transparent;
+}
+.lothal-surface *::-webkit-scrollbar-thumb {
+  background: var(--ink-faint);
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+.lothal-surface *::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-soft);
+  background-clip: content-box;
+  border: 2px solid transparent;
+}
+
+/* Utility classes (scoped — never leak to the rest of Langflow). */
+.lothal-surface .mono {
+  font-family: var(--mono);
+  font-feature-settings: "ss01", "cv02";
+}
+.lothal-surface .serif {
+  font-family: var(--serif);
+}
+.lothal-surface .label {
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+/* Caret blink for streaming assistant replies. */
+@keyframes lothal-blink {
+  0%,
+  49% {
+    opacity: 1;
+  }
+  50%,
+  100% {
+    opacity: 0;
+  }
+}
+.lothal-surface .caret::after {
+  content: "▍";
+  color: var(--accent);
+  margin-left: 2px;
+  animation: lothal-blink 1s steps(2, end) infinite;
+  font-weight: 400;
+}
+
+@keyframes lothal-pulse-soft {
+  0%,
+  100% {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
+}
+.lothal-surface .pulse {
+  animation: lothal-pulse-soft 1.4s ease-in-out infinite;
+}
+
+@keyframes lothal-fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.lothal-surface .fade-up {
+  animation: lothal-fade-in-up 0.35s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
