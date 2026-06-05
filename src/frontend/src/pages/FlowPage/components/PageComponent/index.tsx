@@ -78,13 +78,13 @@ import {
   getSnapPosition,
   type HelperLinesState,
 } from "./helpers/helper-lines";
-import { computeNoteScreenPosition } from "./utils/compute-note-position";
 import { useCanvasDragSelectFix } from "./hooks/useCanvasDragSelectFix";
 import {
   MemoizedBackground,
   MemoizedCanvasControls,
   MemoizedSidebarTrigger,
 } from "./MemoizedComponents";
+import { computeNoteScreenPosition } from "./utils/compute-note-position";
 import getRandomName from "./utils/get-random-name";
 import isWrappedWithClass from "./utils/is-wrapped-with-class";
 
