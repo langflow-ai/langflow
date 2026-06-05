@@ -20,7 +20,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from lfx.interface.components import component_cache
-from lfx.run.base import RunError, output_error, run_flow
+from lfx.run.base import RunError, _materialize_flow_dict, output_error, run_flow
 
 
 class TestRunError:
@@ -1409,3 +1409,438 @@ class TestRunFlowExecutionErrors:
                 await run_flow(script_path=script_path)
 
             assert "Failed to prepare graph" in str(exc_info.value)
+
+
+# ---------------------------------------------------------------------------
+# --upgrade-flow option
+# ---------------------------------------------------------------------------
+
+
+class TestMaterializeFlowDict:
+    """Direct tests for ``_materialize_flow_dict`` — the core outer-envelope unwrap.
+
+    This helper backs ``--upgrade-flow`` input handling.
+    Exported Langflow flows look like ``{"name": ..., "data": {<graph>}}``; the inner graph is
+    ``{"nodes": [...], "edges": [...]}``. This helper must unwrap the envelope, pass a bare graph
+    through unchanged, unwrap exactly one level, and fail loudly (RunError) on bad/missing input.
+    """
+
+    BARE = {"nodes": [{"id": "n1"}], "edges": []}
+
+    def _materialize(self, **kwargs):
+        defaults = {
+            "flow_json": None,
+            "stdin": False,
+            "script_path": None,
+            "upgrade_flow": None,
+            "verbosity": 0,
+            "verbose": False,
+        }
+        defaults.update(kwargs)
+        return _materialize_flow_dict(**defaults)
+
+    def test_inline_envelope_unwrapped(self):
+        env = {"name": "F", "description": "d", "data": self.BARE}
+        assert self._materialize(flow_json=json.dumps(env)) == self.BARE
+
+    def test_inline_bare_passthrough(self):
+        assert self._materialize(flow_json=json.dumps(self.BARE)) == self.BARE
+
+    def test_stdin_envelope_unwrapped(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin", StringIO(json.dumps({"name": "F", "data": self.BARE})))
+        assert self._materialize(stdin=True) == self.BARE
+
+    def test_stdin_bare_passthrough(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin", StringIO(json.dumps(self.BARE)))
+        assert self._materialize(stdin=True) == self.BARE
+
+    def test_file_with_upgrade_envelope_unwrapped(self, tmp_path):
+        f = tmp_path / "flow.json"
+        f.write_text(json.dumps({"name": "F", "data": self.BARE}))
+        assert self._materialize(script_path=f, upgrade_flow="check") == self.BARE
+
+    def test_file_with_upgrade_bare_passthrough(self, tmp_path):
+        f = tmp_path / "flow.json"
+        f.write_text(json.dumps(self.BARE))
+        assert self._materialize(script_path=f, upgrade_flow="check") == self.BARE
+
+    def test_nested_envelope_unwraps_exactly_one_level(self):
+        # Documents behavior: a doubly-nested {"data": {"data": ...}} unwraps a single level.
+        assert self._materialize(flow_json=json.dumps({"data": {"data": self.BARE}})) == {"data": self.BARE}
+
+    def test_plain_file_without_upgrade_returns_none(self, tmp_path):
+        # A plain script path (no --upgrade-flow) is loaded later by path, not materialized here.
+        f = tmp_path / "flow.json"
+        f.write_text(json.dumps(self.BARE))
+        assert self._materialize(script_path=f, upgrade_flow=None) is None
+
+    def test_non_dict_json_raises(self):
+        # A top-level JSON array has no .get(); this surfaces as a RunError (fails loudly).
+        with pytest.raises(RunError):
+            self._materialize(flow_json="[]")
+
+    def test_py_script_with_upgrade_raises(self, tmp_path):
+        f = tmp_path / "flow.py"
+        f.write_text("graph = None\n")
+        with pytest.raises(RunError):
+            self._materialize(script_path=f, upgrade_flow="check")
+
+    def test_upgrade_without_source_raises(self):
+        with pytest.raises(RunError):
+            self._materialize(upgrade_flow="check")
+
+    def test_empty_stdin_raises(self, monkeypatch):
+        monkeypatch.setattr("sys.stdin", StringIO("   "))
+        with pytest.raises(RunError):
+            self._materialize(stdin=True, upgrade_flow="check")
+
+
+class TestUpgradeFlowOption:
+    """Tests for the --upgrade-flow option wired into run_flow."""
+
+    REGISTRY_CODE = "class MyComp:\n    pass  # v2"
+    NODE_CODE = "class MyComp:\n    pass  # v1"
+
+    def _registry(self):
+        return {
+            "Cat": {
+                "MyComp": {
+                    "template": {"code": {"value": self.REGISTRY_CODE}},
+                    "outputs": [
+                        {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                    ],
+                    "metadata": {},
+                }
+            }
+        }
+
+    def _flow_dict(self, code=None):
+        return {
+            "nodes": [
+                {
+                    "id": "n1",
+                    "data": {
+                        "id": "n1",
+                        "type": "MyComp",
+                        "node": {
+                            "display_name": "My Component",
+                            "edited": False,
+                            "template": {"code": {"value": code or self.NODE_CODE}},
+                            "outputs": [
+                                {"name": "o", "display_name": "O", "types": ["M"], "method": "m", "allows_loop": False}
+                            ],
+                        },
+                    },
+                }
+            ],
+            "edges": [],
+        }
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outdated_inline_json(self):
+        """--upgrade-flow=check must reject outdated nodes from inline JSON."""
+        import json as _json
+
+        flow_json = _json.dumps(self._flow_dict(code=self.NODE_CODE))
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(flow_json=flow_json, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outdated_file(self, tmp_path):
+        """--upgrade-flow=check must fire for .json file path inputs, not just inline JSON."""
+        import json as _json
+
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(self._flow_dict(code=self.NODE_CODE)))
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(script_path=f, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outer_envelope_file(self, tmp_path):
+        """Exported flows use an outer envelope; the checker must unwrap it before inspecting nodes.
+
+        Shape: {"name":..., "data": {"nodes": [...], "edges": [...]}}.
+        """
+        import json as _json
+
+        envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(envelope))
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(script_path=f, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_rejects_py_script(self, tmp_path):
+        """--upgrade-flow on a .py script must fail fast with a clear error, not silently skip."""
+        script = tmp_path / "flow.py"
+        script.write_text("graph = None")
+
+        with pytest.raises(RunError, match=r"only supported for JSON"):
+            await run_flow(script_path=script, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_fails_fast_on_unreadable_json_file(self, tmp_path):
+        """If the .json file can't be read for upgrade check, must raise RunError — not silently skip."""
+        f = tmp_path / "broken.json"
+        f.write_text("not valid json")
+
+        with pytest.raises(RunError, match="could not read flow file"):
+            await run_flow(script_path=f, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_unknown_mode_raises(self):
+        """An unknown --upgrade-flow value must raise immediately, not silently pass."""
+        import json as _json
+
+        flow_json = _json.dumps(self._flow_dict(code=self.REGISTRY_CODE))
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="Unknown --upgrade-flow"),
+        ):
+            await run_flow(flow_json=flow_json, upgrade_flow="typo")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outer_envelope_inline_json(self):
+        """--flow-json with an outer envelope must have its nodes inspected, not silently pass with zero nodes."""
+        import json as _json
+
+        envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
+        flow_json = _json.dumps(envelope)
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(flow_json=flow_json, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_rejects_outer_envelope_stdin(self):
+        """--stdin with an outer envelope must have its nodes inspected, not silently pass with zero nodes."""
+        import json as _json
+        from io import StringIO
+
+        envelope = {"name": "My Flow", "data": self._flow_dict(code=self.NODE_CODE)}
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            patch("sys.stdin", StringIO(_json.dumps(envelope))),
+            pytest.raises(RunError, match="incompatible components"),
+        ):
+            await run_flow(stdin=True, upgrade_flow="check")
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_check_passes_clean_real_flow_without_registry_mock(self):
+        """Regression: a known-clean real starter flow must PASS --upgrade-flow=check.
+
+        Deliberately does NOT mock the registry. The original bug was that the gate read
+        component_cache.all_types_dict (empty at gate time) instead of the bundled component
+        index, so every component was classified 'blocked' and every flow rejected. Every
+        other test here mocks a populated registry, which is exactly what hid the bug — this
+        one exercises the real default source end-to-end.
+        """
+        from pathlib import Path
+
+        fixture = Path(__file__).parents[2] / "fixtures" / "starter_flows" / "v1.9.0" / "basic_prompting.json"
+        flow_json = fixture.read_text(encoding="utf-8")
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        # Mock only the loader/executor (not the registry) so we isolate the gate decision:
+        # the gate must pass using the real bundled index, then run_flow proceeds to load.
+        with (
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            # Must not raise: clean flow + real bundled index => gate passes, loader is reached.
+            await run_flow(flow_json=flow_json, upgrade_flow="check")
+            mock_load.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_envelope_file_loads_successfully(self, tmp_path):
+        """Happy path: --upgrade-flow=safe on an envelope file must proceed to load.
+
+        All three input paths (file, --flow-json, --stdin) unwrap the outer envelope with
+        raw.get("data", raw) before the upgrade check, so aload_flow_from_json always
+        receives {"data": <inner_graph>}. The loader does flow_graph["data"] and Graph.from_payload
+        handles the rest correctly.
+        """
+        import json as _json
+
+        envelope = {"name": "My Flow", "description": "x", "data": self._flow_dict(code=self.NODE_CODE)}
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(envelope))
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(script_path=f, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            # Loader receives {"data": inner_graph} — the "data" key is always present.
+            assert "data" in loaded_arg, f"loader got wrong shape: {list(loaded_arg)}"
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_flat_file_loads_successfully(self, tmp_path):
+        """Flat-shape file with --upgrade-flow=safe must still reach the loader without crashing."""
+        import json as _json
+
+        f = tmp_path / "flow.json"
+        f.write_text(_json.dumps(self._flow_dict(code=self.NODE_CODE)))
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(script_path=f, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            # Loader receives {"data": inner_graph} for both flat and envelope inputs.
+            assert "data" in loaded_arg
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_envelope_inline_json_loads_successfully(self):
+        """--flow-json with outer envelope + --upgrade-flow=safe must upgrade and pass {"data": inner} to loader.
+
+        Symmetric to test_upgrade_flow_safe_envelope_file_loads_successfully but for the
+        --flow-json input path. Regression: the envelope unwrap at parse time (line 162)
+        must leave flow_dict as the inner graph so the loader receives {"data": inner}, not
+        {"data": {"name":..., "data": inner}} (double-wrapped).
+        """
+        import json as _json
+
+        envelope = {"name": "My Flow", "description": "x", "data": self._flow_dict(code=self.NODE_CODE)}
+        flow_json = _json.dumps(envelope)
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+        ):
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(flow_json=flow_json, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            assert "data" in loaded_arg, f"loader got wrong shape: {list(loaded_arg)}"
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE
+
+    @pytest.mark.asyncio
+    async def test_upgrade_flow_safe_envelope_stdin_loads_successfully(self):
+        """--stdin with outer envelope + --upgrade-flow=safe must upgrade and pass {"data": inner} to loader.
+
+        Symmetric to the file and --flow-json envelope tests for the stdin input path.
+        """
+        import json as _json
+        from io import StringIO
+
+        envelope = {"name": "My Flow", "description": "x", "data": self._flow_dict(code=self.NODE_CODE)}
+
+        mock_graph = MagicMock()
+        mock_graph.context = {}
+        mock_graph.vertices = []
+        mock_graph.edges = []
+        mock_graph.prepare = MagicMock()
+
+        async def _async_start(_inputs, **_kwargs):
+            yield
+
+        mock_graph.async_start = _async_start
+
+        with (
+            patch("lfx.upgrade.cli_gate._load_bundled_registry", return_value=self._registry()),
+            patch("lfx.load.aload_flow_from_json") as mock_load,
+            patch("lfx.run.base.validate_global_variables_for_env") as mock_validate,
+            patch("lfx.run.base.extract_structured_result") as mock_extract,
+            patch("sys.stdin", StringIO(_json.dumps(envelope))),
+        ):
+            mock_load.return_value = mock_graph
+            mock_validate.return_value = []
+            mock_extract.return_value = {"success": True, "result": "ok"}
+
+            await run_flow(stdin=True, upgrade_flow="safe")
+
+            mock_load.assert_called_once()
+            loaded_arg = mock_load.call_args[0][0]
+            assert "data" in loaded_arg, f"loader got wrong shape: {list(loaded_arg)}"
+            assert loaded_arg["data"]["nodes"][0]["data"]["node"]["template"]["code"]["value"] == self.REGISTRY_CODE

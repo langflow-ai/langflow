@@ -6797,7 +6797,7 @@
   "starter_flows.twitter_thread_generator.description": "このプロンプトベースのフローを使用すれば、構造化された入力データを、ブランドのトーンや技術的な正確性を保ちつつ、魅力的なTwitterスレッドに変換できます。",
   "starter_flows.twitter_thread_generator.name": "Twitterスレッド生成ツール",
   "starter_flows.vector_store_rag.description": "リトリーバル・オーグメンテッド・ジェネレーション（RAG）を使用して、チャットコンテキスト用のデータを読み込みます。",
-  "starter_flows.vector_store_rag.name": "Vector Store RAG",
+  "starter_flows.vector_store_rag.name": "ベクターストア RAG",
   "starter_flows.youtube_analysis.description": "「 YouTube 」の分析フローは、動画のコメントや文字起こしデータを抽出し、感情の傾向やコンテンツのテーマを分析します。",
   "starter_flows.youtube_analysis.name": "YouTube 分析",
   "template_notes.basic_prompt_chaining.b5fcc15e": "# 📖 README\nこのフローでは、3つのプロンプトと3つの言語モデルを連結する方法を示しています。\n各プロンプトは、前の出力を処理するように特別に設計されており、LLMへの各呼び出しは前の結果に基づいて行われます\n\n\n## 前提条件\n\n* [ OpenAI APIキー]( https://platform.openai.com/ )\n\n## クイックスタート\n\n1. APIの認証情報を用いて**モデルプロバイダー**を設定してください。\n2 フローを実行するには、**Playground**を開いてください。 入力例を以下に示します。その他の提案については、以下に挙げます。\n\n    「技術に詳しくないユーザーでも暗号資産への投資を容易に行える、安全で使いやすい分散型金融（ DeFi ）プラットフォームへの需要が高まっている。」\n\n    「分散型ワークフォースにおけるリモートコラボレーションやバーチャルチームビルディングのための、没入型拡張現実（AR）体験の人気が高まっている。」\n\n    「都市居住者が限られたスペースで効率的に食料を自給できる、スマートで IoT-enabled な都市農業ソリューションの市場が拡大している。」\n\n    「サステナビリティ、ボディポジティブ、そして個人のスタイルの好みを考慮した、AIを活用したパーソナルスタイリングおよびショッピングアシスタントへの需要が高まりつつある。」\n\n",

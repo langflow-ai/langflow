@@ -105,7 +105,7 @@ Authorization is a pluggable layer separate from authentication:
 
 Default is **off**: `LANGFLOW_AUTHZ_ENABLED=false`. When enabled with only the OSS stub registered, every check returns allow — the stub is a no-op so routes stay wired and audit rows still flow. Real allow/deny requires a registered authorization plugin.
 
-Route guards live in `langflow.services.authorization.utils`:
+Route guards live in `langflow.services.authorization.guards` (the legacy `langflow.services.authorization.utils` path re-exports them for backward compatibility):
 - `ensure_flow_permission(user, FlowAction.*, flow_id=..., flow_user_id=..., workspace_id=..., folder_id=...)` — single-flow CRUD + execute
 - `ensure_deployment_permission(user, DeploymentAction.*, deployment_id=..., deployment_user_id=..., workspace_id=..., project_id=...)`
 - `ensure_project_permission(user, ProjectAction.*, project_id=..., project_user_id=..., workspace_id=...)`
@@ -127,7 +127,7 @@ The enforcement request shape is `(subject, domain, object, action)`:
 
 **Audit query API (Phase 4):** `GET /api/v1/authz/audit` (superuser-only) exposes a paginated, filterable view of `authz_audit_log`. Supports `user_id`, `resource_type`, `resource_id`, `action`, `result`, `since`, `until` filters; page size capped at 200.
 
-**Default role catalog (Phase 4):** the seed migration `8d3a1f9c2e0b_seed_authz_system_roles` inserts the three built-in `is_system=True` roles (viewer / developer / admin) with `"{resource}:{action}"` permission slugs. OSS does not interpret these — they exist so a registered plugin's policy sync has a stable bootstrap source.
+**Default role catalog (Phase 4):** the consolidated foundations migration `7c8d9e0f1a2b_authz_foundations` seeds the three built-in `is_system=True` roles (viewer / developer / admin) with `"{resource}:{action}"` permission slugs. OSS does not interpret these — they exist so a registered plugin's policy sync has a stable bootstrap source.
 
 ## Component Development
 
