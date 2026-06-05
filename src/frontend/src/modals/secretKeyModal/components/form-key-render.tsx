@@ -92,6 +92,7 @@ export const FormKeyRender = ({
             onChange={({ target: { value } }) => {
               setExpiresAt(value);
             }}
+            className="[color-scheme:light] dark:[&::-webkit-calendar-picker-indicator]:invert dark:[&::-webkit-calendar-picker-indicator]:opacity-80"
           />
         </Form.Control>
         <div className="mt-2 flex items-center gap-1.5">
