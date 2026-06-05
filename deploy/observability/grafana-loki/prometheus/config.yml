@@ -1,0 +1,11 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  - job_name: langflow
+    static_configs:
+      # Langflow exposes background-execution metrics on :9090 when
+      # LANGFLOW_PROMETHEUS_ENABLED=true. host.docker.internal reaches a
+      # Langflow running on the host from inside the prometheus container.
+      - targets: ["host.docker.internal:9090"]
