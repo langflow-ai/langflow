@@ -6,15 +6,12 @@ by Akash Joshi / Anderson Filho: ``get_model_name`` returns ``"Custom"`` for
 is set on a different attribute than the one ``next()`` happens to find first.
 """
 
-import pytest
-
-try:
-    from langchain_ibm import ChatWatsonx
-except (ImportError, TypeError):
-    # langchain-ibm is gated to python_version<'3.14' because ibm-watsonx-ai
-    # has not yet adapted to Python 3.14's StrEnum initialization changes.
-    pytest.skip("langchain-ibm not available on Python 3.14+", allow_module_level=True)
-
+# langchain-ibm / ibm-watsonx-ai are core langflow-base deps importable on every
+# supported Python version (3.10-3.14), so import directly: a hard failure here
+# surfaces a real import regression instead of silently skipping the suite.
+# (ibm-watsonx-ai 1.5.13 fixed the Python 3.14 StrEnum initialization
+# incompatibility that previously forced the upstream <3.14 cap.)
+from langchain_ibm import ChatWatsonx
 from langchain_openai import AzureChatOpenAI, ChatOpenAI
 from lfx.base.models.model_metadata import create_model_metadata
 from lfx.base.models.model_utils import fetch_live_watsonx_models, get_model_name
