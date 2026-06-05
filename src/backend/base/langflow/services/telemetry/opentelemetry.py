@@ -180,8 +180,22 @@ class OpenTelemetry(metaclass=ThreadSafeSingletonMetaUsingWeakref):
             labels={"backend": mandatory_label},
         )
         self._add_metric(
-            name="langflow_bg_alive_workers",
-            description="Distinct background workers heartbeating within the lease window",
+            name="langflow_bg_workers_online",
+            description="Background workers heartbeating within the online window",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_workers_busy",
+            description="Online background workers currently running a job",
+            unit="",
+            metric_type=MetricType.OBSERVABLE_GAUGE,
+            labels={"backend": mandatory_label},
+        )
+        self._add_metric(
+            name="langflow_bg_workers_idle",
+            description="Online background workers currently idle",
             unit="",
             metric_type=MetricType.OBSERVABLE_GAUGE,
             labels={"backend": mandatory_label},

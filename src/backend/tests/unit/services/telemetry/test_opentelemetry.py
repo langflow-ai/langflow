@@ -10,7 +10,9 @@ def ot():
 BG_METRICS = {
     "langflow_bg_jobs": MetricType.OBSERVABLE_GAUGE,
     "langflow_bg_oldest_queued_seconds": MetricType.OBSERVABLE_GAUGE,
-    "langflow_bg_alive_workers": MetricType.OBSERVABLE_GAUGE,
+    "langflow_bg_workers_online": MetricType.OBSERVABLE_GAUGE,
+    "langflow_bg_workers_busy": MetricType.OBSERVABLE_GAUGE,
+    "langflow_bg_workers_idle": MetricType.OBSERVABLE_GAUGE,
     "langflow_bg_jobs_started_total": MetricType.OBSERVABLE_COUNTER,
     "langflow_bg_jobs_completed_total": MetricType.OBSERVABLE_COUNTER,
     "langflow_bg_jobs_failed_total": MetricType.OBSERVABLE_COUNTER,
@@ -36,4 +38,4 @@ def test_set_observable_counter_sets_readable_value(ot):
 
 def test_set_observable_counter_on_non_observable_counter_raises(ot):
     with pytest.raises(TypeError):
-        ot.set_observable_counter("langflow_bg_alive_workers", 1, {"backend": "scaled"})
+        ot.set_observable_counter("langflow_bg_workers_online", 1, {"backend": "scaled"})

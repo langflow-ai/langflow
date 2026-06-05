@@ -5,10 +5,10 @@ They run against the REAL test DB (the ``client`` fixture; SQLite locally,
 Postgres in CI) with NO mocking. ``now`` is injected so the time math is
 deterministic and never races the wall clock.
 
-The "alive" definition MUST match the watchdog's lease-staleness boundary
-(``JobService.is_lease_stale``): a heartbeat is FRESH while its age is within
-the lease window, so ``alive_worker_count`` counts owners with
-``heartbeat_at >= now - lease_window``.
+The worker online/busy/idle gauges are derived from the durable
+``worker_registry`` table via ``WorkerRegistryService.count_by_state``: a row is
+online while ``last_heartbeat >= now - online_window`` (online_window = 3x the
+worker's registry interval), and busy/idle split the online rows by state.
 """
 
 from __future__ import annotations
@@ -20,13 +20,13 @@ import pytest
 from langflow.services.background_execution.metrics import current_backend
 from langflow.services.background_execution.metrics_collector import (
     BackgroundMetricsCollector,
-    alive_worker_count,
     count_nonterminal_jobs,
     duration_percentiles,
     oldest_queued_seconds,
     terminal_counts,
 )
 from langflow.services.database.models.jobs.model import JobStatus
+from langflow.services.database.models.worker_registry.model import WorkerRegistry, WorkerState
 from langflow.services.deps import get_telemetry_service, session_scope
 from langflow.services.jobs.service import JobService
 
@@ -34,19 +34,25 @@ pytestmark = pytest.mark.usefixtures("client")
 
 
 async def test_count_nonterminal_jobs_excludes_terminal():
-    """Only non-terminal statuses are counted, keyed by status string."""
+    """Only non-terminal background statuses are counted, keyed by status string."""
     service = JobService()
 
     queued_a = uuid4()
     queued_b = uuid4()
     in_progress = uuid4()
     completed = uuid4()
+    run_in_progress = uuid4()
 
     await service.create_job(job_id=queued_a, flow_id=uuid4(), user_id=uuid4())
     await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
 
     await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await service.append_event(in_progress, "run_started", {})
     await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
+
+    # A RUN job briefly IN_PROGRESS with NO job_events — must be excluded.
+    await service.create_job(job_id=run_in_progress, flow_id=uuid4(), user_id=uuid4())
+    await service.update_job_status(run_in_progress, JobStatus.IN_PROGRESS)
 
     # Terminal: must be excluded from the non-terminal aggregate.
     await service.create_job(job_id=completed, flow_id=uuid4(), user_id=uuid4())
@@ -97,61 +103,6 @@ async def test_oldest_queued_seconds_zero_when_none_queued():
     assert age == 0.0
 
 
-async def test_alive_worker_count_excludes_stale_heartbeats():
-    """Distinct owners with a FRESH heartbeat (within the lease window) are alive.
-
-    Two owners heartbeat fresh; one owner's heartbeat is older than the window.
-    The stale owner is excluded, matching ``is_lease_stale``.
-    """
-    service = JobService()
-    lease_window = 30.0
-
-    fresh_a = uuid4()
-    fresh_b = uuid4()
-    stale = uuid4()
-
-    await service.create_job(job_id=fresh_a, flow_id=uuid4(), user_id=uuid4())
-    await service.update_job_status(fresh_a, JobStatus.IN_PROGRESS)
-    await service.heartbeat(fresh_a, owner="worker-A")
-
-    await service.create_job(job_id=fresh_b, flow_id=uuid4(), user_id=uuid4())
-    await service.update_job_status(fresh_b, JobStatus.IN_PROGRESS)
-    await service.heartbeat(fresh_b, owner="worker-B")
-
-    await service.create_job(job_id=stale, flow_id=uuid4(), user_id=uuid4())
-    await service.update_job_status(stale, JobStatus.IN_PROGRESS)
-    old = (datetime.now(timezone.utc) - timedelta(seconds=300)).isoformat()
-    await service.update_job_metadata(stale, {"owner": "worker-dead", "heartbeat_at": old})
-
-    now = datetime.now(timezone.utc)
-    async with session_scope() as session:
-        alive = await alive_worker_count(session, now, lease_window)
-
-    assert alive == 2
-
-
-async def test_alive_worker_count_distinct_owner():
-    """Multiple fresh heartbeats from the SAME owner count once."""
-    service = JobService()
-    lease_window = 30.0
-
-    job_one = uuid4()
-    job_two = uuid4()
-    await service.create_job(job_id=job_one, flow_id=uuid4(), user_id=uuid4())
-    await service.update_job_status(job_one, JobStatus.IN_PROGRESS)
-    await service.heartbeat(job_one, owner="worker-A")
-
-    await service.create_job(job_id=job_two, flow_id=uuid4(), user_id=uuid4())
-    await service.update_job_status(job_two, JobStatus.IN_PROGRESS)
-    await service.heartbeat(job_two, owner="worker-A")
-
-    now = datetime.now(timezone.utc)
-    async with session_scope() as session:
-        alive = await alive_worker_count(session, now, lease_window)
-
-    assert alive == 1
-
-
 def _gauge_value(metric_name: str, labels: dict[str, str]) -> float:
     """Read a gauge value straight off the real OTel ObservableGaugeWrapper.
 
@@ -177,8 +128,8 @@ async def test_collect_once_sets_gauges():
     await service.create_job(job_id=queued_b, flow_id=uuid4(), user_id=uuid4())
 
     await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await service.append_event(in_progress, "run_started", {})
     await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
-    await service.heartbeat(in_progress, owner="worker-A")
 
     await service.create_job(job_id=completed, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(completed, JobStatus.COMPLETED, finished_timestamp=True)
@@ -190,7 +141,6 @@ async def test_collect_once_sets_gauges():
     assert _gauge_value("langflow_bg_jobs", {"status": "queued", "backend": backend}) == 2
     assert _gauge_value("langflow_bg_jobs", {"status": "in_progress", "backend": backend}) == 1
     assert _gauge_value("langflow_bg_oldest_queued_seconds", {"backend": backend}) > 0
-    assert _gauge_value("langflow_bg_alive_workers", {"backend": backend}) == 1
 
 
 async def test_collect_once_zero_fills_dropped_status():
@@ -253,16 +203,31 @@ async def test_run_stop_lifecycle():
 
 
 async def _seed_failed(service: JobService, *, error: dict):
-    """Create a job, flip it FAILED, and stamp the given error blob."""
+    """Create a BACKGROUND job (with a job_events row), flip FAILED, stamp error."""
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    # A job_events row is what marks this as a TRUE background job (vs a run job).
+    await service.append_event(job_id, "run_started", {})
     await service.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
     await service.set_error(job_id, error)
     return job_id
 
 
 async def _seed_terminal(service: JobService, status: JobStatus):
-    """Create a job and flip it to the given terminal status."""
+    """Create a BACKGROUND job (with a job_events row) and flip it terminal."""
+    job_id = uuid4()
+    await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
+    await service.append_event(job_id, "run_started", {})
+    await service.update_job_status(job_id, status, finished_timestamp=True)
+    return job_id
+
+
+async def _seed_run_job(service: JobService, status: JobStatus = JobStatus.COMPLETED):
+    """Create a Memory-Base RUN job: created directly, terminal, NO job_events.
+
+    Mimics build.py's second workflow row — it must be excluded by the collector's
+    EXISTS(job_events) filter.
+    """
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     await service.update_job_status(job_id, status, finished_timestamp=True)
@@ -271,7 +236,7 @@ async def _seed_terminal(service: JobService, status: JobStatus):
 
 async def test_terminal_counts_splits_outcomes():
     """terminal_counts returns the per-outcome split; started excludes only QUEUED."""
-    from langflow.services.database.models.jobs.model import Job
+    from langflow.services.database.models.jobs.model import Job, JobEvent
 
     service = JobService()
 
@@ -279,6 +244,7 @@ async def test_terminal_counts_splits_outcomes():
     await service.create_job(job_id=uuid4(), flow_id=uuid4(), user_id=uuid4())
     in_progress = uuid4()
     await service.create_job(job_id=in_progress, flow_id=uuid4(), user_id=uuid4())
+    await service.append_event(in_progress, "run_started", {})
     await service.update_job_status(in_progress, JobStatus.IN_PROGRESS)
 
     # 2 COMPLETED.
@@ -294,14 +260,21 @@ async def test_terminal_counts_splits_outcomes():
     await _seed_terminal(service, JobStatus.TIMED_OUT)
     await _seed_terminal(service, JobStatus.CANCELLED)
 
+    # RUN jobs (no job_events) in several terminal states — must be excluded.
+    await _seed_run_job(service, JobStatus.COMPLETED)
+    await _seed_run_job(service, JobStatus.FAILED)
+
     async with session_scope() as session:
         tc = await terminal_counts(session)
         # Absolute totals in a shared test DB are not isolated across tests, so
-        # assert against the actual current rows by status to keep this robust.
+        # assert against the actual current BACKGROUND rows (EXISTS(job_events))
+        # by status to keep this robust and to exclude run jobs.
         from sqlmodel import col, func, select
 
+        has_events = select(JobEvent.id).where(col(JobEvent.job_id) == Job.job_id).exists()
+
         async def _count(*statuses):
-            stmt = select(func.count()).select_from(Job).where(col(Job.status).in_(statuses))
+            stmt = select(func.count()).select_from(Job).where(col(Job.status).in_(statuses)).where(has_events)
             return int((await session.exec(stmt)).one())
 
         total = await _count(*list(JobStatus))
@@ -315,11 +288,36 @@ async def test_terminal_counts_splits_outcomes():
     assert tc["completed"] == completed
     assert tc["timed_out"] == timed_out
     assert tc["cancelled"] == cancelled
-    # The split must partition all FAILED rows.
+    # The split must partition all FAILED background rows.
     assert tc["failed_worker_lost"] + tc["failed_error"] == failed
     # We seeded exactly two worker_lost rows; any pre-existing FAILED rows from
     # other tests carry a different/absent type and land in failed_error.
     assert tc["failed_worker_lost"] >= 2
+
+
+async def test_terminal_counts_excludes_run_jobs():
+    """A COMPLETED run job (no job_events) must NOT count toward completed.
+
+    This is the 2x-inflation guard: build.py writes a second workflow row per
+    flow build that goes straight to COMPLETED with no job_events. The collector
+    must count only the TRUE background job (EXISTS(job_events)).
+    """
+    service = JobService()
+
+    async with session_scope() as session:
+        before = (await terminal_counts(session))["completed"]
+
+    # One real background completion (+1) and three run-job completions (+0).
+    await _seed_terminal(service, JobStatus.COMPLETED)
+    await _seed_run_job(service, JobStatus.COMPLETED)
+    await _seed_run_job(service, JobStatus.COMPLETED)
+    await _seed_run_job(service, JobStatus.COMPLETED)
+
+    async with session_scope() as session:
+        after = (await terminal_counts(session))["completed"]
+
+    # Only the single background job moved the needle; the three run jobs did not.
+    assert after - before == 1
 
 
 async def test_duration_percentiles_deterministic():
@@ -329,12 +327,14 @@ async def test_duration_percentiles_deterministic():
     service = JobService()
     now = datetime.now(timezone.utc)
 
-    # Seed five COMPLETED jobs with known durations 10..50s, all finished now.
+    # Seed five COMPLETED BACKGROUND jobs (with job_events) with known durations
+    # 10..50s, all finished now.
     durations = [10, 20, 30, 40, 50]
     job_ids = []
     for _ in durations:
         jid = uuid4()
         await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+        await service.append_event(jid, "run_started", {})
         await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
         job_ids.append(jid)
 
@@ -376,7 +376,12 @@ async def test_duration_percentiles_excludes_jobs_outside_window():
     recent = uuid4()
     for jid in (old, recent):
         await service.create_job(job_id=jid, flow_id=uuid4(), user_id=uuid4())
+        await service.append_event(jid, "run_started", {})
         await service.update_job_status(jid, JobStatus.COMPLETED, finished_timestamp=True)
+
+    # A RUN job (no job_events) finished AT base with a 5000s duration — inside
+    # the window but must be excluded by EXISTS(job_events), so it never skews p95.
+    run_job = await _seed_run_job(service, JobStatus.COMPLETED)
 
     async with session_scope() as session:
         old_job = await session.get(Job, old)
@@ -387,11 +392,16 @@ async def test_duration_percentiles_excludes_jobs_outside_window():
         recent_job.finished_timestamp = base
         recent_job.created_timestamp = base - timedelta(seconds=7)
         session.add(recent_job)
+        run_row = await session.get(Job, run_job)
+        run_row.finished_timestamp = base
+        run_row.created_timestamp = base - timedelta(seconds=5000)
+        session.add(run_row)
         await session.flush()
 
     # 60s window back from ``base``: the recent job (finished AT base) is in; the
-    # old job (finished an hour earlier) is out. Only the 7s sample remains, so
-    # p50 == p95 == 7 and the 999s duration never leaks in.
+    # old job (finished an hour earlier) is out by the SQL cutoff; the run job is
+    # out by EXISTS(job_events). Only the 7s sample remains, so p50 == p95 == 7
+    # and neither the 999s nor the 5000s duration leaks in.
     async with session_scope() as session:
         p50, p95 = await duration_percentiles(session, base, window_seconds=60.0)
 
@@ -439,10 +449,11 @@ async def test_collect_once_sets_counters_and_duration_gauges():
         await _seed_terminal(service, JobStatus.CANCELLED),
     ]
 
-    # A COMPLETED job with a known 12s duration finished now so the duration
-    # gauges are non-zero with a tight window.
+    # A COMPLETED BACKGROUND job (with a job_events row) with a known 12s
+    # duration finished now so the duration gauges are non-zero with a tight window.
     dur_job = uuid4()
     await service.create_job(job_id=dur_job, flow_id=uuid4(), user_id=uuid4())
+    await service.append_event(dur_job, "run_started", {})
     await service.update_job_status(dur_job, JobStatus.COMPLETED, finished_timestamp=True)
     async with session_scope() as session:
         # Push every other seeded job's finish well outside the duration window
@@ -490,3 +501,138 @@ async def test_collect_once_sets_counters_and_duration_gauges():
     # wires p50/p95 from a real finished-job sample).
     assert _gauge_value("langflow_bg_job_duration_p50_seconds", {"backend": backend}) > 0.0
     assert _gauge_value("langflow_bg_job_duration_p95_seconds", {"backend": backend}) > 0.0
+
+
+async def test_collect_once_sets_worker_gauges_from_registry():
+    """A tick derives online/busy/idle from worker_registry; stale rows count toward none.
+
+    online_window = 3 * registry_interval = 30s. Seed a fresh IDLE, a fresh BUSY,
+    and a STALE row (heartbeat older than 30s). ``now`` is injected so the freshness
+    boundary is deterministic and never races the wall clock.
+    """
+    backend = current_backend()
+    now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
+    suffix = uuid4().hex
+
+    async with session_scope() as session:
+        session.add(
+            WorkerRegistry(
+                owner=f"fresh-idle-{suffix}",
+                pid=1,
+                host="h",
+                started_at=now - timedelta(minutes=5),
+                last_heartbeat=now,
+                state=WorkerState.IDLE,
+                current_job_id=None,
+            )
+        )
+        session.add(
+            WorkerRegistry(
+                owner=f"fresh-busy-{suffix}",
+                pid=2,
+                host="h",
+                started_at=now - timedelta(minutes=5),
+                last_heartbeat=now - timedelta(seconds=10),
+                state=WorkerState.BUSY,
+                current_job_id=uuid4(),
+            )
+        )
+        # Stale: heartbeat 60s ago, past the 30s online window — excluded everywhere,
+        # but within the 1h retention so prune does not delete it this tick.
+        session.add(
+            WorkerRegistry(
+                owner=f"stale-{suffix}",
+                pid=3,
+                host="h",
+                started_at=now - timedelta(minutes=5),
+                last_heartbeat=now - timedelta(seconds=60),
+                state=WorkerState.IDLE,
+                current_job_id=None,
+            )
+        )
+        await session.flush()
+
+    # registry_interval=10 -> online_window 30s; retention 1h leaves the stale row.
+    collector = BackgroundMetricsCollector(
+        interval=15.0,
+        registry_interval=10.0,
+        registry_retention_s=3600.0,
+    )
+    async with session_scope() as session:
+        await collector.collect_once(session, now=now)
+
+    assert _gauge_value("langflow_bg_workers_online", {"backend": backend}) == 2
+    assert _gauge_value("langflow_bg_workers_busy", {"backend": backend}) == 1
+    assert _gauge_value("langflow_bg_workers_idle", {"backend": backend}) == 1
+
+    # The stale-but-within-retention row is still present (prune did not remove it).
+    async with session_scope() as session:
+        assert await session.get(WorkerRegistry, f"stale-{suffix}") is not None
+
+
+async def test_collect_once_prunes_rows_past_retention():
+    """A tick prunes registry rows older than retention while keeping recent ones.
+
+    With retention=3600s, a row whose heartbeat is 5h old is deleted; one whose
+    heartbeat is 10s old survives. ``now`` is injected so the cutoff is exact.
+    """
+    now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
+    suffix = uuid4().hex
+    keep = f"keep-{suffix}"
+    drop = f"drop-{suffix}"
+
+    async with session_scope() as session:
+        session.add(
+            WorkerRegistry(
+                owner=keep,
+                pid=1,
+                host="h",
+                started_at=now - timedelta(hours=6),
+                last_heartbeat=now - timedelta(seconds=10),
+                state=WorkerState.IDLE,
+                current_job_id=None,
+            )
+        )
+        session.add(
+            WorkerRegistry(
+                owner=drop,
+                pid=2,
+                host="h",
+                started_at=now - timedelta(hours=6),
+                last_heartbeat=now - timedelta(hours=5),
+                state=WorkerState.IDLE,
+                current_job_id=None,
+            )
+        )
+        await session.flush()
+
+    collector = BackgroundMetricsCollector(
+        interval=15.0,
+        registry_interval=10.0,
+        registry_retention_s=3600.0,
+    )
+    async with session_scope() as session:
+        await collector.collect_once(session, now=now)
+
+    async with session_scope() as session:
+        assert await session.get(WorkerRegistry, keep) is not None
+        assert await session.get(WorkerRegistry, drop) is None
+
+
+async def test_collect_once_no_longer_emits_alive_workers():
+    """The replaced langflow_bg_alive_workers gauge is gone; the rest still emit."""
+    backend = current_backend()
+    now = datetime(2026, 6, 5, 12, 0, 0, tzinfo=timezone.utc)
+
+    collector = BackgroundMetricsCollector(interval=15.0, registry_interval=10.0)
+    async with session_scope() as session:
+        await collector.collect_once(session, now=now)
+
+    ot = get_telemetry_service().ot
+    # The metric is no longer registered, so update_gauge would raise on it.
+    assert "langflow_bg_alive_workers" not in ot._metrics
+    assert "langflow_bg_alive_workers" not in ot._metrics_registry
+
+    # The rest of the collector's gauges still emit on this tick.
+    assert "langflow_bg_workers_online" in ot._metrics
+    assert _gauge_value("langflow_bg_oldest_queued_seconds", {"backend": backend}) >= 0.0

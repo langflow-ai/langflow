@@ -9,9 +9,10 @@ writes — Task 7 wires these into the OTel gauges.
 timezone-aware column, but SQLite hands it back naive; we normalize to aware
 UTC before subtracting so the math is valid on both SQLite and Postgres.
 
-The "alive" worker definition reuses ``JobService.is_lease_stale`` semantics so
-it matches the watchdog exactly: a heartbeat is FRESH while its age is within
-the lease window (``age <= lease_window``), stale once older.
+The worker online/busy/idle gauges are derived from the durable
+``worker_registry`` table (``WorkerRegistryService.count_by_state``): a row is
+online while ``last_heartbeat >= now - online_window`` (online_window = 3x the
+worker's registry interval). The collector also prunes rows past retention.
 """
 
 from __future__ import annotations
@@ -26,7 +27,8 @@ from lfx.log.logger import logger
 from sqlmodel import col, func, select
 
 from langflow.services.background_execution.metrics import current_backend
-from langflow.services.database.models.jobs.model import Job, JobStatus
+from langflow.services.background_execution.worker_registry import WorkerRegistryService
+from langflow.services.database.models.jobs.model import Job, JobEvent, JobStatus
 from langflow.services.deps import get_telemetry_service, session_scope
 
 if TYPE_CHECKING:
@@ -38,20 +40,41 @@ if TYPE_CHECKING:
 NONTERMINAL_STATUSES = (JobStatus.QUEUED, JobStatus.IN_PROGRESS)
 
 
-async def count_nonterminal_jobs(session) -> dict[str, int]:
-    """Return counts of non-terminal jobs keyed by status string.
+def _has_job_events():
+    """EXISTS subquery: the job has at least one ``job_events`` row.
 
-    ``{"queued": 3, "in_progress": 1}`` via a ``GROUP BY status`` aggregate
-    filtered to the non-terminal set. Statuses with zero rows are omitted (the
-    collector loop fills in the canonical set with 0 when it sets gauges).
+    Distinguishes a TRUE background job from a Memory-Base "run job". Every flow
+    build writes a second ``job`` row keyed by the graph run_id (``build.py``,
+    predates the bg work); it is ``type=workflow`` too, so a naive status query
+    double-counts it. The background runner uniquely appends ``job_events`` rows,
+    while run jobs never have any (they go straight IN_PROGRESS->terminal via
+    ``execute_with_status`` and never QUEUED). So a background job is
+    ``status == QUEUED`` OR EXISTS(job_events). ``job_id`` is indexed
+    (UNIQUE(job_id, seq)), so the EXISTS is cheap and dialect-agnostic.
     """
-    stmt = select(Job.status, func.count()).where(col(Job.status).in_(NONTERMINAL_STATUSES)).group_by(Job.status)
-    result = await session.exec(stmt)
+    return select(JobEvent.id).where(col(JobEvent.job_id) == Job.job_id).exists()
+
+
+async def count_nonterminal_jobs(session) -> dict[str, int]:
+    """Return counts of non-terminal background jobs keyed by status string.
+
+    ``{"queued": 3, "in_progress": 1}``. QUEUED is bg-only (run jobs are never
+    queued), so it counts as-is. IN_PROGRESS adds the EXISTS(job_events) filter
+    because a run job is briefly IN_PROGRESS with no events — without the filter
+    it would inflate the in_progress count. A status with zero rows is omitted
+    (the collector loop fills in the canonical set with 0 when it sets gauges).
+    """
+    queued = (await session.exec(select(func.count()).select_from(Job).where(Job.status == JobStatus.QUEUED))).one()
+    in_progress = (
+        await session.exec(
+            select(func.count()).select_from(Job).where(Job.status == JobStatus.IN_PROGRESS).where(_has_job_events())
+        )
+    ).one()
     counts: dict[str, int] = {}
-    for status, count in result.all():
-        # ``status`` is a JobStatus enum; ``.value`` is the wire string.
-        key = status.value if isinstance(status, JobStatus) else str(status)
-        counts[key] = int(count)
+    if int(queued):
+        counts[JobStatus.QUEUED.value] = int(queued)
+    if int(in_progress):
+        counts[JobStatus.IN_PROGRESS.value] = int(in_progress)
     return counts
 
 
@@ -75,38 +98,15 @@ async def oldest_queued_seconds(session, now: datetime) -> float:
     return max(age, 0.0)
 
 
-async def alive_worker_count(session, now: datetime, lease_window: float) -> int:
-    """Count distinct heartbeat owners whose lease is still fresh.
+async def worker_state_counts(session, now: datetime, online_window: timedelta) -> dict[str, int]:
+    """Aggregate online/busy/idle worker counts from the durable ``worker_registry``.
 
-    Fresh means ``heartbeat_at >= now - lease_window`` — the exact inverse of
-    ``JobService.is_lease_stale`` (stale once ``age > lease_window``), so a
-    worker counted "alive" here is one the watchdog would NOT reconcile. The
-    heartbeat lease lives in ``job_metadata`` (``owner`` + ``heartbeat_at`` ISO
-    string), stamped only on IN_PROGRESS rows by ``JobService.heartbeat``.
-
-    Parsing the ISO ``heartbeat_at`` in Python (rather than a cross-dialect
-    JSON-string SQL comparison) keeps the boundary identical to is_lease_stale
-    on both SQLite and Postgres.
+    Thin wrapper over ``WorkerRegistryService.count_by_state`` so the collector
+    derives its fleet gauges from the same source of truth the worker loop writes.
+    A row is online when ``last_heartbeat >= now - online_window``; busy/idle split
+    online rows by state. ``now`` is injected for deterministic freshness math.
     """
-    stmt = select(Job.job_metadata).where(Job.status == JobStatus.IN_PROGRESS)
-    result = await session.exec(stmt)
-    alive_owners: set[str] = set()
-    for row in result.all():
-        meta = row or {}
-        owner = meta.get("owner")
-        raw = meta.get("heartbeat_at")
-        if not owner or not raw:
-            continue
-        try:
-            hb = datetime.fromisoformat(raw)
-        except (TypeError, ValueError):
-            continue
-        if hb.tzinfo is None:
-            hb = hb.replace(tzinfo=timezone.utc)
-        age = (now - hb).total_seconds()
-        if age <= lease_window:
-            alive_owners.add(owner)
-    return len(alive_owners)
+    return await WorkerRegistryService().count_by_state(session, now=now, online_window=online_window)
 
 
 def _error_type_expr(session):
@@ -136,25 +136,32 @@ async def terminal_counts(session) -> dict[str, int]:
     Returns ``{"started", "completed", "failed_error", "failed_worker_lost",
     "timed_out", "cancelled"}``:
 
-    * ``started`` — every job that has begun: ``status != QUEUED`` (IN_PROGRESS
-      plus every terminal state).
+    * ``started`` — every background job that has begun: ``status != QUEUED``
+      AND EXISTS(job_events) (IN_PROGRESS plus every terminal state).
     * ``completed`` — ``status == COMPLETED``.
     * FAILED jobs split by ``error->>'type'``: ``failed_worker_lost`` is FAILED
       AND ``type == 'worker_lost'``; ``failed_error`` is every other FAILED row.
     * ``timed_out`` / ``cancelled`` — the matching terminal statuses.
 
-    The worker_lost split uses a dialect-aware JSON extract (see
-    ``_error_type_expr``) so it stays a single bounded SQL aggregate on both
-    SQLite and Postgres.
+    Every non-queued count adds the EXISTS(job_events) filter so a Memory-Base
+    "run job" (build.py's second workflow row, which never appends job_events)
+    is excluded — without it the counts double (see ``_has_job_events``). The
+    worker_lost split uses a dialect-aware JSON extract (see ``_error_type_expr``)
+    so it stays a single bounded SQL aggregate on both SQLite and Postgres.
     """
-    started_stmt = select(func.count()).select_from(Job).where(Job.status != JobStatus.QUEUED)
-    completed_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.COMPLETED)
-    timed_out_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.TIMED_OUT)
-    cancelled_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.CANCELLED)
+    has_events = _has_job_events()
+    started_stmt = select(func.count()).select_from(Job).where(Job.status != JobStatus.QUEUED).where(has_events)
+    completed_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.COMPLETED).where(has_events)
+    timed_out_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.TIMED_OUT).where(has_events)
+    cancelled_stmt = select(func.count()).select_from(Job).where(Job.status == JobStatus.CANCELLED).where(has_events)
 
     error_type = _error_type_expr(session)
     worker_lost_stmt = (
-        select(func.count()).select_from(Job).where(Job.status == JobStatus.FAILED).where(error_type == "worker_lost")
+        select(func.count())
+        .select_from(Job)
+        .where(Job.status == JobStatus.FAILED)
+        .where(has_events)
+        .where(error_type == "worker_lost")
     )
 
     started = (await session.exec(started_stmt)).one()
@@ -166,7 +173,9 @@ async def terminal_counts(session) -> dict[str, int]:
     # with a NULL error or no ``type`` key, so count FAILED-not-worker_lost as the
     # complement of worker_lost to capture those rows too.
     failed_total = (
-        await session.exec(select(func.count()).select_from(Job).where(Job.status == JobStatus.FAILED))
+        await session.exec(
+            select(func.count()).select_from(Job).where(Job.status == JobStatus.FAILED).where(has_events)
+        )
     ).one()
 
     return {
@@ -196,6 +205,9 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
     boundary rows), so SQLite gets a naive-UTC cutoff that matches the stored
     format. Naive SQLite datetimes are still normalized to aware UTC before
     subtracting, the same way ``oldest_queued_seconds`` does.
+
+    Only TRUE background jobs are considered (EXISTS(job_events)) so a run job's
+    near-instant duration does not skew p50/p95 — see ``_has_job_events``.
     """
     cutoff = now - timedelta(seconds=window_seconds)
     # Bind the cutoff in the form the stored column uses: aware for postgres,
@@ -206,6 +218,7 @@ async def duration_percentiles(session, now: datetime, window_seconds: float) ->
         select(Job.created_timestamp, Job.finished_timestamp)
         .where(col(Job.finished_timestamp).is_not(None))
         .where(col(Job.finished_timestamp) >= sql_cutoff)
+        .where(_has_job_events())
     )
     result = await session.exec(stmt)
     durations: list[float] = []
@@ -242,26 +255,41 @@ class BackgroundMetricsCollector:
     Best-effort: a failing tick logs a warning and returns without raising so the
     loop keeps running — observability must never crash the service.
 
-    ``lease_window`` defaults to ``45.0`` to match the runtime
-    ``background_lease_ttl_s`` setting that ``sweep_orphans`` / ``requeue_lost``
-    are actually called with, so "alive workers" agrees with what the watchdog
-    reconciles. Task 8 passes ``settings.background_lease_ttl_s`` explicitly.
+    ``registry_interval`` is the worker's ``background_worker_registry_interval_s``;
+    the online window is ``3 * registry_interval`` (a worker is online while it has
+    beat within three of its own intervals). ``registry_retention_s`` is how long a
+    stale row is kept before the per-tick prune removes it. Both default from the
+    settings at the construction site (``maybe_start_metrics_collector``).
     """
 
-    def __init__(self, *, interval: float, lease_window: float = 45.0, duration_window_seconds: float = 300.0):
+    def __init__(
+        self,
+        *,
+        interval: float,
+        registry_interval: float = 10.0,
+        registry_retention_s: float = 3600.0,
+        duration_window_seconds: float = 300.0,
+    ):
         self.interval = interval
-        self.lease_window = lease_window
+        self.registry_interval = registry_interval
+        self.registry_retention_s = registry_retention_s
         self.duration_window_seconds = duration_window_seconds
         self._stopped = False
         self._task: asyncio.Task | None = None
 
-    async def collect_once(self, session) -> None:
-        """Run the three queries and push the gauges. Never raises."""
+    async def collect_once(self, session, *, now: datetime | None = None) -> None:
+        """Run the queries and push the gauges. Never raises.
+
+        ``now`` defaults to the wall clock so the loop owns the tick's clock; tests
+        inject an explicit ``now`` for deterministic freshness/retention math.
+        """
         try:
-            now = datetime.now(timezone.utc)
+            if now is None:
+                now = datetime.now(timezone.utc)
             counts = await count_nonterminal_jobs(session)
             oldest = await oldest_queued_seconds(session, now)
-            alive = await alive_worker_count(session, now, self.lease_window)
+            online_window = timedelta(seconds=3 * self.registry_interval)
+            worker_counts = await worker_state_counts(session, now, online_window)
 
             backend = current_backend()
             ot = get_telemetry_service().ot
@@ -275,7 +303,9 @@ class BackgroundMetricsCollector:
                     {"status": status.value, "backend": backend},
                 )
             ot.update_gauge("langflow_bg_oldest_queued_seconds", oldest, {"backend": backend})
-            ot.update_gauge("langflow_bg_alive_workers", alive, {"backend": backend})
+            ot.update_gauge("langflow_bg_workers_online", worker_counts["online"], {"backend": backend})
+            ot.update_gauge("langflow_bg_workers_busy", worker_counts["busy"], {"backend": backend})
+            ot.update_gauge("langflow_bg_workers_idle", worker_counts["idle"], {"backend": backend})
 
             # Cumulative all-time throughput/outcome counts, set as observable
             # counters (last-absolute-value-wins per label-set). The worker runs
@@ -303,6 +333,14 @@ class BackgroundMetricsCollector:
             p50, p95 = await duration_percentiles(session, now, self.duration_window_seconds)
             ot.update_gauge("langflow_bg_job_duration_p50_seconds", p50, {"backend": backend})
             ot.update_gauge("langflow_bg_job_duration_p95_seconds", p95, {"backend": backend})
+
+            # Best-effort prune of crashed-worker rows past retention. Guarded on its
+            # own so a prune failure (e.g. a write contention) does not drop the gauges
+            # already set this tick — the next tick retries.
+            try:
+                await WorkerRegistryService().prune_stale(session, now=now, retention_s=self.registry_retention_s)
+            except Exception as exc:  # noqa: BLE001 - prune is best-effort, never breaks the tick
+                logger.warning(f"bg worker_registry prune skipped: {exc}")
         except Exception as exc:  # noqa: BLE001 - observability must never crash the loop
             logger.warning(f"bg metrics collection tick skipped: {exc}")
 
@@ -346,7 +384,8 @@ async def maybe_start_metrics_collector(app: FastAPI, settings: Any, *, promethe
     try:
         collector = BackgroundMetricsCollector(
             interval=settings.background_metrics_interval,
-            lease_window=settings.background_lease_ttl_s,
+            registry_interval=settings.background_worker_registry_interval_s,
+            registry_retention_s=settings.background_worker_registry_retention_s,
         )
         collector.start()
         app.state.background_metrics_collector = collector

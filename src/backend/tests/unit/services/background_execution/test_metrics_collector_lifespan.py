@@ -62,8 +62,11 @@ async def test_started_when_port_bound_and_enabled():
     # The loop task is live: created and not yet finished.
     assert collector._task is not None
     assert not collector._task.done()
-    # The lease window is wired from settings so "alive" agrees with the watchdog.
-    assert collector.lease_window == _settings(prometheus_enabled=True).background_lease_ttl_s
+    # The registry interval/retention are wired from settings so the online window
+    # (3x interval) and the per-tick prune match the worker's own registry config.
+    settings = _settings(prometheus_enabled=True)
+    assert collector.registry_interval == settings.background_worker_registry_interval_s
+    assert collector.registry_retention_s == settings.background_worker_registry_retention_s
 
     await stop_metrics_collector(app)
     # Stop actually ended the loop: task cleared and the underlying task finished.
