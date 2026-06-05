@@ -9,7 +9,7 @@ Use this as a starting point. The compose file, Promtail config, Prometheus conf
 - **Loki 3.2** on `:3100`
 - **Promtail 3.2** scraping a directory of Langflow log files
 - **Prometheus 2.55** on `:9091`, scraping Langflow's metrics endpoint (`:9090`)
-- **Grafana 11.3** on `:3000` with the Loki and Prometheus datasources and two dashboards already provisioned: `Langflow Logs` and `Langflow Background Execution`
+- **Grafana 11.3** on `:3000` with the Loki, Prometheus, and Postgres datasources and three dashboards already provisioned: `Langflow Logs`, `Langflow Background Execution`, and `Langflow Background Workers`
 
 ## Prerequisites on the Langflow side
 
@@ -61,7 +61,9 @@ All of these are derived from the durable job tables by a single collector in th
 |---|---|---|---|
 | `langflow_bg_jobs` | gauge | `status`, `backend` | Current count of non-terminal jobs (`queued`, `in_progress`) |
 | `langflow_bg_oldest_queued_seconds` | gauge | `backend` | Age of the oldest queued job (queue-backlog signal) |
-| `langflow_bg_alive_workers` | gauge | `backend` | Distinct workers heartbeating within the lease window |
+| `langflow_bg_workers_online` | gauge | `backend` | Workers heartbeating within the online window (= `busy` + `idle`) |
+| `langflow_bg_workers_busy` | gauge | `backend` | Online workers currently running a job |
+| `langflow_bg_workers_idle` | gauge | `backend` | Online workers currently idle |
 | `langflow_bg_jobs_started_total` | counter | `backend` | Jobs started |
 | `langflow_bg_jobs_completed_total` | counter | `backend` | Jobs completed |
 | `langflow_bg_jobs_failed_total` | counter | `reason`, `backend` | Jobs failed (`reason` in `error`/`timeout`/`worker_lost`/`cancelled`) |
@@ -69,11 +71,28 @@ All of these are derived from the durable job tables by a single collector in th
 | `langflow_bg_job_duration_p50_seconds` | gauge | `backend` | Median run duration over a recent window |
 | `langflow_bg_job_duration_p95_seconds` | gauge | `backend` | p95 run duration over a recent window |
 
+The three worker gauges come from the `worker_registry` table (see [Worker fleet](#worker-fleet-langflow-background-workers)). A worker is `online` while its `last_heartbeat` is within the online window (3x the heartbeat interval, 30s at the default 10s cadence); `online` always equals `busy` + `idle`. The counts are aggregate only: per-worker detail (owner, pid, host, uptime) stays in the roster table and the logs, never in a Prometheus label.
+
 Metrics stay aggregate: labels are small enums only. Per-job detail (`job_id`, `flow_id`, `user_id`) lives in the logs, not the metrics. The bg-execution dashboard's logs panel filters those with `{job="langflow"} | json | event_type="bg_job"`, so you can pivot from an aggregate spike to the individual jobs behind it.
 
-## Worker roster (Postgres datasource)
+## Worker fleet (`Langflow Background Workers`)
 
-The worker dashboard reads the `worker_registry` table directly from Postgres to show the per-worker roster (which workers exist, online/idle/busy state, uptime, current job, and per-owner job counts). Per-worker detail stays out of Prometheus, so this needs a Postgres datasource rather than a scrape target.
+The `Langflow Background Workers` dashboard (uid `langflow-bg-workers`) is the per-worker view of a scaled `langflow worker` fleet. Open [http://localhost:3000/d/langflow-bg-workers](http://localhost:3000/d/langflow-bg-workers).
+
+Each `langflow worker` registers a row in the durable `worker_registry` table on startup, heartbeats every `background_worker_registry_interval_s` (idle or busy), records its current job, and deregisters on graceful stop. A crashed worker stops beating, so its row goes stale and the API-side collector prunes it after `background_worker_registry_retention_s`.
+
+The dashboard reads `worker_registry` directly from Postgres (joined with per-owner aggregates from the `job` table). Per-worker detail stays out of Prometheus, so this needs a Postgres datasource rather than a scrape target. It has:
+
+- **Header stats**: online / busy / idle / total registered.
+- **Worker roster table**: every registered worker, online vs offline, uptime, current job, and per-worker processed / succeeded / failed counts.
+- **`$worker` drill-down**: a dashboard variable that filters a per-worker table plus the Loki `bg_job` logs for the selected worker (`{job="langflow"} | json | event_type="bg_job" | worker=~"$worker"`). The `bg_job` logs carry a `worker` field on the scaled backend.
+
+Two settings control the registry, both in lfx settings:
+
+| Setting | Default | What it controls |
+|---|---|---|
+| `background_worker_registry_interval_s` | `10.0` | Heartbeat cadence. A worker refreshes its `worker_registry` row this often, idle or busy. The online window is 3x this (30s at the default), so a worker counts as online while it has beaten within three of its own intervals. |
+| `background_worker_registry_retention_s` | `3600.0` | Stale-row prune retention. A crashed worker's row shows offline for this window, then the collector removes it so the roster does not accumulate dead owners across restarts. |
 
 The stack provisions a `Postgres` datasource (uid `langflow-postgres`) pointed at your Langflow database. Set these to point it at your DB. The defaults match the reference dev DB published on `host.docker.internal:5432`:
 
