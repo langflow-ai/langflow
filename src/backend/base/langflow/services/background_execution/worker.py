@@ -182,7 +182,7 @@ async def _write_registry_heartbeat(
     positionally and never opens its own. A DB hiccup must never kill the loop, so
     the write is guarded.
     """
-    with contextlib.suppress(Exception):
+    try:
         async with session_scope() as session:
             await worker_registry.heartbeat(
                 session,
@@ -190,6 +190,8 @@ async def _write_registry_heartbeat(
                 state=presence.state,
                 current_job_id=presence.current_job_id,
             )
+    except Exception as exc:  # noqa: BLE001
+        await logger.adebug(f"Worker registry heartbeat failed for {owner}: {exc}")
 
 
 async def _registry_heartbeat_loop(
@@ -263,7 +265,7 @@ async def run_worker_loop(
     registry_active = worker_registry is not None and owner is not None
     presence = _WorkerPresence()
     if registry_active:
-        with contextlib.suppress(Exception):
+        try:
             async with session_scope() as session:
                 await worker_registry.register(
                     session,
@@ -271,6 +273,8 @@ async def run_worker_loop(
                     pid=pid if pid is not None else os.getpid(),
                     host=host if host is not None else socket.gethostname(),
                 )
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Worker registry register failed for {owner}; not in roster: {exc}")
 
     watchdog_task: asyncio.Task | None = None
     if watchdog_interval_s is not None:
@@ -345,9 +349,11 @@ async def run_worker_loop(
         # immediately. Runs on the normal stop path AND on a signal-driven stop
         # (the loop reaches this finally either way). Best-effort.
         if registry_active:
-            with contextlib.suppress(Exception):
+            try:
                 async with session_scope() as session:
                     await worker_registry.deregister(session, owner=owner)
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Worker registry deregister failed for {owner}; stale row will linger: {exc}")
 
 
 def _coerce_uuid(job_id: Any) -> Any:
