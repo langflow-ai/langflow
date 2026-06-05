@@ -116,6 +116,8 @@ Run LFX without installing it locally using `uvx`.
 
 `lfx serve` accepts a `.json` flow file or a `.py` Python script (same as `lfx run`), as well as inline JSON via `--flow-json` or piped input via `--stdin`.
 
+`lfx serve` accepts a `.json` flow file or a `.py` Python script (same as `lfx run`), as well as inline JSON via `--flow-json` or piped input via `--stdin`.
+
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
 
 This example uses the **Agent** component's built-in OpenAI model, which requires an OpenAI API key. If you want to use a different provider, edit the model provider, model name, and credentials accordingly.
