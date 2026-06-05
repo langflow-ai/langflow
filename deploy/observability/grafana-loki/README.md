@@ -71,6 +71,23 @@ All of these are derived from the durable job tables by a single collector in th
 
 Metrics stay aggregate: labels are small enums only. Per-job detail (`job_id`, `flow_id`, `user_id`) lives in the logs, not the metrics. The bg-execution dashboard's logs panel filters those with `{job="langflow"} | json | event_type="bg_job"`, so you can pivot from an aggregate spike to the individual jobs behind it.
 
+## Worker roster (Postgres datasource)
+
+The worker dashboard reads the `worker_registry` table directly from Postgres to show the per-worker roster (which workers exist, online/idle/busy state, uptime, current job, and per-owner job counts). Per-worker detail stays out of Prometheus, so this needs a Postgres datasource rather than a scrape target.
+
+The stack provisions a `Postgres` datasource (uid `langflow-postgres`) pointed at your Langflow database. Set these to point it at your DB. The defaults match the reference dev DB published on `host.docker.internal:5432`:
+
+```bash
+LANGFLOW_DB_HOST=host.docker.internal   # reaches a Postgres published on the host
+LANGFLOW_DB_PORT=5432
+LANGFLOW_DB_NAME=langflow
+LANGFLOW_DB_USER=langflow
+LANGFLOW_DB_PASSWORD=langflow
+LANGFLOW_DB_SSLMODE=disable
+```
+
+In PRODUCTION this must be a READ-ONLY database role, never the app's read-write credentials. Grafana only runs SELECTs against `worker_registry` and `job`, so a role with read access to those tables is enough. Pointing it at a privileged role gives every dashboard viewer a SQL surface into your write path.
+
 ## Run
 
 From this directory:

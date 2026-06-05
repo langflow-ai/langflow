@@ -1,0 +1,27 @@
+apiVersion: 1
+datasources:
+  # Read-only roster source for the worker fleet dashboard. The workers dashboard
+  # queries the worker_registry table directly through this datasource.
+  #
+  # READ-INTENT: in production this MUST point at a READ-ONLY Postgres role, never
+  # the app's read-write credentials. Grafana only ever runs SELECTs here.
+  - name: Postgres
+    uid: langflow-postgres
+    type: postgres
+    # Reaches a Langflow Postgres published on the host from inside the container,
+    # same idea as the Prometheus datasource targeting host.docker.internal:9090.
+    # Grafana expands $VAR from the container env; defaults for these vars are set
+    # on the grafana service in docker-compose.yml (Grafana provisioning does not
+    # understand the ${VAR:-default} shell syntax, so the defaults live there).
+    url: $LANGFLOW_DB_HOST:$LANGFLOW_DB_PORT
+    database: $LANGFLOW_DB_NAME
+    user: $LANGFLOW_DB_USER
+    isDefault: false
+    editable: false
+    secureJsonData:
+      password: $LANGFLOW_DB_PASSWORD
+    jsonData:
+      sslmode: $LANGFLOW_DB_SSLMODE
+      maxOpenConns: 4
+      postgresVersion: 1500
+      timescaledb: false
