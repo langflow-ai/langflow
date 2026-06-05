@@ -2,16 +2,12 @@
 
 from unittest.mock import Mock, patch
 
+# langchain-ibm / ibm-watsonx-ai are real runtime deps of the lfx-ibm bundle,
+# importable on every supported Python version including 3.14 (upstream lifted
+# the <3.14 cap). Import directly so a real import regression surfaces instead
+# of silently skipping the suite.
+import langchain_ibm  # noqa: F401
 import pytest
-
-try:
-    import langchain_ibm  # noqa: F401
-except ImportError:
-    # langchain-ibm is gated to python_version<'3.14' in the bundle's
-    # pyproject.toml because upstream pins exclude 3.14. Skip these tests
-    # on 3.14 until upstream adapts.
-    pytest.skip("langchain-ibm not available", allow_module_level=True)
-
 from lfx.schema.dotdict import dotdict
 
 # NOTE: the prior in-tree test pre-populated ``sys.modules["langchain_ibm"]``

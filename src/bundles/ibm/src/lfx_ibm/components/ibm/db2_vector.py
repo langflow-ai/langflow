@@ -412,8 +412,21 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def search_documents(self) -> list[Data]:
-        """Perform similarity search and return results."""
+        """Perform similarity search and return results.
+
+        The vector store is built first so that any connected ingest data is
+        written to DB2 regardless of whether a search query is provided.
+        Ingestion and search are independent: an empty query simply skips the
+        search and returns no results -- it must not skip ingestion.
+        """
+        # Build (and ingest into) the vector store first. ``build_vector_store``
+        # is what writes ``self.ingest_data`` to DB2, so it has to run even when
+        # no search query is supplied -- otherwise ingestion would silently
+        # depend on a query being present. Mirrors LCVectorStoreComponent.
+        vector_store = self.build_vector_store()
+
         if not self.search_query:
+            self.status = ""
             return []
 
         # Extract text from search_query (handle Message, Data, or string)
@@ -443,9 +456,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             # Convert any other type to string
             query_text = str(self.search_query)
 
-        # Build vector store
-        vector_store = self.build_vector_store()
-
         # Perform search based on search type
         if self.search_type == "Similarity":
             docs = vector_store.similarity_search(
@@ -458,7 +468,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 k=self.number_of_results,
             )
 
-        return [Data(text=doc.page_content, data={"text": doc.page_content}) for doc in docs]
+        results = [Data(text=doc.page_content, data={"text": doc.page_content}) for doc in docs]
+        self.status = results
+        return results
 
     def build(self):  # type: ignore[override]
         """Build the component based on the selected mode."""
