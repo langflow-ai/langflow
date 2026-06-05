@@ -459,8 +459,11 @@ html[data-theme='light'] .redocusaurus .menu-content label.active span:not([clas
   color: var(--redoc-text-primary) !important;
 }
 
-/* oneOf variant buttons — white text on primaryColor bg fails; dark text passes */
-html[data-theme='light'] .redocusaurus td button {
+/* oneOf variant buttons (td div button — expandable property buttons are
+   direct td children and keep their own colors/arrows). Their backgrounds
+   are white (inactive) or primaryColor pink (active) in BOTH themes; dark
+   text passes 4.5:1 on both, while Redoc's white/pink text fails */
+.redocusaurus td div button {
   color: #111827 !important;
 }
 
@@ -471,6 +474,28 @@ html[data-theme='light'] .redocusaurus td button {
 
 html[data-theme='dark'] .redocusaurus *:not(pre) > code {
   background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── Dark theme WCAG contrast overrides ───────────────────── */
+
+/* Code sample tokens — Redoc defaults fail on the dark panel (#242426) */
+html[data-theme='dark'] .redocusaurus .token.boolean,
+html[data-theme='dark'] .redocusaurus .token.null {
+  color: #e95c59 !important;
+}
+
+html[data-theme='dark'] .redocusaurus .token.number,
+html[data-theme='dark'] .redocusaurus .token.constant {
+  color: #5392b8 !important;
+}
+
+/* Status-code tabs — Redoc renders #303846 on the dark card.
+   docusaurus-theme-redoc ships `.redocusaurus ul > li.react-tabs__tab--selected
+   :not(.tab-error):not(.tab-success) { color: #303846 !important }` (0,4,2),
+   so the selected-tab override must outrank it in specificity */
+html[data-theme='dark'] .redocusaurus .react-tabs__tab,
+html[data-theme='dark'] .redocusaurus ul > li.react-tabs__tab--selected:not(.tab-error):not(.tab-success) {
+  color: var(--redoc-text-muted) !important;
 }
 
 /* ── Dark theme misc ──────────────────────────────────────── */

@@ -22,11 +22,11 @@ html[data-theme="light"] :not(pre) > code {
 html[data-theme="dark"] {
   --lf-ch-bg: #18181a;
   --lf-ch-fg: #c8ccd4;
-  --lf-ch-line-num: #4a5060;
+  --lf-ch-line-num: #798197;
   --lf-ch-selection: #264f78;
   --lf-ch-border: #1e2128;
   --lf-ch-title-bg: #0b0d10;
-  --lf-ch-comment: #4a5060;
+  --lf-ch-comment: #798197;
   --lf-ch-string: #51d0a5;
   --lf-ch-number: #ff9b7d;
   --lf-ch-boolean: #f7c93e;

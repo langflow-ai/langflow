@@ -31,7 +31,7 @@ const grafiteNeonTheme = {
     backgroundColor: "#18181a",
   },
   styles: [
-    { types: ["comment"], style: { color: "#4a5060", fontStyle: "italic" } },
+    { types: ["comment"], style: { color: "#798197", fontStyle: "italic" } },
     { types: ["string", "attr-value", "template-string"], style: { color: "#51d0a5" } },
     { types: ["number"], style: { color: "#ff9b7d" } },
     { types: ["boolean", "constant"], style: { color: "#f7c93e" } },
