@@ -27,21 +27,33 @@ export const waitForNewProjectButton = async (
  * 1.10 screen flow so future intermediate-screen changes only need to be
  * applied here:
  *   1. wait for the "new project" button,
- *   2. click it (header button navigates to a fresh flow with welcome
- *      overlay; empty-page button opens the templates modal directly),
+ *   2. click it — both the header "New Flow" button and the empty-page CTA
+ *      now navigate to a fresh flow with the welcome overlay,
  *   3. if the welcome overlay surfaces, click "Browse more templates" to
  *      open the templates modal,
  *   4. wait for the templates modal title to render.
+ *
+ * Pass `fromEmptyPage: true` when the home page is in its empty state, where
+ * the CTA carries the `new_project_btn_empty_page` test id instead of the
+ * header `new-project-btn`.
  *
  * Replaces the legacy `page.getByTestId("new-project-btn").click()` pattern
  * that assumed the modal opened directly.
  */
 export const openTemplatesModal = async (
   page: Page,
-  options?: { buttonTimeout?: number; modalTimeout?: number },
+  options?: {
+    buttonTimeout?: number;
+    modalTimeout?: number;
+    fromEmptyPage?: boolean;
+  },
 ) => {
   await waitForNewProjectButton(page, { timeout: options?.buttonTimeout });
-  await page.getByTestId(TID.newProjectBtn).click();
+  await page
+    .getByTestId(
+      options?.fromEmptyPage ? TID.newProjectBtnEmptyPage : TID.newProjectBtn,
+    )
+    .click();
 
   // After clicking the header "New Flow" button the app navigates to a
   // freshly-created empty flow and surfaces the FlowBuilderWelcome overlay.

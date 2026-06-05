@@ -344,6 +344,7 @@ class DB2VS(VectorStore):
         distance_strategy: DistanceStrategy = DistanceStrategy.EUCLIDEAN_DISTANCE,
         query: str | None = "What is a Db2 database",
         params: dict[str, Any] | None = None,
+        use_bulk_insert: bool = True,  # noqa: FBT001, FBT002
     ):
         """Initialize DB2 vector store with security validations.
 
@@ -354,6 +355,7 @@ class DB2VS(VectorStore):
             distance_strategy: Strategy for distance calculation
             query: Optional default query
             params: Optional additional parameters
+            use_bulk_insert: Enable bulk insert using executemany() for better performance (default: True)
 
         Raises:
             ValueError: If table name is invalid or other validation fails
@@ -371,6 +373,7 @@ class DB2VS(VectorStore):
 
             self.client = client
             self.table_name = validated_table_name
+            self.use_bulk_insert = use_bulk_insert
 
             if not isinstance(embedding_function, Embeddings):
                 logger.warning(
@@ -532,6 +535,9 @@ class DB2VS(VectorStore):
             generated_ids = [str(uuid.uuid4()) for _ in texts]
             processed_ids = [hashlib.sha256(_id.encode()).hexdigest()[:16].upper() for _id in generated_ids]
 
+        if not texts:
+            return []
+
         # Generate embeddings
         embeddings = self._embed_documents(texts)
 
@@ -545,47 +551,77 @@ class DB2VS(VectorStore):
 
         cursor = self.client.cursor()
         try:
-            logger.debug("Inserting %s documents into %s", len(processed_ids), self.table_name)
+            if self.use_bulk_insert:
+                # BULK INSERT MODE: Use executemany() for better performance
+                logger.debug("Using BULK INSERT mode (executemany) for %s documents", len(processed_ids))
 
-            # SECURITY FIX: Use parameterized queries where possible
-            # For DB2 VECTOR() function, we need to use string formatting but with proper sanitization
-            for idx, (id_, embedding, metadata, text) in enumerate(
-                zip(processed_ids, embeddings, metadatas, texts, strict=False), 1
-            ):
-                # Convert numpy array to Python list if needed
-                embedding_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
-
-                # Format as string for VECTOR() function
-                vector_str = str(embedding_list)
-
-                # SECURITY: Properly sanitize text using SQL-safe escaping
-                text_sanitized = sanitize_sql_string(text) if text else ""
-
-                # SECURITY: Sanitize metadata JSON
-                metadata_json = json.dumps(metadata)
-                metadata_sanitized = sanitize_sql_string(metadata_json)
-
-                # SECURITY: Sanitize ID (already limited to 100 chars)
-                id_sanitized = sanitize_sql_string(id_)
-
-                # Build SQL with sanitized values
-                # Note: table_name and column_names are validated during initialization
+                # Build the SQL statement with placeholders for bulk insert
                 sql_insert = f"""
                 INSERT INTO {_quoted_table_identifier(self.table_name)}
                 ({self.column_names["id"]}, {self.column_names["embedding"]},
                  {self.column_names["metadata"]}, {self.column_names["text"]})
-                VALUES ('{id_sanitized}', VECTOR('{vector_str}', {embedding_len}, FLOAT32),
-                        '{metadata_sanitized}', '{text_sanitized}')
+                VALUES (?, VECTOR(?, {embedding_len}, FLOAT32), ?, ?)
                 """  # noqa: S608
 
-                # Reduced logging - only log summary
-                if idx == 1:
-                    logger.debug("Inserting documents 1-%s into %s", len(processed_ids), self.table_name)
+                # Prepare data tuples for executemany
+                insert_data = []
+                for id_, embedding, metadata, text in zip(processed_ids, embeddings, metadatas, texts, strict=False):
+                    # Convert numpy array to Python list if needed
+                    embedding_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
 
-                cursor.execute(sql_insert)
+                    # Format as string for VECTOR() function
+                    vector_str = str(embedding_list)
+
+                    metadata_json = json.dumps(metadata)
+
+                    insert_data.append((id_, vector_str, metadata_json, text or ""))
+
+                # Use executemany for bulk insert - much more efficient
+                cursor.executemany(sql_insert, insert_data)
+                logger.debug("Successfully inserted %s documents using bulk insert", len(processed_ids))
+
+            else:
+                # ROW-BY-ROW INSERT MODE: Use execute() for each row (for debugging/compatibility)
+                logger.debug("Using ROW-BY-ROW INSERT mode (execute) for %s documents", len(processed_ids))
+
+                for idx, (id_, embedding, metadata, text) in enumerate(
+                    zip(processed_ids, embeddings, metadatas, texts, strict=False), 1
+                ):
+                    # Convert numpy array to Python list if needed
+                    embedding_list = embedding.tolist() if hasattr(embedding, "tolist") else list(embedding)
+
+                    # Format as string for VECTOR() function
+                    vector_str = str(embedding_list)
+
+                    # SECURITY: Properly sanitize text using SQL-safe escaping
+                    text_sanitized = sanitize_sql_string(text) if text else ""
+
+                    # SECURITY: Sanitize metadata JSON
+                    metadata_json = json.dumps(metadata)
+                    metadata_sanitized = sanitize_sql_string(metadata_json)
+
+                    # SECURITY: Sanitize ID (already limited to 100 chars)
+                    id_sanitized = sanitize_sql_string(id_)
+
+                    # Build SQL with sanitized values
+                    sql_insert = f"""
+                    INSERT INTO {_quoted_table_identifier(self.table_name)}
+                    ({self.column_names["id"]}, {self.column_names["embedding"]},
+                     {self.column_names["metadata"]}, {self.column_names["text"]})
+                    VALUES ('{id_sanitized}', VECTOR('{vector_str}', {embedding_len}, FLOAT32),
+                            '{metadata_sanitized}', '{text_sanitized}')
+                    """  # noqa: S608
+
+                    # Log progress for first insert
+                    if idx == 1:
+                        logger.debug("Inserting documents 1-%s into %s", len(processed_ids), self.table_name)
+
+                    # Execute the insert for this row
+                    cursor.execute(sql_insert)
+
+                logger.debug("Successfully inserted %s documents using row-by-row insert", len(processed_ids))
 
             cursor.execute("COMMIT")
-            logger.debug("Successfully inserted %s documents", len(processed_ids))
         except Exception as e:
             # Rollback on error
             import contextlib

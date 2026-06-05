@@ -3,7 +3,13 @@ import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowStore from "@/stores/flowStore";
-import type { NodeDataType } from "@/types/flow";
+import type { APIDataType } from "@/types/api";
+import type { groupedObjType } from "@/types/components";
+import type {
+  NodeDataType,
+  sourceHandleType,
+  targetHandleType,
+} from "@/types/flow";
 import { nodeColorsName } from "@/utils/styleUtils";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import {
@@ -171,12 +177,12 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 }: {
   left: boolean;
   tooltipTitle?: string;
-  proxy?: any;
-  id: any;
+  proxy?: { field: string; id: string };
+  id?: targetHandleType | sourceHandleType;
   title: string;
-  myData: any;
+  myData: APIDataType;
   colors: string[];
-  setFilterEdge: (edges: any) => void;
+  setFilterEdge: (newState: groupedObjType[]) => void;
   showNode: boolean;
   testIdComplement?: string;
   nodeId: string;
@@ -184,6 +190,8 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 }) {
   const [isHovered, setIsHovered] = useState(false);
   const [openTooltip, setOpenTooltip] = useState(false);
+
+  const idType = id && "type" in id ? id.type : undefined;
 
   const isLocked = useFlowStore(
     useShallow((state) => state.currentFlow?.locked),
@@ -195,11 +203,11 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const isInConnectionMode = useFlowStore(
     useCallback(
       (state) => {
-        if (id?.type !== "model" || !left) return false;
+        if (idType !== "model" || !left) return false;
         const node = state.nodes.find((n) => n.id === nodeId);
         return (node?.data as NodeDataType)?._connectionMode === true;
       },
-      [nodeId, id?.type, left],
+      [nodeId, idType, left],
     ),
   );
 
@@ -227,7 +235,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
   const dark = useDarkStore((state) => state.dark);
 
   const myId = useMemo(
-    () => scapedJSONStringfy(proxy ? { ...id, proxy } : id),
+    () => scapedJSONStringfy(proxy ? { ...id, proxy } : (id ?? {})),
     [id, proxy],
   );
 
@@ -296,7 +304,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
 
     // Model handles that initiated connection mode on this node should not be nulled
     const isOwnModelConnectionMode =
-      id?.type === "model" && left && filterType?.target === nodeId;
+      idType === "model" && left && filterType?.target === nodeId;
 
     const isNullHandle =
       filterPresent &&
@@ -353,7 +361,7 @@ const HandleRenderComponent = memo(function HandleRenderComponent({
           color: handleColorName,
         };
 
-    const isModelType = id?.type === "model";
+    const isModelType = idType === "model";
     const isMuted =
       isModelType && !connectedEdge && !filterPresent && !isInConnectionMode;
 

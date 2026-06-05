@@ -68,12 +68,14 @@ Copy [`src/bundles/duckduckgo/pyproject.toml`](duckduckgo/pyproject.toml) and
 substitute names + the runtime-dep block. The non-obvious bits:
 
 - `dependencies` lists every runtime dep the component imports. Floor `lfx`
-  at `>=0.5.0` (the release that introduced extension bundles) with **no
-  upper bound**, so the bundle always resolves the latest available `lfx` —
-  BUNDLE_API compatibility is enforced separately via `extension.json`'s
-  `"lfx": {"compat": [...]}` contract, not an upper version cap. A bundle
-  author *may* tighten this if a component needs a specific newer `lfx`, but
-  the default carries no ceiling.
+  at the current Langflow/LFX `major.minor` line and cap below the next `lfx`
+  major — e.g. `"lfx>=1.10.0,<2.0.0"`. You normally don't hand-write this:
+  `port_bundle.py` fills it in from `src/lfx/pyproject.toml` at port time, and
+  `make patch` re-syncs every existing bundle via
+  [`scripts/ci/sync_bundle_lfx_pin.py`](../../scripts/ci/sync_bundle_lfx_pin.py).
+  Fine-grained BUNDLE_API compatibility is enforced separately via
+  `extension.json`'s `"lfx": {"compat": [...]}` contract against the running
+  lfx's `BUNDLE_API_VERSION`, not the version cap.
 - **Platform-gated deps:** if a runtime dep has no wheel on some platform
   (e.g. `ibm-db` ships none for linux/aarch64), gate it with a PEP 508 marker
   so `pip install langflow` still succeeds there, e.g.

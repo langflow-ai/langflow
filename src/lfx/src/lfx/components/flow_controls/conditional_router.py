@@ -165,6 +165,37 @@ class ConditionalRouterComponent(Component):
             # 2. Conditional exclusion for persistent routing (doesn't get reset except by this router)
             self.graph.exclude_branch_conditionally(self._id, output_name=route_to_stop)
 
+    def _resolve_case_message(self, case_message: Message | str | None) -> Message:
+        """Return the override case message, falling back to the input text when it is blank.
+
+        ``Case True`` and ``Case False`` are optional overrides. When left blank the
+        ``MessageInput`` resolves to an empty ``Message``, so the original ``Text Input``
+        is routed through instead of an empty message.
+
+        A ``Message`` is only treated as blank when it carries no payload at all. An
+        override with empty text but meaningful content (files or content blocks) is
+        preserved as-is so that payload is not dropped.
+
+        Blankness is judged by payload only (``text``, ``files``, ``content_blocks``).
+        A ``Message`` carrying just metadata (``sender``, ``properties``, ``error`` ...)
+        and no payload is intentionally treated as blank: every empty ``Message`` also
+        defaults ``timestamp`` / ``category`` / ``properties``, so keying on metadata
+        would defeat the blank-field fallback. With no payload there is nothing to
+        route, so the ``Text Input`` is used.
+
+        ``case_message`` is typed defensively as ``Message | str | None``. ``MessageInput``
+        wraps user input into a ``Message`` on the validated graph path, but a raw ``str``
+        can still arrive via direct/programmatic assignment (``.set(...)`` stores the raw
+        value), so the ``str`` branch is retained rather than dropping such an override.
+        """
+        if isinstance(case_message, Message):
+            if case_message.text or case_message.files or case_message.content_blocks:
+                return case_message
+            return Message(text=self.input_text)
+        if isinstance(case_message, str) and case_message:
+            return Message(text=case_message)
+        return Message(text=self.input_text)
+
     def true_response(self) -> Message:
         result = self.evaluate_condition(
             self.input_text, self.match_text, self.operator, case_sensitive=self.case_sensitive
@@ -175,12 +206,13 @@ class ConditionalRouterComponent(Component):
         force_output = current_iteration >= self.max_iterations and self.default_route == "true_result"
 
         if result or force_output:
-            self.status = self.true_case_message
+            true_message = self._resolve_case_message(self.true_case_message)
+            self.status = true_message
             if not force_output:  # Only stop the other branch if not forcing due to max iterations
                 self.iterate_and_stop_once("false_result")
-            return self.true_case_message
+            return true_message
         self.iterate_and_stop_once("true_result")
-        return Message(content="")
+        return Message(text="")
 
     def false_response(self) -> Message:
         result = self.evaluate_condition(
@@ -188,12 +220,13 @@ class ConditionalRouterComponent(Component):
         )
 
         if not result:
-            self.status = self.false_case_message
+            false_message = self._resolve_case_message(self.false_case_message)
+            self.status = false_message
             self.iterate_and_stop_once("true_result")
-            return self.false_case_message
+            return false_message
 
         self.iterate_and_stop_once("false_result")
-        return Message(content="")
+        return Message(text="")
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None) -> dict:
         if field_name == "operator":

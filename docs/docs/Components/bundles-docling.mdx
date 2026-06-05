@@ -13,26 +13,60 @@ import PartialDockerDoclingDeps from '@site/docs/_partial-docker-docling-deps.md
 
 Langflow integrates with [Docling](https://docling-project.github.io/docling/) through a bundle of components for parsing and chunking documents.
 
+## Install the Docling bundle
+
+The Docling bundle is included in the `lfx-docling` Extension bundle, which is installed automatically as part of `uv pip install langflow`.
+
+If you need to install it separately, run:
+
+```bash
+uv pip install lfx-docling
+uv run langflow run
+```
+
+To verify the bundle is loaded in your environment:
+
+```bash
+lfx extension list
+```
+
+### Optional extras
+
+Some Docling components require additional dependencies that are not installed by default.
+
+**Local model** (required for the **Docling** local model component):
+
+```bash
+uv pip install "lfx-docling[local]"
+```
+
+Alternatively, if you installed Langflow as a package:
+
+```bash
+uv pip install "langflow[docling]"
+```
+
+**Chunking** (`HybridChunker` and `HierarchicalChunker` support for the **Chunk DoclingDocument** component):
+
+```bash
+uv pip install "lfx-docling[chunking]"
+```
+
+**Image description** (vision model support for image-rich documents):
+
+```bash
+uv pip install "lfx-docling[image-description]"
+```
+
 ## Prerequisites
 
 * **Enable Developer Mode for Windows**:
 
     <PartialDevModeWindows />
 
-* **Install Docling dependency**:
-The Docling dependency is required to use the Docling components in Langflow.
+* **Langflow Desktop**: Set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
 
-    * **Langflow Desktop**: Set `LANGFLOW_DOCLING=True` in your `.env` file to enable Docling dependency installation. For more information, see [Set environment variables for Langflow Desktop](/environment-variables#set-environment-variables-for-langflow-desktop).
-
-    * **Langflow OSS**:
-        * If you installed `langflow` (`uv pip install langflow`), Docling is included automatically through bundled extras.
-        * If you installed `langflow-base` directly, install Docling with an extra, for example `uv pip install "langflow-base[docling]"`.
-
-    * **macOS Intel (x86_64)**: Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
-
-    * **Earlier versions**: Langflow versions earlier than 1.6 don't include the Docling dependency by default.
-
-    For more information, see [Install custom dependencies](/install-custom-dependencies).
+* **macOS Intel (x86_64)**: Use the [Docling installation guide](https://docling-project.github.io/docling/installation/) to install the Docling dependency.
 
 <PartialDockerDoclingDeps />
 
@@ -102,6 +136,8 @@ For more information, see the [Docling serve project repository](https://github.
 ### Chunk DoclingDocument
 
 The **Chunk DoclingDocument** component splits `DoclingDocument` objects into chunks.
+
+This component requires Docling's optional chunking dependencies.
 
 It outputs the chunked documents as a [`Table`](/data-types#table).
 

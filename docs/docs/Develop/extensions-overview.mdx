@@ -16,6 +16,17 @@ When you run `uv pip install langflow`, you install:
 Some bundles that were previously included in `langflow` are moved into standalone packages.
 The `langflow` metapackage adds them as regular pip dependencies, so `pip install langflow` continues to include them.
 
+## Current Extension bundles
+
+The following Extension bundles are included with `uv pip install langflow`:
+
+| Package | Bundle | Components |
+|---------|--------|------------|
+| `lfx-arxiv` | [arXiv](/bundles-arxiv) | arXiv search |
+| `lfx-docling` | [Docling](/bundles-docling) | Document parsing and chunking |
+| `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) | Web search |
+| `lfx-ibm` | [IBM](/bundles-ibm) | IBM watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
+
 The internal identifier for each component changes.
 For example, a DuckDuckGo component previously referenced as a `DuckDuckGoSearchComponent` class is now `ext:duckduckgo:DuckDuckGoSearchComponent@official`.
 Langflow rewrites these references automatically when you open a saved flow, so in most cases the migration is invisible.
