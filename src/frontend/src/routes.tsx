@@ -50,6 +50,7 @@ const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
 const LothalDashboard = lazy(() => import("./pages/lothal/Dashboard"));
 const LothalWorkspace = lazy(() => import("./pages/lothal/Workspace"));
+const LothalDesignSystem = lazy(() => import("./pages/lothal/DesignSystem"));
 
 const SignUp = lazy(() => import("./pages/SignUpPage"));
 
@@ -188,6 +189,10 @@ const router = createBrowserRouter(
                 />
               </Route>
               <Route path="lothal" element={<LothalDashboard />} />
+              <Route
+                path="lothal/design-system"
+                element={<LothalDesignSystem />}
+              />
               <Route path="lothal/:projectId" element={<LothalWorkspace />} />
               <Route path="flow/:id/">
                 <Route path="" element={<CustomDashboardWrapperPage />}>
