@@ -296,7 +296,7 @@ module.exports = {
         {
           type: "doc",
           id: "Deployment/deployment-multi-worker",
-          label: "Deploy with multiple workers",
+          label: "Deploy Langflow with multiple workers",
         },
         {
           type: "doc",
