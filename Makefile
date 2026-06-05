@@ -579,6 +579,9 @@ patch: ## Update version across all projects. Usage: make patch v=1.5.0
 	echo "$(GREEN)Updating lfx pyproject.toml...$(NC)"; \
 	python -c "import re; fname='src/lfx/pyproject.toml'; txt=open(fname).read(); txt=re.sub(r'^version = \".*\"', 'version = \"$$LANGFLOW_VERSION\"', txt, flags=re.MULTILINE); open(fname, 'w').write(txt)"; \
 	\
+	echo "$(GREEN)Syncing bundle lfx pins (src/bundles/*) -> $$LANGFLOW_VERSION...$(NC)"; \
+	python scripts/ci/sync_bundle_lfx_pin.py "$$LANGFLOW_VERSION"; \
+	\
 	echo "$(GREEN)Updating frontend package.json...$(NC)"; \
 	python -c "import re; fname='src/frontend/package.json'; txt=open(fname).read(); txt=re.sub(r'\"version\": \".*\"', '\"version\": \"$$LANGFLOW_VERSION\"', txt); open(fname, 'w').write(txt)"; \
 	\
