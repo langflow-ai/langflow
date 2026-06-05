@@ -94,6 +94,19 @@ class JobRunner:
                 await self._drive(job_id=job_id, source_kwargs=source_kwargs)
 
         bg_metrics.emit_job_started(backend=self._backend)
+        # One structured line per transition (Loki/promtail). event_type="bg_job"
+        # is the marker key: structlog RESERVES "event" for the message itself, so
+        # a custom event= would clobber the message. job_id is the high-cardinality
+        # forensic key that belongs on logs (never on metrics). A logging failure
+        # must never break the run, so the emit is guarded.
+        with contextlib.suppress(Exception):
+            await logger.ainfo(
+                "background job started",
+                event_type="bg_job",
+                job_id=str(job_id),
+                status="started",
+                backend=self._backend,
+            )
         # Monotonic start: the job row has no started_at/finished_at, so we
         # measure run duration off a monotonic clock captured here and read at
         # the terminal point. Monotonic avoids wall-clock skew.
@@ -163,9 +176,17 @@ class JobRunner:
             job = await self._jobs.get_job_by_job_id(job_id)
         if job is None:
             return
+        duration_ms = int(duration_seconds * 1000)
+        # flow_id/user_id are read off the already-fetched row (no extra query) so
+        # they ride along on the terminal log for per-job forensics.
+        flow_id = str(job.flow_id) if job.flow_id is not None else None
+        user_id = str(job.user_id) if job.user_id is not None else None
         if job.status == JobStatus.COMPLETED:
             bg_metrics.emit_job_completed(backend=self._backend)
             bg_metrics.emit_job_duration(seconds=duration_seconds, outcome="completed", backend=self._backend)
+            await self._log_terminal(
+                job_id, status="completed", duration_ms=duration_ms, flow_id=flow_id, user_id=user_id
+            )
         elif job.status in (JobStatus.FAILED, JobStatus.TIMED_OUT, JobStatus.CANCELLED):
             reason = {
                 JobStatus.FAILED: "error",
@@ -174,6 +195,42 @@ class JobRunner:
             }[job.status]
             bg_metrics.emit_job_failed(reason=reason, backend=self._backend)
             bg_metrics.emit_job_duration(seconds=duration_seconds, outcome="failed", backend=self._backend)
+            await self._log_terminal(
+                job_id,
+                status="failed",
+                duration_ms=duration_ms,
+                reason=reason,
+                flow_id=flow_id,
+                user_id=user_id,
+            )
+
+    async def _log_terminal(
+        self,
+        job_id: UUID,
+        *,
+        status: str,
+        duration_ms: int,
+        reason: str | None = None,
+        flow_id: str | None = None,
+        user_id: str | None = None,
+    ) -> None:
+        """One structured terminal line per run. Best-effort: never breaks the run.
+
+        event_type="bg_job" is the marker key (structlog reserves "event" for the
+        message). job_id/flow_id/user_id are the high-cardinality forensic keys
+        that belong on logs, not metrics. The message is ``background job <status>``.
+        """
+        with contextlib.suppress(Exception):
+            extra = {"flow_id": flow_id, "user_id": user_id, "reason": reason}
+            await logger.ainfo(
+                f"background job {status}",
+                event_type="bg_job",
+                job_id=str(job_id),
+                status=status,
+                backend=self._backend,
+                duration_ms=duration_ms,
+                **{k: v for k, v in extra.items() if v is not None},
+            )
 
     async def _finalize_terminal_event(self, job_id: UUID) -> None:
         """Backfill the error blob + terminal event for TIMED_OUT / CANCELLED.

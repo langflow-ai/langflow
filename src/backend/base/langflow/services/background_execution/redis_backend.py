@@ -205,6 +205,26 @@ class RedisBackgroundQueue:
             # This path only runs in scaled mode, so the backend label is literal.
             bg_metrics.emit_job_failed(reason="worker_lost", backend="scaled")
             bg_metrics.emit_orphan_reconciled(backend="scaled")
+            # One structured line per reconciled orphan. event_type="bg_job" is the
+            # marker key (structlog reserves "event" for the message); a logging
+            # failure must never break the watchdog, so the emit is guarded.
+            with contextlib.suppress(Exception):
+                from lfx.log import logger
+
+                extra = {
+                    "flow_id": str(job.flow_id) if job.flow_id is not None else None,
+                    "user_id": str(job.user_id) if job.user_id is not None else None,
+                    "attempt": int(meta["attempt"]) if "attempt" in meta else None,
+                }
+                await logger.ainfo(
+                    "background job worker_lost",
+                    event_type="bg_job",
+                    job_id=str(job.job_id),
+                    status="failed",
+                    reason="worker_lost",
+                    backend="scaled",
+                    **{k: v for k, v in extra.items() if v is not None},
+                )
             await self.claim_queue.complete(job_id)
         return requeued
 
