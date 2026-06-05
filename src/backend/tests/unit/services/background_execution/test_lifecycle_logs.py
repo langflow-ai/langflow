@@ -113,6 +113,59 @@ async def test_runner_emits_bg_job_lifecycle_logs(active_user):
     assert terminal[0]["flow_id"] == str(flow_id)
 
 
+async def test_runner_tags_bg_job_logs_with_worker_owner(active_user):
+    """A runner with an owner stamps ``worker`` on both the started and terminal lines."""
+    job_service = get_job_service()
+    flow_id = uuid4()
+    job_id = await _make_job(flow_id, active_user.id)
+    owner = "worker:4242:deadbeef"
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source, owner=owner)
+
+    with _bg_log_capture() as caps:
+        await runner.run(job_id=job_id, source_kwargs={})
+
+    job = await job_service.get_job_by_job_id(job_id)
+    assert job.status == JobStatus.COMPLETED
+
+    bg = _bg_records(caps)
+    started = [r for r in bg if r.get("status") == "started"]
+    terminal = [r for r in bg if r.get("status") == "completed"]
+    assert started, f"expected a started record, got {bg}"
+    assert terminal, f"expected a completed terminal record, got {bg}"
+    assert started[0]["worker"] == owner
+    assert terminal[0]["worker"] == owner
+
+
+async def test_runner_omits_worker_on_default_backend(active_user):
+    """With no owner (in-process default backend), no bg_job line carries a worker key."""
+    job_service = get_job_service()
+    flow_id = uuid4()
+    job_id = await _make_job(flow_id, active_user.id)
+
+    async def source(**_kwargs) -> AsyncIterator[tuple[bytes, str]]:
+        yield _frame("build_start", {})
+        yield _frame("end", {})
+
+    bus = InMemoryLiveBus()
+    adapter = get_stream_adapter("langflow", StreamAdapterContext(run_id=str(job_id), thread_id="t"))
+    runner = JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
+
+    with _bg_log_capture() as caps:
+        await runner.run(job_id=job_id, source_kwargs={})
+
+    bg = _bg_records(caps)
+    assert bg, "expected at least one bg_job record"
+    for rec in bg:
+        assert "worker" not in rec, f"unexpected worker key on default backend: {rec}"
+
+
 async def test_runner_emits_bg_job_failed_log_with_reason(active_user):
     """A job that errors emits a terminal bg_job log with reason=error."""
     job_service = get_job_service()

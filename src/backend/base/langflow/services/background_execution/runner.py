@@ -99,12 +99,17 @@ class JobRunner:
         # must never break the run, so the emit is guarded. Throughput counters are
         # DB-derived in the API-side collector (not emitted in-process here).
         with contextlib.suppress(Exception):
+            # worker (the per-worker owner token) rides along ONLY on the scaled
+            # backend so the Grafana per-worker drill-down can filter Loki by it;
+            # omitted in the in-process default backend where owner is None.
+            worker = {"worker": self._owner} if self._owner is not None else {}
             await logger.ainfo(
                 "background job started",
                 event_type="bg_job",
                 job_id=str(job_id),
                 status="started",
                 backend=self._backend,
+                **worker,
             )
         # Monotonic start: the job row has no started_at/finished_at, so we
         # measure run duration off a monotonic clock captured here and read at
@@ -215,7 +220,10 @@ class JobRunner:
         that belong on logs, not metrics. The message is ``background job <status>``.
         """
         with contextlib.suppress(Exception):
-            extra = {"flow_id": flow_id, "user_id": user_id, "reason": reason}
+            # worker (the per-worker owner token) rides along ONLY on the scaled
+            # backend so the Grafana per-worker drill-down can filter Loki by it;
+            # the None-filter below drops it in the in-process default backend.
+            extra = {"flow_id": flow_id, "user_id": user_id, "reason": reason, "worker": self._owner}
             await logger.ainfo(
                 f"background job {status}",
                 event_type="bg_job",
