@@ -1,4 +1,4 @@
-"""REAL-PROCESS hard proof: a durable STOP from the API reaches a separate worker.
+"""REAL-PROCESS real service: a durable STOP from the API reaches a separate worker.
 
 Closes the Phase 4 caveat that stop was delivered in-process. Here an ACTUAL
 ``langflow worker`` OS subprocess runs a slowish multi-vertex real flow; the
@@ -37,7 +37,7 @@ def _require_real_instances():
     return pg, redis
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 async def test_real_worker_subprocess_honors_pubsub_stop():
     """API-side stop_job CANCELs a job running in a SEPARATE worker OS process."""
     pg, redis = _require_real_instances()

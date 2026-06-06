@@ -1,4 +1,4 @@
-"""REAL-PROCESS hard proof: a separate ``langflow worker`` OS process runs a job.
+"""REAL-PROCESS real service: a separate ``langflow worker`` OS process runs a job.
 
 Closes the Phase 4 caveat that the worker ran in-process. Here an ACTUAL
 ``subprocess.Popen(["uv", "run", "langflow", "worker"])`` claims a job off real
@@ -41,7 +41,7 @@ def _require_real_instances():
     return pg, redis
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 async def test_real_worker_subprocess_runs_job_and_facade_reattaches():
     """A REAL worker process claims + builds + completes a real graph; facade reattaches."""
     pg, redis = _require_real_instances()
@@ -101,7 +101,7 @@ async def test_real_worker_subprocess_runs_job_and_facade_reattaches():
         await harness.teardown()
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 async def test_real_worker_kill9_midjob_reconciled_by_watchdog():
     """Kill -9 a REAL worker mid-job; the lease watchdog fails the stranded job worker_lost."""
     pg, redis = _require_real_instances()

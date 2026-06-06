@@ -1,4 +1,4 @@
-"""Real-process hard-proof harness: a REAL ``langflow worker`` OS subprocess.
+"""Real-process real-service harness: a REAL ``langflow worker`` OS subprocess.
 
 Phase 4 proved the scaled claim/run/reattach/stop paths in-process (same event
 loop). This closes that honest caveat with an ACTUAL separate process:

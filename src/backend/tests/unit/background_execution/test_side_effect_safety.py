@@ -25,7 +25,7 @@ from langflow.services.database.models.jobs.model import JobStatus
 
 from ._side_effect_component import build_side_effect_graph, reset_side_effects, side_effect_count
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 @pytest.fixture(autouse=True)
@@ -43,9 +43,9 @@ async def _run_real_graph_once(effect_key: str) -> int:
     return side_effect_count(effect_key)
 
 
-async def test_default_at_most_once_no_double_increment(hard_proof_job_service):
+async def test_default_at_most_once_no_double_increment(real_services_job_service):
     """Default: a crashed in-flight job is FAILED(worker_lost) and NOT re-run."""
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id, flow_id = uuid4(), uuid4()
     effect_key = f"atmostonce-{job_id}"
 
@@ -69,12 +69,12 @@ async def test_default_at_most_once_no_double_increment(hard_proof_job_service):
     )
 
 
-async def test_retry_safe_flow_requeues_and_reincrements(hard_proof_redis_url, hard_proof_job_service):
+async def test_retry_safe_flow_requeues_and_reincrements(real_services_redis_url, real_services_job_service):
     """retry_safe=True: the SAME crash path requeues and the real counter hits 2."""
     from langflow.services.background_execution.redis_backend import RedisBackgroundQueue
     from redis.asyncio import StrictRedis
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id, flow_id = uuid4(), uuid4()
     effect_key = f"retrysafe-{job_id}"
 
@@ -86,7 +86,7 @@ async def test_retry_safe_flow_requeues_and_reincrements(hard_proof_redis_url, h
 
     # The retry-safe lease watchdog requeues the IN_PROGRESS orphan (attempt < max)
     # instead of failing it. Real redis processing list + the real backend branch.
-    client = StrictRedis.from_url(hard_proof_redis_url)
+    client = StrictRedis.from_url(real_services_redis_url)
     prefix = f"se-retry:{uuid4().hex}:"
     backend = RedisBackgroundQueue(client=client, job_service=job_service, startup_grace_s=5.0)
     backend.claim_queue.pending_key = f"{prefix}pending"
@@ -112,7 +112,7 @@ async def test_retry_safe_flow_requeues_and_reincrements(hard_proof_redis_url, h
     )
 
 
-async def test_concurrent_claims_run_queued_job_exactly_once(hard_proof_job_service):
+async def test_concurrent_claims_run_queued_job_exactly_once(real_services_job_service):
     """Two concurrent claims on one QUEUED job: exactly ONE wins (single-flight guard).
 
     This is the claim guard the startup sweep relies on to avoid double-running a
@@ -122,7 +122,7 @@ async def test_concurrent_claims_run_queued_job_exactly_once(hard_proof_job_serv
     returns True (the side effect would fire exactly once); the loser sees the row
     already IN_PROGRESS and backs off. Real SQLite + real Postgres.
     """
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id, flow_id, user_id = uuid4(), uuid4(), uuid4()
     await job_service.create_job(job_id=job_id, flow_id=flow_id, user_id=user_id)
 
