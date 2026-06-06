@@ -25,6 +25,7 @@ from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
 from lfx.utils.async_helpers import run_until_complete
 from lfx.utils.secrets import unwrap_secret_value
+from lfx.utils.ssrf_protection import SSRFProtectionError, validate_url_for_ssrf
 from lfx.utils.util import transform_localhost_url
 
 HTTP_STATUS_OK = 200
@@ -164,8 +165,15 @@ async def is_valid_ollama_url(url: str) -> bool:
         url = url.rstrip("/").removesuffix("/v1")
         if not url.endswith("/"):
             url = url + "/"
+        tags_url = urljoin(url, "api/tags")
+        # base_url is tenant-controlled and this runs during build-config edits: block SSRF
+        # to internal/cloud-metadata hosts before issuing the request.
+        validate_url_for_ssrf(tags_url)
         async with httpx.AsyncClient() as client:
-            return (await client.get(url=urljoin(url, "api/tags"))).status_code == HTTP_STATUS_OK
+            return (await client.get(url=tags_url)).status_code == HTTP_STATUS_OK
+    except SSRFProtectionError:
+        logger.warning("Ollama URL blocked by SSRF protection: %s", url)
+        return False
     except httpx.RequestError:
         logger.debug(f"Invalid Ollama URL: {url}")
         return False
@@ -208,6 +216,10 @@ async def get_ollama_models(
 
         # Ollama REST API to return model capabilities
         show_url = urljoin(base_url, "api/show")
+
+        # base_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts. The
+        # host is shared by both endpoints, so validating one covers the POST to show_url too.
+        validate_url_for_ssrf(tags_url)
 
         async with httpx.AsyncClient() as client:
             # Fetch available models

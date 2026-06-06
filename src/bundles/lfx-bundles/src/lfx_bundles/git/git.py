@@ -9,6 +9,7 @@ from langchain_community.document_loaders.git import GitLoader
 from lfx.custom.custom_component.component import Component
 from lfx.io import DropdownInput, MessageTextInput, Output
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_git_repository_url
 
 
 class GitLoaderComponent(Component):
@@ -237,8 +238,10 @@ class GitLoaderComponent(Component):
             repo_path = self.repo_path
             clone_url = None
         else:
-            # Clone source
+            # Clone source. The URL is tenant-controlled: block ext::/fd:: remote helpers
+            # (RCE), file:// / local paths (arbitrary file read), and SSRF-blocked hosts.
             clone_url = self.clone_url
+            validate_git_repository_url(clone_url)
             async with self.temp_clone_dir() as temp_dir:
                 repo_path = temp_dir
 

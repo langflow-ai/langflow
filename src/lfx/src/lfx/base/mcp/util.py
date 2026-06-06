@@ -2230,6 +2230,14 @@ async def update_tools(
     if mode == "Stdio":
         args = list(server_config.get("args", []))
         env = server_config.get("env", {})
+        # SECURITY: A tenant-built flow can embed this stdio config directly in the
+        # MCPTools component value, bypassing the REST-layer MCPServerConfig validators.
+        # The config is about to be run as `bash -c "exec <command> <args>"`, so enforce
+        # the same command-allowlist / metacharacter / env / docker policy here at the
+        # execution sink. Raises MCPStdioSecurityError (a ValueError) on violation.
+        from lfx.base.mcp.security import validate_mcp_stdio_config
+
+        validate_mcp_stdio_config(command, args, env)
         # For stdio mode, inject component headers as --headers CLI args.
         # This enables passing headers through proxy tools like mcp-proxy
         # that forward them to the upstream HTTP server.
@@ -2278,6 +2286,12 @@ async def update_tools(
         client = mcp_stdio_client
     elif mode in ["Streamable_HTTP", "SSE"]:
         # Streamable HTTP connection with SSE fallback
+        # SECURITY: a tenant-embedded MCP HTTP config could point at an internal service or
+        # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
+        # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
+        from lfx.utils.ssrf_protection import validate_url_for_ssrf
+
+        validate_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
         tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client

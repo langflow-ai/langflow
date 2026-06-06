@@ -1,63 +1,24 @@
 """Pydantic schemas for v2 API endpoints."""
 
-from pathlib import Path
-
-from lfx.base.mcp.util import DANGEROUS_MCP_ENV_VARS, is_dangerous_mcp_env_var
+# SECURITY: MCP stdio allowlist/blocklist data and the base-command helper live in lfx
+# (lfx.base.mcp.security) so this REST-layer validator and the flow-execution-time enforcement
+# in lfx.base.mcp.util share a single source of truth and can never drift apart.
+from lfx.base.mcp.security import (
+    ALLOWED_MCP_COMMANDS,
+    DANGEROUS_ENV_VARS,
+    DANGEROUS_KEYWORDS,
+    DANGEROUS_SHELL_CHARS,
+    DOCKER_DANGEROUS_ARG_PREFIXES,
+    DOCKER_DANGEROUS_ARGS,
+    SHELL_EXEC_FLAGS,
+    SHELL_WRAPPERS,
+)
+from lfx.base.mcp.security import (
+    extract_base_command as _extract_base_command,
+)
 from pydantic import BaseModel, ConfigDict, field_validator, model_validator
 
 from langflow.logging import logger
-
-# SECURITY: Allowlist of approved MCP stdio commands
-# Following Flowise best practice: https://github.com/FlowiseAI/Flowise/blob/main/packages/components/nodes/tools/MCP/CustomMCP/CustomMCP.ts#L166
-# Note: Shell commands (cmd/sh/bash) are included for OS compatibility where starter projects
-# use wrapper patterns like "cmd /c uvx ..." (Windows) or "sh -c uvx ..." (Unix)
-ALLOWED_MCP_COMMANDS = frozenset(
-    {
-        "node",
-        "python",
-        "python3",
-        "npx",
-        "uvx",
-        "docker",
-        "cmd",  # Windows command processor (used in starter projects: cmd /c uvx ...)
-        "sh",  # Unix shell (used in starter projects: sh -c uvx ...)
-        "bash",  # Bash shell (alternative to sh on Unix/Linux)
-    }
-)
-
-# SECURITY: Shell metacharacters that enable command injection
-DANGEROUS_SHELL_CHARS = frozenset({";", "|", "&", "$", "`", "<", ">", "(", ")", "\n", "\r"})
-
-# SECURITY: Keywords that enable code execution or package installation
-DANGEROUS_KEYWORDS = frozenset(
-    {
-        "-c",
-        "-e",
-        "-y",
-        "--yes",
-        "pip",
-        "install",
-        "npm",
-        "yarn",
-        "pnpm",
-        "eval",
-        "exec",
-    }
-)
-
-# SECURITY: Environment variables that enable code injection via approved commands.
-# Grouped by attack category. All comparisons are case-insensitive.
-DANGEROUS_ENV_VARS = DANGEROUS_MCP_ENV_VARS
-
-# SECURITY: Docker-specific arguments that break container isolation
-DOCKER_DANGEROUS_ARGS = frozenset({"--privileged", "--cap-add"})
-DOCKER_DANGEROUS_ARG_PREFIXES = ("--net=", "--network=", "--pid=", "--cap-add=", "--privileged=")
-
-# SECURITY: Shell wrapper commands that can execute other commands
-SHELL_WRAPPERS = frozenset({"cmd", "sh", "bash"})
-
-# SECURITY: Shell command flags that execute code
-SHELL_EXEC_FLAGS = frozenset({"-c", "/c"})
 
 
 class MCPServerConfig(BaseModel):
@@ -229,7 +190,8 @@ class MCPServerConfig(BaseModel):
             return None
 
         for key in v:
-            if is_dangerous_mcp_env_var(key):
+            lower_key = key.lower()
+            if lower_key in DANGEROUS_ENV_VARS or lower_key.startswith("bash_func_"):
                 msg = f"Environment variable '{key}' is not allowed for security reasons"
                 logger.warning("MCP env var rejected: '{}'", key)
                 raise ValueError(msg)
@@ -263,37 +225,3 @@ class MCPServerConfig(BaseModel):
                 raise ValueError(msg)
 
         return self
-
-
-def _extract_base_command(command: str) -> str:
-    r"""Extract the base command name from a possibly fully-qualified path.
-
-    Handles Unix paths (``/usr/bin/node``), Windows paths
-    (``C:\\Program Files\\nodejs\\node.exe``), and bare names (``node``).
-
-    Also handles commands with arguments (e.g., "uvx mcp-server-fetch" or
-    "npx @scope/package") by extracting only the first token before any
-    whitespace, unless it's an actual file path.
-    """
-    # Check if this looks like an actual file path (not an npm scoped package)
-    # File paths either:
-    # - Start with / (Unix absolute)
-    # - Start with ./ or ../ (relative)
-    # - Contain \ (Windows)
-    # - Match drive letter pattern like C:\ (Windows absolute)
-    drive_letter_len = 3
-    is_file_path = (
-        command.startswith(("/", "./", "../"))
-        or "\\" in command
-        or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
-    )
-
-    command_only = command.split()[0] if not is_file_path and command.strip() else command
-
-    normalized_path = command_only.replace("\\", "/")
-    base_command = Path(normalized_path).name
-
-    if base_command.lower().endswith(".exe"):
-        base_command = base_command[:-4]
-
-    return base_command

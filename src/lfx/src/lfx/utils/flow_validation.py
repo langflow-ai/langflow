@@ -40,6 +40,14 @@ CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
         "Python REPL",
         "LambdaFilterComponent",
         "Smart Transform",
+        # codeagents/codeact_agent_smolagents.py — runs LLM-generated Python in-process
+        # via smolagents' LocalPythonExecutor, which is explicitly NOT a security sandbox.
+        "CodeActAgentSmolagents",
+        "CodeAct Agent (Smolagents)",
+        # codeagents/open_ds_star_agent.py — DS-Star ExecutorNode runs LLM-generated code
+        # through a bare exec(code, scope, scope) (no restricted interpreter at all).
+        "OpenDsStarAgent",
+        "OpenDsStar Agent",
     }
 )
 
@@ -434,9 +442,7 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     allow_custom_components = settings_service.settings.allow_custom_components
-    block_code_interpreter_components = getattr(
-        settings_service.settings, "block_code_interpreter_components", False
-    )
+    block_code_interpreter_components = getattr(settings_service.settings, "block_code_interpreter_components", False)
     normalized_flow_data = _extract_flow_data(target)
 
     # If a blocking policy is active and we received a target but couldn't extract any flow

@@ -20,6 +20,7 @@ Configuration:
 
 import functools
 import ipaddress
+import re
 import socket
 from urllib.parse import urlparse
 
@@ -461,6 +462,81 @@ def validate_database_url_for_ssrf(url: str) -> None:
         raise SSRFProtectionError(msg)
 
     # Reuse the same allowlist + blocked-range checks as HTTP SSRF validation.
+    if _validate_direct_ip_address(hostname):
+        return
+    _validate_hostname_resolution(hostname)
+
+
+# Git remote-helper transport syntax (``ext::``, ``fd::``, bare ``::address``). The ``ext``
+# helper runs an arbitrary shell command, so this whole syntax is treated as hostile.
+_GIT_REMOTE_HELPER_RE = re.compile(r"^[A-Za-z0-9+.\-]*::")
+
+# Real network transports git understands. Anything else (file, ext, fd, ...) is rejected.
+_ALLOWED_GIT_SCHEMES = frozenset({"http", "https", "git", "ssh", "git+ssh", "git+http", "git+https"})
+
+
+def validate_git_repository_url(url: str) -> None:
+    """Validate a Git repository URL before it is handed to ``git clone``.
+
+    ``git``/GitPython accept far more than network URLs, and the repository URL is fully
+    tenant-controlled in a multi-tenant deployment:
+
+    * ``ext::sh -c '<cmd>'`` (and any ``<helper>::`` remote-helper transport) executes an
+      arbitrary command on the server => RCE.
+    * a leading ``-`` is parsed by git as an option => argument injection.
+    * ``file://`` and bare local paths clone a repository off the server filesystem =>
+      arbitrary local file disclosure.
+
+    The first two are always blocked (no legitimate use, direct RCE/injection). Local-file
+    clones are blocked when SSRF protection (default on) or local-file restriction is enabled,
+    so single-tenant local-repo workflows keep working only when both are off. Network
+    transports have their host validated against the SSRF blocked ranges.
+
+    Raises:
+        SSRFProtectionError: If the URL uses a dangerous transport or targets a blocked host.
+        ValueError: If the URL is empty or malformed.
+    """
+    if not isinstance(url, str) or not url.strip():
+        msg = "Git repository URL must be a non-empty string."
+        raise ValueError(msg)
+    url = url.strip()
+
+    # Always-blocked: remote-helper transports (RCE) and git option injection. These are
+    # rejected regardless of SSRF/file-access toggles because they have no legitimate use.
+    if url.startswith("-"):
+        msg = "Git repository URL may not start with '-' (git option injection)."
+        raise SSRFProtectionError(msg)
+    if _GIT_REMOTE_HELPER_RE.match(url):
+        msg = "Git remote-helper transports (e.g. 'ext::', 'fd::') are not permitted."
+        raise SSRFProtectionError(msg)
+
+    parsed = urlparse(url)
+    scheme = (parsed.scheme or "").lower()
+
+    # Local-filesystem clones (file:// or a bare path) read arbitrary server files.
+    pre_colon = url.split(":", 1)[0]
+    is_local_path = scheme == "file" or (scheme == "" and ("/" in pre_colon or url.startswith(("/", ".", "~"))))
+    if is_local_path:
+        if is_ssrf_protection_enabled() or _local_file_access_restricted():
+            msg = "Cloning local-filesystem Git repositories is not permitted."
+            raise SSRFProtectionError(msg)
+        return
+
+    # Network transports: host SSRF validation only applies when SSRF protection is enabled.
+    if not is_ssrf_protection_enabled():
+        return
+
+    if scheme and scheme not in _ALLOWED_GIT_SCHEMES:
+        msg = f"Git URL scheme '{scheme}' is not permitted."
+        raise SSRFProtectionError(msg)
+
+    # scp-like syntax (git@host:path) has no scheme; the host is before the first ':'.
+    hostname = (url.split("@", 1)[-1].split(":", 1)[0] or None) if scheme == "" else parsed.hostname
+
+    if not hostname:
+        msg = "Git repository URL must contain a network host."
+        raise SSRFProtectionError(msg)
+
     if _validate_direct_ip_address(hostname):
         return
     _validate_hostname_resolution(hostname)

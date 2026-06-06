@@ -12,6 +12,7 @@ from lfx.utils.ssrf_protection import (
     is_ssrf_protection_enabled,
     resolve_hostname,
     validate_database_url_for_ssrf,
+    validate_git_repository_url,
     validate_url_for_ssrf,
 )
 
@@ -497,6 +498,96 @@ class TestDatabaseURLValidation:
         """A non-file dialect with no host cannot be validated -> blocked (fail closed)."""
         with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="network host"):
             validate_database_url_for_ssrf("postgresql:///db")
+
+
+class TestGitRepositoryURLValidation:
+    """Tests for validate_git_repository_url (tenant-controlled git clone URLs)."""
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            'ext::sh -c "touch /tmp/pwned"',  # remote-helper RCE
+            "ext::git-upload-pack",
+            "fd::17/foo",
+            "::bar",  # default remote helper
+        ],
+    )
+    def test_remote_helper_transports_always_blocked(self, url):
+        """ext::/fd:: remote helpers (RCE) are blocked regardless of toggles."""
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="remote-helper"),
+        ):
+            validate_git_repository_url(url)
+
+    def test_option_injection_always_blocked(self):
+        """A leading '-' is parsed by git as an option => always blocked."""
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=False),
+            pytest.raises(SSRFProtectionError, match="option injection"),
+        ):
+            validate_git_repository_url("-upload-pack=evil")
+
+    @pytest.mark.parametrize(
+        "url",
+        ["file:///etc/passwd", "/etc/passwd", "./local/repo", "~/repo", "../escape"],
+    )
+    def test_local_paths_blocked_when_ssrf_on(self, url):
+        """file:// and bare local paths read arbitrary server files -> blocked with SSRF on."""
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="local-filesystem"):
+            validate_git_repository_url(url)
+
+    def test_local_paths_allowed_when_all_off(self):
+        """With SSRF off and file access unrestricted, local clones are allowed (single-tenant)."""
+        with mock_ssrf_settings(enabled=False, restrict_files=False):
+            validate_git_repository_url("/srv/repos/myrepo")
+            validate_git_repository_url("file:///srv/repos/myrepo")
+
+    def test_local_paths_blocked_when_file_restricted(self):
+        """Local clones are blocked when local-file access is restricted, even with SSRF off."""
+        with (
+            mock_ssrf_settings(enabled=False, restrict_files=True),
+            pytest.raises(SSRFProtectionError, match="local-filesystem"),
+        ):
+            validate_git_repository_url("/etc/passwd")
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "http://169.254.169.254/latest/meta-data/",
+            "http://127.0.0.1/x",
+            "https://10.0.0.5/repo.git",
+            "git@127.0.0.1:user/repo.git",  # scp-like to internal host
+        ],
+    )
+    def test_internal_hosts_blocked(self, url):
+        """Network clone URLs pointing at internal/metadata hosts are blocked."""
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError):
+            validate_git_repository_url(url)
+
+    def test_disallowed_scheme_blocked(self):
+        with mock_ssrf_settings(enabled=True), pytest.raises(SSRFProtectionError, match="scheme"):
+            validate_git_repository_url("gopher://x/y")
+
+    def test_public_https_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["140.82.112.3"]  # public IP
+            validate_git_repository_url("https://github.com/user/repo.git")
+
+    def test_public_scp_like_allowed(self):
+        with (
+            mock_ssrf_settings(enabled=True),
+            patch("lfx.utils.ssrf_protection.resolve_hostname") as mock_resolve,
+        ):
+            mock_resolve.return_value = ["140.82.112.3"]
+            validate_git_repository_url("git@github.com:user/repo.git")
+
+    def test_empty_url_rejected(self):
+        with mock_ssrf_settings(enabled=True), pytest.raises(ValueError, match="non-empty"):
+            validate_git_repository_url("   ")
 
     def test_allowlist_bypass(self):
         """An allowlisted internal host is permitted (operator opt-in)."""
