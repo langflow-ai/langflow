@@ -1,5 +1,6 @@
 import * as Form from "@radix-ui/react-form";
 import { useTranslation } from "react-i18next";
+import type { inputHandlerEventType } from "@/types/components";
 import InputComponent from "../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Button } from "../../../../../components/ui/button";
 import {
@@ -13,10 +14,8 @@ import {
 
 type StoreApiKeyFormComponentProps = {
   apikey: string;
-  // biome-ignore lint/suspicious/noExplicitAny: legacy
-  handleInput: (event: any) => void;
-  // biome-ignore lint/suspicious/noExplicitAny: legacy
-  handleSaveKey: (apikey: string, handleInput: any) => void;
+  handleInput: (event: inputHandlerEventType) => void;
+  handleSaveKey: (apikey: string) => void;
   loadingApiKey: boolean;
   validApiKey: boolean;
   hasApiKey: boolean;
@@ -35,7 +34,7 @@ const StoreApiKeyFormComponent = ({
       <Form.Root
         onSubmit={(event) => {
           event.preventDefault();
-          handleSaveKey(apikey, handleInput);
+          handleSaveKey(apikey);
         }}
       >
         <Card x-chunk="dashboard-04-chunk-2" id="api">
@@ -89,7 +88,7 @@ const StoreApiKeyFormComponent = ({
                 type="submit"
                 data-testid="api-key-save-button-store"
               >
-                {t("nodeToolbar.save")}
+                {t("settings.saveButton")}
               </Button>
             </Form.Submit>
           </CardFooter>
