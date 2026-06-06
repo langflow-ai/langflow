@@ -160,6 +160,17 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             advanced=True,
             info="Distance calculation strategy",
         ),
+        BoolInput(
+            name="use_bulk_insert",
+            display_name="Use Bulk Insert",
+            value=True,
+            advanced=True,
+            info=(
+                "Enable bulk insert using executemany() for better performance. "
+                "When enabled, all documents are inserted in a single batch (unlimited chunk size). "
+                "When disabled, uses row-by-row insert with execute() (chunk size: 1 document per call)."
+            ),
+        ),
     ]
 
     outputs = [
@@ -372,6 +383,11 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 )
                 raise ValueError(msg)
 
+            # Log bulk insert mode
+            bulk_insert_enabled = getattr(self, "use_bulk_insert", True)
+            insert_mode = "bulk insert (executemany)" if bulk_insert_enabled else "row-by-row insert (execute)"
+            self.log(f"Insert mode: {insert_mode}")
+
             # Build vector store (will automatically generate embeddings for existing empty rows)
             self.log(f"Connecting to DB2 table: {validated_table_name}")
             vector_store = DB2VS(
@@ -379,6 +395,7 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 embedding_function=self.embedding,
                 table_name=validated_table_name,
                 distance_strategy=distance_strategy_map.get(self.distance_strategy, DistanceStrategy.COSINE),
+                use_bulk_insert=bulk_insert_enabled,
             )
 
             self.log(f"Connected to DB2 table: {validated_table_name}")
@@ -393,8 +410,21 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
         return vector_store
 
     def search_documents(self) -> list[Data]:
-        """Perform similarity search and return results."""
+        """Perform similarity search and return results.
+
+        The vector store is built first so that any connected ingest data is
+        written to DB2 regardless of whether a search query is provided.
+        Ingestion and search are independent: an empty query simply skips the
+        search and returns no results -- it must not skip ingestion.
+        """
+        # Build (and ingest into) the vector store first. ``build_vector_store``
+        # is what writes ``self.ingest_data`` to DB2, so it has to run even when
+        # no search query is supplied -- otherwise ingestion would silently
+        # depend on a query being present. Mirrors LCVectorStoreComponent.
+        vector_store = self.build_vector_store()
+
         if not self.search_query:
+            self.status = ""
             return []
 
         # Extract text from search_query (handle Message, Data, or string)
@@ -424,9 +454,6 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
             # Convert any other type to string
             query_text = str(self.search_query)
 
-        # Build vector store
-        vector_store = self.build_vector_store()
-
         # Perform search based on search type
         if self.search_type == "Similarity":
             docs = vector_store.similarity_search(
@@ -439,7 +466,9 @@ class DB2VectorStoreComponent(LCVectorStoreComponent):
                 k=self.number_of_results,
             )
 
-        return [Data(text=doc.page_content, data={"text": doc.page_content}) for doc in docs]
+        results = [Data(text=doc.page_content, data={"text": doc.page_content}) for doc in docs]
+        self.status = results
+        return results
 
     def build(self):  # type: ignore[override]
         """Build the component based on the selected mode."""

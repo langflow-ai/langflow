@@ -94,8 +94,3 @@ export interface SidebarHeaderComponentProps {
   filterDescription: string;
   resetFilters: () => void;
 }
-
-export interface UniqueInputsComponents {
-  chatInput: boolean;
-  webhookInput: boolean;
-}

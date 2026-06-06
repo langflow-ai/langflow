@@ -22,6 +22,7 @@ dependencies = [
     "lfx-duckduckgo>=0.1.0",
     "lfx-arxiv>=0.1.0",
     "lfx-ibm>=0.1.0",
+    "lfx-docling>=0.1.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -82,6 +83,7 @@ langflow-sdk = { workspace = true }
 lfx-duckduckgo = { workspace = true }
 lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
+lfx-docling = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -97,6 +99,7 @@ members = [
     "src/bundles/duckduckgo",
     "src/bundles/arxiv",
     "src/bundles/ibm",
+    "src/bundles/docling",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -109,15 +112,15 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "langchain-docling>=1.1.0",
-    "tesserocr>=2.8.0",
-    "rapidocr-onnxruntime>=1.4.4",
-    "ocrmac>=1.0.0; sys_platform == 'darwin'",
-    # CPU-only PyTorch required for docling features
-    # Loose version ranges intentionally used to avoid conflicts with transitive dependencies (e.g., altk)
-    # Updated to 2.6.0+ to address CVE: RCE vulnerability in torch.load() with weights_only=True
-    "torch>=2.6.0",
-    "torchvision>=0.21.0",  # torchvision 0.21+ is compatible with PyTorch 2.6+
+    "lfx-docling[local]>=0.1.0",
+]
+
+docling-chunking = [
+    "lfx-docling[chunking]>=0.1.0",
+]
+
+docling-image-description = [
+    "lfx-docling[image-description]>=0.1.0",
 ]
 
 audio = [
@@ -247,6 +250,7 @@ flake8-bugbear.extend-immutable-calls = [
     "fastapi.Depends",
     "fastapi.File",
     "fastapi.Query",
+    "typer.Argument",
     "typer.Option",
 ]
 flake8-type-checking.runtime-evaluated-base-classes = [
@@ -281,6 +285,13 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/tests/stress/*" = [
+    "D1",     # Docstrings: this is a manual CLI tool, not a test target
+    "INP001", # Stress tests live outside the unit test package
+    "S101",   # Asserts ok in stress harness
+    "S311",   # Standard PRNG is fine for stress payload jitter
+    "T201",   # Print statements: this is a CLI script
+]
 "scripts/gp/tests/*" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons
@@ -328,6 +339,9 @@ external = ["RUF027"]
 "src/lfx/src/lfx/cli/common.py" = [
     "S104",  # Intentional binding to all interfaces for server
     "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
+]
+"src/lfx/src/lfx/cli/upgrade.py" = [
+    "TC003",  # Path is used at runtime, not just in type hints
 ]
 "src/lfx/src/lfx/components/__init__.py" = [
     "SLF001",  # Accessing _dynamic_imports from modules
