@@ -1,29 +1,25 @@
-/**
- * Tests for the loadLanguage lazy-loader in i18n.ts.
- *
- * jest.setup.js mocks react-i18next globally, but this file imports the real
- * i18n instance directly — so those tests are unaffected by the global mock.
- */
-
-// Import the real i18n instance and loadLanguage (not the mock from jest.setup.js)
 jest.unmock("react-i18next");
-import i18n, { loadLanguage } from "./i18n";
+
+import i18n, { loadLanguage, normalizeLanguage } from "./i18n";
 
 describe("loadLanguage", () => {
   beforeEach(() => {
-    // Clear cached non-English bundles between tests
-    ["fr", "ja", "es", "de", "pt", "zh-Hans"].forEach((lang) => {
+    ["fr", "ja", "es", "de", "pt", "zh-Hans", "ko", "ru"].forEach((lang) => {
       if (i18n.hasResourceBundle(lang, "translation")) {
         i18n.removeResourceBundle(lang, "translation");
       }
     });
   });
 
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
   it("does not call addResourceBundle for 'en' (already statically loaded)", async () => {
     const spy = jest.spyOn(i18n, "addResourceBundle");
-    await loadLanguage("en");
+    const loadedLanguage = await loadLanguage("en");
+    expect(loadedLanguage).toBe("en");
     expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
   });
 
   it("always has 'en' bundle available (statically bundled)", () => {
@@ -32,7 +28,8 @@ describe("loadLanguage", () => {
 
   it("loads and registers a new language bundle", async () => {
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(false);
-    await loadLanguage("fr");
+    const loadedLanguage = await loadLanguage("fr");
+    expect(loadedLanguage).toBe("fr");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
   });
 
@@ -41,7 +38,6 @@ describe("loadLanguage", () => {
     const spy = jest.spyOn(i18n, "addResourceBundle");
     await loadLanguage("fr");
     expect(spy).not.toHaveBeenCalled();
-    spy.mockRestore();
   });
 
   it("loads multiple different languages independently", async () => {
@@ -49,5 +45,50 @@ describe("loadLanguage", () => {
     await loadLanguage("ja");
     expect(i18n.hasResourceBundle("fr", "translation")).toBe(true);
     expect(i18n.hasResourceBundle("ja", "translation")).toBe(true);
+  });
+
+  it("normalizes browser language variants without truncating zh-Hans", () => {
+    expect(normalizeLanguage("zh-CN")).toBe("zh-Hans");
+    expect(normalizeLanguage("zh-Hans")).toBe("zh-Hans");
+    expect(normalizeLanguage("ko")).toBe("ko");
+    expect(normalizeLanguage("ko-KR")).toBe("ko");
+    expect(normalizeLanguage("ru")).toBe("ru");
+    expect(normalizeLanguage("ru-RU")).toBe("ru");
+    expect(normalizeLanguage("en-US")).toBe("en");
+  });
+
+  it("falls back to English for empty and unknown languages", () => {
+    expect(normalizeLanguage("")).toBe("en");
+    expect(normalizeLanguage(undefined)).toBe("en");
+    expect(normalizeLanguage("zz-ZZ")).toBe("en");
+  });
+
+  it("loads zh variants through the zh-Hans bundle", async () => {
+    const loadedLanguage = await loadLanguage("zh-CN");
+
+    expect(loadedLanguage).toBe("zh-Hans");
+    expect(i18n.hasResourceBundle("zh-Hans", "translation")).toBe(true);
+  });
+
+  it("loads Korean browser variants", async () => {
+    const loadedLanguage = await loadLanguage("ko-KR");
+
+    expect(loadedLanguage).toBe("ko");
+    expect(i18n.hasResourceBundle("ko", "translation")).toBe(true);
+  });
+
+  it("loads Russian browser variants", async () => {
+    const loadedLanguage = await loadLanguage("ru-RU");
+
+    expect(loadedLanguage).toBe("ru");
+    expect(i18n.hasResourceBundle("ru", "translation")).toBe(true);
+  });
+
+  it("falls back to English without importing missing locale files", async () => {
+    const spy = jest.spyOn(i18n, "addResourceBundle");
+    const loadedLanguage = await loadLanguage("zz-ZZ");
+
+    expect(loadedLanguage).toBe("en");
+    expect(spy).not.toHaveBeenCalled();
   });
 });

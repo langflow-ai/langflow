@@ -1,24 +1,37 @@
 import i18next from "i18next";
 import { initReactI18next } from "react-i18next";
+import {
+  SUPPORTED_LANGUAGES,
+  type SupportedLanguage,
+} from "./constants/languages";
 import en from "./locales/en.json";
 
-const SUPPORTED_LANGUAGES = [
-  "en",
-  "de",
-  "es",
-  "fr",
-  "ja",
-  "pt",
-  "zh-Hans",
-] as const;
+type LocaleMessages = Record<string, string>;
 
-const normalizeLanguage = (lang?: string | null): string => {
+const LANGUAGE_LOADERS: Record<
+  SupportedLanguage,
+  () => Promise<LocaleMessages>
+> = {
+  en: async () => en,
+  de: async () => (await import("./locales/de.json")).default,
+  es: async () => (await import("./locales/es.json")).default,
+  fr: async () => (await import("./locales/fr.json")).default,
+  ja: async () => (await import("./locales/ja.json")).default,
+  ko: async () => (await import("./locales/ko.json")).default,
+  pt: async () => (await import("./locales/pt.json")).default,
+  ru: async () => (await import("./locales/ru.json")).default,
+  "zh-Hans": async () => (await import("./locales/zh-Hans.json")).default,
+};
+
+export const normalizeLanguage = (lang?: string | null): SupportedLanguage => {
   if (!lang) return "en";
 
-  if (
-    SUPPORTED_LANGUAGES.includes(lang as (typeof SUPPORTED_LANGUAGES)[number])
-  ) {
-    return lang;
+  const exactLanguage = SUPPORTED_LANGUAGES.find(
+    (supportedLanguage) => supportedLanguage.code === lang,
+  );
+
+  if (exactLanguage) {
+    return exactLanguage.code;
   }
 
   const lowerLang = lang.toLowerCase();
@@ -28,16 +41,11 @@ const normalizeLanguage = (lang?: string | null): string => {
   }
 
   const baseLang = lang.split("-")[0];
+  const baseMatch = SUPPORTED_LANGUAGES.find(
+    (supportedLanguage) => supportedLanguage.code === baseLang,
+  );
 
-  if (
-    SUPPORTED_LANGUAGES.includes(
-      baseLang as (typeof SUPPORTED_LANGUAGES)[number],
-    )
-  ) {
-    return baseLang;
-  }
-
-  return "en";
+  return baseMatch?.code ?? "en";
 };
 
 export const detectedLang = normalizeLanguage(
@@ -64,15 +72,17 @@ i18n.use(initReactI18next).init({
 });
 console.info = _consoleInfo;
 
-export async function loadLanguage(lang: string): Promise<void> {
-  if (lang === "en") return;
-  if (i18n.hasResourceBundle(lang, "translation")) return;
-  try {
-    const messages = await import(`./locales/${lang}.json`);
-    i18n.addResourceBundle(lang, "translation", messages.default);
-  } catch {
-    // Unknown locale — no bundle file exists. i18next's fallbackLng: "en" takes over.
+export async function loadLanguage(lang: string): Promise<SupportedLanguage> {
+  const normalizedLanguage = normalizeLanguage(lang);
+
+  if (normalizedLanguage === "en") return normalizedLanguage;
+  if (i18n.hasResourceBundle(normalizedLanguage, "translation")) {
+    return normalizedLanguage;
   }
+
+  const messages = await LANGUAGE_LOADERS[normalizedLanguage]();
+  i18n.addResourceBundle(normalizedLanguage, "translation", messages);
+  return normalizedLanguage;
 }
 
 export default i18n;
