@@ -138,10 +138,13 @@ export const useModelToggleQueue = ({
       }
       setErrorData({
         title: t("errors.updateModelStatus"),
-        list: [getErrorMessage(error) || "Failed to update model status"],
+        list: [
+          getErrorMessage(error) ||
+            t("modelProviders.errorFailedToUpdateModelStatus"),
+        ],
       });
     },
-    [clearSentOverlay, queryClient, setErrorData],
+    [clearSentOverlay, queryClient, setErrorData, t],
   );
 
   const flushModelToggles = useDebounce(() => {

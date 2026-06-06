@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetIngestionRuns } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
+import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
 import { cn } from "@/utils/utils";
 
 interface IngestionHistoryPanelProps {
@@ -30,16 +31,6 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
 };
 
 const HISTORY_LIMIT = 10;
-
-function formatRelativeTime(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diffSec = Math.max(0, Math.floor((now - then) / 1000));
-  if (diffSec < 60) return `${diffSec}s ago`;
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
-}
 
 export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
   const { t } = useTranslation();
@@ -93,12 +84,12 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
               className="text-xs text-muted-foreground"
               data-testid="kb-ingestion-history-loading"
             >
-              Loading history…
+              {t("knowledge.loadingHistory")}
             </div>
           )}
           {isError && !isLoading && (
             <div className="text-xs text-destructive">
-              Unable to load ingestion history.
+              {t("knowledge.failedToLoadIngestionHistory")}
             </div>
           )}
           {!isLoading && !isError && runs.length === 0 && (
@@ -106,7 +97,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
               className="text-xs text-muted-foreground"
               data-testid="kb-ingestion-history-empty"
             >
-              No sources ingested yet. The first upload will appear here.
+              {t("knowledge.noIngestionHistory")}
             </div>
           )}
           {runs.map((run) => {
@@ -134,7 +125,7 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
                     {run.status}
                   </span>
                   <span className="text-xs text-muted-foreground">
-                    {formatRelativeTime(run.started_at)}
+                    {timeElapsed(run.started_at, t)}
                   </span>
                 </div>
                 <div className="flex flex-col gap-0.5 min-w-0">
@@ -177,7 +168,11 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
                     </span>
                   )}
                   <span>·</span>
-                  <span>{run.chunks_created} chunks</span>
+                  <span>
+                    {t("knowledge.chunksCreated", {
+                      count: run.chunks_created,
+                    })}
+                  </span>
                 </div>
               </div>
             );

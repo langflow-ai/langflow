@@ -70,7 +70,7 @@ export default function FilePreview({
           {isImage ? (
             <img
               src={URL.createObjectURL(file)}
-              alt="file"
+              alt={t("files.previewImageAlt")}
               className="block h-full w-full rounded-md border border-border"
             />
           ) : (

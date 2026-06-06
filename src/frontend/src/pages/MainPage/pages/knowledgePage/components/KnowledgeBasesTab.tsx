@@ -1,5 +1,6 @@
 import type { RowClickedEvent, SelectionChangedEvent } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
+import type { TFunction } from "i18next";
 import { useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
@@ -42,42 +43,57 @@ const formatIngestionFinishedTitle = (
   kbName: string,
   fallbackChunks: number,
   run: IngestionRunInfo | null,
+  t: TFunction,
 ): IngestionFinishedToast => {
   // Default fallback when the run lookup fails or returns nothing —
   // matches the legacy KB-cumulative-chunks message.
   if (!run) {
     return {
       kind: "success",
-      title: `"${kbName}" ingestion complete — ${fallbackChunks} chunks ready`,
+      title: t("knowledge.ingestionComplete", {
+        name: kbName,
+        chunks: fallbackChunks,
+      }),
     };
   }
 
   const parts: string[] = [];
   if (run.succeeded > 0) {
-    parts.push(`${run.succeeded} succeeded`);
+    parts.push(t("knowledge.ingestionSucceeded", { count: run.succeeded }));
   }
   if (run.skipped > 0) {
-    parts.push(`${run.skipped} skipped`);
+    parts.push(t("knowledge.ingestionSkipped", { count: run.skipped }));
   }
   if (run.failed > 0) {
-    parts.push(`${run.failed} failed`);
+    parts.push(t("knowledge.ingestionFailedItems", { count: run.failed }));
   }
 
   if (run.status === "succeeded") {
     return {
       kind: "success",
-      title: `"${kbName}" ingestion complete — ${run.chunks_created} chunks ingested`,
+      title: t("knowledge.ingestionCompleteWithRunChunks", {
+        name: kbName,
+        chunks: run.chunks_created,
+      }),
     };
   }
 
   if (run.status === "partial") {
     const breakdown =
-      parts.length > 0 ? parts.join(", ") : "no items processed";
+      parts.length > 0 ? parts.join(", ") : t("knowledge.noItemsProcessed");
     const chunkSuffix =
-      run.chunks_created > 0 ? ` · ${run.chunks_created} chunks ingested` : "";
+      run.chunks_created > 0
+        ? t("knowledge.ingestedChunksSuffix", {
+            chunks: run.chunks_created,
+          })
+        : "";
     return {
       kind: "notice",
-      title: `"${kbName}" ingestion finished with issues — ${breakdown}${chunkSuffix}`,
+      title: t("knowledge.ingestionFinishedWithIssues", {
+        name: kbName,
+        breakdown,
+        chunkSuffix,
+      }),
     };
   }
 
@@ -86,7 +102,11 @@ const formatIngestionFinishedTitle = (
   const breakdown = parts.length > 0 ? parts.join(", ") : run.status;
   return {
     kind: "notice",
-    title: `"${kbName}" ingestion ${run.status} — ${breakdown}`,
+    title: t("knowledge.ingestionFinishedStatus", {
+      name: kbName,
+      status: run.status,
+      breakdown,
+    }),
   };
 };
 
@@ -94,15 +114,21 @@ const notifyOnIngestionFinished = async (
   kbDirName: string,
   kbDisplayName: string,
   fallbackChunks: number,
+  t: TFunction,
 ): Promise<IngestionFinishedToast> => {
   try {
     const res = await api.get<PaginatedIngestionRunResponse>(
       `${getURL("KNOWLEDGE_BASES")}/${kbDirName}/runs?page=1&limit=1`,
     );
     const latest = res.data?.runs?.[0] ?? null;
-    return formatIngestionFinishedTitle(kbDisplayName, fallbackChunks, latest);
+    return formatIngestionFinishedTitle(
+      kbDisplayName,
+      fallbackChunks,
+      latest,
+      t,
+    );
   } catch {
-    return formatIngestionFinishedTitle(kbDisplayName, fallbackChunks, null);
+    return formatIngestionFinishedTitle(kbDisplayName, fallbackChunks, null, t);
   }
 };
 
@@ -159,7 +185,7 @@ const KnowledgeBasesTab = ({
           // KB.status doesn't distinguish a fully-successful run from a
           // partial one (some files skipped/failed), so look at the
           // most recent run for an accurate, run-scoped message.
-          notifyOnIngestionFinished(kb.dir_name, kb.name, kb.chunks).then(
+          notifyOnIngestionFinished(kb.dir_name, kb.name, kb.chunks, t).then(
             ({ kind, title }) => {
               if (kind === "notice") {
                 setNoticeData({ title });
@@ -368,7 +394,9 @@ const KnowledgeBasesTab = ({
         open={actions.isDeleteModalOpen}
         setOpen={actions.setIsDeleteModalOpen}
         onConfirm={actions.confirmDelete}
-        description={`knowledge base "${actions.knowledgeBaseToDelete?.name || ""}"`}
+        description={t("knowledge.deleteDescription", {
+          name: actions.knowledgeBaseToDelete?.name || "",
+        })}
         note={t("knowledge.thisActionCannotBeUndone")}
       >
         <></>
@@ -378,10 +406,15 @@ const KnowledgeBasesTab = ({
         open={actions.isBulkDeleteModalOpen}
         setOpen={actions.setIsBulkDeleteModalOpen}
         onConfirm={actions.confirmBulkDelete}
-        description={`${actions.deletableSelected.length} knowledge base(s)`}
+        description={t("knowledge.deleteBulkDescription", {
+          count: actions.deletableSelected.length,
+        })}
         note={
           actions.deletableSelected.length < selectedFiles.length
-            ? `${selectedFiles.length - actions.deletableSelected.length} ingesting knowledge base(s) will be skipped. ${t("knowledge.thisActionCannotBeUndone")}`
+            ? t("knowledge.deleteBulkSkipIngestingNote", {
+                count: selectedFiles.length - actions.deletableSelected.length,
+                warning: t("knowledge.thisActionCannotBeUndone"),
+              })
             : t("knowledge.thisActionCannotBeUndone")
         }
       >

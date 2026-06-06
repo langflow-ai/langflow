@@ -7,6 +7,7 @@ import {
 } from "@xyflow/react";
 import { ArrowRight, Check, GitBranch, X } from "lucide-react";
 import { useCallback, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import useFlowStore from "@/stores/flowStore";
 import type { FlowProposalStatus } from "../assistant-panel.types";
 import {
@@ -120,6 +121,7 @@ export function AssistantFlowPreview({
   onApply,
   onDismiss,
 }: AssistantFlowPreviewProps) {
+  const { t } = useTranslation();
   const [showApproved, setShowApproved] = useState(false);
   const paste = useFlowStore((state) => state.paste);
 
@@ -156,11 +158,13 @@ export function AssistantFlowPreview({
         <GitBranch className="h-4 w-4 text-foreground/80" />
         <div className="flex flex-col">
           <span className="text-sm font-semibold text-foreground">
-            {flowPreview.name || "Untitled Flow"}
+            {flowPreview.name || t("flow.untitledFlow")}
           </span>
           <span className="text-xs text-muted-foreground">
-            {flowPreview.nodeCount} components, {flowPreview.edgeCount}{" "}
-            connections
+            {t("assistant.flowStats", {
+              nodes: flowPreview.nodeCount,
+              edges: flowPreview.edgeCount,
+            })}
           </span>
         </div>
       </div>
@@ -169,7 +173,7 @@ export function AssistantFlowPreview({
           nodes is an unreadable tangle. The flow can still be added. */}
       {previewDisabled && (
         <div className="mb-3 w-fit rounded-md border border-dashed border-border bg-muted/30 px-3 py-1.5 text-xs text-muted-foreground">
-          Preview disabled — too many components ({nodeCount}).
+          {t("assistant.previewDisabled", { count: nodeCount })}
         </div>
       )}
 
@@ -217,7 +221,7 @@ export function AssistantFlowPreview({
             className={GHOST_PRIMARY_BUTTON}
             onClick={() => onApply?.("add")}
           >
-            <span>Add to canvas</span>
+            <span>{t("node.addToCanvas")}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
           {/* Secondary action: REPLACE canvas. Destructive — same muted ghost
@@ -227,9 +231,9 @@ export function AssistantFlowPreview({
             data-testid="assistant-flow-replace-button"
             className={GHOST_SECONDARY_BUTTON}
             onClick={() => onApply?.("replace")}
-            title="Discard the current canvas and replace it with this flow"
+            title={t("assistant.replaceCanvasTooltip")}
           >
-            <span>Replace canvas</span>
+            <span>{t("assistant.replaceCanvas")}</span>
           </button>
           <button
             type="button"
@@ -238,7 +242,7 @@ export function AssistantFlowPreview({
             onClick={() => onDismiss?.()}
           >
             <X className="h-3.5 w-3.5" />
-            <span>Dismiss</span>
+            <span>{t("node.dismiss")}</span>
           </button>
         </>
       );
@@ -247,14 +251,14 @@ export function AssistantFlowPreview({
       return (
         <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
           <Check className="h-3.5 w-3.5" />
-          <span>Added to canvas</span>
+          <span>{t("assistant.addedToCanvas")}</span>
         </div>
       );
     }
     if (status === "dismissed") {
       return (
         <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-muted-foreground line-through">
-          <span>Dismissed</span>
+          <span>{t("assistant.dismissed")}</span>
         </div>
       );
     }
@@ -263,7 +267,7 @@ export function AssistantFlowPreview({
       return (
         <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
           <Check className="h-3.5 w-3.5" />
-          <span>Added to flow</span>
+          <span>{t("assistant.addedToFlow")}</span>
         </div>
       );
     }
@@ -273,7 +277,7 @@ export function AssistantFlowPreview({
         className={GHOST_PRIMARY_BUTTON}
         onClick={handleAddToFlow}
       >
-        <span>Add to Flow</span>
+        <span>{t("assistant.addToFlow")}</span>
         <ArrowRight className="h-3.5 w-3.5" />
       </button>
     );

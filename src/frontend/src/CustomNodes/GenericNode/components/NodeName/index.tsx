@@ -110,7 +110,7 @@ export default function NodeName({
           {legacy && (
             <div className="shrink-0">
               <div className="flex items-center text-xxs justify-center rounded-sm border border-accent-amber text-accent-amber-foreground px-1">
-                Legacy
+                {t("node.legacy")}
               </div>
             </div>
           )}

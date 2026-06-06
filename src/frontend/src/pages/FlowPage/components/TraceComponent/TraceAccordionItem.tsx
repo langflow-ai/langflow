@@ -56,6 +56,23 @@ export function TraceAccordionItem({
     setSelectedSpan(span);
   }, []);
 
+  const formatTranslatedPreview = useCallback(
+    (value: Record<string, unknown> | string | null) => {
+      const preview = formatIOPreview(value);
+      switch (preview) {
+        case "N/A":
+          return t("trace.notAvailable");
+        case "Empty":
+          return t("trace.empty");
+        case "[Complex Object]":
+          return t("trace.complexObject");
+        default:
+          return preview;
+      }
+    },
+    [t],
+  );
+
   return (
     <AccordionItem
       value={traceId}
@@ -139,7 +156,7 @@ export function TraceAccordionItem({
                   {t("trace.input")}:
                 </span>
                 <span className="truncate text-foreground/80">
-                  {formatIOPreview(input)}
+                  {formatTranslatedPreview(input)}
                 </span>
               </div>
             )}
@@ -149,7 +166,7 @@ export function TraceAccordionItem({
                   {t("trace.output")}:
                 </span>
                 <span className="truncate text-foreground/80">
-                  {formatIOPreview(output)}
+                  {formatTranslatedPreview(output)}
                 </span>
               </div>
             )}

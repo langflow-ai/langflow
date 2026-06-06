@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -9,25 +10,29 @@ import {
 } from "@/components/ui/table";
 
 const SKELETON_ROWS = 3;
-const COLUMN_HEADERS = [
-  "Name",
-  "Type",
-  "Status",
-  "Health",
-  "Attached",
-  "Provider",
-  "Last Modified",
-  "Test",
+const COLUMN_HEADER_KEYS = [
+  "deployments.columnName",
+  "deployments.columnType",
+  "deployments.columnStatus",
+  "deployments.columnHealth",
+  "deployments.columnAttached",
+  "deployments.columnProvider",
+  "deployments.columnLastModified",
+  "deployments.columnTest",
   "",
 ];
 
 export default function DeploymentsLoadingSkeleton() {
+  const { t } = useTranslation();
+
   return (
     <Table>
       <TableHeader>
         <TableRow>
-          {COLUMN_HEADERS.map((header) => (
-            <TableHead key={header}>{header}</TableHead>
+          {COLUMN_HEADER_KEYS.map((headerKey, index) => (
+            <TableHead key={headerKey || `empty-${index}`}>
+              {headerKey ? t(headerKey) : ""}
+            </TableHead>
           ))}
         </TableRow>
       </TableHeader>

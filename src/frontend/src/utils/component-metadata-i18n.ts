@@ -1,6 +1,9 @@
-import type { TFunction } from "i18next";
-
 const KEY_PREFIX = "componentMetadata";
+
+type ComponentMetadataTranslator = (
+  key: string,
+  options: { defaultValue: string },
+) => string;
 
 /**
  * 将后端组件元数据按作用域映射到本地化 key，并在未命中时回退原文。
@@ -12,7 +15,7 @@ const KEY_PREFIX = "componentMetadata";
  * @returns 本地化后的展示文本，未配置时返回原文 / Localized display text, or the original text when no key exists.
  */
 export const translateComponentMetadata = (
-  t: TFunction,
+  t: ComponentMetadataTranslator,
   scope: string,
   value?: string | null,
 ): string => {

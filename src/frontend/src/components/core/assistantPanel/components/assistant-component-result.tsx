@@ -87,7 +87,7 @@ export function AssistantComponentResult({
   const { t } = useTranslation();
   const [showApproved, setShowApproved] = useState(false);
   const [isViewCodeOpen, setIsViewCodeOpen] = useState(false);
-  const componentName = result.className || "Custom Component";
+  const componentName = result.className || t("assistant.customComponent");
   const { description, inputs, outputs } = useMemo(
     () => parseComponentInfo(result.componentCode),
     [result.componentCode],
@@ -178,7 +178,7 @@ export function AssistantComponentResult({
             className={GHOST_PRIMARY_BUTTON}
             onClick={handleApprove}
           >
-            <span>Approve</span>
+            <span>{t("assistant.approve")}</span>
             <Check className="h-3.5 w-3.5" />
           </button>
         )}

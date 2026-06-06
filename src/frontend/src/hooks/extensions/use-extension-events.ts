@@ -1,5 +1,6 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import useAlertStore from "@/stores/alertStore";
@@ -32,6 +33,7 @@ type UseExtensionEventsReturn = {
 export function useExtensionEvents(): UseExtensionEventsReturn {
   const [isSettled, setIsSettled] = useState(true);
   const [events, setEvents] = useState<ExtensionEvent[]>([]);
+  const { t } = useTranslation();
 
   const queryClient = useQueryClient();
   // Store in a ref so poll callbacks always have the current instance without
@@ -164,16 +166,26 @@ export function useExtensionEvents(): UseExtensionEventsReturn {
             // the API response) sees only the green toast and silently
             // loses the warnings the clicking tab saw.
             const warnings = extractTypedErrorList(event.payload.warnings);
-            const warningList = renderTypedErrorList(warnings);
+            const warningList = renderTypedErrorList(
+              warnings,
+              t("extensions.reloadDiagnostics"),
+            );
             alert.setSuccessData({
               title: hasDelta
-                ? `Reloaded ${bundle} (+${added} / -${removed} / ~${changed} components)`
-                : `Reloaded ${bundle} (no source changes detected)`,
+                ? t("sidebar.bundles.reload.success.withChanges", {
+                    bundle,
+                    added,
+                    removed,
+                    changed,
+                  })
+                : t("sidebar.bundles.reload.success.noChanges", { bundle }),
               ...(warningList ? { list: warningList.list } : {}),
             });
             if (warningList && warningList.list.length > 0) {
               alert.setNoticeData({
-                title: `Reloaded ${bundle} with warnings`,
+                title: t("sidebar.bundles.reload.success.warnings", {
+                  bundle,
+                }),
                 list: warningList.list,
               });
             }
@@ -197,8 +209,15 @@ export function useExtensionEvents(): UseExtensionEventsReturn {
             const sign = event.type === "components_added" ? "+" : "-";
             alert.setNoticeData({
               title: bundle
-                ? `${sign}${components} components in ${bundle}`
-                : `${sign}${components} components`,
+                ? t("extensions.componentsChangedInBundle", {
+                    sign,
+                    count: components,
+                    bundle,
+                  })
+                : t("extensions.componentsChanged", {
+                    sign,
+                    count: components,
+                  }),
             });
           } else if (
             event.type === "extension_error" ||
@@ -225,8 +244,11 @@ export function useExtensionEvents(): UseExtensionEventsReturn {
               message = event.payload.message;
             }
             alert.setErrorData({
-              title: "Extension error",
-              list: [message ?? `${event.type}: check server logs for details`],
+              title: t("extensions.extensionError"),
+              list: [
+                message ??
+                  t("extensions.checkServerLogs", { eventType: event.type }),
+              ],
             });
           }
           // flow_migrated: no-op for Phase 1; future tickets wire to canvas
@@ -280,7 +302,7 @@ export function useExtensionEvents(): UseExtensionEventsReturn {
     } finally {
       isPollingRef.current = false;
     }
-  }, [clearInterval_, settle]);
+  }, [clearInterval_, settle, t]);
 
   pollRef.current = poll;
 

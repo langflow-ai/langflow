@@ -15,6 +15,7 @@ import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import type { NodeInputFieldComponentType } from "@/types/components";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { cn } from "@/utils/utils";
 
 interface InspectionPanelFieldProps
@@ -176,6 +177,12 @@ export default function InspectionPanelField({
               isToolMode
                 ? t("input.toolsetPlaceholder")
                 : data.node?.template[name].placeholder
+                  ? translateComponentMetadata(
+                      t,
+                      "placeholder",
+                      data.node.template[name].placeholder,
+                    )
+                  : undefined
             }
             isToolMode={isToolMode}
             nodeInformationMetadata={nodeInformationMetadata}

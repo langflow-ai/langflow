@@ -27,7 +27,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
     if (!trace) return null;
 
     const status = trace.status;
-    const name = trace.name || flowName || "Run Summary";
+    const name = trace.name || flowName || t("trace.runSummary");
 
     return {
       id: trace.id,
@@ -50,7 +50,7 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
           : undefined,
       children: trace.spans ?? [],
     };
-  }, [trace]);
+  }, [flowName, t, trace]);
 
   const treeSpans = useMemo(() => {
     if (!trace || !summarySpan) return [] as Span[];
@@ -101,8 +101,6 @@ export function TraceDetailView({ traceId, flowName }: TraceDetailViewProps) {
       </div>
     );
   }
-
-  const headerTitle = `${trace.name || flowName || "Trace"}`;
 
   return (
     <div

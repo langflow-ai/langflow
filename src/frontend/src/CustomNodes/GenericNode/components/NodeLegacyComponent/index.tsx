@@ -34,7 +34,9 @@ export default function NodeLegacyComponent({
     >
       <div className="flex items-center gap-3 w-full">
         <div className="h-2.5 w-2.5 rounded-full bg-warning" />
-        <div className="mb-px flex-1 truncate text-mmd font-medium">Legacy</div>
+        <div className="mb-px flex-1 truncate text-mmd font-medium">
+          {t("node.legacy")}
+        </div>
 
         <Button
           variant="ghost"
@@ -47,7 +49,7 @@ export default function NodeLegacyComponent({
           aria-label={t("node.dismissWarning")}
           data-testid="dismiss-warning-bar"
         >
-          Dismiss
+          {t("node.dismiss")}
         </Button>
       </div>
       <div className="text-mmd text-muted-foreground w-full">
@@ -56,7 +58,7 @@ export default function NodeLegacyComponent({
         replacement.length > 0 &&
         foundComponents.some((component) => component) ? (
           <span className="block items-center">
-            Use{" "}
+            {t("node.useReplacement")}{" "}
             {foundComponents.map((component, index) => (
               <>
                 {component && (
@@ -77,7 +79,7 @@ export default function NodeLegacyComponent({
             .
           </span>
         ) : (
-          "No direct replacement."
+          t("node.noDirectReplacement")
         )}
       </div>
     </div>

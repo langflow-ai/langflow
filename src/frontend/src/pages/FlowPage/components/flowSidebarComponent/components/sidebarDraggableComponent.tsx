@@ -194,7 +194,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    Beta
+                    {t("sidebar.betaLabel")}
                   </Badge>
                 )}
                 {legacy && (
@@ -203,7 +203,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    Legacy
+                    {t("sidebar.legacyLabel")}
                   </Badge>
                 )}
               </div>

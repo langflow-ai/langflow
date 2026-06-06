@@ -125,7 +125,7 @@ export function useDeploymentChat({
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,
-              error: "Run started but no run ID was returned.",
+              error: t("deployments.runStartedNoRunId"),
             });
           } else {
             const result = providerData?.result as
@@ -136,7 +136,7 @@ export function useDeploymentChat({
               extractTextFromResult(result) ||
               (typeof providerData?.status === "string"
                 ? providerData.status
-                : "Done.");
+                : t("deployments.done"));
             const toolTraces = extractToolTraces(result);
 
             updateAssistantMessage(assistantMsgId, {
@@ -176,7 +176,7 @@ export function useDeploymentChat({
             updateAssistantMessage(assistantMsgId, {
               content: "",
               isLoading: false,
-              error: "Run timed out. Please try again.",
+              error: t("deployments.runTimedOut"),
             });
             if (isMountedRef.current) setIsWaitingForResponse(false);
             return;
@@ -211,7 +211,8 @@ export function useDeploymentChat({
             }
 
             if (providerData?.failed_at || providerData?.cancelled_at) {
-              const errorMsg = providerData?.last_error ?? "Run failed.";
+              const errorMsg =
+                providerData?.last_error ?? t("deployments.runFailed");
               updateAssistantMessage(assistantMsgId, {
                 content: "",
                 isLoading: false,
@@ -226,7 +227,7 @@ export function useDeploymentChat({
                 extractTextFromResult(result) ||
                 (typeof providerData?.status === "string"
                   ? providerData.status
-                  : "Done.");
+                  : t("deployments.done"));
               const toolTraces = extractToolTraces(result);
 
               updateAssistantMessage(assistantMsgId, {
@@ -264,6 +265,7 @@ export function useDeploymentChat({
       getRun,
       stopPolling,
       updateAssistantMessage,
+      t,
     ],
   );
 

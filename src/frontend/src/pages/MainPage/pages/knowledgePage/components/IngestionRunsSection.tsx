@@ -5,6 +5,7 @@ import {
   type PaginatedIngestionRunResponse,
   useGetIngestionRuns,
 } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
+import { timeElapsed } from "@/pages/MainPage/utils/time-elapse";
 import IngestionRunDetailModal from "./IngestionRunDetailModal";
 
 interface IngestionRunsSectionProps {
@@ -48,16 +49,6 @@ function formatBytes(bytes: number): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
 }
 
-function formatRelativeTime(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diffSec = Math.max(0, Math.floor((now - then) / 1000));
-  if (diffSec < 60) return `${diffSec}s ago`;
-  if (diffSec < 3600) return `${Math.floor(diffSec / 60)}m ago`;
-  if (diffSec < 86400) return `${Math.floor(diffSec / 3600)}h ago`;
-  return `${Math.floor(diffSec / 86400)}d ago`;
-}
-
 const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
   const { t } = useTranslation();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
@@ -89,7 +80,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
         <h4 className="text-sm font-medium">{t("knowledge.ingestionRuns")}</h4>
         {data?.total ? (
           <span className="text-xs text-muted-foreground">
-            {data.total} total
+            {t("knowledge.ingestionRunsTotal", { count: data.total })}
           </span>
         ) : null}
       </div>
@@ -101,13 +92,12 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
       )}
       {isError && (
         <div className="text-sm text-destructive">
-          Unable to load ingestion runs.
+          {t("knowledge.failedToLoadIngestionRuns")}
         </div>
       )}
       {!isLoading && !isError && data?.runs.length === 0 && (
         <div className="text-sm text-muted-foreground">
-          No ingestion runs yet. Upload a file or ingest a folder to see history
-          here.
+          {t("knowledge.noIngestionRuns")}
         </div>
       )}
 
@@ -132,7 +122,7 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
                   {run.status}
                 </span>
                 <span className="text-xs text-muted-foreground">
-                  {formatRelativeTime(run.started_at)}
+                  {timeElapsed(run.started_at, t)}
                 </span>
               </div>
               <span className="truncate text-sm font-medium">
@@ -165,7 +155,11 @@ const IngestionRunsSection = ({ kbName }: IngestionRunsSectionProps) => {
                   </span>
                 )}
                 <span>·</span>
-                <span>{run.chunks_created} chunks</span>
+                <span>
+                  {t("knowledge.chunksCreated", {
+                    count: run.chunks_created,
+                  })}
+                </span>
                 {run.total_bytes > 0 && (
                   <>
                     <span>·</span>

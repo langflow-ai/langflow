@@ -1,12 +1,22 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 
 interface ComboBoxItemProps {
-  item: any;
+  item: {
+    name: string;
+    description?: string;
+  };
 }
 
 const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
+  const { t } = useTranslation();
   const [isChecked, setIsChecked] = useState(false);
+  const translatedName = translateComponentMetadata(t, "action", item.name);
+  const translatedDescription = item.description
+    ? translateComponentMetadata(t, "info", item.description)
+    : undefined;
 
   return (
     <div className="flex flex-row pb-1">
@@ -47,14 +57,14 @@ const ComboBoxItem = ({ item }: ComboBoxItemProps) => {
             className="ml-2 flex w-72 cursor-pointer text-sm font-bold text-primary"
             htmlFor={`check-${item?.name}`}
           >
-            <span className="truncate">{item?.name}</span>
+            <span className="truncate">{translatedName}</span>
           </label>
 
           <label
             className="flex w-72 cursor-pointer text-sm text-muted-foreground"
             htmlFor={`check-${item?.name}`}
           >
-            <span className="truncate">{item?.description}</span>
+            <span className="truncate">{translatedDescription}</span>
           </label>
         </Button>
       </div>

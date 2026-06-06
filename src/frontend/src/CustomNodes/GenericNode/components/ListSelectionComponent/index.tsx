@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SearchBarComponent from "@/components/core/parameterRenderComponent/components/searchBarComponent";
 import type { InputProps } from "@/components/core/parameterRenderComponent/types";
@@ -6,18 +7,27 @@ import { Button } from "@/components/ui/button";
 import { DialogFooter, DialogHeader } from "@/components/ui/dialog";
 import { Dialog, DialogContent } from "@/components/ui/dialog-with-no-close";
 import { Input } from "@/components/ui/input";
-import { cn, testIdCase } from "@/utils/utils";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
+import { testIdCase } from "@/utils/utils";
 import ListItem from "./ListItem";
+
+type ListSelectionItem = {
+  name: string;
+  description?: string;
+  icon?: string;
+  link?: string;
+  metaData?: string;
+};
 
 // Update interface with better types
 interface ListSelectionComponentProps {
   open: boolean;
   onClose: () => void;
-  options: any[];
-  setSelectedList: (action: any[]) => void;
-  selectedList: any[];
+  options: ListSelectionItem[];
+  setSelectedList: (action: ListSelectionItem[]) => void;
+  selectedList: ListSelectionItem[];
   searchCategories?: string[];
-  onSelection?: (action: any) => void;
+  onSelection?: (action: ListSelectionItem) => void;
   limit?: number;
   headerSearchPlaceholder?: string;
   addButtonText?: string;
@@ -37,10 +47,13 @@ const ListSelectionComponent = ({
   addButtonText,
   onAddButtonClick,
   ...baseInputProps
-}: InputProps<any, ListSelectionComponentProps>) => {
+}: InputProps<unknown, ListSelectionComponentProps>) => {
+  const { t } = useTranslation();
   const { nodeClass } = baseInputProps;
   const [search, setSearch] = useState("");
-  const [hoveredItem, setHoveredItem] = useState<any | null>(null);
+  const [hoveredItem, setHoveredItem] = useState<ListSelectionItem | null>(
+    null,
+  );
   const [focusedIndex, setFocusedIndex] = useState<number>(-1);
   const [isKeyboardNavActive, setIsKeyboardNavActive] = useState(false);
   const listContainerRef = useRef<HTMLDivElement>(null);
@@ -56,7 +69,7 @@ const ListSelectionComponent = ({
   }, [options, search]);
 
   const handleSelectAction = useCallback(
-    (action: any) => {
+    (action: ListSelectionItem) => {
       if (limit !== 1) {
         // Multiple selection mode
         const isAlreadySelected = selectedList.some(
@@ -183,7 +196,11 @@ const ListSelectionComponent = ({
                 className="h-[18px] w-[18px] text-muted-foreground"
               />
               <div className="text-[13px] font-semibold">
-                {nodeClass?.display_name}
+                {translateComponentMetadata(
+                  t,
+                  "component",
+                  nodeClass?.display_name,
+                )}
               </div>
             </div>
           ) : (
@@ -244,7 +261,7 @@ const ListSelectionComponent = ({
             ))
           ) : (
             <div className="py-3 text-center text-muted-foreground">
-              No items match your search
+              {t("input.noItemsMatchSearch")}
             </div>
           )}
         </div>

@@ -12,6 +12,7 @@ import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType } from "@/types/api";
 import type { NodeDataType } from "@/types/flow";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import ForwardedIconComponent from "../../../../common/genericIconComponent";
 import { Button } from "../../../../ui/button";
 import { Command } from "../../../../ui/command";
@@ -50,7 +51,9 @@ export default function ModelInputComponent({
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
-  const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
+  const resolvedPlaceholder = placeholder
+    ? translateComponentMetadata(t, "placeholder", placeholder)
+    : t("model.setupProvider");
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);

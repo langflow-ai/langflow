@@ -54,6 +54,9 @@ import { formatFileSize } from "../utils";
 function validateBackendConfig(
   backendType: AvailableDBProviderId,
   config: Record<string, DBProviderConfigValue>,
+  messages: {
+    opensearchIndexNameRequired: string;
+  },
 ): string | null {
   if (backendType === "chroma_cloud") {
     // API key is validated by isDBProviderConfigured; no literal fields here.
@@ -62,7 +65,7 @@ function validateBackendConfig(
   if (backendType === "opensearch") {
     const indexName = config.index_name;
     if (typeof indexName !== "string" || !indexName.trim()) {
-      return "OpenSearch requires an index_name";
+      return messages.opensearchIndexNameRequired;
     }
   }
   return null;
@@ -410,9 +413,19 @@ export function useKnowledgeBaseForm({
     if (!isAddSourcesMode) {
       const selectedProvider = getDBProviderOption(backendType);
       if (!isDBProviderConfigured(backendType, globalVariables)) {
-        errors.backend = `${selectedProvider.label} must be configured in DB Providers settings before it can be used.`;
+        errors.backend = t("knowledge.validationProviderMustBeConfigured", {
+          provider: selectedProvider.label,
+        });
       } else {
-        const backendErrors = validateBackendConfig(backendType, backendConfig);
+        const backendErrors = validateBackendConfig(
+          backendType,
+          backendConfig,
+          {
+            opensearchIndexNameRequired: t(
+              "knowledge.validationOpenSearchIndexNameRequired",
+            ),
+          },
+        );
         if (backendErrors) {
           errors.backend = backendErrors;
         }
@@ -424,13 +437,14 @@ export function useKnowledgeBaseForm({
     }
     const runMetadataValidation = validateMetadataPairs(metadataPairs);
     if (!runMetadataValidation.ok) {
-      errors.metadata =
-        "Fix metadata fields before continuing. Keys must be 1-32 lowercase letters, digits, or underscores and must be unique.";
+      errors.metadata = t("knowledge.validationMetadataFields");
     }
     for (const [fileName, pairs] of Object.entries(perFileMetadata)) {
       const perFileValidation = validateMetadataPairs(pairs);
       if (!perFileValidation.ok) {
-        errors.metadata = `Fix metadata fields for "${fileName}" before continuing.`;
+        errors.metadata = t("knowledge.validationFileMetadataFields", {
+          fileName,
+        });
         break;
       }
     }
@@ -490,7 +504,7 @@ export function useKnowledgeBaseForm({
         };
 
         setSuccessData({
-          title: `Knowledge base "${sourceName}" created`,
+          title: t("knowledge.baseCreated", { name: sourceName }),
         });
 
         onSubmit?.(callbackData);
@@ -546,7 +560,9 @@ export function useKnowledgeBaseForm({
             setErrorData({
               title: t("knowledge.errorIngestion", { name: sourceName }),
               list: [
-                err?.response?.data?.detail || err?.message || "Unknown error",
+                err?.response?.data?.detail ||
+                  err?.message ||
+                  t("knowledge.unknownError"),
               ],
             });
           });
@@ -611,8 +627,7 @@ export function useKnowledgeBaseForm({
 
       if (excludedFiles.length > 0) {
         setErrorData({
-          title:
-            "Some files were skipped. Only supported file types were uploaded. Excluded files:",
+          title: t("knowledge.unsupportedFilesSkipped"),
           list: excludedFiles,
         });
       }

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { PopoverTrigger } from "@/components/ui/popover";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { cn } from "@/utils/utils";
 import { ModelOption, SelectedModel } from "../types";
 
@@ -61,9 +62,7 @@ const ModelTrigger = ({
           className="h-4 w-4 flex-shrink-0 text-muted-foreground"
         />
         <div className="text-[13px] text-muted-foreground">
-          {placeholder === "Setup Provider"
-            ? t("model.setupProvider")
-            : placeholder}
+          {translateComponentMetadata(t, "placeholder", placeholder)}
         </div>
       </Button>
     );

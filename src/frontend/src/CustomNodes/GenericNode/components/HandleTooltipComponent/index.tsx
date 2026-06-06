@@ -20,28 +20,29 @@ export default function HandleTooltipComponent({
 }) {
   const { t } = useTranslation();
   const tooltips = tooltipTitle.split("\n");
-  const plural = tooltips.length > 1 ? "s" : "";
+  const handleType = isInput ? t("node.input") : t("node.output");
+  const oppositeHandleType = isInput ? t("node.outputs") : t("node.inputs");
+  const handleTypeTitle = isInput
+    ? t(tooltips.length > 1 ? "node.inputTypes" : "node.inputType")
+    : t(tooltips.length > 1 ? "node.outputTypes" : "node.outputType");
 
   return (
     <div className="font-medium">
       {isSameNode ? (
-        "Can't connect to the same node"
+        t("node.cannotConnectSameNode")
       ) : (
         <div className="flex items-center gap-1.5">
           {isConnecting ? (
             isCompatible ? (
               <span>
-                <span className="font-semibold">Connect</span> to
+                <span className="font-semibold">{t("node.connectTo")}</span>
               </span>
             ) : (
               <span>{t("node.incompatibleWith")}</span>
             )
           ) : (
             <span className="text-xs">
-              {isInput
-                ? `Input${plural} type${plural}`
-                : `Output${plural} type${plural}`}
-              :{" "}
+              {t("node.handleTypeLabel", { type: handleTypeTitle })}{" "}
             </span>
           )}
           {tooltips.map((word, index) => (
@@ -61,17 +62,18 @@ export default function HandleTooltipComponent({
               {word}
             </Badge>
           ))}
-          {isConnecting && <span>{isInput ? `input` : `output`}</span>}
+          {isConnecting && <span>{handleType}</span>}
         </div>
       )}
       {!isConnecting && (
         <div className="mt-2 flex flex-col gap-0.5 text-xs leading-6">
           <div>
-            <b>Drag</b> to connect compatible {!isInput ? "inputs" : "outputs"}
+            <b>{t("node.drag")}</b>{" "}
+            {t("node.connectCompatible", { type: oppositeHandleType })}
           </div>
           <div>
-            <b>Click</b> to filter compatible {!isInput ? "inputs" : "outputs"}{" "}
-            and components
+            <b>{t("node.click")}</b>{" "}
+            {t("node.filterCompatible", { type: oppositeHandleType })}
           </div>
         </div>
       )}

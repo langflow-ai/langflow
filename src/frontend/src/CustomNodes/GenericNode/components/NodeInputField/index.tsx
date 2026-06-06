@@ -11,6 +11,7 @@ import {
 } from "@/customization/components/custom-parameter";
 import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { cn } from "@/utils/utils";
 import { default as IconComponent } from "../../../../components/common/genericIconComponent";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
@@ -202,6 +203,12 @@ export default function NodeInputField({
               isToolMode
                 ? t("input.toolsetPlaceholder")
                 : data.node?.template[name].placeholder
+                  ? translateComponentMetadata(
+                      t,
+                      "placeholder",
+                      data.node.template[name].placeholder,
+                    )
+                  : undefined
             }
             isToolMode={isToolMode}
             nodeInformationMetadata={nodeInformationMetadata}

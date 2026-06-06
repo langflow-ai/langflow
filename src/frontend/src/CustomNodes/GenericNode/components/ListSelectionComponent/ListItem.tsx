@@ -1,7 +1,18 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { cn } from "@/utils/utils";
+
+type ListSelectionItem = {
+  id?: string;
+  name: string;
+  description?: string;
+  icon?: string;
+  link?: string;
+  metaData?: string;
+};
 
 const ListItem = ({
   item,
@@ -14,7 +25,7 @@ const ListItem = ({
   isKeyboardNavActive,
   dataTestId,
 }: {
-  item: any;
+  item: ListSelectionItem;
   isSelected: boolean;
   onClick: () => void;
   className?: string;
@@ -24,10 +35,15 @@ const ListItem = ({
   isKeyboardNavActive: boolean;
   dataTestId: string;
 }) => {
+  const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const itemRef = useRef<HTMLButtonElement>(null);
   const formattedIcon =
     item?.icon?.charAt(0).toUpperCase() + item?.icon?.slice(1);
+  const translatedName = translateComponentMetadata(t, "action", item.name);
+  const translatedDescription = item.description
+    ? translateComponentMetadata(t, "info", item.description)
+    : undefined;
 
   // Clear hover state when keyboard navigation is active
   useEffect(() => {
@@ -79,10 +95,10 @@ const ListItem = ({
         )}
         <div className="flex w-full flex-col truncate">
           <div className="flex w-full items-center gap-2 truncate text-mmd font-medium">
-            <span className="truncate">{item.name}</span>
-            {"description" in item && item.description && (
+            <span className="truncate">{translatedName}</span>
+            {translatedDescription && (
               <span className="font-normal text-muted-foreground">
-                {item.description}
+                {translatedDescription}
               </span>
             )}
           </div>
@@ -96,7 +112,7 @@ const ListItem = ({
         {isHovered || isFocused ? (
           <div className="ml-auto flex items-center justify-start rounded-md">
             <div className="flex items-center pr-1.5 text-mmd font-semibold text-muted-foreground">
-              Select
+              {t("common.select")}
             </div>
             <div className="flex items-center justify-center rounded-md">
               <ForwardedIconComponent

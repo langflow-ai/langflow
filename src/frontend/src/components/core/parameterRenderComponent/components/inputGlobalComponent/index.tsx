@@ -176,10 +176,7 @@ export default function InputGlobalComponent({
     : Object.fromEntries(
         typedGlobalVariables
           .filter((v) => v.type === "Credential")
-          .map((v) => [
-            v.name,
-            "Credential variables can only be used in secret fields (API keys, tokens). Select a Generic-typed variable, or change this variable's type to Generic if it isn't sensitive.",
-          ]),
+          .map((v) => [v.name, t("globalVars.credentialOnlySecretFields")]),
       );
 
   const selectedOption = loadFromDb ? currentValue : "";

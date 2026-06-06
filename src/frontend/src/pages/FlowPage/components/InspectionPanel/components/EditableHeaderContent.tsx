@@ -6,6 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import useFlowStore from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { NodeDataType } from "@/types/flow";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { cn } from "@/utils/utils";
 
 interface EditableHeaderContentProps {
@@ -178,11 +179,11 @@ export default function EditableHeaderContent({
             ),
           }}
         >
-          {String(description)}
+          {translateComponentMetadata(t, "description", String(description))}
         </MemoizedMarkdown>
       </div>
     );
-  }, [data.node?.description, editMode]);
+  }, [data.node?.description, editMode, t]);
 
   return {
     containerRef,
@@ -198,7 +199,11 @@ export default function EditableHeaderContent({
       />
     ) : (
       <span className="font-medium text-sm">
-        {data.node?.display_name ?? data.type}
+        {translateComponentMetadata(
+          t,
+          "component",
+          data.node?.display_name ?? data.type,
+        )}
       </span>
     ),
     descriptionElement: editMode ? (
