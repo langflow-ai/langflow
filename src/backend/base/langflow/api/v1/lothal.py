@@ -12,11 +12,14 @@ in `services/auth/utils.py`); an invalid or expired token returns `401`. The
 auth tests accept either status.
 """
 
+import json
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, HTTPException, Response, status
 from fastapi.responses import JSONResponse
+from sqlmodel import select
 
+from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.lothal.schemas import (
     ChatRequest,
     CodeResponse,
@@ -33,6 +36,7 @@ from langflow.lothal.schemas import (
     ProjectRead,
 )
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.database.models.lothal_project.model import Project
 
 router = APIRouter(
     prefix="/lothal",
@@ -58,48 +62,109 @@ def stub(detail: str) -> JSONResponse:
     )
 
 
+def _to_project_read(project: Project) -> ProjectRead:
+    """Map the ORM row to the contract shape.
+
+    `diagram_layout` is stored as a JSON string of xyflow positions but the
+    contract exposes it as an object, so parse it back here (it is `None` for
+    every B.2 flow — only the diagram stories populate it).
+    """
+    layout = project.diagram_layout
+    return ProjectRead(
+        id=project.id,
+        user_id=project.user_id,
+        name=project.name,
+        phase=project.phase,
+        prd_content=project.prd_content,
+        diagram_mmd=project.diagram_mmd,
+        diagram_layout=json.loads(layout) if layout else None,
+        created_at=project.created_at,
+        updated_at=project.updated_at,
+    )
+
+
+async def _get_owned_project(session: DbSession, project_id: UUID, user_id: UUID) -> Project:
+    """Fetch a project owned by `user_id`, or raise 404.
+
+    Ownership is enforced by the `user_id` predicate: another user's project is
+    indistinguishable from a missing one, so it 404s rather than 403 — we never
+    confirm a project's existence to a user who can't see it.
+    """
+    project = (await session.exec(select(Project).where(Project.id == project_id, Project.user_id == user_id))).first()
+    if project is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
+    return project
+
+
 # --- Projects ----------------------------------------------------------------
 
 
 @router.post(
     "/projects/",
-    response_model=ProjectRead,
     status_code=status.HTTP_201_CREATED,
-    responses=_NOT_IMPLEMENTED,
     summary="Create a project",
 )
-async def create_project(body: ProjectCreate) -> JSONResponse:
-    return stub("Project creation is not implemented yet.")
+async def create_project(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    body: ProjectCreate,
+) -> ProjectRead:
+    name = body.name.strip()
+    if not name:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Project name cannot be empty.")
+    project = Project(name=name, user_id=current_user.id)
+    session.add(project)
+    await session.flush()
+    await session.refresh(project)
+    return _to_project_read(project)
 
 
 @router.get(
     "/projects/",
-    response_model=list[ProjectRead],
-    responses=_NOT_IMPLEMENTED,
     summary="List the authenticated user's projects",
 )
-async def list_projects() -> JSONResponse:
-    return stub("Listing projects is not implemented yet.")
+async def list_projects(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+) -> list[ProjectRead]:
+    projects = (
+        await session.exec(
+            select(Project).where(Project.user_id == current_user.id).order_by(Project.updated_at.desc())  # type: ignore[attr-defined]
+        )
+    ).all()
+    return [_to_project_read(p) for p in projects]
 
 
 @router.get(
     "/projects/{project_id}",
-    response_model=ProjectRead,
-    responses=_NOT_IMPLEMENTED,
     summary="Get a project",
 )
-async def get_project(project_id: UUID) -> JSONResponse:
-    return stub("Fetching a project is not implemented yet.")
+async def get_project(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    project_id: UUID,
+) -> ProjectRead:
+    project = await _get_owned_project(session, project_id, current_user.id)
+    return _to_project_read(project)
 
 
 @router.delete(
     "/projects/{project_id}",
     status_code=status.HTTP_204_NO_CONTENT,
-    responses=_NOT_IMPLEMENTED,
     summary="Delete a project",
 )
-async def delete_project(project_id: UUID) -> JSONResponse:
-    return stub("Deleting a project is not implemented yet.")
+async def delete_project(
+    *,
+    session: DbSession,
+    current_user: CurrentActiveUser,
+    project_id: UUID,
+) -> Response:
+    project = await _get_owned_project(session, project_id, current_user.id)
+    await session.delete(project)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 
 # --- Chat --------------------------------------------------------------------

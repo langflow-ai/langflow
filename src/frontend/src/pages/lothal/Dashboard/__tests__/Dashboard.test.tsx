@@ -5,21 +5,12 @@ jest.mock("react-router-dom", () => ({
   useNavigate: () => mockNavigate,
 }));
 
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: ({ name, className }: { name: string; className?: string }) => (
-    <span data-testid={`icon-${name}`} className={className}>
-      {name}
-    </span>
-  ),
-}));
-
 const mockUseProjects = jest.fn();
 const mockCreateMutate = jest.fn();
 const mockDeleteMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProjects: () => mockUseProjects(),
-  useCreateProject: () => ({ mutate: mockCreateMutate }),
+  useCreateProject: () => ({ mutate: mockCreateMutate, isPending: false }),
   useDeleteProject: () => ({ mutate: mockDeleteMutate }),
 }));
 
@@ -42,20 +33,30 @@ describe("Lothal Dashboard", () => {
     jest.clearAllMocks();
   });
 
-  it("shows the empty state when there are no projects", () => {
+  it("shows the dockyard empty state when there are no projects", () => {
     mockUseProjects.mockReturnValue({ data: [], isLoading: false });
     render(<Dashboard />);
-    expect(
-      screen.getByText("No projects yet. Create one to get started."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("No vessels in the harbor")).toBeInTheDocument();
   });
 
-  it("renders a card per project using the shared phase label", () => {
+  it("renders a card per project with its name and status verb", () => {
     mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
     render(<Dashboard />);
     expect(screen.getByText("Demo")).toBeInTheDocument();
-    // Shared constant resolves to "Refining Diagram" (not the old "Refining").
-    expect(screen.getByText("Refining Diagram")).toBeInTheDocument();
+    // StatusDot verb for the phase (DIAGRAM_REFINEMENT → "refining").
+    expect(screen.getByText("refining")).toBeInTheDocument();
+  });
+
+  it("shows the project counts beside the Projects heading", () => {
+    mockUseProjects.mockReturnValue({
+      data: [project, { ...project, id: "p2", phase: "DONE" }],
+      isLoading: false,
+    });
+    render(<Dashboard />);
+    // All · 2 / In progress · 1 (the refinement one) / Delivered · 1.
+    expect(screen.getByText("All · 2")).toBeInTheDocument();
+    expect(screen.getByText("In progress · 1")).toBeInTheDocument();
+    expect(screen.getByText("Delivered · 1")).toBeInTheDocument();
   });
 
   it("confirms before deleting and only deletes when confirmed", () => {
@@ -63,9 +64,7 @@ describe("Lothal Dashboard", () => {
     const confirmSpy = jest.spyOn(window, "confirm").mockReturnValue(false);
     render(<Dashboard />);
 
-    const deleteButton = screen
-      .getByTestId("icon-Trash2")
-      .closest("button") as HTMLButtonElement;
+    const deleteButton = screen.getByRole("button", { name: "Delete Demo" });
 
     fireEvent.click(deleteButton);
     expect(confirmSpy).toHaveBeenCalledTimes(1);
@@ -76,5 +75,22 @@ describe("Lothal Dashboard", () => {
     expect(mockDeleteMutate).toHaveBeenCalledWith("p1");
 
     confirmSpy.mockRestore();
+  });
+
+  it("creates a project from the modal with the trimmed name", () => {
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+
+    // Open the modal (several "New project" affordances; the first opens it).
+    fireEvent.click(screen.getAllByRole("button", { name: "New project" })[0]);
+
+    const input = screen.getByLabelText("Project name");
+    fireEvent.change(input, { target: { value: "  Tide Tracker  " } });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+
+    expect(mockCreateMutate).toHaveBeenCalledWith(
+      "Tide Tracker",
+      expect.any(Object),
+    );
   });
 });

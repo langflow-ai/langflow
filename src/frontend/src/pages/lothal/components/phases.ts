@@ -29,3 +29,8 @@ export const PHASES: PhaseMeta[] = [
 export function phaseIndex(phase: string): number {
   return PHASES.findIndex((p) => p.id === phase);
 }
+
+/** Short design label for a phase ("Refine"), or the raw id if unknown. */
+export function phaseLabel(phase: string): string {
+  return PHASES.find((p) => p.id === phase)?.label ?? phase;
+}
