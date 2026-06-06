@@ -201,6 +201,16 @@ def serve_command(
             "strict cross-request isolation. Default (unset) means unlimited concurrency."
         ),
     ),
+    timeout: int = typer.Option(
+        120,
+        "--timeout",
+        help=(
+            "Worker timeout in seconds (gunicorn, Unix, --workers > 1): a worker that does not "
+            "complete a request within this many seconds is killed and restarted. Raise it for "
+            "long-running flows, especially with --sync-workers (a blocking sync worker cannot "
+            "heartbeat mid-request). Default: 120. No effect on Windows (uvicorn fallback)."
+        ),
+    ),
     *,
     stdin: bool = typer.Option(
         False,  # noqa: FBT003
@@ -404,6 +414,7 @@ def serve_command(
                     limit_concurrency=limit_concurrency,
                     reset_environ=reset_environ,
                     sync_workers=sync_workers,
+                    timeout=timeout,
                 )
             else:
                 from lfx.cli.serve_app import _SERVE_RESET_ENVIRON_ENV
@@ -442,6 +453,7 @@ def _launch_workers(
     limit_concurrency: int | None,
     reset_environ: bool = False,
     sync_workers: bool = False,
+    timeout: int = 120,
 ) -> None:
     """Launch ``workers`` worker processes for ``lfx serve --workers N``.
 
@@ -469,7 +481,9 @@ def _launch_workers(
     around every flow run (see ``guarded_execute``). ``sync_workers``
     (``--sync-workers``, Unix only) swaps the async worker for gunicorn's blocking
     ``sync`` worker wrapped by an a2wsgi ASGI->WSGI bridge, so the kernel routes each
-    request to an idle worker. Both default off.
+    request to an idle worker. Both default off. ``timeout`` (``--timeout``, default
+    120s) sets gunicorn's worker timeout — raise it for long flows, especially under
+    ``--sync-workers``.
     """
     from lfx.cli.serve_app import (
         _SERVE_FLOW_DIR_ENV,
@@ -569,9 +583,10 @@ def _launch_workers(
                     "max_requests": max_requests if max_requests is not None else 0,
                     "max_requests_jitter": 0,
                     "loglevel": log_level,
-                    # Sized for long synchronous flows; gunicorn's default 30s timeout
-                    # would kill long LLM flows. Expose --timeout later if needed.
-                    "timeout": 120,
+                    # Worker timeout (--timeout, default 120). gunicorn's own default is 30s,
+                    # which would kill long LLM flows — especially under --sync-workers, where a
+                    # blocking worker cannot heartbeat mid-request.
+                    "timeout": timeout,
                 },
             ).run()
     finally:

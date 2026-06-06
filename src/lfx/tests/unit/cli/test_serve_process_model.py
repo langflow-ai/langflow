@@ -557,3 +557,15 @@ def test_launch_workers_reset_environ_off_by_default(monkeypatch):
 
     captured = _capture_gunicorn_launch(monkeypatch)
     assert captured["env"].get(_SERVE_RESET_ENVIRON_ENV) == "0"
+
+
+def test_launch_workers_timeout_defaults_to_120(monkeypatch):
+    """Without --timeout, gunicorn's worker timeout is 120s (long-flow safe default)."""
+    captured = _capture_gunicorn_launch(monkeypatch)
+    assert captured["options"]["timeout"] == 120
+
+
+def test_launch_workers_timeout_propagates(monkeypatch):
+    """--timeout N is forwarded to gunicorn's worker timeout."""
+    captured = _capture_gunicorn_launch(monkeypatch, timeout=600)
+    assert captured["options"]["timeout"] == 600

@@ -157,6 +157,16 @@ def register(app: typer.Typer) -> None:
                 "strict cross-request isolation. Default (unset) means unlimited concurrency."
             ),
         ),
+        timeout: int = typer.Option(
+            120,
+            "--timeout",
+            help=(
+                "Worker timeout in seconds (gunicorn, Unix, --workers > 1): a worker that does not "
+                "complete a request within this many seconds is killed and restarted. Raise it for "
+                "long-running flows, especially with --sync-workers (a blocking sync worker cannot "
+                "heartbeat mid-request). Default: 120. No effect on Windows (uvicorn fallback)."
+            ),
+        ),
         *,
         stdin: bool = typer.Option(
             False,
@@ -222,4 +232,5 @@ def register(app: typer.Typer) -> None:
             limit_concurrency=limit_concurrency,
             reset_environ=reset_environ,
             sync_workers=sync_workers,
+            timeout=timeout,
         )
