@@ -39,7 +39,7 @@ const StoreApiKeyFormComponent = ({
       >
         <Card x-chunk="dashboard-04-chunk-2" id="api">
           <CardHeader>
-            <CardTitle>{t("storeApiKey.cardTitle")}</CardTitle>
+            <CardTitle>{t("storeApiKey.formTitle")}</CardTitle>
             <CardDescription>
               {(hasApiKey && !validApiKey
                 ? t("store.invalidApiKey")
@@ -60,11 +60,11 @@ const StoreApiKeyFormComponent = ({
                     value={apikey}
                     isForm
                     password={true}
-                    placeholder={t("storeApiKey.insertPlaceholder")}
+                    placeholder={t("storeApiKey.placeholder")}
                     className="w-full"
                   />
                   <Form.Message match="valueMissing" className="field-invalid">
-                    {t("storeApiKey.validationRequired")}
+                    {t("storeApiKey.required")}
                   </Form.Message>
                 </Form.Field>
               </div>
