@@ -12,11 +12,13 @@ jest.mock("react-router-dom", () => ({
 
 const mockUseProjects = jest.fn();
 const mockUseMessages = jest.fn();
+const mockUseDiagram = jest.fn();
 const mockUseCode = jest.fn();
 const mockSendMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProjects: () => mockUseProjects(),
   useMessages: () => mockUseMessages(),
+  useDiagram: () => mockUseDiagram(),
   useCode: () => mockUseCode(),
   useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
 }));
@@ -79,6 +81,14 @@ describe("Lothal Workspace", () => {
       data: [],
       isLoading: false,
       isError: false,
+    });
+    // Default: the diagram query is idle (most tests use a CLARIFICATION
+    // project, so the canvas shows its placeholder and never reads this).
+    mockUseDiagram.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: false,
+      error: undefined,
     });
     // Default: no code yet (the right pane only consults this in a code phase).
     mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });

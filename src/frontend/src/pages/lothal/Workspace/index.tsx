@@ -3,8 +3,9 @@
 // (clarification chat on the left, canvas on the right). The chat is wired to
 // the real `/messages` + `/chat` endpoints — no scripted playback. While those
 // are 501 stubs (Epic 1) the chat column shows the uniform NotReady state; it
-// "goes live" with no UI change once the clarification backend lands. The
-// canvas is a placeholder until Story B.4 brings the real @xyflow/react canvas.
+// "goes live" with no UI change once the clarification backend lands. The right
+// pane is the real @xyflow/react sequence-diagram canvas (Story B.4), or the
+// generated-code surface (Story B.5) once the build reaches a code phase.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
@@ -20,7 +21,7 @@ import useAuthStore from "@/stores/authStore";
 import {
   AssistantQuestion,
   Button,
-  CanvasPlaceholder,
+  CanvasSurface,
   ChatBubble,
   ChatDock,
   CodeView,
@@ -488,13 +489,15 @@ function WorkspaceView() {
           <ChatPanel project={project} />
         </div>
 
-        {/* Right pane — code surface once generation begins, else the canvas
-            (placeholder until Story B.4). */}
+        {/* Right pane — the code surface once generation begins (Story B.5),
+            otherwise the real @xyflow/react sequence-diagram canvas (Story B.4),
+            which itself falls back to a phase-aware placeholder before a diagram
+            exists and to NotReady while /diagram is a 501 stub. */}
         <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
           {isCodePhase(project.phase) ? (
             <CodePanel project={project} />
           ) : (
-            <CanvasPlaceholder phase={project.phase} />
+            <CanvasSurface project={project} />
           )}
         </div>
       </div>

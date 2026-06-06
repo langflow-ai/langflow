@@ -1,12 +1,16 @@
 // Shared lothal design-system atoms. Import from "@/pages/lothal/components".
 
+export { ActorNode } from "./ActorNode";
 export { AssistantQuestion } from "./AssistantQuestion";
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { Button } from "./Button";
+export { CanvasLegend } from "./CanvasLegend";
 export { CanvasPlaceholder } from "./CanvasPlaceholder";
+export { CanvasSurface } from "./CanvasSurface";
 export { ChatBubble } from "./ChatBubble";
 export { ChatDock } from "./ChatDock";
 export { CodeView } from "./CodeView";
+export { DiagramCanvas } from "./DiagramCanvas";
 export { EmptyHint } from "./EmptyHint";
 export { HarborWatermark } from "./HarborWatermark";
 export { LothalMark } from "./LothalMark";
