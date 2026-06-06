@@ -60,14 +60,14 @@ reviews:
           1. Tests should cover the main functionality being implemented
           2. For async functions, ensure proper async testing patterns are used (pytest for backend)
           3. Check that tests are not just smoke tests but actually validate behavior
-          4. Ensure tests follow the project's testing patterns (pytest for backend, Playwright for frontend)
+          4. Ensure tests follow the project's testing patterns (pytest for backend; Jest + React Testing Library for frontend unit tests, Playwright only for e2e specs under src/frontend/tests/**)
           5. For API endpoints, verify both success and error response testing
         mode: "warning"
       - name: "Test File Naming and Structure"
         instructions: |
           Verify that test files follow the correct patterns and structure:
           1. Backend tests: test_*.py with proper pytest structure
-          2. Frontend tests: *.test.ts or *.test.tsx using Playwright
+          2. Frontend unit tests: *.test.ts / *.test.tsx using Jest + React Testing Library, colocated (e.g. under __tests__/); Playwright e2e specs (*.spec.ts) live under src/frontend/tests/**
           3. Integration tests should be clearly marked and in appropriate directories
           4. Test files should have descriptive test function names that explain what is being tested
           5. Tests should be organized logically with proper setup and teardown
