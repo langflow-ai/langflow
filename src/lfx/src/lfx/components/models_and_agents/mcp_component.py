@@ -6,7 +6,7 @@ import json
 import time
 import uuid
 from types import UnionType
-from typing import Any, get_args, get_origin
+from typing import Any, ClassVar, get_args, get_origin
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
 from pydantic import BaseModel
@@ -95,9 +95,10 @@ class MCPToolsComponent(ComponentWithCache):
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
 
-    # Opt-in trust verifier — set by callers that want pre-dispatch trust checks.
+    # Opt-in trust verifier - set by callers that want pre-dispatch trust checks.
     # When None (the default), the hook is skipped with zero overhead.
-    trust_verifier: TrustVerifier | None = None
+    # ClassVar keeps Pydantic from treating this as a model field (and from the JSON schema).
+    trust_verifier: ClassVar[TrustVerifier | None] = None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
