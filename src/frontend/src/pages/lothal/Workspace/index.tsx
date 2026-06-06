@@ -19,7 +19,7 @@ import useAuthStore from "@/stores/authStore";
 import {
   AssistantQuestion,
   Button,
-  CanvasPlaceholder,
+  CanvasSurface,
   ChatBubble,
   ChatDock,
   EmptyHint,
@@ -422,9 +422,11 @@ function WorkspaceView() {
           <ChatPanel project={project} />
         </div>
 
-        {/* Canvas — right (placeholder until Story B.4) */}
+        {/* Canvas — right. The real @xyflow/react sequence-diagram canvas
+            (Story B.4); falls back to a phase-aware placeholder before a
+            diagram exists and to NotReady while /diagram is a 501 stub. */}
         <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
-          <CanvasPlaceholder phase={project.phase} />
+          <CanvasSurface project={project} />
         </div>
       </div>
     </div>
