@@ -12,6 +12,7 @@ from langchain_core.tools import StructuredTool  # noqa: TC002
 from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
+from lfx.base.mcp.trust import TrustVerifier
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
@@ -93,6 +94,10 @@ class MCPToolsComponent(ComponentWithCache):
     _not_load_actions: bool = False
     _tool_cache: dict = {}
     _last_selected_server: str | None = None  # Cache for the last selected server
+
+    # Opt-in trust verifier — set by callers that want pre-dispatch trust checks.
+    # When None (the default), the hook is skipped with zero overhead.
+    trust_verifier: TrustVerifier | None = None
 
     def __init__(self, **data) -> None:
         super().__init__(**data)
@@ -357,9 +362,8 @@ class MCPToolsComponent(ComponentWithCache):
             header_keys,
         )
 
-        async with self._update_tool_list_lock:
-            # Use shared cache if available and caching is enabled
-            cached = None
+        # Use shared cache if available and caching is enabled
+        cached = None
             if use_cache:
                 servers_cache = safe_cache_get(self._shared_component_cache, "servers", {})
                 cached = servers_cache.get(servers_cache_key) if isinstance(servers_cache, dict) else None
@@ -518,6 +522,7 @@ class MCPToolsComponent(ComponentWithCache):
                     mcp_streamable_http_client=self.streamable_http_client,
                     request_variables=request_variables,
                     tool_execution_timeout=timeout,
+                    trust_verifier=self.trust_verifier,
                 )
 
                 self.tool_names = [tool.name for tool in tool_list if hasattr(tool, "name")]
