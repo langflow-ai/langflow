@@ -1,13 +1,13 @@
 from __future__ import annotations
 
 import inspect
-import os
 import warnings
 from typing import TYPE_CHECKING, Any
 
 import orjson
 from lfx.custom.eval import eval_custom_component_code
 from lfx.log.logger import logger
+from lfx.utils.env_var_security import safe_getenv
 from pydantic import PydanticDeprecatedSince20
 
 from langflow.schema.artifact import get_artifact_type, post_process_raw
@@ -131,7 +131,9 @@ async def update_params_with_load_from_db_fields(
                 key = None
 
             if fallback_to_env_vars and key is None:
-                key = os.getenv(params[field])
+                # safe_getenv refuses server-reserved / sensitive names so a tenant cannot
+                # name LANGFLOW_SECRET_KEY / DATABASE_URL etc. and exfiltrate it via the flow.
+                key = safe_getenv(params[field])
                 if key:
                     await logger.ainfo(f"Using environment variable {params[field]} for {field}")
                 else:
