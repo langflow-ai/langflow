@@ -33,6 +33,11 @@ jest.mock("@/stores/typesStore", () => ({
   ) => selector({ setTypes: mockSetTypes }),
 }));
 
+jest.mock("@/components/common/genericIconComponent", () => ({
+  __esModule: true,
+  default: ({ name }: { name: string }) => <span data-testid={name} />,
+}));
+
 jest.mock("@/components/ui/select", () => ({
   Select: ({
     children,
@@ -132,6 +137,7 @@ describe("LanguageSelector", () => {
     render(
       <LanguageSelector
         className="selector-shell"
+        showIcon
         triggerClassName="selector-trigger"
       />,
     );
@@ -140,6 +146,7 @@ describe("LanguageSelector", () => {
       "selector-shell",
       "selector-trigger",
     );
+    expect(screen.getByTestId("Globe")).toBeInTheDocument();
   });
 
   it("saves manual selections and refreshes type data", async () => {
