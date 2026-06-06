@@ -6,7 +6,7 @@ Acceptance criteria (from issue #13333 and reviewer comment):
 3. A verifier that returns DENY raises PermissionError before the tool runs.
 4. A verifier that returns REQUIRE_APPROVAL raises PermissionError before the tool runs.
 5. A verifier that returns WARN emits a warning but still dispatches the call.
-6. The verifier always receives a fresh MCPToolCall — decisions are never
+6. The verifier always receives a fresh MCPToolCall - decisions are never
    reused across different (server_uri, tool_name, parameters_digest) tuples.
 7. MCPToolCall.parameters_digest differs when parameters differ.
 8. MCPToolCall.server_origin is derived from server_uri automatically.
@@ -27,7 +27,7 @@ from lfx.base.mcp.trust import MCPToolCall, TrustDecision, TrustState, TrustVeri
 
 
 class _AllowVerifier:
-    async def verify(self, call: MCPToolCall) -> TrustDecision:
+    async def verify(self, call: MCPToolCall) -> TrustDecision:  # noqa: ARG002
         return TrustDecision(state=TrustState.ALLOW)
 
 
@@ -35,17 +35,17 @@ class _DenyVerifier:
     def __init__(self, reason: str = "untrusted_origin") -> None:
         self._reason = reason
 
-    async def verify(self, call: MCPToolCall) -> TrustDecision:
+    async def verify(self, call: MCPToolCall) -> TrustDecision:  # noqa: ARG002
         return TrustDecision(state=TrustState.DENY, reason_code=self._reason)
 
 
 class _ApprovalVerifier:
-    async def verify(self, call: MCPToolCall) -> TrustDecision:
+    async def verify(self, call: MCPToolCall) -> TrustDecision:  # noqa: ARG002
         return TrustDecision(state=TrustState.REQUIRE_APPROVAL, reason_code="needs_approval")
 
 
 class _WarnVerifier:
-    async def verify(self, call: MCPToolCall) -> TrustDecision:
+    async def verify(self, call: MCPToolCall) -> TrustDecision:  # noqa: ARG002
         return TrustDecision(state=TrustState.WARN, reason_code="low_trust_score")
 
 
@@ -141,7 +141,7 @@ class TestTrustVerifierProtocol:
 
 
 # ---------------------------------------------------------------------------
-# run_trust_check – the core hook logic
+# run_trust_check - the core hook logic
 # ---------------------------------------------------------------------------
 
 
@@ -166,7 +166,7 @@ class TestRunTrustCheckDeny:
     @pytest.mark.asyncio
     async def test_deny_without_reason_still_raises(self):
         class _NoReason:
-            async def verify(self, call: MCPToolCall) -> TrustDecision:
+            async def verify(self, call: MCPToolCall) -> TrustDecision:  # noqa: ARG002
                 return TrustDecision(state=TrustState.DENY)
 
         with pytest.raises(PermissionError):
@@ -193,7 +193,6 @@ class TestRunTrustCheckRequireApproval:
 class TestRunTrustCheckWarn:
     @pytest.mark.asyncio
     async def test_warn_does_not_raise(self):
-        # warn must not raise — it allows the call through
         await run_trust_check(_WarnVerifier(), "t", "", {})
 
     @pytest.mark.asyncio
@@ -212,7 +211,7 @@ class TestRunTrustCheckWarn:
     @pytest.mark.asyncio
     async def test_warn_log_contains_decision_id(self):
         class _WarnWithKnownId:
-            async def verify(self, call: MCPToolCall) -> TrustDecision:
+            async def verify(self, call: MCPToolCall) -> TrustDecision:  # noqa: ARG002
                 return TrustDecision(state=TrustState.WARN, decision_id="test-id-999")
 
         warn = AsyncMock()
@@ -222,10 +221,9 @@ class TestRunTrustCheckWarn:
 
     @pytest.mark.asyncio
     async def test_warn_is_not_silently_allow(self):
-        """Warn must never be treated as a silent allow — logger must be called."""
+        """Warn must never be treated as a silent allow - logger must be called."""
         warn = AsyncMock()
         await run_trust_check(_WarnVerifier(), "t", "", {}, warn_logger=warn)
-        # If this assertion fails, warn became a silent allow.
         assert warn.await_count == 1, "warn state must always emit a log entry"
 
 

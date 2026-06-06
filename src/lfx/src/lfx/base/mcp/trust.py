@@ -6,15 +6,15 @@ is configured, the framework skips the hook entirely with zero overhead.
 
 Decision states
 ---------------
-- ``allow``            – dispatch the tool call normally.
-- ``deny``             – block the call; ``PermissionError`` is raised.
-- ``warn``             – dispatch the call but emit a warning log entry.
-- ``require_approval`` – treated as ``deny`` at the framework level until
+- ``allow``            - dispatch the tool call normally.
+- ``deny``             - block the call; ``PermissionError`` is raised.
+- ``warn``             - dispatch the call but emit a warning log entry.
+- ``require_approval`` - treated as ``deny`` at the framework level until
                          an interactive approval flow is wired in.
 
 Acceptance contract
 -------------------
-1. The framework always calls ``verify()`` fresh on every dispatch — it does
+1. The framework always calls ``verify()`` fresh on every dispatch - it does
    not re-use a previous decision when ``server_uri``, ``tool_name``,
    ``schema_version``, or ``parameters_digest`` differ.
 2. ``warn`` is never silently promoted to ``allow``; the warning is always
@@ -57,7 +57,7 @@ class MCPToolCall:
     tool_name: str
     parameters: dict[str, Any]
 
-    # Optional context – populated when available, empty string / None otherwise.
+    # Optional context - populated when available, empty string / None otherwise.
     server_origin: str = ""
     schema_version: str | None = None
     session_id: str | None = None
@@ -82,7 +82,7 @@ class MCPToolCall:
 class TrustDecision:
     """Result returned by a :class:`TrustVerifier`.
 
-    ``decision_id`` is a unique identifier for this decision instance — useful
+    ``decision_id`` is a unique identifier for this decision instance - useful
     for audit logs. ``ttl`` is advisory: it tells the *verifier's own* cache
     how long this decision is valid; the framework never caches decisions.
     """
@@ -142,8 +142,8 @@ async def run_trust_check(
         server_uri: URI of the MCP server (empty string for stdio).
         arguments: Final arguments that will be sent to the server.
         warn_logger: Optional async callable used to emit the WARN-state log
-            message. When ``None``, ``print`` is used as a fallback so that
-            callers without a structured logger still surface the warning.
+            message. When ``None``, the warning is silently dropped - callers
+            on the async path always supply ``logger.awarning``.
 
     Raises:
         PermissionError: When the decision state is ``deny`` or
@@ -157,15 +157,11 @@ async def run_trust_check(
         msg = f"MCP tool call '{tool_name}' blocked by trust verifier{reason}"
         raise PermissionError(msg)
 
-    if decision.state == TrustState.WARN:
+    if decision.state == TrustState.WARN and warn_logger is not None:
         reason = decision.reason_code or "no reason given"
-        warning_msg = (
+        await warn_logger(
             "MCP tool call '%s' allowed with trust warning: %s (decision_id=%s)",
             tool_name,
             reason,
             decision.decision_id,
         )
-        if warn_logger is not None:
-            await warn_logger(*warning_msg)
-        else:
-            print("WARNING:", " ".join(str(a) for a in warning_msg))

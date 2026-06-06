@@ -6,13 +6,12 @@ import json
 import time
 import uuid
 from types import UnionType
-from typing import Any, get_args, get_origin
+from typing import TYPE_CHECKING, Any, get_args, get_origin
 
 from langchain_core.tools import StructuredTool  # noqa: TC002
 from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict, safe_cache_get, safe_cache_set
-from lfx.base.mcp.trust import TrustVerifier
 from lfx.base.mcp.util import (
     MCPStdioClient,
     MCPStreamableHttpClient,
@@ -27,6 +26,9 @@ from lfx.log.logger import logger
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.deps import get_storage_service, session_scope
+
+if TYPE_CHECKING:
+    from lfx.base.mcp.trust import TrustVerifier
 
 
 def resolve_mcp_config(
