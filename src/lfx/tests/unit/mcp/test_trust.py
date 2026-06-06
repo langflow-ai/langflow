@@ -19,9 +19,7 @@ import json
 from unittest.mock import AsyncMock
 
 import pytest
-
 from lfx.base.mcp.trust import MCPToolCall, TrustDecision, TrustState, TrustVerifier, run_trust_check
-
 
 # ---------------------------------------------------------------------------
 # Helpers
