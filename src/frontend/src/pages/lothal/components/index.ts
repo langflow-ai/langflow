@@ -3,6 +3,7 @@
 export type { ButtonProps, ButtonSize, ButtonVariant } from "./Button";
 export { Button } from "./Button";
 export { EmptyHint } from "./EmptyHint";
+export { HarborWatermark } from "./HarborWatermark";
 export { LothalMark } from "./LothalMark";
 export {
   isNotImplemented,
@@ -15,6 +16,7 @@ export {
   PHASES,
   type PhaseMeta,
   phaseIndex,
+  phaseLabel,
 } from "./phases";
 export { StatusDot } from "./StatusDot";
 export { TopBar } from "./TopBar";
