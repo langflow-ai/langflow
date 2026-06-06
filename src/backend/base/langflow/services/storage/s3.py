@@ -156,7 +156,7 @@ class S3StorageService(StorageService):
         return logical_path
 
     def _get_client(self):
-        """Get or create an S3 client using the async context manager."""
+        """Create an S3 client using the async context manager."""
         endpoint_url = os.getenv("AWS_ENDPOINT_URL_S3")
         if endpoint_url:
             return self.session.client("s3", endpoint_url=endpoint_url)
