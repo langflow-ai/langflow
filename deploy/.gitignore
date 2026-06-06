@@ -1,1 +1,5 @@
 pgadmin
+
+# Real production env (the .example template is committed; the filled-in file is not)
+.env
+.env.prod
