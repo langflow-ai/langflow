@@ -1,5 +1,5 @@
-import TimeoutErrorComponent from "@/components/common/timeoutErrorComponent";
 import { useTranslation } from "react-i18next";
+import TimeoutErrorComponent from "@/components/common/timeoutErrorComponent";
 import CustomFetchErrorComponent from "@/customization/components/custom-fetch-error-component";
 
 export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
@@ -8,8 +8,8 @@ export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
     case "serverDown":
       return (
         <CustomFetchErrorComponent
-          description={t("misc.fetchErrorDescription")}
-          message={t("misc.fetchErrorMessage")}
+          description={t("misc.fetchErrorDesc")}
+          message={t("misc.fetchError")}
           openModal={true}
           setRetry={retry}
           isLoadingHealth={fetching}
@@ -18,8 +18,8 @@ export function GenericErrorComponent({ healthCheckTimeout, fetching, retry }) {
     case "timeout":
       return (
         <TimeoutErrorComponent
-          description={t("misc.timeoutErrorMessage")}
-          message={t("misc.timeoutErrorDescription")}
+          description={t("misc.timeoutErrorDesc")}
+          message={t("misc.timeoutError")}
           openModal={true}
           setRetry={retry}
           isLoadingHealth={fetching}
