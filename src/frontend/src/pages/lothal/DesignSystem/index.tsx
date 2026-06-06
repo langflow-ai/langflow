@@ -4,7 +4,11 @@
 
 import { type ReactNode, useState } from "react";
 import {
+  AssistantQuestion,
   Button,
+  CanvasPlaceholder,
+  ChatBubble,
+  ChatDock,
   EmptyHint,
   LothalMark,
   NotReady,
@@ -12,6 +16,7 @@ import {
   PhaseStepper,
   type PhaseStepperStyle,
   StatusDot,
+  SystemBlock,
   TopBar,
 } from "../components";
 import {
@@ -78,6 +83,72 @@ function Swatch({ token }: { token: string }) {
       >
         {token}
       </span>
+    </div>
+  );
+}
+
+// The B.3 chat atoms, exercised with sample data. They render the same way
+// from real `/messages` data once the clarification backend (Epic 1) is live —
+// this is how they're verified while that endpoint is still a 501 stub.
+function ChatShowcase() {
+  const [draft, setDraft] = useState("");
+  const [picked, setPicked] = useState<string | null>(null);
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 14,
+        width: "100%",
+      }}
+    >
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+          maxWidth: 520,
+        }}
+      >
+        <ChatBubble
+          role="USER"
+          content="I want a tide-tracking app for surfers."
+        />
+        <ChatBubble
+          role="ASSISTANT"
+          content="Got it. Who's the primary user — casual beachgoers, or serious surfers tracking specific breaks?"
+        >
+          <AssistantQuestion
+            suggestions={["Casual beachgoers", "Serious surfers", "Both"]}
+            onPick={setPicked}
+          />
+        </ChatBubble>
+        <SystemBlock>Requirements clear — sketching the diagram</SystemBlock>
+        <ChatBubble
+          role="ASSISTANT"
+          content="Drafting the sequence diagram now"
+          streaming
+        />
+        {picked && (
+          <span style={{ fontSize: 12, color: "var(--ink-soft)" }}>
+            picked: <span style={{ color: "var(--accent-ink)" }}>{picked}</span>
+          </span>
+        )}
+      </div>
+      <div
+        style={{
+          maxWidth: 520,
+          border: "1px solid var(--border)",
+          borderRadius: "var(--radius-lg)",
+          overflow: "hidden",
+        }}
+      >
+        <ChatDock
+          value={draft}
+          onChange={setDraft}
+          onSend={() => setDraft("")}
+        />
+      </div>
     </div>
   );
 }
@@ -249,6 +320,16 @@ function Gallery() {
               sub="Describe what you want to build and a new project takes shape here."
               kbd="N to start"
             />
+          </div>
+        </Section>
+
+        <Section title="Chat (bubbles · chips · transition · dock)">
+          <ChatShowcase />
+        </Section>
+
+        <Section title="Canvas placeholder (pre-B.4)">
+          <div style={{ width: "100%", minHeight: 260 }}>
+            <CanvasPlaceholder phase="CLARIFICATION" />
           </div>
         </Section>
 

@@ -84,6 +84,14 @@ export function useMessages(projectId: string) {
       const res = await api.get<Message[]>(`${BASE}${projectId}/messages`);
       return res.data;
     },
+    // The endpoint is a 501 stub until Epic 1 — don't retry that (the UI keys
+    // its NotReady state off the error, and retrying just delays it). Real
+    // transient failures still get a couple of attempts.
+    retry: (count, error) => {
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      return status !== 501 && count < 2;
+    },
   });
 }
 

@@ -1,7 +1,11 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { LothalSurface, useLothalTheme } from "../../theme/LothalSurface";
 import {
+  AssistantQuestion,
   Button,
+  CanvasPlaceholder,
+  ChatBubble,
+  ChatDock,
   EmptyHint,
   isNotImplemented,
   LothalMark,
@@ -11,6 +15,7 @@ import {
   PhaseStepper,
   phaseIndex,
   StatusDot,
+  SystemBlock,
   TopBar,
 } from "../index";
 
@@ -184,5 +189,94 @@ describe("LothalSurface", () => {
     expect(screen.getByRole("button")).toHaveTextContent("light");
     fireEvent.click(screen.getByRole("button"));
     expect(screen.getByRole("button")).toHaveTextContent("dark");
+  });
+});
+
+describe("ChatBubble", () => {
+  it("labels the sender by role and renders the content", () => {
+    render(<ChatBubble role="USER" content="hello there" />);
+    expect(screen.getByText("You")).toBeInTheDocument();
+    expect(screen.getByText("hello there")).toBeInTheDocument();
+  });
+
+  it("attaches the streaming caret only when streaming", () => {
+    const { rerender, container } = render(
+      <ChatBubble role="ASSISTANT" content="typing" />,
+    );
+    expect(screen.getByText("Lothal")).toBeInTheDocument();
+    expect(container.querySelector(".caret")).toBeNull();
+    rerender(<ChatBubble role="ASSISTANT" content="typing" streaming />);
+    expect(container.querySelector(".caret")).not.toBeNull();
+  });
+});
+
+describe("AssistantQuestion", () => {
+  it("renders a chip per suggestion and reports the picked one", () => {
+    const onPick = jest.fn();
+    render(
+      <AssistantQuestion suggestions={["Casual", "Serious"]} onPick={onPick} />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Serious" }));
+    expect(onPick).toHaveBeenCalledWith("Serious");
+  });
+
+  it("renders nothing when there are no suggestions", () => {
+    const { container } = render(
+      <AssistantQuestion suggestions={[]} onPick={jest.fn()} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("does not fire onPick while disabled", () => {
+    const onPick = jest.fn();
+    render(<AssistantQuestion suggestions={["A"]} onPick={onPick} disabled />);
+    fireEvent.click(screen.getByRole("button", { name: "A" }));
+    expect(onPick).not.toHaveBeenCalled();
+  });
+});
+
+describe("SystemBlock", () => {
+  it("renders the kicker and the transition text", () => {
+    render(<SystemBlock>Requirements clear — sketching</SystemBlock>);
+    expect(screen.getByText("Phase")).toBeInTheDocument();
+    expect(
+      screen.getByText("Requirements clear — sketching"),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("ChatDock", () => {
+  it("sends on Enter and inserts a newline on Shift+Enter", () => {
+    const onSend = jest.fn();
+    render(
+      <ChatDock value="a tide app" onChange={jest.fn()} onSend={onSend} />,
+    );
+    const input = screen.getByLabelText("Message");
+    fireEvent.keyDown(input, { key: "Enter", shiftKey: true });
+    expect(onSend).not.toHaveBeenCalled();
+    fireEvent.keyDown(input, { key: "Enter" });
+    expect(onSend).toHaveBeenCalledTimes(1);
+  });
+
+  it("does not send when the value is blank", () => {
+    const onSend = jest.fn();
+    render(<ChatDock value="   " onChange={jest.fn()} onSend={onSend} />);
+    fireEvent.keyDown(screen.getByLabelText("Message"), { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    expect(onSend).not.toHaveBeenCalled();
+  });
+});
+
+describe("CanvasPlaceholder", () => {
+  it("shows phase-aware copy for clarification", () => {
+    render(<CanvasPlaceholder phase="CLARIFICATION" />);
+    expect(
+      screen.getByText("The diagram takes shape here"),
+    ).toBeInTheDocument();
+  });
+
+  it("falls back to a neutral message for an unmapped phase", () => {
+    render(<CanvasPlaceholder phase="DONE" />);
+    expect(screen.getByText("Nothing on the canvas yet")).toBeInTheDocument();
   });
 });

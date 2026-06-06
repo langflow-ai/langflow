@@ -1,5 +1,4 @@
-import { render, screen } from "@testing-library/react";
-import React from "react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 // jsdom has no scrollIntoView; the chat panel calls it on every message change.
 Element.prototype.scrollIntoView = jest.fn();
@@ -11,67 +10,175 @@ jest.mock("react-router-dom", () => ({
   useParams: () => mockParams,
 }));
 
-jest.mock("@/components/common/genericIconComponent", () => ({
-  __esModule: true,
-  default: ({ name }: { name: string }) => (
-    <span data-testid={`icon-${name}`}>{name}</span>
-  ),
-}));
-
-jest.mock("@/pages/FlowPage/consts", () => ({ nodeTypes: {} }));
-
-jest.mock("@xyflow/react", () => ({
-  __esModule: true,
-  ReactFlow: ({ children }: { children?: React.ReactNode }) => (
-    <div data-testid="reactflow">{children}</div>
-  ),
-  Background: () => <div data-testid="background" />,
-  Controls: () => <div data-testid="controls" />,
-  ReactFlowProvider: ({ children }: { children?: React.ReactNode }) => (
-    <div>{children}</div>
-  ),
-  useNodesState: () => [[], jest.fn(), jest.fn()],
-  useEdgesState: () => [[], jest.fn(), jest.fn()],
-}));
-
 const mockUseProjects = jest.fn();
 const mockUseMessages = jest.fn();
 const mockSendMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProjects: () => mockUseProjects(),
   useMessages: () => mockUseMessages(),
-  useSendMessage: () => ({ mutateAsync: mockSendMutate }),
+  useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
 }));
 
 import Workspace from "../index";
+
+const project = {
+  id: "p1",
+  user_id: "u1",
+  name: "Tide Tracker",
+  phase: "CLARIFICATION",
+  prd_content: null,
+  diagram_mmd: null,
+  diagram_layout: null,
+  created_at: "2026-01-01T00:00:00Z",
+  updated_at: "2026-01-01T00:00:00Z",
+};
+
+const msg = (over: Partial<Record<string, unknown>>) => ({
+  id: "m1",
+  project_id: "p1",
+  role: "ASSISTANT",
+  content: "",
+  suggestions: [],
+  phase: "CLARIFICATION",
+  created_at: "2026-01-01T00:00:00Z",
+  ...over,
+});
+
+// The shape an axios 501 takes; the chat keys its NotReady state off it.
+const error501 = {
+  response: {
+    status: 501,
+    data: {
+      detail: "Listing messages is not implemented yet.",
+      status: "not_implemented",
+    },
+  },
+};
 
 describe("Lothal Workspace", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockParams = { projectId: "p1" };
-    mockUseMessages.mockReturnValue({ data: [] });
+    mockSendMutate.mockResolvedValue(msg({ id: "reply", content: "ok" }));
+    // Default: messages load fine and empty.
+    mockUseMessages.mockReturnValue({
+      data: [],
+      isLoading: false,
+      isError: false,
+    });
   });
 
-  it("shows Loading… while the projects query is loading", () => {
+  it("shows a themed loading state while projects load", () => {
     mockUseProjects.mockReturnValue({ data: undefined, isLoading: true });
     render(<Workspace />);
-    expect(screen.getByText("Loading…")).toBeInTheDocument();
+    expect(screen.getByText("Opening the workshop…")).toBeInTheDocument();
   });
 
-  it("shows Project not found. once loaded with no matching id", () => {
+  it("shows a not-found state when no project matches the id", () => {
     mockUseProjects.mockReturnValue({ data: [], isLoading: false });
     render(<Workspace />);
-    expect(screen.getByText("Project not found.")).toBeInTheDocument();
+    expect(screen.getByText("Project not found")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Back to the harbor" }));
+    expect(mockNavigate).toHaveBeenCalledWith("/lothal");
   });
 
-  it("renders the workspace shell when the project exists", () => {
-    mockUseProjects.mockReturnValue({
-      data: [{ id: "p1", name: "Demo", phase: "CLARIFICATION" }],
+  it("renders the shell — name, phase stepper, and status verb", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    render(<Workspace />);
+    expect(screen.getByText("Tide Tracker")).toBeInTheDocument();
+    // PhaseStepper label + StatusDot verb for CLARIFICATION.
+    expect(screen.getByText("Clarify")).toBeInTheDocument();
+    expect(screen.getByText("clarifying")).toBeInTheDocument();
+  });
+
+  it("shows NotReady (not an error) when the messages endpoint 501s", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseMessages.mockReturnValue({
+      data: undefined,
       isLoading: false,
+      isError: true,
+      error: error501,
     });
     render(<Workspace />);
-    expect(screen.getByText("Demo")).toBeInTheDocument();
-    expect(screen.getByText("Clarifying")).toBeInTheDocument();
-    expect(screen.getByTestId("reactflow")).toBeInTheDocument();
+    expect(
+      screen.getByText("The conversation isn't live yet"),
+    ).toBeInTheDocument();
+    // The 501's human detail is surfaced through NotReady.
+    expect(
+      screen.getByText("Listing messages is not implemented yet."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the empty-conversation prompt (no scripted welcome) when live and empty", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    render(<Workspace />);
+    expect(screen.getByText("Start the conversation")).toBeInTheDocument();
+    // The input dock is always available.
+    expect(screen.getByLabelText("Message")).toBeInTheDocument();
+  });
+
+  it("renders messages in order with a transition block at a phase boundary", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseMessages.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [
+        msg({
+          id: "m1",
+          role: "USER",
+          content: "Build a tide app",
+          phase: "CLARIFICATION",
+        }),
+        msg({
+          id: "m2",
+          role: "ASSISTANT",
+          content: "Who is it for?",
+          phase: "CLARIFICATION",
+        }),
+        msg({
+          id: "m3",
+          role: "ASSISTANT",
+          content: "Sketching now",
+          phase: "DIAGRAM_GENERATION",
+        }),
+      ],
+    });
+    render(<Workspace />);
+    expect(screen.getByText("Build a tide app")).toBeInTheDocument();
+    expect(screen.getByText("Who is it for?")).toBeInTheDocument();
+    expect(
+      screen.getByText("Requirements clear — sketching the diagram"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders suggestion chips only on the latest clarification reply and sends on pick", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseMessages.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [
+        msg({
+          id: "m1",
+          role: "ASSISTANT",
+          content: "Who is it for?",
+          suggestions: ["Casual", "Serious"],
+        }),
+      ],
+    });
+    render(<Workspace />);
+    fireEvent.click(screen.getByRole("button", { name: "Casual" }));
+    expect(mockSendMutate).toHaveBeenCalledWith("Casual");
+  });
+
+  it("sends a typed message and clears the input", async () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    render(<Workspace />);
+    const input = screen.getByLabelText("Message") as HTMLTextAreaElement;
+    fireEvent.change(input, { target: { value: "A tide app" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
+    await waitFor(() =>
+      expect(mockSendMutate).toHaveBeenCalledWith("A tide app"),
+    );
+    expect(input.value).toBe("");
   });
 });

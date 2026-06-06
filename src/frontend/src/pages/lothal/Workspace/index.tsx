@@ -1,248 +1,440 @@
-import {
-  Background,
-  Controls,
-  ReactFlow,
-  ReactFlowProvider,
-  useEdgesState,
-  useNodesState,
-} from "@xyflow/react";
-import { useEffect, useRef, useState } from "react";
+// Lothal workspace (Story B.3) — the build bench. Rebuilt onto the B.1 design
+// system: a themed surface with a phase-aware top bar and a split layout
+// (clarification chat on the left, canvas on the right). The chat is wired to
+// the real `/messages` + `/chat` endpoints — no scripted playback. While those
+// are 501 stubs (Epic 1) the chat column shows the uniform NotReady state; it
+// "goes live" with no UI change once the clarification backend lands. The
+// canvas is a placeholder until Story B.4 brings the real @xyflow/react canvas.
+
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import { Button } from "@/components/ui/button";
-import { Textarea } from "@/components/ui/textarea";
 import {
+  type Message,
   type Project,
   useMessages,
   useProjects,
   useSendMessage,
 } from "@/controllers/API/queries/lothal";
-import { nodeTypes } from "@/pages/FlowPage/consts";
-import { PHASE_LABELS } from "../constants";
+import useAuthStore from "@/stores/authStore";
+import {
+  AssistantQuestion,
+  Button,
+  CanvasPlaceholder,
+  ChatBubble,
+  ChatDock,
+  EmptyHint,
+  isNotImplemented,
+  LothalMark,
+  NotReady,
+  PhaseStepper,
+  phaseLabel,
+  StatusDot,
+  SystemBlock,
+  TopBar,
+} from "../components";
+import { LothalSurface } from "../theme/LothalSurface";
 
-type ChatMessage = {
-  id: string;
-  role: "USER" | "ASSISTANT";
-  content: string;
-};
+// The line shown when the conversation crosses a phase boundary.
+function transitionNote(toPhase: string): string {
+  switch (toPhase) {
+    case "DIAGRAM_GENERATION":
+      return "Requirements clear — sketching the diagram";
+    case "DIAGRAM_REFINEMENT":
+      return "Refining the diagram";
+    case "CODE_GENERATION":
+      return "Diagram approved — generating the code";
+    case "DONE":
+      return "Delivered";
+    default:
+      return `Now ${phaseLabel(toPhase)}`;
+  }
+}
+
+function ArrowLeft({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" fill="none" aria-hidden>
+      <path
+        d="M9.5 3.5 5 8l4.5 4.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
+// Pulsing dots while the assistant reply is in flight.
+function ThinkingBubble() {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "flex-start",
+        gap: 5,
+      }}
+    >
+      <span className="label" style={{ fontSize: 9.5, paddingInline: 2 }}>
+        Lothal
+      </span>
+      <div
+        style={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: 5,
+          padding: "11px 14px",
+          background: "var(--surface)",
+          border: "1px solid var(--border)",
+          borderRadius: 14,
+          borderBottomLeftRadius: 4,
+        }}
+      >
+        {[0, 1, 2].map((i) => (
+          <span
+            key={i}
+            className="pulse"
+            style={{
+              width: 5,
+              height: 5,
+              borderRadius: "50%",
+              background: "var(--ink-soft)",
+              animationDelay: `${i * 0.18}s`,
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// --- Chat --------------------------------------------------------------------
 
 function ChatPanel({ project }: { project: Project }) {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const { data: messages, isLoading, isError, error } = useMessages(project.id);
+  const send = useSendMessage(project.id);
   const [input, setInput] = useState("");
-  const [sending, setSending] = useState(false);
+  // The user's in-flight turn, shown optimistically until the refetched thread
+  // (which now includes it) replaces it.
+  const [pending, setPending] = useState<string | null>(null);
+  const [sendFailed, setSendFailed] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  const { data: backendMessages } = useMessages(project.id);
-  const sendMutation = useSendMessage(project.id);
-
-  // Initialize from backend on first load; show welcome only for new projects
+  // A fresh message list means the send round-tripped — drop the optimistic
+  // bubble (the real user + assistant messages are now in `messages`).
   useEffect(() => {
-    if (backendMessages === undefined) return;
-    if (backendMessages.length === 0) {
-      setMessages([
-        {
-          id: "welcome",
-          role: "ASSISTANT",
-          content: `Hi! I'm here to help you build **${project.name}**. Tell me what you'd like to create — what problem does it solve and who's it for?`,
-        },
-      ]);
-    } else {
-      setMessages(
-        backendMessages.map((m) => ({
-          id: m.id,
-          role: m.role,
-          content: m.content,
-        })),
-      );
-    }
-  }, [backendMessages, project.name]);
+    setPending(null);
+  }, [messages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages]);
+  }, [messages, pending]);
 
-  const handleSend = async () => {
-    const text = input.trim();
-    if (!text || sending) return;
-    setInput("");
-    setSending(true);
-    setMessages((prev) => [
-      ...prev,
-      { id: Date.now().toString(), role: "USER", content: text },
-    ]);
+  const submit = async (text: string) => {
+    const trimmed = text.trim();
+    if (!trimmed || send.isPending) return;
+    setSendFailed(false);
+    setPending(trimmed);
     try {
-      const reply = await sendMutation.mutateAsync(text);
-      setMessages((prev) => [
-        ...prev,
-        { id: reply.id, role: "ASSISTANT", content: reply.content },
-      ]);
+      await send.mutateAsync(trimmed);
     } catch {
-      // Surface the failure inline so the user isn't left wondering whether
-      // their message was sent (the send endpoint may not be live yet).
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: `error-${prev.length}`,
-          role: "ASSISTANT",
-          content: "Sorry, something went wrong. Please try again.",
-        },
-      ]);
-    } finally {
-      setSending(false);
+      // Roll back the optimistic bubble and surface the failure inline.
+      setPending(null);
+      setSendFailed(true);
     }
   };
 
+  const handleSend = () => {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    setInput("");
+    submit(trimmed);
+  };
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 13,
+          color: "var(--ink-soft)",
+        }}
+      >
+        Opening the conversation…
+      </div>
+    );
+  }
+
+  if (isError) {
+    // Contract-first: a structured 501 means the backend isn't built yet, so
+    // the whole column shows the uniform NotReady state. Any other error is a
+    // genuine failure reaching the dockyard.
+    return isNotImplemented(error) ? (
+      <NotReady title="The conversation isn't live yet" error={error} />
+    ) : (
+      <NotReady
+        title="Couldn't load the conversation"
+        detail="Something went wrong reaching the dockyard. Try again in a moment."
+      />
+    );
+  }
+
+  const list: Message[] = messages ?? [];
+  const lastMsg = list[list.length - 1];
+  // Chips belong to the active question only: the latest message, when it's an
+  // assistant reply still offering suggestions (clarification). Once the phase
+  // advances the backend returns `suggestions: []`, so they disappear on their
+  // own — and they're hidden while a reply is in flight.
+  const showChips =
+    !pending &&
+    !send.isPending &&
+    lastMsg?.role === "ASSISTANT" &&
+    (lastMsg.suggestions?.length ?? 0) > 0;
+
+  const thread: ReactNode[] = [];
+  let prevPhase: string | null = null;
+  list.forEach((m, i) => {
+    if (prevPhase !== null && m.phase !== prevPhase) {
+      thread.push(
+        <SystemBlock key={`sys-${m.id}`}>
+          {transitionNote(m.phase)}
+        </SystemBlock>,
+      );
+    }
+    prevPhase = m.phase;
+    const isLast = i === list.length - 1;
+    thread.push(
+      <ChatBubble key={m.id} role={m.role} content={m.content}>
+        {isLast && showChips ? (
+          <AssistantQuestion
+            suggestions={m.suggestions}
+            onPick={submit}
+            disabled={send.isPending}
+          />
+        ) : null}
+      </ChatBubble>,
+    );
+  });
+
   return (
-    <div className="flex h-full flex-col">
-      {/* Messages */}
-      <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-        {messages.map((msg) => (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "100%",
+        minHeight: 0,
+      }}
+    >
+      <div
+        style={{
+          flex: 1,
+          minHeight: 0,
+          overflowY: "auto",
+          padding: "18px var(--pad)",
+          display: "flex",
+          flexDirection: "column",
+          gap: 14,
+        }}
+      >
+        {list.length === 0 && !pending ? (
+          <EmptyHint
+            title="Start the conversation"
+            sub="Describe what you want to build. Lothal asks focused questions until the spec is clear, then sketches the diagram."
+          />
+        ) : (
+          thread
+        )}
+        {pending && <ChatBubble role="USER" content={pending} />}
+        {send.isPending && <ThinkingBubble />}
+        {sendFailed && (
           <div
-            key={msg.id}
-            className={`flex ${msg.role === "USER" ? "justify-end" : "justify-start"}`}
+            style={{
+              alignSelf: "center",
+              fontSize: 12,
+              color: "var(--warn)",
+            }}
           >
-            <div
-              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
-                msg.role === "USER"
-                  ? "bg-blue-600 text-white"
-                  : "bg-gray-100 text-gray-800"
-              }`}
-            >
-              {msg.content}
-            </div>
-          </div>
-        ))}
-        {sending && (
-          <div className="flex justify-start">
-            <div className="rounded-2xl bg-gray-100 px-4 py-2.5 text-sm text-gray-400">
-              Thinking…
-            </div>
+            Couldn’t send that — please try again.
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Input */}
-      <div className="border-t border-gray-200 p-4">
-        <div className="flex items-end gap-2">
-          <Textarea
-            className="max-h-[160px] min-h-[60px] resize-none text-sm"
-            placeholder="Describe what you want to build…"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-          />
-          <Button
-            size="icon"
-            disabled={!input.trim() || sending}
-            onClick={handleSend}
-            className="shrink-0"
-          >
-            <ForwardedIconComponent name="Send" className="h-4 w-4" />
-          </Button>
-        </div>
-        <p className="mt-1.5 text-xs text-gray-400">
-          Enter to send · Shift+Enter for new line
-        </p>
-      </div>
+      <ChatDock
+        value={input}
+        onChange={setInput}
+        onSend={handleSend}
+        disabled={send.isPending}
+      />
     </div>
   );
 }
 
-function CanvasPanel() {
-  const [nodes, , onNodesChange] = useNodesState([]);
-  const [edges, , onEdgesChange] = useEdgesState([]);
+// --- Page --------------------------------------------------------------------
 
-  return (
-    <div className="h-full w-full">
-      <ReactFlow
-        nodes={nodes}
-        edges={edges}
-        onNodesChange={onNodesChange}
-        onEdgesChange={onEdgesChange}
-        nodeTypes={nodeTypes}
-        fitView
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background gap={16} size={1} color="#e5e7eb" />
-        <Controls />
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="text-center text-gray-400">
-            <ForwardedIconComponent
-              name="GitBranch"
-              className="mx-auto mb-2 h-10 w-10 opacity-30"
-            />
-            <p className="text-sm">Diagram will appear here once generated</p>
-          </div>
-        </div>
-      </ReactFlow>
-    </div>
-  );
-}
-
-export default function Workspace() {
+function WorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
   const { data: projects, isLoading } = useProjects();
+  const username = useAuthStore((s) => s.userData?.username);
+  const initial = username ? username.charAt(0).toUpperCase() : "";
   const project = projects?.find((p) => p.id === projectId);
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-gray-400">
-        Loading…
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <span
+          className="serif"
+          style={{
+            fontSize: 22,
+            color: "var(--ink-mute)",
+            fontStyle: "italic",
+          }}
+        >
+          Opening the workshop…
+        </span>
       </div>
     );
   }
 
   if (!project) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-gray-400">
-        Project not found.
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+        }}
+      >
+        <EmptyHint
+          title="Project not found"
+          sub="This build isn’t in your harbor — it may have been deleted."
+        />
+        <Button variant="accent" onClick={() => navigate("/lothal")}>
+          Back to the harbor
+        </Button>
       </div>
     );
   }
 
-  const phaseLabel = PHASE_LABELS[project.phase] ?? project.phase;
-
   return (
-    <div className="flex h-full flex-col">
-      {/* Header */}
-      <div className="flex items-center gap-3 border-b border-gray-200 px-6 py-3">
-        <button
-          onClick={() => navigate("/lothal")}
-          className="rounded p-1 text-gray-400 hover:text-gray-600"
-        >
-          <ForwardedIconComponent name="ArrowLeft" className="h-4 w-4" />
-        </button>
-        <div className="flex-1">
-          <h1 className="text-sm font-semibold text-gray-900">
-            {project.name}
-          </h1>
-        </div>
-        <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">
-          {phaseLabel}
-        </span>
-      </div>
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      <TopBar
+        dense
+        left={
+          <span
+            style={{
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 12,
+              minWidth: 0,
+            }}
+          >
+            <button
+              type="button"
+              aria-label="Back to the harbor"
+              onClick={() => navigate("/lothal")}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 28,
+                height: 28,
+                borderRadius: 7,
+                border: "1px solid var(--border)",
+                background: "transparent",
+                color: "var(--ink-mute)",
+                cursor: "pointer",
+              }}
+            >
+              <ArrowLeft />
+            </button>
+            <span style={{ color: "var(--accent)", display: "inline-flex" }}>
+              <LothalMark size={18} />
+            </span>
+            <span
+              className="serif"
+              style={{
+                fontSize: 19,
+                color: "var(--ink)",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+                maxWidth: 260,
+              }}
+            >
+              {project.name}
+            </span>
+          </span>
+        }
+        center={<PhaseStepper phase={project.phase} variant="stepper" />}
+        right={
+          <span
+            style={{ display: "inline-flex", alignItems: "center", gap: 16 }}
+          >
+            <StatusDot phase={project.phase} />
+            <span
+              aria-label={username ? `Account: ${username}` : "Account"}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: 28,
+                height: 28,
+                borderRadius: "50%",
+                background: "var(--accent)",
+                color: "var(--accent-fg)",
+                fontSize: 12,
+                fontWeight: 600,
+              }}
+            >
+              {initial}
+            </span>
+          </span>
+        }
+      />
 
-      {/* Split layout */}
-      <div className="flex flex-1 overflow-hidden">
-        {/* Chat — left 40% */}
-        <div className="flex w-2/5 flex-col overflow-hidden border-r border-gray-200">
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        {/* Chat — left */}
+        <div
+          style={{
+            flexBasis: "40%",
+            minWidth: 360,
+            maxWidth: 540,
+            borderRight: "1px solid var(--border)",
+            background: "var(--paper)",
+            minHeight: 0,
+          }}
+        >
           <ChatPanel project={project} />
         </div>
 
-        {/* Canvas — right 60% */}
-        <div className="flex-1 overflow-hidden">
-          <ReactFlowProvider>
-            <CanvasPanel />
-          </ReactFlowProvider>
+        {/* Canvas — right (placeholder until Story B.4) */}
+        <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
+          <CanvasPlaceholder phase={project.phase} />
         </div>
       </div>
     </div>
+  );
+}
+
+export default function Workspace() {
+  return (
+    <LothalSurface>
+      <WorkspaceView />
+    </LothalSurface>
   );
 }
