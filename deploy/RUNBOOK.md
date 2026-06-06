@@ -44,7 +44,9 @@ Performed once on a fresh box (idempotent — safe to re-run):
 4. **certbot** — `apt-get install certbot python3-certbot-nginx`; `certbot.timer` auto-renews.
 5. **Deploy SSH key** — an ed25519 key authorizes `lothal` for non-interactive SSH/CI.
    The private key is the `SSH_KEY` GitHub secret (see below).
-6. **App dir** — `/opt/lothal/` created and `chown lothal:lothal`; compose + `.env` placed there.
+6. **App dir** — `/opt/lothal/` created and `chown lothal:lothal`; `docker-compose.prod.yml`,
+   `.env`, and `lothal.conf` (from the repo root + `deploy/`) placed there. The nginx step below
+   copies the site config from `/opt/lothal/lothal.conf`.
 
 ## nginx + TLS (host)
 
@@ -72,7 +74,7 @@ cd /opt/lothal
 cp .env.prod.example .env   # if not already present
 # Fill every __CHANGE_ME__. Generate strong values:
 python3 -c "import secrets; print(secrets.token_urlsafe(48))"   # LANGFLOW_SECRET_KEY
-# Set POSTGRES_PASSWORD (and mirror it inside LANGFLOW_DATABASE_URL),
+# Set POSTGRES_PASSWORD (the compose derives LANGFLOW_DATABASE_URL from POSTGRES_*),
 # LANGFLOW_SUPERUSER_PASSWORD, and the OPENAI_BASE_URL / OPENAI_API_KEY / LOTHAL_MODEL_NAME.
 chmod 600 .env
 ```
