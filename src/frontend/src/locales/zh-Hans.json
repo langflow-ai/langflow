@@ -1629,6 +1629,7 @@
   "settings.generalDescription": "管理与 Langflow 及您的账户相关的设置。",
   "settings.generalTitle": "常规",
   "settings.languageDescription": "选择 Langflow 界面的显示语言。",
+  "settings.languageAuto": "自动",
   "settings.languageRecommended": "建议",
   "settings.languageSelectAriaLabel": "选择语言",
   "settings.languageTitle": "语言",

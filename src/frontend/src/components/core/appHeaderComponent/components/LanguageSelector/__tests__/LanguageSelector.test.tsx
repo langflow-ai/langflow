@@ -1,16 +1,17 @@
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { SUPPORTED_LANGUAGES } from "@/constants/languages";
+import { AUTO_LANGUAGE, SUPPORTED_LANGUAGES } from "@/constants/languages";
 
 const mockInvalidateQueries = jest.fn();
 const mockSetTypes = jest.fn();
-const mockChangeLanguage = jest.fn();
 const mockLoadLanguage = jest.fn((lang: string) => Promise.resolve(lang));
+const mockGetBrowserLanguage = jest.fn(() => "zh-Hans");
 const mockNormalizeLanguage = jest.fn((lang: string) => lang);
 let mockSelectValue: string | undefined;
 let mockSelectOnValueChange: ((v: string) => void) | undefined;
 
 jest.mock("@/i18n", () => ({
+  getBrowserLanguage: mockGetBrowserLanguage,
   loadLanguage: mockLoadLanguage,
   normalizeLanguage: mockNormalizeLanguage,
 }));
@@ -18,7 +19,6 @@ jest.mock("@/i18n", () => ({
 jest.mock("react-i18next", () => ({
   useTranslation: () => ({
     t: (key: string) => key,
-    i18n: { changeLanguage: mockChangeLanguage, language: "en" },
   }),
 }));
 
@@ -104,12 +104,13 @@ describe("LanguageSelector", () => {
     jest.restoreAllMocks();
   });
 
-  it("renders manual language options in locale file order", () => {
+  it("renders Auto plus manual language options in locale file order", () => {
     render(<LanguageSelector />);
 
     const options = screen.getAllByRole("option");
-    expect(options).toHaveLength(SUPPORTED_LANGUAGES.length);
+    expect(options).toHaveLength(SUPPORTED_LANGUAGES.length + 1);
     expect(options.map((option) => option.getAttribute("value"))).toEqual([
+      AUTO_LANGUAGE,
       "de",
       "en",
       "es",
@@ -120,6 +121,9 @@ describe("LanguageSelector", () => {
       "ru",
       "zh-Hans",
     ]);
+    expect(
+      screen.getByRole("option", { name: /settings.languageAuto/i }),
+    ).toBeInTheDocument();
     SUPPORTED_LANGUAGES.forEach((lang) => {
       expect(
         screen.getByRole("option", { name: new RegExp(lang.label) }),
@@ -127,10 +131,10 @@ describe("LanguageSelector", () => {
     });
   });
 
-  it("selects the current i18n language by default", () => {
+  it("selects Auto by default", () => {
     render(<LanguageSelector />);
 
-    expect(screen.getByRole("combobox")).toHaveValue("en");
+    expect(screen.getByRole("combobox")).toHaveValue(AUTO_LANGUAGE);
   });
 
   it("applies trigger styling props", () => {
@@ -158,7 +162,24 @@ describe("LanguageSelector", () => {
     await waitFor(() => {
       expect(localStorage.getItem("languagePreference")).toBe("de");
       expect(mockLoadLanguage).toHaveBeenCalledWith("de");
-      expect(mockChangeLanguage).toHaveBeenCalledWith("de");
+      expect(mockSetTypes).toHaveBeenCalledWith({});
+      expect(mockInvalidateQueries).toHaveBeenCalledWith({
+        queryKey: ["useGetTypes"],
+      });
+    });
+  });
+
+  it("clears manual preference and loads browser language when selecting Auto", async () => {
+    const user = userEvent.setup();
+    localStorage.setItem("languagePreference", "fr");
+
+    render(<LanguageSelector />);
+    await user.selectOptions(screen.getByRole("combobox"), AUTO_LANGUAGE);
+
+    await waitFor(() => {
+      expect(localStorage.getItem("languagePreference")).toBeNull();
+      expect(mockGetBrowserLanguage).toHaveBeenCalled();
+      expect(mockLoadLanguage).toHaveBeenCalledWith("zh-Hans");
       expect(mockSetTypes).toHaveBeenCalledWith({});
       expect(mockInvalidateQueries).toHaveBeenCalledWith({
         queryKey: ["useGetTypes"],

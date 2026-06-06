@@ -1629,6 +1629,7 @@
   "settings.generalDescription": "Gestiona los ajustes relacionados con Langflow y tu cuenta.",
   "settings.generalTitle": "Tema general",
   "settings.languageDescription": "Selecciona el idioma de visualización de la interfaz de Langflow.",
+  "settings.languageAuto": "Automático",
   "settings.languageRecommended": "Recomendado",
   "settings.languageSelectAriaLabel": "Seleccionar idioma",
   "settings.languageTitle": "Idioma",

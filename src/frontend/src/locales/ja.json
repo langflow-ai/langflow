@@ -1629,6 +1629,7 @@
   "settings.generalDescription": "Langflowおよびアカウントに関する設定を管理します。",
   "settings.generalTitle": "一般",
   "settings.languageDescription": "Langflowインターフェースの表示言語を選択してください。",
+  "settings.languageAuto": "自動",
   "settings.languageRecommended": "推奨",
   "settings.languageSelectAriaLabel": "言語の選択",
   "settings.languageTitle": "言語",

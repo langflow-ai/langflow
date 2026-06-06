@@ -1,4 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import {
@@ -9,10 +10,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  AUTO_LANGUAGE,
+  LANGUAGE_PREFERENCE_STORAGE_KEY,
+  type LanguagePreference,
   SUPPORTED_LANGUAGES,
-  type SupportedLanguage,
 } from "@/constants/languages";
-import { loadLanguage, normalizeLanguage } from "@/i18n";
+import { getBrowserLanguage, loadLanguage, normalizeLanguage } from "@/i18n";
 import { useTypesStore } from "@/stores/typesStore";
 
 type LanguageSelectorProps = {
@@ -26,29 +29,48 @@ type LanguageSelectorProps = {
  * Renders the shared language selector and keeps language-dependent caches fresh.
  *
  * @param props - 选择器触发器的样式与图标选项。 / Styling and icon options for the selector trigger.
- * @returns 手动语言选项选择器。 / The manual language selector.
+ * @returns 包含自动与手动语言选项的语言选择器。 / The language selector with Auto and manual language options.
  */
 export const LanguageSelector = ({
   className,
   showIcon = false,
   triggerClassName,
 }: LanguageSelectorProps) => {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const queryClient = useQueryClient();
   const setTypes = useTypesStore((state) => state.setTypes);
+  const [languagePreference, setLanguagePreference] =
+    useState<LanguagePreference>(() => {
+      const storedLanguagePreference = localStorage.getItem(
+        LANGUAGE_PREFERENCE_STORAGE_KEY,
+      );
 
-  const handleChange = async (code: SupportedLanguage) => {
-    const normalizedLanguage = await loadLanguage(code);
-    await i18n.changeLanguage(normalizedLanguage);
-    localStorage.setItem("languagePreference", normalizedLanguage);
+      return storedLanguagePreference &&
+        storedLanguagePreference !== AUTO_LANGUAGE
+        ? normalizeLanguage(storedLanguagePreference)
+        : AUTO_LANGUAGE;
+    });
+
+  const handleChange = async (code: LanguagePreference) => {
+    if (code === AUTO_LANGUAGE) {
+      localStorage.removeItem(LANGUAGE_PREFERENCE_STORAGE_KEY);
+      setLanguagePreference(AUTO_LANGUAGE);
+      await loadLanguage(getBrowserLanguage());
+    } else {
+      const normalizedLanguage = normalizeLanguage(code);
+      localStorage.setItem(LANGUAGE_PREFERENCE_STORAGE_KEY, normalizedLanguage);
+      setLanguagePreference(normalizedLanguage);
+      await loadLanguage(normalizedLanguage);
+    }
+
     setTypes({});
     queryClient.invalidateQueries({ queryKey: ["useGetTypes"] });
   };
 
   return (
     <Select
-      value={normalizeLanguage(i18n.language)}
-      onValueChange={(code) => handleChange(code as SupportedLanguage)}
+      value={languagePreference}
+      onValueChange={(code) => handleChange(code as LanguagePreference)}
     >
       <SelectTrigger
         aria-label={t("settings.languageSelectAriaLabel")}
@@ -60,12 +82,12 @@ export const LanguageSelector = ({
         <SelectValue />
       </SelectTrigger>
       <SelectContent>
+        <SelectItem value={AUTO_LANGUAGE}>
+          {t("settings.languageAuto")} ({t("settings.languageRecommended")})
+        </SelectItem>
         {SUPPORTED_LANGUAGES.map((lang) => (
           <SelectItem key={lang.code} value={lang.code}>
             {lang.label}
-            {lang.code === "en"
-              ? ` (${t("settings.languageRecommended")})`
-              : ""}
           </SelectItem>
         ))}
       </SelectContent>

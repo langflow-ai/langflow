@@ -1,3 +1,6 @@
+export const AUTO_LANGUAGE = "auto";
+export const LANGUAGE_PREFERENCE_STORAGE_KEY = "languagePreference";
+
 export const SUPPORTED_LANGUAGES = [
   { code: "de", label: "Deutsch" },
   { code: "en", label: "English" },
@@ -11,3 +14,4 @@ export const SUPPORTED_LANGUAGES = [
 ] as const;
 
 export type SupportedLanguage = (typeof SUPPORTED_LANGUAGES)[number]["code"];
+export type LanguagePreference = SupportedLanguage | typeof AUTO_LANGUAGE;
