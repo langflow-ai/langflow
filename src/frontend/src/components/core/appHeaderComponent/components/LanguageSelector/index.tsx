@@ -17,6 +17,11 @@ import {
 } from "@/constants/languages";
 import { getBrowserLanguage, loadLanguage, normalizeLanguage } from "@/i18n";
 import { useTypesStore } from "@/stores/typesStore";
+import {
+  getLocalStorage,
+  removeLocalStorage,
+  setLocalStorage,
+} from "@/utils/local-storage-util";
 
 type LanguageSelectorProps = {
   className?: string;
@@ -41,7 +46,7 @@ export const LanguageSelector = ({
   const setTypes = useTypesStore((state) => state.setTypes);
   const [languagePreference, setLanguagePreference] =
     useState<LanguagePreference>(() => {
-      const storedLanguagePreference = localStorage.getItem(
+      const storedLanguagePreference = getLocalStorage(
         LANGUAGE_PREFERENCE_STORAGE_KEY,
       );
 
@@ -53,12 +58,12 @@ export const LanguageSelector = ({
 
   const handleChange = async (code: LanguagePreference) => {
     if (code === AUTO_LANGUAGE) {
-      localStorage.removeItem(LANGUAGE_PREFERENCE_STORAGE_KEY);
+      removeLocalStorage(LANGUAGE_PREFERENCE_STORAGE_KEY);
       setLanguagePreference(AUTO_LANGUAGE);
       await loadLanguage(getBrowserLanguage());
     } else {
       const normalizedLanguage = normalizeLanguage(code);
-      localStorage.setItem(LANGUAGE_PREFERENCE_STORAGE_KEY, normalizedLanguage);
+      setLocalStorage(LANGUAGE_PREFERENCE_STORAGE_KEY, normalizedLanguage);
       setLanguagePreference(normalizedLanguage);
       await loadLanguage(normalizedLanguage);
     }

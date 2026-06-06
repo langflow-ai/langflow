@@ -6,6 +6,7 @@ import {
 } from "./constants/languages";
 import { getBrowserLanguage, loadLanguage } from "./i18n";
 import reportWebVitals from "./reportWebVitals";
+import { getLocalStorage } from "./utils/local-storage-util";
 
 import "./style/classes.css";
 // @ts-ignore
@@ -17,9 +18,7 @@ import "./style/applies.css";
 // @ts-ignore
 import App from "./customization/custom-App";
 
-const languagePreference = localStorage.getItem(
-  LANGUAGE_PREFERENCE_STORAGE_KEY,
-);
+const languagePreference = getLocalStorage(LANGUAGE_PREFERENCE_STORAGE_KEY);
 const detectedLang =
   languagePreference && languagePreference !== AUTO_LANGUAGE
     ? languagePreference
