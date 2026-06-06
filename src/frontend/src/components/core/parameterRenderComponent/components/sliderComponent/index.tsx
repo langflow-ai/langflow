@@ -52,6 +52,7 @@ export default function SliderComponent({
   handleOnNewValue,
   showParameter = true,
 }: InputProps<string[] | number[], SliderComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const min = rangeSpec?.min ?? -2;
   const max = rangeSpec?.max ?? 2;
 
@@ -88,8 +89,6 @@ export default function SliderComponent({
 
     return null;
   };
-
-  const { t } = useTranslation();
 
   const labelTranslations: Record<string, string> = {
     Precise: t("slider.precise"),

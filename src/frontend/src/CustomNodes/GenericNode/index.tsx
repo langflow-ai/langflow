@@ -25,6 +25,7 @@ import { useTypesStore } from "../../stores/typesStore";
 import { useUtilityStore } from "../../stores/utilityStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import type { NodeDataType } from "../../types/flow";
+import { translateComponentMetadata } from "../../utils/component-metadata-i18n";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
 import { classNames, cn } from "../../utils/utils";
 import { processNodeAdvancedFields } from "../helpers/process-node-advanced-fields";
@@ -121,6 +122,16 @@ function GenericNode({
   );
 
   const showNode = data.showNode ?? true;
+  const translatedDisplayName = translateComponentMetadata(
+    t,
+    "component",
+    data.node?.display_name,
+  );
+  const translatedDescription = translateComponentMetadata(
+    t,
+    "description",
+    data.node?.description,
+  );
 
   const getValidationStatus = useCallback((data) => {
     setValidationStatus(data);
@@ -592,6 +603,7 @@ function GenericNode({
               <div className="ml-3 flex flex-1 overflow-hidden">
                 <MemoizedNodeName
                   display_name={data.node?.display_name}
+                  translatedDisplayName={translatedDisplayName}
                   nodeId={data.id}
                   selected={selected}
                   showNode={showNode}
@@ -652,6 +664,7 @@ function GenericNode({
             <div className="px-4 pb-3">
               <MemoizedNodeDescription
                 description={data.node?.description}
+                displayDescription={translatedDescription}
                 charLimit={1000}
                 mdClassName={"dark:prose-invert"}
                 nodeId={data.id}

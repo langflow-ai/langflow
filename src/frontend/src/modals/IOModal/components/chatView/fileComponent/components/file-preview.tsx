@@ -60,7 +60,7 @@ export default function FilePreview({
           </div>
         )
       ) : error ? (
-        <div>Error...</div>
+        <div>{t("chat.filePreviewError")}</div>
       ) : (
         <div
           className={`relative mt-2 ${

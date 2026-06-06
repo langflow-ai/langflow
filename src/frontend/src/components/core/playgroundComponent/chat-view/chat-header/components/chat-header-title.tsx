@@ -1,4 +1,4 @@
-import React from "react";
+import { useTranslation } from "react-i18next";
 import { cn } from "@/utils/utils";
 import { SessionRename } from "./session-rename";
 
@@ -21,7 +21,8 @@ export function ChatHeaderTitle({
   onCancel,
   className,
 }: ChatHeaderTitleProps) {
-  const displayTitle = sessionTitle ?? "Default Session";
+  const { t } = useTranslation();
+  const displayTitle = sessionTitle ?? t("chat.defaultSession");
 
   return (
     <div

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { getNodeInputColors } from "@/CustomNodes/helpers/get-node-input-colors";
 import { getNodeInputColorsName } from "@/CustomNodes/helpers/get-node-input-colors-name";
 import {
@@ -8,6 +9,7 @@ import {
 import { sortToolModeFields } from "@/CustomNodes/helpers/sort-tool-mode-field";
 import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import useFlowStore from "@/stores/flowStore";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { scapedJSONStringfy } from "@/utils/reactflowUtils";
 import NodeInputField from "../NodeInputField";
 import { findPrimaryInput } from "./utils";
@@ -20,6 +22,7 @@ const RenderInputParameters = ({
   shownOutputs,
   showHiddenOutputs,
 }) => {
+  const { t } = useTranslation();
   const edges = useFlowStore((state) => state.edges);
 
   const templateFields = useMemo(() => {
@@ -115,8 +118,12 @@ const RenderInputParameters = ({
           key={memoizedKey}
           data={data}
           colors={memoizedColor.colors}
-          title={getFieldTitle(data.node?.template!, templateField)}
-          info={template.info!}
+          title={translateComponentMetadata(
+            t,
+            "field",
+            getFieldTitle(data.node?.template!, templateField),
+          )}
+          info={translateComponentMetadata(t, "info", template.info)}
           name={templateField}
           tooltipTitle={template.input_types?.join("\n") ?? template.type}
           required={template.required}

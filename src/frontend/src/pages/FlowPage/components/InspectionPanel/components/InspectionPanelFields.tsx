@@ -12,6 +12,7 @@ import getFieldTitle from "@/CustomNodes/utils/get-field-title";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import useFlowStore from "@/stores/flowStore";
 import type { NodeDataType, targetHandleType } from "@/types/flow";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { scapeJSONParse } from "@/utils/reactflowUtils";
 import { HIDDEN_FIELDS, INSPECTION_PANEL_ONLY_FIELDS } from "./hidden-fields";
 import InspectionPanelEditField from "./InspectionPanelEditField";
@@ -133,8 +134,16 @@ export default function InspectionPanelFields({
                 key={`${data.id}-${templateField}-edit`}
                 data={data}
                 name={templateField}
-                title={getFieldTitle(data.node?.template!, templateField)}
-                description={template.info || ""}
+                title={translateComponentMetadata(
+                  t,
+                  "field",
+                  getFieldTitle(data.node?.template!, templateField),
+                )}
+                description={translateComponentMetadata(
+                  t,
+                  "info",
+                  template.info,
+                )}
                 isOnCanvas={!template.advanced}
               />
             );
@@ -164,8 +173,12 @@ export default function InspectionPanelFields({
       <InspectionPanelField
         key={`${data.id}-${templateField}`}
         data={data}
-        title={getFieldTitle(data.node?.template!, templateField)}
-        info={template.info!}
+        title={translateComponentMetadata(
+          t,
+          "field",
+          getFieldTitle(data.node?.template!, templateField),
+        )}
+        info={translateComponentMetadata(t, "info", template.info)}
         name={templateField}
         required={template.required}
         id={{
