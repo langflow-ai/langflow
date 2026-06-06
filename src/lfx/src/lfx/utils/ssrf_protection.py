@@ -395,6 +395,77 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise
 
 
+# SQLAlchemy dialects that read/write the local filesystem instead of connecting over the
+# network. A multi-tenant deployer must never let a tenant-supplied DB URL open these
+# (e.g. sqlite:////etc/passwd, or ATTACH to read/write arbitrary server files).
+_LOCAL_FILE_DB_DIALECTS = frozenset({"sqlite", "duckdb", "access", "shell"})
+
+
+def _local_file_access_restricted() -> bool:
+    """Return True if LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled."""
+    try:
+        return bool(get_settings_service().settings.restrict_local_file_access)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; default to not restricted
+        return False
+
+
+def validate_database_url_for_ssrf(url: str) -> None:
+    """Validate a SQLAlchemy database URL against SSRF and local-file access.
+
+    Unlike :func:`validate_url_for_ssrf` (which only guards http/https and returns early for
+    other schemes), this guards arbitrary DB URIs on two axes, each with its own toggle:
+
+    * Network dialects (postgresql, mysql, ...) must resolve to a host that is not an
+      internal/blocked IP — guarded by SSRF protection (``LANGFLOW_SSRF_PROTECTION_ENABLED``,
+      default on), so a tenant cannot reach the control-plane DB or other internal services.
+    * Local-file-backed dialects (sqlite, duckdb, ...) read/write the server filesystem and
+      are blocked only when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default off), so
+      single-tenant sqlite usage keeps working while multi-tenant deployments can disable it.
+
+    Raises:
+        SSRFProtectionError: If the URL targets a blocked IP, or a local-file dialect while
+            local file access is restricted.
+        ValueError: If the URL is malformed.
+    """
+    ssrf_on = is_ssrf_protection_enabled()
+    file_restricted = _local_file_access_restricted()
+    if not ssrf_on and not file_restricted:
+        return
+
+    try:
+        parsed = urlparse(url)
+    except Exception as e:
+        msg = f"Invalid database URL format: {e}"
+        raise ValueError(msg) from e
+
+    # SQLAlchemy schemes look like "postgresql+psycopg2"; reduce to the dialect.
+    dialect = (parsed.scheme or "").lower().split("+", 1)[0]
+    if dialect in _LOCAL_FILE_DB_DIALECTS:
+        if file_restricted:
+            msg = (
+                f"Database dialect '{dialect}' accesses the local filesystem and is not permitted "
+                "(LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true). Use a network database (e.g. postgresql, mysql)."
+            )
+            raise SSRFProtectionError(msg)
+        # Not restricted: local-file DBs are allowed (single-tenant default).
+        return
+
+    # Network dialect: host SSRF validation only applies when SSRF protection is enabled.
+    if not ssrf_on:
+        return
+
+    hostname = parsed.hostname
+    if not hostname:
+        # A network dialect with no host cannot be validated -> fail closed.
+        msg = "Database URL must contain a network host."
+        raise SSRFProtectionError(msg)
+
+    # Reuse the same allowlist + blocked-range checks as HTTP SSRF validation.
+    if _validate_direct_ip_address(hostname):
+        return
+    _validate_hostname_resolution(hostname)
+
+
 def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
     """Validate URL for SSRF and return validated IP addresses for DNS pinning.
 

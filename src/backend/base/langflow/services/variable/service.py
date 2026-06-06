@@ -241,6 +241,15 @@ class DatabaseVariableService(VariableService, Service):
                 if not variable.value:
                     await logger.awarning("Variable '%s' has no stored value — skipping.", variable.name)
                     continue
+                # Security defense-in-depth: a GENERIC variable is stored as plain text, so its
+                # value must never be a Fernet token. If it is (e.g. a CREDENTIAL row that was
+                # relabeled GENERIC), do NOT decrypt-and-return it — that would leak the secret.
+                if isinstance(variable.value, str) and variable.value.startswith("gAAAAA"):
+                    await logger.awarning(
+                        "Variable '%s' is Generic but contains encrypted credential-shaped data — skipping.",
+                        variable.name,
+                    )
+                    continue
                 value = auth_utils.decrypt_api_key(variable.value)
                 if not value:
                     await logger.awarning(
@@ -353,6 +362,24 @@ class DatabaseVariableService(VariableService, Service):
         query = select(Variable).where(Variable.id == variable_id, Variable.user_id == user_id)
         db_variable = (await session.exec(query)).one()
         db_variable.updated_at = datetime.now(timezone.utc)
+
+        # Security: prevent a CREDENTIAL -> GENERIC type-confusion that would expose the
+        # decrypted secret. Credential values are stored as Fernet ciphertext ("gAAAAA...").
+        # Relabeling the row GENERIC *without* supplying a fresh value would leave that
+        # ciphertext in place; get_all() then decrypts GENERIC values and returns the
+        # plaintext (e.g. the server's shared provider keys). Reject that transition.
+        resulting_type = variable.type if variable.type is not None else db_variable.type
+        if (
+            resulting_type == GENERIC_TYPE
+            and variable.value is None
+            and isinstance(db_variable.value, str)
+            and db_variable.value.startswith("gAAAAA")
+        ):
+            msg = (
+                "Cannot change a credential variable to a generic variable without providing "
+                "a new value."
+            )
+            raise ValueError(msg)
 
         # Handle value encryption based on variable type (consistent with update_variable and create_variable)
         if variable.value is not None:
