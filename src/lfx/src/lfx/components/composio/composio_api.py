@@ -9,6 +9,12 @@ from langchain_core.tools import Tool
 
 from lfx.base.composio.safe_provider import SafeLangchainProvider
 
+# if (isinstance(request[_param], dict) and 
+#     isinstance(params.get(_param), dict) and 
+#     params[_param].get("type") == "object"):
+#     pass
+
+
 # Local imports
 from lfx.base.langchain_utilities.model import LCToolComponent
 from lfx.inputs.inputs import (
