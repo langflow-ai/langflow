@@ -7,7 +7,7 @@ inject a phantom terminal event into A's live durable log, and race A's real
 terminal write. With lease+heartbeat liveness the sweep only reconciles
 GENUINELY orphaned rows (stale/absent heartbeat), so B leaves A's live job alone.
 
-Real SQLite AND real Postgres via the hard-proof fixture.
+Real SQLite AND real Postgres via the real-service fixture.
 """
 
 from __future__ import annotations
@@ -26,15 +26,15 @@ from langflow.services.database.models.jobs.model import JobStatus
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 def _frame(event_type: str, data: dict) -> tuple[bytes, str]:
     return (json.dumps({"event": event_type, "data": data}).encode("utf-8"), event_type)
 
 
-async def test_booting_worker_sweep_spares_live_heartbeated_job(hard_proof_job_service):
-    job_service = hard_proof_job_service
+async def test_booting_worker_sweep_spares_live_heartbeated_job(real_services_job_service):
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 

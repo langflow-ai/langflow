@@ -1,14 +1,14 @@
-"""Real-instance fixtures for the background-execution hard-proof tier.
+"""Real-instance fixtures for the background-execution real-service tier.
 
-These fixtures back ``@pytest.mark.hard_proof`` tests with REAL engines, never
+These fixtures back ``@pytest.mark.real_services`` tests with REAL engines, never
 fakes:
 
-- ``hard_proof_db_url`` parametrizes over real SQLite (always) and real Postgres
+- ``real_services_db_url`` parametrizes over real SQLite (always) and real Postgres
   (only when ``LANGFLOW_TEST_DATABASE_URI`` is set; CI always sets it).
-- ``hard_proof_redis_url`` yields a real Redis URL from ``LANGFLOW_TEST_REDIS_URL``
+- ``real_services_redis_url`` yields a real Redis URL from ``LANGFLOW_TEST_REDIS_URL``
   (skips when unset), flushed clean before and after each test.
-- ``hard_proof_job_service`` runs the real Alembic migrations against
-  ``hard_proof_db_url`` and binds ``session_scope()`` to it, so store methods are
+- ``real_services_job_service`` runs the real Alembic migrations against
+  ``real_services_db_url`` and binds ``session_scope()`` to it, so store methods are
   exercised on both real SQLite and real Postgres.
 """
 
@@ -40,7 +40,7 @@ def _async_pg_url(raw: str) -> str:
 
 
 @pytest.fixture(params=["sqlite", "postgres"])
-async def hard_proof_db_url(request: pytest.FixtureRequest) -> AsyncGenerator[str, None]:
+async def real_services_db_url(request: pytest.FixtureRequest) -> AsyncGenerator[str, None]:
     """Yield a real, connectable async DB URL.
 
     - sqlite: a real temp-file SQLite database (always runs).
@@ -63,10 +63,10 @@ async def hard_proof_db_url(request: pytest.FixtureRequest) -> AsyncGenerator[st
 
 
 @pytest.fixture
-async def hard_proof_job_service(hard_proof_db_url: str) -> AsyncGenerator[JobService, None]:
+async def real_services_job_service(real_services_db_url: str) -> AsyncGenerator[JobService, None]:
     """Yield a JobService whose ``session_scope()`` is bound to a real, migrated DB.
 
-    Runs the real Alembic migrations against ``hard_proof_db_url`` (sqlite + postgres)
+    Runs the real Alembic migrations against ``real_services_db_url`` (sqlite + postgres)
     through the production ``DatabaseService`` path, then swaps that service into the
     service manager so ``JobService``'s ``session_scope()`` resolves to it. This proves
     the store methods on BOTH real SQLite and real Postgres, and that the migrations
@@ -83,7 +83,7 @@ async def hard_proof_job_service(hard_proof_db_url: str) -> AsyncGenerator[JobSe
     original_url = settings_service.settings.database_url
     original_db_service = manager.services.pop(ServiceType.DATABASE_SERVICE, None)
 
-    settings_service.settings.database_url = hard_proof_db_url
+    settings_service.settings.database_url = real_services_db_url
     db_service = DatabaseServiceFactory().create(settings_service)
     manager.services[ServiceType.DATABASE_SERVICE] = db_service
 
@@ -100,7 +100,7 @@ async def hard_proof_job_service(hard_proof_db_url: str) -> AsyncGenerator[JobSe
 
 
 @pytest.fixture
-async def hard_proof_redis_url() -> AsyncGenerator[str, None]:
+async def real_services_redis_url() -> AsyncGenerator[str, None]:
     """Yield a real Redis URL from ``LANGFLOW_TEST_REDIS_URL``, flushed clean.
 
     Skips when ``LANGFLOW_TEST_REDIS_URL`` is unset (CI sets it via the redis:7

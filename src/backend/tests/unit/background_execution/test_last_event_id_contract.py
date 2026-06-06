@@ -30,7 +30,7 @@ from langflow.services.background_execution.runner import JobRunner
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 class _StubUser:
@@ -92,7 +92,7 @@ async def _run_token_flow(job_service, job_id, bus) -> None:
     await runner.run(job_id=job_id, source_kwargs={})
 
 
-async def test_live_id_matches_durable_seq_default(hard_proof_job_service):
+async def test_live_id_matches_durable_seq_default(real_services_job_service):
     """The live id: a client sees == the durable seq the replay resumes after.
 
     Drives the real runner (default in-memory bus), captures the live frames, then
@@ -100,7 +100,7 @@ async def test_live_id_matches_durable_seq_default(hard_proof_job_service):
     Pre-fix the live id is the stream-seq (0,1,4,5) while the durable seq is
     (1,2,3,4), so they diverge and a Last-Event-ID resume is wrong.
     """
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     user_id = uuid4()
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=user_id)
@@ -134,7 +134,7 @@ async def test_live_id_matches_durable_seq_default(hard_proof_job_service):
         )
 
 
-async def test_reattach_no_gap_no_dup_default(hard_proof_job_service):
+async def test_reattach_no_gap_no_dup_default(real_services_job_service):
     """Mid-run Last-Event-ID resume starts exactly at the next milestone.
 
     Captures the live id of the ``vertices_sorted`` milestone, reconnects with it
@@ -148,7 +148,7 @@ async def test_reattach_no_gap_no_dup_default(hard_proof_job_service):
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     user_id = uuid4()
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=user_id)

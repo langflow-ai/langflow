@@ -111,7 +111,7 @@ def pytest_configure(config):
     config.addinivalue_line("markers", "api_key_required: run only if the api key is set in the environment variables")
     config.addinivalue_line(
         "markers",
-        "hard_proof: Real-instance proof tests (real SQLite + real Postgres + real Redis)",
+        "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)",
     )
     data_path = Path(__file__).parent.absolute() / "data"
 

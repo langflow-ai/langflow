@@ -58,8 +58,8 @@ jobs:
         run: |
           uv run pytest src/backend/tests/unit/alembic/test_migration_execution.py -x -v
 
-  background-hard-proof:
-    name: Background Execution Hard-Proof (real Postgres + Redis)
+  background-real-service:
+    name: Background Execution Real-Service Tests (real Postgres + Redis)
     runs-on: ubuntu-latest
 
     services:
@@ -104,12 +104,12 @@ jobs:
         run: |
           uv sync --extra postgresql
 
-      - name: Run hard-proof tests
+      - name: Run real-service tests
         env:
           LANGFLOW_TEST_DATABASE_URI: "postgresql://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
           LANGFLOW_TEST_REDIS_URL: "redis://localhost:6379/0"
         run: |
-          uv run pytest src/backend/tests/unit/background_execution -m hard_proof -x -v
+          uv run pytest src/backend/tests/unit/background_execution -m real_services -x -v
 
   validate-migration:
     name: Migration Pattern Validation

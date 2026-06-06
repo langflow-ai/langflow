@@ -1,4 +1,4 @@
-"""Phase 0 harness tests: the hard_proof marker + real-instance fixtures.
+"""Phase 0 harness tests: the real_services marker + real-instance fixtures.
 
 These prove the harness itself works before any background-execution code exists:
 the marker is registered, the DB fixture backs a real engine on sqlite and
@@ -15,20 +15,20 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 
 @pytest.mark.no_blockbuster
-def test_hard_proof_marker_is_registered(request: pytest.FixtureRequest) -> None:
-    """The hard_proof marker must be registered so --strict-markers accepts it."""
+def test_real_services_marker_is_registered(request: pytest.FixtureRequest) -> None:
+    """The real_services marker must be registered so --strict-markers accepts it."""
     ini_markers = request.config.getini("markers")
     names = {line.split(":", 1)[0].strip() for line in ini_markers}
-    assert "hard_proof" in names, f"hard_proof not registered; have: {sorted(names)}"
+    assert "real_services" in names, f"real_services not registered; have: {sorted(names)}"
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_hard_proof_db_url_yields_real_engine(hard_proof_db_url: str) -> None:
-    """hard_proof_db_url must produce a URL backing a real, queryable engine."""
-    if "postgresql" in hard_proof_db_url:
+async def test_real_services_db_url_yields_real_engine(real_services_db_url: str) -> None:
+    """real_services_db_url must produce a URL backing a real, queryable engine."""
+    if "postgresql" in real_services_db_url:
         assert os.environ.get("LANGFLOW_TEST_DATABASE_URI"), "postgres param ran without URI set"
-    engine = create_async_engine(hard_proof_db_url)
+    engine = create_async_engine(real_services_db_url)
     try:
         async with engine.connect() as conn:
             result = await conn.execute(text("SELECT 1"))
@@ -37,17 +37,17 @@ async def test_hard_proof_db_url_yields_real_engine(hard_proof_db_url: str) -> N
         await engine.dispose()
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_hard_proof_redis_url_pings_real_server(hard_proof_redis_url: str) -> None:
-    """hard_proof_redis_url must back a reachable, real Redis server."""
+async def test_real_services_redis_url_pings_real_server(real_services_redis_url: str) -> None:
+    """real_services_redis_url must back a reachable, real Redis server."""
     from redis.asyncio import StrictRedis
 
     assert os.environ.get("LANGFLOW_TEST_REDIS_URL"), "redis fixture ran without URL set"
-    client = StrictRedis.from_url(hard_proof_redis_url)
+    client = StrictRedis.from_url(real_services_redis_url)
     try:
         assert await client.ping() is True
-        await client.set("hard_proof:probe", "1")
-        assert await client.get("hard_proof:probe") == b"1"
+        await client.set("real_services:probe", "1")
+        assert await client.get("real_services:probe") == b"1"
     finally:
         await client.aclose()

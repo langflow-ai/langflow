@@ -1,7 +1,7 @@
-"""Hard-proof store tests: JobService methods against REAL SQLite and REAL Postgres.
+"""Real-service store tests: JobService methods against REAL SQLite and REAL Postgres.
 
 These bind ``session_scope()`` to a real, migrated database (via the
-``hard_proof_job_service`` fixture) so every store method is exercised on both
+``real_services_job_service`` fixture) so every store method is exercised on both
 engines, not just the temp-file SQLite the ``client`` fixture provides. Running
 the real Alembic migrations against both engines here also re-proves the schema
 applies on Postgres (JSONB columns, the execution_signal_type_enum, the
@@ -17,10 +17,10 @@ import pytest
 from langflow.services.database.models.jobs.model import JobStatus, SignalType
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_set_result_and_error_persist(hard_proof_job_service) -> None:
-    service = hard_proof_job_service
+async def test_set_result_and_error_persist(real_services_job_service) -> None:
+    service = real_services_job_service
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -32,10 +32,10 @@ async def test_set_result_and_error_persist(hard_proof_job_service) -> None:
     assert fetched.error == {"type": "boom", "message": "x"}
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_append_and_read_events_ordered(hard_proof_job_service) -> None:
-    service = hard_proof_job_service
+async def test_append_and_read_events_ordered(real_services_job_service) -> None:
+    service = real_services_job_service
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -48,10 +48,10 @@ async def test_append_and_read_events_ordered(hard_proof_job_service) -> None:
     assert tail[0].payload == {"i": 2}
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_append_event_seq_is_per_job(hard_proof_job_service) -> None:
-    service = hard_proof_job_service
+async def test_append_event_seq_is_per_job(real_services_job_service) -> None:
+    service = real_services_job_service
     job_a = uuid4()
     job_b = uuid4()
     await service.create_job(job_id=job_a, flow_id=uuid4(), user_id=uuid4())
@@ -62,15 +62,15 @@ async def test_append_event_seq_is_per_job(hard_proof_job_service) -> None:
     assert await service.append_event(job_a, "x", {}) == 2
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_append_event_concurrent_appends_all_land_gap_free(hard_proof_job_service) -> None:
+async def test_append_event_concurrent_appends_all_land_gap_free(real_services_job_service) -> None:
     """Concurrent appends to one job must ALL land, gap-free (retry on UNIQUE collision).
 
     Regression for the seq race: SELECT max(seq)+1 then INSERT collides under
     contention; without retry the losers' events were silently dropped.
     """
-    service = hard_proof_job_service
+    service = real_services_job_service
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -84,10 +84,10 @@ async def test_append_event_concurrent_appends_all_land_gap_free(hard_proof_job_
     assert len(events) == n
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_write_and_read_signals(hard_proof_job_service) -> None:
-    service = hard_proof_job_service
+async def test_write_and_read_signals(real_services_job_service) -> None:
+    service = real_services_job_service
     job_id = uuid4()
     await service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -101,10 +101,10 @@ async def test_write_and_read_signals(hard_proof_job_service) -> None:
     assert pending[0].signal_type == SignalType.STOP
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_sweep_orphans_reconciles_in_progress(hard_proof_job_service) -> None:
-    service = hard_proof_job_service
+async def test_sweep_orphans_reconciles_in_progress(real_services_job_service) -> None:
+    service = real_services_job_service
     orphan = uuid4()
     queued = uuid4()
     await service.create_job(job_id=orphan, flow_id=uuid4(), user_id=uuid4())
@@ -128,11 +128,11 @@ async def test_sweep_orphans_reconciles_in_progress(hard_proof_job_service) -> N
     assert queued_job.status == JobStatus.QUEUED
 
 
-@pytest.mark.hard_proof
+@pytest.mark.real_services
 @pytest.mark.no_blockbuster
-async def test_get_jobs_by_flow_id_orders_by_created_timestamp(hard_proof_job_service) -> None:
+async def test_get_jobs_by_flow_id_orders_by_created_timestamp(real_services_job_service) -> None:
     """Regression on real engines: ordering by created_timestamp must not raise."""
-    service = hard_proof_job_service
+    service = real_services_job_service
     flow_id = uuid4()
     user_id = uuid4()
     first = uuid4()

@@ -1,4 +1,4 @@
-"""Hard-proof the in-process executor's worker resilience.
+"""Verify the in-process executor's worker resilience.
 
 These tests drive the REAL ``InProcessExecutor`` (no mocks of our logic) and
 assert the worker pool survives the two ways a job can end abnormally:
@@ -21,7 +21,7 @@ import asyncio
 import pytest
 from langflow.services.background_execution.executor import InProcessExecutor
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 async def test_pool_survives_repeated_job_cancellation(monkeypatch):

@@ -33,7 +33,7 @@ from langflow.services.background_execution.live_bus import InMemoryLiveBus
 from langflow.services.background_execution.runner import JobRunner
 from langflow.services.database.models.jobs.model import JobStatus
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 # --------------------------------------------------------------------------- #
@@ -146,12 +146,12 @@ def _echo_factory(*, request, **_kwargs):
     return _source
 
 
-async def test_durability_delta_off_loses_job_on_restart_on_recovers(hard_proof_job_service):
+async def test_durability_delta_off_loses_job_on_restart_on_recovers(real_services_job_service):
     """Durability OFF: a restart finds NO recoverable row -> job lost. ON: recovered + re-run."""
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
 
     # --- OFF: the in-memory-only path (pre-fix). The submit never wrote a durable
     #     QUEUED row — the job lived only in the dead process's executor queue. A
@@ -229,9 +229,9 @@ def _runner(job_service, job_id, source):
     return JobRunner(job_service=job_service, live_bus=InMemoryLiveBus(), adapter=adapter, frame_source=source)
 
 
-async def test_sweep_claim_delta_off_double_runs_on_exactly_once(hard_proof_job_service):
+async def test_sweep_claim_delta_off_double_runs_on_exactly_once(real_services_job_service):
     """Sweep claim OFF: two sweepers both run a QUEUED job (double). ON: exactly once."""
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
 
     # --- OFF: the pre-fix unconditional re-enqueue. Two sweepers each run the job
     #     because neither claims it first. We reproduce by running the runner twice

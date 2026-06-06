@@ -1235,7 +1235,7 @@ class TestStopWorkflowEndToEnd:
     The deterministic CANCELLED outcome of a stop is proven without an
     HTTP-level race in
     ``services/background_execution/test_service.py::test_stop_cancels_job`` and
-    ``background_execution/test_facade_hard_proof.py::test_stop_signal_cancels_run``
+    ``background_execution/test_facade_real_services.py::test_stop_signal_cancels_run``
     (sqlite + postgres), so this test deliberately does not assert the exact
     terminal label under the unsynchronized fast-flow vs stop race.
     """

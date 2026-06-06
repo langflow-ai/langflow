@@ -205,7 +205,7 @@ markers = [
     "integration: Integration tests",
     "slow: Slow-running tests",
     "security: Security regression tests (IDOR, auth, access control)",
-    "hard_proof: Real-instance proof tests (real SQLite + real Postgres + real Redis)"
+    "real_services: Tests that need real service instances (real SQLite + real Postgres + real Redis)"
 ]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"

@@ -1,4 +1,4 @@
-"""BOUNDED-CONCURRENCY hard proof.
+"""BOUNDED-CONCURRENCY real service.
 
 Submit N+k jobs to the real ``InProcessExecutor`` configured for max concurrency
 N. A barrier holds every started job so the peak in-flight count is observable;
@@ -15,7 +15,7 @@ import threading
 import pytest
 from langflow.services.background_execution.executor import InProcessExecutor
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 class _Probe:

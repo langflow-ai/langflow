@@ -1,7 +1,7 @@
-"""Hard-proof the durable background path on real SQLite AND real Postgres.
+"""Verify the durable background path on real SQLite AND real Postgres.
 
 The Runner + InMemoryLiveBus + facade durable replay all sit on ``JobService``,
-whose ``session_scope()`` the ``hard_proof_job_service`` fixture binds to a real,
+whose ``session_scope()`` the ``real_services_job_service`` fixture binds to a real,
 migrated DB parametrized over sqlite and postgres. These tests drive the real
 Runner with a scripted frame source (legitimate test input, not a mock of our
 logic) and assert durable persistence, ordering, terminal state, reattach replay,
@@ -23,7 +23,7 @@ from langflow.services.database.models.jobs.model import JobStatus, SignalType
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-pytestmark = pytest.mark.hard_proof
+pytestmark = pytest.mark.real_services
 
 
 def _frame(event_type: str, data: dict) -> tuple[bytes, str]:
@@ -35,8 +35,8 @@ def _runner(job_service, bus, job_id, source) -> JobRunner:
     return JobRunner(job_service=job_service, live_bus=bus, adapter=adapter, frame_source=source)
 
 
-async def test_durable_persistence_and_terminal_state(hard_proof_job_service):
-    job_service = hard_proof_job_service
+async def test_durable_persistence_and_terminal_state(real_services_job_service):
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -60,8 +60,8 @@ async def test_durable_persistence_and_terminal_state(hard_proof_job_service):
     assert [e.seq for e in events] == [1, 2, 3]  # contiguous, monotonic
 
 
-async def test_reattach_replays_durable_after_completion(hard_proof_job_service):
-    job_service = hard_proof_job_service
+async def test_reattach_replays_durable_after_completion(real_services_job_service):
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -88,8 +88,8 @@ async def test_reattach_replays_durable_after_completion(hard_proof_job_service)
     assert b"end_vertex" in bodies
 
 
-async def test_reattach_from_midpoint_has_no_gap(hard_proof_job_service):
-    job_service = hard_proof_job_service
+async def test_reattach_from_midpoint_has_no_gap(real_services_job_service):
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -110,8 +110,8 @@ async def test_reattach_from_midpoint_has_no_gap(hard_proof_job_service):
     assert seqs == [2, 3]
 
 
-async def test_stop_signal_cancels_run(hard_proof_job_service):
-    job_service = hard_proof_job_service
+async def test_stop_signal_cancels_run(real_services_job_service):
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     # A STOP written before the run makes the first boundary poll cancel it.
@@ -128,8 +128,8 @@ async def test_stop_signal_cancels_run(hard_proof_job_service):
     assert job.status == JobStatus.CANCELLED
 
 
-async def test_sweep_orphans_fails_in_progress(hard_proof_job_service):
-    job_service = hard_proof_job_service
+async def test_sweep_orphans_fails_in_progress(real_services_job_service):
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
@@ -161,7 +161,7 @@ def _echo_input_factory(*, request, **_kwargs):
     return _source
 
 
-async def test_submit_persists_request_for_faithful_requeue(hard_proof_job_service):
+async def test_submit_persists_request_for_faithful_requeue(real_services_job_service):
     """``submit`` persists the request body on the job row (job_metadata.request).
 
     This is the durable record the startup sweep reads to replay original inputs.
@@ -171,7 +171,7 @@ async def test_submit_persists_request_for_faithful_requeue(hard_proof_job_servi
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     original_input = f"original-input-{uuid4()}"
     flow_id = uuid4()
 
@@ -197,7 +197,7 @@ async def test_submit_persists_request_for_faithful_requeue(hard_proof_job_servi
     assert persisted == request
 
 
-async def test_submit_redacts_inline_globals_from_persisted_request(hard_proof_job_service):
+async def test_submit_redacts_inline_globals_from_persisted_request(real_services_job_service):
     """Inline ``globals`` (request-level secrets) must NOT land plaintext on the row.
 
     ``submit`` persists the request body for faithful replay, but request-level
@@ -212,7 +212,7 @@ async def test_submit_redacts_inline_globals_from_persisted_request(hard_proof_j
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     flow_id = uuid4()
     secret = f"sk-secret-{uuid4()}"
 
@@ -239,7 +239,7 @@ async def test_submit_redacts_inline_globals_from_persisted_request(hard_proof_j
     assert request["globals"] == {"OPENAI_API_KEY": secret}
 
 
-async def test_requeued_queued_job_replays_original_input(hard_proof_job_service):
+async def test_requeued_queued_job_replays_original_input(real_services_job_service):
     """A QUEUED job that survives a restart re-runs with its ORIGINAL input.
 
     Models "queued, never started, then the process died": the durable row is
@@ -254,7 +254,7 @@ async def test_requeued_queued_job_replays_original_input(hard_proof_job_service
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     original_input = f"original-input-{uuid4()}"
     user_id = uuid4()
     flow_id = uuid4()
@@ -295,7 +295,7 @@ async def test_requeued_queued_job_replays_original_input(hard_proof_job_service
     assert echoed == [original_input]
 
 
-async def test_job_timeout_marks_timed_out(hard_proof_job_service):
+async def test_job_timeout_marks_timed_out(real_services_job_service):
     """A run that overruns ``background_job_timeout`` ends TIMED_OUT.
 
     The runner wraps the drive in ``asyncio.wait_for(timeout=...)``;
@@ -306,7 +306,7 @@ async def test_job_timeout_marks_timed_out(hard_proof_job_service):
     """
     import asyncio
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -330,7 +330,7 @@ async def test_job_timeout_marks_timed_out(hard_proof_job_service):
     assert job.status == JobStatus.TIMED_OUT
 
 
-async def test_events_reattach_after_restart_returns_on_terminal_job(hard_proof_job_service):
+async def test_events_reattach_after_restart_returns_on_terminal_job(real_services_job_service):
     """Reattaching to an already-terminal job after a restart MUST NOT hang.
 
     Models a process restart: a job runs to COMPLETED, persisting durable
@@ -348,7 +348,7 @@ async def test_events_reattach_after_restart_returns_on_terminal_job(hard_proof_
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     user_id = uuid4()
     flow_id = uuid4()
     job_id = uuid4()
@@ -381,7 +381,7 @@ async def test_events_reattach_after_restart_returns_on_terminal_job(hard_proof_
     assert b"end" in body
 
 
-async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
+async def test_events_replay_frames_are_sse_framed(real_services_job_service):
     """Durable replay must emit SSE-framed bytes byte-compatible with live frames.
 
     Live frames are pre-SSE-framed with a ``data:`` line followed by an ``id:``
@@ -396,7 +396,7 @@ async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     user_id = uuid4()
     flow_id = uuid4()
     job_id = uuid4()
@@ -423,7 +423,7 @@ async def test_events_replay_frames_are_sse_framed(hard_proof_job_service):
         assert f"id: {seq}".encode() in frame, f"replayed frame missing id: {frame!r}"
 
 
-async def test_executor_stop_applies_terminal_reconcile(hard_proof_job_service):
+async def test_executor_stop_applies_terminal_reconcile(real_services_job_service):
     """``executor.stop()`` lets an in-flight stopped job's reconcile land.
 
     Drives the REAL runner on the executor. The job blocks mid-run; a STOP signal
@@ -440,7 +440,7 @@ async def test_executor_stop_applies_terminal_reconcile(hard_proof_job_service):
 
     from langflow.services.background_execution.executor import InProcessExecutor
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -476,7 +476,7 @@ async def test_executor_stop_applies_terminal_reconcile(hard_proof_job_service):
     assert job.status == JobStatus.CANCELLED
 
 
-async def test_stop_poll_only_on_durable_frames(hard_proof_job_service):
+async def test_stop_poll_only_on_durable_frames(real_services_job_service):
     """The runner polls the STOP signal only on DURABLE frames, not every token.
 
     Polling ``unconsumed_signals`` (a DB read) on every ephemeral token is wasted
@@ -486,7 +486,7 @@ async def test_stop_poll_only_on_durable_frames(hard_proof_job_service):
     durable frames, and assert the poll count tracks the durable frames, not the
     token flood. Real SQLite and Postgres.
     """
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
 
@@ -521,7 +521,7 @@ async def test_stop_poll_only_on_durable_frames(hard_proof_job_service):
     )
 
 
-async def test_stop_signal_is_marked_consumed(hard_proof_job_service):
+async def test_stop_signal_is_marked_consumed(real_services_job_service):
     """When the runner acts on a STOP, the signal row is stamped ``consumed_at``.
 
     Otherwise the execution_signals table grows unbounded and, worse, a
@@ -530,7 +530,7 @@ async def test_stop_signal_is_marked_consumed(hard_proof_job_service):
     (2) a fresh run of the SAME job_id afterwards does NOT instantly cancel —
     it completes, because the stale STOP was consumed. Real SQLite and Postgres.
     """
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     job_id = uuid4()
     await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=uuid4())
     await job_service.write_signal(job_id, SignalType.STOP)
@@ -579,7 +579,7 @@ def _side_effect_factory(*, request, **_kwargs):  # noqa: ARG001
     return _source
 
 
-async def test_concurrent_sweep_runs_queued_job_exactly_once(hard_proof_job_service):
+async def test_concurrent_sweep_runs_queued_job_exactly_once(real_services_job_service):
     """Two startup sweepers sharing one DB must run a QUEUED job EXACTLY once.
 
     Models two uvicorn workers booting against the same database, each calling
@@ -594,7 +594,7 @@ async def test_concurrent_sweep_runs_queued_job_exactly_once(hard_proof_job_serv
     from langflow.services.background_execution.service import BackgroundExecutionService
     from langflow.services.deps import get_settings_service
 
-    job_service = hard_proof_job_service
+    job_service = real_services_job_service
     user_id = uuid4()
     flow_id = uuid4()
     job_id = uuid4()
