@@ -9,6 +9,7 @@ export { CanvasPlaceholder } from "./CanvasPlaceholder";
 export { CanvasSurface } from "./CanvasSurface";
 export { ChatBubble } from "./ChatBubble";
 export { ChatDock } from "./ChatDock";
+export { CodeView } from "./CodeView";
 export { DiagramCanvas } from "./DiagramCanvas";
 export { EmptyHint } from "./EmptyHint";
 export { HarborWatermark } from "./HarborWatermark";
@@ -28,4 +29,11 @@ export {
 } from "./phases";
 export { StatusDot } from "./StatusDot";
 export { SystemBlock } from "./SystemBlock";
+export {
+  highlightTokens,
+  type Language,
+  languageFromPath,
+  type Token,
+  type TokenType,
+} from "./syntax";
 export { TopBar } from "./TopBar";

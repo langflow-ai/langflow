@@ -13,11 +13,13 @@ jest.mock("react-router-dom", () => ({
 const mockUseProjects = jest.fn();
 const mockUseMessages = jest.fn();
 const mockUseDiagram = jest.fn();
+const mockUseCode = jest.fn();
 const mockSendMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
   useProjects: () => mockUseProjects(),
   useMessages: () => mockUseMessages(),
   useDiagram: () => mockUseDiagram(),
+  useCode: () => mockUseCode(),
   useSendMessage: () => ({ mutateAsync: mockSendMutate, isPending: false }),
 }));
 
@@ -57,6 +59,18 @@ const error501 = {
   },
 };
 
+const codeError501 = {
+  response: {
+    status: 501,
+    data: {
+      detail: "The code endpoint is not implemented yet.",
+      status: "not_implemented",
+    },
+  },
+};
+
+const codeProject = { ...project, phase: "CODE_GENERATION" };
+
 describe("Lothal Workspace", () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -68,7 +82,7 @@ describe("Lothal Workspace", () => {
       isLoading: false,
       isError: false,
     });
-    // Default: the diagram query is idle (these tests use a CLARIFICATION
+    // Default: the diagram query is idle (most tests use a CLARIFICATION
     // project, so the canvas shows its placeholder and never reads this).
     mockUseDiagram.mockReturnValue({
       data: undefined,
@@ -76,6 +90,8 @@ describe("Lothal Workspace", () => {
       isError: false,
       error: undefined,
     });
+    // Default: no code yet (the right pane only consults this in a code phase).
+    mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });
   });
 
   it("shows a themed loading state while projects load", () => {
@@ -190,5 +206,87 @@ describe("Lothal Workspace", () => {
       expect(mockSendMutate).toHaveBeenCalledWith("A tide app"),
     );
     expect(input.value).toBe("");
+  });
+
+  // --- Code surface (right pane in code phases) ---
+
+  it("shows the canvas (not code) while still in a diagram phase", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    render(<Workspace />);
+    expect(
+      screen.getByText("The diagram takes shape here"),
+    ).toBeInTheDocument();
+  });
+
+  it("renders the code surface with the file tree in a code phase", () => {
+    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseCode.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [
+        { path: "src/main.py", content: 'print("alpha")\n' },
+        { path: "README.md", content: "# Title\n" },
+      ],
+    });
+    render(<Workspace />);
+    // The tree shows the folder and the (non-active) sibling file.
+    expect(screen.getByText("src")).toBeInTheDocument();
+    expect(screen.getByText("README.md")).toBeInTheDocument();
+    // The first file (src/main.py) is shown by default — its content renders.
+    expect(screen.getByText('"alpha"')).toBeInTheDocument();
+  });
+
+  it("shows a file's content when selected in the code tree", () => {
+    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseCode.mockReturnValue({
+      isLoading: false,
+      isError: false,
+      data: [
+        { path: "src/main.py", content: 'print("alpha")\n' },
+        { path: "README.md", content: "# Title\n" },
+      ],
+    });
+    render(<Workspace />);
+    fireEvent.click(screen.getByText("README.md"));
+    expect(screen.getByText("# Title")).toBeInTheDocument();
+  });
+
+  it("shows NotReady (not an error) when the code endpoint 501s", () => {
+    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseCode.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: codeError501,
+    });
+    render(<Workspace />);
+    expect(screen.getByText("The code isn't ready yet")).toBeInTheDocument();
+    expect(
+      screen.getByText("The code endpoint is not implemented yet."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows a generic failure (not NotReady) when /code fails non-501", () => {
+    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseCode.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error("boom"),
+    });
+    render(<Workspace />);
+    expect(screen.getByText("Couldn't load the code")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Something went wrong reaching the dockyard. Try again in a moment.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("shows the generating state while code files are still empty", () => {
+    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });
+    render(<Workspace />);
+    expect(screen.getByText("Generating the code…")).toBeInTheDocument();
   });
 });

@@ -63,6 +63,13 @@ export type Diagram = {
   edges: DiagramEdge[];
 };
 
+// A single generated file. Mirrors `CodeFile` / `CodeResponse` in the contract
+// (`langflow/lothal/schemas.py`): `GET /code` returns `{ files: CodeFile[] }`.
+export type CodeFile = {
+  path: string;
+  content: string;
+};
+
 const BASE = "/api/v1/lothal/projects/";
 
 const PROJECTS_KEY = ["lothal", "projects"] as const;
@@ -70,6 +77,15 @@ const messagesKey = (projectId: string) =>
   ["lothal", "messages", projectId] as const;
 const diagramKey = (projectId: string) =>
   ["lothal", "diagram", projectId] as const;
+const codeKey = (projectId: string) => ["lothal", "code", projectId] as const;
+
+// A structured 501 (the contract's "not implemented yet" stub) is terminal —
+// retrying just delays the NotReady state. Real transient failures still retry.
+const skip501Retry = (count: number, error: unknown): boolean => {
+  const status = (error as { response?: { status?: number } })?.response
+    ?.status;
+  return status !== 501 && count < 2;
+};
 
 // --- Projects --------------------------------------------------------------
 
@@ -117,13 +133,8 @@ export function useMessages(projectId: string) {
       return res.data;
     },
     // The endpoint is a 501 stub until Epic 1 — don't retry that (the UI keys
-    // its NotReady state off the error, and retrying just delays it). Real
-    // transient failures still get a couple of attempts.
-    retry: (count, error) => {
-      const status = (error as { response?: { status?: number } })?.response
-        ?.status;
-      return status !== 501 && count < 2;
-    },
+    // its NotReady state off the error, and retrying just delays it).
+    retry: skip501Retry,
   });
 }
 
@@ -165,5 +176,23 @@ export function useDiagram(projectId: string, enabled = true) {
         ?.status;
       return status !== 501 && status !== 403 && count < 2;
     },
+  });
+}
+
+// --- Code ------------------------------------------------------------------
+
+// The generated files for a project. A 501 stub until Epic 4 lights up code
+// generation; the Code view keys its NotReady state off that. `files` is `[]`
+// while generation is in progress.
+export function useCode(projectId: string) {
+  return useQuery({
+    queryKey: codeKey(projectId),
+    queryFn: async () => {
+      const res = await api.get<{ files: CodeFile[] }>(
+        `${BASE}${projectId}/code`,
+      );
+      return res.data.files;
+    },
+    retry: skip501Retry,
   });
 }

@@ -13,6 +13,7 @@ import {
   CanvasPlaceholder,
   ChatBubble,
   ChatDock,
+  CodeView,
   DiagramCanvas,
   EmptyHint,
   LothalMark,
@@ -105,6 +106,68 @@ const SAMPLE_EDGES: DiagramEdge[] = [
     target: "user",
     label: "ask",
     data: { order: 5, kind: "return" },
+  },
+];
+
+// A sample `/code` payload — the shape the contract returns — so the populated
+// CodeView is visually verifiable while `/code` is still a 501 stub.
+const SAMPLE_FILES = [
+  {
+    path: "app/main.py",
+    content: `# Tide Tracker — FastAPI entrypoint
+from fastapi import FastAPI
+
+from app.routes import tides
+
+app = FastAPI(title="Tide Tracker")
+app.include_router(tides.router)
+
+
+@app.get("/health")
+def health() -> dict[str, str]:
+    return {"status": "ok"}
+`,
+  },
+  {
+    path: "app/routes/tides.py",
+    content: `from fastapi import APIRouter
+
+router = APIRouter(prefix="/tides", tags=["tides"])
+
+BREAKS = ["mavericks", "ocean-beach", "pacifica"]
+
+
+@router.get("/")
+async def list_breaks() -> list[str]:
+    """Return the surf breaks we track."""
+    return BREAKS
+`,
+  },
+  {
+    path: "frontend/index.html",
+    content: `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Tide Tracker</title>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/main.js"></script>
+  </body>
+</html>
+`,
+  },
+  {
+    path: "README.md",
+    content: `# Tide Tracker
+
+A small app that tracks tide windows for a handful of surf breaks.
+
+## Run
+
+    uvicorn app.main:app --reload
+`,
   },
 ];
 
@@ -416,6 +479,20 @@ function Gallery() {
         <Section title="Canvas placeholder (no diagram yet)">
           <div style={{ width: "100%", minHeight: 260 }}>
             <CanvasPlaceholder phase="CLARIFICATION" />
+          </div>
+        </Section>
+
+        <Section title="Code view (tree · tabs · highlight · delivery)">
+          <div
+            style={{
+              width: "100%",
+              height: 420,
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              overflow: "hidden",
+            }}
+          >
+            <CodeView files={SAMPLE_FILES} />
           </div>
         </Section>
 

@@ -3,14 +3,16 @@
 // (clarification chat on the left, canvas on the right). The chat is wired to
 // the real `/messages` + `/chat` endpoints — no scripted playback. While those
 // are 501 stubs (Epic 1) the chat column shows the uniform NotReady state; it
-// "goes live" with no UI change once the clarification backend lands. The
-// canvas is a placeholder until Story B.4 brings the real @xyflow/react canvas.
+// "goes live" with no UI change once the clarification backend lands. The right
+// pane is the real @xyflow/react sequence-diagram canvas (Story B.4), or the
+// generated-code surface (Story B.5) once the build reaches a code phase.
 
 import { type ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import {
   type Message,
   type Project,
+  useCode,
   useMessages,
   useProjects,
   useSendMessage,
@@ -22,6 +24,7 @@ import {
   CanvasSurface,
   ChatBubble,
   ChatDock,
+  CodeView,
   EmptyHint,
   isNotImplemented,
   LothalMark,
@@ -33,6 +36,12 @@ import {
   TopBar,
 } from "../components";
 import { LothalSurface } from "../theme/LothalSurface";
+
+// The code surface takes over the right pane once generation begins; before
+// that it's the diagram canvas.
+function isCodePhase(phase: string): boolean {
+  return phase === "CODE_GENERATION" || phase === "DONE";
+}
 
 // The line shown when the conversation crosses a phase boundary.
 function transitionNote(toPhase: string): string {
@@ -273,6 +282,64 @@ function ChatPanel({ project }: { project: Project }) {
   );
 }
 
+// --- Code --------------------------------------------------------------------
+
+function CodePanel({ project }: { project: Project }) {
+  const { data: files, isLoading, isError, error } = useCode(project.id);
+
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          flex: 1,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 13,
+          color: "var(--ink-soft)",
+        }}
+      >
+        Opening the generated code…
+      </div>
+    );
+  }
+
+  if (isError) {
+    // Contract-first: a structured 501 means code generation isn't built yet
+    // (Epic 4), so the pane shows the uniform NotReady state. Any other error
+    // is a genuine failure reaching the dockyard.
+    return isNotImplemented(error) ? (
+      <NotReady title="The code isn't ready yet" error={error} />
+    ) : (
+      <NotReady
+        title="Couldn't load the code"
+        detail="Something went wrong reaching the dockyard. Try again in a moment."
+      />
+    );
+  }
+
+  // `files` is `[]` while generation is still running.
+  if (!files || files.length === 0) {
+    return (
+      <div
+        style={{
+          height: "100%",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <EmptyHint
+          title="Generating the code…"
+          sub="Lothal is writing the scaffold from your approved diagram. Files appear here as they're produced."
+        />
+      </div>
+    );
+  }
+
+  return <CodeView files={files} />;
+}
+
 // --- Page --------------------------------------------------------------------
 
 function WorkspaceView() {
@@ -422,11 +489,16 @@ function WorkspaceView() {
           <ChatPanel project={project} />
         </div>
 
-        {/* Canvas — right. The real @xyflow/react sequence-diagram canvas
-            (Story B.4); falls back to a phase-aware placeholder before a
-            diagram exists and to NotReady while /diagram is a 501 stub. */}
+        {/* Right pane — the code surface once generation begins (Story B.5),
+            otherwise the real @xyflow/react sequence-diagram canvas (Story B.4),
+            which itself falls back to a phase-aware placeholder before a diagram
+            exists and to NotReady while /diagram is a 501 stub. */}
         <div style={{ flex: 1, minWidth: 0, background: "var(--paper-deep)" }}>
-          <CanvasSurface project={project} />
+          {isCodePhase(project.phase) ? (
+            <CodePanel project={project} />
+          ) : (
+            <CanvasSurface project={project} />
+          )}
         </div>
       </div>
     </div>
