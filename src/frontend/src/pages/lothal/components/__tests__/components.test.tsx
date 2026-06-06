@@ -349,4 +349,30 @@ describe("CodeView", () => {
     render(<CodeView files={[]} />);
     expect(screen.getByText("No files yet")).toBeInTheDocument();
   });
+
+  it("collapses and expands a folder in the tree", () => {
+    render(<CodeView files={FILES} />);
+    // `app.py` lives under `src` and isn't the default tab, so it appears once.
+    expect(screen.getByText("app.py")).toBeInTheDocument();
+    fireEvent.click(screen.getByText("src")); // collapse
+    expect(screen.queryByText("app.py")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByText("src")); // expand
+    expect(screen.getByText("app.py")).toBeInTheDocument();
+  });
+
+  it("falls back to another open tab when the active tab is closed", () => {
+    render(<CodeView files={FILES} />);
+    // Open two tabs by selecting two files; README.md ends up active.
+    fireEvent.click(screen.getByText("app.py"));
+    fireEvent.click(screen.getByText("README.md"));
+    expect(
+      screen.getByRole("button", { name: "Close README.md" }),
+    ).toBeInTheDocument();
+    // Closing the active tab falls back to the remaining open tab (app.py).
+    fireEvent.click(screen.getByRole("button", { name: "Close README.md" }));
+    expect(
+      screen.queryByRole("button", { name: "Close README.md" }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByText('"alpha"')).toBeInTheDocument();
+  });
 });

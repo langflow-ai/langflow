@@ -256,6 +256,23 @@ describe("Lothal Workspace", () => {
     ).toBeInTheDocument();
   });
 
+  it("shows a generic failure (not NotReady) when /code fails non-501", () => {
+    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseCode.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      error: new Error("boom"),
+    });
+    render(<Workspace />);
+    expect(screen.getByText("Couldn't load the code")).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        "Something went wrong reaching the dockyard. Try again in a moment.",
+      ),
+    ).toBeInTheDocument();
+  });
+
   it("shows the generating state while code files are still empty", () => {
     mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
     mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });

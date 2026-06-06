@@ -138,6 +138,18 @@ describe("lothal queries", () => {
       );
       expect(result.current.data).toEqual([MESSAGE]);
     });
+
+    it("surfaces the 501 stub as an error (without retrying it)", async () => {
+      // `useMessages` shares the `skip501Retry` policy with `useCode`, so the
+      // chat path must also treat a structured 501 as terminal.
+      mockApiGet.mockRejectedValue({ response: { status: 501 } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useMessages("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(mockApiGet).toHaveBeenCalledTimes(1);
+    });
   });
 
   describe("useCode", () => {
