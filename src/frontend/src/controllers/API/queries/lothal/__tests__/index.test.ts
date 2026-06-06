@@ -16,8 +16,10 @@ jest.mock("@/controllers/API/api", () => ({
 }));
 
 import {
+  type CodeFile,
   type Message,
   type Project,
+  useCode,
   useCreateProject,
   useDeleteProject,
   useMessages,
@@ -59,6 +61,8 @@ const MESSAGE: Message = {
   phase: "CLARIFICATION",
   created_at: "2026-01-01T00:00:00Z",
 };
+
+const CODE_FILE: CodeFile = { path: "src/main.py", content: "print('hi')\n" };
 
 describe("lothal queries", () => {
   beforeEach(() => {
@@ -133,6 +137,44 @@ describe("lothal queries", () => {
         "/api/v1/lothal/projects/p1/messages",
       );
       expect(result.current.data).toEqual([MESSAGE]);
+    });
+
+    it("surfaces the 501 stub as an error (without retrying it)", async () => {
+      // `useMessages` shares the `skip501Retry` policy with `useCode`, so the
+      // chat path must also treat a structured 501 as terminal.
+      mockApiGet.mockRejectedValue({ response: { status: 501 } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useMessages("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(mockApiGet).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("useCode", () => {
+    it("GETs the project's files, unwrapping the `files` envelope", async () => {
+      mockApiGet.mockResolvedValue({ data: { files: [CODE_FILE] } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useCode("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockApiGet).toHaveBeenCalledWith(
+        "/api/v1/lothal/projects/p1/code",
+      );
+      expect(result.current.data).toEqual([CODE_FILE]);
+    });
+
+    it("surfaces the 501 stub as an error (without retrying it)", async () => {
+      // The structured 501 is terminal — the hook must not retry it, so the
+      // NotReady state appears immediately.
+      mockApiGet.mockRejectedValue({ response: { status: 501 } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useCode("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+      expect(mockApiGet).toHaveBeenCalledTimes(1);
     });
   });
 

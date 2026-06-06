@@ -6,6 +6,7 @@ export { Button } from "./Button";
 export { CanvasPlaceholder } from "./CanvasPlaceholder";
 export { ChatBubble } from "./ChatBubble";
 export { ChatDock } from "./ChatDock";
+export { CodeView } from "./CodeView";
 export { EmptyHint } from "./EmptyHint";
 export { HarborWatermark } from "./HarborWatermark";
 export { LothalMark } from "./LothalMark";
@@ -24,4 +25,11 @@ export {
 } from "./phases";
 export { StatusDot } from "./StatusDot";
 export { SystemBlock } from "./SystemBlock";
+export {
+  highlightTokens,
+  type Language,
+  languageFromPath,
+  type Token,
+  type TokenType,
+} from "./syntax";
 export { TopBar } from "./TopBar";
