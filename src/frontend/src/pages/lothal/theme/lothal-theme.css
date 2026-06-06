@@ -246,7 +246,7 @@
   fill: var(--ink);
 }
 .lothal-surface .react-flow__controls-button svg {
-  fill: currentColor;
+  fill: currentcolor;
 }
 .lothal-surface .react-flow__attribution {
   display: none;

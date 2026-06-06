@@ -88,6 +88,7 @@ beforeEach(() => {
     data: undefined,
     isLoading: false,
     isError: false,
+    error: undefined,
   });
 });
 

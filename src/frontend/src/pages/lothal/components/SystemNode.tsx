@@ -3,18 +3,13 @@
 // theme tokens. Like the actor node it carries a left target / right source
 // handle so messages route between horizontally-laid-out participants.
 
-import { Handle, type NodeProps, Position } from "@xyflow/react";
+import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { memo } from "react";
+import { type CanvasNodeData, HANDLE_STYLE } from "./nodeStyles";
 
-const handleStyle = {
-  width: 7,
-  height: 7,
-  background: "var(--accent)",
-  border: "none",
-} as const;
+type SystemFlowNode = Node<CanvasNodeData, "systemNode">;
 
-function SystemNodeImpl({ data }: NodeProps) {
-  const d = data as { label?: string; note?: string };
+function SystemNodeImpl({ data }: NodeProps<SystemFlowNode>) {
   return (
     <div
       style={{
@@ -32,14 +27,16 @@ function SystemNodeImpl({ data }: NodeProps) {
         boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
       }}
     >
-      <Handle type="target" position={Position.Left} style={handleStyle} />
+      <Handle type="target" position={Position.Left} style={HANDLE_STYLE} />
       <span style={{ fontSize: 12.5, fontWeight: 500, textAlign: "center" }}>
-        {d.label ?? "System"}
+        {data.label ?? "System"}
       </span>
-      {d.note && (
-        <span style={{ fontSize: 10, color: "var(--ink-soft)" }}>{d.note}</span>
+      {data.note && (
+        <span style={{ fontSize: 10, color: "var(--ink-soft)" }}>
+          {data.note}
+        </span>
       )}
-      <Handle type="source" position={Position.Right} style={handleStyle} />
+      <Handle type="source" position={Position.Right} style={HANDLE_STYLE} />
     </div>
   );
 }

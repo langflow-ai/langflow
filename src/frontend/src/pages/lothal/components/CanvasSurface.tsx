@@ -69,10 +69,11 @@ export function CanvasSurface({ project }: { project: Project }) {
     );
   }
 
-  // Endpoint is live but the diagram hasn't been generated yet.
-  if (isEmptyDiagram(diagram)) {
+  // Endpoint is live but the diagram hasn't been generated yet. The `!diagram`
+  // guard also narrows the type so the render below needs no assertion.
+  if (!diagram || isEmptyDiagram(diagram)) {
     return <CanvasPlaceholder phase={project.phase} />;
   }
 
-  return <DiagramCanvas nodes={diagram!.nodes} edges={diagram!.edges} />;
+  return <DiagramCanvas nodes={diagram.nodes} edges={diagram.edges} />;
 }

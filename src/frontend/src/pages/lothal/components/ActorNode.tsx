@@ -4,8 +4,11 @@
 // handle on the left and a source handle on the right let messages route
 // between participants laid out left-to-right.
 
-import { Handle, type NodeProps, Position } from "@xyflow/react";
+import { Handle, type Node, type NodeProps, Position } from "@xyflow/react";
 import { memo } from "react";
+import { type CanvasNodeData, HANDLE_STYLE } from "./nodeStyles";
+
+type ActorFlowNode = Node<CanvasNodeData, "actorNode">;
 
 function PersonGlyph() {
   return (
@@ -21,15 +24,7 @@ function PersonGlyph() {
   );
 }
 
-const handleStyle = {
-  width: 7,
-  height: 7,
-  background: "var(--accent)",
-  border: "none",
-} as const;
-
-function ActorNodeImpl({ data }: NodeProps) {
-  const d = data as { label?: string; note?: string };
+function ActorNodeImpl({ data }: NodeProps<ActorFlowNode>) {
   return (
     <div
       style={{
@@ -46,17 +41,19 @@ function ActorNodeImpl({ data }: NodeProps) {
         boxShadow: "0 1px 2px rgba(0,0,0,0.06)",
       }}
     >
-      <Handle type="target" position={Position.Left} style={handleStyle} />
+      <Handle type="target" position={Position.Left} style={HANDLE_STYLE} />
       <span style={{ color: "var(--accent)" }}>
         <PersonGlyph />
       </span>
       <span style={{ fontSize: 12.5, fontWeight: 500, textAlign: "center" }}>
-        {d.label ?? "Actor"}
+        {data.label ?? "Actor"}
       </span>
-      {d.note && (
-        <span style={{ fontSize: 10, color: "var(--ink-soft)" }}>{d.note}</span>
+      {data.note && (
+        <span style={{ fontSize: 10, color: "var(--ink-soft)" }}>
+          {data.note}
+        </span>
       )}
-      <Handle type="source" position={Position.Right} style={handleStyle} />
+      <Handle type="source" position={Position.Right} style={HANDLE_STYLE} />
     </div>
   );
 }
