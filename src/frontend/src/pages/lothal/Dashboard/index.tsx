@@ -279,6 +279,9 @@ function ProjectCard({
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => {
+        // Only open from the card itself — ignore Enter/Space bubbling up from
+        // a nested control (e.g. the delete button activated by keyboard).
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           onOpen();

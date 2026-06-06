@@ -77,6 +77,33 @@ describe("Lothal Dashboard", () => {
     confirmSpy.mockRestore();
   });
 
+  it("opens the card on Enter/Space from the card itself", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    render(<Dashboard />);
+    const card = screen
+      .getByText("Demo")
+      .closest('[role="button"]') as HTMLElement;
+
+    fireEvent.keyDown(card, { key: "Enter" });
+    expect(mockNavigate).toHaveBeenCalledWith("/lothal/p1");
+
+    mockNavigate.mockClear();
+    fireEvent.keyDown(card, { key: " " });
+    expect(mockNavigate).toHaveBeenCalledWith("/lothal/p1");
+  });
+
+  it("does not open the card when the delete button receives Enter/Space", () => {
+    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    render(<Dashboard />);
+    const deleteButton = screen.getByRole("button", { name: "Delete Demo" });
+
+    // Key events bubble to the card; the card must ignore those from a nested
+    // control and stay closed (the delete itself runs on the button's own click).
+    fireEvent.keyDown(deleteButton, { key: "Enter" });
+    fireEvent.keyDown(deleteButton, { key: " " });
+    expect(mockNavigate).not.toHaveBeenCalled();
+  });
+
   it("creates a project from the modal with the trimmed name", () => {
     mockUseProjects.mockReturnValue({ data: [], isLoading: false });
     render(<Dashboard />);

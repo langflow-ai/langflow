@@ -136,6 +136,13 @@ async def test_create_project_rejects_blank_name(client: AsyncClient, logged_in_
     assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
 
 
+async def test_create_project_trims_name(client: AsyncClient, logged_in_headers: dict):
+    # Surrounding whitespace is stripped before persisting — lock the contract.
+    response = await client.post("api/v1/lothal/projects/", json={"name": "  My App  "}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    assert response.json()["name"] == "My App"
+
+
 async def test_get_or_delete_missing_project_is_404(client: AsyncClient, logged_in_headers: dict):
     assert (
         await client.get(f"api/v1/lothal/projects/{PROJECT_ID}", headers=logged_in_headers)
