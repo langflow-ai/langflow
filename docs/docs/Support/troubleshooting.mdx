@@ -682,7 +682,7 @@ To resolve this issue:
 - Ensure `LANGFLOW_JOB_QUEUE_TYPE=redis` is set on **all** workers, not just some. Mixed-mode deployments (some workers using `asyncio`, others using `redis`) are not supported.
 - Verify all workers can reach the same Redis instance.
 
-For setup instructions, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+For setup instructions, see [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker.mdx).
 
 ### Redis connection refused or auth errors
 
