@@ -21,16 +21,7 @@ export type DeleteNodeFieldUpdate = {
   path: NodeFieldPath;
 };
 
-export type OverwriteNodeUpdate = {
-  id: string;
-  op: "overwrite_node";
-  node: AllNodeType;
-};
-
-export type UpdateNodeEntry =
-  | SetNodeFieldUpdate
-  | DeleteNodeFieldUpdate
-  | OverwriteNodeUpdate;
+export type UpdateNodeEntry = SetNodeFieldUpdate | DeleteNodeFieldUpdate;
 
 export type UpdateNodesOp = {
   type: "update_nodes";

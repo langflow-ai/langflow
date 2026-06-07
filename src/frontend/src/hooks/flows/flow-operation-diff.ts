@@ -54,6 +54,75 @@ function edgesEqual(a: EdgeType, b: EdgeType): boolean {
   );
 }
 
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+export function buildSetNodeFieldUpdate(
+  id: string,
+  path: NodeFieldPath,
+  value: unknown,
+): UpdateNodeEntry {
+  return { id, op: "set_field", path: [...path], value: cloneDeep(value) };
+}
+
+export function buildDeleteNodeFieldUpdate(
+  id: string,
+  path: NodeFieldPath,
+): UpdateNodeEntry {
+  return { id, op: "delete_field", path: [...path] };
+}
+
+export function buildNodeFieldDiffUpdates(
+  id: string,
+  previous: Record<string, unknown>,
+  next: Record<string, unknown>,
+  pathPrefix: NodeFieldPath = [],
+): UpdateNodeEntry[] {
+  const updates: UpdateNodeEntry[] = [];
+  const previousKeyList = Object.keys(previous);
+  const nextKeyList = Object.keys(next);
+  const previousKeys = new Set(previousKeyList);
+  const nextKeys = new Set(nextKeyList);
+
+  for (const key of nextKeyList) {
+    if (key === "id" && pathPrefix.length === 0) {
+      continue;
+    }
+
+    const childPath: NodeFieldPath = [...pathPrefix, key];
+    const previousValue = previous[key];
+    const nextValue = next[key];
+
+    if (!previousKeys.has(key)) {
+      updates.push(buildSetNodeFieldUpdate(id, childPath, nextValue));
+      continue;
+    }
+
+    if (isPlainObject(previousValue) && isPlainObject(nextValue)) {
+      updates.push(
+        ...buildNodeFieldDiffUpdates(id, previousValue, nextValue, childPath),
+      );
+      continue;
+    }
+
+    if (!isEqual(previousValue, nextValue)) {
+      updates.push(buildSetNodeFieldUpdate(id, childPath, nextValue));
+    }
+  }
+
+  for (const key of previousKeyList) {
+    if (key === "id" && pathPrefix.length === 0) {
+      continue;
+    }
+    if (!nextKeys.has(key)) {
+      updates.push(buildDeleteNodeFieldUpdate(id, [...pathPrefix, key]));
+    }
+  }
+
+  return updates;
+}
+
 export function buildGraphDiffOperations(
   prevNodes: AllNodeType[],
   prevEdges: EdgeType[],
@@ -76,7 +145,13 @@ export function buildGraphDiffOperations(
       continue;
     }
     if (!nodesEqual(previous, node)) {
-      updatedNodes.push(buildOverwriteNodeUpdate(node));
+      updatedNodes.push(
+        ...buildNodeFieldDiffUpdates(
+          node.id,
+          nodeSnapshotForFlowOperation(previous) as Record<string, unknown>,
+          nodeSnapshotForFlowOperation(node) as Record<string, unknown>,
+        ),
+      );
     }
   }
 
@@ -134,36 +209,6 @@ export function buildGraphDiffOperations(
   }
 
   return operations;
-}
-
-export function buildUpdateNodesOperation(nodes: AllNodeType[]): FlowOperation {
-  return {
-    type: "update_nodes",
-    updates: nodes.map(buildOverwriteNodeUpdate),
-  };
-}
-
-export function buildSetNodeFieldUpdate(
-  id: string,
-  path: NodeFieldPath,
-  value: unknown,
-): UpdateNodeEntry {
-  return { id, op: "set_field", path: [...path], value: cloneDeep(value) };
-}
-
-export function buildDeleteNodeFieldUpdate(
-  id: string,
-  path: NodeFieldPath,
-): UpdateNodeEntry {
-  return { id, op: "delete_field", path: [...path] };
-}
-
-export function buildOverwriteNodeUpdate(node: AllNodeType): UpdateNodeEntry {
-  return {
-    id: node.id,
-    op: "overwrite_node",
-    node: nodeSnapshotForFlowOperation(node),
-  };
 }
 
 export function buildUpdateNodeFieldsOperation(
@@ -247,9 +292,7 @@ function applyGraphOperationToState(
         if (!currentNode) {
           continue;
         }
-        if (update.op === "overwrite_node") {
-          updatedById.set(update.id, cloneDeep(update.node));
-        } else if (update.op === "set_field") {
+        if (update.op === "set_field") {
           setValueAtPath(currentNode, update.path, update.value);
         } else {
           deleteValueAtPath(currentNode, update.path);
@@ -374,9 +417,7 @@ export function buildInverseFlowOperations(
             continue;
           }
 
-          if (update.op === "overwrite_node") {
-            inverseUpdates.unshift(buildOverwriteNodeUpdate(currentNode));
-          } else if (update.op === "set_field") {
+          if (update.op === "set_field") {
             const previous = getValueAtPath(currentNode, update.path);
             inverseUpdates.unshift(
               previous.exists
@@ -480,8 +521,10 @@ export function buildInverseFlowOperations(
 
 export type FlowOperationTouchSet = {
   nodeIds: Set<string>;
+  nodeFieldNodeIds: Set<string>;
   nodeFieldPaths: Set<string>;
   edgeIds: Set<string>;
+  edgeEndpointNodeIds: Set<string>;
   metadataKeys: Set<string>;
 };
 
@@ -490,8 +533,10 @@ export function collectFlowOperationTouches(
 ): FlowOperationTouchSet {
   const touches: FlowOperationTouchSet = {
     nodeIds: new Set(),
+    nodeFieldNodeIds: new Set(),
     nodeFieldPaths: new Set(),
     edgeIds: new Set(),
+    edgeEndpointNodeIds: new Set(),
     metadataKeys: new Set(),
   };
 
@@ -504,14 +549,10 @@ export function collectFlowOperationTouches(
         break;
       case "update_nodes":
         for (const update of operation.updates) {
-          touches.nodeIds.add(update.id);
-          if (update.op !== "overwrite_node") {
-            for (let i = 1; i <= update.path.length; i += 1) {
-              touches.nodeFieldPaths.add(
-                `${update.id}:${JSON.stringify(update.path.slice(0, i))}`,
-              );
-            }
-          }
+          touches.nodeFieldNodeIds.add(update.id);
+          touches.nodeFieldPaths.add(
+            `${update.id}:${JSON.stringify(update.path)}`,
+          );
         }
         break;
       case "delete_nodes":
@@ -522,8 +563,8 @@ export function collectFlowOperationTouches(
       case "add_edges":
         for (const edge of operation.edges) {
           touches.edgeIds.add(edge.id);
-          touches.nodeIds.add(edge.source);
-          touches.nodeIds.add(edge.target);
+          touches.edgeEndpointNodeIds.add(edge.source);
+          touches.edgeEndpointNodeIds.add(edge.target);
         }
         break;
       case "delete_edges":
@@ -556,12 +597,63 @@ function setsIntersect(a: Set<string>, b: Set<string>): boolean {
   return false;
 }
 
+function parseNodeFieldPathKey(
+  key: string,
+): { nodeId: string; path: NodeFieldPath } | null {
+  const separatorIndex = key.indexOf(":");
+  if (separatorIndex === -1) {
+    return null;
+  }
+  try {
+    const path = JSON.parse(key.slice(separatorIndex + 1));
+    return Array.isArray(path)
+      ? { nodeId: key.slice(0, separatorIndex), path }
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function pathIsPrefix(left: NodeFieldPath, right: NodeFieldPath): boolean {
+  if (left.length > right.length) {
+    return false;
+  }
+  return left.every((segment, index) => segment === right[index]);
+}
+
+function nodeFieldPathsIntersect(a: Set<string>, b: Set<string>): boolean {
+  for (const leftKey of Array.from(a)) {
+    const left = parseNodeFieldPathKey(leftKey);
+    if (!left) {
+      continue;
+    }
+    for (const rightKey of Array.from(b)) {
+      const right = parseNodeFieldPathKey(rightKey);
+      if (!right || left.nodeId !== right.nodeId) {
+        continue;
+      }
+      if (
+        pathIsPrefix(left.path, right.path) ||
+        pathIsPrefix(right.path, left.path)
+      ) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 export function flowOperationTouchesIntersect(
   left: FlowOperationTouchSet,
   right: FlowOperationTouchSet,
 ): boolean {
   return (
     setsIntersect(left.nodeIds, right.nodeIds) ||
+    setsIntersect(left.nodeIds, right.nodeFieldNodeIds) ||
+    setsIntersect(left.nodeFieldNodeIds, right.nodeIds) ||
+    setsIntersect(left.nodeIds, right.edgeEndpointNodeIds) ||
+    setsIntersect(left.edgeEndpointNodeIds, right.nodeIds) ||
+    nodeFieldPathsIntersect(left.nodeFieldPaths, right.nodeFieldPaths) ||
     setsIntersect(left.edgeIds, right.edgeIds) ||
     setsIntersect(left.metadataKeys, right.metadataKeys)
   );

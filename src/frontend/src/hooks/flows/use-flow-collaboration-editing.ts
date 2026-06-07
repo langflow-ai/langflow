@@ -54,13 +54,9 @@ function getSingleUpdateNodesOperation(
     : null;
 }
 
-function hasOverwriteNodeUpdate(operation: UpdateNodesOperation): boolean {
-  return operation.updates.some((update) => update.op === "overwrite_node");
-}
-
 function canCoalesceOperationBatch(batch: QueuedOperationBatch): boolean {
   const operation = getSingleUpdateNodesOperation(batch.operations);
-  if (batch.onAccepted || !operation || hasOverwriteNodeUpdate(operation)) {
+  if (batch.onAccepted || !operation) {
     return false;
   }
 
@@ -74,57 +70,45 @@ function canCoalesceOperationBatch(batch: QueuedOperationBatch): boolean {
   const inverseOperation = getSingleUpdateNodesOperation(
     batch.historyEntry.inverseOps,
   );
-  return Boolean(
-    forwardOperation &&
-      inverseOperation &&
-      !hasOverwriteNodeUpdate(forwardOperation) &&
-      !hasOverwriteNodeUpdate(inverseOperation),
-  );
+  return Boolean(forwardOperation && inverseOperation);
 }
 
-function updateEntryKey(update: UpdateNodeEntry): string | null {
-  if (update.op === "overwrite_node") {
-    return null;
-  }
+function updateEntryKey(update: UpdateNodeEntry): string {
   return `${update.id}:${JSON.stringify(update.path)}`;
 }
 
-function canonicalizeLastFieldUpdates(
-  updates: UpdateNodeEntry[],
-): UpdateNodeEntry[] {
-  const seen = new Set<string>();
-  const reversed: UpdateNodeEntry[] = [];
-  for (const update of [...updates].reverse()) {
-    const key = updateEntryKey(update);
-    if (!key) {
-      reversed.push(cloneDeep(update));
-      continue;
-    }
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    reversed.push(cloneDeep(update));
+function pathContains(
+  ancestor: UpdateNodeEntry,
+  descendant: UpdateNodeEntry,
+): boolean {
+  if (ancestor.id !== descendant.id) {
+    return false;
   }
-  return reversed.reverse();
+  if (ancestor.path.length > descendant.path.length) {
+    return false;
+  }
+  return ancestor.path.every(
+    (segment, index) => segment === descendant.path[index],
+  );
 }
 
-function keepFirstInverseFieldUpdates(
+function canonicalizeFieldUpdatesInOrder(
   updates: UpdateNodeEntry[],
 ): UpdateNodeEntry[] {
-  const seen = new Set<string>();
   const merged: UpdateNodeEntry[] = [];
   for (const update of updates) {
     const key = updateEntryKey(update);
-    if (!key) {
-      merged.push(cloneDeep(update));
-      continue;
+    const nextUpdate = cloneDeep(update);
+    for (let index = merged.length - 1; index >= 0; index -= 1) {
+      const existing = merged[index];
+      if (
+        existing &&
+        (updateEntryKey(existing) === key || pathContains(nextUpdate, existing))
+      ) {
+        merged.splice(index, 1);
+      }
     }
-    if (seen.has(key)) {
-      continue;
-    }
-    seen.add(key);
-    merged.push(cloneDeep(update));
+    merged.push(nextUpdate);
   }
   return merged;
 }
@@ -139,7 +123,7 @@ function mergeUpdateNodeBatches(
     return incoming;
   }
 
-  const mergedUpdates = canonicalizeLastFieldUpdates([
+  const mergedUpdates = canonicalizeFieldUpdatesInOrder([
     ...currentOperation.updates,
     ...incomingOperation.updates,
   ]);
@@ -161,15 +145,15 @@ function mergeUpdateNodeBatches(
   const incomingInverseOperation = incoming.historyEntry
     ? getSingleUpdateNodesOperation(incoming.historyEntry.inverseOps)
     : null;
-  const inverseUpdates = keepFirstInverseFieldUpdates([
-    ...(currentInverseOperation?.updates ?? []),
+  const inverseUpdates = canonicalizeFieldUpdatesInOrder([
     ...(incomingInverseOperation?.updates ?? []),
+    ...(currentInverseOperation?.updates ?? []),
   ]);
 
   return {
     operations: mergedForwardOps,
     historyEntry: {
-      forwardOps: cloneDeep(mergedForwardOps),
+      forwardOps: mergedForwardOps,
       inverseOps: [
         {
           type: "update_nodes",

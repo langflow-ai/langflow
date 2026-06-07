@@ -16,11 +16,10 @@ export {
   buildDeleteNodeFieldUpdate,
   buildGraphDiffOperations,
   buildInverseFlowOperations,
-  buildOverwriteNodeUpdate,
+  buildNodeFieldDiffUpdates,
   buildSetNodeFieldUpdate,
   buildUpdateMetadataOperation,
   buildUpdateNodeFieldsOperation,
-  buildUpdateNodesOperation,
   collectFlowOperationTouches,
   flowOperationTouchesIntersect,
 } from "./flow-operation-diff";
@@ -64,29 +63,16 @@ function restoreEdgeSelection(
   });
 }
 
-function applyNodeUpdate(existingNode: AllNodeType, nextNode: AllNodeType) {
-  const node = nodeSnapshotForFlowOperation(nextNode);
-  if (existingNode.selected !== undefined) {
-    node.selected = existingNode.selected;
-  }
-  return node;
-}
-
 function applyNodeUpdateEntry(
   existingNode: AllNodeType,
   update: UpdateNodeEntry,
 ): AllNodeType {
-  if (update.op === "overwrite_node") {
-    return applyNodeUpdate(existingNode, update.node);
-  }
-
-  const node = cloneDeep(existingNode);
   if (update.op === "set_field") {
-    setValueAtPath(node, update.path, update.value);
+    setValueAtPath(existingNode, update.path, update.value);
   } else {
-    deleteValueAtPath(node, update.path);
+    deleteValueAtPath(existingNode, update.path);
   }
-  return node;
+  return existingNode;
 }
 
 export function applyFlowOperationsLocally(

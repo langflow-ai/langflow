@@ -8,9 +8,9 @@ import {
 import {
   buildGraphDiffOperations,
   buildInverseFlowOperations,
+  buildNodeFieldDiffUpdates,
   buildSetNodeFieldUpdate,
   buildUpdateMetadataOperation,
-  buildUpdateNodesOperation,
   collectFlowOperationTouches,
   flowOperationTouchesIntersect,
 } from "../flow-operation-diff";
@@ -73,13 +73,20 @@ describe("flow-operation-adapter", () => {
       expect.arrayContaining([
         {
           type: "update_nodes",
-          updates: [
+          updates: expect.arrayContaining([
             {
               id: "a",
-              op: "overwrite_node",
-              node: expect.objectContaining({ id: "a" }),
+              op: "set_field",
+              path: ["position", "x"],
+              value: 10,
             },
-          ],
+            {
+              id: "a",
+              op: "set_field",
+              path: ["position", "y"],
+              value: 10,
+            },
+          ]),
         },
         { type: "delete_edges", ids: ["e-ab"] },
       ]),
@@ -104,30 +111,68 @@ describe("flow-operation-adapter", () => {
     expect(operations).toEqual([]);
   });
 
-  it("buildUpdateNodesOperation omits React Flow runtime node fields", () => {
-    const operation = buildUpdateNodesOperation([
-      {
-        ...nodeA,
-        selected: true,
-        dragging: true,
-        measured: { width: 320, height: 180 },
-        position: { x: 25, y: 25 },
-      } as AllNodeType,
-    ]);
+  it("buildNodeFieldDiffUpdates emits nested object and deleted key updates", () => {
+    const previous = {
+      ...nodeA,
+      data: { ...nodeA.data, label: "old", stale: true },
+    } as unknown as Record<string, unknown>;
+    const next = {
+      ...nodeA,
+      position: { x: 25, y: 25 },
+      data: { ...nodeA.data, label: "new", created: null },
+    } as unknown as Record<string, unknown>;
 
-    expect(operation).toEqual({
-      type: "update_nodes",
-      updates: [
+    const updates = buildNodeFieldDiffUpdates("a", previous, next);
+
+    expect(updates).toEqual(
+      expect.arrayContaining([
         {
           id: "a",
-          op: "overwrite_node",
-          node: {
-            ...nodeA,
-            position: { x: 25, y: 25 },
-          },
+          op: "set_field",
+          path: ["position", "x"],
+          value: 25,
         },
-      ],
-    });
+        {
+          id: "a",
+          op: "set_field",
+          path: ["position", "y"],
+          value: 25,
+        },
+        {
+          id: "a",
+          op: "set_field",
+          path: ["data", "label"],
+          value: "new",
+        },
+        {
+          id: "a",
+          op: "set_field",
+          path: ["data", "created"],
+          value: null,
+        },
+        { id: "a", op: "delete_field", path: ["data", "stale"] },
+      ]),
+    );
+  });
+
+  it("buildNodeFieldDiffUpdates replaces arrays as a single set_field", () => {
+    const previous = {
+      ...nodeA,
+      data: { ...nodeA.data, items: ["a", "b"] },
+    } as unknown as Record<string, unknown>;
+    const next = {
+      ...nodeA,
+      data: { ...nodeA.data, items: ["a", "c"] },
+    } as unknown as Record<string, unknown>;
+
+    expect(buildNodeFieldDiffUpdates("a", previous, next)).toEqual([
+      {
+        id: "a",
+        op: "set_field",
+        path: ["data", "items"],
+        value: ["a", "c"],
+      },
+    ]);
   });
 
   it("buildGraphDiffOperations represents edge reconnect as delete plus add", () => {
@@ -301,7 +346,7 @@ describe("flow-operation-adapter", () => {
     expect(result.edges).toEqual([]);
   });
 
-  it("applyFlowOperationsLocally preserves local node selection on updates", () => {
+  it("applyFlowOperationsLocally preserves local node selection on field updates", () => {
     const selectedNode = { ...nodeA, selected: true } as AllNodeType;
     const result = applyFlowOperationsLocally(
       [selectedNode, nodeB],
@@ -310,16 +355,7 @@ describe("flow-operation-adapter", () => {
         {
           type: "update_nodes",
           updates: [
-            {
-              id: "a",
-              op: "overwrite_node",
-              node: {
-                ...nodeA,
-                selected: false,
-                measured: { width: 320, height: 180 },
-                position: { x: 25, y: 25 },
-              } as AllNodeType,
-            },
+            buildSetNodeFieldUpdate("a", ["position"], { x: 25, y: 25 }),
           ],
         },
       ],
@@ -330,6 +366,46 @@ describe("flow-operation-adapter", () => {
       selected: true,
       position: { x: 25, y: 25 },
     });
+  });
+
+  it("buildInverseFlowOperations inverts graph diff node field updates", () => {
+    const updatedA = {
+      ...nodeA,
+      position: { x: 10, y: 10 },
+    } as AllNodeType;
+    const forwardOps = buildGraphDiffOperations(
+      [nodeA, nodeB],
+      [edgeAb],
+      [updatedA, nodeB],
+      [edgeAb],
+    );
+
+    const inverse = buildInverseFlowOperations(
+      [nodeA, nodeB],
+      [edgeAb],
+      { nodes: [nodeA, nodeB], edges: [edgeAb] },
+      forwardOps,
+    );
+
+    expect(inverse).toEqual([
+      {
+        type: "update_nodes",
+        updates: expect.arrayContaining([
+          {
+            id: "a",
+            op: "set_field",
+            path: ["position", "x"],
+            value: 0,
+          },
+          {
+            id: "a",
+            op: "set_field",
+            path: ["position", "y"],
+            value: 0,
+          },
+        ]),
+      },
+    ]);
   });
 
   it("applyFlowOperationsLocally preserves local edge selection on node updates", () => {

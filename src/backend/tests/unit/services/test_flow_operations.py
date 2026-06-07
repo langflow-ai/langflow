@@ -276,19 +276,14 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError, match="multiple field updates"):
             apply_flow_operations(flow_data, [{"type": "update_nodes", "updates": updates}])
 
-    def test_update_nodes_replaces_full_payload(self):
+    def test_update_nodes_applies_field_level_position_update(self):
         flow_data = _base_flow_data()
-        updated = copy.deepcopy(NODE_A)
-        updated["position"] = {"x": 50, "y": 50}
-        result = apply_flow_operations(
-            flow_data, [{"type": "update_nodes", "updates": [{"id": "a", "op": "overwrite_node", "node": updated}]}]
-        )
+        update = {"id": "a", "op": "set_field", "path": ["position"], "value": {"x": 50, "y": 50}}
+        result = apply_flow_operations(flow_data, [{"type": "update_nodes", "updates": [update]}])
 
         stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
         assert stored["position"] == {"x": 50, "y": 50}
-        assert result.forward_ops == [
-            UpdateNodesOp(type="update_nodes", updates=[{"id": "a", "op": "overwrite_node", "node": updated}])
-        ]
+        assert result.forward_ops == [UpdateNodesOp(type="update_nodes", updates=[update])]
 
     def test_delete_nodes_removes_incident_edges(self):
         flow_data = _base_flow_data()
@@ -349,27 +344,6 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError, match="duplicate node id"):
             apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [node, copy.deepcopy(node)]}])
 
-    def test_rejects_multiple_overwrite_node_updates_for_same_node(self):
-        flow_data = _base_flow_data()
-        first_update = copy.deepcopy(NODE_A)
-        first_update["position"] = {"x": 10, "y": 10}
-        second_update = copy.deepcopy(NODE_A)
-        second_update["position"] = {"x": 20, "y": 20}
-
-        with pytest.raises(FlowOperationValidationError, match="multiple overwrite_node entries"):
-            apply_flow_operations(
-                flow_data,
-                [
-                    {
-                        "type": "update_nodes",
-                        "updates": [
-                            {"id": "a", "op": "overwrite_node", "node": first_update},
-                            {"id": "a", "op": "overwrite_node", "node": second_update},
-                        ],
-                    }
-                ],
-            )
-
     def test_rejects_missing_node_on_update(self):
         flow_data = _base_flow_data()
         with pytest.raises(FlowOperationValidationError, match="does not exist"):
@@ -388,27 +362,20 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError, match="updates"):
             apply_flow_operations(flow_data, [{"type": "update_nodes", "nodes": [copy.deepcopy(NODE_A)]}])
 
-    def test_rejects_overwrite_node_id_mismatch(self):
+    def test_rejects_unknown_node_update_operation(self):
         flow_data = _base_flow_data()
-        updated = copy.deepcopy(NODE_A)
-        updated["id"] = "different"
-        with pytest.raises(FlowOperationValidationError, match="overwrite_node node id must match"):
-            apply_flow_operations(
-                flow_data,
-                [{"type": "update_nodes", "updates": [{"id": "a", "op": "overwrite_node", "node": updated}]}],
-            )
-
-    def test_rejects_mixing_overwrite_node_and_field_updates(self):
-        flow_data = _base_flow_data()
-        with pytest.raises(FlowOperationValidationError, match="cannot mix overwrite_node"):
+        with pytest.raises(FlowOperationValidationError):
             apply_flow_operations(
                 flow_data,
                 [
                     {
                         "type": "update_nodes",
                         "updates": [
-                            {"id": "a", "op": "set_field", "path": ["position", "x"], "value": 1},
-                            {"id": "a", "op": "overwrite_node", "node": copy.deepcopy(NODE_A)},
+                            {
+                                "id": "a",
+                                "op": "replace_node",
+                                "node": copy.deepcopy(NODE_A),
+                            }
                         ],
                     }
                 ],
@@ -517,12 +484,11 @@ class TestApplyFlowOperations:
 
     def test_preserves_operation_order_in_forward_ops(self):
         flow_data = _base_flow_data()
-        updated = copy.deepcopy(NODE_B)
-        updated["position"] = {"x": 10, "y": 10}
+        update = {"id": "b", "op": "set_field", "path": ["position"], "value": {"x": 10, "y": 10}}
         result = apply_flow_operations(
             flow_data,
             [
-                {"type": "update_nodes", "updates": [{"id": "b", "op": "overwrite_node", "node": updated}]},
+                {"type": "update_nodes", "updates": [update]},
                 {"type": "delete_edges", "ids": ["e-ab"]},
             ],
         )

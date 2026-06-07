@@ -463,6 +463,45 @@ async def test_invalid_edge_rejected_without_revision_change(client: AsyncClient
         assert flow.latest_operation_revision == 0
 
 
+async def test_unknown_node_update_operation_rejected(client: AsyncClient, logged_in_headers):
+    token = _access_token(logged_in_headers)
+    flow_id = await _create_collab_flow(client, logged_in_headers)
+    app = client._transport.app
+
+    def _submit(ws) -> None:
+        ws.send_json({"type": "session.start"})
+        ready, _ = _receive_session_bootstrap(ws)
+        ws.send_json(
+            {
+                "type": "operation.submit",
+                "request_id": "req-unknown-update",
+                "base_revision": ready["current_revision"],
+                "operations": [
+                    {
+                        "type": "update_nodes",
+                        "updates": [
+                            {
+                                "id": "a",
+                                "op": "replace_node",
+                                "node": copy.deepcopy(NODE_A),
+                            }
+                        ],
+                    }
+                ],
+            }
+        )
+        rejected = _receive_message_type(ws, "operation.rejected")
+        assert rejected["type"] == "operation.rejected"
+        assert rejected["status"] == 400
+
+    await _run_websocket_test(app, flow_id, token, _submit)
+
+    async with session_scope() as session:
+        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+        assert flow is not None
+        assert flow.latest_operation_revision == 0
+
+
 async def test_operation_broadcast_to_peer_socket(client: AsyncClient, logged_in_headers):
     token = _access_token(logged_in_headers)
     flow_id = await _create_collab_flow(client, logged_in_headers)

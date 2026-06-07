@@ -23,7 +23,6 @@ from lfx.services.flow_operations.ops import (
     FlowOperation,
     NodeFieldPath,
     NodeFieldPathSegment,
-    OverwriteNodeUpdate,
     SetNodeFieldUpdate,
     UpdateMetadataOp,
     UpdateNodeEntry,
@@ -170,45 +169,16 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> li
         return []
 
     _validate_update_node_entries(updates)
-    accepted_updates_by_key: dict[tuple[Any, ...], _AcceptedNodeUpdate] = {}
-    for index, (update, forward_update) in enumerate(zip(updates, copy.deepcopy(updates), strict=True)):
-        accepted_update = _AcceptedNodeUpdate(update=update, forward_update=forward_update, input_index=index)
-        if forward_update.op == "overwrite_node":
-            accepted_updates_by_key[("overwrite_node", forward_update.id)] = accepted_update
-            continue
-
-        field_key = ("field", forward_update.id, forward_update.path)
-        accepted_updates_by_key[field_key] = accepted_update
-
-    forward_updates: list[UpdateNodeEntry] = []
-    for accepted_update in accepted_updates_by_key.values():
-        node_id = accepted_update.update.id
+    for index, update in enumerate(updates):
+        node_id = update.id
         if node_id not in state.nodes_by_id:
             msg = f"update_nodes: node does not exist: {node_id!r}"
             raise FlowOperationValidationError(msg)
-        NODE_UPDATE_HANDLERS[accepted_update.update.op](state, accepted_update.update, accepted_update.input_index)
-        forward_updates.append(accepted_update.forward_update)
-    if not forward_updates:
-        return []
-    return [UpdateNodesOp(type="update_nodes", updates=forward_updates)]
-
-
-@dataclass(frozen=True)
-class _AcceptedNodeUpdate:
-    update: UpdateNodeEntry
-    forward_update: UpdateNodeEntry
-    input_index: int
+        NODE_UPDATE_HANDLERS[update.op](state, update, index)
+    return [UpdateNodesOp(type="update_nodes", updates=copy.deepcopy(updates))]
 
 
 NodeUpdateHandler = Callable[[GraphState, Any, int], None]
-
-
-def _apply_overwrite_node_update(
-    state: GraphState,
-    update: OverwriteNodeUpdate,
-    _index: int,
-) -> None:
-    state.nodes_by_id[update.id] = update.node
 
 
 def _apply_set_node_field_update(
@@ -230,7 +200,6 @@ def _apply_delete_node_field_update(
 
 
 NODE_UPDATE_HANDLERS: dict[str, NodeUpdateHandler] = {
-    "overwrite_node": _apply_overwrite_node_update,
     "set_field": _apply_set_node_field_update,
     "delete_field": _apply_delete_node_field_update,
 }
@@ -239,28 +208,12 @@ NODE_UPDATE_HANDLERS: dict[str, NodeUpdateHandler] = {
 def _validate_update_node_entries(
     updates: list[UpdateNodeEntry],
 ) -> None:
-    """Reject update batches with ambiguous per-node overwrite behavior.
-
-    A node can be overwritten once, or patched through one or more field updates.
-    It cannot do both in the same update_nodes operation. A field path can appear
-    at most once per node.
-    """
-    overwrite_counts: Counter[str] = Counter()
+    """Reject update batches with duplicate field paths for the same node."""
     field_update_counts: defaultdict[str, Counter[NodeFieldPath]] = defaultdict(Counter)
     for update in updates:
-        if update.op == "overwrite_node":
-            overwrite_counts[update.id] += 1
-        if update.op in {"set_field", "delete_field"}:
-            field_update_counts[update.id][update.path] += 1
-            if field_update_counts[update.id][update.path] > 1:
-                msg = f"update_nodes: multiple field updates for node/path: {update.id!r} {update.path!r}"
-                raise FlowOperationValidationError(msg)
-
-        if overwrite_counts[update.id] > 1:
-            msg = f"update_nodes: multiple overwrite_node entries for node id: {update.id!r}"
-            raise FlowOperationValidationError(msg)
-        if overwrite_counts[update.id] > 0 and update.id in field_update_counts:
-            msg = f"update_nodes: cannot mix overwrite_node and field updates for node id: {update.id!r}"
+        field_update_counts[update.id][update.path] += 1
+        if field_update_counts[update.id][update.path] > 1:
+            msg = f"update_nodes: multiple field updates for node/path: {update.id!r} {update.path!r}"
             raise FlowOperationValidationError(msg)
 
 
@@ -307,7 +260,9 @@ def _write_object_path_part(
     if not isinstance(path_part, str):
         msg = f"{context}: object path part must be a string: {path_part!r}"
         raise FlowOperationValidationError(msg)
-    json_object[path_part] = value
+    # Prevent stored graph state from sharing mutable objects with the operation
+    # payload returned in forward_ops.
+    json_object[path_part] = copy.deepcopy(value)
 
 
 def _write_array_path_part(
@@ -323,7 +278,9 @@ def _write_array_path_part(
     if not (0 <= path_part < len(json_array)):
         msg = f"{context}: array index is out of range"
         raise FlowOperationValidationError(msg)
-    json_array[path_part] = value
+    # Prevent stored graph state from sharing mutable objects with the operation
+    # payload returned in forward_ops.
+    json_array[path_part] = copy.deepcopy(value)
 
 
 def _read_json_value_before_last_path_part(
