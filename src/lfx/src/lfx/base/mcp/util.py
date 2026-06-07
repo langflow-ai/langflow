@@ -666,7 +666,8 @@ def create_tool_func(
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
-            run_until_complete(_verify(arguments))
+            if trust_verifier is not None:
+                run_until_complete(_verify(arguments))
             return run_until_complete(client.run_tool(tool_name, arguments=arguments))
         except PermissionError:
             raise
