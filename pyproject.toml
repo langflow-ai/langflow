@@ -1,6 +1,6 @@
 [project]
-name = "langflow"
-version = "1.10.0"
+name = "langflow-nightly"
+version = "v1.10.0.dev68"
 description = "A Python package with a built-in web application"
 requires-python = ">=3.10,<3.15"
 license = "MIT"
@@ -17,12 +17,12 @@ maintainers = [
 ]
 # Define your main dependencies here
 dependencies = [
-    "langflow-base[complete]>=0.10.0",
+    "langflow-base-nightly[complete]==1.10.0.dev68",
     # langflow-extensions:bundle-deps-start
-    "lfx-duckduckgo>=0.1.0",
-    "lfx-arxiv>=0.1.0",
-    "lfx-ibm>=0.1.0",
-    "lfx-docling>=0.1.0",
+    "lfx-duckduckgo-nightly==0.1.0.dev2",
+    "lfx-arxiv-nightly==0.1.0.dev2",
+    "lfx-ibm-nightly==0.1.0.dev2",
+    "lfx-docling-nightly==0.1.0.dev2",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -75,15 +75,15 @@ url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 
 [tool.uv.sources]
-langflow-base = { workspace = true }
-langflow = { workspace = true }
-lfx = { workspace = true }
-langflow-sdk = { workspace = true }
+langflow-base-nightly = { workspace = true }
+langflow-nightly = { workspace = true }
+lfx-nightly = { workspace = true }
+langflow-sdk-nightly = { workspace = true }
 # langflow-extensions:bundle-sources-start
-lfx-duckduckgo = { workspace = true }
-lfx-arxiv = { workspace = true }
-lfx-ibm = { workspace = true }
-lfx-docling = { workspace = true }
+lfx-duckduckgo-nightly = { workspace = true }
+lfx-arxiv-nightly = { workspace = true }
+lfx-ibm-nightly = { workspace = true }
+lfx-docling-nightly = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -112,15 +112,15 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "lfx-docling[local]>=0.1.0",
+    "lfx-docling-nightly[local]==0.1.0.dev2",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.0",
+    "lfx-docling-nightly[chunking]==0.1.0.dev2",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.0",
+    "lfx-docling-nightly[image-description]==0.1.0.dev2",
 ]
 
 audio = [
