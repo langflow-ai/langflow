@@ -203,5 +203,24 @@ describe("lothal queries", () => {
         queryKey: ["lothal", "projects"],
       });
     });
+
+    // Regression guard (from the code review): the diagram cache must be
+    // invalidated too, since a chat reply can (re)generate the diagram.
+    it("also invalidates the diagram cache (a chat reply can change the diagram)", async () => {
+      // Input: a chat turn succeeds while the project is in a diagram phase.
+      const reply: Message = { ...MESSAGE, id: "m2", content: "reply" };
+      mockApiPost.mockResolvedValue({ data: reply });
+      const { wrapper, invalidateSpy } = setup();
+      const { result } = renderHook(() => useSendMessage("p1"), { wrapper });
+
+      await act(async () => {
+        await result.current.mutateAsync("hello");
+      });
+
+      // Expected: messages, projects, AND diagram are all refreshed.
+      expect(invalidateSpy).toHaveBeenCalledWith({
+        queryKey: ["lothal", "diagram", "p1"],
+      });
+    });
   });
 });

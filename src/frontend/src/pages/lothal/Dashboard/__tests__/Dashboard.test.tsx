@@ -120,4 +120,73 @@ describe("Lothal Dashboard", () => {
       expect.any(Object),
     );
   });
+
+  // --- Regression guards (from the code review) ----------------------------
+  // Each of these reproduced a real bug; the source is now fixed, so they are
+  // plain passing tests guarding the fix.
+
+  it("shows an error state — not the empty 'harbor' — when the project list fails to load", () => {
+    // Input: the list query failed (backend 500 / expired session / network drop).
+    mockUseProjects.mockReturnValue({
+      data: undefined,
+      isLoading: false,
+      isError: true,
+      refetch: jest.fn(),
+    });
+    render(<Dashboard />);
+    // Expected: a user with real projects is NOT told they have none...
+    expect(
+      screen.queryByText("No vessels in the harbor"),
+    ).not.toBeInTheDocument();
+    // ...and the error UI with a retry affordance is shown instead.
+    expect(screen.getByText("Couldn’t reach the harbor")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
+  });
+
+  it("opens the new-project modal when the advertised 'N' shortcut is pressed", () => {
+    // Input: the dashboard advertises an "N to start" shortcut.
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    expect(screen.queryByLabelText("Project name")).not.toBeInTheDocument();
+    fireEvent.keyDown(document.body, { key: "n" });
+    // Expected: the modal opens.
+    expect(screen.getByLabelText("Project name")).toBeInTheDocument();
+  });
+
+  it("ignores the 'N' shortcut when a modifier is held (leaves browser shortcuts alone)", () => {
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    fireEvent.keyDown(document.body, { key: "n", metaKey: true });
+    fireEvent.keyDown(document.body, { key: "n", ctrlKey: true });
+    // Expected: Cmd/Ctrl+N is not hijacked, so the modal stays closed.
+    expect(screen.queryByLabelText("Project name")).not.toBeInTheDocument();
+  });
+
+  it("ignores the 'N' shortcut while typing in the project-name field", () => {
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    fireEvent.click(screen.getAllByRole("button", { name: "New project" })[0]);
+    const input = screen.getByLabelText("Project name");
+    // Typing 'n' into the field must not toggle/disturb the open modal.
+    fireEvent.keyDown(input, { key: "n" });
+    expect(screen.getByLabelText("Project name")).toBeInTheDocument();
+  });
+
+  it("surfaces an error when creating a project fails", () => {
+    // Input: the create POST fails (the mutation invokes its onError callback).
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    mockCreateMutate.mockImplementation((_name, opts) =>
+      opts?.onError?.(new Error("create failed")),
+    );
+    render(<Dashboard />);
+    fireEvent.click(screen.getAllByRole("button", { name: "New project" })[0]);
+    fireEvent.change(screen.getByLabelText("Project name"), {
+      target: { value: "Tide Tracker" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Create" }));
+    // Expected: the user is told the create failed (an alert surfaces).
+    expect(screen.getByRole("alert")).toBeInTheDocument();
+  });
 });

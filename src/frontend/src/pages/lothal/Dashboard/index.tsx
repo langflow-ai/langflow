@@ -90,10 +90,12 @@ function PlusGlyph({ size = 14 }: { size?: number }) {
 
 function NewProjectModal({
   busy,
+  error,
   onClose,
   onCreate,
 }: {
   busy: boolean;
+  error?: string | null;
   onClose: () => void;
   onCreate: (name: string) => void;
 }) {
@@ -187,6 +189,14 @@ function NewProjectModal({
             outline: "none",
           }}
         />
+        {error && (
+          <p
+            role="alert"
+            style={{ marginTop: 12, fontSize: 13, color: "#e5484d" }}
+          >
+            {error}
+          </p>
+        )}
         <div
           style={{
             display: "flex",
@@ -256,7 +266,7 @@ function NewProjectTile({ onClick }: { onClick: () => void }) {
         Start a new project
       </span>
       <span className="mono" style={{ fontSize: 11, color: "var(--ink-soft)" }}>
-        ⌘ N
+        N
       </span>
     </button>
   );
@@ -421,8 +431,9 @@ function DashboardView() {
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
   const [showModal, setShowModal] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
-  const { data: projects, isLoading } = useProjects();
+  const { data: projects, isLoading, isError, refetch } = useProjects();
   const createProject = useCreateProject();
   const deleteProject = useDeleteProject();
 
@@ -431,11 +442,45 @@ function DashboardView() {
   const underway = list.filter((p) => p.phase !== "DONE").length;
   const delivered = list.filter((p) => p.phase === "DONE").length;
 
+  const openModal = () => {
+    setCreateError(null);
+    setShowModal(true);
+  };
+
+  // "N" opens the new-project modal (the dashboard advertises this shortcut).
+  // Ignored while typing in a field, with a modifier held, or when the modal
+  // is already open.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "n" && e.key !== "N") return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const el = e.target as HTMLElement | null;
+      if (
+        el &&
+        (el.tagName === "INPUT" ||
+          el.tagName === "TEXTAREA" ||
+          el.isContentEditable)
+      ) {
+        return;
+      }
+      if (showModal) return;
+      e.preventDefault();
+      setCreateError(null);
+      setShowModal(true);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [showModal]);
+
   const handleCreate = (name: string) => {
+    setCreateError(null);
     createProject.mutate(name, {
       onSuccess: (created) => {
         setShowModal(false);
         navigate(`/lothal/${created.id}`);
+      },
+      onError: () => {
+        setCreateError("Couldn’t create the project. Please try again.");
       },
     });
   };
@@ -566,19 +611,11 @@ function DashboardView() {
                 flexWrap: "wrap",
               }}
             >
-              <Button
-                variant="accent"
-                size="lg"
-                onClick={() => setShowModal(true)}
-              >
+              <Button variant="accent" size="lg" onClick={openModal}>
                 <PlusGlyph size={16} />
                 New project
               </Button>
-              <Button
-                variant="outline"
-                size="lg"
-                onClick={() => setShowModal(true)}
-              >
+              <Button variant="outline" size="lg" onClick={openModal}>
                 Import a spec
               </Button>
             </div>
@@ -639,6 +676,25 @@ function DashboardView() {
               >
                 Loading the harbor…
               </div>
+            ) : isError ? (
+              <div
+                role="alert"
+                style={{
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  gap: 16,
+                  padding: "16px 0 8px",
+                }}
+              >
+                <EmptyHint
+                  title="Couldn’t reach the harbor"
+                  sub="We couldn’t load your projects. Check your connection and try again."
+                />
+                <Button variant="outline" onClick={() => refetch()}>
+                  Try again
+                </Button>
+              </div>
             ) : total === 0 ? (
               <div
                 style={{
@@ -654,7 +710,7 @@ function DashboardView() {
                   sub="Describe what you want to build and a new project takes shape here."
                   kbd="N to start"
                 />
-                <Button variant="accent" onClick={() => setShowModal(true)}>
+                <Button variant="accent" onClick={openModal}>
                   <PlusGlyph />
                   New project
                 </Button>
@@ -675,7 +731,7 @@ function DashboardView() {
                     onDelete={() => handleDelete(p)}
                   />
                 ))}
-                <NewProjectTile onClick={() => setShowModal(true)} />
+                <NewProjectTile onClick={openModal} />
               </div>
             )}
           </section>
@@ -709,6 +765,7 @@ function DashboardView() {
       {showModal && (
         <NewProjectModal
           busy={createProject.isPending}
+          error={createError}
           onClose={() => setShowModal(false)}
           onCreate={handleCreate}
         />

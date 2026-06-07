@@ -148,10 +148,11 @@ export function useSendMessage(projectId: string) {
       return res.data;
     },
     onSuccess: () => {
-      // The reply may advance the phase — refresh both the conversation and
-      // the project list so the phase badge stays in sync.
+      // The reply may advance the phase or (re)generate the diagram — refresh the
+      // conversation, the project list (phase badge), and the diagram (canvas).
       qc.invalidateQueries({ queryKey: messagesKey(projectId) });
       qc.invalidateQueries({ queryKey: PROJECTS_KEY });
+      qc.invalidateQueries({ queryKey: diagramKey(projectId) });
     },
   });
 }

@@ -8,11 +8,14 @@ endpoint is still a stub and is asserted to return the structured `501`.
 Common to both: every endpoint requires auth and appears in the OpenAPI schema.
 """
 
+from uuid import UUID
+
 import pytest
 from fastapi import status
 from httpx import AsyncClient
-from langflow.services.database.models.lothal_project.model import Project
+from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
+from sqlmodel import select
 
 # A non-existent project id is fine for the stubbed routes: they short-circuit
 # before any lookup.
@@ -181,3 +184,29 @@ async def test_projects_are_scoped_to_the_owner(client: AsyncClient, logged_in_h
             leftover = await session.get(Project, foreign_pk)
             if leftover:
                 await session.delete(leftover)
+
+
+async def test_delete_project_cascades_to_messages_and_code_files(client: AsyncClient, logged_in_headers: dict):
+    # Create a project via the API, then seed child rows directly (the chat/code
+    # endpoints that would create them are still 501 stubs).
+    response = await client.post("api/v1/lothal/projects/", json={"name": "Cascade"}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    project_pk = UUID(response.json()["id"])
+
+    async with session_scope() as session:
+        session.add(Message(project_id=project_pk, role="USER", content="hi", phase="CLARIFICATION"))
+        session.add(CodeFile(project_id=project_pk, path="main.py", content="print('hi')\n"))
+
+    # Delete via the API. The in-handler flush emits the cascade DELETEs (and
+    # surfaces any error) in-request, before the 204 — exercising the async
+    # cascade path with children present.
+    response = await client.delete(f"api/v1/lothal/projects/{project_pk}", headers=logged_in_headers)
+    assert response.status_code == status.HTTP_204_NO_CONTENT
+
+    # The project and both child rows are gone.
+    async with session_scope() as session:
+        assert await session.get(Project, project_pk) is None
+        messages = (await session.exec(select(Message).where(Message.project_id == project_pk))).all()
+        code_files = (await session.exec(select(CodeFile).where(CodeFile.project_id == project_pk))).all()
+        assert messages == []
+        assert code_files == []

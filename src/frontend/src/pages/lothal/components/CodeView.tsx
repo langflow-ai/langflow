@@ -8,7 +8,13 @@
 // `/download` endpoint is still a 501 stub and GitHub push is post-MVP, so both
 // are rendered disabled. They light up in Epic 5 with no change to this view.
 
-import { type CSSProperties, type ReactNode, useMemo, useState } from "react";
+import {
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { Button } from "./Button";
 import { EmptyHint } from "./EmptyHint";
 import { highlightTokens, languageFromPath, type TokenType } from "./syntax";
@@ -408,6 +414,14 @@ export function CodeView({ files }: { files: FileEntry[] }): ReactNode {
   const [activePath, setActivePath] = useState<string | null>(null);
   const [openPaths, setOpenPaths] = useState<string[]>([]);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
+  // Tracks an explicit close of the implicit "default" tab so we don't
+  // immediately re-open it — closing the sole auto-opened tab should stick.
+  const [closedDefault, setClosedDefault] = useState(false);
+
+  // A new file set (e.g. a different project) restores the default-tab behaviour.
+  useEffect(() => {
+    setClosedDefault(false);
+  }, [defaultPath]);
 
   if (files.length === 0) {
     return (
@@ -423,6 +437,10 @@ export function CodeView({ files }: { files: FileEntry[] }): ReactNode {
   const activeFile = (() => {
     if (activePath && fileMap.has(activePath)) {
       return { path: activePath, content: fileMap.get(activePath) ?? "" };
+    }
+    // The user explicitly closed the default tab — don't resurrect it.
+    if (!activePath && closedDefault) {
+      return null;
     }
     if (defaultPath) {
       return { path: defaultPath, content: fileMap.get(defaultPath) ?? "" };
@@ -445,13 +463,18 @@ export function CodeView({ files }: { files: FileEntry[] }): ReactNode {
   const selectFile = (path: string) => {
     setActivePath(path);
     setOpenPaths((prev) => (prev.includes(path) ? prev : [...prev, path]));
+    setClosedDefault(false);
   };
 
   const closeTab = (path: string) => {
     const next = tabPaths.filter((p) => p !== path);
     setOpenPaths((prev) => prev.filter((p) => p !== path));
     if (activePath === path || (!activePath && activeFile?.path === path)) {
-      setActivePath(next[next.length - 1] ?? null);
+      const fallback = next[next.length - 1] ?? null;
+      setActivePath(fallback);
+      // Closing the last tab (including the implicit default) leaves none open;
+      // remember that so the default tab isn't immediately re-opened.
+      if (fallback === null) setClosedDefault(true);
     }
   };
 
