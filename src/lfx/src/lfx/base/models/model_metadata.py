@@ -217,12 +217,61 @@ MODEL_PROVIDER_METADATA: dict[str, Any] = {
                     "advanced": True,
                     "info": "Falls back to AZURE_OPENAI_API_KEY environment variable",
                 },
-            }
+            },
+            {
+                "variable_name": "Azure Endpoint",
+                "variable_key": "AZURE_OPENAI_API_BASE",
+                "required": True,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "azure_endpoint",
+                "component_metadata": {
+                    "mapping_field": "azure_endpoint",
+                    "required": True,
+                    "advanced": False,
+                    "info": "Full Azure endpoint URL, e.g. https://my-resource.openai.azure.com/. "
+                    "Falls back to AZURE_OPENAI_API_BASE environment variable.",
+                },
+            },
+            {
+                "variable_name": "API Version",
+                "variable_key": "AZURE_OPENAI_API_VERSION",
+                "required": False,
+                "is_secret": False,
+                "is_list": False,
+                "options": [],
+                "langchain_param": "api_version",
+                "component_metadata": {
+                    "mapping_field": "api_version",
+                    "required": False,
+                    "advanced": True,
+                    "info": "Azure OpenAI API version (e.g. '2024-06-01'). "
+                    "Falls back to AZURE_OPENAI_API_VERSION environment variable.",
+                },
+            },
+            {
+                "variable_name": "Deployment Name",
+                "variable_key": "AZURE_OPENAI_DEPLOYMENT_NAME",
+                "required": True,
+                "is_secret": False,
+                "is_list": False,
+                "combobox": True,
+                "options": ["gpt-4o", "gpt-4o-mini", "gpt-4-turbo", "gpt-4", "gpt-35-turbo"],
+                "langchain_param": "azure_deployment",
+                "component_metadata": {
+                    "mapping_field": "azure_deployment",
+                    "required": True,
+                    "advanced": False,
+                    "info": "Your Azure deployment name (user-defined in Azure Portal). "
+                    "Type your own or pick a common suggestion.",
+                },
+            },
         ],
         "api_docs_url": "https://learn.microsoft.com/en-us/azure/ai-services/openai/",
         "mapping": {
             "model_class": "AzureChatOpenAI",
-            "model_param": "model",
+            "model_param": "azure_deployment",
         },
     },
     "IBM WatsonX": {

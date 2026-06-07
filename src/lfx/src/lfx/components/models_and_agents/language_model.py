@@ -61,6 +61,21 @@ class LanguageModelComponent(LCModelComponent):
             show=False,
             real_time_refresh=True,
         ),
+        StrInput(
+            name="azure_endpoint",
+            display_name="Azure Endpoint",
+            info="Your Azure endpoint, including the resource (Azure OpenAI only). "
+            "Example: https://example-resource.openai.azure.com/",
+            show=False,
+            required=False,
+        ),
+        StrInput(
+            name="azure_deployment",
+            display_name="Deployment Name",
+            info="Your Azure deployment name, as defined in the Azure Portal (Azure OpenAI only).",
+            show=False,
+            required=False,
+        ),
         MessageInput(
             name="input_value",
             display_name="Input",
@@ -97,7 +112,7 @@ class LanguageModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:
-        return get_llm(
+        model = get_llm(
             model=self.model,
             user_id=self.user_id,
             api_key=self.api_key,
@@ -107,7 +122,36 @@ class LanguageModelComponent(LCModelComponent):
             watsonx_url=getattr(self, "base_url_ibm_watsonx", None),
             watsonx_project_id=getattr(self, "project_id", None),
             ollama_base_url=getattr(self, "ollama_base_url", None),
+            azure_endpoint=getattr(self, "azure_endpoint", None),
+            azure_deployment=getattr(self, "azure_deployment", None),
         )
+        # Stash the built model so _get_exception_message can report the exact
+        # endpoint/deployment/api_version that were sent if invoke fails.
+        self._built_model = model
+        return model
+
+    def _get_exception_message(self, e: Exception):
+        """Add Azure-specific context to invoke-time errors.
+
+        The lfx logger defaults to ERROR level, so debug logs about the Azure
+        request are usually suppressed. A 404 ("Resource not found") from Azure
+        means the deployment path doesn't exist at the endpoint, so surface the
+        exact values that were sent directly in the (always-visible) error.
+        """
+        msg = str(e)
+        built = getattr(self, "_built_model", None)
+        if ("404" in msg or "resource not found" in msg.lower()) and type(built).__name__ == "AzureChatOpenAI":
+            endpoint = getattr(built, "azure_endpoint", None)
+            deployment = getattr(built, "deployment_name", None)
+            api_version = getattr(built, "openai_api_version", None)
+            return (
+                f"Azure OpenAI returned 404 (Resource not found).\n"
+                f"Request used: endpoint='{endpoint}', deployment='{deployment}', api_version='{api_version}'.\n"
+                "Verify a deployment with that exact name exists at that endpoint in the Azure Portal "
+                "(deployment names are user-defined and case-sensitive). Original error: "
+                f"{msg}"
+            )
+        return msg
 
     def update_build_config(self, build_config: dict, field_value: str, field_name: str | None = None):
         """Dynamically update build config with user-filtered model options."""
