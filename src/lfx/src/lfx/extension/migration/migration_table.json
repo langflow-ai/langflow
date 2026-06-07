@@ -242,26 +242,6 @@
       "added_in": "1.10.0"
     },
     {
-      "bare_class_name": "GetEnvVar",
-      "target": "ext:datastax:GetEnvVar@official",
-      "added_in": "1.10.0"
-    },
-    {
-      "import_path": "lfx.components.datastax.getenvvar.GetEnvVar",
-      "target": "ext:datastax:GetEnvVar@official",
-      "added_in": "1.10.0"
-    },
-    {
-      "import_path": "lfx.components.datastax.GetEnvVar",
-      "target": "ext:datastax:GetEnvVar@official",
-      "added_in": "1.10.0"
-    },
-    {
-      "legacy_slot": "ext:datastax:GetEnvVar@official-pre-a",
-      "target": "ext:datastax:GetEnvVar@official",
-      "added_in": "1.10.0"
-    },
-    {
       "bare_class_name": "WikidataComponent",
       "target": "ext:wikipedia:WikidataComponent@official",
       "added_in": "1.10.0"

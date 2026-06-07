@@ -314,6 +314,21 @@ class ExtensionManifest(BaseModel):
         description="Optional declared capabilities (v0: requiresCredentials only).",
     )
 
+    locales: StrictStr | None = Field(
+        default=None,
+        min_length=1,
+        max_length=255,
+        description=(
+            "Optional directory (relative to this manifest) holding per-locale "
+            "translation JSON files (en.json, de.json, ...) that Langflow merges "
+            "into its component i18n table at load time. Conventionally 'locales'. "
+            "Keys use the same 'components.<norm>.<field>.<hash>' scheme as the "
+            "core locale files; core strings win on any key collision, so a bundle "
+            "cannot shadow a first-party string. A bundle without translations "
+            "simply omits this field and renders its English source strings."
+        ),
+    )
+
     # ------------------------------------------------------------------
     # Deferred fields.  We model them as ``None``-only so that downstream
     # tooling can distinguish "absent" from "explicitly set to a value the
@@ -346,6 +361,20 @@ class ExtensionManifest(BaseModel):
     # ------------------------------------------------------------------
     # Validators
     # ------------------------------------------------------------------
+
+    @field_validator("locales")
+    @classmethod
+    def _validate_locales_path(cls, value: str | None) -> str | None:
+        # Same path-safety shape as BundleRef.path: relative, no parent traversal.
+        if value is None:
+            return value
+        if Path(value).is_absolute():
+            msg = f"locales path {value!r} must be relative to the manifest"
+            raise ValueError(msg)
+        if any(part == ".." for part in Path(value).parts):
+            msg = f"locales path {value!r} must not contain '..'"
+            raise ValueError(msg)
+        return value
 
     @model_validator(mode="after")
     def _validate_bundle_uniqueness(self) -> ExtensionManifest:

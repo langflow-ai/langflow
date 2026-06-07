@@ -34,24 +34,94 @@ from pathlib import Path
 
 OUTPUT_PATH = Path(__file__).parent.parent.parent / "src/backend/base/langflow/locales/en.json"
 STARTER_PROJECTS_DIR = Path(__file__).parent.parent.parent / "src/backend/base/langflow/initial_setup/starter_projects"
+REPO_ROOT = Path(__file__).parent.parent.parent
+BUNDLES_DIR = REPO_ROOT / "src" / "bundles"
 
 
-def collect_strings() -> dict[str, str]:
-    """Walk lfx.components and extract all translatable display_name strings."""
-    from langflow.utils.i18n_keys import component_field_key as _component_field_key
-    from langflow.utils.i18n_keys import normalize_component_key as _normalize_component_key
-    from langflow.utils.i18n_keys import safe_flow_key as _safe_key
+def _iter_component_packages():
+    """Yield (package, dotted_name) for lfx.components and every bundle's components subpackage.
 
+    lfx.components is yielded FIRST so the base ``Component`` class is fully
+    initialized before any bundle module (which imports from ``lfx``) is imported
+    — otherwise the bundle imports hit "partially initialized module" circular
+    import errors and silently get skipped, which is exactly how bundle component
+    strings went missing from en.json after the mass extraction.
+
+    Bundles are discovered two ways, unioned and de-duped by package name:
+      1. Directory walk of ``src/bundles/*/src/lfx_*`` — covers the in-repo
+         monorepo whether or not the bundles are pip-installed.
+      2. The ``langflow.extensions`` entry-point group — covers installed /
+         third-party bundles that do not live under ``src/bundles``.
+    """
     try:
         import lfx.components as components_pkg
     except ImportError:
         print("ERROR: Could not import lfx.components. Run this script from inside the backend virtualenv.")
         sys.exit(1)
+    yield components_pkg, components_pkg.__name__
+
+    seen_pkgs: set[str] = set()
+
+    # 1) In-repo bundles (src/bundles/<provider>/src/lfx_<provider>/components)
+    if BUNDLES_DIR.is_dir():
+        for src_dir in sorted(BUNDLES_DIR.glob("*/src")):
+            if str(src_dir) not in sys.path:
+                sys.path.insert(0, str(src_dir))
+        for pkg_dir in sorted(BUNDLES_DIR.glob("*/src/lfx_*")):
+            comp_name = f"{pkg_dir.name}.components"
+            if comp_name in seen_pkgs:
+                continue
+            seen_pkgs.add(comp_name)
+            try:
+                module = importlib.import_module(comp_name)
+            except Exception as e:  # noqa: BLE001
+                print(f"  SKIP bundle {comp_name}: {e}")
+                continue
+            if hasattr(module, "__path__"):  # only walkable packages
+                yield module, comp_name
+
+    # 2) Installed / third-party bundles registered via entry points
+    try:
+        from importlib.metadata import entry_points
+
+        eps = list(entry_points(group="langflow.extensions"))
+    except Exception as e:  # noqa: BLE001
+        print(f"  (entry-point discovery skipped: {e})")
+        eps = []
+    for ep in eps:
+        top = (ep.value or "").split(":")[0].strip().split(".")[0]
+        if not top:
+            continue
+        comp_name = f"{top}.components"
+        if comp_name in seen_pkgs:
+            continue
+        seen_pkgs.add(comp_name)
+        try:
+            module = importlib.import_module(comp_name)
+        except Exception as e:  # noqa: BLE001
+            print(f"  SKIP extension {comp_name}: {e}")
+            continue
+        if hasattr(module, "__path__"):  # only walkable packages
+            yield module, comp_name
+
+
+def collect_strings() -> dict[str, str]:
+    """Walk lfx.components and every bundle, extracting translatable strings."""
+    from langflow.utils.i18n_keys import component_field_key as _component_field_key
+    from langflow.utils.i18n_keys import normalize_component_key as _normalize_component_key
+    from langflow.utils.i18n_keys import safe_flow_key as _safe_key
 
     flat: dict[str, str] = {}
     seen_names: set[str] = set()
 
-    for _finder, modname, _ispkg in pkgutil.walk_packages(components_pkg.__path__, components_pkg.__name__ + "."):
+    # Collect module names across lfx.components + all bundles first (lfx is walked
+    # first so Component is initialized), then import each to extract strings.
+    modnames: list[str] = []
+    for pkg, pkg_name in _iter_component_packages():
+        for _finder, modname, _ispkg in pkgutil.walk_packages(pkg.__path__, pkg_name + ".", onerror=lambda _n: None):
+            modnames.append(modname)
+
+    for modname in modnames:
         if "deactivated" in modname:
             continue
 

@@ -57,24 +57,112 @@ _translations_lock = threading.Lock()
 
 
 def _load_translations() -> None:
-    """Load all *.json files from the locales directory into memory.
+    """Load core + per-bundle *.json locale files into memory.
 
     Uses double-checked locking: the fast path (already loaded) skips the lock,
     the slow path (first load) acquires it and re-checks to avoid duplicate work
     from concurrent callers at cold start.
+
+    Core locale files (langflow/locales/) are loaded first, then per-bundle
+    locale files contributed by installed extensions are merged on top with
+    **core-wins** precedence (see :func:`_merge_bundle_translations`), so a
+    third-party bundle can add translations for its own components but can never
+    shadow a first-party string.
     """
     with _translations_lock:
         if _translations:
             return
-        if not _LOCALES_DIR.exists():
-            return
-        for path in _LOCALES_DIR.glob("*.json"):
-            locale_code = path.stem  # "en", "fr", "zh-Hans", etc.
+        if _LOCALES_DIR.exists():
+            for path in _LOCALES_DIR.glob("*.json"):
+                locale_code = path.stem  # "en", "fr", "zh-Hans", etc.
+                try:
+                    with path.open(encoding="utf-8") as f:
+                        _translations[locale_code] = json.load(f)
+                except (OSError, json.JSONDecodeError) as exc:
+                    logger.warning("Failed to load locale %s: %s", locale_code, exc)
+        _merge_bundle_translations(_translations)
+
+
+def reload_translations() -> None:
+    """Clear the cache and reload core + bundle translations.
+
+    Test seam and reload hook: call after locale files change on disk or after an
+    extension is (un)loaded so the in-memory table reflects the new state.
+    """
+    with _translations_lock:
+        _translations.clear()
+    _load_translations()
+
+
+def _iter_bundle_locale_dirs() -> list[Path]:
+    """Best-effort discovery of per-bundle locale directories for installed extensions.
+
+    Fully defensive: any failure is swallowed and the directories found so far are
+    returned, so component translation always degrades to the core locale files
+    rather than erroring. An extension contributes translations by shipping a
+    ``locales/`` directory beside its manifest (or the directory named by the
+    manifest's optional ``locales`` field).
+    """
+    dirs: list[Path] = []
+    try:
+        import importlib.util
+        from importlib.metadata import entry_points
+
+        eps = list(entry_points(group="langflow.extensions"))
+    except Exception as exc:  # noqa: BLE001
+        logger.debug("Bundle locale discovery skipped: %s", exc)
+        return dirs
+
+    for ep in eps:
+        try:
+            top = (getattr(ep, "value", "") or "").split(":")[0].strip().split(".")[0]
+            if not top:
+                continue
+            spec = importlib.util.find_spec(top)
+            if not spec or not spec.submodule_search_locations:
+                continue
+            root = Path(next(iter(spec.submodule_search_locations)))
+            locales_sub = "locales"
+            try:
+                from lfx.extension.manifest import load_manifest
+
+                declared = getattr(load_manifest(root).manifest, "locales", None)
+                if declared:
+                    locales_sub = declared
+            except Exception as exc:  # noqa: BLE001 - manifest optional/unreadable: fall back to convention
+                logger.debug("Manifest locales lookup failed for %s; using convention: %s", root, exc)
+            locale_dir = root / locales_sub
+            if locale_dir.is_dir():
+                dirs.append(locale_dir)
+        except Exception as exc:  # noqa: BLE001
+            logger.debug("Skipping bundle locale dir for %r: %s", getattr(ep, "name", "?"), exc)
+            continue
+    return dirs
+
+
+def _merge_bundle_translations(translations: dict[str, dict[str, str]]) -> None:
+    """Merge per-bundle locale files into ``translations`` with core-wins precedence.
+
+    Keys already present (the core locale files loaded first) are never
+    overwritten, so a bundle can only *add* translations for keys core does not
+    define — it cannot shadow a first-party string. Key namespacing
+    (``components.<norm>.<field>.<hash>``) makes cross-bundle collisions
+    practically impossible; if one occurs, the first loaded value wins.
+    """
+    for locale_dir in _iter_bundle_locale_dirs():
+        for path in locale_dir.glob("*.json"):
+            locale_code = path.stem
             try:
                 with path.open(encoding="utf-8") as f:
-                    _translations[locale_code] = json.load(f)
+                    data = json.load(f)
             except (OSError, json.JSONDecodeError) as exc:
-                logger.warning("Failed to load locale %s: %s", locale_code, exc)
+                logger.warning("Failed to load bundle locale %s from %s: %s", locale_code, path, exc)
+                continue
+            if not isinstance(data, dict):
+                continue
+            target = translations.setdefault(locale_code, {})
+            for key, value in data.items():
+                target.setdefault(key, value)  # core-wins
 
 
 def translate(key: str, locale: str, default: str) -> str:

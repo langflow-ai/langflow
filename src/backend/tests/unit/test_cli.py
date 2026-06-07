@@ -330,6 +330,7 @@ def test_build_direct_uvicorn_kwargs_pins_full_shape():
         "loop",
         "ssl_certfile",
         "ssl_keyfile",
+        "forwarded_allow_ips",
     }
     assert result["reload"] is False
 

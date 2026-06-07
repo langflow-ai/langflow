@@ -269,10 +269,19 @@ export default function SliderComponent({
       </Case>
 
       <div className="flex cursor-default items-center justify-center">
+        {/*
+          Isolate the slider from React Flow's node interactions. Radix drives the
+          slider with pointer events, while the node selects on click and pans/drags
+          on pointer down. Without stopping propagation (and the nodrag/nopan opt-out
+          classes), the first interaction on an unselected node is consumed by node
+          selection and the value the user set is silently lost or mis-registered.
+        */}
         <SliderPrimitive.Root
-          className="relative flex h-5 w-full touch-none select-none items-center"
+          className="noflow nowheel nopan nodelete nodrag relative flex h-5 w-full touch-none select-none items-center"
           value={[valueAsNumber]}
           onValueChange={handleChange}
+          onPointerDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           min={min}
           max={max}
           step={step}

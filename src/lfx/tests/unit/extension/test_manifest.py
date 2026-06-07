@@ -81,6 +81,28 @@ def test_minimal_manifest_round_trip() -> None:
     manifest = ExtensionManifest.model_validate(minimal)
     assert manifest.capabilities.requiresCredentials is False
     assert manifest.description is None
+    assert manifest.locales is None
+
+
+# ---------------------------------------------------------------------------
+# locales field (optional per-bundle translation directory)
+# ---------------------------------------------------------------------------
+
+
+def test_locales_defaults_to_none() -> None:
+    assert ExtensionManifest.model_validate(_VALID).locales is None
+
+
+def test_locales_relative_path_accepted_and_round_trips() -> None:
+    manifest = ExtensionManifest.model_validate(_with(_VALID, locales="locales"))
+    assert manifest.locales == "locales"
+    assert manifest.model_dump(by_alias=True, mode="json")["locales"] == "locales"
+
+
+@pytest.mark.parametrize("bad_path", ["/abs/locales", "../escape", "nested/../../escape"])
+def test_locales_unsafe_path_rejected(bad_path: str) -> None:
+    with pytest.raises(ValidationError, match="locales"):
+        ExtensionManifest.model_validate(_with(_VALID, locales=bad_path))
 
 
 # ---------------------------------------------------------------------------

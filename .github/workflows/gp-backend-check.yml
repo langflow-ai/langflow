@@ -4,6 +4,7 @@ on:
   pull_request:
     paths:
       - "src/lfx/src/lfx/components/**"
+      - "src/bundles/**"
       - "src/backend/base/langflow/initial_setup/starter_projects/**"
 
 jobs:
@@ -38,6 +39,9 @@ jobs:
 
       - name: Generate en.json
         run: uv run python scripts/gp/extract_backend_strings.py
+
+      - name: Check locale alignment (backstop for mass orphan regressions)
+        run: uv run python scripts/gp/check_locale_alignment.py
 
       - name: Commit updated files to PR branch if changed
         run: |

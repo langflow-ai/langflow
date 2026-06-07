@@ -9,10 +9,32 @@ There is no `langflow.db` database file when using LFX.
 You can run flows with the API, but any stateful operations that depend on the Langflow database, like saving flows, storing messages, or managing users **will not** persist data.
 Operations that depend on `langflow.db` will not work as they do in the full Langflow application.
 
-LFX includes two commands for executing flows:
+Memory operations are dispatched at call time, not at import time.
+If the `langflow` package is installed in the same Python environment as `lfx` and a real database service is registered, memory operations are routed to the full `langflow.memory` implementation instead. This applies when `lfx` is used as a Python library inside a running Langflow server, not when running `lfx run` or `lfx serve` from the command line.
 
-- **`lfx serve`**: Starts a FastAPI server hosting a Langflow API endpoint with your flow available at `/flows/{flow_id}/run`. The flow graph is stored in memory at all times, so there is less overhead for loading the graph from a database.
-- **`lfx run`**: Executes a flow locally and returns the results to `stdout`.
+## Commands
+
+**Runtime commands** — documented in this README:
+
+| Command | Description |
+|---------|-------------|
+| [`lfx serve`](#serve-the-simple-agent-starter-flow-with-lfx-serve) | Serve a flow as a FastAPI endpoint at `/flows/{flow_id}/run` |
+| [`lfx run`](#run-the-simple-agent-flow-with-lfx-run) | Execute a flow locally and stream results to `stdout` |
+| [`lfx-mcp`](#lfx-mcp) | Start an MCP server that connects to a running Langflow instance |
+
+**Flow DevOps SDK commands** — documented in the [Flow DevOps Toolkit](https://docs.langflow.org/flow-devops-sdk):
+
+| Command | Description |
+|---------|-------------|
+| `lfx init` | Scaffold a versioned flow project with CI templates |
+| `lfx login` | Validate credentials against a remote Langflow instance |
+| `lfx create` | Create a new flow JSON from a built-in or custom template |
+| `lfx validate` | Validate flow JSON before pushing |
+| `lfx requirements` | Generate `requirements.txt` from a flow's component dependencies |
+| `lfx status` | Compare local flow files against a remote Langflow instance |
+| `lfx push` | Push flows to a remote instance by stable ID |
+| `lfx pull` | Pull flows from a remote instance to local files |
+| `lfx export` | Normalize flow JSON for clean git diffs |
 
 ## Prerequisites
 
@@ -91,6 +113,8 @@ Run LFX without installing it locally using `uvx`.
 ## Serve the simple agent starter flow with `lfx serve`
 
 To serve a flow as a REST API endpoint, set a `LANGFLOW_API_KEY` and run the flow JSON.
+
+`lfx serve` accepts a `.json` flow file or a `.py` Python script (same as `lfx run`), as well as inline JSON via `--flow-json` or piped input via `--stdin`.
 
 The API key is required for security because `lfx serve` can create a publicly accessible FastAPI server.
 
@@ -231,7 +255,55 @@ Your flow is now running as a lightweight API endpoint, with only the flow's req
 
 To make your server publicly accessible, use a tunneling service like ngrok or deploy to a public cloud provider.
 
-### LFX response schema
+### HTTP endpoints
+
+The LFX server exposes the following endpoints. All `/flows/{flow_id}` routes require the `x-api-key` header or `?x-api-key=` query parameter.
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/flows` | GET | List all served flows and their metadata |
+| `/flows/{flow_id}/run` | POST | Run the flow and return a single response |
+| `/flows/{flow_id}/stream` | POST | Run the flow and stream output as server-sent events |
+| `/flows/{flow_id}/info` | GET | Return flow metadata (title, description, input/output types) |
+| `/health` | GET | Global health check — returns `{"status": "ok"}` |
+| `/docs` | GET | Auto-generated OpenAPI/Swagger UI |
+
+### Request body schema
+
+**`POST /flows/{flow_id}/run`**
+
+```json
+{
+  "input_value": "Your message here",
+  "session_id": "optional-conversation-id"
+}
+```
+
+`session_id` is optional. When set, Agent and Memory components use it to maintain conversation history across multiple calls. If omitted, a new session ID is generated for each request.
+
+**`POST /flows/{flow_id}/stream`**
+
+```json
+{
+  "input_value": "Your message here",
+  "input_type": "chat",
+  "output_type": "chat",
+  "output_component": null,
+  "session_id": "optional-conversation-id",
+  "tweaks": {"ComponentName": {"param": "value"}}
+}
+```
+
+| Field | Default | Description |
+|-------|---------|-------------|
+| `input_value` | — | Required. Input passed to the flow. |
+| `input_type` | `"chat"` | Input type: `chat` or `text`. |
+| `output_type` | `"chat"` | Output type: `chat`, `text`, `debug`, or `any`. |
+| `output_component` | `null` | Pin output to a specific component by name. |
+| `session_id` | `null` | Conversation ID for memory continuity across requests. |
+| `tweaks` | `null` | Per-request parameter overrides. Keys are component names; values are dicts of parameter overrides. Use this to parameterize a flow without modifying the JSON. |
+
+### Response schema
 
 The LFX server's response schema is different from the Langflow API `/run` endpoint's schema. Requests to the LFX server's `/flows/{flow_id}/run` endpoint return the following fields:
 
@@ -245,7 +317,7 @@ The LFX server's response schema is different from the Langflow API `/run` endpo
 }
 ```
 
-To view the LFX server's API docs and schema, see the `/docs` endpoint at `http://localhost:8000/docs`.
+The `/stream` endpoint returns the same fields as server-sent events, with one event per component output.
 
 ### LFX serve options
 
@@ -358,6 +430,7 @@ uv run lfx run --flow-json '{"data": {"nodes": [...], "edges": [...]}}' \
 | `--flow-json` | Load inline JSON flow content as a string. |
 | `--format`, `-f` | Output format. One of: `json`, `text`, `message`, `result`. Default: `json`. |
 | `--input-value` | Input value to pass to the graph. |
+| `--session-id` | Session ID for conversation tracking. Agent and Memory components use this to maintain history across runs. Auto-generated if not set. |
 | `--stdin` | Read JSON flow content from `stdin`. |
 | `--timing` | Include detailed timing information in output. |
 | `--verbose`, `-v` | Show basic progress and diagnostic output. |
@@ -416,6 +489,12 @@ Install dependencies and set your OpenAI API key, then run:
 ```bash
 uv run lfx run simple_agent.py "How are you?" --verbose
 ```
+
+## lfx-mcp
+
+`lfx-mcp` is a separate binary installed with `lfx`. It starts an MCP server that gives any MCP-compatible client programmatic control over a Langflow instance for building flows, managing components, and running executions.
+
+For more information, see [LFX_MCP.md](./LFX_MCP.md).
 
 ## Development
 

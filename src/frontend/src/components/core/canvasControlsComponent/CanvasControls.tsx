@@ -170,7 +170,7 @@ const CanvasControls = ({
                     name="Sparkles"
                     className="h-2.5 w-2.5"
                   />
-                  New
+                  {t("assistant.newPill")}
                 </span>
               )}
               <Button
@@ -235,7 +235,7 @@ const CanvasControls = ({
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-              <span>Try the new Langflow Assistant!</span>
+              <span>{t("assistant.tryAssistant")}</span>
               <button
                 type="button"
                 data-testid="assistant-onboarding-open"
