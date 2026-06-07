@@ -375,4 +375,16 @@ describe("CodeView", () => {
     ).not.toBeInTheDocument();
     expect(screen.getByText('"alpha"')).toBeInTheDocument();
   });
+
+  // Regression guard (from the code review): closing the sole auto-opened tab
+  // must actually close it (previously it immediately reappeared).
+  it("closing the sole auto-opened tab actually closes it", () => {
+    // Input: a single file auto-opens as one tab with a close button.
+    render(<CodeView files={[{ path: "only.py", content: "x = 1\n" }]} />);
+    fireEvent.click(screen.getByRole("button", { name: "Close only.py" }));
+    // Expected: the tab (and its close button) is gone.
+    expect(
+      screen.queryByRole("button", { name: "Close only.py" }),
+    ).not.toBeInTheDocument();
+  });
 });
