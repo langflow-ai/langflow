@@ -7,7 +7,7 @@ from lfx.io import (
     Output,
     StrInput,
 )
-from lfx.utils.ssrf_protection import validate_database_url_for_ssrf
+from lfx.utils.ssrf_protection import validate_connector_database_url_for_ssrf
 
 
 class SQLDatabaseComponent(Component):
@@ -33,7 +33,7 @@ class SQLDatabaseComponent(Component):
         uri = self.clean_up_uri(self.uri)
         # Security: block SSRF to internal databases and local-file dialects (the tenant
         # controls this URI).
-        validate_database_url_for_ssrf(uri)
+        validate_connector_database_url_for_ssrf(uri)
         # Create an engine using SQLAlchemy with StaticPool
         engine = create_engine(uri, poolclass=StaticPool)
         return SQLDatabase(engine)

@@ -14,6 +14,7 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data
+from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
 
 class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
@@ -110,6 +111,9 @@ class ElasticsearchVectorStoreComponent(LCVectorStoreComponent):
     @check_cached_vector_store
     def build_vector_store(self) -> ElasticsearchStore:
         """Builds the Elasticsearch Vector Store object."""
+        # elasticsearch_url is tenant-controlled: block SSRF to internal/cloud-metadata hosts.
+        if self.elasticsearch_url:
+            validate_connector_url_for_ssrf(self.elasticsearch_url)
         if self.cloud_id and self.elasticsearch_url:
             msg = (
                 "Both 'cloud_id' and 'elasticsearch_url' provided. "

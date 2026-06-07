@@ -552,7 +552,10 @@ def _code_interpreter_raw_graph(component_type: str = "PythonREPLComponent") -> 
     [
         "PythonREPLComponent",
         "PythonCodeStructuredTool",
+        "Python Code Structured",  # display_name alias must also be caught (bypass regression)
         "PythonREPLToolComponent",
+        "PythonFunction",  # prototypes/python_function.py — exec of user function_code
+        "Python Function",  # display_name alias
         "LambdaFilterComponent",
         "Smart Transform",  # alias must also be caught
         # Code-agent components run LLM-generated Python in-process (smolagents local

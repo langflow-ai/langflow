@@ -15,6 +15,7 @@ from lfx.io import BoolInput, DropdownInput, SecretStrInput, StrInput
 from lfx.schema import Data, DataFrame, Message
 from lfx.services.deps import get_settings_service, get_storage_service, session_scope
 from lfx.template.field.base import Output
+from lfx.utils.file_path_security import enforce_local_file_access
 from lfx.utils.validate_cloud import is_astra_cloud_environment
 
 
@@ -637,8 +638,13 @@ class SaveToFileComponent(Component):
             msg = f"Invalid file format '{file_format}' for {self._get_input_type()}. Allowed: {allowed_formats}"
             raise ValueError(msg)
 
-        # Prepare file path
-        file_path = Path(self._get_safe_local_file_name())
+        # Prepare file path. file_name is tenant-controlled and this writes to local disk:
+        # reject path traversal first, then confine it to the storage dir when
+        # LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS is enabled (multi-tenant) before
+        # creating any directory or writing.
+        file_path = enforce_local_file_access(Path(self._get_safe_local_file_name()).expanduser())
+        if not file_path.parent.exists():
+            file_path.parent.mkdir(parents=True, exist_ok=True)
         file_path = self._adjust_file_path_with_format(file_path, file_format)
 
         # Save the input to file based on type

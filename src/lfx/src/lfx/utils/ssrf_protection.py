@@ -396,6 +396,41 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise
 
 
+def is_connector_ssrf_validation_enabled() -> bool:
+    """Whether SSRF validation is enabled for tenant-controlled CONNECTOR host/URL components.
+
+    Separate, opt-in (default False) gate from the global ``ssrf_protection_enabled``. Connector
+    components (vector stores, the Glean/AstraDB-CQL tools, model-provider model discovery) commonly
+    point at localhost / a private network, so they are NOT validated by default. Multi-tenant
+    operators opt in via ``LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED=true``.
+    """
+    import os
+
+    env_value = os.getenv("LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED")
+    if env_value is not None:
+        return env_value.lower() in ("true", "1", "yes", "on")
+    try:
+        return bool(get_settings_service().settings.connector_ssrf_validation_enabled)
+    except Exception:  # noqa: BLE001 - settings may be unavailable; default to disabled
+        return False
+
+
+def validate_connector_url_for_ssrf(url: str) -> None:
+    """SSRF-validate a tenant-controlled connector URL, but only when connector validation is on.
+
+    A no-op unless ``connector_ssrf_validation_enabled`` is set, so default behavior is unchanged
+    (connectors keep reaching localhost/private hosts). When enabled, defers to
+    :func:`validate_url_for_ssrf` (which still respects ``ssrf_protection_enabled`` and the
+    allowlist) for the actual host policy.
+
+    Raises:
+        SSRFProtectionError: If connector validation is enabled and the host is blocked.
+    """
+    if not is_connector_ssrf_validation_enabled():
+        return
+    validate_url_for_ssrf(url)
+
+
 # SQLAlchemy dialects that read/write the local filesystem instead of connecting over the
 # network. A multi-tenant deployer must never let a tenant-supplied DB URL open these
 # (e.g. sqlite:////etc/passwd, or ATTACH to read/write arbitrary server files).
@@ -410,7 +445,7 @@ def _local_file_access_restricted() -> bool:
         return False
 
 
-def validate_database_url_for_ssrf(url: str) -> None:
+def validate_database_url_for_ssrf(url: str, *, validate_network_host: bool = True) -> None:
     """Validate a SQLAlchemy database URL against SSRF and local-file access.
 
     Unlike :func:`validate_url_for_ssrf` (which only guards http/https and returns early for
@@ -423,12 +458,18 @@ def validate_database_url_for_ssrf(url: str) -> None:
       are blocked only when ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` is on (default off), so
       single-tenant sqlite usage keeps working while multi-tenant deployments can disable it.
 
+    Args:
+        url: The SQLAlchemy database URL to validate.
+        validate_network_host: When False, the network-host SSRF check is skipped (the local-file
+            dialect restriction still applies). Used by the connector-gated wrapper so the
+            host SSRF check is opt-in.
+
     Raises:
         SSRFProtectionError: If the URL targets a blocked IP, or a local-file dialect while
             local file access is restricted.
         ValueError: If the URL is malformed.
     """
-    ssrf_on = is_ssrf_protection_enabled()
+    ssrf_on = is_ssrf_protection_enabled() and validate_network_host
     file_restricted = _local_file_access_restricted()
     if not ssrf_on and not file_restricted:
         return
@@ -465,6 +506,21 @@ def validate_database_url_for_ssrf(url: str) -> None:
     if _validate_direct_ip_address(hostname):
         return
     _validate_hostname_resolution(hostname)
+
+
+def validate_connector_database_url_for_ssrf(url: str) -> None:
+    """DB-URL validation for connector components (e.g. the SQL Database components).
+
+    The network-host SSRF check is opt-in via ``connector_ssrf_validation_enabled`` so a tenant's
+    local/private database keeps working by default. The local-file dialect restriction still
+    honors ``LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS`` regardless, since that is a separate control.
+
+    Raises:
+        SSRFProtectionError: If connector validation is on and the host is blocked, or a local-file
+            dialect is used while local file access is restricted.
+        ValueError: If the URL is malformed.
+    """
+    validate_database_url_for_ssrf(url, validate_network_host=is_connector_ssrf_validation_enabled())
 
 
 # Git remote-helper transport syntax (``ext::``, ``fd::``, bare ``::address``). The ``ext``
@@ -513,6 +569,13 @@ def validate_git_repository_url(url: str) -> None:
     parsed = urlparse(url)
     scheme = (parsed.scheme or "").lower()
 
+    # Scheme allowlist is ALWAYS enforced (independent of the SSRF/file toggles): non-network
+    # schemes such as ``ext://`` invoke the git-remote-<scheme> helper (RCE) and ``gopher://``
+    # etc. are dangerous transports, not a network-policy choice. ``file`` is handled just below.
+    if scheme and scheme != "file" and scheme not in _ALLOWED_GIT_SCHEMES:
+        msg = f"Git URL scheme '{scheme}' is not permitted."
+        raise SSRFProtectionError(msg)
+
     # Local-filesystem clones (file:// or a bare path) read arbitrary server files.
     pre_colon = url.split(":", 1)[0]
     is_local_path = scheme == "file" or (scheme == "" and ("/" in pre_colon or url.startswith(("/", ".", "~"))))
@@ -525,10 +588,6 @@ def validate_git_repository_url(url: str) -> None:
     # Network transports: host SSRF validation only applies when SSRF protection is enabled.
     if not is_ssrf_protection_enabled():
         return
-
-    if scheme and scheme not in _ALLOWED_GIT_SCHEMES:
-        msg = f"Git URL scheme '{scheme}' is not permitted."
-        raise SSRFProtectionError(msg)
 
     # scp-like syntax (git@host:path) has no scheme; the host is before the first ':'.
     hostname = (url.split("@", 1)[-1].split(":", 1)[0] or None) if scheme == "" else parsed.hostname

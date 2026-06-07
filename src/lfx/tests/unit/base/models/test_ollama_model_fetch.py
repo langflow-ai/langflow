@@ -8,7 +8,6 @@ Covers the two fixes for issue #13137:
 
 from __future__ import annotations
 
-import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
@@ -48,18 +47,11 @@ def _build_async_client(*, tags_payload: dict, show_results: dict) -> AsyncMock:
 
 @pytest.fixture(autouse=True)
 def _clear_ollama_cache():
-    """Reset the in-process Ollama model-list cache between tests.
-
-    Also disables SSRF protection: these tests target the gather/cache fetch logic against a
-    ``http://localhost:11434`` Ollama, which the (default-on) SSRF guard would otherwise block
-    as a loopback host. SSRF blocking of tenant-controlled Ollama URLs is covered separately
-    in ``tests/unit/components/test_provider_base_url_ssrf.py``.
-    """
+    """Reset the in-process Ollama model-list cache between tests."""
     from lfx.base.models.model_utils import _ollama_cache_clear
 
     _ollama_cache_clear()
-    with patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "false"}):
-        yield
+    yield
     _ollama_cache_clear()
 
 

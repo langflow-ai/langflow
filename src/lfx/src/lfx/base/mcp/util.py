@@ -2289,9 +2289,9 @@ async def update_tools(
         # SECURITY: a tenant-embedded MCP HTTP config could point at an internal service or
         # the cloud-metadata endpoint. Guard the URL with the same SSRF posture as other
         # outbound fetches (no-op when SSRF protection is disabled / host is allowlisted).
-        from lfx.utils.ssrf_protection import validate_url_for_ssrf
+        from lfx.utils.ssrf_protection import validate_connector_url_for_ssrf
 
-        validate_url_for_ssrf(url)
+        validate_connector_url_for_ssrf(url)
         verify_ssl = server_config.get("verify_ssl", True)
         tools = await mcp_streamable_http_client.connect_to_server(url, headers=headers, verify_ssl=verify_ssl)
         client = mcp_streamable_http_client

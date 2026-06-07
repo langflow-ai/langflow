@@ -19,6 +19,7 @@ enforcement points can never drift.
 
 from __future__ import annotations
 
+import shlex
 from pathlib import Path
 
 # SECURITY: Allowlist of approved MCP stdio commands. Shell wrappers (cmd/sh/bash) are
@@ -165,6 +166,35 @@ def validate_mcp_stdio_config(
             wraps a non-allowed command, an env var is in the blocklist, or a docker arg
             breaks container isolation.
     """
+    # 0) Tokenize a command that carries its own arguments (e.g. "bash -c '<payload>'").
+    #    Without this, a tenant can pack the whole payload into ``command`` with empty ``args``:
+    #    extract_base_command() only inspects the first token for the allowlist, the metacharacter
+    #    scan only iterates ``args``, and the shell-wrapper check is skipped when ``args`` is empty
+    #    -- so the embedded ``-c '<payload>'`` would never be examined. Splitting here folds those
+    #    embedded tokens into ``args`` so every check below sees them. Applies to ALL callers
+    #    (update_tools, the REST MCPServerConfig, the legacy stdio component), keeping the
+    #    REST-layer and execution-time enforcement identical.
+    #    Do NOT split file-path commands: an absolute/relative/Windows path may legitimately
+    #    contain spaces (e.g. "C:\\Program Files\\nodejs\\node.exe") and carries no embedded
+    #    shell arguments -- extract_base_command resolves those directly.
+    args = list(args or [])
+    if command:
+        drive_letter_len = 3
+        is_file_path = (
+            command.startswith(("/", "./", "../"))
+            or "\\" in command
+            or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
+        )
+        if not is_file_path:
+            try:
+                command_tokens = shlex.split(command)
+            except ValueError:
+                # Unbalanced quotes etc. -- fall back to whitespace splitting (fail toward more checks).
+                command_tokens = command.split()
+            if command_tokens:
+                command = command_tokens[0]
+                args = command_tokens[1:] + args
+
     # 1) Command allowlist.
     if command:
         base_command = extract_base_command(command)
@@ -173,21 +203,9 @@ def validate_mcp_stdio_config(
             msg = f"Command '{base_command}' is not allowed for security reasons. Allowed commands: {allowed_list}"
             raise MCPStdioSecurityError(msg)
 
-    # 2) Argument metacharacters and dangerous keywords.
-    if args:
-        for arg in args:
-            for char in DANGEROUS_SHELL_CHARS:
-                if char in arg:
-                    msg = f"Argument contains dangerous shell metacharacter '{char}': {arg}"
-                    raise MCPStdioSecurityError(msg)
-        for arg in args:
-            arg_lower = arg.lower()
-            if arg_lower in DANGEROUS_KEYWORDS and arg_lower not in SHELL_EXEC_FLAGS:
-                msg = f"Argument '{arg}' is not allowed for security reasons"
-                raise MCPStdioSecurityError(msg)
-
-    # 3) Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
-    #    another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`.
+    # 2) Shell-wrapper rules: -c/-/c only with shell wrappers, and a wrapper may only wrap
+    #    another allowed (non-shell) command. This is what blocks `bash -c '<payload>'`. Checked
+    #    before the metacharacter scan so a `-c` on a non-shell command is reported as such.
     if command and args:
         base_command = extract_base_command(command)
         has_shell_exec_flag = any(arg in SHELL_EXEC_FLAGS for arg in args)
@@ -212,6 +230,19 @@ def validate_mcp_stdio_config(
                         f"Only these commands can be wrapped: {', '.join(sorted(allowed_wrapped))}"
                     )
                     raise MCPStdioSecurityError(msg)
+
+    # 3) Argument metacharacters and dangerous keywords.
+    if args:
+        for arg in args:
+            for char in DANGEROUS_SHELL_CHARS:
+                if char in arg:
+                    msg = f"Argument contains dangerous shell metacharacter '{char}': {arg}"
+                    raise MCPStdioSecurityError(msg)
+        for arg in args:
+            arg_lower = arg.lower()
+            if arg_lower in DANGEROUS_KEYWORDS and arg_lower not in SHELL_EXEC_FLAGS:
+                msg = f"Argument '{arg}' is not allowed for security reasons"
+                raise MCPStdioSecurityError(msg)
 
     # 4) Environment-variable blocklist.
     if env:

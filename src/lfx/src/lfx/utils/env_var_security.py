@@ -31,15 +31,32 @@ _RESERVED_ENV_PREFIXES: tuple[str, ...] = (
     "LFX_",
 )
 
-# Exact names that carry infrastructure secrets but do not use a reserved prefix. Kept
-# deliberately small and obvious; the prefix rule above covers the application's own config.
+# Exact names that carry infrastructure secrets but do not use a reserved prefix. These are
+# never legitimate flow values (unlike LLM provider API keys, which intentionally remain
+# resolvable). Covers the database, cloud-IAM, cache, and VCS credentials an operator is most
+# likely to have in the process environment of a multi-tenant deployment.
 _RESERVED_ENV_NAMES: frozenset[str] = frozenset(
     {
+        # Application / database
         "DATABASE_URL",
         "SECRET_KEY",
         "POSTGRES_PASSWORD",
+        "PGPASSWORD",
+        "MYSQL_PWD",
+        "MYSQL_ROOT_PASSWORD",
+        "REDIS_URL",
+        "REDIS_PASSWORD",
+        "MONGODB_URI",
+        "MONGO_URL",
+        # Cloud IAM
         "AWS_SECRET_ACCESS_KEY",
+        "AWS_ACCESS_KEY_ID",
         "AWS_SESSION_TOKEN",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "AZURE_CLIENT_SECRET",
+        # Source control / CI
+        "GITHUB_TOKEN",
+        "GH_TOKEN",
     }
 )
 

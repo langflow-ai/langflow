@@ -18,6 +18,9 @@ def ssrf_enabled():
     with patch("lfx.utils.ssrf_protection.get_settings_service") as mock_get:
         s = MagicMock()
         s.settings.ssrf_protection_enabled = True
+        # Also enable the opt-in connector flag so the watsonx connector guard runs here too.
+        # (Home Assistant / Ollama / LM Studio use the always-on validate_url_for_ssrf.)
+        s.settings.connector_ssrf_validation_enabled = True
         s.settings.ssrf_allowed_hosts = []
         s.settings.restrict_local_file_access = False
         mock_get.return_value = s
@@ -99,3 +102,22 @@ async def test_lmstudio_embeddings_get_model_blocks_metadata():
 
     with ssrf_enabled(), pytest.raises(ValueError, match="Could not retrieve models"):
         await LMStudioEmbeddingsComponent.get_model(f"{METADATA_URL}/v1")
+
+
+def test_get_watsonx_llm_models_blocks_metadata_without_request():
+    """WatsonX model discovery (returns-defaults-on-block) must not hit a blocked host."""
+    from lfx.base.models import model_utils
+
+    with ssrf_enabled(), patch.object(model_utils.requests, "get") as mock_get:
+        result = model_utils.get_watsonx_llm_models(base_url=METADATA_URL, default_models=["fallback-llm"])
+        assert mock_get.call_count == 0  # request never issued to the blocked host
+        assert result == ["fallback-llm"]  # falls back instead
+
+
+def test_get_watsonx_embedding_models_blocks_metadata_without_request():
+    from lfx.base.models import model_utils
+
+    with ssrf_enabled(), patch.object(model_utils.requests, "get") as mock_get:
+        result = model_utils.get_watsonx_embedding_models(base_url=METADATA_URL, default_models=["fallback-emb"])
+        assert mock_get.call_count == 0
+        assert result == ["fallback-emb"]

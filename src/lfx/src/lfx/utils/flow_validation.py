@@ -29,25 +29,23 @@ SETTINGS_SERVICE_REQUIRED_MESSAGE = "Settings service must be initialized before
 CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     {
         "CSVAgent",  # LangChain CSV agent can execute Python when allow_dangerous_code is enabled
+        "CodeAct Agent (Smolagents)",
         "CodeActAgentSmolagents",  # smolagents CodeAgent executes model-generated code
         "Cuga",  # CUGA agent executes model-generated Python via its built-in executor
+        "LambdaFilterComponent",
+        "OpenDsStar Agent",
         "OpenDsStarAgent",  # OpenDsStar data-science agent executes model-generated Python
+        "Python Code Structured",
         "PythonCodeStructuredTool",
-        "PythonREPLComponent",
+        "Python Function",
+        "PythonFunction",
+        "PythonFunctionComponent",
         "Python Interpreter",
+        "PythonREPLComponent",
+        "Python REPL",
         "PythonREPLToolComponent",
         "PythonREPLTool",
-        "Python REPL",
-        "LambdaFilterComponent",
         "Smart Transform",
-        # codeagents/codeact_agent_smolagents.py — runs LLM-generated Python in-process
-        # via smolagents' LocalPythonExecutor, which is explicitly NOT a security sandbox.
-        "CodeActAgentSmolagents",
-        "CodeAct Agent (Smolagents)",
-        # codeagents/open_ds_star_agent.py — DS-Star ExecutorNode runs LLM-generated code
-        # through a bare exec(code, scope, scope) (no restricted interpreter at all).
-        "OpenDsStarAgent",
-        "OpenDsStar Agent",
     }
 )
 

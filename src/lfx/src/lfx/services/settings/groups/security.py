@@ -32,6 +32,20 @@ class SecuritySettings(BaseModel):
 
     Note: This setting only takes effect when ssrf_protection_enabled is True.
     When protection is disabled, all hosts are allowed regardless of this setting."""
+    connector_ssrf_validation_enabled: bool = False
+    """Opt-in SSRF validation for CONNECTOR components that take a tenant-controlled host/URL:
+    vector stores (Chroma/Qdrant/Elasticsearch/OpenSearch/Milvus/Weaviate/Supabase/Upstash/
+    ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, model-provider
+    model discovery (LiteLLM/HuggingFace/xAI/DeepSeek/Groq/watsonx), and the Ollama / LM Studio /
+    Home Assistant base-URL fields.
+
+    Default False to preserve existing behavior: these connectors commonly point at localhost or
+    a private network, so validating them by default (under ssrf_protection_enabled) would break
+    legitimate single-tenant/self-hosted setups. Multi-tenant operators who want to stop tenants
+    reaching internal/cloud-metadata hosts through these components should set this to True (it
+    then defers to ssrf_protection_enabled / ssrf_allowed_hosts for the actual host policy). For
+    the SQL Database components, the separate LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS toggle still
+    governs local-file dialects (e.g. sqlite) independently of this flag."""
 
     # API key handling
     disable_track_apikey_usage: bool = False

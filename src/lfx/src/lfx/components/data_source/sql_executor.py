@@ -8,7 +8,7 @@ from lfx.io import BoolInput, MessageTextInput, MultilineInput, Output
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
 from lfx.services.cache.utils import CacheMiss
-from lfx.utils.ssrf_protection import validate_database_url_for_ssrf
+from lfx.utils.ssrf_protection import validate_connector_database_url_for_ssrf
 
 if TYPE_CHECKING:
     from sqlalchemy.engine import Result
@@ -35,7 +35,7 @@ class SQLComponent(ComponentWithCache):
             # Security: a tenant fully controls database_url. Block SSRF to internal
             # databases/services and local-file dialects (sqlite/duckdb -> arbitrary
             # server file read/write) before opening the connection.
-            validate_database_url_for_ssrf(self.database_url)
+            validate_connector_database_url_for_ssrf(self.database_url)
             if self._shared_component_cache:
                 cached_db = self._shared_component_cache.get(self.database_url)
                 if not isinstance(cached_db, CacheMiss):

@@ -16,6 +16,13 @@ from lfx.utils.env_var_security import is_protected_env_var, safe_getenv
         "SECRET_KEY",
         "POSTGRES_PASSWORD",
         "AWS_SECRET_ACCESS_KEY",
+        "AWS_ACCESS_KEY_ID",
+        "PGPASSWORD",
+        "REDIS_URL",
+        "GITHUB_TOKEN",
+        "GOOGLE_APPLICATION_CREDENTIALS",
+        "AZURE_CLIENT_SECRET",
+        "mongodb_uri",  # case-insensitive
         "",  # empty fails closed
     ],
 )
