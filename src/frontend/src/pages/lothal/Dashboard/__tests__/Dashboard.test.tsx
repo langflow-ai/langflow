@@ -131,12 +131,18 @@ describe("Lothal Dashboard", () => {
       data: undefined,
       isLoading: false,
       isError: true,
+      refetch: jest.fn(),
     });
     render(<Dashboard />);
-    // Expected: a user with real projects is NOT told they have none.
+    // Expected: a user with real projects is NOT told they have none...
     expect(
       screen.queryByText("No vessels in the harbor"),
     ).not.toBeInTheDocument();
+    // ...and the error UI with a retry affordance is shown instead.
+    expect(screen.getByText("Couldn’t reach the harbor")).toBeInTheDocument();
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument();
   });
 
   it("opens the new-project modal when the advertised 'N' shortcut is pressed", () => {
@@ -146,6 +152,25 @@ describe("Lothal Dashboard", () => {
     expect(screen.queryByLabelText("Project name")).not.toBeInTheDocument();
     fireEvent.keyDown(document.body, { key: "n" });
     // Expected: the modal opens.
+    expect(screen.getByLabelText("Project name")).toBeInTheDocument();
+  });
+
+  it("ignores the 'N' shortcut when a modifier is held (leaves browser shortcuts alone)", () => {
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    fireEvent.keyDown(document.body, { key: "n", metaKey: true });
+    fireEvent.keyDown(document.body, { key: "n", ctrlKey: true });
+    // Expected: Cmd/Ctrl+N is not hijacked, so the modal stays closed.
+    expect(screen.queryByLabelText("Project name")).not.toBeInTheDocument();
+  });
+
+  it("ignores the 'N' shortcut while typing in the project-name field", () => {
+    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    render(<Dashboard />);
+    fireEvent.click(screen.getAllByRole("button", { name: "New project" })[0]);
+    const input = screen.getByLabelText("Project name");
+    // Typing 'n' into the field must not toggle/disturb the open modal.
+    fireEvent.keyDown(input, { key: "n" });
     expect(screen.getByLabelText("Project name")).toBeInTheDocument();
   });
 

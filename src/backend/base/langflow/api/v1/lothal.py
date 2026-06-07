@@ -162,6 +162,7 @@ async def delete_project(
     current_user: CurrentActiveUser,
     project_id: UUID,
 ) -> Response:
+    """Delete a project, cascading to its messages and code files (404 if not owned)."""
     project = await _get_owned_project(session, project_id, current_user.id)
     await session.delete(project)
     # Flush eagerly so cascade/constraint errors surface in-request (as a 5xx)
