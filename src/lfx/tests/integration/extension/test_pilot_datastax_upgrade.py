@@ -54,7 +54,6 @@ BUNDLE_CLASSES: tuple[tuple[str, str], ...] = (
     ("GraphRAGComponent", "graph_rag"),
     ("HCDVectorStoreComponent", "hcd"),
     ("Dotenv", "dotenv"),
-    ("GetEnvVar", "getenvvar"),
 )
 
 

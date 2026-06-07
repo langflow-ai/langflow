@@ -331,18 +331,18 @@ class TestDynamicImportIntegration:
             assert component is not None, f"Component {name} should not be None"
 
     def test_getenvvar_component_removed(self):
-        """Test that the removed GetEnvVar component cannot be imported from lfx datastax."""
+        """Test that the removed GetEnvVar component cannot be imported from the lfx-datastax bundle."""
         import importlib
 
-        import lfx.components.datastax as lfx_datastax
+        import lfx_datastax
 
         with pytest.raises(AttributeError):
             _ = lfx_datastax.GetEnvVar
 
-        assert not hasattr(lfx_datastax, "GetEnvVar"), "GetEnvVar should have been removed from lfx.components.datastax"
+        assert not hasattr(lfx_datastax, "GetEnvVar"), "GetEnvVar should have been removed from the lfx-datastax bundle"
 
         with pytest.raises((ImportError, ModuleNotFoundError)):
-            importlib.import_module("lfx.components.datastax.getenvvar")
+            importlib.import_module("lfx_datastax.components.datastax.getenvvar")
 
     def test_datastax_dir_excludes_deprecated(self):
         """Test that dir(datastax) does not list deprecated components."""

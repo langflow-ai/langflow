@@ -2,7 +2,7 @@
 
 This package is the distribution unit ``lfx-datastax``.  At runtime
 Langflow's loader discovers ``extension.json`` shipped alongside this
-``__init__.py`` and registers the 11 datastax components under the
+``__init__.py`` and registers the 10 datastax components under the
 namespaced IDs ``ext:datastax:<Class>@official``.
 
 Ported from the in-tree ``lfx.components.datastax`` and
@@ -24,7 +24,6 @@ from lfx_datastax.components.datastax.astradb_vectorstore import (
     AstraDBVectorStoreComponent,
 )
 from lfx_datastax.components.datastax.dotenv import Dotenv
-from lfx_datastax.components.datastax.getenvvar import GetEnvVar
 from lfx_datastax.components.datastax.graph_rag import GraphRAGComponent
 from lfx_datastax.components.datastax.hcd import HCDVectorStoreComponent
 
@@ -37,7 +36,6 @@ __all__ = [
     "AstraDBVectorStoreComponent",
     "AstraVectorizeComponent",
     "Dotenv",
-    "GetEnvVar",
     "GraphRAGComponent",
     "HCDVectorStoreComponent",
 ]

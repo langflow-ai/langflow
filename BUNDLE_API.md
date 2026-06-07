@@ -402,3 +402,15 @@ the deserialize half is covered by
   added to ``ERROR_CODES`` (additive; codes-as-contract semantics
   preserved).  In-tree polling clients that never sent the parameter
   are unaffected.
+- **Optional ``locales`` manifest field for bundle translations.**  A
+  bundle may declare ``locales`` on its ``extension.json`` manifest -- a
+  directory (relative to the manifest, conventionally ``locales``) holding
+  per-locale translation files (``en.json``, ``de.json``, ...) whose keys
+  use the same ``components.<norm>.<field>.<hash>`` scheme as the core
+  locale files.  Langflow merges them into its component i18n table at load
+  time; **core strings win on any key collision**, so a bundle cannot
+  shadow a first-party string.  The field is optional and additive -- a
+  bundle without translations simply omits it and renders its English
+  source strings -- so ``BUNDLE_API_VERSION`` is unchanged.  Path
+  validation mirrors ``BundleRef.path``: the value must be relative and may
+  not contain a ``..`` traversal segment.
