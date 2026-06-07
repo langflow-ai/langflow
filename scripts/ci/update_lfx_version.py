@@ -63,12 +63,19 @@ _BUNDLE_LFX_DEP_PATTERN = re.compile(r'"lfx(?:-nightly)?(?=[<>=!~])[^"]*"')
 def update_lfx_dep_in_bundles(lfx_version: str) -> None:
     """Pin every bundle's `lfx` dep to the renamed `lfx-nightly==<version>`.
 
-    Each `src/bundles/*/pyproject.toml` floors its `lfx` dep at `>=X.Y`
-    (no upper bound) against the published `lfx` package. During nightly builds the
-    workspace `lfx` package gets renamed to `lfx-nightly`, so those pins
-    no longer resolve against the workspace member — and PyPI may not yet
+    Each `src/bundles/*/pyproject.toml` floors its `lfx` dep at
+    `>=X.Y.0,<(X+1).0.0` against the published `lfx` package. During nightly
+    builds the workspace `lfx` package gets renamed to `lfx-nightly`, so those
+    pins no longer resolve against the workspace member — and PyPI may not yet
     ship a matching `lfx` either. Rewrite each bundle's pin to
     `lfx-nightly==<exact dev version>` so `uv lock` resolves cleanly.
+
+    This is also why `langflow-nightly` cannot simply depend on the *stable*
+    bundles: `lfx-nightly` and stable `lfx` are different distributions that both
+    ship the same `lfx/` import package, so co-installing them collides on disk —
+    an install-time conflict, not just a resolution failure. Repinning each
+    bundle to `lfx-nightly` keeps a single `lfx/` in the environment. See
+    `src/bundles/NIGHTLY.md` for the planned cutover that removes this step.
 
     No-op when no bundles exist (e.g. on a branch that hasn't picked up
     the bundle extraction) or when a bundle has no `lfx` dep.
@@ -112,8 +119,12 @@ def rename_bundles_for_nightly(lfx_version: str) -> None:
     nightly build the workspace `lfx` becomes `lfx-nightly` (no stable `lfx`
     matching the pin may exist on PyPI yet), so a `langflow-nightly` that still
     depended on the stable `lfx-<name>` would drag in `lfx>=X.Y` and fail to
-    resolve. Give the bundles their own nightly track instead, mirroring how
-    lfx/base/main are renamed. For every bundle this:
+    resolve. And even once stable `lfx` IS on PyPI, that stable `lfx` would be
+    co-installed alongside `lfx-nightly` — both ship the same `lfx/` import
+    package — colliding at install time, not just at resolution. Give the
+    bundles their own nightly track instead, mirroring how lfx/base/main are
+    renamed (see `src/bundles/NIGHTLY.md` for the planned cutover). For every
+    bundle this:
 
       * rewrites its `[project] name`     `lfx-<name>` -> `lfx-<name>-nightly`
       * rewrites its `[project] version`  `0.1.0`      -> `0.1.0.dev<N>`
