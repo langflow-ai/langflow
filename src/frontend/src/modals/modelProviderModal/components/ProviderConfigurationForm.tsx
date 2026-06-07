@@ -18,6 +18,7 @@ const PROVIDER_KEY_PREVIEW: Record<
   Anthropic: { prefix: "sk-ant-", totalLength: 108 },
   "Google Generative AI": { prefix: "AIza", totalLength: 39 },
   "IBM watsonx": { prefix: "", totalLength: 44 },
+  "Azure OpenAI": { prefix: "", totalLength: 32 },
 };
 
 const getMaskedKeyPreview = (providerName: string): string => {
@@ -67,6 +68,7 @@ const getPlaceholder = (variableName: string, provider: string) => {
   ) {
     if (providerLower.includes("anthropic")) return "sk-ant-...";
     if (providerLower.includes("google")) return "AIza...";
+    if (providerLower.includes("azure")) return "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     if (providerLower.includes("openai")) return "sk-...";
   }
 

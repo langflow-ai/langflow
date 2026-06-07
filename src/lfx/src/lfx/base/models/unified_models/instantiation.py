@@ -6,6 +6,7 @@ import os
 from typing import TYPE_CHECKING, Any
 
 from lfx.base.models.model_utils import _to_str
+from lfx.log.logger import logger
 
 from .provider_queries import model_provider_metadata
 
@@ -24,6 +25,8 @@ def get_llm(
     watsonx_url=None,
     watsonx_project_id=None,
     ollama_base_url=None,
+    azure_endpoint=None,
+    azure_deployment=None,
 ) -> Any:
     # Resolve helpers via package namespace so tests patching
     # lfx.base.models.unified_models.<name> keep working.
@@ -33,6 +36,8 @@ def get_llm(
     ollama_base_url = _to_str(ollama_base_url)
     watsonx_url = _to_str(watsonx_url)
     watsonx_project_id = _to_str(watsonx_project_id)
+    azure_endpoint = _to_str(azure_endpoint)
+    azure_deployment = _to_str(azure_deployment)
 
     # Check if model is already a BaseLanguageModel instance (from a connection)
     try:
@@ -168,6 +173,58 @@ def get_llm(
             )
             raise ValueError(msg)
         # else: neither provided - let ChatWatsonx handle it (will fail with its own error)
+    elif provider == "Azure OpenAI":
+        # Priority for each value: component field > database global > environment variable.
+        # This mirrors the WatsonX/Ollama handling so the unified Language Model component
+        # can configure Azure directly (matching the standalone Azure OpenAI component),
+        # while still falling back to globally-configured provider settings.
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        azure_endpoint = (
+            azure_endpoint
+            or provider_vars.get("AZURE_OPENAI_API_BASE")
+            or os.environ.get("AZURE_OPENAI_API_BASE")
+            or os.environ.get("AZURE_OPENAI_ENDPOINT")
+        )
+        api_version = (
+            provider_vars.get("AZURE_OPENAI_API_VERSION")
+            or os.environ.get("AZURE_OPENAI_API_VERSION")
+            or "2024-06-01"
+        )
+        if not azure_endpoint:
+            msg = (
+                "Azure OpenAI requires an endpoint URL. "
+                "Please configure it in the provider settings as 'Azure Endpoint' "
+                "or set the AZURE_OPENAI_API_BASE environment variable."
+            )
+            raise ValueError(msg)
+        # Azure routes requests by deployment name (user-defined in the Azure Portal),
+        # which is required and often differs from the model name. The selected model
+        # name is passed separately as `model` for token/cost identity only.
+        deployment_name = (
+            azure_deployment
+            or provider_vars.get("AZURE_OPENAI_DEPLOYMENT_NAME")
+            or os.environ.get("AZURE_OPENAI_DEPLOYMENT_NAME")
+        )
+        if not deployment_name:
+            msg = (
+                "Azure OpenAI requires a deployment name. "
+                "Please configure it in the provider settings as 'Deployment Name' "
+                "or set the AZURE_OPENAI_DEPLOYMENT_NAME environment variable. "
+                "The deployment name is user-defined in the Azure Portal and is often "
+                "different from the model name."
+            )
+            raise ValueError(msg)
+        kwargs["azure_endpoint"] = azure_endpoint
+        kwargs["api_version"] = api_version
+        kwargs["azure_deployment"] = deployment_name
+        kwargs["model"] = model_name
+        logger.debug(
+            "Azure OpenAI request: endpoint=%s deployment=%s model=%s api_version=%s",
+            kwargs.get("azure_endpoint"),
+            kwargs.get("azure_deployment"),
+            kwargs.get("model"),
+            kwargs.get("api_version"),
+        )
     elif provider == "Ollama":
         # For Ollama, handle custom base_url with database > component > env var fallback
         base_url_param = metadata.get("base_url_param", "base_url")
