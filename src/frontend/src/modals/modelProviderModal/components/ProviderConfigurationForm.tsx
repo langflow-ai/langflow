@@ -68,7 +68,8 @@ const getPlaceholder = (variableName: string, provider: string) => {
   ) {
     if (providerLower.includes("anthropic")) return "sk-ant-...";
     if (providerLower.includes("google")) return "AIza...";
-    if (providerLower.includes("azure")) return "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
+    if (providerLower.includes("azure"))
+      return "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx";
     if (providerLower.includes("openai")) return "sk-...";
   }
 
