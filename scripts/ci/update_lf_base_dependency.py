@@ -28,7 +28,9 @@ def update_base_dep(pyproject_path: str, new_version: str) -> None:
 
     # Extract extras if present (e.g., "[complete]")
     extras = match.group(2) if match.group(2) else ""
-    replacement = f'"langflow-base-nightly{extras}=={new_version}"'
+    # Approach A: keep the canonical `langflow-base` name; the exact `==<dev>` pin enables
+    # pre-release resolution down the tree and keeps base in lockstep with the run.
+    replacement = f'"langflow-base{extras}=={new_version}"'
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)
@@ -43,7 +45,9 @@ def update_lfx_dep_in_base(pyproject_path: str, lfx_version: str) -> None:
     # Updated pattern to handle PEP 440 version suffixes, both ~= and == version specifiers,
     # and both lfx and lfx-nightly names
     pattern = re.compile(r'("lfx(?:-nightly)?(?:~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*")')
-    replacement = f'"lfx-nightly=={lfx_version}"'
+    # Approach A: pin base's lfx dep to the exact canonical dev version (single `lfx` distribution,
+    # no `lfx-nightly`), so there is no `lfx` vs `lfx-nightly` install collision with the bundles.
+    replacement = f'"lfx=={lfx_version}"'
 
     # Check if the pattern is found
     if not pattern.search(content):
