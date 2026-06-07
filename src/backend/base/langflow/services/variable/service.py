@@ -246,7 +246,8 @@ class DatabaseVariableService(VariableService, Service):
                 # relabeled GENERIC), do NOT decrypt-and-return it — that would leak the secret.
                 if isinstance(variable.value, str) and variable.value.startswith("gAAAAA"):
                     await logger.awarning(
-                        "Variable '%s' is Generic but contains encrypted credential-shaped data — skipping.",
+                        "Skipping variable '%s': a GENERIC variable holds ciphertext "
+                        "(likely a CREDENTIAL row relabeled GENERIC); not decrypting or returning it.",
                         variable.name,
                     )
                     continue
@@ -375,10 +376,7 @@ class DatabaseVariableService(VariableService, Service):
             and isinstance(db_variable.value, str)
             and db_variable.value.startswith("gAAAAA")
         ):
-            msg = (
-                "Cannot change a credential variable to a generic variable without providing "
-                "a new value."
-            )
+            msg = "Cannot change a credential variable to a generic variable without providing a new value."
             raise ValueError(msg)
 
         # Handle value encryption based on variable type (consistent with update_variable and create_variable)

@@ -364,10 +364,8 @@ def validate_url_for_ssrf(url: str, *, warn_only: bool = False) -> None:
         raise ValueError(msg) from e
 
     try:
-        # Validate scheme
+        # Validate scheme (raises SSRFProtectionError for any non-http/https scheme)
         _validate_url_scheme(parsed.scheme)
-        if parsed.scheme not in ("http", "https"):
-            return
 
         # Validate hostname exists
         hostname = _validate_hostname_exists(parsed.hostname)
@@ -412,6 +410,10 @@ def is_connector_ssrf_validation_enabled() -> bool:
     try:
         return bool(get_settings_service().settings.connector_ssrf_validation_enabled)
     except Exception:  # noqa: BLE001 - settings may be unavailable; default to disabled
+        logger.warning(
+            "Could not read connector_ssrf_validation_enabled setting; treating connector SSRF "
+            "validation as DISABLED (fail-open to default). Connector URLs are not being validated."
+        )
         return False
 
 
@@ -442,6 +444,10 @@ def _local_file_access_restricted() -> bool:
     try:
         return bool(get_settings_service().settings.restrict_local_file_access)
     except Exception:  # noqa: BLE001 - settings may be unavailable; default to not restricted
+        logger.warning(
+            "Could not read restrict_local_file_access setting; treating local file restriction "
+            "as DISABLED (fail-open to default). Local-file DB dialects are not being blocked."
+        )
         return False
 
 
@@ -630,7 +636,7 @@ def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
           Returns empty list if:
           - SSRF protection is disabled
           - Host is in the allowlist (e.g., localhost for Ollama)
-          - URL scheme is not http/https
+          (a non-http/https scheme raises SSRFProtectionError rather than returning)
 
     Raises:
         SSRFProtectionError: If URL is blocked by SSRF protection
@@ -667,12 +673,9 @@ def validate_and_resolve_url(url: str) -> tuple[str, list[str]]:
 
     try:
         # ============================================================================
-        # Step 3: Validate URL scheme (only http/https allowed)
+        # Step 3: Validate URL scheme (raises SSRFProtectionError for any non-http/https scheme)
         # ============================================================================
         _validate_url_scheme(parsed.scheme)
-        if parsed.scheme not in ("http", "https"):
-            # Non-HTTP schemes (ftp, file, etc.) are not subject to SSRF protection
-            return url, []
 
         # ============================================================================
         # Step 4: Extract and validate hostname

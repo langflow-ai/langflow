@@ -14,6 +14,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from lfx.logging import logger
 from lfx.services.deps import get_settings_service
 
 
@@ -26,6 +27,10 @@ def is_local_file_access_restricted() -> bool:
     try:
         return bool(get_settings_service().settings.restrict_local_file_access)
     except Exception:  # noqa: BLE001 - settings service may be unavailable; fail open to default
+        logger.warning(
+            "Could not read restrict_local_file_access setting; treating local file restriction "
+            "as DISABLED (fail-open to default). Local-file containment is not being enforced."
+        )
         return False
 
 
@@ -36,7 +41,8 @@ def enforce_local_file_access(resolved_path: str | Path) -> Path:
     cannot point outside it.
 
     Args:
-        resolved_path: An already-resolved (absolute) filesystem path.
+        resolved_path: A filesystem path. It is re-resolved here (``Path.resolve()``) so that
+            symlinks are followed before the containment check; the caller need not pre-resolve it.
 
     Returns:
         The path as a ``Path`` object (unchanged) when allowed.

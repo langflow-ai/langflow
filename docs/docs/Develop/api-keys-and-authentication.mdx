@@ -457,7 +457,7 @@ SSRF protection prevents requests to internal or private network resources, such
 
 | Variable | Format | Default | Description |
 |----------|--------|---------|-------------|
-| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `False` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
+| `LANGFLOW_SSRF_PROTECTION_ENABLED` | Boolean | `True` | Enable SSRF protection for the **API Request** component. When enabled, the component blocks requests to private IP addresses. When disabled, requests are not blocked. |
 | `LANGFLOW_SSRF_ALLOWED_HOSTS` | List[String] | Not set | A comma-separated list of allowed hosts, IP addresses, or CIDR ranges that can bypass SSRF protection checks. For example: `192.168.1.0/24,10.0.0.5,*.internal.company.local`.|
 | `LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED` | Boolean | `False` | Opt-in: also apply SSRF host validation to connector components that take a tenant-controlled host or URL — vector stores (Chroma, Qdrant, Elasticsearch, OpenSearch, Milvus, Weaviate, Supabase, Upstash, ClickHouse), the SQL Database components, the Glean and AstraDB-CQL tools, model-provider model discovery (LiteLLM, HuggingFace, xAI, DeepSeek, Groq, watsonx), and the Ollama / LM Studio / Home Assistant base-URL fields. Disabled by default because these connectors commonly point at `localhost` or a private network. When enabled, it defers to `LANGFLOW_SSRF_PROTECTION_ENABLED` and `LANGFLOW_SSRF_ALLOWED_HOSTS` for the host policy. Recommended for multi-tenant deployments where untrusted users build flows. |
 
