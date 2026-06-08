@@ -479,6 +479,10 @@ They are disabled by default to preserve single-tenant behavior, and are meant t
 For a deployment where mutually-untrusted users build flows, set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`, and `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true` together. The first blocks user-authored component code; the second blocks the built-in code-execution components that would otherwise be an equivalent escape hatch; the third confines built-in file access to the upload sandbox. Pair these with the SSRF settings above.
 :::
 
+:::warning Tracing in multi-tenant deployments
+External tracing integrations (LangSmith, Langfuse, Phoenix, Arize, Opik, and similar) are configured **process-wide** from environment variables, not per user. When you enable one in a multi-tenant deployment, **every tenant's** flow inputs, outputs, and prompts are sent to that single external project, where anyone with access to the tracing account can read them — and a tenant's secret echoed into a component output may not be redacted. Do not enable a shared SaaS tracing backend in a deployment with mutually-untrusted tenants; rely on the built-in local tracing instead.
+:::
+
 ### Session cookie hardening {#session-cookie-hardening}
 
 For a multi-tenant deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local/HTTP development and for the current frontend, which reads the access token in JavaScript.
