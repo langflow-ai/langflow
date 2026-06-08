@@ -418,6 +418,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_writer(monkeypatch):
+    # Tests assert on freshly-written transactions / vertex_builds rows. The
+    # batched writer is a production optimization; in tests we want the
+    # synchronous legacy DB path so reads-after-writes are visible.
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_WRITER_ENABLED", "false")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
