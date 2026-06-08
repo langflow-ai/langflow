@@ -1,9 +1,9 @@
 """Generate the nightly tag for the canonical ``langflow-sdk`` package.
 
-Approach A (canonical pre-releases): mirrors ``lfx_nightly_tag.py`` but for the SDK -- the nightly
-publishes ``langflow-sdk==<base>.devN`` to the canonical ``langflow-sdk`` PyPI project, so the dev
-counter is computed against that project's ``.devN`` history (stable finals never contribute).
-``<base>`` comes from ``src/sdk/pyproject.toml``. See ``src/bundles/NIGHTLY.md``.
+Mirrors ``lfx_nightly_tag.py`` but for the SDK -- the nightly publishes ``langflow-sdk==<base>.devN``
+to the canonical ``langflow-sdk`` PyPI project, so the dev counter is computed against that
+project's ``.devN`` history (stable finals never contribute). ``<base>`` comes from
+``src/sdk/pyproject.toml``. See ``src/bundles/NIGHTLY.md``.
 """
 
 from pathlib import Path

@@ -347,7 +347,7 @@ jobs:
           mkdir -p main-dist
           cp "${MAIN_WHEELS[0]}" main-dist/
 
-      # Approach A: bundles are NOT rebuilt/republished for nightly. The stable `lfx-*` bundles on
+      # Bundles are NOT rebuilt/republished for nightly. The stable `lfx-*` bundles on
       # PyPI work as-is against the canonical `lfx` pre-release (see src/bundles/NIGHTLY.md). The
       # cross-platform test self-builds the bundles from src/bundles for install coverage.
 

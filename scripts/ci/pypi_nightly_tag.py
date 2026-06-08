@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 """Idea from https://github.com/streamlit/streamlit/blob/4841cf91f1c820a392441092390c4c04907f9944/scripts/pypi_nightly_create_tag.py.
 
-Approach A publishes the nightly as canonical `.devN` pre-releases (e.g. `langflow==X.Y.Z.devN`),
-NOT separate `*-nightly` distributions, so the dev counter is computed against the canonical
+The nightly is published as canonical `.devN` pre-releases (e.g. `langflow==X.Y.Z.devN`), NOT
+separate `*-nightly` distributions, so the dev counter is computed against the canonical
 `langflow` / `langflow-base` PyPI histories (their `.devN` pre-releases; stable finals never
 contribute). See `src/bundles/NIGHTLY.md`.
 
@@ -25,8 +25,8 @@ import packaging.version
 import requests
 from packaging.version import Version
 
-# Approach A: count dev releases against the CANONICAL projects (not `*-nightly`), since the
-# nightly is published as canonical `.devN` pre-releases of `langflow` / `langflow-base`.
+# Count dev releases against the CANONICAL projects (not `*-nightly`), since the nightly is
+# published as canonical `.devN` pre-releases of `langflow` / `langflow-base`.
 PYPI_LANGFLOW_URL = "https://pypi.org/pypi/langflow/json"
 PYPI_LANGFLOW_BASE_URL = "https://pypi.org/pypi/langflow-base/json"
 

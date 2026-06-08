@@ -1,11 +1,10 @@
 """Update the canonical ``lfx`` package (and its SDK dep) for nightly builds.
 
-Approach A (canonical pre-releases): the nightly publishes ``lfx`` and ``langflow-sdk`` under their
-CANONICAL names as ``.devN`` pre-releases -- it does NOT rename them to ``lfx-nightly`` /
-``langflow-sdk-nightly``, and it does NOT give the ``src/bundles/*`` packages their own nightly
-track. The stable ``lfx-*`` bundles (pinning ``lfx>=X.Y.0,<(X+1).0.0``) then resolve against the
-single canonical ``lfx`` distribution, so there is no ``lfx`` vs ``lfx-nightly`` install collision.
-See ``src/bundles/NIGHTLY.md``.
+The nightly publishes ``lfx`` and ``langflow-sdk`` under their CANONICAL names as ``.devN``
+pre-releases -- it does NOT rename them to ``lfx-nightly`` / ``langflow-sdk-nightly``, and it does
+NOT give the ``src/bundles/*`` packages their own nightly track. The stable ``lfx-*`` bundles
+(pinning ``lfx>=X.Y.0,<(X+1).0.0``) then resolve against the single canonical ``lfx`` distribution,
+so there is no ``lfx`` vs ``lfx-nightly`` install collision. See ``src/bundles/NIGHTLY.md``.
 
 This script therefore only (a) sets ``lfx``'s version to the nightly ``.devN`` and (b) re-pins
 lfx's ``langflow-sdk`` dependency to the exact canonical dev version.

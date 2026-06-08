@@ -1,8 +1,8 @@
 """Update the canonical ``langflow-sdk`` version for nightly builds.
 
-Approach A (canonical pre-releases): the SDK keeps its canonical ``langflow-sdk`` name -- it is NOT
-renamed to ``langflow-sdk-nightly`` -- and is published as a ``.devN`` pre-release. This script only
-sets the nightly version. See ``src/bundles/NIGHTLY.md``.
+The SDK keeps its canonical ``langflow-sdk`` name -- it is NOT renamed to ``langflow-sdk-nightly`` --
+and is published as a ``.devN`` pre-release. This script only sets the nightly version.
+See ``src/bundles/NIGHTLY.md``.
 """
 
 import sys

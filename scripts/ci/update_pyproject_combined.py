@@ -15,10 +15,9 @@ sys.path.append(str(current_dir))
 def main():
     """Universal update script that handles both base and main updates in a single run.
 
-    Approach A (canonical pre-releases): the packages keep their CANONICAL names (``langflow``,
-    ``langflow-base``) -- they are NOT renamed to ``*-nightly``. This script only sets the nightly
-    ``.devN`` versions and re-pins the inter-package dependencies to exact canonical dev versions.
-    See ``src/bundles/NIGHTLY.md``.
+    The packages keep their CANONICAL names (``langflow``, ``langflow-base``) -- they are NOT
+    renamed to ``*-nightly``. This script only sets the nightly ``.devN`` versions and re-pins the
+    inter-package dependencies to exact canonical dev versions. See ``src/bundles/NIGHTLY.md``.
 
     Usage:
     update_pyproject_combined.py main <main_tag> <base_tag> <lfx_tag>

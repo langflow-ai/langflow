@@ -1,8 +1,8 @@
 """Generate the nightly tag for the canonical ``lfx`` package.
 
-Approach A (canonical pre-releases): the nightly publishes ``lfx==<base>.devN`` to the canonical
-``lfx`` PyPI project (not a separate ``lfx-nightly`` distribution), so the dev counter is computed
-against ``lfx``'s own release history. ``<base>`` is the in-development version from
+The nightly publishes ``lfx==<base>.devN`` to the canonical ``lfx`` PyPI project (not a separate
+``lfx-nightly`` distribution), so the dev counter is computed against ``lfx``'s own release history.
+``<base>`` is the in-development version from
 ``src/lfx/pyproject.toml`` (the latest ``release-*`` branch the nightly builds from) and ``N`` is
 ``max(existing same-base devN) + 1``.
 
