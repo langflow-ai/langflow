@@ -1,0 +1,56 @@
+name: Stress Tests
+
+on:
+  workflow_dispatch: {}
+  workflow_call:
+    inputs:
+      ref:
+        description: "Branch or tag to test"
+        required: false
+        type: string
+        default: ""
+
+jobs:
+  telemetry-writes:
+    name: Telemetry Writes (Postgres)
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: langflow
+          POSTGRES_PASSWORD: langflow
+          POSTGRES_DB: langflow
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U langflow"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.sha }}
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: "3.12"
+          prune-cache: false
+
+      - name: Install dependencies
+        run: uv sync --extra postgresql
+
+      - name: Run stress test
+        env:
+          DB_URL: "postgresql+psycopg://langflow:langflow@localhost:5432/langflow"  # pragma: allowlist secret
+          LANGFLOW_TELEMETRY_WRITER_ENABLED: "true"
+        run: |
+          uv run python src/backend/tests/stress/stress_telemetry_writes.py \
+            --concurrency 50 --seconds 15
