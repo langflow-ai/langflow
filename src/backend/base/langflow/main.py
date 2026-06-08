@@ -215,6 +215,17 @@ def get_lifespan(*, fix_migration=False, version=None):
                     f"writes will use the legacy direct-write path: {exc}"
                 )
 
+            # Start the periodic authz audit-log retention sweep. No-op unless
+            # AUTHZ_AUDIT_ENABLED and AUTHZ_AUDIT_RETENTION_DAYS > 0. The startup
+            # sweep in initialize_services() already pruned at boot; this keeps a
+            # long-running instance bounded between restarts.
+            try:
+                from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                await audit_log_cleanup_worker.start()
+            except Exception as exc:  # noqa: BLE001 — never block startup on cleanup scheduling
+                await logger.awarning(f"Failed to start authz audit-log cleanup worker: {exc}")
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -547,6 +558,15 @@ def get_lifespan(*, fix_migration=False, version=None):
                         await stop_streamable_http_manager()
                     except Exception as e:  # noqa: BLE001
                         await logger.aerror(f"Failed to stop MCP server streamable-http session manager: {e}")
+                    # Stop the authz audit-log retention worker (best-effort;
+                    # no-op when it was never scheduled).
+                    try:
+                        from langflow.services.task.audit_cleanup import audit_log_cleanup_worker
+
+                        await audit_log_cleanup_worker.stop()
+                    except Exception as e:  # noqa: BLE001
+                        await logger.aerror(f"Failed to stop authz audit-log cleanup worker: {e}")
+
                     # Cancel background tasks
                     tasks_to_cancel = []
                     if sync_flows_from_fs_task:
