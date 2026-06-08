@@ -387,7 +387,7 @@ class TestApplyFlowOperations:
     def test_delete_nodes_rejects_missing_ids(self):
         flow_data = _base_flow_data()
 
-        with pytest.raises(FlowOperationValidationError, match="node was not in base flow"):
+        with pytest.raises(FlowOperationValidationError, match="does not exist in the original flow"):
             apply_flow_operations(flow_data, [{"type": "delete_nodes", "ids": ["missing"]}])
 
     def test_delete_edges_ignores_missing_ids(self):
@@ -432,7 +432,7 @@ class TestApplyFlowOperations:
         flow_data = _base_flow_data()
         new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
 
-        with pytest.raises(FlowOperationValidationError, match="cannot update node added earlier"):
+        with pytest.raises(FlowOperationValidationError, match="does not exist in the original flow"):
             apply_flow_operations(
                 flow_data,
                 [
@@ -448,7 +448,7 @@ class TestApplyFlowOperations:
         flow_data = _base_flow_data()
         new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
 
-        with pytest.raises(FlowOperationValidationError, match="node was not in base flow"):
+        with pytest.raises(FlowOperationValidationError, match="does not exist in the original flow"):
             apply_flow_operations(
                 flow_data,
                 [
@@ -519,6 +519,34 @@ class TestApplyFlowOperations:
                 flow_data,
                 [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": path, "value": 1}]}],
             )
+
+    @pytest.mark.parametrize("path", [["data"], ["data", "node"], ["data", "node", "template"]])
+    def test_rejects_broad_node_refresh_roots(self, path):
+        flow_data = _base_flow_data()
+        flow_data["nodes"][0]["data"]["node"] = {"template": {}, "outputs": []}
+
+        with pytest.raises(FlowOperationValidationError, match="cannot update entire node data objects"):
+            apply_flow_operations(
+                flow_data,
+                [{"type": "update_nodes", "updates": [{"id": "a", "op": "set_field", "path": path, "value": {}}]}],
+            )
+
+    def test_update_nodes_allows_merged_outputs_array(self):
+        flow_data = _base_flow_data()
+        flow_data["nodes"][0]["data"]["node"] = {"template": {}, "outputs": []}
+        outputs = [{"name": "result", "display_name": "Result", "types": ["Message"]}]
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [{"id": "a", "op": "set_field", "path": ["data", "node", "outputs"], "value": outputs}],
+                }
+            ],
+        )
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert stored["data"]["node"]["outputs"] == outputs
 
     def test_rejects_array_delete(self):
         flow_data = _base_flow_data()

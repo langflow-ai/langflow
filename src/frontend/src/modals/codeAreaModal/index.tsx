@@ -1,6 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { usePostValidateCode } from "@/controllers/API/queries/nodes/use-post-validate-code";
 import { usePostValidateComponentCode } from "@/controllers/API/queries/nodes/use-post-validate-component-code";
+import {
+  applyNodeFieldUpdates,
+  buildSetNodeFieldUpdate,
+  buildThreeWayComponentNodeUpdates,
+  type ThreeWayComponentDiffPolicy,
+} from "@/hooks/flows/flow-operation-diff";
+import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import { clearHandlesFromAdvancedFields } from "@/utils/reactflowUtils";
 import "ace-builds/src-noconflict/ace";
@@ -20,8 +27,14 @@ import useAlertStore from "../../stores/alertStore";
 import { useDarkStore } from "../../stores/darkStore";
 import type { CodeErrorDataTypeAPI } from "../../types/api";
 import type { codeAreaModalPropsType } from "../../types/components";
+import type { AllNodeType } from "../../types/flow";
+import type { NodeFieldPath } from "../../types/flow-operations";
 import BaseModal from "../baseModal";
 import ConfirmationModal from "../confirmationModal";
+
+function pathStartsWith(path: NodeFieldPath, prefix: string[]): boolean {
+  return prefix.every((segment, index) => path[index] === segment);
+}
 
 export default function CodeAreaModal({
   value,
@@ -121,19 +134,63 @@ export default function CodeAreaModal({
             setValue(code);
             try {
               const merged = cloneDeep(data);
-              if (nodeClass?.template && merged?.template) {
+              const latestGraphNode = componentId
+                ? useFlowStore.getState().getNode(componentId)
+                : undefined;
+              const latestNodeClass =
+                (latestGraphNode?.data?.node as typeof nodeClass) ?? nodeClass;
+              if (latestNodeClass?.template && merged?.template) {
                 for (const fieldName of Object.keys(merged.template)) {
                   if (fieldName === "code") continue;
-                  const existing = nodeClass.template[fieldName];
+                  const existing = latestNodeClass.template[fieldName];
                   if (existing && Object.hasOwn(existing, "value")) {
                     // Preserve the user's current value for this parameter
                     merged.template[fieldName].value = existing.value;
                   }
                 }
               }
+              if (merged.template?.code) {
+                merged.template.code.value = code;
+              }
 
               clearHandlesFromAdvancedFields(componentId!, merged);
-              setNodeClass(merged, type);
+              if (componentId && latestGraphNode && nodeClass) {
+                const policy: ThreeWayComponentDiffPolicy = {
+                  generatedWinsOnOverlap: (path) =>
+                    pathStartsWith(path, [
+                      "data",
+                      "node",
+                      "template",
+                      "code",
+                      "value",
+                    ]),
+                };
+                const collaborationUpdates = buildThreeWayComponentNodeUpdates(
+                  componentId,
+                  nodeClass as unknown as Record<string, unknown>,
+                  (latestGraphNode.data.node ?? {}) as unknown as Record<
+                    string,
+                    unknown
+                  >,
+                  merged as unknown as Record<string, unknown>,
+                  policy,
+                );
+                collaborationUpdates.push(
+                  buildSetNodeFieldUpdate(componentId, ["data", "type"], type),
+                );
+                const mergedGraphNode = applyNodeFieldUpdates(
+                  latestGraphNode as unknown as Record<string, unknown>,
+                  collaborationUpdates,
+                ) as unknown as AllNodeType;
+                useFlowStore
+                  .getState()
+                  .setNode(componentId, mergedGraphNode, true, undefined, {
+                    collaborationUpdates,
+                  });
+                setNodeClass(mergedGraphNode.data.node!, type);
+              } else {
+                setNodeClass(merged, type);
+              }
             } catch (e) {
               clearHandlesFromAdvancedFields(componentId!, data);
               setNodeClass(data, type);

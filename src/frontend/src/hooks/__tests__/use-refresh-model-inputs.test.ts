@@ -54,6 +54,7 @@ jest.mock("@/stores/flowStore", () => ({
     getState: () => ({
       nodes: mockNodes,
       setNode: mockSetNode,
+      getNode: (id: string) => mockNodes.find((node) => node.id === id),
       componentsToUpdate: mockComponentsToUpdate,
     }),
   },
@@ -385,6 +386,23 @@ describe("refreshAllModelInputs", () => {
 
     expect(api.post).toHaveBeenCalled();
     expect(mockSetNode).toHaveBeenCalled();
+    expect(mockSetNode.mock.calls[0][4]).toEqual({
+      collaborationUpdates: expect.arrayContaining([
+        {
+          id: "node-1",
+          op: "set_field",
+          path: ["data", "node", "template", "model", "options"],
+          value: ["gpt-4", "gpt-4-turbo"],
+        },
+      ]),
+    });
+    expect(
+      mockSetNode.mock.calls[0][4].collaborationUpdates.some(
+        (update) =>
+          JSON.stringify(update.path) ===
+          JSON.stringify(["data", "node", "template"]),
+      ),
+    ).toBe(false);
     expect(mockSetSuccessData).toHaveBeenCalledWith({
       title: "Refreshed 1 model component",
     });

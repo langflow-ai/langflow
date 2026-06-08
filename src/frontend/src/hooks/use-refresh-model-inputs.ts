@@ -1,7 +1,13 @@
 import { QueryClient, useQueryClient } from "@tanstack/react-query";
+import { isEqual } from "lodash";
 import { useCallback, useRef } from "react";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
+import {
+  applyNodeFieldUpdates,
+  buildThreeWayComponentNodeUpdates,
+  type ThreeWayComponentDiffPolicy,
+} from "@/hooks/flows/flow-operation-diff";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore, { syncNodeTranslations } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -12,6 +18,7 @@ import type {
   ModelOptionType,
 } from "@/types/api";
 import type { AllNodeType } from "@/types/flow";
+import type { NodeFieldPath } from "@/types/flow-operations";
 import {
   isCustomComponentBlockError,
   isNodeOutdated,
@@ -28,6 +35,10 @@ let pendingRefresh: {
   queryClient?: QueryClient;
   options?: RefreshOptions;
 } | null = null;
+
+function pathStartsWith(path: NodeFieldPath, prefix: string[]): boolean {
+  return prefix.every((segment, index) => path[index] === segment);
+}
 
 /** Checks if a node has a model-type input field */
 export function isModelNode(node: AllNodeType): boolean {
@@ -288,12 +299,55 @@ async function refreshSingleNode(
       responseData.template,
       modelFieldKey,
     );
+    const valueWasCorrected = !isEqual(
+      responseData.template[modelFieldKey]?.value,
+      validatedTemplate[modelFieldKey]?.value,
+    );
+    const generatedNode = {
+      ...responseData,
+      template: validatedTemplate,
+    } as APIClassType;
+    const latestGraphNode = useFlowStore.getState().getNode(node.id);
+    const latestNodeData =
+      (latestGraphNode?.data?.node as APIClassType | undefined) ?? nodeData;
+    const policy: ThreeWayComponentDiffPolicy = {
+      generatedWinsOnOverlap: (path) =>
+        pathStartsWith(path, [
+          "data",
+          "node",
+          "template",
+          modelFieldKey,
+          "options",
+        ]) ||
+        (valueWasCorrected &&
+          pathStartsWith(path, [
+            "data",
+            "node",
+            "template",
+            modelFieldKey,
+            "value",
+          ])),
+    };
+    const collaborationUpdates = buildThreeWayComponentNodeUpdates(
+      node.id,
+      nodeData as unknown as Record<string, unknown>,
+      latestNodeData as unknown as Record<string, unknown>,
+      generatedNode as unknown as Record<string, unknown>,
+      policy,
+    );
+
+    if (collaborationUpdates.length === 0) return;
 
     setNode(
       node.id,
       (currentNode) =>
-        createUpdatedNode(currentNode, validatedTemplate, responseData.outputs),
+        applyNodeFieldUpdates(
+          currentNode as unknown as Record<string, unknown>,
+          collaborationUpdates,
+        ) as unknown as AllNodeType,
       false,
+      undefined,
+      { collaborationUpdates },
     );
   } catch (error) {
     console.warn(`Failed to refresh model node ${node.id}:`, error);

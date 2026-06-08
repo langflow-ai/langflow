@@ -73,6 +73,291 @@ export function buildDeleteNodeFieldUpdate(
   return { id, op: "delete_field", path: [...path] };
 }
 
+export type ThreeWayComponentDiffPolicy = {
+  generatedWinsOnOverlap?: (path: NodeFieldPath) => boolean;
+};
+
+function shouldUseGeneratedOnOverlap(
+  policy: ThreeWayComponentDiffPolicy | undefined,
+  path: NodeFieldPath,
+): boolean {
+  return policy?.generatedWinsOnOverlap?.(path) ?? false;
+}
+
+function buildThreeWayFieldUpdates(
+  id: string,
+  base: Record<string, unknown>,
+  local: Record<string, unknown>,
+  generated: Record<string, unknown>,
+  pathPrefix: NodeFieldPath,
+  policy?: ThreeWayComponentDiffPolicy,
+): UpdateNodeEntry[] {
+  const updates: UpdateNodeEntry[] = [];
+  const baseKeys = new Set(Object.keys(base));
+  const localKeys = new Set(Object.keys(local));
+  const generatedKeys = new Set(Object.keys(generated));
+  const touchedKeys = new Set([
+    ...Object.keys(base),
+    ...Object.keys(generated),
+  ]);
+
+  for (const key of Array.from(touchedKeys)) {
+    const childPath: NodeFieldPath = [...pathPrefix, key];
+    const baseExists = baseKeys.has(key);
+    const localExists = localKeys.has(key);
+    const generatedExists = generatedKeys.has(key);
+    const baseValue = base[key];
+    const localValue = local[key];
+    const generatedValue = generated[key];
+
+    if (generatedExists && baseExists && isEqual(generatedValue, baseValue)) {
+      continue;
+    }
+
+    if (generatedExists && localExists && isEqual(localValue, generatedValue)) {
+      continue;
+    }
+
+    if (
+      generatedExists &&
+      baseExists &&
+      localExists &&
+      isPlainObject(baseValue) &&
+      isPlainObject(localValue) &&
+      isPlainObject(generatedValue)
+    ) {
+      updates.push(
+        ...buildThreeWayFieldUpdates(
+          id,
+          baseValue,
+          localValue,
+          generatedValue,
+          childPath,
+          policy,
+        ),
+      );
+      continue;
+    }
+
+    if (!generatedExists) {
+      if (!localExists) {
+        continue;
+      }
+      if (isEqual(localValue, baseValue)) {
+        updates.push(buildDeleteNodeFieldUpdate(id, childPath));
+      } else if (shouldUseGeneratedOnOverlap(policy, childPath)) {
+        updates.push(buildDeleteNodeFieldUpdate(id, childPath));
+      }
+      continue;
+    }
+
+    if (!baseExists || !localExists || isEqual(localValue, baseValue)) {
+      updates.push(buildSetNodeFieldUpdate(id, childPath, generatedValue));
+      continue;
+    }
+
+    if (shouldUseGeneratedOnOverlap(policy, childPath)) {
+      updates.push(buildSetNodeFieldUpdate(id, childPath, generatedValue));
+    }
+  }
+
+  return updates;
+}
+
+function outputName(output: unknown): string | null {
+  if (!isPlainObject(output)) {
+    return null;
+  }
+  return typeof output.name === "string" && output.name ? output.name : null;
+}
+
+function outputsByName(outputs: unknown): Map<string, Record<string, unknown>> {
+  const outputMap = new Map<string, Record<string, unknown>>();
+  if (!Array.isArray(outputs)) {
+    return outputMap;
+  }
+  for (const output of outputs) {
+    const name = outputName(output);
+    if (name && isPlainObject(output)) {
+      outputMap.set(name, output);
+    }
+  }
+  return outputMap;
+}
+
+function mergeOutputObject(
+  name: string,
+  baseOutput: Record<string, unknown>,
+  localOutput: Record<string, unknown>,
+  generatedOutput: Record<string, unknown>,
+  policy?: ThreeWayComponentDiffPolicy,
+): Record<string, unknown> {
+  const merged = cloneDeep(localOutput);
+  const propertyUpdates = buildThreeWayFieldUpdates(
+    name,
+    baseOutput,
+    localOutput,
+    generatedOutput,
+    ["data", "node", "outputs", name],
+    policy,
+  );
+
+  for (const update of propertyUpdates) {
+    const propertyPath = update.path.slice(4);
+    if (propertyPath.length === 0) {
+      continue;
+    }
+    if (update.op === "set_field") {
+      setValueAtPath(merged, propertyPath, update.value);
+    } else {
+      deleteValueAtPath(merged, propertyPath);
+    }
+  }
+
+  for (const localOnlyKey of ["hidden", "selected"]) {
+    const localOnlyPath: NodeFieldPath = [
+      "data",
+      "node",
+      "outputs",
+      name,
+      localOnlyKey,
+    ];
+    if (
+      Object.hasOwn(localOutput, localOnlyKey) &&
+      !shouldUseGeneratedOnOverlap(policy, localOnlyPath)
+    ) {
+      merged[localOnlyKey] = cloneDeep(localOutput[localOnlyKey]);
+    }
+  }
+
+  return merged;
+}
+
+function mergeOutputsArray(
+  baseOutputs: unknown,
+  localOutputs: unknown,
+  generatedOutputs: unknown,
+  policy?: ThreeWayComponentDiffPolicy,
+): unknown[] | null {
+  if (!Array.isArray(baseOutputs) && !Array.isArray(generatedOutputs)) {
+    return null;
+  }
+
+  const baseArray = Array.isArray(baseOutputs) ? baseOutputs : [];
+  const localArray = Array.isArray(localOutputs) ? localOutputs : [];
+  const generatedArray = Array.isArray(generatedOutputs)
+    ? generatedOutputs
+    : [];
+  const baseMap = outputsByName(baseArray);
+  const localMap = outputsByName(localArray);
+  const generatedMap = outputsByName(generatedArray);
+  const accepted = new Set<string>();
+  const merged: unknown[] = [];
+  const outputPath: NodeFieldPath = ["data", "node", "outputs"];
+
+  for (const generatedOutput of generatedArray) {
+    const name = outputName(generatedOutput);
+    if (!name || !isPlainObject(generatedOutput)) {
+      merged.push(cloneDeep(generatedOutput));
+      continue;
+    }
+
+    const baseOutput = baseMap.get(name);
+    const localOutput = localMap.get(name);
+    if (!baseOutput) {
+      accepted.add(name);
+      merged.push(cloneDeep(localOutput ?? generatedOutput));
+      continue;
+    }
+    if (!localOutput) {
+      accepted.add(name);
+      merged.push(cloneDeep(generatedOutput));
+      continue;
+    }
+
+    accepted.add(name);
+    merged.push(
+      mergeOutputObject(name, baseOutput, localOutput, generatedOutput, policy),
+    );
+  }
+
+  for (const localOutput of localArray) {
+    const name = outputName(localOutput);
+    if (!name || accepted.has(name)) {
+      continue;
+    }
+
+    const baseOutput = baseMap.get(name);
+    if (!baseOutput) {
+      merged.push(cloneDeep(localOutput));
+      continue;
+    }
+
+    if (
+      !isEqual(localOutput, baseOutput) &&
+      !shouldUseGeneratedOnOverlap(policy, outputPath)
+    ) {
+      merged.push(cloneDeep(localOutput));
+    }
+  }
+
+  return merged;
+}
+
+export function buildThreeWayComponentNodeUpdates(
+  id: string,
+  baseNode: Record<string, unknown>,
+  localNode: Record<string, unknown>,
+  generatedNode: Record<string, unknown>,
+  policy?: ThreeWayComponentDiffPolicy,
+): UpdateNodeEntry[] {
+  const updates = buildThreeWayFieldUpdates(
+    id,
+    baseNode,
+    localNode,
+    generatedNode,
+    ["data", "node"],
+    policy,
+  );
+  const mergedOutputs = mergeOutputsArray(
+    baseNode.outputs,
+    localNode.outputs,
+    generatedNode.outputs,
+    policy,
+  );
+
+  if (mergedOutputs && !isEqual(localNode.outputs, mergedOutputs)) {
+    return [
+      ...updates.filter(
+        (update) =>
+          !(
+            update.path[0] === "data" &&
+            update.path[1] === "node" &&
+            update.path[2] === "outputs"
+          ),
+      ),
+      buildSetNodeFieldUpdate(id, ["data", "node", "outputs"], mergedOutputs),
+    ];
+  }
+
+  return updates;
+}
+
+export function applyNodeFieldUpdates<T extends Record<string, unknown>>(
+  node: T,
+  updates: UpdateNodeEntry[],
+): T {
+  const nextNode = cloneDeep(node);
+  for (const update of updates) {
+    if (update.op === "set_field") {
+      setValueAtPath(nextNode, update.path, update.value);
+    } else {
+      deleteValueAtPath(nextNode, update.path);
+    }
+  }
+  return nextNode;
+}
+
 export function buildNodeFieldDiffUpdates(
   id: string,
   previous: Record<string, unknown>,

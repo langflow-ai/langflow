@@ -10,6 +10,7 @@ import {
   buildInverseFlowOperations,
   buildNodeFieldDiffUpdates,
   buildSetNodeFieldUpdate,
+  buildThreeWayComponentNodeUpdates,
   buildUpdateMetadataOperation,
   collectFlowOperationTouches,
   flowOperationTouchesIntersect,
@@ -171,6 +172,135 @@ describe("flow-operation-adapter", () => {
         op: "set_field",
         path: ["data", "items"],
         value: ["a", "c"],
+      },
+    ]);
+  });
+
+  it("buildThreeWayComponentNodeUpdates preserves local overlapping changes by default", () => {
+    const base = {
+      template: {
+        prompt: { value: "base", show: true },
+      },
+    };
+    const local = {
+      template: {
+        prompt: { value: "local", show: true },
+      },
+    };
+    const generated = {
+      template: {
+        prompt: { value: "generated", show: false },
+      },
+    };
+
+    expect(
+      buildThreeWayComponentNodeUpdates("a", base, local, generated),
+    ).toEqual([
+      {
+        id: "a",
+        op: "set_field",
+        path: ["data", "node", "template", "prompt", "show"],
+        value: false,
+      },
+    ]);
+  });
+
+  it("buildThreeWayComponentNodeUpdates allows callers to opt generated overlaps in", () => {
+    const base = {
+      template: {
+        code: { value: "old code" },
+      },
+    };
+    const local = {
+      template: {
+        code: { value: "local code" },
+      },
+    };
+    const generated = {
+      template: {
+        code: { value: "generated code" },
+      },
+    };
+
+    expect(
+      buildThreeWayComponentNodeUpdates("a", base, local, generated, {
+        generatedWinsOnOverlap: (path) =>
+          path.join(".") === "data.node.template.code.value",
+      }),
+    ).toEqual([
+      {
+        id: "a",
+        op: "set_field",
+        path: ["data", "node", "template", "code", "value"],
+        value: "generated code",
+      },
+    ]);
+  });
+
+  it("buildThreeWayComponentNodeUpdates merges outputs by name", () => {
+    const base = {
+      outputs: [
+        {
+          name: "result",
+          display_name: "Result",
+          types: ["str"],
+          hidden: false,
+          selected: "old",
+        },
+        { name: "removed", display_name: "Removed", types: ["str"] },
+      ],
+    };
+    const local = {
+      outputs: [
+        {
+          name: "result",
+          display_name: "Result",
+          types: ["str"],
+          hidden: true,
+          selected: "local",
+        },
+        {
+          name: "local_only",
+          display_name: "Local Only",
+          types: ["str"],
+        },
+      ],
+    };
+    const generated = {
+      outputs: [
+        {
+          name: "result",
+          display_name: "Generated Result",
+          types: ["Message"],
+          hidden: false,
+          selected: "generated",
+        },
+        { name: "added", display_name: "Added", types: ["Data"] },
+      ],
+    };
+
+    expect(
+      buildThreeWayComponentNodeUpdates("a", base, local, generated),
+    ).toEqual([
+      {
+        id: "a",
+        op: "set_field",
+        path: ["data", "node", "outputs"],
+        value: [
+          {
+            name: "result",
+            display_name: "Generated Result",
+            types: ["Message"],
+            hidden: true,
+            selected: "local",
+          },
+          { name: "added", display_name: "Added", types: ["Data"] },
+          {
+            name: "local_only",
+            display_name: "Local Only",
+            types: ["str"],
+          },
+        ],
       },
     ]);
   });

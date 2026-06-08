@@ -201,6 +201,20 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> li
 
 
 NodeUpdateHandler = Callable[[GraphState, Any, int], None]
+# These whole-object paths can overwrite unrelated concurrent node edits.
+# Callers must send narrower field-level updates instead.
+FORBIDDEN_WHOLE_NODE_UPDATE_PATHS: frozenset[NodeFieldPath] = frozenset(
+    {
+        ("data",),
+        ("data", "node"),
+        ("data", "node", "template"),
+    }
+)
+# Preformat the path list once so validation errors stay explicit without
+# rebuilding the same string on every update.
+FORBIDDEN_WHOLE_NODE_UPDATE_PATHS_ERROR_LABEL = ", ".join(
+    ".".join(root_path) for root_path in sorted(FORBIDDEN_WHOLE_NODE_UPDATE_PATHS)
+)
 
 
 def _apply_set_node_field_update(
@@ -244,6 +258,12 @@ def _validate_update_node_entries(
 def _validate_node_field_path(path: NodeFieldPath, *, context: str) -> None:
     if path[0] == "id":
         msg = f"{context}: cannot modify node identity"
+        raise FlowOperationValidationError(msg)
+    if path in FORBIDDEN_WHOLE_NODE_UPDATE_PATHS:
+        msg = (
+            f"{context}: cannot update entire node data objects at path {path!r}; "
+            f"forbidden paths are: {FORBIDDEN_WHOLE_NODE_UPDATE_PATHS_ERROR_LABEL}"
+        )
         raise FlowOperationValidationError(msg)
 
 

@@ -26,6 +26,7 @@ if TYPE_CHECKING:
     from langflow.services.storage.service import StorageService
 
 
+TEMPLATE_PATH_LENGTH = 3
 TEMPLATE_FIELD_PATH_LENGTH = 4
 TEMPLATE_FIELD_VALUE_PATH_LENGTH = 5
 
@@ -113,32 +114,17 @@ def _remove_api_keys_from_inner_node(inner_node: dict[str, Any]) -> None:
 def _sanitize_update_node_value(update: dict[str, Any], flow_data: dict[str, Any]) -> None:
     path = tuple(update["path"])
     value = update["value"]
-    if path == ("data",):
-        if isinstance(value, dict):
-            _remove_api_keys_from_node_data(value)
+    if len(path) <= TEMPLATE_PATH_LENGTH or path[:TEMPLATE_PATH_LENGTH] != ("data", "node", "template"):
         return
-    if path == ("data", "node"):
-        if isinstance(value, dict):
-            _remove_api_keys_from_inner_node(value)
-        return
-    if path == ("data", "node", "template"):
-        if isinstance(value, dict):
-            remove_api_keys_from_template(value)
-        return
-    if (
-        len(path) == TEMPLATE_FIELD_PATH_LENGTH
-        and path[:3] == ("data", "node", "template")
-        and isinstance(path[3], str)
-    ):
-        if is_api_key_template_field(value):
-            value["value"] = None
+
+    template_field_name = path[TEMPLATE_PATH_LENGTH]
+    if len(path) == TEMPLATE_FIELD_PATH_LENGTH and is_api_key_template_field(value):
+        value["value"] = None
         return
     if (
         len(path) == TEMPLATE_FIELD_VALUE_PATH_LENGTH
-        and path[:3] == ("data", "node", "template")
-        and isinstance(path[3], str)
         and path[4] == "value"
-        and _is_api_key_template_value_update(flow_data, update["id"], path[3])
+        and _is_api_key_template_value_update(flow_data, update["id"], template_field_name)
     ):
         update["value"] = None
 
