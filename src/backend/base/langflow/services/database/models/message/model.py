@@ -19,6 +19,12 @@ from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_times
 if TYPE_CHECKING:
     from langflow.schema.message import Message
 
+# Columns a caller may order messages by. A tenant-supplied order_by is passed to
+# getattr(MessageTable, order_by); validating against this allowlist prevents an arbitrary
+# attribute name from raising a 500 error-oracle (or reaching a non-column attribute). Shared by
+# the monitor endpoints and the langflow.memory query helper so they validate identically.
+ALLOWED_MESSAGE_ORDER_FIELDS = frozenset({"timestamp", "sender", "sender_name", "session_id", "text"})
+
 
 class MessageBase(SQLModel):
     timestamp: Annotated[datetime, str_to_timestamp_validator] = Field(
