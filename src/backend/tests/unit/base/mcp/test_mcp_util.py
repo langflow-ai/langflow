@@ -3910,8 +3910,10 @@ class TestTrustVerifierIntegration:
 
     @pytest.mark.asyncio
     async def test_coroutine_warn_audit_record_contains_required_fields(self, schema, mock_client):
-        """Warn path must emit decision_id, reason_code, server_origin, tool_name,
-        and parameters_digest so an external verifier can reconstruct the audit trail.
+        """warn path must emit decision_id and reason_code before dispatch.
+
+        An external verifier must be able to reconstruct the audit trail without
+        inspecting logs after the fact.
         """
         from lfx.base.mcp.trust import TrustDecision, TrustState
 
@@ -3936,8 +3938,9 @@ class TestTrustVerifierIntegration:
 
     @pytest.mark.asyncio
     async def test_coroutine_different_params_invoke_verifier_again(self, schema, mock_client):
-        """Each call with different params must produce a fresh MCPToolCall with
-        a different parameters_digest — decisions are never reused.
+        """Each call with different params must produce a fresh MCPToolCall.
+
+        A different parameters_digest must be generated so decisions are never reused.
         """
         from lfx.base.mcp.trust import TrustDecision, TrustState
 
@@ -3968,9 +3971,11 @@ class TestTrustVerifierIntegration:
 
     def test_func_deny_blocks_run_tool(self, schema, mock_client):
         tool = util.create_tool_func("search", schema, mock_client, trust_verifier=_make_verifier("deny"))
-        with patch("lfx.base.mcp.util.run_until_complete", side_effect=_sync_run_until_complete):
-            with pytest.raises(PermissionError):
-                tool(query="hello")
+        with (
+            patch("lfx.base.mcp.util.run_until_complete", side_effect=_sync_run_until_complete),
+            pytest.raises(PermissionError),
+        ):
+            tool(query="hello")
         mock_client.run_tool.assert_not_awaited()
 
     def test_func_allow_calls_run_tool(self, schema, mock_client):
