@@ -295,10 +295,13 @@ def _substitute_trusted_node_code(nodes: list, type_to_code: dict[str, str]) -> 
                 code_field = template["code"]
 
         component_type = node_data.get("type")
-        if component_type and code_field is not None and code_field.get("value"):
-            if component_type in type_to_code:
+        if code_field is not None and code_field.get("value"):
+            if isinstance(component_type, str) and component_type in type_to_code:
                 code_field["value"] = type_to_code[component_type]
             else:
+                display_name = (node_info.get("display_name") if node_info else None) or component_type
+                node_id = node_data.get("id") or node.get("id", "unknown")
+                blocked.append(f"{display_name} ({node_id})")
                 display_name = (node_info.get("display_name") if node_info else None) or component_type
                 node_id = node_data.get("id") or node.get("id", "unknown")
                 blocked.append(f"{display_name} ({node_id})")
