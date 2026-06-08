@@ -1,0 +1,265 @@
+---
+title: Langflow release notes
+slug: /release-notes
+---
+
+import Icon from "@site/src/components/icon";
+import McpIcon from '@site/static/logos/mcp-icon.svg';
+
+This page summarizes significant changes to Langflow in each release.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases/latest).
+
+Due to strict SemVer requirements, Langflow Desktop can have different patch versions than the core Langflow OSS Python package, but the major and minor versions are aligned.
+
+## Prepare to upgrade
+
+:::warning
+Whenever possible, the Langflow team recommends installing new Langflow versions in a new virtual environment or VM before upgrading your primary installation.
+This allows you to [import flows](/concepts-flows-import#import-a-flow) from your existing installation and test them in the new version without disrupting your existing installation.
+In the event of breaking changes or bugs, your existing installation is preserved in a stable state.
+:::
+
+To avoid the impact of potential breaking changes and test new versions, the Langflow team recommends the following upgrade process:
+
+1. Recommended: [Export your projects](/api-projects#export-a-project) to create backups of your flows:
+
+    ```bash
+    curl -X GET \
+    "$LANGFLOW_SERVER_URL/api/v1/projects/download/$PROJECT_ID" \
+      -H "accept: application/json" \
+      -H "x-api-key: $LANGFLOW_API_KEY"
+    ```
+
+   To export flows from the visual editor, see [Import and export flows](/concepts-flows-import).
+
+2. Install the new version:
+
+   * **Langflow OSS Python package**: Install the new version in a new virtual environment. For instructions, see [Install and run the Langflow OSS Python package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+   * **Langflow Docker image**: Run the new image in a separate container, or upgrade your existing image. For more information, see [Upgrade the Langflow Docker image](/deployment-docker#upgrade-the-langflow-docker-image).
+   * **Langflow Desktop**: To upgrade in place, open Langflow Desktop, and then click **Upgrade Available** in the Langflow header. If you want to isolate the new version, you must install Langflow Desktop on a separate physical or virtual machine, and then [import your flows](/concepts-flows-import) to the new installation.
+
+3. [Import your flows](/concepts-flows-import) to test them in the new version, [upgrading components](/concepts-components#component-versions) as needed.
+
+    When upgrading components, you can use the **Create backup flow before updating** option if you didn't previously export your flows.
+
+4. If you installed the new version in isolation, upgrade your primary installation after testing the new version.
+
+    If you made changes to your flows in the isolated installation, you might want to export and import those flows back to your upgraded primary installation so you don't have to repeat the component upgrade process.
+
+## 1.10.x
+
+Highlights of this release include the following changes.
+For all changes, see the [Changelog](https://github.com/langflow-ai/langflow/releases).
+
+
+### Breaking changes
+
+- Upcoming breaking change: bundle separation
+
+    Langflow 1.10.x introduces the Extension bundles model.
+    In future releases, bundle separation will extend to more component providers.
+
+    Saved flows will continue to open normally, but the following may require manual updates before upgrading:
+
+    - Code or scripts that reference component class names or `lfx.components.<provider>` import paths.
+    - External tooling that reads component type identifiers from raw flow JSON.
+    - Custom deployment scripts that install or pin individual component packages.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+
+### New features and enhancements
+
+- **Langflow Assistant**: build complete flows
+
+    **Langflow Assistant** can now build entire flows, and not only individual components.
+
+    For more information, see [Build flows and components with Langflow Assistant](/langflow-assistant).
+
+- Redis-backed job queue for multi-worker deployments
+
+    Langflow now supports a Redis-backed job queue that allows flow build events to be shared across multiple Gunicorn/Uvicorn workers and across multiple replicas behind a load balancer.
+
+    Single-process deployments are unaffected. The default `asyncio` in-memory queue is unchanged.
+
+    For setup instructions and configuration details, see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+
+- Memory bases
+
+    Memory bases are per-flow vector stores that automatically ingest conversation messages.
+    The **Memory Base** component retrieves context from the vector store, offering long-term semantic memory for flows.
+    For more information, see [Manage memory bases](../Develop/memory-bases.mdx).
+
+- Python 3.14 support
+
+    Langflow now supports Python 3.10 through 3.14 on macOS, Linux, and Windows.
+    The Langflow Docker images now use Python 3.14.
+
+    <details>
+    <summary>Optional integrations not yet available on Python 3.14</summary>
+
+    The following optional integrations are excluded from installs on Python 3.14:
+
+    - [IBM watsonx](/bundles-ibm)
+    - [IBM watsonx Orchestrate](/deployment-wxo)
+    - [ALTK](/bundles-altk)
+    - [CUGA](/bundles-cuga)
+    - [LangWatch](/integrations-langwatch)
+    - [Pinecone](/bundles-pinecone)
+    - OpenDsStar
+
+    </details>
+
+- **Agent** component: structured response output
+
+    The **Agent** component now includes a **Structured Response** (`structured_response`) output that returns the agent's reply as structured data according to an **Output Schema** you define.
+
+    For more information, see [Agent component output](/agents#agent-component-output).
+
+- **Agent** component: default system prompt
+
+    The **Agent** component now uses a structured default system prompt that includes the current date and the active model name.
+    Existing flows are not affected.
+
+    For more information, see [Agent instructions and input](/agents#agent-instructions-and-input).
+
+- Extension bundles
+
+    Langflow 1.10 introduces Extension bundles: component providers that are packaged and versioned as standalone pip packages, independent of the core Langflow server.
+    All bundles are still included in `uv pip install langflow`, so nothing changes for existing users.
+
+    The following Extension bundles ship with Langflow 1.10:
+
+    | Package | Bundle | Components |
+    |---------|--------|------------|
+    | `lfx-arxiv` | [arXiv](/bundles-arxiv) | arXiv search |
+    | `lfx-docling` | [Docling](/bundles-docling) | Document parsing and chunking |
+    | `lfx-duckduckgo` | [DuckDuckGo](/bundles-duckduckgo) | Web search |
+    | `lfx-ibm` | [IBM](/bundles-ibm) | IBM watsonx.ai LLM and embeddings, IBM Db2 Vector Store |
+
+    To view all Extension bundles currently loaded in your environment:
+
+    ```bash
+    lfx extension list
+    ```
+
+    If a bundle is not installed, its components are absent from the canvas.
+    To install a missing bundle, install its standalone package and restart Langflow:
+
+    ```bash
+    uv pip install lfx-duckduckgo
+    uv run langflow run
+    ```
+
+    Components in Extension bundles use a namespaced identifier instead of a bare class name.
+    For example, `DuckDuckGoSearchComponent` is now identified as:
+
+    ```text
+    ext:duckduckgo:DuckDuckGoSearchComponent@official
+    ```
+
+    You can see this identifier in the raw JSON of any saved flow that uses the component.
+    Langflow migrates saved flow references to the new format automatically when you open a flow.
+
+    For more information, see [Langflow Extensions overview](../Develop/extensions-overview.mdx).
+
+- File System component
+
+    The **File System** component gives agents sandboxed read/write access to files on disk.
+    An optional **Read Only** mode restricts the agent to read and search operations only.
+
+    For more information, see [File System](../Components/file-system.mdx).
+
+- Unified **Knowledge Base** component
+
+    The **Knowledge Ingestion** and **Knowledge Base** (legacy) components are merged into a single **Knowledge Base** component with a **Mode** selector.
+
+    Existing flows that use the legacy components continue to work.
+
+    For more information, see the [**Knowledge Base** component](/knowledge-base) and [Manage vector data](/knowledge).
+
+- Database connectors for knowledge bases
+
+    Knowledge bases now support configurable vector database backends through **DB Providers** configured in **Settings → DB Providers**.
+    Available providers include [Chroma (default)](https://docs.trychroma.com/), [Chroma Cloud](https://docs.trychroma.com/cloud/getting-started), and [OpenSearch](https://docs.opensearch.org/latest/about/).
+
+    For more information, see [Manage vector data](/knowledge).
+
+- MCP server management lock
+
+    Set `LANGFLOW_MCP_SERVERS_LOCKED=true` to prevent non-superusers from adding, editing, or removing MCP server connections.
+
+    For more information, see [Restrict MCP server management to superusers](/mcp-server#restrict-mcp-server-management).
+
+- Embedded mode UI flags
+
+    Set `LANGFLOW_EMBEDDED_MODE=true` to hide standalone UI elements when embedding the Langflow visual editor in another application.
+
+    These flags control UI visibility only. They do not block the underlying API endpoints.
+
+    For more information, see [Embedded mode](/environment-variables#embedded-mode).
+
+- Custom component admin-only restriction
+
+    Set `LANGFLOW_CUSTOM_COMPONENT_ADMIN_ONLY=true` to restrict custom component creation and code editing to superusers.
+
+    For more information, see [Restrict custom component creation to superusers](/deployment-block-custom-components#restrict-custom-components-to-superusers).
+
+- macOS support matrix
+
+    A new [macOS support](./macos-support-matrix.mdx) page documents feature availability across Apple Silicon and Intel Macs.
+
+- IBM Db2 Vector Store component
+
+    The **IBM Db2 Vector Store** component is now available in the [IBM bundle](/bundles-ibm).
+
+    For more information, see [IBM Db2 Vector Store](/bundles-ibm#ibm-db2-vector-store).
+
+- Internationalization
+
+    The Langflow interface is now available in multiple languages.
+    To change the display language, click your **Profile Picture**, select **Settings**, and then select a language from the **Language** dropdown.
+
+    Available languages include English, French (Français), Spanish (Español), German (Deutsch), Portuguese (Português), Japanese (日本語), and Chinese (中文).
+
+- Login endpoint rate limiting
+
+    Langflow now applies IP-based rate limiting to the `/login` endpoint to protect against brute-force attacks.
+
+    For more information, see [Login rate limiting](/api-keys-and-authentication#login-rate-limiting).
+
+- Code Agents bundle (beta)
+
+    The **Code Agents** bundle adds new beta agent components for code generation with the `smolagents` and `OpenDsStar` libraries.
+
+    For more information, see [Code Agents bundle](./bundles-codeagents).
+
+- File Processing bundle (beta)
+
+    The **File Processing** bundle adds components for ingesting and retrieving file content in agent workflows.
+
+    For more information, see [File Processing bundle](./bundles-files-ingestion).
+
+### Deprecations
+
+- **Text Input** and **Text Output** components are legacy
+
+    The **Text Input** and **Text Output** components are now legacy and may be removed in a future release.
+    Replace them with the [**Chat Input** and **Chat Output** components](/chat-input-and-output).
+
+- Voice mode is removed
+
+    The <Icon name="Mic" aria-hidden="true"/> **Microphone** button in the **Playground** now only enables speech-to-text, with no additional voice mode functionality.
+    The bi-directional `/v1/voice/ws/flow_as_tool/{flow_id}` voice-to-voice endpoints are deprecated.
+    For more information, see [Use voice mode](/concepts-voice-mode).
+
+## 1.9.x
+
+For 1.9.x release notes, see the [1.9.x documentation](https://docs.langflow.org/1.9.0/release-notes).
+
+## 1.8.x
+
+For 1.8.x release notes, see the [1.8.x documentation](https://docs.langflow.org/1.8.0/release-notes).
+
+## Earlier releases
+
+See the [Changelog](https://github.com/langflow-ai/langflow/releases).
