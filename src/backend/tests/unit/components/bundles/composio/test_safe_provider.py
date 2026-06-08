@@ -143,6 +143,36 @@ class TestSafeLangchainProviderRegression:
         result = helper._substitute_file_uploads_recursively(None, schema, request)
         assert result == request
 
+    def test_file_helper_downloads_no_keyerror_on_untyped_property(self):
+        """End-to-end guard against the original KeyError site for downloads.
+        
+        Drives Composio's download walker with a params dict whose property has no
+        ``type`` key. The wrapper should inject "type": "object" into the param.
+        """
+        from composio.core.models._files import FileHelper
+
+        helper = FileHelper.__new__(FileHelper)
+
+        request = {"payload": {"foo": "bar"}}
+        params = {"payload": {"description": "blob"}}
+
+        result = helper._substitute_file_downloads_recursively(request=request, params=params)
+        assert result == request
+        assert params["payload"]["type"] == "object"
+
+    def test_file_helper_downloads_accepts_positional_args(self):
+        """Forward-compat guard: wrapper must tolerate positional invocation for downloads."""
+        from composio.core.models._files import FileHelper
+
+        helper = FileHelper.__new__(FileHelper)
+
+        request = {"payload": {"foo": "bar"}}
+        params = {"payload": {"description": "blob"}}
+
+        result = helper._substitute_file_downloads_recursively(request, params)
+        assert result == request
+        assert params["payload"]["type"] == "object"
+
     def test_pydantic_builder_patched(self):
         """``pydantic_model_from_param_schema`` must be wrapped on import.
 
