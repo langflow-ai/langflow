@@ -5,31 +5,25 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from lfx.components.vllm.vllm import VllmComponent
-    from lfx.components.vllm.vllm_colbert_embeddings import VllmColBERTEmbeddingsComponent
-    from lfx.components.vllm.vllm_embeddings import VllmEmbeddingsComponent
+    from .nextplaid import NextPlaidVectorStoreComponent
 
 _dynamic_imports = {
-    "VllmComponent": "vllm",
-    "VllmEmbeddingsComponent": "vllm_embeddings",
-    "VllmColBERTEmbeddingsComponent": "vllm_colbert_embeddings",
+    "NextPlaidVectorStoreComponent": "nextplaid",
 }
 
 __all__ = [
-    "VllmColBERTEmbeddingsComponent",
-    "VllmComponent",
-    "VllmEmbeddingsComponent",
+    "NextPlaidVectorStoreComponent",
 ]
 
 
 def __getattr__(attr_name: str) -> Any:
-    """Lazily import vLLM components on attribute access."""
+    """Lazily import NextPlaid components on attribute access."""
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
     try:
         result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
-    except (ImportError, AttributeError) as e:
+    except (ModuleNotFoundError, ImportError, AttributeError) as e:
         msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
         raise AttributeError(msg) from e
     globals()[attr_name] = result
