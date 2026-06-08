@@ -17,7 +17,7 @@ from langflow.api.v1.collaboration_manager import CollaborationManager
 from langflow.api.v1.flows_helpers import _get_safe_flow_path
 from langflow.services.database.models.flow.model import Flow, FlowCreate
 from langflow.services.database.models.user.model import UserRead
-from langflow.services.deps import get_storage_service, session_scope
+from langflow.services.deps import get_settings_service, get_storage_service, session_scope
 from sqlmodel import select
 from starlette.testclient import TestClient
 from starlette.websockets import WebSocketState
@@ -77,10 +77,12 @@ async def _create_collab_flow(
     logged_in_headers: dict[str, str],
     *,
     fs_path: str | None = None,
+    data: dict | None = None,
 ) -> UUID:
+    flow_data = data or {"nodes": [copy.deepcopy(NODE_A), copy.deepcopy(NODE_B)], "edges": [copy.deepcopy(EDGE_AB)]}
     payload = FlowCreate(
         name="collab-test",
-        data={"nodes": [copy.deepcopy(NODE_A), copy.deepcopy(NODE_B)], "edges": [copy.deepcopy(EDGE_AB)]},
+        data=copy.deepcopy(flow_data),
         fs_path=fs_path,
     )
     response = await client.post(
@@ -306,6 +308,48 @@ async def test_operation_submit_accepted_increments_revision(client: AsyncClient
         assert flow.latest_operation_revision == 1
         node = next(n for n in flow.data["nodes"] if n["id"] == "a")
         assert node["position"] == {"x": 50, "y": 50}
+
+
+async def test_apply_operation_batch_redacts_forward_ops_when_remove_api_keys_enabled(
+    client: AsyncClient,
+    logged_in_headers,
+    active_user,
+    monkeypatch,
+):
+    settings = get_settings_service().settings
+    monkeypatch.setattr(settings, "remove_api_keys", True)
+    flow_data = {"nodes": [copy.deepcopy(NODE_A)], "edges": []}
+    flow_data["nodes"][0]["data"]["node"]["template"]["api_key"] = {
+        "name": "openai_api_key",
+        "password": True,
+        "value": "old-value",
+    }
+    flow_id = await _create_collab_flow(client, logged_in_headers, data=flow_data)
+    sensitive_value = "new-value-to-redact"
+    update = {
+        "id": "a",
+        "op": "set_field",
+        "path": ["data", "node", "template", "api_key", "value"],
+        "value": sensitive_value,
+    }
+
+    async with session_scope() as session:
+        accepted = await apply_flow_operation_batch(
+            session,
+            flow_id=flow_id,
+            actor_user_id=active_user.id,
+            base_revision=0,
+            operations=[{"type": "update_nodes", "updates": [update]}],
+            storage_service=get_storage_service(),
+        )
+        flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+
+    expected_update = {**update, "value": None}
+    assert accepted.forward_ops == [{"type": "update_nodes", "updates": [expected_update]}]
+    assert sensitive_value not in str(accepted.forward_ops)
+    assert flow is not None
+    stored_template = flow.data["nodes"][0]["data"]["node"]["template"]
+    assert stored_template["api_key"]["value"] is None
 
 
 async def test_filesystem_mirror_restored_when_commit_fails(

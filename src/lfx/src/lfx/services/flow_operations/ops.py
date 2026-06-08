@@ -144,6 +144,6 @@ def parse_flow_operation(operation: dict[str, Any]) -> FlowOperation:
     raise FlowOperationValidationError(msg)
 
 
-def coalesce_delete_ids(ids: list[str]) -> list[str]:
+def deduplicate_delete_ids(ids: list[str]) -> list[str]:
     """Preserve first-seen order while removing duplicate delete IDs."""
     return list(dict.fromkeys(ids))

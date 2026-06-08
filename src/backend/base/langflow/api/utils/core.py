@@ -72,6 +72,21 @@ def has_api_terms(word: str):
     return "api" in word and ("key" in word or ("token" in word and "tokens" not in word))
 
 
+def is_api_key_template_field(template_field: Any) -> bool:
+    return (
+        isinstance(template_field, dict)
+        and "name" in template_field
+        and has_api_terms(template_field["name"])
+        and template_field.get("password")
+    )
+
+
+def remove_api_keys_from_template(template: dict) -> None:
+    for template_field in template.values():
+        if is_api_key_template_field(template_field):
+            template_field["value"] = None
+
+
 def _get_provider_from_template(template: dict) -> str | None:
     """Return provider name from template's model field, if any."""
     model_field = template.get("model")

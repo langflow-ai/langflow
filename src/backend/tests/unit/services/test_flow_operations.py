@@ -15,7 +15,7 @@ from lfx.services.flow_operations import (
     PythonFlowOperationService,
     UpdateMetadataOp,
     UpdateNodesOp,
-    coalesce_delete_ids,
+    deduplicate_delete_ids,
     normalize_requested_ops,
     parse_flow_operations,
 )
@@ -47,9 +47,9 @@ def apply_flow_operations(base_flow: dict, operations: list[dict]) -> FlowOperat
     return _apply_flow_operations(base_flow, parse_flow_operations(operations))
 
 
-class TestCoalesceDeleteIds:
+class TestDeduplicateDeleteIds:
     def test_preserves_first_seen_order(self):
-        assert coalesce_delete_ids(["e1", "e2", "e1", "e3", "e2"]) == ["e1", "e2", "e3"]
+        assert deduplicate_delete_ids(["e1", "e2", "e1", "e3", "e2"]) == ["e1", "e2", "e3"]
 
 
 class TestNormalizeRequestedOps:
@@ -105,6 +105,67 @@ class TestApplyFlowOperations:
         with pytest.raises(FlowOperationValidationError):
             apply_flow_operations(flow_data, [{"type": "add_nodes", "nodes": [copy.deepcopy(NODE_A)]}])
         assert flow_data == original
+
+    def test_does_not_mutate_input_on_node_update_failure_after_node_copy(self):
+        flow_data = _base_flow_data()
+        original = copy.deepcopy(flow_data)
+
+        with pytest.raises(FlowOperationValidationError, match="object path part must be an existing string key"):
+            apply_flow_operations(
+                flow_data,
+                [
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "a", "op": "set_field", "path": ["data", "missing", "value"], "value": 1}],
+                    }
+                ],
+            )
+
+        assert flow_data == original
+
+    def test_graph_collection_operations_do_not_mutate_input_lists(self):
+        flow_data = _base_flow_data()
+        original = copy.deepcopy(flow_data)
+        original_nodes = flow_data["nodes"]
+        original_edges = flow_data["edges"]
+        new_node = {"id": "c", "type": "generic", "position": {"x": 200, "y": 0}, "data": {}}
+
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {"type": "add_nodes", "nodes": [new_node]},
+                {"type": "delete_edges", "ids": ["e-ab"]},
+            ],
+        )
+
+        assert flow_data == original
+        assert flow_data["nodes"] is original_nodes
+        assert flow_data["edges"] is original_edges
+        assert result.flow_data["nodes"] is not original_nodes
+        assert result.flow_data["edges"] is not original_edges
+        assert [node["id"] for node in result.flow_data["nodes"]] == ["a", "b", "c"]
+        assert result.flow_data["edges"] == []
+
+    def test_update_nodes_copies_only_mutated_node(self):
+        flow_data = _base_flow_data()
+        original_node_a = flow_data["nodes"][0]
+        original_node_b = flow_data["nodes"][1]
+
+        result = apply_flow_operations(
+            flow_data,
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [{"id": "a", "op": "set_field", "path": ["position", "x"], "value": 5}],
+                }
+            ],
+        )
+
+        stored_node_a = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        stored_node_b = next(node for node in result.flow_data["nodes"] if node["id"] == "b")
+        assert stored_node_a is not original_node_a
+        assert stored_node_b is original_node_b
+        assert original_node_a["position"]["x"] == 0
 
     def test_add_nodes(self):
         flow_data = _base_flow_data()
@@ -250,6 +311,34 @@ class TestApplyFlowOperations:
         assert isinstance(update_op, UpdateNodesOp)
         assert update_op.updates[0].value == {"enabled": True}
 
+    def test_update_nodes_mutable_value_isolated_from_submitted_operation_model(self):
+        flow_data = _base_flow_data()
+        operations = parse_flow_operations(
+            [
+                {
+                    "type": "update_nodes",
+                    "updates": [
+                        {
+                            "id": "a",
+                            "op": "set_field",
+                            "path": ["data", "config"],
+                            "value": {"enabled": True},
+                        }
+                    ],
+                }
+            ]
+        )
+
+        result = _apply_flow_operations(flow_data, operations)
+        submitted_update = operations[0].updates[0]
+        submitted_update.value["enabled"] = False
+
+        stored = next(node for node in result.flow_data["nodes"] if node["id"] == "a")
+        assert stored["data"]["config"] == {"enabled": True}
+        update_op = result.forward_ops[0]
+        assert isinstance(update_op, UpdateNodesOp)
+        assert update_op.updates[0].value == {"enabled": True}
+
     @pytest.mark.parametrize(
         "updates",
         [
@@ -295,6 +384,12 @@ class TestApplyFlowOperations:
         assert result.forward_ops[1] == DeleteEdgesOp(type="delete_edges", ids=["e-ab"])
         assert result.deleted_edges == ("e-ab",)
 
+    def test_delete_nodes_rejects_missing_ids(self):
+        flow_data = _base_flow_data()
+
+        with pytest.raises(FlowOperationValidationError, match="node was not in base flow"):
+            apply_flow_operations(flow_data, [{"type": "delete_nodes", "ids": ["missing"]}])
+
     def test_delete_edges_ignores_missing_ids(self):
         flow_data = _base_flow_data()
         result = apply_flow_operations(
@@ -332,6 +427,35 @@ class TestApplyFlowOperations:
 
         assert len(result.flow_data["nodes"]) == 3
         assert any(edge["id"] == "e-bc" for edge in result.flow_data["edges"])
+
+    def test_rejects_update_node_added_earlier_in_same_batch(self):
+        flow_data = _base_flow_data()
+        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
+
+        with pytest.raises(FlowOperationValidationError, match="cannot update node added earlier"):
+            apply_flow_operations(
+                flow_data,
+                [
+                    {"type": "add_nodes", "nodes": [new_node]},
+                    {
+                        "type": "update_nodes",
+                        "updates": [{"id": "c", "op": "set_field", "path": ["position", "x"], "value": 1}],
+                    },
+                ],
+            )
+
+    def test_rejects_delete_node_added_earlier_in_same_batch(self):
+        flow_data = _base_flow_data()
+        new_node = {"id": "c", "type": "generic", "position": {"x": 0, "y": 0}, "data": {}}
+
+        with pytest.raises(FlowOperationValidationError, match="node was not in base flow"):
+            apply_flow_operations(
+                flow_data,
+                [
+                    {"type": "add_nodes", "nodes": [new_node]},
+                    {"type": "delete_nodes", "ids": ["c"]},
+                ],
+            )
 
     def test_rejects_duplicate_node_id_in_add_nodes(self):
         flow_data = _base_flow_data()
@@ -449,6 +573,7 @@ class TestApplyFlowOperations:
         flow_data = _base_flow_data()
         flow_data["description"] = "old"
         flow_data["custom_flag"] = True
+        original = copy.deepcopy(flow_data)
         result = apply_flow_operations(
             flow_data,
             [
@@ -460,6 +585,7 @@ class TestApplyFlowOperations:
             ],
         )
 
+        assert flow_data == original
         assert result.flow_data["description"] == "new"
         assert result.flow_data["notes"] == {"k": "v"}
         assert "custom_flag" not in result.flow_data
@@ -468,6 +594,21 @@ class TestApplyFlowOperations:
         assert isinstance(metadata_op, UpdateMetadataOp)
         assert metadata_op.fields == {"description": "new", "notes": {"k": "v"}}
         assert metadata_op.delete_keys == ["custom_flag"]
+
+    def test_update_metadata_mutable_value_isolated_from_submitted_operation_model(self):
+        flow_data = _base_flow_data()
+        operations = parse_flow_operations(
+            [{"type": "update_metadata", "fields": {"notes": {"k": "v"}, "description": "new"}, "delete_keys": []}]
+        )
+
+        result = _apply_flow_operations(flow_data, operations)
+        operations[0].fields["notes"]["k"] = "changed"
+
+        assert result.flow_data["description"] == "new"
+        assert result.flow_data["notes"] == {"k": "v"}
+        metadata_op = result.forward_ops[0]
+        assert isinstance(metadata_op, UpdateMetadataOp)
+        assert metadata_op.fields["notes"] == {"k": "v"}
 
     def test_update_metadata_rejects_graph_collection_keys(self):
         flow_data = _base_flow_data()

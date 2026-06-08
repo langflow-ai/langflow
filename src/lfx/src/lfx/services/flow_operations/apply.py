@@ -27,7 +27,7 @@ from lfx.services.flow_operations.ops import (
     UpdateMetadataOp,
     UpdateNodeEntry,
     UpdateNodesOp,
-    coalesce_delete_ids,
+    deduplicate_delete_ids,
     normalize_requested_ops,
 )
 
@@ -49,6 +49,10 @@ class GraphState:
     nodes_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
     edges_by_id: dict[str, dict[str, Any]] = field(default_factory=dict)
     edge_ids_by_node_id: dict[str, set[str]] = field(default_factory=dict)
+    # Node ids read from base_flow["nodes"] before applying operations.
+    base_flow_node_ids: set[str] = field(default_factory=set)
+    # Base-flow node ids whose payload has already been copied before mutation.
+    copied_base_flow_node_ids: set[str] = field(default_factory=set)
 
     def __post_init__(self) -> None:
         if not isinstance(self.flow_data.get("nodes"), list):
@@ -68,15 +72,15 @@ class GraphState:
 
 
 def build_graph_state(base_flow: dict[str, Any]) -> GraphState:
-    """Deep-copy flow.data and build node/edge indexes."""
-    copied = copy.deepcopy(base_flow)
-    state = GraphState(flow_data=copied, edge_ids_by_node_id=defaultdict(set))
+    """Shallow-copy flow.data and index graph payloads by reference."""
+    state = GraphState(flow_data=dict(base_flow), edge_ids_by_node_id=defaultdict(set))
     for node in state.nodes:
         node_id = _require_node_id(node, context="flow.data.nodes", error_cls=FlowDataValidationError)
         if node_id in state.nodes_by_id:
             msg = f"flow.data.nodes: duplicate node id: {node_id!r}"
             raise FlowDataValidationError(msg)
         state.nodes_by_id[node_id] = node
+        state.base_flow_node_ids.add(node_id)
 
     for edge in state.edges:
         edge_id, source, target = _require_edge_endpoints(
@@ -99,6 +103,21 @@ def finalize_graph(state: GraphState) -> dict[str, Any]:
     state.flow_data["nodes"] = list(state.nodes_by_id.values())
     state.flow_data["edges"] = list(state.edges_by_id.values())
     return state.flow_data
+
+
+def _copy_mutable_graph_value(value: Any) -> Any:
+    """Deep-copy mutable JSON values to prevent shared state between the original and applied graph."""
+    if value is None or isinstance(value, (bool, int, float, str)):
+        return value
+    return copy.deepcopy(value)
+
+
+def _copy_base_flow_node_before_mutation(state: GraphState, node_id: str) -> dict[str, Any]:
+    """Deep-copy mutable node payloads to prevent shared state between the original and applied graph."""
+    if node_id in state.base_flow_node_ids and node_id not in state.copied_base_flow_node_ids:
+        state.nodes_by_id[node_id] = copy.deepcopy(state.nodes_by_id[node_id])
+        state.copied_base_flow_node_ids.add(node_id)
+    return state.nodes_by_id[node_id]
 
 
 def apply_flow_operations(
@@ -157,7 +176,7 @@ def _apply_add_nodes(state: GraphState, nodes: list[dict[str, Any]]) -> list[Flo
             msg = f"add_nodes: node id already exists: {node_id!r}"
             raise FlowOperationValidationError(msg)
         seen_in_request.add(node_id)
-        payload = copy.deepcopy(node)
+        payload = _copy_mutable_graph_value(node)
         state.nodes_by_id[node_id] = payload
         payloads.append(payload)
 
@@ -174,6 +193,9 @@ def _apply_update_nodes(state: GraphState, updates: list[UpdateNodeEntry]) -> li
         if node_id not in state.nodes_by_id:
             msg = f"update_nodes: node does not exist: {node_id!r}"
             raise FlowOperationValidationError(msg)
+        if node_id not in state.base_flow_node_ids:
+            msg = f"update_nodes: cannot update node that does not exist in the original flow: {node_id!r}"
+            raise FlowOperationValidationError(msg)
         NODE_UPDATE_HANDLERS[update.op](state, update, index)
     return [UpdateNodesOp(type="update_nodes", updates=copy.deepcopy(updates))]
 
@@ -187,7 +209,8 @@ def _apply_set_node_field_update(
     index: int,
 ) -> None:
     _validate_node_field_path(update.path, context=f"update_nodes[{index}].path")
-    _set_node_field(state.nodes_by_id[update.id], update.path, update.value, context=f"update_nodes[{index}]")
+    node = _copy_base_flow_node_before_mutation(state, update.id)
+    _set_node_field(node, update.path, update.value, context=f"update_nodes[{index}]")
 
 
 def _apply_delete_node_field_update(
@@ -196,7 +219,8 @@ def _apply_delete_node_field_update(
     index: int,
 ) -> None:
     _validate_node_field_path(update.path, context=f"update_nodes[{index}].path")
-    _delete_node_field(state.nodes_by_id[update.id], update.path, context=f"update_nodes[{index}]")
+    node = _copy_base_flow_node_before_mutation(state, update.id)
+    _delete_node_field(node, update.path, context=f"update_nodes[{index}]")
 
 
 NODE_UPDATE_HANDLERS: dict[str, NodeUpdateHandler] = {
@@ -262,7 +286,7 @@ def _write_object_path_part(
         raise FlowOperationValidationError(msg)
     # Prevent stored graph state from sharing mutable objects with the operation
     # payload returned in forward_ops.
-    json_object[path_part] = copy.deepcopy(value)
+    json_object[path_part] = _copy_mutable_graph_value(value)
 
 
 def _write_array_path_part(
@@ -280,7 +304,7 @@ def _write_array_path_part(
         raise FlowOperationValidationError(msg)
     # Prevent stored graph state from sharing mutable objects with the operation
     # payload returned in forward_ops.
-    json_array[path_part] = copy.deepcopy(value)
+    json_array[path_part] = _copy_mutable_graph_value(value)
 
 
 def _read_json_value_before_last_path_part(
@@ -330,14 +354,19 @@ def _is_json_array_index(path_part: NodeFieldPathSegment) -> bool:
 
 
 def _apply_delete_nodes(state: GraphState, ids: list[str]) -> tuple[list[FlowOperation], list[str]]:
-    coalesced_ids = coalesce_delete_ids(ids)
-    if not coalesced_ids:
+    delete_ids = deduplicate_delete_ids(ids)
+    if not delete_ids:
         return [], []
+
+    for node_id in delete_ids:
+        if node_id not in state.base_flow_node_ids:
+            msg = f"delete_nodes: cannot delete node that does not exist in the original flow: {node_id!r}"
+            raise FlowOperationValidationError(msg)
 
     removed_node_ids: list[str] = []
     incident_edge_ids: list[str] = []
 
-    for node_id in coalesced_ids:
+    for node_id in delete_ids:
         if node_id not in state.nodes_by_id:
             continue
         del state.nodes_by_id[node_id]
@@ -376,7 +405,7 @@ def _apply_add_edges(state: GraphState, edges: list[dict[str, Any]]) -> list[Flo
             msg = f"add_edges: target node does not exist: {target!r}"
             raise FlowOperationValidationError(msg)
         seen_in_request.add(edge_id)
-        payload = copy.deepcopy(edge)
+        payload = _copy_mutable_graph_value(edge)
         _insert_edge(state, payload)
         payloads.append(payload)
 
@@ -404,27 +433,27 @@ def _apply_update_metadata(
             msg = f"update_metadata: cannot delete graph collection key {key!r}"
             raise FlowOperationValidationError(msg)
 
-    coalesced_delete_keys = coalesce_delete_ids(delete_keys)
-    if not fields and not coalesced_delete_keys:
+    keys_to_delete = deduplicate_delete_ids(delete_keys)
+    if not fields and not keys_to_delete:
         return []
 
     for key, value in fields.items():
-        state.flow_data[key] = copy.deepcopy(value)
-    for key in coalesced_delete_keys:
+        state.flow_data[key] = _copy_mutable_graph_value(value)
+    for key in keys_to_delete:
         state.flow_data.pop(key, None)
 
     return [
         UpdateMetadataOp(
             type="update_metadata",
             fields=copy.deepcopy(fields),
-            delete_keys=coalesced_delete_keys,
+            delete_keys=keys_to_delete,
         )
     ]
 
 
 def _remove_edges(state: GraphState, ids: list[str]) -> list[str]:
     removed_edge_ids: list[str] = []
-    for edge_id in coalesce_delete_ids(ids):
+    for edge_id in deduplicate_delete_ids(ids):
         edge = state.edges_by_id.pop(edge_id, None)
         if edge is None:
             continue

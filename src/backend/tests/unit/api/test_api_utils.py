@@ -2,7 +2,7 @@ from unittest.mock import patch
 
 import pytest
 from langflow.api.utils import get_suggestion_message, remove_api_keys
-from langflow.api.utils.core import build_content_disposition
+from langflow.api.utils.core import build_content_disposition, is_api_key_template_field, remove_api_keys_from_template
 from langflow.services.database.models.flow.utils import get_outdated_components
 from langflow.utils.version import get_version_info
 
@@ -45,6 +45,27 @@ def test_get_outdated_components():
         result = get_outdated_components(flow)
         # Assert the result is as expected
         assert result == expected_outdated_components
+
+
+def test_template_api_key_helpers():
+    template = {
+        "api_key": {"name": "openai_api_key", "password": True, "value": "secret"},  # pragma: allowlist secret
+        "truthy_password": {"name": "api_token", "password": "yes", "value": "secret"},  # pragma: allowlist secret
+        "not_secret": {"name": "display_name", "password": False, "value": "visible"},
+        "missing_name": {"password": True, "value": "visible"},
+    }
+
+    assert is_api_key_template_field(template["api_key"])
+    assert is_api_key_template_field(template["truthy_password"])
+    assert not is_api_key_template_field(template["not_secret"])
+    assert not is_api_key_template_field(template["missing_name"])
+
+    remove_api_keys_from_template(template)
+
+    assert template["api_key"]["value"] is None
+    assert template["truthy_password"]["value"] is None
+    assert template["not_secret"]["value"] == "visible"
+    assert template["missing_name"]["value"] == "visible"
 
 
 def test_remove_api_keys():
