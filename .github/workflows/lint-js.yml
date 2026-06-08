@@ -2,6 +2,12 @@ name: Lint Frontend
 
 on:
   workflow_call:
+    inputs:
+      allow-failure:
+        description: "When true, Biome errors are reported but job exits 0 (non-blocking)."
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       branch:
@@ -86,7 +92,14 @@ jobs:
           cd src/frontend
           # NUL-delimit so paths containing spaces (e.g. starter-project
           # specs like "Basic Prompting.spec.ts") aren't split by xargs.
-          printf '%s\n' "$RELATIVE_FILES" | tr '\n' '\0' \
-            | xargs -0 npx @biomejs/biome check \
-              --files-ignore-unknown=true \
-              --diagnostic-level=error
+          if ${{ inputs.allow-failure || 'false' }}; then
+            printf '%s\n' "$RELATIVE_FILES" | tr '\n' '\0' \
+              | xargs -0 npx @biomejs/biome check \
+                --files-ignore-unknown=true \
+                --diagnostic-level=error || echo "Biome found errors (non-blocking for this run)."
+          else
+            printf '%s\n' "$RELATIVE_FILES" | tr '\n' '\0' \
+              | xargs -0 npx @biomejs/biome check \
+                --files-ignore-unknown=true \
+                --diagnostic-level=error
+          fi
