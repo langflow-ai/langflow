@@ -854,6 +854,7 @@ async def list_deployments_synced(
     deployment_type: DeploymentType | None,
     flow_version_ids: list[UUID] | None = None,
     project_id: UUID | None = None,
+    allowed_ids: list[UUID] | None = None,
 ) -> tuple[list[tuple[Deployment, int, list[tuple[UUID, str | None]]]], int, dict[str, dict[str, Any]]]:
     """Return a page of deployments, deleting any DB rows the provider doesn't recognise.
 
@@ -861,6 +862,11 @@ async def list_deployments_synced(
     provider for validation, deletes stale rows inline, and syncs
     provider-owned display metadata for rows that still exist. The cursor
     does not advance for deleted rows (deletion shifts subsequent offsets down).
+
+    ``allowed_ids`` is the DB-layer authorization prefilter, threaded into both
+    the page query and the total count so a registered authorization plugin can
+    constrain the listing to (owner ⊕ visible) rows without a per-row enforce.
+    ``None`` (OSS default) keeps the listing owner-scoped exactly as before.
     """
     accepted: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]] = []
     accepted_deployment_ids: list[UUID] = []
@@ -880,6 +886,7 @@ async def list_deployments_synced(
             limit=size - len(accepted),
             flow_version_ids=flow_version_ids,
             project_id=project_id,
+            allowed_ids=allowed_ids,
         )
         if not batch:
             break
@@ -961,6 +968,7 @@ async def list_deployments_synced(
         deployment_provider_account_id=provider_id,
         flow_version_ids=flow_version_ids,
         project_id=project_id,
+        allowed_ids=allowed_ids,
     )
     return accepted, total, provider_data_by_resource_key
 

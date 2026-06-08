@@ -4,13 +4,19 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any, TypeVar
 
+from sqlmodel import col, or_
+
 from langflow.services.authorization.actions import FlowAction
 from langflow.services.authorization.guards import _auth_context, _coerce_action
 from langflow.services.deps import get_authorization_service, get_settings_service
 
 if TYPE_CHECKING:
-    from collections.abc import Callable
+    from collections.abc import Callable, Sequence
     from uuid import UUID
+
+    from sqlalchemy.orm.attributes import InstrumentedAttribute
+    from sqlalchemy.sql.elements import ColumnElement
+    from sqlmodel.sql.expression import SelectOfScalar
 
     from langflow.services.database.models.user.model import User, UserRead
 
@@ -90,3 +96,61 @@ async def filter_visible_resources(
                     decisions[original_index] = allowed
 
     return [item for item, allowed in zip(candidates, decisions, strict=True) if allowed]
+
+
+async def visible_id_prefilter(
+    user: User | UserRead,
+    *,
+    resource_type: str,
+    domain: str = "*",
+    act: FlowAction | str = FlowAction.READ,
+) -> list[UUID] | None:
+    """Return the concrete resource ids the caller may ``act`` on, or ``None``.
+
+    Thin wrapper over :meth:`BaseAuthorizationService.list_visible_resource_ids`
+    that gates on ``AUTHZ_ENABLED``. A concrete list lets a list endpoint push a
+    ``WHERE id IN (...)`` prefilter into its DB query (unioned with the caller's
+    owned rows via :func:`restrict_to_owned_or_visible`) and skip the fetch-all
+    + per-row :func:`filter_visible_resources` fallback — the point of the hook
+    at large-tenant scale.
+
+    Returns ``None`` (meaning "no prefilter; use the in-memory fallback") when
+    ``AUTHZ_ENABLED`` is false or when the registered service declines to
+    prefilter — the OSS pass-through always declines (its base
+    ``list_visible_resource_ids`` returns ``None``). Callers MUST treat ``None``
+    as "preserve today's owner-scoped query plus :func:`filter_visible_resources`"
+    so OSS behavior is byte-for-byte unchanged.
+    """
+    settings = get_settings_service()
+    if not settings.auth_settings.AUTHZ_ENABLED:
+        return None
+    authz = get_authorization_service()
+    return await authz.list_visible_resource_ids(
+        user_id=getattr(user, "id", None),
+        resource_type=resource_type,
+        domain=domain,
+        act=_coerce_action(act),
+        context=_auth_context(user),
+    )
+
+
+def restrict_to_owned_or_visible(
+    stmt: SelectOfScalar[T],
+    *,
+    id_column: InstrumentedAttribute,
+    owner_clause: ColumnElement[bool],
+    visible_ids: Sequence[UUID],
+) -> SelectOfScalar[T]:
+    """Constrain ``stmt`` to the prefilter union: owner rows ⊕ plugin-visible ids.
+
+    A row is kept when it satisfies ``owner_clause`` (the caller's own rows,
+    always visible via the owner-override invariant — so an empty ``visible_ids``
+    still returns every owned row) OR its id is in ``visible_ids`` (rows a
+    registered authorization plugin reports the caller may read).
+
+    Apply this BEFORE pagination so the page total counts only rows in the
+    union; an in-memory post-filter would leave the total overcounting rows it
+    then drops. ``visible_ids`` comes from :func:`visible_id_prefilter`; pass it
+    only when that returned a concrete list (``None`` keeps today's behavior).
+    """
+    return stmt.where(or_(col(id_column).in_(list(visible_ids)), owner_clause))

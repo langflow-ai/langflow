@@ -1,0 +1,131 @@
+"""DB-layer tests for the deployment authz prefilter (``allowed_ids``).
+
+``list_deployments_page`` / ``count_deployments_by_provider`` gain an
+``allowed_ids`` parameter so a registered authorization plugin can widen the
+owner-scoped listing to the union of owner rows and the ids it reports visible —
+all in one SQL statement (no per-row enforce, so no N+1). ``None`` preserves the
+owner-only behavior exactly.
+
+The rows here deliberately seed foreign-owned deployments under the requester's
+provider account so the union semantics are observable at the DB layer (the
+route layer additionally scopes by provider ownership).
+"""
+
+from uuid import uuid4
+
+import pytest
+from langflow.services.database.models.deployment.crud import (
+    count_deployments_by_provider,
+    list_deployments_page,
+)
+from langflow.services.database.models.deployment.model import Deployment
+from langflow.services.database.models.deployment_provider_account.model import DeploymentProviderAccount
+from langflow.services.database.models.deployment_provider_account.schemas import DeploymentProviderKey
+from langflow.services.database.models.folder.model import Folder
+from langflow.services.database.models.user.model import User
+from lfx.services.adapters.deployment.schema import DeploymentType
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+async def _seed(async_session: AsyncSession):
+    """Seed one provider account (owned by ``owner``) plus owned + foreign rows."""
+    owner = User(username=f"owner-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
+    other = User(username=f"other-{uuid4()}", password=f"hashed-{uuid4()}", is_active=True)
+    project = Folder(name=f"project-{uuid4()}", user_id=owner.id)
+    provider = DeploymentProviderAccount(
+        user_id=owner.id,
+        name=f"provider-{uuid4()}",
+        provider_tenant_id=None,
+        provider_key=DeploymentProviderKey.WATSONX_ORCHESTRATE,
+        provider_url="https://api.us-south.wxo.cloud.ibm.com/instances/tenant-1",
+        api_key="encrypted-api-key",  # pragma: allowlist secret
+    )
+    async_session.add_all([owner, other, project, provider])
+    await async_session.commit()
+
+    def _mk(user_id):
+        return Deployment(
+            user_id=user_id,
+            project_id=project.id,
+            deployment_provider_account_id=provider.id,
+            resource_key=f"rk-{uuid4()}",
+            display_name=f"dep-{uuid4()}",
+            deployment_type=DeploymentType.AGENT,
+        )
+
+    owned = _mk(owner.id)
+    foreign_visible = _mk(other.id)
+    foreign_hidden = _mk(other.id)
+    async_session.add_all([owned, foreign_visible, foreign_hidden])
+    await async_session.commit()
+    return owner, provider, owned, foreign_visible, foreign_hidden
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_none_allowed_ids_is_owner_only(async_session: AsyncSession):
+    """allowed_ids=None (OSS default) returns owner rows only — unchanged behavior."""
+    owner, provider, owned, foreign_visible, foreign_hidden = await _seed(async_session)
+
+    rows = await list_deployments_page(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+    )
+
+    returned = {deployment.id for deployment, _count, _matched in rows}
+    assert returned == {owned.id}
+    assert foreign_visible.id not in returned
+    assert foreign_hidden.id not in returned
+
+
+@pytest.mark.asyncio
+async def test_list_deployments_page_allowed_ids_unions_owner_and_visible(async_session: AsyncSession):
+    """A concrete allowed_ids list widens the page to (owner ⊕ visible) — and no further."""
+    owner, provider, owned, foreign_visible, foreign_hidden = await _seed(async_session)
+
+    rows = await list_deployments_page(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        offset=0,
+        limit=20,
+        allowed_ids=[foreign_visible.id],
+    )
+
+    returned = {deployment.id for deployment, _count, _matched in rows}
+    # Owner row is always present (owner-override); the explicitly-visible
+    # foreign row is added; the non-listed foreign row stays hidden.
+    assert returned == {owned.id, foreign_visible.id}
+    assert foreign_hidden.id not in returned
+
+
+@pytest.mark.asyncio
+async def test_count_deployments_by_provider_reflects_allowed_ids(async_session: AsyncSession):
+    """The total count uses the same predicate as the page, so pagination stays consistent."""
+    owner, provider, _owned, foreign_visible, _foreign_hidden = await _seed(async_session)
+
+    owner_only = await count_deployments_by_provider(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+    )
+    widened = await count_deployments_by_provider(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        allowed_ids=[foreign_visible.id],
+    )
+    empty_allowed = await count_deployments_by_provider(
+        async_session,
+        user_id=owner.id,
+        deployment_provider_account_id=provider.id,
+        allowed_ids=[],
+    )
+
+    assert owner_only == 1
+    assert widened == 2
+    # An empty visible set degrades to owner-only (owner-override invariant),
+    # never to zero.
+    assert empty_allowed == 1

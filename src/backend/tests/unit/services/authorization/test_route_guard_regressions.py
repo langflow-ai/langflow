@@ -10,6 +10,7 @@ import pytest
 _API_V1 = Path(__file__).resolve().parents[4] / "base" / "langflow" / "api" / "v1"
 _FLOWS_FILE = _API_V1 / "flows.py"
 _PROJECTS_FILE = _API_V1 / "projects.py"
+_DEPLOYMENTS_FILE = _API_V1 / "deployments.py"
 _HELPERS_FLOW = Path(__file__).resolve().parents[4] / "base" / "langflow" / "helpers" / "flow.py"
 
 
@@ -43,6 +44,11 @@ def flows_routes() -> dict[str, ast.AsyncFunctionDef]:
 @pytest.fixture(scope="module")
 def projects_routes() -> dict[str, ast.AsyncFunctionDef]:
     return _parse_async_funcs(_PROJECTS_FILE)
+
+
+@pytest.fixture(scope="module")
+def deployments_routes() -> dict[str, ast.AsyncFunctionDef]:
+    return _parse_async_funcs(_DEPLOYMENTS_FILE)
 
 
 @pytest.fixture(scope="module")
@@ -128,6 +134,46 @@ def test_read_project_paginated_branch_filters_via_filter_visible_resources(proj
     assert len(fvr_calls) >= 2, (
         "read_project must call filter_visible_resources on both the paginated "
         "and non-paginated shared-project branches"
+    )
+
+
+def test_read_flows_wires_db_layer_prefilter(flows_routes):
+    """read_flows must call ``visible_id_prefilter`` so an EE plugin can prefilter at the DB.
+
+    Without this the plugin's ``list_visible_resource_ids`` override has no
+    effect on the listing — every candidate row is fetched and filtered in
+    memory, defeating the hook at large-tenant scale.
+    """
+    func = flows_routes["read_flows"]
+    assert _calls(func, "visible_id_prefilter"), "read_flows must consult visible_id_prefilter"
+
+
+def test_read_projects_wires_db_layer_prefilter(projects_routes):
+    """read_projects must call ``visible_id_prefilter`` (DB-layer prefilter)."""
+    func = projects_routes["read_projects"]
+    assert _calls(func, "visible_id_prefilter"), "read_projects must consult visible_id_prefilter"
+
+
+def test_read_project_wires_db_layer_prefilter(projects_routes):
+    """read_project (flows-in-project) must call ``visible_id_prefilter`` too."""
+    func = projects_routes["read_project"]
+    assert _calls(func, "visible_id_prefilter"), "read_project must consult visible_id_prefilter"
+
+
+def test_list_deployments_threads_prefilter_into_synced_query(deployments_routes):
+    """list_deployments must consult the prefilter AND thread it into the synced query.
+
+    Passing ``allowed_ids`` into ``list_deployments_synced`` is what pushes the
+    prefilter down to both the page query and its count, so pagination totals
+    reflect the constraint instead of overcounting denied rows.
+    """
+    func = deployments_routes["list_deployments"]
+    assert _calls(func, "visible_id_prefilter"), "list_deployments must consult visible_id_prefilter"
+    synced_calls = _calls(func, "list_deployments_synced")
+    assert synced_calls, "list_deployments must call list_deployments_synced"
+    assert any(_has_keyword(call, "allowed_ids") for call in synced_calls), (
+        "list_deployments must thread allowed_ids into list_deployments_synced so the "
+        "page query and its total share the prefilter"
     )
 
 
