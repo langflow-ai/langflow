@@ -1,6 +1,6 @@
 [project]
 name = "lfx-arxiv"
-version = "0.1.1"
+version = "0.1.1rc0"
 description = "arXiv search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -15,7 +15,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "arxiv", "search"]
 # but we list it here as a direct runtime dep so the bundle keeps building
 # even if lfx drops it later.
 dependencies = [
-    "lfx>=1.10.0,<2.0.0",
+    "lfx>=1.10.0rc0,<2.0.0",
     "defusedxml>=0.7.1,<1.0.0",
 ]
 

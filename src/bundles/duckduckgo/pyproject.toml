@@ -1,6 +1,6 @@
 [project]
 name = "lfx-duckduckgo"
-version = "0.1.1"
+version = "0.1.1rc0"
 description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -18,7 +18,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
 # "lfx": {"compat": [...]} contract.  langchain-community uses the same
 # range the lfx tree does to keep co-installation lockstep.
 dependencies = [
-    "lfx>=1.10.0,<2.0.0",
+    "lfx>=1.10.0rc0,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",
     "ddgs>=9.0.0",
 ]
