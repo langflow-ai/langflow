@@ -94,8 +94,9 @@ jobs:
         id: verify
         run: |
           cd src/lfx
-          name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
-          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
+          # Root the tree at lfx; a bare `grep lfx` matches bundles like `lfx-ibm` first.
+          name=$(uv tree --package lfx | head -n 1 | awk '{print $1}')
+          version=$(uv tree --package lfx | head -n 1 | awk '{print $2}')
           if [ "$name" != "lfx" ]; then
             echo "Name $name does not match lfx. Exiting the workflow."
             exit 1
@@ -188,9 +189,11 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
-          # Strip extras from package name (e.g., "langflow-base-nightly[complete]" -> "langflow-base-nightly")
+          # Root the tree at langflow-base; it prints as a top-level `langflow-base v<ver>` line,
+          # so a bare `grep langflow-base` would read the version into $name and leave $version empty.
+          name=$(uv tree --package langflow-base | head -n 1 | awk '{print $1}')
+          version=$(uv tree --package langflow-base | head -n 1 | awk '{print $2}')
+          # Strip extras from package name (e.g., "langflow-base[complete]" -> "langflow-base")
           name_without_extras=$(echo $name | sed 's/\[.*\]//')
           if [ "$name_without_extras" != "langflow-base" ]; then
             echo "Name $name_without_extras does not match langflow-base. Exiting the workflow."
