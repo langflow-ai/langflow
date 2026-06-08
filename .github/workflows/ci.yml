@@ -269,6 +269,20 @@ jobs:
       ANTHROPIC_API_KEY: "${{ secrets.ANTHROPIC_API_KEY }}"
       CODECOV_TOKEN: "${{ secrets.CODECOV_TOKEN }}"
 
+  lint-frontend:
+    needs: [path-filter, set-ci-condition]
+    name: Lint Frontend
+    if: |
+      always() &&
+      !cancelled() &&
+      needs.set-ci-condition.outputs.should-run-ci == 'true' &&
+      (
+        inputs.run-all-tests ||
+        (needs.path-filter.result != 'skipped' &&
+        needs.path-filter.outputs.frontend == 'true')
+      )
+    uses: ./.github/workflows/lint-js.yml
+
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
     name: Run Frontend Unit Tests
@@ -431,16 +445,22 @@ jobs:
             --report-dir coverage/final
 
       - name: Upload Merged Frontend Coverage to Codecov
+        if: env.CODECOV_TOKEN != ''
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         uses: codecov/codecov-action@v5
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
+          token: ${{ env.CODECOV_TOKEN }}
           files: coverage/combined/total-frontend-coverage.json
           flags: frontend
-          fail_ci_if_error: true
+          fail_ci_if_error: false
 
   # https://github.com/langchain-ai/langchain/blob/master/.github/workflows/check_diffs.yml
   ci_success:
     name: "CI Success"
+    # Note: `lint-frontend` is intentionally NOT in this list — the Biome
+    # check runs on every PR and shows up in the checks list, but its failure
+    # does NOT block merge (informational only).
     needs:
       [
         validate-pr-title,

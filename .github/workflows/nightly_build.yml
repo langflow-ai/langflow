@@ -82,7 +82,7 @@ jobs:
       # Required to create tag
       contents: write
     outputs:
-      release_tag: ${{ steps.generate_release_tag.outputs.release_tag }}
+      release_tag: ${{ steps.generate_shared_tag.outputs.release_tag }}
       base_tag: ${{ steps.set_base_tag.outputs.base_tag }}
       lfx_tag: ${{ steps.generate_lfx_tag.outputs.lfx_tag }}
       sdk_tag: ${{ steps.generate_sdk_tag.outputs.sdk_tag }}
@@ -107,29 +107,31 @@ jobs:
         run: |
           echo "PWD: $(pwd)"
           find . -name "pypi_nightly_tag.py"
-      - name: Generate main nightly tag
-        id: generate_release_tag
+      - name: Generate shared nightly tag (main == base, lockstep)
+        id: generate_shared_tag
         run: |
+          # langflow-nightly pins langflow-base-nightly[complete]==<exact dev>, so both tags
+          # MUST be identical. Compute them in ONE invocation (single PyPI snapshot) so they
+          # cannot drift across separate calls.
           # NOTE: This outputs the tag with the `v` prefix.
-          RELEASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py main)"
+          TAGS_OUTPUT="$(uv run ./scripts/ci/pypi_nightly_tag.py both)"
+          RELEASE_TAG="$(printf '%s\n' "$TAGS_OUTPUT" | sed -n '1p')"
+          BASE_TAG="$(printf '%s\n' "$TAGS_OUTPUT" | sed -n '2p')"
+          if [ -z "$RELEASE_TAG" ] || [ "$RELEASE_TAG" != "$BASE_TAG" ]; then
+            echo "Shared tag mismatch: release='$RELEASE_TAG' base='$BASE_TAG'. Exiting the workflow."
+            exit 1
+          fi
           echo "release_tag=$RELEASE_TAG" >> $GITHUB_OUTPUT
-          echo "release_tag=$RELEASE_TAG"
+          echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
+          echo "release_tag=$RELEASE_TAG base_tag=$BASE_TAG"
 
       - name: Delete existing tag if it exists
         id: check_release_tag
         run: |
           git fetch --tags
-          git tag -d ${{ steps.generate_release_tag.outputs.release_tag }} || true
-          git push --delete origin ${{ steps.generate_release_tag.outputs.release_tag }} || true
+          git tag -d ${{ steps.generate_shared_tag.outputs.release_tag }} || true
+          git push --delete origin ${{ steps.generate_shared_tag.outputs.release_tag }} || true
           echo "release_tag_exists=false" >> $GITHUB_OUTPUT
-
-      - name: Generate base nightly tag
-        id: generate_base_tag
-        run: |
-          # NOTE: This outputs the tag with the `v` prefix.
-          BASE_TAG="$(uv run ./scripts/ci/pypi_nightly_tag.py base)"
-          echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
-          echo "base_tag=$BASE_TAG"
 
       - name: Generate LFX nightly tag
         id: generate_lfx_tag
@@ -155,8 +157,8 @@ jobs:
           git config --global user.email "bot-nightly-builds@langflow.org"
           git config --global user.name "Langflow Bot"
 
-          RELEASE_TAG="${{ steps.generate_release_tag.outputs.release_tag }}"
-          BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
+          RELEASE_TAG="${{ steps.generate_shared_tag.outputs.release_tag }}"
+          BASE_TAG="${{ steps.generate_shared_tag.outputs.base_tag }}"
           LFX_TAG="${{ steps.generate_lfx_tag.outputs.lfx_tag }}"
           SDK_TAG="${{ steps.generate_sdk_tag.outputs.sdk_tag }}"
           echo "Updating SDK project version to $SDK_TAG"
@@ -167,10 +169,9 @@ jobs:
           uv run --no-sync ./scripts/ci/update_pyproject_combined.py main $RELEASE_TAG $BASE_TAG $LFX_TAG
 
           uv lock
-          cd src/backend/base && uv lock && cd ../../..
           cd src/lfx && uv lock && cd ../..
 
-          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml src/sdk/pyproject.toml uv.lock src/backend/base/uv.lock
+          git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml src/sdk/pyproject.toml uv.lock
           # update_lfx_version.py re-pins each bundle's `lfx` dep to
           # lfx-nightly==<dev>, so any modified bundle pyprojects need to
           # ride the same commit/tag as the rest of the version bumps.
@@ -195,7 +196,7 @@ jobs:
       - name: Checkout main nightly tag
         uses: actions/checkout@v6
         with:
-          ref: ${{ steps.generate_release_tag.outputs.release_tag }}
+          ref: ${{ steps.generate_shared_tag.outputs.release_tag }}
           persist-credentials: true
 
       - name: Retrieve Base Tag
@@ -214,8 +215,8 @@ jobs:
             BASE_TAG="${{ steps.retrieve_base_tag.outputs.base_tag }}"
             echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
             echo "base_tag=$BASE_TAG"
-          elif [ "${{ steps.commit_tag.conclusion }}" != "skipped" ] && [ "${{ steps.generate_base_tag.outputs.base_tag }}" ]; then
-            BASE_TAG="${{ steps.generate_base_tag.outputs.base_tag }}"
+          elif [ "${{ steps.commit_tag.conclusion }}" != "skipped" ] && [ "${{ steps.generate_shared_tag.outputs.base_tag }}" ]; then
+            BASE_TAG="${{ steps.generate_shared_tag.outputs.base_tag }}"
             echo "base_tag=$BASE_TAG" >> $GITHUB_OUTPUT
             echo "base_tag=$BASE_TAG"
           else
@@ -301,15 +302,26 @@ jobs:
       # When triggered manually, use the provided value (default is also true)
       push_to_registry: ${{ github.event_name == 'schedule' || inputs.push_to_registry != false }}
     secrets: inherit
+  db-migration-validation:
+    name: Run DB Migration Validation
+    needs: [create-nightly-tag, release-nightly-build]
+    if: ${{ github.repository == 'langflow-ai/langflow' && always() && needs.release-nightly-build.result == 'success' }}
+    uses: ./.github/workflows/db-migration-validation.yml
+    with:
+      # Pass Docker image reference for docker-compose and version without 'v' prefix for pip
+      # release_tag format: v1.10.0.dev20260522
+      # We need: langflowai/langflow-nightly:1.10.0.dev20260522 for Docker
+      nightly_tag: langflowai/langflow-nightly:${{ needs.create-nightly-tag.outputs.release_tag }}
+    secrets: inherit
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build, db-migration-validation]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' }}
         run: |
           # Determine which job failed
           FAILED_JOB="unknown"
@@ -321,6 +333,8 @@ jobs:
             FAILED_JOB="frontend-tests-windows (non-blocking)"
           elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
             FAILED_JOB="backend-unit-tests"
+          elif [ "${{ needs.db-migration-validation.result }}" == "failure" ]; then
+            FAILED_JOB="db-migration-validation"
           fi
 
           curl -X POST -H 'Content-type: application/json' \
@@ -366,7 +380,7 @@ jobs:
           }" ${{ secrets.LANGFLOW_ENG_SLACK_WEBHOOK_URL }}
 
       - name: Send success notification to Slack
-        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' }}
+        if: ${{ !inputs.skip_slack && needs.release-nightly-build.result == 'success' && needs.db-migration-validation.result != 'failure' }}
         run: |
           curl -X POST -H 'Content-type: application/json' \
           --data '{

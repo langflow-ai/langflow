@@ -18,6 +18,7 @@ from langflow.services.database.models.user.crud import get_user_by_id
 
 from lfx.base.knowledge_bases.knowledge_base_utils import get_knowledge_bases
 from lfx.base.models.unified_models import get_embedding_model_options, get_embeddings
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.components.processing.converter import convert_to_dataframe
 from lfx.custom import Component
 from lfx.io import (
@@ -389,6 +390,7 @@ class KnowledgeIngestionComponent(Component):
             persist_directory=str(vector_store_dir),
             embedding_function=embedding_function,
             collection_name=self.knowledge_base,
+            **chroma_langchain_collection_kwargs(),
         )
 
         # Convert Data objects to LangChain Documents
@@ -417,6 +419,7 @@ class KnowledgeIngestionComponent(Component):
         chroma = Chroma(
             persist_directory=str(kb_path),
             collection_name=self.knowledge_base,
+            **chroma_langchain_collection_kwargs(),
         )
 
         # Get all documents and their metadata

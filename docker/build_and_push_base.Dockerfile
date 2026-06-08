@@ -42,7 +42,6 @@ COPY ./uv.lock /app/uv.lock
 COPY ./README.md /app/README.md
 COPY ./pyproject.toml /app/pyproject.toml
 COPY ./src/backend/base/README.md /app/src/backend/base/README.md
-COPY ./src/backend/base/uv.lock /app/src/backend/base/uv.lock
 COPY ./src/backend/base/pyproject.toml /app/src/backend/base/pyproject.toml
 # Copy lfx metadata files since it's a workspace member
 COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
@@ -101,6 +100,15 @@ RUN useradd user -u 1000 -g 0 --no-create-home --home-dir /app/data
 
 COPY --from=builder --chown=1000 /app/.venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
+
+# Pre-create LANGFLOW_CONFIG_DIR (the default location used by the docker_example
+# compose file) with the non-root user as owner. When the official compose mounts
+# a fresh named volume at /app/langflow, Docker copies this directory's ownership
+# and permissions into the new volume, so the in-container uid=1000 user can
+# write secret_key, profile_pictures, etc. Without this, the volume is created
+# as root:root and Langflow crashes during startup with PermissionError on
+# /app/langflow/secret_key. See https://github.com/langflow-ai/langflow/issues/10437
+RUN mkdir -p /app/langflow && chown -R 1000:0 /app/langflow && chmod -R g+rwX /app/langflow
 
 LABEL org.opencontainers.image.title=langflow
 LABEL org.opencontainers.image.authors=['Langflow']

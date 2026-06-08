@@ -60,6 +60,7 @@ EXPECTED_FIELDS = {
     # CacheSettings
     "cache_type",
     "cache_expire",
+    "cache_dir",
     "langchain_cache",
     "redis_host",
     "redis_port",

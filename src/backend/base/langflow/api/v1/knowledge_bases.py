@@ -11,6 +11,10 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Upload
 from langchain_chroma import Chroma
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from lfx.base.data.utils import extract_text_from_bytes
+from lfx.base.vectorstores.chroma_security import (
+    chroma_client_create_collection_kwargs,
+    chroma_langchain_collection_kwargs,
+)
 from lfx.log import logger
 
 from langflow.api.utils import CurrentActiveUser
@@ -108,7 +112,7 @@ async def create_knowledge_base(
         # This ensures files exist for read operations and avoids 'readonly' errors later
         try:
             client = KBStorageHelper.get_fresh_chroma_client(kb_path)
-            client.create_collection(name=kb_name)
+            client.create_collection(name=kb_name, **chroma_client_create_collection_kwargs())
         except (OSError, ValueError, chromadb.errors.ChromaError) as e:
             logger.warning("Initial Chroma setup for %s failed: %s", kb_name, e)
         finally:
@@ -573,6 +577,7 @@ async def get_knowledge_base_chunks(
         chroma = Chroma(
             client=client,
             collection_name=kb_name,
+            **chroma_langchain_collection_kwargs(),
         )
 
         # Access the raw collection

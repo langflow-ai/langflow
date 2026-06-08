@@ -194,15 +194,18 @@ jobs:
           name_without_extras=$(echo $name | sed 's/\[.*\]//')
           if [ "$name_without_extras" != "langflow-base-nightly" ]; then
             echo "Name $name_without_extras does not match langflow-base-nightly. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           # Strip the leading `v` from the version
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
+          echo "skipped=false" >> $GITHUB_OUTPUT
 
       - name: Build Langflow Base for distribution
         run: |
@@ -472,10 +475,60 @@ jobs:
         run: |
           make publish base=true
 
+  publish-nightly-bundles:
+    name: Publish Langflow Bundles Nightly to PyPI
+    # langflow-nightly pins each `lfx-<name>-nightly==<dev>` exactly, so the
+    # bundles must be on PyPI before main is published (publish-nightly-main
+    # gates on this job). They depend on `lfx-nightly`, so gate on the lfx
+    # publish too (or skip it when lfx isn't being rebuilt).
+    needs: [build-nightly-main, test-cross-platform, publish-nightly-lfx]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bundles artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-bundles
+          path: bundles-dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish bundles to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          shopt -s nullglob
+          wheels=(bundles-dist/*.whl)
+          if [ ${#wheels[@]} -eq 0 ]; then
+            echo "No bundle wheels to publish."
+            exit 1
+          fi
+          failed=0
+          for wheel in "${wheels[@]}"; do
+            echo "Publishing $wheel"
+            # Capture stderr so a re-run without a version bump is a no-op for
+            # an already-published bundle instead of failing the whole job.
+            if ! err=$(uv publish "$wheel" 2>&1); then
+              echo "$err"
+              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
+                echo "Skipping $wheel: already published."
+              else
+                echo "Publish failed for $wheel"
+                failed=1
+              fi
+            fi
+          done
+          if [ "$failed" = "1" ]; then
+            exit 1
+          fi
+
   publish-nightly-main:
     name: Publish Langflow Main Nightly to PyPI
-    needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
-    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' }}
+    needs: [build-nightly-main, test-cross-platform, publish-nightly-base, publish-nightly-bundles]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' && needs.publish-nightly-bundles.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
