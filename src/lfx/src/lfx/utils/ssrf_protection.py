@@ -425,11 +425,35 @@ def validate_connector_url_for_ssrf(url: str) -> None:
     :func:`validate_url_for_ssrf` (which still respects ``ssrf_protection_enabled`` and the
     allowlist) for the actual host policy.
 
+    DNS-rebinding residual: unlike the API Request component (which uses
+    :func:`validate_and_resolve_url` to pin the validated IP), connectors hand the URL to a
+    third-party client (chromadb, pymilvus, qdrant-client, SQLAlchemy, the ollama client, ...)
+    that re-resolves DNS at connect time and exposes no hook to dial a pre-resolved IP without
+    breaking TLS SNI / cert validation. So this guard is validate-then-connect and a
+    TOCTOU/DNS-rebinding attacker with a fast-flipping record could still slip an internal IP
+    past it. The high-value targets (cloud metadata, RFC1918 literals) are literal IPs with no
+    DNS to rebind and are blocked identically here.
+
     Raises:
-        SSRFProtectionError: If connector validation is enabled and the host is blocked.
+        SSRFProtectionError: If connector validation is enabled and the host is blocked, or the
+            URL is not an http(s) URL with a host (the only shape this guard can validate).
     """
     if not is_connector_ssrf_validation_enabled():
         return
+    # The shared validator only understands http/https URLs that carry a host. Connector fields
+    # are sometimes a bare "host:port" (e.g. Milvus) or a non-HTTP scheme, which urlparse maps to
+    # a missing/garbage scheme -- without this, that would surface as a confusing
+    # "Invalid URL scheme ''". Only raise when host validation would actually run (global SSRF
+    # protection on); otherwise stay a no-op exactly as before.
+    if is_ssrf_protection_enabled():
+        parsed = urlparse(url)
+        if parsed.scheme not in ("http", "https") or not parsed.hostname:
+            msg = (
+                f"Connector URL must be an http(s) URL with a host for SSRF validation; got {url!r}. "
+                "Use an explicit scheme (e.g. 'http://host:port'); to reach an internal host, also add "
+                "it to LANGFLOW_SSRF_ALLOWED_HOSTS (allowlisting alone does not permit a scheme-less host)."
+            )
+            raise SSRFProtectionError(msg)
     validate_url_for_ssrf(url)
 
 

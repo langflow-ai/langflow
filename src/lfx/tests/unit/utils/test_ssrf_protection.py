@@ -1,5 +1,6 @@
 """Unit tests for SSRF protection utilities."""
 
+import os
 from contextlib import contextmanager
 from unittest.mock import MagicMock, patch
 
@@ -11,6 +12,7 @@ from lfx.utils.ssrf_protection import (
     is_ip_blocked,
     is_ssrf_protection_enabled,
     resolve_hostname,
+    validate_connector_url_for_ssrf,
     validate_database_url_for_ssrf,
     validate_git_repository_url,
     validate_url_for_ssrf,
@@ -597,3 +599,49 @@ class TestGitRepositoryURLValidation:
         ):
             mock_resolve.return_value = ["172.18.0.2"]
             validate_database_url_for_ssrf("postgresql://database:5432/app")
+
+
+class TestConnectorURLValidation:
+    """Tests for validate_connector_url_for_ssrf (opt-in connector host validation)."""
+
+    def test_noop_when_connector_validation_disabled(self):
+        """With the connector flag off, even a metadata URL is a no-op (default behavior)."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "false"}),
+            mock_ssrf_settings(enabled=True),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/latest/meta-data/")
+
+    def test_blocks_metadata_when_enabled(self):
+        """With both flags on, a metadata URL is blocked (defers to validate_url_for_ssrf)."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError),
+        ):
+            validate_connector_url_for_ssrf("http://169.254.169.254/")
+
+    @pytest.mark.parametrize(
+        "url",
+        ["host:19530", "localhost:19530", "10.0.0.5:5432", "my-milvus", "grpc://h:443"],
+    )
+    def test_scheme_less_host_gives_clear_error(self, url):
+        """A bare host[:port] / non-http scheme yields a connector-specific message.
+
+        Without this, urlparse maps these to a missing/garbage scheme and the shared validator
+        would surface a confusing "Invalid URL scheme ''" instead.
+        """
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=True),
+            pytest.raises(SSRFProtectionError, match=r"http\(s\) URL with a host"),
+        ):
+            validate_connector_url_for_ssrf(url)
+
+    def test_scheme_less_noop_when_global_ssrf_off(self):
+        """When global SSRF protection is off, the wrapper stays a no-op even for a bare host."""
+        with (
+            patch.dict(os.environ, {"LANGFLOW_CONNECTOR_SSRF_VALIDATION_ENABLED": "true"}),
+            mock_ssrf_settings(enabled=False),
+        ):
+            validate_connector_url_for_ssrf("host:19530")
