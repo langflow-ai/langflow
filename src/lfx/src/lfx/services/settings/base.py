@@ -569,6 +569,19 @@ class Settings(BaseSettings):
     Has no effect when allow_custom_components is True (the flag is not blocking anything
     to override)."""
 
+    allow_public_custom_components: bool = False
+    """If set to True, the unauthenticated public flow build path
+    (POST /api/v1/build_public_tmp/{flow_id}/flow) honors allow_custom_components just like
+    the authenticated build path.
+
+    Default is False: the public path enforces the component-template allow-list (hash gate)
+    regardless of allow_custom_components, so anonymous visitors can only trigger component
+    code that matches a known server template. The global allow_custom_components flag grants
+    custom-code execution to *authenticated* users; it is intentionally not extended to the
+    unauthenticated public path, which builds flows as their owner (report H1-3754930
+    follow-up). Enable this only if you knowingly want public flows to run custom component
+    code permitted by allow_custom_components."""
+
     # SSRF Protection
     ssrf_protection_enabled: bool = True
     """If set to True, Langflow will enable SSRF (Server-Side Request Forgery) protection.

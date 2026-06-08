@@ -801,6 +801,52 @@ async def test_build_public_tmp_without_data_parameter(client, json_memory_chatb
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_rejects_custom_component(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """H1-3754930 follow-up: an unrecognized custom component must be rejected on the public path.
+
+    Under the default allow_public_custom_components=False, the unauthenticated public build path
+    runs only the server's trusted code for known component types and rejects custom/unknown
+    component code, so an anonymous visitor cannot trigger arbitrary server-side code execution
+    even when allow_custom_components is True (the default).
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "EvilCustom-1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "EvilCustom-1",
+                "type": "TotallyCustomEvilComponent",
+                "node": {
+                    "display_name": "Evil Custom",
+                    "template": {"code": {"value": "import os\nos.system('id')\n"}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-custom-component-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_get_build_events_public_tmp_job_accessible_by_any_auth_user(
     client, json_memory_chatbot_no_llm, logged_in_headers, user_two, monkeypatch
 ):
