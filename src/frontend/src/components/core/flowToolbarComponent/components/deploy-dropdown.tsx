@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Switch } from "@/components/ui/switch";
+import { usePermissions } from "@/contexts/permissionsContext";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import { CustomLink } from "@/customization/components/custom-link";
 import { ENABLE_PUBLISH, ENABLE_WIDGET } from "@/customization/feature-flags";
@@ -50,6 +51,9 @@ export default function PublishDropdown({
   const isPublished = currentFlow?.access_type === "PUBLIC";
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
+  const { can } = usePermissions();
+  // Sharing/publishing changes the flow's access settings → gate on write.
+  const canShare = can(flowId, "write");
   const [openExportModal, setOpenExportModal] = useState(false);
   const { t } = useTranslation();
 
@@ -100,6 +104,7 @@ export default function PublishDropdown({
             size="md"
             className="!px-2.5 font-normal"
             data-testid="publish-button"
+            disabled={!canShare}
           >
             {t("misc.share")}
             <IconComponent name="ChevronDown" className="!h-5 !w-5" />

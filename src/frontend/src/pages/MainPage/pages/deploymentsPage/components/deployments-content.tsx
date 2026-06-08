@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useTranslation } from "react-i18next";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useDeleteDeployment } from "@/controllers/API/queries/deployments/use-delete-deployment";
 import { useDeleteWithConfirmation } from "../hooks/use-delete-with-confirmation";
 import { useTestDeploymentModal } from "../hooks/use-test-deployment-modal";
@@ -62,18 +63,23 @@ export default function DeploymentsContent({
     if (deployments.length === 0)
       return <DeploymentsEmptyState onAction={() => setStepperOpen(true)} />;
     return (
-      <DeploymentsTable
-        deployments={deployments}
-        providerMap={providerMap}
-        deletingId={deploymentDelete.deletingId}
-        onTestDeployment={testModal.handleTestDeployment}
-        onViewDetails={(deployment) => setDetailsDeployment(deployment)}
-        onUpdateDeployment={(deployment) => {
-          setEditingDeployment(deployment);
-          setStepperOpen(true);
-        }}
-        onDeleteDeployment={deploymentDelete.requestDelete}
-      />
+      <PermissionsProvider
+        resourceType="deployment"
+        resourceIds={deployments.map((deployment) => deployment.id)}
+      >
+        <DeploymentsTable
+          deployments={deployments}
+          providerMap={providerMap}
+          deletingId={deploymentDelete.deletingId}
+          onTestDeployment={testModal.handleTestDeployment}
+          onViewDetails={(deployment) => setDetailsDeployment(deployment)}
+          onUpdateDeployment={(deployment) => {
+            setEditingDeployment(deployment);
+            setStepperOpen(true);
+          }}
+          onDeleteDeployment={deploymentDelete.requestDelete}
+        />
+      </PermissionsProvider>
     );
   })();
 

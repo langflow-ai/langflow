@@ -5,6 +5,7 @@ import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
 import { useStartNewFlow } from "@/components/core/flowBuilderWelcome/hooks/use-start-new-flow";
 import { IS_MAC } from "@/constants/constants";
+import { PermissionsProvider } from "@/contexts/permissionsContext";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
 import { CustomMcpServerTab } from "@/customization/components/custom-McpServerTab";
@@ -322,35 +323,41 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                   ) : (flowType === "flows" || flowType === "components") &&
                     data &&
                     data.pagination.total > 0 ? (
-                    view === "grid" ? (
-                      <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
-                        {data.flows.map((flow, index) => (
-                          <ListComponent
-                            key={flow.id}
-                            flowData={flow}
-                            selected={selectedFlows.includes(flow.id)}
-                            setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id, index)
-                            }
-                            shiftPressed={isShiftPressed || isCtrlPressed}
-                          />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="mt-4 flex flex-col gap-1">
-                        {data.flows.map((flow, index) => (
-                          <ListComponent
-                            key={flow.id}
-                            flowData={flow}
-                            selected={selectedFlows.includes(flow.id)}
-                            setSelected={(selected) =>
-                              setSelectedFlow(selected, flow.id, index)
-                            }
-                            shiftPressed={isShiftPressed || isCtrlPressed}
-                          />
-                        ))}
-                      </div>
-                    )
+                    <PermissionsProvider
+                      resourceType="flow"
+                      resourceIds={data.flows.map((flow) => flow.id)}
+                      domain={folderId ? `project:${folderId}` : undefined}
+                    >
+                      {view === "grid" ? (
+                        <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
+                          {data.flows.map((flow, index) => (
+                            <ListComponent
+                              key={flow.id}
+                              flowData={flow}
+                              selected={selectedFlows.includes(flow.id)}
+                              setSelected={(selected) =>
+                                setSelectedFlow(selected, flow.id, index)
+                              }
+                              shiftPressed={isShiftPressed || isCtrlPressed}
+                            />
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="mt-4 flex flex-col gap-1">
+                          {data.flows.map((flow, index) => (
+                            <ListComponent
+                              key={flow.id}
+                              flowData={flow}
+                              selected={selectedFlows.includes(flow.id)}
+                              setSelected={(selected) =>
+                                setSelectedFlow(selected, flow.id, index)
+                              }
+                              shiftPressed={isShiftPressed || isCtrlPressed}
+                            />
+                          ))}
+                        </div>
+                      )}
+                    </PermissionsProvider>
                   ) : (
                     <div className="pt-24 text-center text-sm text-secondary-foreground">
                       {t("home.flowTypeNotSupported", { flowType })}
