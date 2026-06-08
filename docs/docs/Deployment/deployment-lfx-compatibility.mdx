@@ -1,0 +1,105 @@
+---
+title: LFX and Langflow version compatibility
+slug: /lfx-compatibility
+---
+
+Langflow and LFX are versioned together on the same `major.minor` line, so you can always tell which LFX release runs which flows.
+
+## Compatibility contract
+
+**LFX `X.Y.N` is guaranteed compatible with any flow exported from Langflow `X.Y.M`.**
+
+The major and minor numbers must match.
+The patches `.N` for LFX and `.M` for Langflow are released independently. An LFX patch fix does not require a Langflow patch release, and vice versa.
+
+When LFX and a flow share the same `major` version but differ on `minor`, such as a flow exported from Langflow 1.9.x run with LFX 1.10.x,  individual components may have been updated since the flow was saved.
+Use `lfx upgrade` to check compatibility and apply safe automatic fixes before running or serving such a flow.
+For more information, see [Check and upgrade flows with lfx upgrade](#check-and-upgrade-flows-with-lfx-upgrade).
+
+## Compatibility matrix
+
+| Langflow version | Compatible LFX version | Notes |
+|---|---|---|
+| 1.10.x | 1.10.x | Fully compatible. Same `major.minor` line. |
+| 1.11.x | 1.11.x | Fully compatible. Same `major.minor` line. |
+| 1.9.x or earlier | 1.10.x | Use `lfx upgrade --upgrade-flow=safe` to apply safe component schema upgrades before running. |
+| Any 1.x.x | 0.5.x | LFX 0.5.x was a standalone release before version alignment. It is no longer compatible with Langflow 1.10+ flows. |
+
+## Check and upgrade flows with `lfx upgrade`
+
+The `lfx upgrade` command inspects a flow against the built-in component registry and reports any components that have become incompatible or that have safe automatic upgrades available.
+
+`lfx upgrade` compares each component in the flow against a bundled index at `_assets/component_index.json` that ships with the LFX release.
+
+Run it with no flags to get a read-only compatibility report. The command reads your flow JSON, walks through every component node, and prints one line per node with its status. It does not modify the file.
+
+```bash
+lfx upgrade my-flow.json
+```
+
+Example output:
+
+```text
+  [SAFE] Agent (AgentComponent) - id: abc123
+  [OK] Chat Output (ChatOutput) - id: def456
+```
+
+| CLI output | What it means | Example |
+|---|---|---|
+| `[OK]` | Component matches the current registry. | No action needed. |
+| `[SAFE]` | Component code changed, but ports and fields your flow uses still line up. `lfx upgrade --write` can apply this update automatically. | An output that previously emitted only `Message` now also supports `Data`. |
+| `[BREAKING]` | A port or field your flow relies on was removed. | An input that accepted `Message` and `Data` now accepts only `Message` and your flow uses a `Data` component. |
+| `[BLOCKED]` | The component type no longer exists in this LFX build. | A bundle-only component is not installed in your environment. |
+
+To apply fixes or enforce stricter checks, run:
+
+```bash
+# Apply all safe upgrades and overwrite the file
+lfx upgrade my-flow.json --write
+
+# Fail if any safe upgrades are still pending (use after a dry run before running `--write`)
+lfx upgrade my-flow.json --strict
+```
+
+## Inline compatibility checking with `--upgrade-flow`
+
+Both `lfx run` and `lfx serve` accept an `--upgrade-flow` option so you can apply compatibility checks at execution without a separate `lfx upgrade` step.
+
+```bash
+# Check only — fail if any component is blocked
+lfx run my-flow.json --upgrade-flow=check "Hello world"
+
+# Apply safe upgrades in memory, then run
+lfx run my-flow.json --upgrade-flow=safe "Hello world"
+
+# Same options for serve
+lfx serve my-flow.json --upgrade-flow=safe
+```
+
+| Mode | Behavior |
+|---|---|
+| `check` | Reports compatibility issues and exits non-zero if any component is blocked. No changes are written to disk. |
+| `safe` | Applies all safe upgrades in memory, then runs or serves the flow. Blocked components still cause a non-zero exit. |
+
+## Pin versions
+
+Pin `lfx~=1.10.0` in `requirements.txt` to track all patch releases for a given Langflow minor without crossing into the next minor automatically.
+
+```text
+# requirements.txt — allows 1.10.1, 1.10.2, … but not 1.11.0
+lfx~=1.10.0
+```
+
+## Migrating from LFX 0.5.x to 1.10.0
+
+LFX was realigned from its standalone `0.5.x` line onto Langflow's `major.minor` line, so the version number jumps from `0.5.0` to `1.10.0` in one release. This is a version-numbering change, not 95 minor releases of new features.
+
+This jump can affect existing dependency pins in unexpected ways:
+
+| Pin style | Effect |
+|---|---|
+| `lfx==0.5.x` or `lfx<1.0` | Does not upgrade. The deployment stays on 0.5.x. |
+| `lfx>=0.5,<1` | Does not upgrade. The upper bound excludes 1.10.0. |
+| `lfx>=0.5` (no upper bound) | Upgrades automatically to 1.10.0 on the next install. |
+
+Going forward, pin with `lfx~=1.10.0` so you receive compatible patches without silently crossing minor lines.
