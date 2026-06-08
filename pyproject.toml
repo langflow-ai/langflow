@@ -285,6 +285,13 @@ external = ["RUF027"]
 
 [tool.ruff.lint.per-file-ignores]
 "scripts/*" = ["D1", "INP", "T201"]
+"src/backend/tests/stress/*" = [
+    "D1",     # Docstrings: this is a manual CLI tool, not a test target
+    "INP001", # Stress tests live outside the unit test package
+    "S101",   # Asserts ok in stress harness
+    "S311",   # Standard PRNG is fine for stress payload jitter
+    "T201",   # Print statements: this is a CLI script
+]
 "scripts/gp/tests/*" = [
     "D1",      # Missing docstrings
     "PLR2004", # Magic value comparisons
@@ -332,6 +339,9 @@ external = ["RUF027"]
 "src/lfx/src/lfx/cli/common.py" = [
     "S104",  # Intentional binding to all interfaces for server
     "S105",  # False positive: GITHUB_TOKEN_ENV is an env var name
+]
+"src/lfx/src/lfx/cli/upgrade.py" = [
+    "TC003",  # Path is used at runtime, not just in type hints
 ]
 "src/lfx/src/lfx/components/__init__.py" = [
     "SLF001",  # Accessing _dynamic_imports from modules

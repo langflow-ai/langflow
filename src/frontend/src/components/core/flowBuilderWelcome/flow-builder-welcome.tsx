@@ -1,26 +1,16 @@
 import { ArrowUp } from "lucide-react";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
+import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { ModelSelector } from "@/components/core/assistantPanel/components/model-selector";
 import { useAssistantSelectedModel } from "@/components/core/assistantPanel/hooks/use-assistant-selected-model";
 import { useEnabledModels } from "@/components/core/assistantPanel/hooks/use-enabled-models";
-import ForwardedIconComponent from "@/components/common/genericIconComponent";
-import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import type { SidebarSection } from "@/components/ui/sidebar";
 import ModelProviderModal from "@/modals/modelProviderModal";
 import { NAV_ITEMS } from "@/pages/FlowPage/components/flowSidebarComponent/components/sidebar-nav-items";
-import {
-  WELCOME_BROWSE_MORE_LABEL,
-  WELCOME_MAX_INPUT_LENGTH,
-  WELCOME_OR_TEMPLATE_LABEL,
-  WELCOME_SEND_LABEL,
-  WELCOME_SIMPLE_AGENT_LABEL,
-  WELCOME_TEXTAREA_PLACEHOLDER,
-  WELCOME_TITLE,
-  WELCOME_TITLE_NO_PROVIDER,
-  WELCOME_VECTOR_STORE_RAG_LABEL,
-} from "./flow-builder-welcome.constants";
+import { WELCOME_MAX_INPUT_LENGTH } from "./flow-builder-welcome.constants";
 import type { StarterTemplateNameKey } from "./helpers/find-starter-template";
 
 interface FlowBuilderWelcomeProps {
@@ -149,7 +139,9 @@ export function FlowBuilderWelcome({
         onClick={(e) => e.stopPropagation()}
       >
         <h1 className="text-center text-4xl font-semibold text-foreground">
-          {showNoProviderState ? WELCOME_TITLE_NO_PROVIDER : WELCOME_TITLE}
+          {showNoProviderState
+            ? t("flowBuilderWelcome.titleNoProvider")
+            : t("flowBuilderWelcome.title")}
         </h1>
 
         {showNoProviderState ? (
@@ -161,8 +153,7 @@ export function FlowBuilderWelcome({
             className="flex w-full flex-col items-center gap-3 py-4 text-center"
           >
             <p className="max-w-[26rem] text-sm text-muted-foreground">
-              Add a model provider to describe your flow with AI, or pick a
-              template below to get going right away.
+              {t("flowBuilderWelcome.noProviderDescription")}
             </p>
             <Button
               variant="outline"
@@ -171,7 +162,7 @@ export function FlowBuilderWelcome({
               onClick={() => setIsProviderModalOpen(true)}
             >
               <ForwardedIconComponent name="Settings" className="h-4 w-4" />
-              Configure Model Providers
+              {t("flowBuilderWelcome.configureModelProviders")}
             </Button>
           </div>
         ) : (
@@ -193,7 +184,7 @@ export function FlowBuilderWelcome({
               <textarea
                 ref={textareaRef}
                 data-testid="flow-builder-welcome-textarea"
-                placeholder={WELCOME_TEXTAREA_PLACEHOLDER}
+                placeholder={t("flowBuilderWelcome.textareaPlaceholder")}
                 value={message}
                 onChange={(e) =>
                   setMessage(e.target.value.slice(0, WELCOME_MAX_INPUT_LENGTH))
@@ -210,8 +201,8 @@ export function FlowBuilderWelcome({
                 <button
                   type="button"
                   data-testid="flow-builder-welcome-send-button"
-                  aria-label={WELCOME_SEND_LABEL}
-                  title={WELCOME_SEND_LABEL}
+                  aria-label={t("flowBuilderWelcome.sendLabel")}
+                  title={t("flowBuilderWelcome.sendLabel")}
                   disabled={!canSend}
                   onClick={trySubmit}
                   className="flex h-8 w-8 items-center justify-center rounded-md bg-foreground text-background transition-colors hover:bg-foreground/90 disabled:opacity-50"
@@ -234,7 +225,7 @@ export function FlowBuilderWelcome({
             padding, 10px gap. */}
         <div className="flex flex-col items-center gap-2">
           <span className="text-sm text-muted-foreground">
-            {WELCOME_OR_TEMPLATE_LABEL}
+            {t("flowBuilderWelcome.orTemplateLabel")}
           </span>
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button
@@ -244,7 +235,7 @@ export function FlowBuilderWelcome({
               className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
               <ForwardedIconComponent name="Bot" className="h-4 w-4" />
-              {WELCOME_SIMPLE_AGENT_LABEL}
+              {t("flowBuilderWelcome.simpleAgentLabel")}
             </button>
             <button
               type="button"
@@ -253,7 +244,7 @@ export function FlowBuilderWelcome({
               className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
               <ForwardedIconComponent name="Database" className="h-4 w-4" />
-              {WELCOME_VECTOR_STORE_RAG_LABEL}
+              {t("flowBuilderWelcome.vectorStoreRagLabel")}
             </button>
             <button
               type="button"
@@ -262,7 +253,7 @@ export function FlowBuilderWelcome({
               className="flex h-[3.125rem] w-[11rem] items-center justify-center gap-2.5 whitespace-nowrap rounded-xl border border-border bg-muted p-[0.8125rem] text-sm font-medium text-foreground transition-colors hover:bg-border"
             >
               <ForwardedIconComponent name="LayoutGrid" className="h-4 w-4" />
-              {WELCOME_BROWSE_MORE_LABEL}
+              {t("flowBuilderWelcome.browseMoreLabel")}
             </button>
           </div>
         </div>

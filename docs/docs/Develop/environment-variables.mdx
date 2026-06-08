@@ -112,7 +112,7 @@ If it detects a supported environment variable, then it automatically adopts the
     LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True
     LANGFLOW_SUPERUSER=adminuser
     LANGFLOW_SUPERUSER_PASSWORD=adminpass
-    LANGFLOW_WORKER_TIMEOUT=60000
+    LANGFLOW_WORKER_TIMEOUT=300
     LANGFLOW_WORKERS=3
     ```
 
@@ -191,7 +191,7 @@ LANGFLOW_SECRET_KEY=somesecretkey
 LANGFLOW_STORE_ENVIRONMENT_VARIABLES=True
 LANGFLOW_SUPERUSER=adminuser
 LANGFLOW_SUPERUSER_PASSWORD=adminpass
-LANGFLOW_WORKER_TIMEOUT=60000
+LANGFLOW_WORKER_TIMEOUT=300
 LANGFLOW_WORKERS=3
 ```
 
@@ -239,7 +239,7 @@ Environment="LANGFLOW_SECRET_KEY=somesecretkey"
 Environment="LANGFLOW_STORE_ENVIRONMENT_VARIABLES=true"
 Environment="LANGFLOW_SUPERUSER=adminuser"
 Environment="LANGFLOW_SUPERUSER_PASSWORD=adminpass"
-Environment="LANGFLOW_WORKER_TIMEOUT=60000"
+Environment="LANGFLOW_WORKER_TIMEOUT=300"
 Environment="LANGFLOW_WORKERS=3"
 ```
 
@@ -292,7 +292,7 @@ Create or edit the `.vscode/tasks.json` file in your project root.
             "LANGFLOW_STORE_ENVIRONMENT_VARIABLES": "true",
             "LANGFLOW_SUPERUSER": "adminuser",
             "LANGFLOW_SUPERUSER_PASSWORD": "adminpass",
-            "LANGFLOW_WORKER_TIMEOUT": "60000",
+            "LANGFLOW_WORKER_TIMEOUT": "300",
             "LANGFLOW_WORKERS": "3"
         }
     },
@@ -395,7 +395,7 @@ See [Use Langflow as an MCP server](/mcp-server).
 
 ### Multi-worker deployments
 
-For multi-worker job queue environment variables, including Redis connection settings, TTLs, and cancellation configuration, see [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference).
+For multi-worker tuning—including the Redis job queue and Gunicorn worker settings—see [Deploy Langflow with multiple workers](./deployment-multi-worker).
 
 ### Monitoring and metrics
 
@@ -413,29 +413,15 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_DEV` | Boolean | `False` | Whether to run Langflow in development mode (may contain bugs). |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `False` | Open the system web browser on startup. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
-| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. |
-| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. |
-| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | **Experimental.** When `true`, enables Gunicorn `preload_app` (non-Windows): the app is loaded in the master process before worker processes fork. See [Multi-worker deployments](#multi-worker-deployments). |
-| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` to share queue events across workers. See [Multi-worker deployments](#multi-worker-deployments). |
+| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
+| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
+| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | Enables Gunicorn `preload_app`. Non-Windows only. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
+| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` for multi-worker deployments. See [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference). |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
 | `LANGFLOW_CELERY_ENABLED` | Boolean | `False` | Enable Celery for distributed task processing. |
 | `LANGFLOW_ALEMBIC_LOG_TO_STDOUT` | Boolean | `False` | Whether to log Alembic database migration output to stdout instead of a log file. If `true`, Alembic logs to `stdout` and the default log file is ignored. |
-
-#### Gunicorn configuration
-
-When running Langflow in a production environment using Gunicorn, you can configure Gunicorn workers using the `GUNICORN_CMD_ARGS` environment variable.
-
-This is particularly useful to manage worker memory and prevent potential memory leaks over time. You can add it to your `.env` file like this:
-
-```text
-GUNICORN_CMD_ARGS="--max-requests 100 --max-requests-jitter 20"
-```
-
-Here is what these arguments do:
-- `--max-requests 100`: Automatically restarts a worker after it has processed 100 requests. This helps prevent memory leaks from accumulating over time.
-- `--max-requests-jitter 20`: Adds a random jitter of up to 20 requests to the `--max-requests` value. This ensures that all workers don't restart simultaneously, which could cause a brief downtime or spikes in latency.
 
 ### Storage
 

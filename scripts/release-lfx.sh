@@ -105,6 +105,16 @@ fi
 
 print_info "Preparing to release LFX version $NEW_VERSION"
 
+# Soft check: warn if LFX minor doesn't match Langflow minor
+LANGFLOW_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
+LFX_MINOR=$(echo "$NEW_VERSION" | cut -d. -f1-2)
+LANGFLOW_MINOR=$(echo "$LANGFLOW_VERSION" | cut -d. -f1-2)
+if [ "$LFX_MINOR" != "$LANGFLOW_MINOR" ]; then
+    print_warning "LFX minor version ($LFX_MINOR) does not match Langflow minor version ($LANGFLOW_MINOR)."
+    print_warning "Per the compatibility policy, LFX X.Y.N must align with Langflow X.Y.M."
+    print_warning "Proceed only if this is intentional (e.g., a patch-only LFX release)."
+fi
+
 # Update version in pyproject.toml
 if [ "$DRY_RUN" = true ]; then
     print_dry_run "Would update version in pyproject.toml to $NEW_VERSION"
