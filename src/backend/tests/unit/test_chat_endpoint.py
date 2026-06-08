@@ -703,6 +703,54 @@ async def test_build_public_tmp_rejects_code_execution_components(
 
 @pytest.mark.benchmark
 @pytest.mark.security
+async def test_build_public_tmp_rejects_flow_invoking_components(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Report H1-3754930 (transitive case): public builds must reject flow-invoking components.
+
+    A public wrapper flow with no directly-blocked nodes could otherwise embed a
+    Run Flow / Sub Flow / Flow as Tool node that loads and executes another saved
+    owner flow by id/name at runtime — a private flow which may itself contain a
+    code-execution component that is never re-validated on the run path. Blocking
+    the flow-invoking node type on the public path closes that indirection.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "RunFlow-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "RunFlow-pub1",
+                "type": "RunFlow",
+                "display_name": "Run Flow",
+                "node": {
+                    "display_name": "Run Flow",
+                    "template": {"flow_id_selected": {"value": str(uuid.uuid4())}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-flow-invoke-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
 async def test_build_flow_cross_user_blocked(client, json_memory_chatbot_no_llm, logged_in_headers, user_two):
     """Security (GHSA-qj98-rhf8-v93f): authenticated user cannot build another user's private flow.
 

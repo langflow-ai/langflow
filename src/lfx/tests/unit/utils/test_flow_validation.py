@@ -6,6 +6,7 @@ from unittest.mock import AsyncMock, patch
 import pytest
 from lfx.utils.flow_validation import (
     CODE_EXECUTION_COMPONENT_TYPES,
+    FLOW_REFERENCE_COMPONENT_TYPES,
     CustomComponentValidationError,
     PublicFlowValidationError,
     ensure_component_hash_lookups_loaded,
@@ -149,3 +150,135 @@ def test_public_flow_noop_on_empty(empty):
 def test_public_flow_validation_error_is_custom_component_error():
     """Subclassing keeps the existing public-build handler (CustomComponentValidationError -> 400)."""
     assert issubclass(PublicFlowValidationError, CustomComponentValidationError)
+
+
+# --- transitive flow execution (report H1-3754930, transitive case) ---------------
+
+
+@pytest.mark.parametrize("component_type", sorted(FLOW_REFERENCE_COMPONENT_TYPES))
+def test_public_flow_blocks_flow_invoking_components(component_type):
+    """Flow-invoking components (Run Flow / Sub Flow / Flow as Tool) must be rejected.
+
+    They load and execute another saved owner flow by id/name at runtime; that
+    referenced flow is never re-validated, so a public wrapper flow could use one
+    to reach a private flow containing a code-execution component.
+    """
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(_flow_with_component(component_type))
+    assert component_type in str(exc_info.value)
+    assert "execute other flows" in str(exc_info.value)
+
+
+def test_public_flow_blocks_wrapper_with_runflow_and_safe_nodes():
+    """The real attack shape — a wrapper of otherwise-safe nodes plus a Run Flow — is blocked."""
+    wrapper = {
+        "nodes": [
+            {"id": "ChatInput-1", "data": {"id": "ChatInput-1", "type": "ChatInput", "node": {"template": {}}}},
+            {
+                "id": "RunFlow-1",
+                "data": {"id": "RunFlow-1", "type": "RunFlow", "node": {"display_name": "Run Flow", "template": {}}},
+            },
+            {"id": "ChatOutput-1", "data": {"id": "ChatOutput-1", "type": "ChatOutput", "node": {"template": {}}}},
+        ],
+        "edges": [],
+    }
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(wrapper)
+    assert "RunFlow-1" in str(exc_info.value)
+
+
+def test_public_flow_blocks_nested_flow_invoking_component():
+    """A flow-invoking component hidden inside an inlined sub-flow must still be caught."""
+    nested = {
+        "nodes": [
+            {
+                "id": "group-1",
+                "data": {
+                    "id": "group-1",
+                    "type": "GroupNode",
+                    "node": {"flow": {"data": _flow_with_component("SubFlow")}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+    with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(nested)
+
+
+def test_code_execution_and_flow_reference_sets_are_disjoint():
+    """The two blocklists describe different failure modes and must not overlap."""
+    assert CODE_EXECUTION_COMPONENT_TYPES.isdisjoint(FLOW_REFERENCE_COMPONENT_TYPES)
+
+
+# --- aliasing bypass: match by code-hash, not just declared type ------------------
+
+
+def _flow_with_typed_code(component_type: str, code: str) -> dict:
+    """Build raw graph data for a single node carrying ``code`` under ``component_type``."""
+    return {
+        "nodes": [
+            {
+                "id": "evasive-1",
+                "data": {
+                    "id": "evasive-1",
+                    "type": component_type,
+                    "node": {"display_name": component_type, "template": {"code": {"value": code}}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
+def test_public_flow_blocks_flow_invoking_component_relabelled_via_code_hash(monkeypatch):
+    """A flow-invoking node that relabels its ``type`` to dodge the type block is still caught.
+
+    In the hardened ``allow_custom_components=false`` mode the build runs the node's
+    stored ``code`` regardless of its declared ``type``, so the code-hash of a
+    blocked component is the authoritative signal.
+    """
+    from lfx.utils import flow_validation as fv
+
+    run_flow_code = "class RunFlowComponent(Component):\n    name = 'RunFlow'\n"
+    code_hash = fv._compute_code_hash(run_flow_code)
+    # Pretend the server's known RunFlow template hashes to this code.
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: {"RunFlow": {code_hash}})
+
+    # Declared type is innocuous and in NEITHER blocklist, but the code is RunFlow's.
+    evasive = _flow_with_typed_code("Totally Innocent", run_flow_code)
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(evasive)
+    assert "execute other flows" in str(exc_info.value)
+
+
+def test_public_flow_blocks_code_execution_component_relabelled_via_code_hash(monkeypatch):
+    """The same aliasing defense applies to code-execution components."""
+    from lfx.utils import flow_validation as fv
+
+    repl_code = "class PythonREPLComponent(Component):\n    pass\n"
+    code_hash = fv._compute_code_hash(repl_code)
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: {"PythonREPLComponent": {code_hash}})
+
+    evasive = _flow_with_typed_code("Harmless Label", repl_code)
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(evasive)
+    assert "code-execution" in str(exc_info.value)
+
+
+def test_public_flow_code_hash_allows_unrelated_code(monkeypatch):
+    """A node whose code does not match any blocked template hash must still build."""
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: {"RunFlow": {"deadbeefcafe"}})
+    safe = _flow_with_typed_code("ChatInput", "class ChatInput(Component):\n    pass\n")
+    validate_public_flow_no_code_execution(safe)  # must not raise
+
+
+def test_public_flow_type_block_works_without_hash_lookups(monkeypatch):
+    """When the hash lookup is unavailable, canonical type-name matching still blocks."""
+    from lfx.utils import flow_validation as fv
+
+    monkeypatch.setattr(fv, "get_component_hash_lookups_for_validation", lambda: None)
+    with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(_flow_with_component("RunFlow"))
