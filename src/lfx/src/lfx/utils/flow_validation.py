@@ -24,6 +24,30 @@ class CustomComponentValidationError(ValueError):
     """
 
 
+class PublicFlowValidationError(CustomComponentValidationError):
+    """Raised when a public (unauthenticated) flow build is disallowed.
+
+    Subclasses CustomComponentValidationError so the existing public-build
+    handlers (which already map that error to a safe 400) catch it too.
+    """
+
+
+# Component node ``type`` values that execute user- or model-supplied code when
+# a flow is built or run. Public flows are buildable without authentication via
+# ``/api/v1/build_public_tmp/{flow_id}/flow``; allowing these components on that
+# path turns any public flow into an unauthenticated server-side code-execution
+# primitive (report H1-3754930). The restriction is enforced ONLY on the
+# unauthenticated public path — authenticated builds are unaffected.
+CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
+    {
+        "PythonCodeStructuredTool",  # legacy raw exec() (now a disabled stub)
+        "PythonREPLComponent",  # "Python Interpreter"
+        "PythonREPLTool",  # legacy "Python REPL" tool
+        "Smart Transform",  # LambdaFilterComponent — eval()s a generated lambda
+    }
+)
+
+
 def _compute_code_hash(code: str) -> str:
     """Compute the 12-char SHA256 prefix used by the component index."""
     return hashlib.sha256(code.encode("utf-8")).hexdigest()[:12]
@@ -231,6 +255,72 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
         allow_custom_components=allow_custom_components,
         type_to_current_hash=type_to_current_hash,
     )
+
+
+def _collect_code_execution_components(nodes: list[dict]) -> list[str]:
+    """Return ``display_name (id)`` labels for code-execution components in ``nodes``.
+
+    Recurses into nested flow definitions so a code-execution component cannot
+    be hidden inside a sub-flow / group node.
+    """
+    found: list[str] = []
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        node_data = node.get("data", {})
+        if not isinstance(node_data, dict):
+            continue
+
+        if node_data.get("type") in CODE_EXECUTION_COMPONENT_TYPES:
+            node_info = node_data.get("node", {})
+            display_name = (node_info.get("display_name") if isinstance(node_info, dict) else None) or node_data["type"]
+            node_id = node_data.get("id") or node.get("id", "unknown")
+            found.append(f"{display_name} ({node_id})")
+
+        # Recurse into nested flows (group / sub-flow nodes).
+        node_info = node_data.get("node", {})
+        if isinstance(node_info, dict):
+            nested_flow = node_info.get("flow", {})
+            nested_nodes = nested_flow.get("data", {}).get("nodes", []) if isinstance(nested_flow, dict) else []
+            if isinstance(nested_nodes, list) and nested_nodes:
+                found.extend(_collect_code_execution_components(nested_nodes))
+    return found
+
+
+def validate_public_flow_no_code_execution(target: Mapping[str, Any] | Any | None) -> None:
+    """Reject unauthenticated public-flow builds that would run arbitrary code.
+
+    Public flows are reachable without authentication through
+    ``/api/v1/build_public_tmp/{flow_id}/flow``. Components that execute user-
+    or model-supplied code (the Python interpreter/REPL components, the legacy
+    Python Code Structured tool, the Smart Transform lambda) must not run on
+    that path — otherwise any anonymous visitor can trigger server-side code
+    execution through a public flow that contains one (report H1-3754930).
+
+    This is enforced only on the unauthenticated public build path; authenticated
+    builds (``/api/v1/build/{flow_id}/flow``) are unaffected and may still run
+    these components.
+
+    Raises:
+        PublicFlowValidationError: if the flow contains a code-execution component.
+    """
+    normalized_flow_data = _extract_flow_data(target)
+    if not normalized_flow_data:
+        return
+
+    nodes = normalized_flow_data.get("nodes", [])
+    if not isinstance(nodes, list) or not nodes:
+        return
+
+    blocked = _collect_code_execution_components(nodes)
+    if blocked:
+        blocked_names = ", ".join(blocked)
+        logger.warning(f"Public flow build blocked: code-execution components are not allowed: {blocked_names}")
+        message = (
+            "Public flows cannot be built without authentication when they contain "
+            f"code-execution components: {blocked_names}"
+        )
+        raise PublicFlowValidationError(message)
 
 
 async def ensure_component_hash_lookups_loaded() -> dict[str, str] | None:

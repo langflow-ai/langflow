@@ -4,7 +4,14 @@ from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
-from lfx.utils.flow_validation import ensure_component_hash_lookups_loaded, validate_flow_for_current_settings
+from lfx.utils.flow_validation import (
+    CODE_EXECUTION_COMPONENT_TYPES,
+    CustomComponentValidationError,
+    PublicFlowValidationError,
+    ensure_component_hash_lookups_loaded,
+    validate_flow_for_current_settings,
+    validate_public_flow_no_code_execution,
+)
 
 
 def _blocked_raw_graph() -> dict:
@@ -65,3 +72,80 @@ def test_validate_flow_for_current_settings_requires_settings_service(monkeypatc
 
     with pytest.raises(RuntimeError, match="Settings service must be initialized"):
         validate_flow_for_current_settings(graph)
+
+
+# --- validate_public_flow_no_code_execution (report H1-3754930) -------------------
+
+
+def _flow_with_component(component_type: str) -> dict:
+    """Build minimal raw graph data containing a single node of ``component_type``."""
+    node_id = f"{component_type}-1"
+    return {
+        "nodes": [
+            {
+                "id": node_id,
+                "data": {
+                    "id": node_id,
+                    "type": component_type,
+                    "node": {"display_name": component_type, "template": {}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+
+
+@pytest.mark.parametrize("component_type", sorted(CODE_EXECUTION_COMPONENT_TYPES))
+def test_public_flow_blocks_code_execution_components(component_type):
+    """Every code-execution component must be rejected on the unauthenticated public path."""
+    with pytest.raises(PublicFlowValidationError) as exc_info:
+        validate_public_flow_no_code_execution(_flow_with_component(component_type))
+    assert component_type in str(exc_info.value)
+
+
+def test_public_flow_allows_safe_components():
+    """A flow without code-execution components must build on the public path."""
+    safe = {
+        "nodes": [
+            {"id": "ChatInput-1", "data": {"id": "ChatInput-1", "type": "ChatInput", "node": {"template": {}}}},
+        ],
+        "edges": [],
+    }
+    validate_public_flow_no_code_execution(safe)  # must not raise
+
+
+def test_public_flow_blocks_nested_code_execution_component():
+    """A code-execution component hidden inside a sub-flow must still be caught."""
+    nested = {
+        "nodes": [
+            {
+                "id": "group-1",
+                "data": {
+                    "id": "group-1",
+                    "type": "GroupNode",
+                    "node": {"flow": {"data": _flow_with_component("PythonREPLComponent")}},
+                },
+            }
+        ],
+        "edges": [],
+    }
+    with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(nested)
+
+
+def test_public_flow_unwraps_data_envelope():
+    """The {"data": {...}} envelope must be unwrapped before validation."""
+    wrapped = {"data": _flow_with_component("PythonREPLTool")}
+    with pytest.raises(PublicFlowValidationError):
+        validate_public_flow_no_code_execution(wrapped)
+
+
+@pytest.mark.parametrize("empty", [None, {}, {"nodes": []}, {"nodes": "not-a-list"}])
+def test_public_flow_noop_on_empty(empty):
+    """Missing/empty/malformed node lists are a no-op, not an error."""
+    validate_public_flow_no_code_execution(empty)  # must not raise
+
+
+def test_public_flow_validation_error_is_custom_component_error():
+    """Subclassing keeps the existing public-build handler (CustomComponentValidationError -> 400)."""
+    assert issubclass(PublicFlowValidationError, CustomComponentValidationError)
