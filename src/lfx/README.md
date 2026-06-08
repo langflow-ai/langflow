@@ -382,7 +382,7 @@ How it works:
 
 A warning is printed when `--workers > 1` is used without `--flow-dir`, because in that case each worker has its own isolated in-memory registry.
 
-### Isolate credentials with `--no-env-fallback`
+### Isolate credentials with `--no-env-fallback` _(experimental)_
 
 By default, `lfx serve` resolves component credentials from the process environment (`os.environ`). In multi-tenant deployments, this means every request shares the same credentials.
 
@@ -408,7 +408,7 @@ curl -X POST http://localhost:8000/flows/$FLOW_ID/run \
   }'
 ```
 
-Credentials supplied in `LANGFLOW_REQUEST_VARIABLES` are scoped to the current request using Python `contextvars`. They are never written to `os.environ` and do not bleed into other concurrent requests on the same worker.
+Credentials supplied in `LANGFLOW_REQUEST_VARIABLES` are scoped to the current request using Python `contextvars`. Langflow's built-in components do not write them to `os.environ`, so they do not bleed into other concurrent requests on the same worker. Custom components that explicitly write to `os.environ` are outside this guarantee.
 
 ### Check or upgrade flow compatibility at startup
 
