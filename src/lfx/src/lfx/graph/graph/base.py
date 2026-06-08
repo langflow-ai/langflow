@@ -1053,6 +1053,39 @@ class Graph:
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
 
+    def exclude_branches_conditionally(self, vertex_id: str, output_names: list[str]) -> None:
+        """Conditionally exclude several output branches of a single source vertex at once.
+
+        Behaves like :meth:`exclude_branch_conditionally` but accumulates the branches of
+        every output in ``output_names`` under one source key, so excluding one branch does
+        not clear its siblings. This is required by multi-way routers (e.g. Smart Router)
+        that keep a single matched output and must persistently exclude all the others.
+
+        Like the single-branch variant, any previous exclusions from this source vertex are
+        cleared first so the decision can be re-evaluated (e.g. on later cycle iterations).
+
+        Args:
+            vertex_id: The source vertex making the exclusion decision.
+            output_names: The output names whose downstream branches should be excluded.
+        """
+        # Clear any previous exclusions from this source vertex
+        if vertex_id in self.conditional_exclusion_sources:
+            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
+            self.conditionally_excluded_vertices -= previous_exclusions
+            del self.conditional_exclusion_sources[vertex_id]
+
+        # Exclude each requested branch, accumulating the excluded vertices into one set.
+        # ``visited`` is reset per output so each branch is traversed fully, while
+        # ``excluded`` accumulates across outputs (a vertex shared by two excluded
+        # branches is simply added once).
+        excluded: set[str] = set()
+        for output_name in output_names:
+            self._exclude_branch_conditionally(vertex_id, set(), excluded, output_name, skip_first=True)
+
+        # Track which vertices this source excluded so they can be cleared on re-evaluation
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
+
     def _exclude_branch_conditionally(
         self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
     ) -> None:
