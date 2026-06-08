@@ -1,0 +1,52 @@
+---
+title: Xquik
+slug: /xquik
+---
+
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+
+The **Xquik** component reads public X/Twitter data with Xquik.
+Use it to search tweets, look up tweets or users, list recent user tweets, and retrieve trends in Langflow flows.
+
+The component is read-only.
+It doesn't post tweets, send DMs, follow accounts, like posts, or update profiles.
+
+## Use the Xquik component in a flow
+
+1. Add the **Xquik** component to your flow.
+2. Select an **Operation**.
+3. Enter your **Xquik API Key**.
+4. Fill in the operation-specific fields, such as **Query**, **Tweet ID**, **User ID or Username**, or **WOEID**.
+5. Connect the **Table**, **JSON**, or **Text** output to downstream components.
+
+Use **Table** for tabular processing, **JSON** for structured workflows, and **Text** when you want to pass results directly into prompts.
+
+For Xquik API details, see the [Xquik API reference](https://docs.xquik.com/api-reference/overview).
+
+## Parameters
+
+<PartialParams />
+
+| Name | Type | Description |
+|------|------|-------------|
+| operation | String | Input parameter. Read-only Xquik operation to run: **Search Tweets**, **Get Tweet**, **Get User**, **Search Users**, **User Tweets**, or **Trends**. |
+| api_key | SecretString | Input parameter. Xquik API key from your dashboard account page. |
+| query | String | Input parameter. Search query for tweet or user search operations. |
+| tweet_id | String | Input parameter. Tweet ID for the **Get Tweet** operation. |
+| user_identifier | String | Input parameter. User ID or username for **Get User** and **User Tweets** operations. |
+| query_type | String | Input parameter. Tweet search mode. Options are **Latest** and **Top**. |
+| limit | Integer | Input parameter. Maximum records to return when supported by the operation. |
+| cursor | String | Input parameter. Pagination cursor returned by a previous call. |
+| woeid | Integer | Input parameter. Yahoo Where On Earth ID for trends. Use `1` for worldwide. |
+| include_replies | Boolean | Input parameter. Include replies in **User Tweets** results. |
+| include_parent_tweet | Boolean | Input parameter. Include parent tweet data when supported. |
+| base_url | String | Input parameter. Xquik API base URL. Default: `https://xquik.com/api/v1`. |
+| timeout | Integer | Input parameter. Timeout for the request in seconds. |
+
+## Outputs
+
+| Name | Type | Description |
+|------|------|-------------|
+| table | Table | Returns Xquik records as rows for tabular processing. |
+| json_data | JSON | Returns the full Xquik response payload. |
+| text | Message | Returns newline-delimited JSON records for prompt context. |

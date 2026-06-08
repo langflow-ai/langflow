@@ -359,6 +359,7 @@ module.exports = {
                 "Components/mock-data",
                 "Components/url",
                 "Components/web-search",
+                "Components/xquik",
               ]
             },
             {
