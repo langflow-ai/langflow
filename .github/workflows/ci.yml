@@ -272,10 +272,10 @@ jobs:
   lint-frontend:
     needs: [path-filter, set-ci-condition]
     name: Lint Frontend
-    # Non-blocking for release workflow calls — Biome is informational there.
-    # For regular PRs (inputs.release is false/unset) failures still show as
-    # failed but are excluded from ci_success gating (see ci_success needs).
-    continue-on-error: ${{ inputs.release == true }}
+    # lint-frontend is intentionally excluded from ci_success needs so it does
+    # not block PR merges. For release workflow calls (inputs.release == true)
+    # we also pass allow-failure=true so Biome errors don't fail the reusable
+    # workflow itself (which release.yml gates on via needs.ci.result).
     if: |
       always() &&
       !cancelled() &&
@@ -286,6 +286,8 @@ jobs:
         needs.path-filter.outputs.frontend == 'true')
       )
     uses: ./.github/workflows/lint-js.yml
+    with:
+      allow-failure: ${{ inputs.release == true }}
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]
