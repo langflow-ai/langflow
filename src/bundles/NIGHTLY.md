@@ -1,9 +1,9 @@
 # Bundles & the nightly build
 
-> **Status:** Approach A (canonical pre-releases) is **implemented in this PR** (stacked on the
-> prep PR #13528). It is held as a **draft** and must **NOT** be merged/activated until the
-> [activation gate](#activation-gate-must-read) below is met (stable `lfx 1.10.0` published **and**
-> the nightly's base version moved to the next minor). Sibling docs: [PORTING.md](./PORTING.md).
+> **Status:** Approach A (canonical pre-releases) is **implemented in this PR**. The guard against
+> premature activation is the [activation gate](#activation-gate-must-read) below — **not** merge or
+> draft state: this must **NOT** be merged/activated until stable `lfx 1.10.0` is published **and**
+> the nightly's base version has moved to the next minor. Sibling docs: [PORTING.md](./PORTING.md).
 
 ## Goal
 
@@ -81,7 +81,7 @@ Why (2) is not optional: a bundle pins `lfx>=1.10.0,<2.0.0`, and PEP 440 sorts `
 daily from **main's** workflow definition, so merging this before the gate would break the live
 nightly on the next run.
 
-## A1 vs A2 + remaining follow-ups (decide before un-drafting)
+## A1 vs A2 + remaining follow-ups (decide before activating)
 
 This PR implements the **A1** publish behavior: the separate `langflow-nightly` / `langflow-base-nightly`
 / `lfx-nightly` distributions go away; the nightly is installed via `pip install --pre langflow`.
