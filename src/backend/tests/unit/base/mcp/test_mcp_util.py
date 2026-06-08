@@ -3835,7 +3835,7 @@ class TestTrustVerifierIntegration:
     is emitted before run_tool is ever called.
     """
 
-    @pytest.fixture()
+    @pytest.fixture
     def schema(self):
         from pydantic import Field, create_model
 
@@ -3844,7 +3844,7 @@ class TestTrustVerifierIntegration:
             query=(str, Field(..., description="Search query")),
         )
 
-    @pytest.fixture()
+    @pytest.fixture
     def mock_client(self):
         client = AsyncMock()
         client.run_tool = AsyncMock(return_value="ok")
@@ -3910,8 +3910,9 @@ class TestTrustVerifierIntegration:
 
     @pytest.mark.asyncio
     async def test_coroutine_warn_audit_record_contains_required_fields(self, schema, mock_client):
-        """warn path must emit decision_id, reason_code, server_origin, tool_name,
-        and parameters_digest so an external verifier can reconstruct the audit trail."""
+        """Warn path must emit decision_id, reason_code, server_origin, tool_name,
+        and parameters_digest so an external verifier can reconstruct the audit trail.
+        """
         from lfx.base.mcp.trust import TrustDecision, TrustState
 
         fixed_decision_id = "audit-test-id-001"
@@ -3936,7 +3937,8 @@ class TestTrustVerifierIntegration:
     @pytest.mark.asyncio
     async def test_coroutine_different_params_invoke_verifier_again(self, schema, mock_client):
         """Each call with different params must produce a fresh MCPToolCall with
-        a different parameters_digest — decisions are never reused."""
+        a different parameters_digest — decisions are never reused.
+        """
         from lfx.base.mcp.trust import TrustDecision, TrustState
 
         seen_digests = []
