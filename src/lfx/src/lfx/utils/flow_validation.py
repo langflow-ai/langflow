@@ -440,7 +440,7 @@ def validate_flow_for_current_settings(target: Mapping[str, Any] | Any | None) -
         raise RuntimeError(SETTINGS_SERVICE_REQUIRED_MESSAGE)
 
     allow_custom_components = settings_service.settings.allow_custom_components
-    block_code_interpreter_components = getattr(settings_service.settings, "block_code_interpreter_components", False)
+    block_code_interpreter_components = settings_service.settings.block_code_interpreter_components
     normalized_flow_data = _extract_flow_data(target)
 
     # If a blocking policy is active and we received a target but couldn't extract any flow

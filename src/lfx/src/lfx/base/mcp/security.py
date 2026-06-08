@@ -141,6 +141,16 @@ class MCPStdioSecurityError(ValueError):
     """
 
 
+def _is_file_path(command: str) -> bool:
+    """Whether command looks like a filesystem path (Unix/relative/Windows) vs a bare command name."""
+    drive_letter_len = 3
+    return (
+        command.startswith(("/", "./", "../"))
+        or "\\" in command
+        or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
+    )
+
+
 def extract_base_command(command: str) -> str:
     r"""Extract the base command name from a possibly fully-qualified path.
 
@@ -149,14 +159,7 @@ def extract_base_command(command: str) -> str:
     commands with arguments (e.g. ``uvx mcp-server-fetch``) by taking the first token,
     unless the value is an actual file path.
     """
-    drive_letter_len = 3
-    is_file_path = (
-        command.startswith(("/", "./", "../"))
-        or "\\" in command
-        or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
-    )
-
-    command_only = command.split()[0] if not is_file_path and command.strip() else command
+    command_only = command.split()[0] if not _is_file_path(command) and command.strip() else command
 
     normalized_path = command_only.replace("\\", "/")
     base_command = Path(normalized_path).name
@@ -195,22 +198,15 @@ def validate_mcp_stdio_config(
     #    contain spaces (e.g. "C:\\Program Files\\nodejs\\node.exe") and carries no embedded
     #    shell arguments -- extract_base_command resolves those directly.
     args = list(args or [])
-    if command:
-        drive_letter_len = 3
-        is_file_path = (
-            command.startswith(("/", "./", "../"))
-            or "\\" in command
-            or (len(command) >= drive_letter_len and command[1:3] == ":\\")  # Windows drive letter
-        )
-        if not is_file_path:
-            try:
-                command_tokens = shlex.split(command)
-            except ValueError:
-                # Unbalanced quotes etc. -- fall back to whitespace splitting (fail toward more checks).
-                command_tokens = command.split()
-            if command_tokens:
-                command = command_tokens[0]
-                args = command_tokens[1:] + args
+    if command and not _is_file_path(command):
+        try:
+            command_tokens = shlex.split(command)
+        except ValueError:
+            # Unbalanced quotes etc. -- fall back to whitespace splitting (fail toward more checks).
+            command_tokens = command.split()
+        if command_tokens:
+            command = command_tokens[0]
+            args = command_tokens[1:] + args
 
     # 1) Command allowlist.
     if command:

@@ -4,8 +4,8 @@
 # (lfx.base.mcp.security). Both this REST-layer model and the flow-execution-time enforcement
 # in lfx.base.mcp.util call the SAME validate_mcp_stdio_config, so the allowlist/metacharacter/
 # env/docker checks are byte-for-byte identical and can never drift. The allowlist/blocklist
-# constants and the base-command helper are re-exported here for backwards compatibility with
-# code that imported them from this module before they were moved to lfx.
+# constants are re-exported here for backwards compatibility with code that imported them from
+# this module before they were moved to lfx.
 from lfx.base.mcp.security import (  # noqa: F401 - re-exported for backwards compatibility
     ALLOWED_MCP_COMMANDS,
     DANGEROUS_ENV_VARS,
@@ -16,9 +16,6 @@ from lfx.base.mcp.security import (  # noqa: F401 - re-exported for backwards co
     SHELL_EXEC_FLAGS,
     SHELL_WRAPPERS,
     validate_mcp_stdio_config,
-)
-from lfx.base.mcp.security import (
-    extract_base_command as _extract_base_command,  # noqa: F401 - re-exported for compatibility
 )
 from pydantic import BaseModel, ConfigDict, model_validator
 
