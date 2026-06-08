@@ -161,6 +161,7 @@ module.exports = {
               label: "Monitoring",
               items: [
                 "Develop/integrations-arize",
+                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
