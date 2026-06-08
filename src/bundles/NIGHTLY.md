@@ -85,18 +85,27 @@ nightly on the next run.
 
 This PR implements the **A1** publish behavior: the separate `langflow-nightly` / `langflow-base-nightly`
 / `lfx-nightly` distributions go away; the nightly is installed via `pip install --pre langflow`.
-Still open (intentionally not done here — they depend on the A1-vs-A2 call):
 
-- **Install UX / docs.** Update install instructions `pip install langflow-nightly` →
-  `pip install --pre langflow` (only one doc reference today: `docs/.../integrations-langwatch.mdx`).
+Addressed here (consumers of the dropped `*-nightly` PyPI names, so the cutover stays self-consistent):
+
+- **Runtime nightly detection.** `_get_version_info` (`src/backend/base/langflow/utils/version.py`,
+  `test_version.py`) now derives the "Nightly" label from the `.dev` version marker — the canonical
+  `langflow` distribution matches first, so the package *name* alone no longer identifies a nightly.
+  Keeps the startup banner and telemetry `package` field correct.
+- **CI nightly consumers.** `ci.yml`'s `check-nightly-status` inspects the latest `.devN` release of
+  the canonical `langflow` project (not `langflow-nightly`); `db-migration-validation.yml` installs
+  the nightly as `langflow[postgresql]==<dev>` instead of `langflow-nightly[...]`.
+- **LFX install doc.** `src/lfx/README.md` nightly install is now `uv pip install --pre lfx`.
+
+Still open (deferred by design — decisions, not blockers):
+
 - **Docker nightly image.** `langflowai/langflow-nightly` (Docker Hub) is independent of the PyPI
-  name and is left as-is; decide whether to keep or rename.
-- **Runtime nightly detection.** `get_version_info` keys off the `langflow-nightly` package *name*
-  (`src/backend/.../utils/version.py`, `test_version.py`). Under A1 the installed package is
-  `langflow` with a `.dev` version, so detection should key off the `.dev` marker instead.
+  name and works as-is; decide whether to keep or rename.
+- **Website install docs.** Any `pip install langflow-nightly` instructions on the docs site (not in
+  this repo) should become `pip install --pre langflow`.
 - **A2 alternative (preserve the install name).** Instead of dropping `langflow-nightly`, keep it as
-  a thin meta-package pinning `langflow==X.Y.Z.devN`. The scripts above already produce exact dev
-  pins, so A2 only adds a meta-package publish step and leaves the UX/docs untouched.
+  a thin meta-package pinning `langflow==X.Y.Z.devN`. The scripts already produce exact dev pins, so
+  A2 only adds a meta-package publish step and leaves the `pip install langflow-nightly` UX intact.
 
 ## Approach B (alternative, not taken)
 

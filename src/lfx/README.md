@@ -84,10 +84,10 @@ LFX can be installed in multiple ways. If you have installed Langflow OSS versio
    uv pip install lfx
    ```
 
-   To install the latest nightly version of LFX:
+   To install the latest nightly (pre-release) version of LFX:
 
    ```bash
-   uv pip install lfx-nightly
+   uv pip install --pre lfx
    ```
 
    To run `lfx` commands, continue to [lfx serve](#serve-the-simple-agent-starter-flow-with-lfx-serve) or [lfx run](#run-the-simple-agent-flow-with-lfx-run).
