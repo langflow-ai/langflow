@@ -38,6 +38,10 @@ from lfx.base.mcp.security import (
         ("uvx", ["mcp-server-fetch"], {"LD_PRELOAD": "/tmp/x.so"}),
         ("node", ["server.js"], {"NODE_OPTIONS": "--require /tmp/x.js"}),
         ("uvx", ["x"], {"BASH_FUNC_foo%%": "() { :; }; evil"}),
+        # A tenant cannot supply the agentic user-id binding env var (case-insensitive); only
+        # Langflow may inject it at spawn from the authenticated identity.
+        ("python", ["-m", "langflow.agentic.mcp"], {"LANGFLOW_AGENTIC_USER_ID": "victim"}),
+        ("uvx", ["x"], {"langflow_agentic_user_id": "victim"}),
         # Docker isolation break.
         ("docker", ["run", "--privileged", "img"], {}),
         ("docker", ["run", "--network=host", "img"], {}),
@@ -103,3 +107,41 @@ async def test_update_tools_blocks_malicious_stdio_before_connecting():
         await update_tools("evil-server", malicious, mcp_stdio_client=stdio_client)
 
     assert stdio_client.connect_to_server.call_count == 0
+
+
+async def test_update_tools_requires_user_for_agentic_server():
+    """The internal agentic MCP server must fail closed without an authenticated user id.
+
+    Otherwise a tenant could embed `python -m langflow.agentic.mcp` and read/write flows with
+    an unscoped (or caller-chosen) user id.
+    """
+    from unittest.mock import AsyncMock
+
+    from lfx.base.mcp.util import update_tools
+
+    stdio_client = AsyncMock()
+    stdio_client.connect_to_server = AsyncMock()
+    config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
+
+    with pytest.raises(ValueError, match="authenticated user"):
+        await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client)
+    assert stdio_client.connect_to_server.call_count == 0
+
+
+async def test_update_tools_injects_bound_user_for_agentic_server():
+    """A provided user id is injected into the agentic server's spawn env (never from config)."""
+    from unittest.mock import AsyncMock
+
+    from lfx.base.mcp.security import AGENTIC_USER_ID_ENV_VAR
+    from lfx.base.mcp.util import update_tools
+
+    stdio_client = AsyncMock()
+    stdio_client.connect_to_server = AsyncMock(return_value=[])
+    config = {"mode": "Stdio", "command": "python", "args": ["-m", "langflow.agentic.mcp"]}
+    user_id = "11111111-1111-1111-1111-111111111111"
+
+    await update_tools("langflow-agentic", config, mcp_stdio_client=stdio_client, current_user_id=user_id)
+
+    assert stdio_client.connect_to_server.call_count == 1
+    _command, env_arg = stdio_client.connect_to_server.call_args.args
+    assert env_arg[AGENTIC_USER_ID_ENV_VAR] == user_id

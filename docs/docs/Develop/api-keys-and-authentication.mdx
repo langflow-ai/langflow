@@ -479,6 +479,18 @@ They are disabled by default to preserve single-tenant behavior, and are meant t
 For a deployment where mutually-untrusted users build flows, set `LANGFLOW_ALLOW_CUSTOM_COMPONENTS=false`, `LANGFLOW_BLOCK_CODE_INTERPRETER_COMPONENTS=true`, and `LANGFLOW_RESTRICT_LOCAL_FILE_ACCESS=true` together. The first blocks user-authored component code; the second blocks the built-in code-execution components that would otherwise be an equivalent escape hatch; the third confines built-in file access to the upload sandbox. Pair these with the SSRF settings above.
 :::
 
+### Session cookie hardening {#session-cookie-hardening}
+
+For a multi-tenant deployment served over HTTPS, harden the access-token cookie. These default to permissive values for local/HTTP development and for the current frontend, which reads the access token in JavaScript.
+
+| Variable | Format | Default | Description |
+|----------|--------|---------|-------------|
+| `LANGFLOW_ACCESS_SECURE` | Boolean | `False` | When `true`, the `access_token_lf` cookie is sent only over HTTPS. Recommended `true` for any HTTPS deployment. Leave `false` for plain-HTTP/localhost development, where a `Secure` cookie would not be sent. |
+| `LANGFLOW_ACCESS_HTTPONLY` | Boolean | `False` | When `true`, the `access_token_lf` cookie is not readable by JavaScript (mitigates token theft via XSS). The default is `false` because the bundled frontend currently reads this cookie in JavaScript; enabling `HttpOnly` requires a frontend that does not read the token directly. |
+| `LANGFLOW_ACCESS_SAME_SITE` | String | `lax` | The `SameSite` attribute of the access-token cookie (`lax`, `strict`, or `none`). |
+
+The refresh-token cookie is already `HttpOnly` + `Secure` + `SameSite` by default.
+
 ### Login rate limiting {#login-rate-limiting}
 
 The following environment variables configure IP-based rate limiting on the `/login` endpoint to protect against brute-force attacks.

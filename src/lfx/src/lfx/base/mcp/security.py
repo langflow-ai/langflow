@@ -22,6 +22,17 @@ from __future__ import annotations
 import shlex
 from pathlib import Path
 
+# Env var through which Langflow binds the agentic MCP server to an authenticated user's id.
+# Langflow injects it at spawn time from the request identity; it is in DANGEROUS_ENV_VARS so a
+# tenant-authored stdio config cannot set it. The agentic MCP tools read it and fail closed when
+# it is absent. Single source of truth for both the injector (lfx.base.mcp.util.update_tools) and
+# the reader (langflow.agentic.mcp.server).
+AGENTIC_USER_ID_ENV_VAR = "LANGFLOW_AGENTIC_USER_ID"
+
+# Substring identifying the agentic MCP server module in a stdio command, so update_tools knows
+# when to inject AGENTIC_USER_ID_ENV_VAR.
+AGENTIC_MCP_MODULE = "langflow.agentic.mcp"
+
 # SECURITY: Allowlist of approved MCP stdio commands. Shell wrappers (cmd/sh/bash) are
 # allowed ONLY to wrap another allowed command (validated below).
 ALLOWED_MCP_COMMANDS = frozenset(
@@ -102,6 +113,12 @@ DANGEROUS_ENV_VARS = frozenset(
         "res_options",
         # -- Locale / getconf injection --
         "getconf_dir",
+        # -- Langflow-internal trust binding: the agentic MCP server reads the owning user's id
+        #    from this env var. It must be injected by Langflow at spawn time from the
+        #    authenticated identity, never supplied through a tenant-authored stdio config
+        #    (which would let a tenant read/write another tenant's flows). Block it here so a
+        #    tenant config that tries to set it is rejected before the server is spawned.
+        "langflow_agentic_user_id",
     }
 )
 
