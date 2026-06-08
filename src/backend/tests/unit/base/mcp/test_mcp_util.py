@@ -3910,7 +3910,7 @@ class TestTrustVerifierIntegration:
 
     @pytest.mark.asyncio
     async def test_coroutine_warn_audit_record_contains_required_fields(self, schema, mock_client):
-        """warn path must emit decision_id and reason_code before dispatch.
+        """Warn path must emit decision_id and reason_code before dispatch.
 
         An external verifier must be able to reconstruct the audit trail without
         inspecting logs after the fact.
