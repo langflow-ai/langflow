@@ -4492,7 +4492,7 @@
   "components.memory.inputs.template.info.e9ef56ea": "The template to use for formatting the data. It can contain the keys {text}, {sender} or any other key in the message data.",
   "components.memory.outputs.dataframe.display_name.16d1c905": "Table",
   "components.memory.outputs.messages_text.display_name.04d7b483": "Messages",
-  "components.memorybase.description.49825d5a": "Retrieve chat memory from a Memory Base attached to this flow. Defaults to scoping by the current session; disable 'Filter by Session' to retrieve across every session ingested into this Memory Base.",
+  "components.memorybase.description.03cd3f8b": "Retrieve long-term memory from a Memory Base attached to this workflow. When 'Filter by Session' is off, queries run across all sessions.",
   "components.memorybase.display_name.6c40130b": "Memory Base",
   "components.memorybase.inputs.filter_by_session.display_name.0c2249c9": "Filter by Session",
   "components.memorybase.inputs.filter_by_session.info.ddd14a58": "If enabled, only memories from the current session will be retrieved. Disable to allow retrieval across every session ingested into this Memory Base (useful for cross-conversation recall).",
