@@ -1858,12 +1858,6 @@
       "0.3.1": "f51b15d26440"
     }
   },
-  "PythonCodeStructuredTool": {
-    "versions": {
-      "0.3.0": "3f913a303e47",
-      "0.3.1": "3f913a303e47"
-    }
-  },
   "PythonREPLTool": {
     "versions": {
       "0.3.0": "695ab612478d",
