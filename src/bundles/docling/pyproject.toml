@@ -1,6 +1,6 @@
 [project]
-name = "lfx-docling"
-version = "0.1.1"
+name = "lfx-docling-nightly"
+version = "0.1.1.dev4"
 description = "Docling document processing components as a standalone Langflow Extension Bundle."
 readme = "README.md"
 requires-python = ">=3.10,<3.15"
@@ -14,7 +14,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "docling", "documents"]
 # base dependency because the bundle exchanges DoclingDocument objects even when
 # conversion happens remotely.
 dependencies = [
-    "lfx>=1.10.0,<2.0.0",
+    "lfx-nightly==1.10.0.dev4",
     "httpx>=0.28.1,<1.0.0",
     "docling-core>=2.36.1,<3.0.0",
 ]
@@ -33,11 +33,11 @@ chunking = [
     "tiktoken>=0.7.0",
 ]
 image-description = [
-    "lfx-docling[local]",
+    "lfx-docling-nightly[local]",
     "langchain-docling>=1.1.0",
 ]
 all = [
-    "lfx-docling[local,chunking,image-description]",
+    "lfx-docling-nightly[local,chunking,image-description]",
 ]
 
 [project.urls]
