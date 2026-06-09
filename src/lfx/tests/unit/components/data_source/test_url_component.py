@@ -33,3 +33,8 @@ class TestURLComponentInputTypes:
     def test_urls_input_is_list(self, url_component):
         urls_input = next(inp for inp in url_component.inputs if inp.name == "urls")
         assert urls_input.is_list is True
+
+    def test_follow_redirects_input_defaults_to_true(self, url_component):
+        """Redirects must be followed by default so canonical http->https / www hops resolve."""
+        follow_redirects_input = next(inp for inp in url_component.inputs if inp.name == "follow_redirects")
+        assert follow_redirects_input.value is True

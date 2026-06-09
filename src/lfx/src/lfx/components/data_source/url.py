@@ -23,6 +23,13 @@ DEFAULT_TIMEOUT = 30
 DEFAULT_MAX_DEPTH = 1
 DEFAULT_FORMAT = "Text"
 
+# HTTP status codes that carry a redirect Location header (RFC 9110).
+REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
+
+# Maximum number of redirects to follow. Each hop is re-validated for SSRF safety;
+# matches httpx's default and the API Request component.
+MAX_REDIRECTS = 20
+
 
 URL_REGEX = re.compile(
     r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
@@ -103,6 +110,21 @@ class URLComponent(Component):
             info=(
                 "If enabled, uses asynchronous loading which can be significantly faster "
                 "but might use more system resources."
+            ),
+            value=True,
+            required=False,
+            advanced=True,
+        ),
+        BoolInput(
+            name="follow_redirects",
+            display_name="Follow Redirects",
+            info=(
+                "If enabled, follows HTTP redirects such as http→https or www/non-www "
+                "normalization, which most sites rely on to serve their content. When SSRF "
+                "protection is enabled (the default), every redirect hop is re-validated against "
+                "the same blocked-IP denylist and DNS-pinned before it is fetched, so following "
+                "redirects cannot be used to reach internal resources. Disable to capture the "
+                "first response as-is without following redirects."
             ),
             value=True,
             required=False,
@@ -286,8 +308,135 @@ class URLComponent(Component):
                 return create_ssrf_protected_client(hostname=hostname, validated_ips=validated_ips)
         return httpx.AsyncClient()
 
+    @staticmethod
+    def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:
+        """Drop sensitive headers when a redirect crosses to a different host.
+
+        Mirrors httpx's auto-follow behavior so manually following redirects does not
+        leak credentials (Authorization / Cookie) to a different host than the one the
+        caller intended them for. Same-host redirects keep all headers.
+        """
+        if not headers:
+            return headers
+        if urlparse(current_url).hostname == urlparse(next_url).hostname:
+            return headers
+        sensitive = {"authorization", "proxy-authorization", "cookie"}
+        return {k: v for k, v in headers.items() if k.lower() not in sensitive}
+
+    def _process_response(self, response: httpx.Response) -> tuple[str, dict]:
+        """Turn a final (non-redirect) response into its HTML content and metadata.
+
+        Args:
+            response: The HTTP response to process
+
+        Returns:
+            tuple[str, dict]: The HTML content and metadata
+        """
+        if self.check_response_status:
+            response.raise_for_status()
+
+        content_type = response.headers.get("content-type", "").lower()
+
+        # Filter out CSS files if requested
+        if self.filter_text_html and "text/css" in content_type:
+            logger.debug(f"Skipping CSS file: {response.url}")
+            return "", {}
+
+        # Get the HTML content
+        html_content = response.text
+
+        # Extract metadata
+        metadata = {
+            "source": str(response.url),
+            "title": "",
+            "description": "",
+            "content_type": content_type,
+            "language": "",
+        }
+
+        # Try to extract title and description from HTML
+        try:
+            soup = BeautifulSoup(html_content, "lxml")
+        except Exception:  # noqa: BLE001
+            # Broad exception is acceptable here - metadata extraction is optional
+            # and we don't want to fail the entire request if it fails
+            logger.debug(f"Failed to extract metadata from {response.url}")
+        else:
+            if soup.title:
+                metadata["title"] = soup.title.string or ""
+
+            # Try to get description from meta tags
+            meta_desc = soup.find("meta", attrs={"name": "description"})
+            if meta_desc and meta_desc.get("content"):
+                metadata["description"] = meta_desc["content"]
+
+            # Try to get language
+            html_tag = soup.find("html")
+            if html_tag and html_tag.get("lang"):
+                metadata["language"] = html_tag["lang"]
+
+        return html_content, metadata
+
+    async def _fetch_with_revalidated_redirects(
+        self, url: str, validated_ips: list[str], headers: dict
+    ) -> tuple[str, dict]:
+        """Fetch ``url``, following redirects manually and re-validating every hop.
+
+        This closes an SSRF bypass: with redirects enabled, httpx would otherwise
+        auto-follow a redirect from a validated public URL to an internal address that
+        the pinned transport never checked (the redirect target is a different host, so
+        it is not in the pin map). Each redirect ``Location`` is resolved (relative
+        locations included) and re-validated with ``ensure_url`` - the same private/
+        loopback/link-local denylist and DNS pinning applied to the initial request -
+        before any connection to it is made. A blocked hop raises ``ValueError`` (unless
+        ``continue_on_failure``); the chain is capped at ``MAX_REDIRECTS`` hops.
+
+        Args:
+            url: The URL to fetch
+            validated_ips: Validated IPs for DNS pinning of the initial URL
+            headers: HTTP headers to send
+
+        Returns:
+            tuple[str, dict]: The HTML content and metadata
+        """
+        current_url = url
+        current_ips = validated_ips
+
+        for _ in range(MAX_REDIRECTS + 1):
+            async with self._build_http_client(current_url, current_ips) as client:
+                response = await client.get(current_url, headers=headers, timeout=self.timeout, follow_redirects=False)
+
+            location = response.headers.get("location")
+            if response.status_code in REDIRECT_STATUS_CODES and location:
+                # Resolve relative redirects against the current URL.
+                next_url = urljoin(current_url, location)
+
+                # Re-validate the redirect target with the same SSRF denylist + DNS pinning.
+                try:
+                    validated_next_url, current_ips = self.ensure_url(next_url)
+                except (ValueError, SSRFProtectionError) as e:
+                    if self.continue_on_failure:
+                        logger.warning(f"Skipping blocked or invalid redirect to {next_url}: {e}")
+                        return "", {}
+                    msg = f"SSRF Protection: blocked redirect to {next_url}: {e}"
+                    raise ValueError(msg) from e
+
+                headers = self._headers_for_redirect(headers, current_url, next_url)
+                current_url = validated_next_url
+                continue
+
+            # Not a redirect (or no Location header) - this is the final response.
+            return self._process_response(response)
+
+        # Exhausted the redirect budget.
+        if self.continue_on_failure:
+            logger.warning(f"Exceeded the maximum of {MAX_REDIRECTS} redirects while requesting {url}")
+            return "", {}
+        msg = f"SSRF Protection: exceeded the maximum of {MAX_REDIRECTS} redirects while requesting {url}"
+        raise ValueError(msg)
+
     async def _fetch_url_with_pinning(self, url: str, validated_ips: list[str], headers: dict) -> tuple[str, dict]:
-        """Fetch a single URL with DNS pinning protection.
+        """Fetch a single URL with DNS pinning protection, following redirects safely.
 
         Args:
             url: The URL to fetch
@@ -297,60 +446,26 @@ class URLComponent(Component):
         Returns:
             tuple[str, dict]: The HTML content and metadata
         """
-        async with self._build_http_client(url, validated_ips) as client:
-            try:
-                response = await client.get(url, headers=headers, timeout=self.timeout, follow_redirects=False)
+        try:
+            # When SSRF protection is enabled we must follow redirects manually so each hop
+            # is re-validated and DNS-pinned; letting httpx auto-follow would connect to the
+            # redirect target without pinning (different host, not in the pin map) and re-open
+            # the SSRF hole that DNS pinning closes. With protection disabled there is no pin
+            # to bypass, so httpx can follow redirects natively.
+            if self.follow_redirects and is_ssrf_protection_enabled():
+                return await self._fetch_with_revalidated_redirects(url, validated_ips, headers)
 
-                if self.check_response_status:
-                    response.raise_for_status()
+            async with self._build_http_client(url, validated_ips) as client:
+                response = await client.get(
+                    url, headers=headers, timeout=self.timeout, follow_redirects=self.follow_redirects
+                )
+            return self._process_response(response)
 
-                content_type = response.headers.get("content-type", "").lower()
-
-                # Filter out CSS files if requested
-                if self.filter_text_html and "text/css" in content_type:
-                    logger.debug(f"Skipping CSS file: {url}")
-                    return "", {}
-
-                # Get the HTML content
-                html_content = response.text
-
-                # Extract metadata
-                metadata = {
-                    "source": str(response.url),
-                    "title": "",
-                    "description": "",
-                    "content_type": content_type,
-                    "language": "",
-                }
-
-                # Try to extract title and description from HTML
-                try:
-                    soup = BeautifulSoup(html_content, "lxml")
-                except Exception:  # noqa: BLE001
-                    # Broad exception is acceptable here - metadata extraction is optional
-                    # and we don't want to fail the entire request if it fails
-                    logger.debug(f"Failed to extract metadata from {url}")
-                else:
-                    if soup.title:
-                        metadata["title"] = soup.title.string or ""
-
-                    # Try to get description from meta tags
-                    meta_desc = soup.find("meta", attrs={"name": "description"})
-                    if meta_desc and meta_desc.get("content"):
-                        metadata["description"] = meta_desc["content"]
-
-                    # Try to get language
-                    html_tag = soup.find("html")
-                    if html_tag and html_tag.get("lang"):
-                        metadata["language"] = html_tag["lang"]
-
-            except httpx.HTTPError as e:
-                if self.continue_on_failure:
-                    logger.warning(f"Failed to fetch {url}: {e}")
-                    return "", {}
-                raise
-            else:
-                return html_content, metadata
+        except httpx.HTTPError as e:
+            if self.continue_on_failure:
+                logger.warning(f"Failed to fetch {url}: {e}")
+                return "", {}
+            raise
 
     async def _crawl_recursive(
         self, start_url: str, validated_ips: list[str], headers: dict, visited: set, depth: int = 0
