@@ -44,16 +44,60 @@ MIGRATION_TABLE = REPO_ROOT / "src" / "lfx" / "src" / "lfx" / "extension" / "mig
 # Release this consolidation ships in -- stamped on every migration entry.
 MIGRATION_RELEASE = "1.11.0"
 
+# Shared spec for providers whose components go through langchain_community
+# wrappers (the wrapper itself; whatever SDK the wrapper lazy-imports at
+# runtime is listed per provider alongside it).
+_LC_COMMUNITY = "langchain-community>=0.4.1,<1.0.0"
+
 # Curated provider -> third-party runtime deps (everything beyond lfx itself,
 # which the metapackage already declares).  Each list is the provider's deps as
-# verified against langflow-base's per-provider extras / lfx core deps.  Empty
-# means the provider's only runtime needs are already in lfx core (e.g. httpx).
+# verified against langflow-base's per-provider extras or its direct
+# dependencies / lfx core deps.  Empty means the provider's only runtime needs
+# are already in lfx core (e.g. httpx, pydantic, pandas).  ``requests`` is NOT
+# an lfx core dep (only transitive in today's env), so providers importing it
+# declare it explicitly.
 PROVIDER_DEPS: dict[str, list[str]] = {
+    # --- tranche 1: search/tools ---
     "tavily": [],  # talks to the Tavily API via httpx (an lfx core dep)
     "exa": ["metaphor-python==0.1.23"],
-    "wikipedia": ["wikipedia==1.4.0", "langchain-community>=0.4.1,<1.0.0"],
+    "wikipedia": ["wikipedia==1.4.0", _LC_COMMUNITY],
     "yahoosearch": ["yfinance==0.2.50"],
-    "wolframalpha": ["wolframalpha==5.1.3", "langchain-community>=0.4.1,<1.0.0"],
+    "wolframalpha": ["wolframalpha==5.1.3", _LC_COMMUNITY],
+    # --- tranche 2: vector stores ---
+    "chroma": ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", _LC_COMMUNITY],
+    "clickhouse": ["clickhouse-connect==0.7.19", _LC_COMMUNITY],
+    "couchbase": ["couchbase>=4.2.1", _LC_COMMUNITY],
+    "milvus": ["langchain-milvus~=0.3.2"],
+    "mongodb": ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"],
+    "pgvector": ["pgvector>=0.4.2", _LC_COMMUNITY],
+    # Marker preserved from langflow-base: no py3.14 wheel yet; on 3.14 the
+    # component degrades exactly as it does in today's published images.
+    "pinecone": ["langchain-pinecone~=0.2.13; python_version < '3.14'"],
+    "qdrant": ["qdrant-client>=1.12.0,<2.0.0", "langchain-qdrant>=1.0.0,<2.0.0"],
+    "supabase": ["supabase>=2.6.0,<3.0.0", _LC_COMMUNITY],
+    "upstash": ["upstash-vector==0.6.0", _LC_COMMUNITY],
+    "weaviate": ["weaviate-client>=4.10.2,<5.0.0", "langchain-weaviate>=0.0.6"],
+    # --- tranche 2: model providers ---
+    "groq": ["langchain-groq~=1.1.1"],
+    "mistral": ["langchain-mistralai~=1.1.1"],
+    "ollama": ["langchain-ollama~=0.3.10"],
+    "perplexity": ["langchain-perplexity>=1.0.0,<2.0.0"],
+    "sambanova": ["langchain-sambanova~=1.0.0"],
+    # --- tranche 2: tools / memory / data ---
+    "apify": ["apify-client>=1.8.1", _LC_COMMUNITY],
+    "assemblyai": ["assemblyai>=0.33.0,<1.0.0"],
+    "confluence": ["atlassian-python-api==3.41.16", _LC_COMMUNITY],
+    "firecrawl": ["firecrawl-py>=1.0.16,<2.0.0"],
+    "git": ["GitPython>=3.1.50", _LC_COMMUNITY],
+    "glean": [],  # httpx + pydantic only (lfx core)
+    "icosacomputing": ["requests>=2.32.0"],
+    "mem0": ["mem0ai>=2.0.2,<3.0.0"],
+    "needle": ["needle-python>=0.4.0", _LC_COMMUNITY],
+    "scrapegraph": ["scrapegraph-py>=1.12.0"],
+    "serpapi": ["google-search-results>=2.4.1,<3.0.0", _LC_COMMUNITY],
+    "unstructured": ["langchain-unstructured~=1.0.0"],
+    "youtube": ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"],
+    "zep": ["zep-python==2.0.2"],
 }
 
 _OPTIONAL_DEPS_HEADER = (

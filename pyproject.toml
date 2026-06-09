@@ -361,7 +361,7 @@ external = ["RUF027"]
 "src/lfx/src/lfx/components/knowledge_bases/retrieval.py" = [
     "SLF001",  # Chroma client private member access
 ]
-"src/lfx/src/lfx/components/mongodb/mongodb_atlas.py" = [
+"src/bundles/lfx-bundles/src/lfx_bundles/mongodb/mongodb_atlas.py" = [
     "SLF001",  # MongoDB collection private member access
 ]
 "src/lfx/src/lfx/components/tools/{python_code_structured_tool.py,searxng.py}" = [
