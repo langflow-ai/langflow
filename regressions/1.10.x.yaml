@@ -3,7 +3,7 @@ release: 1.10.x
 
 entries:
 
-- id: H1-3754930
+- id: GH-13538
   title: Python Code Structured tool disabled then removed (unauthenticated RCE fix)
   status: ship_with_note
   area: components
