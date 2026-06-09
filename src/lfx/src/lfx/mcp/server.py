@@ -1238,6 +1238,18 @@ async def validate_flow(flow_id: str) -> dict[str, Any]:
             "errors": errors,
         }
 
+    if len(completed) != expected:
+        return {
+            "valid": False,
+            "component_count": len(completed),
+            "errors": [
+                {
+                    "component_id": "flow",
+                    "error": f"Build ended early: {len(completed)}/{expected} components completed",
+                }
+            ],
+        }
+
     return {
         "valid": True,
         "component_count": len(completed),

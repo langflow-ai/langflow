@@ -162,3 +162,21 @@ class TestValidateFlow:
         assert result["valid"] is False
         assert "Build request failed" in result["error"]
         assert result["component_count"] == 0
+
+    async def test_end_event_before_all_components_finish_returns_failure(self) -> None:
+        """An early end event must not be reported as a valid full build."""
+        from lfx.mcp.server import validate_flow
+
+        flow = _flow_with_nodes(2)
+        events = [
+            _end_vertex_event("A-1", valid=True),
+            _end_event(),
+        ]
+        client = _stream_client(events)
+
+        with _patch_validate(flow=flow, client=client):
+            result = await validate_flow("flow-1")
+
+        assert result["valid"] is False
+        assert result["component_count"] == 1
+        assert result["errors"] == [{"component_id": "flow", "error": "Build ended early: 1/2 components completed"}]
