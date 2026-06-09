@@ -39,7 +39,9 @@ function formatDate(iso: string) {
 }
 
 // Relative within a week ("just now", "2 hours ago", "yesterday", "3 days
-// ago"); an absolute date beyond that.
+// ago"); an absolute date beyond that. Deliberately not moment.fromNow():
+// the design wants this exact copy plus the absolute-date switch after a
+// week, which fromNow doesn't do — moment.utc would only cover the TZ half.
 function relativeTime(iso: string): string {
   const diffMs = Date.now() - toDate(iso).getTime();
   const min = Math.floor(diffMs / 60_000);

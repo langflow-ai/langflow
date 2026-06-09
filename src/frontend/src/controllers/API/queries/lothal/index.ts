@@ -94,6 +94,13 @@ const retrySkipping =
 
 const skip501Retry = retrySkipping(501);
 
+// The stub-backed queries (messages/diagram/code) have nothing fresher to
+// fetch for minutes at a time — and react-query's default staleTime of 0
+// refetches them on every window focus, hammering known-501 endpoints. Once
+// live they stay correct: every mutation that changes them invalidates their
+// keys, which bypasses staleTime.
+const STUB_STALE_MS = 5 * 60 * 1000;
+
 // --- Projects --------------------------------------------------------------
 
 async function listProjects(): Promise<Project[]> {
@@ -155,6 +162,7 @@ export function useMessages(projectId: string) {
     // The endpoint is a 501 stub until Epic 1 — don't retry that (the UI keys
     // its NotReady state off the error, and retrying just delays it).
     retry: skip501Retry,
+    staleTime: STUB_STALE_MS,
   });
 }
 
@@ -191,6 +199,7 @@ export function useDiagram(projectId: string, enabled = true) {
     // are both deterministic — the UI keys NotReady off them.
     enabled,
     retry: retrySkipping(501, 403),
+    staleTime: STUB_STALE_MS,
   });
 }
 
@@ -209,5 +218,6 @@ export function useCode(projectId: string) {
       return res.data.files;
     },
     retry: skip501Retry,
+    staleTime: STUB_STALE_MS,
   });
 }

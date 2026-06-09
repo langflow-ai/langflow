@@ -31,13 +31,17 @@ env:
   FRONTEND_IMAGE_NAME: realbytecode/lothal-frontend
 
 jobs:
-  build:
-    name: Build & push images
+  # Resolve the dispatched ref to one exact commit first: the two image builds
+  # run in parallel on separate runners, and checking the *branch* out twice
+  # could race a push landing in between — both builds (and the SHA tag) must
+  # come from the same commit.
+  refs:
+    name: Resolve ref
     runs-on: ubuntu-latest
     permissions:
       contents: read
-      packages: write
     outputs:
+      full_sha: ${{ steps.refs.outputs.full_sha }}
       sha: ${{ steps.refs.outputs.sha }}
       backend_image: ${{ steps.refs.outputs.backend_image }}
       frontend_image: ${{ steps.refs.outputs.frontend_image }}
@@ -50,11 +54,29 @@ jobs:
       - name: Compute image refs
         id: refs
         run: |
+          full_sha="$(git rev-parse HEAD)"
           sha="$(git rev-parse --short=12 HEAD)"
+          echo "full_sha=$full_sha" >> "$GITHUB_OUTPUT"
           echo "sha=$sha" >> "$GITHUB_OUTPUT"
           echo "backend_image=${REGISTRY}/${BACKEND_IMAGE_NAME}:${sha}" >> "$GITHUB_OUTPUT"
           echo "frontend_image=${REGISTRY}/${FRONTEND_IMAGE_NAME}:${sha}" >> "$GITHUB_OUTPUT"
-          echo "Building from $(git rev-parse HEAD) -> sha tag ${sha}"
+          echo "Building from ${full_sha} -> sha tag ${sha}"
+
+  # The RackNerd box is x86_64 and ubuntu-latest runners are amd64, so a single
+  # linux/amd64 build is all that's needed — no QEMU, no multi-arch manifest.
+  # Backend and frontend build concurrently; each keeps its own GHA cache scope.
+  build-backend:
+    name: Build & push backend
+    needs: refs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out ${{ needs.refs.outputs.sha }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.refs.outputs.full_sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -66,8 +88,6 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      # The RackNerd box is x86_64 and ubuntu-latest runners are amd64, so a single
-      # linux/amd64 build is all that's needed — no QEMU, no multi-arch manifest.
       - name: Build & push backend
         uses: docker/build-push-action@v6
         with:
@@ -77,10 +97,33 @@ jobs:
           platforms: linux/amd64
           provenance: false
           tags: |
-            ${{ steps.refs.outputs.backend_image }}
+            ${{ needs.refs.outputs.backend_image }}
             ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
           cache-from: type=gha,scope=lothal-backend
           cache-to: type=gha,mode=max,scope=lothal-backend
+
+  build-frontend:
+    name: Build & push frontend
+    needs: refs
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Check out ${{ needs.refs.outputs.sha }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ needs.refs.outputs.full_sha }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build & push frontend
         uses: docker/build-push-action@v6
@@ -91,14 +134,14 @@ jobs:
           platforms: linux/amd64
           provenance: false
           tags: |
-            ${{ steps.refs.outputs.frontend_image }}
+            ${{ needs.refs.outputs.frontend_image }}
             ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
           cache-from: type=gha,scope=lothal-frontend
           cache-to: type=gha,mode=max,scope=lothal-frontend
 
   deploy:
     name: Deploy to RackNerd
-    needs: build
+    needs: [refs, build-backend, build-frontend]
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -107,8 +150,8 @@ jobs:
       - name: SSH → pull, migrate, up, health-check
         uses: appleboy/ssh-action@v1
         env:
-          BACKEND_IMAGE: ${{ needs.build.outputs.backend_image }}
-          FRONTEND_IMAGE: ${{ needs.build.outputs.frontend_image }}
+          BACKEND_IMAGE: ${{ needs.refs.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ needs.refs.outputs.frontend_image }}
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
