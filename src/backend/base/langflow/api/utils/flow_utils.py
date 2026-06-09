@@ -105,9 +105,9 @@ async def cascade_delete_flow(session: AsyncSession, flow_id: uuid.UUID) -> None
         # by default (requires PRAGMA foreign_keys = ON), and this function follows
         # the existing pattern of explicitly deleting all child records.
         await session.exec(delete(FlowVersion).where(FlowVersion.flow_id == flow_id))
-        # span.trace_id FK lacks ON DELETE CASCADE in the DDL, so spans must
-        # be removed before traces to avoid an FK violation under
-        # PRAGMA foreign_keys=ON.
+        # Explicit span deletion for clarity and SQLite compatibility.
+        # Database-level CASCADE exists, but explicit deletion ensures
+        # consistent behavior across all database backends.
         trace_ids = (await session.exec(select(TraceTable.id).where(TraceTable.flow_id == flow_id))).all()
         if trace_ids:
             await session.exec(delete(SpanTable).where(col(SpanTable.trace_id).in_(trace_ids)))
