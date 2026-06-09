@@ -11,6 +11,11 @@ ENV TZ=UTC
 
 WORKDIR /app
 
+# pipefail so a failed NodeSource download fails the layer: under the default
+# shell, `curl | bash` exits 0 when curl dies, the repo setup silently never
+# runs, and `apt-get install nodejs` quietly installs Debian's ancient node.
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN apt-get update \
     && apt-get upgrade -y \
     && apt-get install -y \
@@ -20,6 +25,9 @@ RUN apt-get update \
     libpq5 \
     && curl -fsSL https://deb.nodesource.com/setup_22.x | bash - \
     && apt-get install -y nodejs \
+    # Belt and braces: whatever the setup script did, the wrong node major
+    # must fail the build here, not as tooling errors much later.
+    && node --version | grep -q '^v22\.' \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
 
