@@ -363,6 +363,7 @@ async def generate_flow_events(
     current_user: CurrentActiveUser,
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
+    run_id: str | None = None,
 ) -> None:
     """Generate events for flow building process.
 
@@ -370,6 +371,10 @@ async def generate_flow_events(
     - Building and validating the graph
     - Processing vertices
     - Handling errors and cleanup
+
+    When ``run_id`` is provided the graph adopts it instead of minting a fresh
+    one, so callers (e.g. background jobs) can later look up the run's vertex
+    builds by that id. Defaults to a fresh uuid for the live build path.
     """
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
@@ -380,14 +385,14 @@ async def generate_flow_events(
         start_time = time.perf_counter()
         components_count = 0
         graph = None
-        run_id = str(uuid.uuid4())
+        build_run_id = run_id or str(uuid.uuid4())
         try:
             flow_id_str = str(flow_id)
             # Create a fresh session for database operations
             async with session_scope() as fresh_session:
                 graph = await create_graph(fresh_session, flow_id_str, flow_name)
 
-            graph.set_run_id(run_id)
+            graph.set_run_id(build_run_id)
             first_layer = sort_vertices(graph)
 
             for vertex_id in first_layer:
@@ -400,13 +405,13 @@ async def generate_flow_events(
             vertices_to_run = list(graph.vertices_to_run.union(get_top_level_vertices(graph, graph.vertices_to_run)))
 
             await chat_service.set_cache(flow_id_str, graph)
-            await log_telemetry(start_time, components_count, run_id=run_id, success=True)
+            await log_telemetry(start_time, components_count, run_id=build_run_id, success=True)
 
         except Exception as exc:
             await log_telemetry(
                 start_time,
                 components_count,
-                run_id=run_id,
+                run_id=build_run_id,
                 success=False,
                 error_message=str(exc),
             )
@@ -523,8 +528,12 @@ async def generate_flow_events(
 
             result_data_response.message = artifacts
 
-            # Log the vertex build
-            if not vertex.will_stream and log_builds:
+            # Log the vertex build. Job-tracked runs (background workflows pass a
+            # ``run_id``) persist every vertex, including streaming terminal outputs,
+            # so GET-status reconstruction by job_id is complete. The live build
+            # path (``run_id is None``) keeps the original "skip streaming vertices"
+            # behavior unchanged.
+            if log_builds and (run_id is not None or not vertex.will_stream):
                 background_tasks.add_task(
                     log_vertex_build,
                     flow_id=flow_id_str,
@@ -533,6 +542,9 @@ async def generate_flow_events(
                     params=params,
                     data=result_data_response,
                     artifacts=artifacts,
+                    # Key the persisted build by the run id so job-tracked runs can
+                    # reconstruct status by job_id.
+                    job_id=graph.run_id,
                 )
             else:
                 await chat_service.set_cache(flow_id_str, graph)

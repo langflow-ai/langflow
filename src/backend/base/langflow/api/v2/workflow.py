@@ -564,6 +564,7 @@ async def _stream_event_frames(
     parsed: ParsedWorkflowRun,
     current_user: UserRead,
     source_flow_id: UUID | None = None,
+    run_id: str | None = None,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -620,10 +621,14 @@ async def _stream_event_frames(
                 files=parsed.files,
                 stop_component_id=parsed.stop_component_id,
                 start_component_id=parsed.start_component_id,
-                log_builds=False,
+                # Persist vertex builds (keyed by ``run_id``) only for job-tracked
+                # runs so a background job's status can be reconstructed later. Live
+                # streams pass no ``run_id`` and keep the no-persist behavior.
+                log_builds=run_id is not None,
                 current_user=current_user,
                 flow_name=flow_name,
                 source_flow_id=source_flow_id,
+                run_id=run_id,
             )
         except asyncio.CancelledError:
             raise
@@ -922,6 +927,9 @@ async def _buffer_background_run(
             background_tasks=fresh_background_tasks,
             parsed=parsed,
             current_user=current_user,
+            # Build under the job id so the run's vertex builds are persisted
+            # keyed by job_id and GET-status reconstruction can find them.
+            run_id=job_id,
         ):
             if terminal_error_type is not None and event_type == terminal_error_type:
                 errored = True

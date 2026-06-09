@@ -643,6 +643,61 @@ class TestAGUIBackgroundJobStatus:
             "the literal 'RUN_ERROR' so the byte-substring detector would false-positive"
         )
 
+    async def test_completed_background_job_status_reconstructs_from_job_id(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+    ):
+        """A completed background job's GET status must reconstruct its outputs.
+
+        Regression: the background build path minted its own ``run_id`` instead of
+        using ``job_id``, so vertex builds were persisted under a different id than
+        ``get_vertex_builds_by_job_id`` queries. Completed background jobs then 500
+        with "No vertex builds found" on status reconstruction. The sync path
+        already aligns ``run_id`` to ``job_id`` (``graph.set_run_id(job_id)``); the
+        background path must too.
+        """
+        import asyncio as _asyncio
+        from uuid import UUID as _UUID
+
+        from langflow.services.database.models.jobs.model import Job as _Job
+
+        headers = {"x-api-key": created_api_key.api_key}
+        start = await client.post(
+            "api/v2/workflows",
+            json=_agui_body(chatbot_flow, message="hi", mode="background"),
+            headers=headers,
+        )
+        assert start.status_code == 200
+        job_id = start.json()["job_id"]
+
+        # Drain the SSE buffer so the build runs and persists vertex builds.
+        events = await client.get(f"api/v2/workflows/{job_id}/events", headers=headers)
+        assert events.status_code == 200
+        assert "RUN_FINISHED" in events.text
+
+        # Wait for the buffer task to finalize the job row to completed.
+        row = None
+        for _ in range(100):
+            async with session_scope() as session:
+                row = await session.get(_Job, _UUID(job_id))
+                if row is not None and row.status.value in ("completed", "failed"):
+                    break
+            await _asyncio.sleep(0.1)
+        assert row is not None, "background job row was never created"
+        assert row.status.value == "completed", f"background job did not complete: {row.status.value!r}"
+
+        # GET status reconstructs from the vertex_build table keyed by job_id.
+        status_resp = await client.get(f"api/v2/workflows?job_id={job_id}", headers=headers)
+        assert status_resp.status_code == 200, (
+            "completed background job status failed to reconstruct "
+            f"(run_id/job_id mismatch?): {status_resp.status_code} {status_resp.text}"
+        )
+        body = status_resp.json()
+        assert body["status"] == "completed"
+        assert "outputs" in body
+
     async def test_message_with_json_shaped_run_error_payload_does_not_fail_job(
         self,
         client: AsyncClient,
