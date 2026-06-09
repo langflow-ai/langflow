@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,9 @@ export const McpAutoInstallContent = ({
   loadingMCP,
   installClient,
   installedClients,
-}: McpAutoInstallContentProps) => (
+}: McpAutoInstallContentProps) => {
+  const { t } = useTranslation();
+  return (
   <div className="flex flex-col gap-1">
     {!isLocalConnection && (
       <div className="mb-2 rounded-md bg-accent-amber px-3 py-2 text-sm text-accent-amber-foreground">
@@ -33,11 +36,7 @@ export const McpAutoInstallContent = ({
             name="AlertTriangle"
             className="h-4 w-4 shrink-0"
           />
-          <span>
-            One-click install is disabled because the Langflow server is not
-            running on your local machine. Use the JSON tab to configure your
-            client manually.
-          </span>
+          <span>{t("mcp.installDisabledWarning")}</span>
         </div>
       </div>
     )}
@@ -47,7 +46,7 @@ export const McpAutoInstallContent = ({
         content={
           !installedMCPData?.find((client) => client.name === installer.name)
             ?.available
-            ? `Install ${toSpaceCase(installer.name)} to enable auto-install.`
+            ? t("mcp.installTooltip", { name: toSpaceCase(installer.name) })
             : ""
         }
         side="left"
@@ -109,4 +108,5 @@ export const McpAutoInstallContent = ({
       </ShadTooltip>
     ))}
   </div>
-);
+  );
+};
