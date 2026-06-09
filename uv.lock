@@ -8950,6 +8950,11 @@ dependencies = [
     { name = "wheel" },
 ]
 
+[package.optional-dependencies]
+bundles = [
+    { name = "lfx-bundles" },
+]
+
 [package.dev-dependencies]
 dev = [
     { name = "asgi-lifespan" },
@@ -8992,6 +8997,7 @@ requires-dist = [
     { name = "langchain-classic", specifier = "~=1.0.7" },
     { name = "langchain-core", specifier = ">=1.2.28,<2.0.0" },
     { name = "langflow-sdk", editable = "src/sdk" },
+    { name = "lfx-bundles", extras = ["all"], marker = "extra == 'bundles'", editable = "src/bundles/lfx-bundles" },
     { name = "loguru", specifier = ">=0.7.3,<1.0.0" },
     { name = "markitdown", specifier = ">=0.1.4,<2.0.0" },
     { name = "mcp", specifier = ">=1.17.0,<2.0.0" },
@@ -9018,6 +9024,7 @@ requires-dist = [
     { name = "validators", specifier = ">=0.34.0,<1.0.0" },
     { name = "wheel", specifier = ">=0.46.2,<1.0.0" },
 ]
+provides-extras = ["bundles"]
 
 [package.metadata.requires-dev]
 dev = [
