@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.skip(
@@ -13,10 +14,7 @@ test.skip(
 
     await page.getByTestId("youtubeYouTube Transcripts").hover();
     await page.getByTestId("add-component-button-youtube-transcripts").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     let outdatedComponents = await page.getByTestId("update-button").count();
 
@@ -28,10 +26,8 @@ test.skip(
     await page
       .getByTestId("textarea_str_url")
       .fill("https://www.youtube.com/watch?v=VqhCQZaH4Vs");
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("button_run_youtube transcripts").click();
 

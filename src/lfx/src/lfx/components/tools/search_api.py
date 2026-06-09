@@ -1,7 +1,7 @@
 from typing import Any
 
-from langchain.tools import StructuredTool
 from langchain_community.utilities.searchapi import SearchApiAPIWrapper
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -11,12 +11,13 @@ from lfx.schema.data import Data
 
 
 class SearchAPIComponent(LCToolComponent):
-    display_name: str = "Search API [DEPRECATED]"
+    display_name: str = "Search API"
     description: str = "Call the searchapi.io API with result limiting"
     name = "SearchAPI"
     documentation: str = "https://www.searchapi.io/docs/google"
     icon = "SearchAPI"
     legacy = True
+    replacement = ["searchapi.SearchComponent"]
 
     inputs = [
         MessageTextInput(name="engine", display_name="Engine", value="google"),

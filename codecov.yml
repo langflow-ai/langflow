@@ -36,6 +36,17 @@ coverage:
         flags:
           - frontend
 
+      # LFX coverage: Target for core package (excludes components)
+      # Components (third-party integrations) tracked separately
+      # Current core coverage: ~44%, Target: 60% (aspirational improvement)
+      lfx:
+        target: 60%
+        # Threshold: Allowable drop in coverage before failing the check
+        # 5% = coverage can drop from 44% to 39% without failing status
+        threshold: 5%
+        flags:
+          - lfx
+
     # New code coverage requirements - realistic target for current state
     # Encourages testing new features without blocking development
     patch:
@@ -51,7 +62,7 @@ comment:
   require_base: false     # Don't require base branch comparison
   require_head: true      # Require current branch coverage
 
-# Define separate coverage tracking for frontend and backend
+# Define separate coverage tracking for frontend, backend, and lfx
 flags:
   backend:
     paths:
@@ -60,6 +71,10 @@ flags:
   frontend:
     paths:
       - src/frontend/
+    carryforward: true  # Preserve coverage data across builds if missing
+  lfx:
+    paths:
+      - src/lfx/
     carryforward: true  # Preserve coverage data across builds if missing
 
 # Define coverage components for granular reporting
@@ -86,6 +101,7 @@ ignore:
   - "src/backend/tests/**"
   - "src/frontend/tests/**"
   - "src/frontend/test-results/**"
+  - "src/lfx/tests/**"
   # Build artifacts and dependencies
   - "**/__pycache__/**"
   - "**/*.pyc"
@@ -95,3 +111,5 @@ ignore:
   - "**/__init__.py"
   # Database migrations
   - "**/migrations/**"
+  # LFX components - third-party integrations tracked separately
+  - "src/lfx/components/**"

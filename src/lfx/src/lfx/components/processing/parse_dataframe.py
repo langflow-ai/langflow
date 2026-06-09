@@ -12,9 +12,10 @@ class ParseDataFrameComponent(Component):
     icon = "braces"
     name = "ParseDataFrame"
     legacy = True
+    replacement = ["processing.DataFrameOperations", "processing.TypeConverterComponent"]
 
     inputs = [
-        DataFrameInput(name="df", display_name="DataFrame", info="The DataFrame to convert to text rows."),
+        DataFrameInput(name="df", display_name="Table", info="The DataFrame to convert to text rows."),
         MultilineInput(
             name="template",
             display_name="Template",

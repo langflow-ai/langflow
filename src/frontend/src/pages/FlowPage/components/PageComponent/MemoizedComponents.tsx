@@ -1,12 +1,16 @@
 import { Background, Panel } from "@xyflow/react";
-import { memo } from "react";
+import { cloneDeep } from "lodash";
+import { memo, useCallback, useState } from "react";
+import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
 import CanvasControls from "@/components/core/canvasControlsComponent/CanvasControls";
-import LogCanvasControls from "@/components/core/logCanvasControlsComponent";
 import { Button } from "@/components/ui/button";
 import { SidebarTrigger, useSidebar } from "@/components/ui/sidebar";
 import { ENABLE_NEW_SIDEBAR } from "@/customization/feature-flags";
+import useSaveFlow from "@/hooks/flows/use-save-flow";
+import useFlowStore from "@/stores/flowStore";
+import { AllNodeType } from "@/types/flow";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../flowSidebarComponent";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
@@ -17,45 +21,90 @@ export const MemoizedBackground = memo(() => (
 
 interface MemoizedCanvasControlsProps {
   setIsAddingNote: (value: boolean) => void;
-  position: { x: number; y: number };
   shadowBoxWidth: number;
   shadowBoxHeight: number;
+  selectedNode: AllNodeType | null;
+  isAgentWorking?: boolean;
 }
-
-export const MemoizedLogCanvasControls = memo(() => <LogCanvasControls />);
 
 export const MemoizedCanvasControls = memo(
   ({
     setIsAddingNote,
-    position,
     shadowBoxWidth,
     shadowBoxHeight,
-  }: MemoizedCanvasControlsProps) => (
-    <CanvasControls>
-      <Button
-        variant="ghost"
-        size="icon"
-        data-testid="add_note"
-        className="group flex items-center justify-center px-2 rounded-none"
-        title="Add sticky note"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsAddingNote(true);
-          const shadowBox = document.getElementById("shadow-box");
-          if (shadowBox) {
-            shadowBox.style.display = "block";
-            shadowBox.style.left = `${position.x - shadowBoxWidth / 2}px`;
-            shadowBox.style.top = `${position.y - shadowBoxHeight / 2}px`;
-          }
-        }}
+    selectedNode,
+    isAgentWorking,
+  }: MemoizedCanvasControlsProps) => {
+    const currentFlow = useFlowStore(useShallow((state) => state.currentFlow));
+    const setCurrentFlow = useFlowStore((state) => state.setCurrentFlow);
+    const saveFlow = useSaveFlow();
+    const isLocked = currentFlow?.locked ?? false;
+    const effectiveLocked = isLocked || isAgentWorking;
+    const [isSaving, setIsSaving] = useState(false);
+
+    const handleToggleLock = useCallback(async () => {
+      if (isAgentWorking || isSaving || !currentFlow) return;
+      const newFlow = cloneDeep(currentFlow);
+      newFlow.locked = !isLocked;
+      setIsSaving(true);
+      try {
+        await saveFlow(newFlow);
+        setCurrentFlow(newFlow);
+      } finally {
+        setIsSaving(false);
+      }
+    }, [
+      currentFlow,
+      isLocked,
+      isAgentWorking,
+      isSaving,
+      saveFlow,
+      setCurrentFlow,
+    ]);
+
+    return (
+      <CanvasControls
+        selectedNode={selectedNode}
+        effectiveLocked={effectiveLocked}
       >
-        <ForwardedIconComponent
-          name="sticky-note"
-          className="!h-5 !w-5 text-muted-foreground group-hover:text-primary"
-        />
-      </Button>
-    </CanvasControls>
-  ),
+        <Button
+          unstyled
+          size="icon"
+          data-testid="lock-status"
+          disabled={isAgentWorking || isSaving}
+          className={cn(
+            "flex items-center justify-center px-2 rounded-none gap-1",
+            isAgentWorking || isSaving
+              ? "cursor-default opacity-70"
+              : "cursor-pointer",
+          )}
+          title={
+            isAgentWorking
+              ? "Agent Working"
+              : isSaving
+                ? "Saving..."
+                : isLocked
+                  ? "Unlock flow"
+                  : "Lock flow"
+          }
+          onClick={handleToggleLock}
+        >
+          <ForwardedIconComponent
+            name={effectiveLocked ? "Lock" : "Unlock"}
+            className={cn(
+              "!h-[18px] !w-[18px] text-muted-foreground",
+              effectiveLocked && "text-destructive",
+            )}
+          />
+          {effectiveLocked && (
+            <span className="text-xs text-destructive">
+              {isAgentWorking ? "Agent Working" : "Flow Locked"}
+            </span>
+          )}
+        </Button>
+      </CanvasControls>
+    );
+  },
 );
 
 export const MemoizedSidebarTrigger = memo(() => {
@@ -75,6 +124,7 @@ export const MemoizedSidebarTrigger = memo(() => {
             data-testid={`sidebar-trigger-${item.id}`}
             iconName={item.icon}
             iconClasses={item.id === "mcp" ? "h-8 w-8" : ""}
+            key={item.id}
             tooltipText={item.tooltip}
             onClick={() => {
               setActiveSection(item.id);

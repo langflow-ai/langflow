@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 
 test(
   "should delete a component (requires store API key)",
@@ -31,7 +31,7 @@ test(
 
     await page.getByTestId("install-Basic RAG").click();
     await page.waitForTimeout(5000);
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
     await page.getByTestId("icon-ChevronLeft").first().click();

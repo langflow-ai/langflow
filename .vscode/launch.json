@@ -1,6 +1,7 @@
 {
   "version": "0.2.0",
   "configurations": [
+
     {
       "name": "Debug Backend",
       "type": "debugpy",
@@ -21,7 +22,11 @@
         "--reload-include",
         "./src/backend/*",
         "--reload-include",
-        "./src/lfx/*"
+        "./src/lfx/*",
+        "--reload-exclude",
+        "*.db*",
+        "--reload-exclude",
+        "./tmp_toolguard/*"
       ],
       "jinja": true,
       "justMyCode": false,
@@ -38,7 +43,7 @@
       "module": "langflow",
       "args": [
         "run",
-        "--path",
+        "--frontend-path",
         "${workspaceFolder}/src/backend/base/langflow/frontend",
         "--env-file",
         "${workspaceFolder}/.env"
@@ -77,6 +82,13 @@
       "purpose": ["debug-test"],
       "console": "integratedTerminal",
       "justMyCode": false
-    }
+    },
+    {
+    "name": "Python Debugger: Python File",
+    "type": "python",
+    "request": "launch",
+    "program": "${file}",
+    "console": "integratedTerminal"
+}
   ]
 }

@@ -1,4 +1,5 @@
-import { expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { expect } from "../fixtures";
 
 export const addNewUserAndLogin = async (page: Page) => {
   await page.route("**/api/v1/auto_login", (route) => {
@@ -42,6 +43,12 @@ export const addNewUserAndLogin = async (page: Page) => {
   await page.getByRole("button", { name: "Sign In" }).click();
 
   await page.waitForSelector('[data-testid="mainpage_title"]', {
+    timeout: 30000,
+  });
+
+  // Wait for any loading text to disappear
+  await page.waitForSelector('text="Loading"', {
+    state: "hidden",
     timeout: 30000,
   });
 
@@ -99,5 +106,11 @@ export const addNewUserAndLogin = async (page: Page) => {
 
   await page.evaluate(() => {
     sessionStorage.removeItem("testMockAutoLogin");
+  });
+
+  // Wait for any loading text to disappear
+  await page.waitForSelector('text="Loading"', {
+    state: "hidden",
+    timeout: 30000,
   });
 };

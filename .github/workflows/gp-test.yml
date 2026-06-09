@@ -1,0 +1,27 @@
+name: GP Scripts Tests
+
+on:
+  pull_request:
+    paths:
+      - "scripts/gp/**"
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    name: Test Globalization Pipeline scripts
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install -r scripts/gp/requirements.txt pytest
+
+      - name: Run GP script tests
+        run: python -m pytest scripts/gp/tests/ -v

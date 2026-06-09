@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -21,7 +21,7 @@ test(
     };
 
     await focusElementsOnBoard({ page });
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await page.getByTestId("canvas_controls_dropdown").click({ force: true });
 
     await page.getByText("Retriever", { exact: true }).first().isHidden();
     await page.getByTestId("icon-ChevronDown").last().isVisible();

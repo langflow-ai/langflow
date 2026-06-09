@@ -6,6 +6,7 @@ import contextvars
 import copy
 import json
 import queue
+import sys
 import threading
 import traceback
 import uuid
@@ -14,6 +15,8 @@ from datetime import datetime, timezone
 from functools import partial
 from itertools import chain
 from typing import TYPE_CHECKING, Any, cast
+
+from ag_ui.core import RunFinishedEvent, RunStartedEvent
 
 from lfx.exceptions.component import ComponentBuildError
 from lfx.graph.edge.base import CycleEdge, Edge
@@ -42,7 +45,7 @@ from lfx.services.deps import get_chat_service, get_tracing_service
 from lfx.utils.async_helpers import run_until_complete
 
 if TYPE_CHECKING:
-    from collections.abc import Callable, Generator, Iterable
+    from collections.abc import AsyncIterator, Callable, Generator, Iterable
     from typing import Any
 
     from lfx.custom.custom_component.component import Component
@@ -102,6 +105,9 @@ class Graph:
         self.vertices_to_run: set[str] = set()
         self.stop_vertex: str | None = None
         self.inactive_vertices: set = set()
+        # Conditional routing system (separate from ACTIVE/INACTIVE cycle management)
+        self.conditionally_excluded_vertices: set = set()  # Vertices excluded by conditional routing
+        self.conditional_exclusion_sources: dict[str, set[str]] = {}  # Maps source vertex -> excluded vertices
         self.edges: list[CycleEdge] = []
         self.vertices: list[Vertex] = []
         self.run_manager = RunnableVerticesManager()
@@ -124,6 +130,7 @@ class Graph:
         self._call_order: list[str] = []
         self._snapshots: list[dict[str, Any]] = []
         self._end_trace_tasks: set[asyncio.Task] = set()
+        self._is_subgraph = False
 
         if context and not isinstance(context, dict):
             msg = "Context must be a dictionary"
@@ -354,10 +361,15 @@ class Graph:
         event_manager: EventManager | None = None,
         *,
         reset_output_values: bool = True,
+        fallback_to_env_vars: bool = False,
     ):
-        self.prepare()
+        # Preserve start_component_id from constructor if available
+        start_component_id = self._start.get_id() if self._start else None
+        self.prepare(start_component_id=start_component_id)
         if reset_output_values:
             self._reset_all_output_values()
+
+        await self.initialize_run()
 
         # The idea is for this to return a generator that yields the result of
         # each step call and raise StopIteration when the graph is done
@@ -368,12 +380,28 @@ class Graph:
         yielded_counts: dict[str, int] = defaultdict(int)
 
         while should_continue(yielded_counts, max_iterations):
-            result = await self.astep(event_manager=event_manager, inputs=inputs)
+            result = await self.astep(
+                event_manager=event_manager, inputs=inputs, fallback_to_env_vars=fallback_to_env_vars
+            )
             yield result
             if isinstance(result, Finish):
                 return
             if hasattr(result, "vertex"):
                 yielded_counts[result.vertex.id] += 1
+                # Emit on_end_vertex event for each completed vertex
+                if event_manager is not None:
+                    result_data_dict = None
+                    if hasattr(result, "result_dict") and result.result_dict:
+                        try:
+                            result_data_dict = result.result_dict.model_dump()
+                        except (AttributeError, TypeError):
+                            result_data_dict = result.result_dict
+                    build_data = {
+                        "id": result.vertex.id,
+                        "valid": result.valid if hasattr(result, "valid") else True,
+                        "data": result_data_dict,
+                    }
+                    event_manager.on_end_vertex(data={"build_data": build_data})
 
         msg = "Max iterations reached"
         raise ValueError(msg)
@@ -399,7 +427,7 @@ class Graph:
         for vertex in self.vertices:
             if vertex.custom_component is None:
                 continue
-            vertex.custom_component._reset_all_output_values()
+            vertex.custom_component.reset_all_output_values()
 
     def start(
         self,
@@ -646,9 +674,13 @@ class Graph:
                 run_name=run_name,
                 user_id=self.user_id,
                 session_id=self.session_id,
+                flow_id=self.flow_id,
             )
 
     def _end_all_traces_async(self, outputs: dict[str, Any] | None = None, error: Exception | None = None) -> None:
+        # Subgraphs don't end traces - the parent graph owns the trace lifecycle
+        if self._is_subgraph:
+            return
         task = asyncio.create_task(self.end_all_traces(outputs, error))
         self._end_trace_tasks.add(task)
         task.add_done_callback(self._end_trace_tasks.discard)
@@ -662,7 +694,15 @@ class Graph:
         context = contextvars.copy_context()
 
         async def async_end_traces_func():
-            await asyncio.create_task(self.end_all_traces(outputs, error), context=context)
+            coro = self.end_all_traces(outputs, error)
+            if sys.version_info >= (3, 11):
+                await asyncio.create_task(coro, context=context)
+            else:
+                # Python 3.10's asyncio.create_task does not accept context=.
+                # Invoke create_task inside the captured context so the new
+                # Task copies it as its current context.
+                task = context.run(asyncio.create_task, coro)
+                await task
 
         return async_end_traces_func
 
@@ -966,6 +1006,59 @@ class Graph:
             vertices_to_run=self.vertices_to_run,
         )
 
+    def exclude_branch_conditionally(self, vertex_id: str, output_name: str | None = None) -> None:
+        """Marks a branch as conditionally excluded (for conditional routing).
+
+        This system is separate from the ACTIVE/INACTIVE state used for cycle management:
+        - ACTIVE/INACTIVE: Reset after each cycle iteration to allow cycles to continue
+        - Conditional exclusion: Persists until explicitly cleared by the same source vertex
+
+        Used by ConditionalRouter to ensure only one branch executes per condition evaluation.
+        If this vertex has previously excluded branches, they are cleared first to allow
+        re-evaluation on subsequent iterations (e.g., in cycles where condition may change).
+
+        Args:
+            vertex_id: The source vertex making the exclusion decision
+            output_name: The output name to follow when excluding downstream vertices
+        """
+        # Clear any previous exclusions from this source vertex
+        if vertex_id in self.conditional_exclusion_sources:
+            previous_exclusions = self.conditional_exclusion_sources[vertex_id]
+            self.conditionally_excluded_vertices -= previous_exclusions
+            del self.conditional_exclusion_sources[vertex_id]
+
+        # Now exclude the new branch
+        visited: set[str] = set()
+        excluded: set[str] = set()
+        self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
+
+        # Track which vertices this source excluded
+        if excluded:
+            self.conditional_exclusion_sources[vertex_id] = excluded
+
+    def _exclude_branch_conditionally(
+        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
+    ) -> None:
+        """Recursively excludes vertices in a branch for conditional routing."""
+        if vertex_id in visited:
+            return
+        visited.add(vertex_id)
+
+        # Don't exclude the first vertex (the router itself)
+        if not skip_first:
+            self.conditionally_excluded_vertices.add(vertex_id)
+            excluded.add(vertex_id)
+
+        for child_id in self.parent_child_map[vertex_id]:
+            # If we're at the router (skip_first=True) and have an output_name,
+            # only follow edges from that specific output
+            if skip_first and output_name:
+                edge = self.get_edge(vertex_id, child_id)
+                if edge and edge.source_handle.name != output_name:
+                    continue
+            # After the first level, exclude all descendants
+            self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
+
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
         for edge in self.edges:
@@ -1084,8 +1177,17 @@ class Graph:
         Returns:
             Graph: The created graph.
         """
+        from lfx.utils.flow_validation import validate_flow_for_current_settings
+
         if "data" in payload:
             payload = payload["data"]
+        # Defense-in-depth: validate here so that no code path can construct
+        # a graph with blocked/custom components, even if an API endpoint
+        # forgets its own pre-check. Ideally this would live only at the API
+        # boundary (middleware or endpoint dependency) so from_payload stays
+        # pure deserialization, but a missed endpoint means arbitrary code
+        # execution, so we keep this as a safety net.
+        validate_flow_for_current_settings(payload)
         try:
             vertices = payload["nodes"]
             edges = payload["edges"]
@@ -1342,6 +1444,8 @@ class Graph:
         files: list[str] | None = None,
         user_id: str | None = None,
         event_manager: EventManager | None = None,
+        *,
+        fallback_to_env_vars: bool = False,
     ):
         if not self._prepared:
             msg = "Graph not prepared. Call prepare() first."
@@ -1353,6 +1457,11 @@ class Graph:
         if not vertex_id:
             msg = "No vertex to run"
             raise ValueError(msg)
+
+        # Emit build_start event before building vertex
+        if event_manager is not None:
+            event_manager.on_build_start(data={"id": vertex_id})
+
         chat_service = get_chat_service()
 
         # Provide fallback cache functions if chat service is unavailable
@@ -1362,7 +1471,7 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
             async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
                 return True
@@ -1375,6 +1484,7 @@ class Graph:
             get_cache=get_cache_func,
             set_cache=set_cache_func,
             event_manager=event_manager,
+            fallback_to_env_vars=fallback_to_env_vars,
         )
 
         next_runnable_vertices = await self.get_next_runnable_vertices(
@@ -1463,7 +1573,10 @@ class Graph:
         try:
             params = ""
             should_build = False
-            if not vertex.frozen:
+            # Loop components must always build, even when frozen,
+            # because they need to iterate through their data
+            is_loop_component = vertex.display_name == "Loop" or vertex.is_loop
+            if not vertex.frozen or is_loop_component:
                 should_build = True
             else:
                 # Check the cache for the vertex
@@ -1490,8 +1603,10 @@ class Graph:
                                 vertex.result.used_frozen_result = True
                         except Exception:  # noqa: BLE001
                             logger.debug("Error finalizing build", exc_info=True)
+                            vertex.built = False
                             should_build = True
                     except KeyError:
+                        vertex.built = False
                         should_build = True
 
             if should_build:
@@ -1582,10 +1697,10 @@ class Graph:
         else:
             # Fallback no-op cache functions for tests or when service unavailable
             async def get_cache_func(*args, **kwargs):  # noqa: ARG001
-                return None
+                return CacheMiss()
 
-            async def set_cache_func(*args, **kwargs):
-                pass
+            async def set_cache_func(*args, **kwargs) -> bool:  # noqa: ARG001
+                return True
 
         await self.initialize_run()
         lock = asyncio.Lock()
@@ -1712,6 +1827,7 @@ class Graph:
             params=params,
             data=result_data_response,
             artifacts={},
+            job_id=self._run_id if self._run_id else None,
         )
 
     async def _execute_tasks(
@@ -1724,9 +1840,13 @@ class Graph:
             lock: Async lock for synchronization
             has_webhook_component: Whether the graph has a webhook component
         """
+        from lfx.graph.utils import emit_vertex_build_event
+
         results = []
         completed_tasks = await asyncio.gather(*tasks, return_exceptions=True)
         vertices: list[Vertex] = []
+        # Store build results for SSE emission after calculating next_runnable_vertices
+        build_results: dict[str, VertexBuildResult] = {}
 
         for i, result in enumerate(completed_tasks):
             task_name = tasks[i].get_name()
@@ -1750,7 +1870,10 @@ class Graph:
                         params=result.params,
                         data=result.result_dict,
                         artifacts=result.artifacts,
+                        job_id=self._run_id if self._run_id else None,
                     )
+                    # Store for SSE emission later
+                    build_results[result.vertex.id] = result
 
                 vertices.append(result.vertex)
             else:
@@ -1768,6 +1891,27 @@ class Graph:
         for v in vertices:
             next_runnable_vertices = await self.get_next_runnable_vertices(lock, vertex=v, cache=False)
             results.extend(next_runnable_vertices)
+
+            # Emit SSE event with complete data including next_vertices_ids
+            if self.flow_id is not None and v.id in build_results:
+                build_result = build_results[v.id]
+                # Get top level vertices for these next runnable vertices
+                top_level = self.get_top_level_vertices(next_runnable_vertices)
+                # Get inactivated vertices
+                inactivated = list(self.inactivated_vertices.union(self.conditionally_excluded_vertices))
+
+                await emit_vertex_build_event(
+                    flow_id=self.flow_id,
+                    vertex_id=v.id,
+                    valid=build_result.valid,
+                    params=build_result.params,
+                    data_dict=build_result.result_dict,
+                    artifacts_dict=build_result.artifacts,
+                    next_vertices_ids=next_runnable_vertices,
+                    top_level_vertices=top_level,
+                    inactivated_vertices=inactivated,
+                )
+
         return list(set(results))
 
     def topological_sort(self) -> list[Vertex]:
@@ -2073,6 +2217,17 @@ class Graph:
         """Get all vertex IDs in the graph."""
         return [vertex.id for vertex in self.vertices]
 
+    def get_terminal_nodes(self) -> list[str]:
+        """Returns vertex IDs that are terminal nodes (not source of any edge).
+
+        Terminal nodes are vertices that have no outgoing edges - they are not
+        listed as source_id in any of the graph's edges.
+
+        Returns:
+            list[str]: List of vertex IDs that are terminal nodes.
+        """
+        return [vertex.id for vertex in self.vertices if not self.successor_map.get(vertex.id, [])]
+
     def sort_vertices(
         self,
         stop_component_id: str | None = None,
@@ -2135,6 +2290,9 @@ class Graph:
 
     def is_vertex_runnable(self, vertex_id: str) -> bool:
         """Returns whether a vertex is runnable."""
+        # Check if vertex is conditionally excluded (for conditional routing)
+        if vertex_id in self.conditionally_excluded_vertices:
+            return False
         is_active = self.get_vertex(vertex_id).is_active()
         is_loop = self.get_vertex(vertex_id).is_loop
         return self.run_manager.is_vertex_runnable(vertex_id, is_active=is_active, is_loop=is_loop)
@@ -2167,10 +2325,8 @@ class Graph:
             if predecessor_id in visited:
                 return
             visited.add(predecessor_id)
-            predecessor_vertex = self.get_vertex(predecessor_id)
-            is_active = predecessor_vertex.is_active()
-            is_loop = predecessor_vertex.is_loop
-            if self.run_manager.is_vertex_runnable(predecessor_id, is_active=is_active, is_loop=is_loop):
+
+            if self.is_vertex_runnable(predecessor_id):
                 runnable_vertices.append(predecessor_id)
             else:
                 for pred_pred_id in self.run_manager.run_predecessors.get(predecessor_id, []):
@@ -2217,6 +2373,55 @@ class Graph:
                 in_degree[vertex.id] = 0
         return in_degree
 
+    @contextlib.asynccontextmanager
+    async def create_subgraph(self, vertex_ids: set[str]) -> AsyncIterator[Graph]:
+        """Create an isolated subgraph containing only specified vertices.
+
+        This creates a new Graph instance with only the vertices and edges
+        that connect the specified vertices. The subgraph shares the same
+        flow_id and user_id but gets its own context copy.
+
+        Must be used as an async context manager to ensure proper cleanup
+        of any pending trace tasks when the subgraph execution completes.
+
+        Args:
+            vertex_ids: Set of vertex IDs to include in the subgraph
+
+        Yields:
+            A new Graph instance containing only the specified vertices
+
+        Example:
+            async with graph.create_subgraph(vertex_ids) as subgraph:
+                subgraph.prepare()
+                async for result in subgraph.async_start():
+                    process(result)
+        """
+        # Filter nodes to only include specified vertex IDs
+        subgraph_nodes = [n for n in self._vertices if n["id"] in vertex_ids]
+
+        # Filter edges to only include those connecting vertices in the subgraph
+        subgraph_edges = [e for e in self._edges if e["source"] in vertex_ids and e["target"] in vertex_ids]
+
+        # Create new graph instance with copied context
+        subgraph = Graph(
+            flow_id=self.flow_id,
+            flow_name=f"{self.flow_name}_subgraph" if self.flow_name else "subgraph",
+            user_id=self.user_id,
+            context=dict(self.context) if self.context else None,
+        )
+
+        # Inherit parent's tracing context - subgraph is an extension of parent's execution
+        subgraph._tracing_service = self._tracing_service
+        subgraph._tracing_service_initialized = True
+        subgraph._run_id = self._run_id
+        subgraph.session_id = self.session_id
+        subgraph._is_subgraph = True
+
+        # Add the filtered nodes and edges
+        subgraph.add_nodes_and_edges(subgraph_nodes, subgraph_edges)
+
+        yield subgraph
+
     @staticmethod
     def build_adjacency_maps(edges: list[CycleEdge]) -> tuple[dict[str, list[str]], dict[str, list[str]]]:
         """Returns the adjacency maps for the graph."""
@@ -2236,3 +2441,22 @@ class Graph:
             predecessors = [i.id for i in self.get_predecessors(vertex)]
             result |= {vertex_id: {"successors": sucessors, "predecessors": predecessors}}
         return result
+
+    def raw_event_metrics(self, optional_fields: dict | None = None) -> dict:
+        if optional_fields is None:
+            optional_fields = {}
+        import time
+
+        return {"timestamp": time.time(), **optional_fields}
+
+    def before_callback_event(self, *args, **kwargs) -> RunStartedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunStartedEvent(run_id=self._run_id, thread_id=self.flow_id, raw_event=metrics)
+
+    def after_callback_event(self, result: Any = None, *args, **kwargs) -> RunFinishedEvent:  # noqa: ARG002
+        metrics = {}
+        if hasattr(self, "raw_event_metrics"):
+            metrics = self.raw_event_metrics({"total_components": len(self.vertices)})
+        return RunFinishedEvent(run_id=self._run_id, thread_id=self.flow_id, result=None, raw_event=metrics)

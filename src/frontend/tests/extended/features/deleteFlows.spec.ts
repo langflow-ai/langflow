@@ -1,6 +1,6 @@
-import { test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { test } from "../../fixtures";
 
 test(
   "should delete a flow (requires store API key)",
@@ -48,7 +48,7 @@ test(
     await waitForSuccessMessage(page);
 
     // Wait for navigation button
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       state: "visible",
       timeout: 30000,
     });

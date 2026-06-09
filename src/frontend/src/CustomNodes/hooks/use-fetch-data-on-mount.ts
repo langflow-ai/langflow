@@ -20,15 +20,35 @@ const useFetchDataOnMount = (
   useEffect(() => {
     async function fetchData() {
       const template = node.template[name];
-      if (
-        (template?.real_time_refresh ||
-          template?.refresh_button ||
-          (node.tool_mode && name === "tools_metadata")) &&
-        // options can be undefined but not an empty array
-        (template?.options?.length ?? 0) === 0
-      ) {
+      if (!template) return;
+
+      const isRealtimeOrRefresh =
+        template.real_time_refresh ||
+        template.refresh_button ||
+        (node.tool_mode && name === "tools_metadata");
+
+      const hasOptions = (template.options?.length ?? 0) > 0;
+      // Only consider empty options as a trigger if the field actually supports
+      // options (e.g., dropdowns). Fields like McpInput have no options property
+      // and should not trigger a fetch on mount — their real_time_refresh is
+      // meant for user-initiated value changes, not initial load.
+      const fieldSupportsOptions = template.options !== undefined;
+
+      const needApiKeyPrefill =
+        name === "model" &&
+        node.template?.api_key != null &&
+        !node.template?.api_key?.value;
+
+      const shouldFetchOnMount =
+        isRealtimeOrRefresh &&
+        ((!hasOptions && fieldSupportsOptions) ||
+          (!fieldSupportsOptions && !!template.value) ||
+          (name === "api_key" && !template.value) ||
+          needApiKeyPrefill);
+
+      if (shouldFetchOnMount) {
         mutateTemplate(
-          template?.value,
+          template.value,
           nodeId,
           node,
           setNodeClass,
@@ -41,7 +61,7 @@ const useFetchDataOnMount = (
       }
     }
     fetchData();
-  }, []); // Empty dependency array ensures that this effect runs only once, on mount
+  }, []);
 };
 
 export default useFetchDataOnMount;

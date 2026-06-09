@@ -92,6 +92,7 @@ class AnthropicModelComponent(LCModelComponent):
                 temperature=self.temperature,
                 anthropic_api_url=self.base_url or DEFAULT_ANTHROPIC_API_URL,
                 streaming=self.stream,
+                stream_usage=True,
             )
         except ValidationError:
             raise

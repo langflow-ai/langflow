@@ -15,6 +15,8 @@ from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service, session_scope
 from lfx.services.session import NoopSession
 
+TABLE_LOAD_FROM_DB_FIELDS = "__load_from_db_fields"
+
 if TYPE_CHECKING:
     from lfx.custom.custom_component.component import Component
     from lfx.custom.custom_component.custom_component import CustomComponent
@@ -111,19 +113,149 @@ def convert_kwargs(params):
     return params
 
 
-def load_from_env_vars(params, load_from_db_fields):
+def load_from_env_vars(params, load_from_db_fields, context=None):
     for field in load_from_db_fields:
         if field not in params or not params[field]:
             continue
-        key = os.getenv(params[field])
-        if key:
-            logger.info(f"Using environment variable {params[field]} for {field}")
-        else:
-            logger.error(f"Environment variable {params[field]} is not set.")
+        variable_name = params[field]
+        key = None
+
+        # Check request_variables in context
+        if context and "request_variables" in context:
+            request_variables = context["request_variables"]
+            if variable_name in request_variables:
+                key = request_variables[variable_name]
+                logger.debug(f"Found context override for variable '{variable_name}'")
+
+        if key is None:
+            key = os.getenv(variable_name)
+            if key:
+                logger.info(f"Using environment variable {variable_name} for {field}")
+            else:
+                logger.error(f"Environment variable {variable_name} is not set.")
         params[field] = key if key is not None else None
         if key is None:
             logger.warning(f"Could not get value for {field}. Setting it to None.")
     return params
+
+
+async def update_table_params_with_load_from_db_fields(
+    custom_component: CustomComponent,
+    params: dict,
+    table_field_name: str,
+    *,
+    fallback_to_env_vars: bool = False,
+) -> dict:
+    """Update table parameters with load_from_db column values."""
+    # Get the table data and column metadata
+    table_data = params.get(table_field_name, [])
+    metadata_key = f"{table_field_name}_load_from_db_columns"
+    load_from_db_columns = params.pop(metadata_key, [])
+
+    if not table_data or not load_from_db_columns:
+        return params
+
+    def cell_load_from_db(row_metadata: Any, column_name: str) -> bool | None:
+        if isinstance(row_metadata, dict):
+            return bool(row_metadata[column_name]) if column_name in row_metadata else None
+        if isinstance(row_metadata, list):
+            return column_name in row_metadata
+        return None
+
+    # Extract context once for use throughout the function
+    context = None
+    if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
+        context = custom_component.graph.context
+
+    async with session_scope() as session:
+        settings_service = get_settings_service()
+        is_noop_session = isinstance(session, NoopSession) or (
+            settings_service and settings_service.settings.use_noop_database
+        )
+
+        # Process each row in the table
+        updated_table_data = []
+        for row in table_data:
+            if not isinstance(row, dict):
+                updated_table_data.append(row)
+                continue
+
+            updated_row = row.copy()
+            row_load_from_db_fields = updated_row.pop(TABLE_LOAD_FROM_DB_FIELDS, None)
+
+            # Process each column that needs database loading
+            for column_name in load_from_db_columns:
+                if column_name not in updated_row:
+                    continue
+
+                should_load_from_db = cell_load_from_db(row_load_from_db_fields, column_name)
+                if should_load_from_db is False:
+                    continue
+
+                # The column value should be the name of the global variable to lookup
+                variable_name = updated_row[column_name]
+                if not variable_name:
+                    continue
+
+                try:
+                    if is_noop_session:
+                        # Fallback to environment variables
+                        key = None
+                        # Check request_variables first
+                        if context and "request_variables" in context:
+                            request_variables = context["request_variables"]
+                            if variable_name in request_variables:
+                                key = request_variables[variable_name]
+                                logger.debug(f"Found context override for variable '{variable_name}'")
+
+                        if key is None:
+                            key = os.getenv(variable_name)
+                            if key:
+                                logger.info(
+                                    f"Using environment variable {variable_name} for table column {column_name}"
+                                )
+                            else:
+                                logger.error(f"Environment variable {variable_name} is not set.")
+                    else:
+                        # Load from database
+                        key = await custom_component.get_variable(
+                            name=variable_name, field=f"{table_field_name}.{column_name}", session=session
+                        )
+
+                except ValueError as e:
+                    if "User id is not set" in str(e):
+                        raise
+                    logger.debug(str(e))
+                    key = None
+
+                # If we couldn't get from database and fallback is enabled, try environment
+                if fallback_to_env_vars and key is None:
+                    key = os.getenv(variable_name)
+                    if key:
+                        logger.info(f"Using environment variable {variable_name} for table column {column_name}")
+                    else:
+                        logger.error(f"Environment variable {variable_name} is not set.")
+
+                if key is None:
+                    if should_load_from_db is None:
+                        logger.debug(
+                            "Could not get global variable %s for table column %s. Keeping the literal value.",
+                            variable_name,
+                            column_name,
+                        )
+                    else:
+                        updated_row[column_name] = None
+                        logger.warning(
+                            f"Could not get value for {variable_name} in table column {column_name}. "
+                            "Setting it to None."
+                        )
+                else:
+                    updated_row[column_name] = key
+
+            updated_table_data.append(updated_row)
+
+        params[table_field_name] = updated_table_data
+        return params
 
 
 async def update_params_with_load_from_db_fields(
@@ -140,29 +272,45 @@ async def update_params_with_load_from_db_fields(
         )
         if is_noop_session:
             logger.debug("Loading variables from environment variables because database is not available.")
-            return load_from_env_vars(params, load_from_db_fields)
+            context = None
+            if hasattr(custom_component, "graph") and hasattr(custom_component.graph, "context"):
+                context = custom_component.graph.context
+            return load_from_env_vars(params, load_from_db_fields, context=context)
         for field in load_from_db_fields:
-            if field not in params or not params[field]:
-                continue
+            # Check if this is a table field (using our naming convention)
+            if field.startswith("table:"):
+                table_field_name = field[6:]  # Remove "table:" prefix
+                params = await update_table_params_with_load_from_db_fields(
+                    custom_component,
+                    params,
+                    table_field_name,
+                    fallback_to_env_vars=fallback_to_env_vars,
+                )
+            else:
+                # Handle regular field-level load_from_db
+                if field not in params or not params[field]:
+                    continue
 
-            try:
-                key = await custom_component.get_variable(name=params[field], field=field, session=session)
-            except ValueError as e:
-                if any(reason in str(e) for reason in ["User id is not set", "variable not found."]):
-                    raise
-                logger.debug(str(e))
-                key = None
+                try:
+                    key = await custom_component.get_variable(name=params[field], field=field, session=session)
+                except ValueError as e:
+                    if "User id is not set" in str(e):
+                        raise
+                    if "variable not found." in str(e) and not fallback_to_env_vars:
+                        raise
+                    logger.debug(str(e))
+                    key = None
 
-            if fallback_to_env_vars and key is None:
-                key = os.getenv(params[field])
-                if key:
-                    logger.info(f"Using environment variable {params[field]} for {field}")
-                else:
-                    logger.error(f"Environment variable {params[field]} is not set.")
+                if fallback_to_env_vars and key is None:
+                    key = os.getenv(params[field])
+                    if key:
+                        logger.info(f"Using environment variable {params[field]} for {field}")
+                    else:
+                        logger.error(f"Environment variable {params[field]} is not set.")
 
-            params[field] = key if key is not None else None
-            if key is None:
-                logger.warning(f"Could not get value for {field}. Setting it to None.")
+                params[field] = key if key is not None else None
+                if key is None:
+                    logger.warning(f"Could not get value for {field}. Setting it to None.")
 
         return params
 

@@ -1,6 +1,6 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -54,7 +54,7 @@ test(
     await expect(page.getByTestId("button_run_language model")).toBeVisible({
       timeout: 30000,
     });
-    await expect(page.getByTestId("button_run_prompt")).toBeVisible({
+    await expect(page.getByTestId("button_run_prompt template")).toBeVisible({
       timeout: 30000,
     });
     await expect(page.getByTestId("button_run_chat input")).toBeVisible({

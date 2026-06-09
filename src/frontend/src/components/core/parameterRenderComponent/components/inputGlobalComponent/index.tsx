@@ -27,8 +27,14 @@ export default function InputGlobalComponent({
   placeholder,
   isToolMode = false,
   hasRefreshButton = false,
-}: InputProps<string, InputGlobalComponentType>): JSX.Element {
-  const { data: globalVariables } = useGetGlobalVariables();
+  showParameter = true,
+}: InputProps<string, InputGlobalComponentType>): JSX.Element | null {
+  const {
+    data: globalVariables,
+    isFetchedAfterMount: isGlobalVariablesFetchedAfterMount,
+    isFetching: isGlobalVariablesFetching,
+    isSuccess: isGlobalVariablesFetchSuccessful,
+  } = useGetGlobalVariables();
 
   // // Safely cast the data to our typed interface
   const typedGlobalVariables: GlobalVariable[] = globalVariables ?? [];
@@ -42,25 +48,46 @@ export default function InputGlobalComponent({
     typedGlobalVariables,
   );
   const unavailableField = useUnavailableField(display_name, currentValue);
+  const canValidateMissingVariable =
+    isGlobalVariablesFetchSuccessful &&
+    !isGlobalVariablesFetching &&
+    isGlobalVariablesFetchedAfterMount;
 
   useInitialLoad(
     isDisabled,
     loadFromDb,
     typedGlobalVariables,
+    canValidateMissingVariable,
     valueExists,
     unavailableField,
     handleOnNewValue,
   );
 
-  // Clean up when selected variable no longer exists
+  // Clean up when selected variable no longer exists.
+  // Only validate against a successful, settled query result for this mount.
+  // This avoids clearing values during the initial fetch, during background
+  // refetches against cached data, or after failed requests.
   useEffect(() => {
-    if (loadFromDb && currentValue && !valueExists && !isDisabled) {
+    if (
+      canValidateMissingVariable &&
+      loadFromDb &&
+      currentValue &&
+      !valueExists &&
+      !isDisabled
+    ) {
       handleOnNewValue(
         { value: "", load_from_db: false },
         { skipSnapshot: true },
       );
     }
-  }, [loadFromDb, currentValue, valueExists, isDisabled, handleOnNewValue]);
+  }, [
+    canValidateMissingVariable,
+    loadFromDb,
+    currentValue,
+    valueExists,
+    isDisabled,
+    handleOnNewValue,
+  ]);
 
   // Create handlers object for better organization
   const handlers: GlobalVariableHandlers = {
@@ -113,9 +140,22 @@ export default function InputGlobalComponent({
     />
   );
 
-  // // Extract options list for better readability
-  const variableOptions = typedGlobalVariables.map((variable) => variable.name);
-  const selectedOption = loadFromDb && valueExists ? currentValue : "";
+  let variableOptions = typedGlobalVariables.map((variable) => variable.name);
+
+  if (
+    loadFromDb &&
+    currentValue &&
+    !valueExists &&
+    !variableOptions.includes(currentValue)
+  ) {
+    variableOptions = [...variableOptions, currentValue];
+  }
+
+  const selectedOption = loadFromDb ? currentValue : "";
+
+  if (!showParameter) {
+    return null;
+  }
 
   return (
     <InputComponent

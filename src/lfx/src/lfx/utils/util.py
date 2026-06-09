@@ -2,7 +2,10 @@ import difflib
 import importlib
 import inspect
 import json
+import os
 import re
+import socket
+import struct
 from functools import wraps
 from pathlib import Path
 from typing import Any
@@ -14,6 +17,148 @@ from lfx.schema.data import Data
 from lfx.services.deps import get_settings_service
 from lfx.template.frontend_node.constants import FORCE_SHOW_FIELDS
 from lfx.utils import constants
+
+
+def detect_container_environment() -> str | None:
+    """Detect if running in a container and return the appropriate container type.
+
+    Returns:
+        'docker' if running in Docker, 'podman' if running in Podman, None otherwise.
+    """
+    # Check for .dockerenv file (Docker)
+    if Path("/.dockerenv").exists():
+        return "docker"
+
+    # Check cgroup for container indicators
+    try:
+        with Path("/proc/self/cgroup").open() as f:
+            content = f.read()
+            if "docker" in content:
+                return "docker"
+            if "podman" in content:
+                return "podman"
+    except (FileNotFoundError, PermissionError):
+        pass
+
+    # Check environment variables (lowercase 'container' is the standard for Podman)
+    if os.getenv("container") == "podman":  # noqa: SIM112
+        return "podman"
+
+    return None
+
+
+def get_container_host() -> str | None:
+    """Get the hostname to access host services from within a container.
+
+    Tries multiple methods to find the correct hostname:
+    1. host.containers.internal (Podman) or host.docker.internal (Docker)
+    2. Gateway IP from routing table (fallback for Linux)
+
+    Returns:
+        The hostname or IP to use, or None if not in a container.
+    """
+    # Check if we're in a container first
+    container_type = detect_container_environment()
+    if not container_type:
+        return None
+
+    # Try container-specific hostnames first based on detected type
+    if container_type == "podman":
+        # Podman: try host.containers.internal first
+        try:
+            socket.getaddrinfo("host.containers.internal", None)
+        except socket.gaierror:
+            pass
+        else:
+            return "host.containers.internal"
+
+        # Fallback to host.docker.internal (for Podman Desktop on macOS)
+        try:
+            socket.getaddrinfo("host.docker.internal", None)
+        except socket.gaierror:
+            pass
+        else:
+            return "host.docker.internal"
+    else:
+        # Docker: try host.docker.internal first
+        try:
+            socket.getaddrinfo("host.docker.internal", None)
+        except socket.gaierror:
+            pass
+        else:
+            return "host.docker.internal"
+
+        # Fallback to host.containers.internal (unlikely but possible)
+        try:
+            socket.getaddrinfo("host.containers.internal", None)
+        except socket.gaierror:
+            pass
+        else:
+            return "host.containers.internal"
+
+    # Fallback: try to get gateway IP from routing table (Linux containers)
+    try:
+        with Path("/proc/net/route").open() as f:
+            # Skip header
+            next(f)
+            for line in f:
+                fields = line.strip().split()
+                min_field_count = 3  # Minimum fields needed: interface, destination, gateway
+                if len(fields) >= min_field_count and fields[1] == "00000000":  # Default route
+                    # Gateway is in hex format (little-endian)
+                    gateway_hex = fields[2]
+                    # Convert little-endian hex to dotted IPv4
+                    gw_int = int(gateway_hex, 16)
+                    return socket.inet_ntoa(struct.pack("<L", gw_int))
+    except (FileNotFoundError, PermissionError, IndexError, ValueError):
+        pass
+
+    return None
+
+
+def transform_localhost_url(url: str | None) -> str | None:
+    """Transform localhost URLs to container-accessible hosts when running in a container.
+
+    Automatically detects if running inside a container and finds the appropriate host
+    address to replace localhost/127.0.0.1. Tries in order:
+    - host.docker.internal (if resolvable)
+    - host.containers.internal (if resolvable)
+    - Gateway IP from routing table (fallback)
+
+    Args:
+        url: The original URL, can be None or empty string
+
+    Returns:
+        Transformed URL with container-accessible host if applicable, otherwise the original URL.
+        Returns None if url is None, empty string if url is empty string.
+
+    Example:
+        >>> transform_localhost_url("http://localhost:5001")
+        # Returns "http://host.docker.internal:5001" if running in Docker and hostname resolves
+        # Returns "http://172.17.0.1:5001" if running in Docker on Linux (gateway IP fallback)
+        # Returns "http://localhost:5001" if not in a container
+        >>> transform_localhost_url(None)
+        # Returns None
+        >>> transform_localhost_url("")
+        # Returns ""
+    """
+    # Guard against None and empty string to prevent TypeError
+    if not url:
+        return url
+
+    container_host = get_container_host()
+
+    if not container_host:
+        return url
+
+    # Replace localhost and 127.0.0.1 with the container host
+    localhost_patterns = ["localhost", "127.0.0.1"]
+
+    for pattern in localhost_patterns:
+        if pattern in url:
+            return url.replace(pattern, container_host)
+
+    return url
 
 
 def unescape_string(s: str):

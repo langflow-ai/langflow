@@ -10,6 +10,7 @@ class GetEnvVar(Component):
     display_name = "Get Environment Variable"
     description = "Gets the value of an environment variable from the system."
     icon = "AstraDB"
+    legacy = True
 
     inputs = [
         StrInput(

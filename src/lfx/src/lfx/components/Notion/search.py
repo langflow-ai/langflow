@@ -1,7 +1,7 @@
 from typing import Any
 
 import requests
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -13,7 +13,7 @@ from lfx.schema.data import Data
 class NotionSearch(LCToolComponent):
     display_name: str = "Search "
     description: str = "Searches all pages and databases that have been shared with an integration."
-    documentation: str = "https://docs.langflow.org/integrations/notion/search"
+    documentation: str = "https://docs.langflow.org/bundles-notion"
     icon = "NotionDirectoryLoader"
 
     inputs = [

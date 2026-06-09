@@ -1,8 +1,7 @@
 from typing import Any
 
-from langchain.tools import StructuredTool
 from langchain_community.utilities.serpapi import SerpAPIWrapper
-from langchain_core.tools import ToolException
+from langchain_core.tools import StructuredTool, ToolException
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -30,11 +29,12 @@ class SerpAPISchema(BaseModel):
 
 
 class SerpAPIComponent(LCToolComponent):
-    display_name = "Serp Search API [DEPRECATED]"
+    display_name = "Serp Search API"
     description = "Call Serp Search API with result limiting"
     name = "SerpAPI"
     icon = "SerpSearch"
     legacy = True
+    replacement = ["serpapi.Serp"]
 
     inputs = [
         SecretStrInput(name="serpapi_api_key", display_name="SerpAPI API Key", required=True),

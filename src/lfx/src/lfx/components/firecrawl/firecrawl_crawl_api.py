@@ -15,7 +15,7 @@ class FirecrawlCrawlApi(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Firecrawl API Key",
             required=True,
             password=True,
             info="The API key to use Firecrawl API.",
@@ -50,7 +50,7 @@ class FirecrawlCrawlApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="crawl"),
+        Output(display_name="JSON", name="data", method="crawl"),
     ]
     idempotency_key: str | None = None
 

@@ -69,6 +69,7 @@ ATTR_FUNC_MAPPING: dict[str, Callable] = {
     "description": getattr_return_str,
     "beta": getattr_return_bool,
     "legacy": getattr_return_bool,
+    "replacement": getattr_return_list_of_str,
     "documentation": getattr_return_str,
     "priority": getattr_return_int,
     "icon": validate_icon,

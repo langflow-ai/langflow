@@ -9,6 +9,7 @@ import { ProtectedAdminRoute } from "./components/authorization/authAdminGuard";
 import { ProtectedRoute } from "./components/authorization/authGuard";
 import { ProtectedLoginRoute } from "./components/authorization/authLoginGuard";
 import { AuthSettingsGuard } from "./components/authorization/authSettingsGuard";
+import { PlaygroundAuthGate } from "./components/authorization/playgroundAuthGate";
 import ContextWrapper from "./contexts";
 import CustomDashboardWrapperPage from "./customization/components/custom-DashboardWrapperPage";
 import { CustomNavigate } from "./customization/components/custom-navigate";
@@ -16,6 +17,7 @@ import { BASENAME } from "./customization/config-constants";
 import {
   ENABLE_CUSTOM_PARAM,
   ENABLE_FILE_MANAGEMENT,
+  ENABLE_KNOWLEDGE_BASES,
 } from "./customization/feature-flags";
 import { CustomRoutesStore } from "./customization/utils/custom-routes-store";
 import { CustomRoutesStorePages } from "./customization/utils/custom-routes-store-pages";
@@ -27,12 +29,15 @@ import LoginPage from "./pages/LoginPage";
 import FilesPage from "./pages/MainPage/pages/filesPage";
 import HomePage from "./pages/MainPage/pages/homePage";
 import KnowledgePage from "./pages/MainPage/pages/knowledgePage";
+import SourceChunksPage from "./pages/MainPage/pages/knowledgePage/sourceChunksPage/SourceChunksPage";
 import CollectionPage from "./pages/MainPage/pages/main-page";
 import SettingsPage from "./pages/SettingsPage";
 import ApiKeysPage from "./pages/SettingsPage/pages/ApiKeysPage";
 import GeneralPage from "./pages/SettingsPage/pages/GeneralPage";
 import GlobalVariablesPage from "./pages/SettingsPage/pages/GlobalVariablesPage";
 import MCPServersPage from "./pages/SettingsPage/pages/MCPServersPage";
+import McpClientPage from "./pages/SettingsPage/pages/McpClientPage";
+import ModelProvidersPage from "./pages/SettingsPage/pages/ModelProvidersPage";
 import MessagesPage from "./pages/SettingsPage/pages/messagesPage";
 import ShortcutsPage from "./pages/SettingsPage/pages/ShortcutsPage";
 import ViewPage from "./pages/ViewPage";
@@ -52,7 +57,9 @@ const router = createBrowserRouter(
         path=""
         element={
           <ContextWrapper key={1}>
-            <PlaygroundPage />
+            <PlaygroundAuthGate>
+              <PlaygroundPage />
+            </PlaygroundAuthGate>
           </ContextWrapper>
         }
       />
@@ -89,10 +96,18 @@ const router = createBrowserRouter(
                         element={<CustomNavigate replace to="files" />}
                       />
                       <Route path="files" element={<FilesPage />} />
-                      <Route
-                        path="knowledge-bases"
-                        element={<KnowledgePage />}
-                      />
+                      {ENABLE_KNOWLEDGE_BASES && (
+                        <>
+                          <Route
+                            path="knowledge-bases"
+                            element={<KnowledgePage />}
+                          />
+                          <Route
+                            path="knowledge-bases/:sourceId/chunks"
+                            element={<SourceChunksPage />}
+                          />
+                        </>
+                      )}
                     </Route>
                   )}
                   <Route
@@ -136,7 +151,13 @@ const router = createBrowserRouter(
                     path="global-variables"
                     element={<GlobalVariablesPage />}
                   />
+                  <Route
+                    path="model-providers"
+                    element={<ModelProvidersPage />}
+                  />
                   <Route path="mcp-servers" element={<MCPServersPage />} />
+                  <Route path="mcp-client" element={<McpClientPage />} />
+
                   <Route path="api-keys" element={<ApiKeysPage />} />
                   <Route
                     path="general/:scrollId?"

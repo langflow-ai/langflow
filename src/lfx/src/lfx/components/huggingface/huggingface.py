@@ -104,7 +104,9 @@ class HuggingFaceEndpointsComponent(LCModelComponent):
             advanced=True,
             info="The task to call the model with. Should be a task that returns `generated_text` or `summary_text`.",
         ),
-        SecretStrInput(name="huggingfacehub_api_token", display_name="API Token", password=True, required=True),
+        SecretStrInput(
+            name="huggingfacehub_api_token", display_name="HuggingFace HubAPI Token", password=True, required=True
+        ),
         DictInput(name="model_kwargs", display_name="Model Keyword Arguments", advanced=True),
         IntInput(name="retry_attempts", display_name="Retry Attempts", value=1, advanced=True),
     ]

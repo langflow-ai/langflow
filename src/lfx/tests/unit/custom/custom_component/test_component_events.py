@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 from uuid import uuid4
 
 import pytest
-
 from lfx.custom.custom_component.component import Component
 from lfx.events.event_manager import EventManager
 from lfx.schema.content_block import ContentBlock
@@ -201,8 +200,12 @@ async def test_component_logging():
     # Log a message
     await asyncio.to_thread(component.log, "Test log message")
 
-    # Get the event from the queue
-    event_id, event_data, _ = queue.get_nowait()
+    # Get the event from the queue with timeout to avoid race conditions
+    try:
+        event_id, event_data, _ = await asyncio.wait_for(queue.get(), timeout=5.0)
+    except asyncio.TimeoutError:
+        pytest.fail("Timeout waiting for log event in queue")
+
     event = event_data.decode("utf-8")
 
     assert "Test log message" in event

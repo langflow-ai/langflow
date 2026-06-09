@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test.describe("group node test", () => {
@@ -21,7 +21,7 @@ test.describe("group node test", () => {
         .getByTestId("title-OpenAI")
         .click({ modifiers: ["ControlOrMeta"] });
       await page
-        .getByTestId("title-Prompt")
+        .getByTestId("title-Prompt Template")
         .click({ modifiers: ["ControlOrMeta"] });
 
       await page.getByRole("button", { name: "Group" }).click();

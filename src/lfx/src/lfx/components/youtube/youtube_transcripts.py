@@ -1,7 +1,7 @@
+import re
+
 import pandas as pd
-import youtube_transcript_api
-from langchain_community.document_loaders import YoutubeLoader
-from langchain_community.document_loaders.youtube import TranscriptFormat
+from youtube_transcript_api import NoTranscriptFound, TranscriptsDisabled, YouTubeTranscriptApi
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import DropdownInput, IntInput, MultilineInput
@@ -48,43 +48,133 @@ class YouTubeTranscriptsComponent(Component):
         Output(name="data_output", display_name="Transcript + Source", method="get_data_output"),
     ]
 
+    def _extract_video_id(self, url: str) -> str:
+        """Extract video ID from YouTube URL."""
+        patterns = [
+            r"(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&\n?#]+)",
+            r"youtube\.com\/watch\?.*?v=([^&\n?#]+)",
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        msg = f"Could not extract video ID from URL: {url}"
+        raise ValueError(msg)
+
     def _load_transcripts(self, *, as_chunks: bool = True):
         """Internal method to load transcripts from YouTube."""
-        loader = YoutubeLoader.from_youtube_url(
-            self.url,
-            transcript_format=TranscriptFormat.CHUNKS if as_chunks else TranscriptFormat.TEXT,
-            chunk_size_seconds=self.chunk_size_seconds,
-            translation=self.translation or None,
-        )
-        return loader.load()
+        try:
+            video_id = self._extract_video_id(self.url)
+        except ValueError as e:
+            msg = f"Invalid YouTube URL: {e}"
+            raise ValueError(msg) from e
+
+        try:
+            # Use new v1.0+ API - create instance
+            api = YouTubeTranscriptApi()
+            transcript_list = api.list(video_id)
+
+            # Get transcript in specified language or default to English
+            if self.translation:
+                # Get any available transcript and translate it
+                transcript = transcript_list.find_transcript(["en"])
+                transcript = transcript.translate(self.translation)
+            else:
+                # Try to get transcript in available languages
+                try:
+                    transcript = transcript_list.find_transcript(["en"])
+                except NoTranscriptFound:
+                    # Try auto-generated English
+                    transcript = transcript_list.find_generated_transcript(["en"])
+
+            # Fetch the transcript data
+            transcript_data = api.fetch(transcript.video_id, [transcript.language_code])
+
+        except (TranscriptsDisabled, NoTranscriptFound) as e:
+            error_type = type(e).__name__
+            msg = (
+                f"Could not retrieve transcripts for video '{video_id}'. "
+                "Possible reasons:\n"
+                "1. This video does not have captions/transcripts enabled\n"
+                "2. The video is private, restricted, or deleted\n"
+                f"\nTechnical error ({error_type}): {e}"
+            )
+            raise RuntimeError(msg) from e
+        except Exception as e:
+            error_type = type(e).__name__
+            msg = (
+                f"Could not retrieve transcripts for video '{video_id}'. "
+                "Possible reasons:\n"
+                "1. This video does not have captions/transcripts enabled\n"
+                "2. The video is private, restricted, or deleted\n"
+                "3. YouTube is blocking automated requests\n"
+                f"\nTechnical error ({error_type}): {e}"
+            )
+            raise RuntimeError(msg) from e
+
+        if as_chunks:
+            # Group into chunks based on chunk_size_seconds
+            return self._chunk_transcript(transcript_data)
+        # Return as continuous text
+        return transcript_data
+
+    def _chunk_transcript(self, transcript_data):
+        """Group transcript segments into time-based chunks."""
+        chunks = []
+        current_chunk = []
+        chunk_start = 0
+
+        for segment in transcript_data:
+            # Handle both dict (old API) and object (new API) formats
+            segment_start = segment.start if hasattr(segment, "start") else segment["start"]
+
+            # If this segment starts beyond the current chunk window, start a new chunk
+            if segment_start - chunk_start >= self.chunk_size_seconds and current_chunk:
+                chunk_text = " ".join(s.text if hasattr(s, "text") else s["text"] for s in current_chunk)
+                chunks.append({"start": chunk_start, "text": chunk_text})
+                current_chunk = []
+                chunk_start = segment_start
+
+            current_chunk.append(segment)
+
+        # Add the last chunk
+        if current_chunk:
+            chunk_text = " ".join(s.text if hasattr(s, "text") else s["text"] for s in current_chunk)
+            chunks.append({"start": chunk_start, "text": chunk_text})
+
+        return chunks
 
     def get_dataframe_output(self) -> DataFrame:
         """Provides transcript output as a DataFrame with timestamp and text columns."""
         try:
-            transcripts = self._load_transcripts(as_chunks=True)
+            chunks = self._load_transcripts(as_chunks=True)
 
             # Create DataFrame with timestamp and text columns
             data = []
-            for doc in transcripts:
-                start_seconds = int(doc.metadata["start_seconds"])
+            for chunk in chunks:
+                start_seconds = int(chunk["start"])
                 start_minutes = start_seconds // 60
-                start_seconds %= 60
-                timestamp = f"{start_minutes:02d}:{start_seconds:02d}"
-                data.append({"timestamp": timestamp, "text": doc.page_content})
+                start_seconds_remainder = start_seconds % 60
+                timestamp = f"{start_minutes:02d}:{start_seconds_remainder:02d}"
+                data.append({"timestamp": timestamp, "text": chunk["text"]})
 
             return DataFrame(pd.DataFrame(data))
 
-        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:
-            return DataFrame(pd.DataFrame({"error": [f"Failed to get YouTube transcripts: {exc!s}"]}))
+        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:
+            error_msg = f"Failed to get YouTube transcripts: {exc!s}"
+            return DataFrame(pd.DataFrame({"error": [error_msg]}))
 
     def get_message_output(self) -> Message:
         """Provides transcript output as continuous text."""
         try:
-            transcripts = self._load_transcripts(as_chunks=False)
-            result = transcripts[0].page_content
+            transcript_data = self._load_transcripts(as_chunks=False)
+            # Handle both dict (old API) and object (new API) formats
+            result = " ".join(
+                segment.text if hasattr(segment, "text") else segment["text"] for segment in transcript_data
+            )
             return Message(text=result)
 
-        except (youtube_transcript_api.TranscriptsDisabled, youtube_transcript_api.NoTranscriptFound) as exc:
+        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:
             error_msg = f"Failed to get YouTube transcripts: {exc!s}"
             return Message(text=error_msg)
 
@@ -100,19 +190,17 @@ class YouTubeTranscriptsComponent(Component):
         default_data = {"transcript": "", "video_url": self.url, "error": None}
 
         try:
-            transcripts = self._load_transcripts(as_chunks=False)
-            if not transcripts:
+            transcript_data = self._load_transcripts(as_chunks=False)
+            if not transcript_data:
                 default_data["error"] = "No transcripts found."
                 return Data(data=default_data)
 
-            # Combine all transcript parts
-            full_transcript = " ".join(doc.page_content for doc in transcripts)
+            # Combine all transcript segments - handle both dict and object formats
+            full_transcript = " ".join(
+                segment.text if hasattr(segment, "text") else segment["text"] for segment in transcript_data
+            )
             return Data(data={"transcript": full_transcript, "video_url": self.url})
 
-        except (
-            youtube_transcript_api.TranscriptsDisabled,
-            youtube_transcript_api.NoTranscriptFound,
-            youtube_transcript_api.CouldNotRetrieveTranscript,
-        ) as exc:
+        except (TranscriptsDisabled, NoTranscriptFound, RuntimeError, ValueError) as exc:
             default_data["error"] = str(exc)
             return Data(data=default_data)

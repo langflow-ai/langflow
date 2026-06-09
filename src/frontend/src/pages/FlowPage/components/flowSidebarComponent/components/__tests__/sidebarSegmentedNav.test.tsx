@@ -1,6 +1,9 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { SidebarSection } from "@/components/ui/sidebar";
+import enTranslations from "@/locales/en.json";
 import SidebarSegmentedNav, { NAV_ITEMS } from "../sidebarSegmentedNav";
+
+const mockNavigate = jest.fn();
 
 // Mock the hooks and components
 const mockUseSidebar: {
@@ -21,9 +24,20 @@ const mockUseSearchContext = {
   setSearch: jest.fn(),
 };
 
+const mockPlaygroundStore = {
+  setIsOpen: jest.fn(),
+  setIsFullscreen: jest.fn(),
+};
+
 jest.mock("@/components/ui/sidebar", () => ({
   useSidebar: () => mockUseSidebar,
-  SidebarMenu: ({ children, className }: any) => (
+  SidebarMenu: ({
+    children,
+    className,
+  }: {
+    children: React.ReactNode;
+    className?: string;
+  }) => (
     <div data-testid="sidebar-menu" className={className}>
       {children}
     </div>
@@ -35,8 +49,16 @@ jest.mock("@/components/ui/sidebar", () => ({
     className,
     size,
     "data-testid": testId,
-  }: any) => (
+  }: {
+    children: React.ReactNode;
+    onClick?: (e: React.MouseEvent) => void;
+    isActive?: boolean;
+    className?: string;
+    size?: string;
+    "data-testid"?: string;
+  }) => (
     <button
+      type="button"
       onClick={onClick}
       data-testid={testId}
       data-active={isActive}
@@ -46,9 +68,17 @@ jest.mock("@/components/ui/sidebar", () => ({
       {children}
     </button>
   ),
-  SidebarMenuItem: ({ children }: any) => (
+  SidebarMenuItem: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="sidebar-menu-item">{children}</div>
   ),
+}));
+
+jest.mock("react-router-dom", () => ({
+  useParams: () => ({ id: "flow_123" }),
+}));
+
+jest.mock("@/customization/hooks/use-custom-navigate", () => ({
+  useCustomNavigate: () => mockNavigate,
 }));
 
 jest.mock("../../index", () => ({
@@ -57,7 +87,7 @@ jest.mock("../../index", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <div data-testid={`icon-${name}`} className={className}>
       {name}
     </div>
@@ -66,7 +96,15 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children, content, side }: any) => (
+  default: ({
+    children,
+    content,
+    side,
+  }: {
+    children: React.ReactNode;
+    content: string;
+    side?: string;
+  }) => (
     <div data-testid="tooltip" data-content={content} data-side={side}>
       {children}
     </div>
@@ -74,18 +112,24 @@ jest.mock("@/components/common/shadTooltipComponent", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...args: any[]) => args.filter(Boolean).join(" "),
+  cn: (...args: (string | undefined | null | boolean)[]) =>
+    args.filter(Boolean).join(" "),
+}));
+
+jest.mock("@/stores/playgroundStore", () => ({
+  usePlaygroundStore: (selector: (state: typeof mockPlaygroundStore) => any) =>
+    selector(mockPlaygroundStore),
 }));
 
 describe("SidebarSegmentedNav", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     // Reset to default values
-    mockUseSidebar.activeSection = "components";
+    mockUseSidebar.activeSection = "components" as SidebarSection;
     mockUseSidebar.open = true;
     mockUseSearchContext.isSearchFocused = false;
-    jest.clearAllTimers();
     jest.useFakeTimers();
+    jest.clearAllTimers();
   });
 
   afterEach(() => {
@@ -118,7 +162,9 @@ describe("SidebarSegmentedNav", () => {
     NAV_ITEMS.forEach((item) => {
       const tooltips = screen.getAllByTestId("tooltip");
       const itemTooltip = tooltips.find(
-        (tooltip) => tooltip.getAttribute("data-content") === item.tooltip,
+        (tooltip) =>
+          tooltip.getAttribute("data-content") ===
+          enTranslations[item.tooltip as keyof typeof enTranslations],
       );
       expect(itemTooltip).toBeInTheDocument();
       expect(itemTooltip).toHaveAttribute("data-side", "right");
@@ -137,9 +183,8 @@ describe("SidebarSegmentedNav", () => {
     expect(componentsButton).toHaveAttribute("data-active", "false");
   });
 
-  it("sets active state for search when search is focused", () => {
-    mockUseSidebar.activeSection = "components";
-    mockUseSearchContext.isSearchFocused = true;
+  it("sets active state for search when activeSection is search", () => {
+    mockUseSidebar.activeSection = "search";
     render(<SidebarSegmentedNav />);
 
     const searchButton = screen.getByTestId("sidebar-nav-search");
@@ -249,7 +294,11 @@ describe("SidebarSegmentedNav", () => {
 
     NAV_ITEMS.forEach((item) => {
       const button = screen.getByTestId(`sidebar-nav-${item.id}`);
-      expect(button).toHaveTextContent(item.label);
+      // Check for screen reader only text
+      const srOnlySpan = button.querySelector(".sr-only");
+      expect(srOnlySpan).toHaveTextContent(
+        enTranslations[item.label as keyof typeof enTranslations],
+      );
     });
   });
 
@@ -258,10 +307,35 @@ describe("SidebarSegmentedNav", () => {
     render(<SidebarSegmentedNav />);
 
     const mcpButton = screen.getByTestId("sidebar-nav-mcp");
-    expect(mcpButton).toHaveClass("bg-accent", "text-accent-foreground");
+    expect(mcpButton).toHaveClass(
+      "flex",
+      "h-8",
+      "w-8",
+      "items-center",
+      "justify-center",
+      "rounded-md",
+      "p-0",
+      "transition-all",
+      "duration-200",
+      "bg-accent",
+      "text-accent-foreground",
+    );
 
     const componentsButton = screen.getByTestId("sidebar-nav-components");
-    expect(componentsButton).toHaveClass("text-muted-foreground");
+    expect(componentsButton).toHaveClass(
+      "flex",
+      "h-8",
+      "w-8",
+      "items-center",
+      "justify-center",
+      "rounded-md",
+      "p-0",
+      "transition-all",
+      "duration-200",
+      "text-muted-foreground",
+      "hover:bg-accent",
+      "hover:text-accent-foreground",
+    );
   });
 
   it("renders icons with correct styling", () => {
@@ -271,6 +345,27 @@ describe("SidebarSegmentedNav", () => {
       const icon = screen.getByTestId(`icon-${item.icon}`);
       expect(icon).toHaveClass("h-5", "w-5");
     });
+  });
+
+  it("renders container with correct styling", () => {
+    const { container } = render(<SidebarSegmentedNav />);
+
+    const wrapper = container.firstChild as HTMLElement;
+    expect(wrapper).toHaveClass(
+      "flex",
+      "h-full",
+      "flex-col",
+      "border-r",
+      "border-border",
+      "bg-background",
+    );
+  });
+
+  it("renders SidebarMenu with correct styling", () => {
+    render(<SidebarSegmentedNav />);
+
+    const sidebarMenu = screen.getByTestId("sidebar-menu");
+    expect(sidebarMenu).toHaveClass("gap-2", "py-1");
   });
 
   it("handles multiple rapid clicks correctly", () => {
@@ -289,18 +384,56 @@ describe("SidebarSegmentedNav", () => {
   });
 
   it("exports NAV_ITEMS correctly", () => {
-    expect(NAV_ITEMS).toHaveLength(4);
+    expect(NAV_ITEMS).toHaveLength(6);
     expect(NAV_ITEMS[0]).toEqual({
       id: "search",
       icon: "search",
-      label: "Search",
-      tooltip: "Search",
+      label: "sidebar.nav.search",
+      tooltip: "sidebar.nav.search",
     });
     expect(NAV_ITEMS[3]).toEqual({
       id: "bundles",
       icon: "blocks",
-      label: "Bundles",
-      tooltip: "Bundles",
+      label: "sidebar.nav.bundles",
+      tooltip: "sidebar.nav.bundles",
     });
+    expect(NAV_ITEMS[4]).toEqual({
+      id: "versions",
+      icon: "History",
+      label: "sidebar.nav.versions",
+      tooltip: "sidebar.nav.versionHistory",
+    });
+    expect(NAV_ITEMS[5]).toEqual({
+      id: "traces",
+      icon: "Activity",
+      label: "sidebar.nav.traces",
+      tooltip: "sidebar.nav.traces",
+    });
+  });
+
+  it("sets active section to traces when clicking traces", () => {
+    render(<SidebarSegmentedNav />);
+
+    const tracesButton = screen.getByTestId("sidebar-nav-traces");
+    fireEvent.click(tracesButton);
+
+    expect(mockPlaygroundStore.setIsOpen).toHaveBeenCalledWith(false);
+    expect(mockPlaygroundStore.setIsFullscreen).toHaveBeenCalledWith(false);
+    expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("traces");
+    expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
+  });
+
+  it("toggles back to components when clicking traces while already active and open", () => {
+    mockUseSidebar.activeSection = "traces";
+    mockUseSidebar.open = true;
+    render(<SidebarSegmentedNav />);
+
+    const tracesButton = screen.getByTestId("sidebar-nav-traces");
+    fireEvent.click(tracesButton);
+
+    expect(mockPlaygroundStore.setIsOpen).toHaveBeenCalledWith(false);
+    expect(mockPlaygroundStore.setIsFullscreen).toHaveBeenCalledWith(false);
+    expect(mockUseSidebar.setActiveSection).toHaveBeenCalledWith("components");
+    expect(mockUseSidebar.toggleSidebar).not.toHaveBeenCalled();
   });
 });

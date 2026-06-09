@@ -1,6 +1,9 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+
 import { renameFlow } from "../../utils/rename-flow";
+import { zoomOut } from "../../utils/zoom-out";
 
 test(
   "when auto_login is false, admin can CRUD user's and should see just your own flows",
@@ -108,7 +111,12 @@ test(
 
     await page.waitForSelector("text=new user added", { timeout: 30000 });
 
+    const searchResponse = page.waitForResponse(
+      (response) =>
+        response.url().includes("/api/v1/users") && response.status() === 200,
+    );
     await page.getByPlaceholder("Username").last().fill(randomName);
+    await searchResponse;
 
     await page.getByTestId("icon-Pencil").last().click();
 
@@ -140,25 +148,16 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 1 });
 
     await renameFlow(page, { flowName: randomFlowName });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
       state: "visible",
     });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 1500,
     });
 
@@ -219,20 +218,11 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
     await renameFlow(page, { flowName: secondRandomFlowName });
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 

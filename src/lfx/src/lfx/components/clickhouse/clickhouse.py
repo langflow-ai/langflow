@@ -15,8 +15,8 @@ from lfx.schema.data import Data
 
 
 class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
-    display_name = "Clickhouse"
-    description = "Clickhouse Vector Store with search capabilities"
+    display_name = "ClickHouse"
+    description = "ClickHouse Vector Store with search capabilities"
     name = "Clickhouse"
     icon = "Clickhouse"
 
@@ -26,7 +26,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="database", display_name="database", required=True),
         StrInput(name="table", display_name="Table name", required=True),
         StrInput(name="username", display_name="The ClickHouse user name.", required=True),
-        SecretStrInput(name="password", display_name="The password for username.", required=True),
+        SecretStrInput(name="password", display_name="Clickhouse Password", required=True),
         DropdownInput(
             name="index_type",
             display_name="index_type",
@@ -69,7 +69,7 @@ class ClickhouseVectorStoreComponent(LCVectorStoreComponent):
             import clickhouse_connect
         except ImportError as e:
             msg = (
-                "Failed to import Clickhouse dependencies. "
+                "Failed to import ClickHouse dependencies. "
                 "Install it using `uv pip install langflow[clickhouse-connect] --pre`"
             )
             raise ImportError(msg) from e

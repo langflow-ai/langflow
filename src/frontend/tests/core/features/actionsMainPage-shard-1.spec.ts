@@ -1,4 +1,5 @@
-import { test } from "@playwright/test";
+import { test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -10,7 +11,7 @@ test(
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-    await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+    await page.waitForSelector('[data-testid="sidebar-search-input"]', {
       timeout: 100000,
     });
 
@@ -43,7 +44,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
 
@@ -54,7 +55,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Memory Chatbot" }).click();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
 
@@ -63,7 +64,7 @@ test("search flows", { tag: ["@release", "@mainpage"] }, async ({ page }) => {
   await page.getByTestId("side_nav_options_all-templates").click();
   await page.getByRole("heading", { name: "Document Q&A" }).click();
 
-  await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+  await page.waitForSelector('[data-testid="sidebar-search-input"]', {
     timeout: 100000,
   });
 
@@ -84,15 +85,7 @@ test(
       await page.getByTestId("side_nav_options_all-templates").click();
       await page.getByRole("heading", { name: "Basic Prompting" }).click();
 
-      await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-        timeout: 100000,
-      });
-
-      await page.getByTestId("canvas_controls_dropdown").click();
-      await page.getByTestId("fit_view").click();
-      await page.getByTestId("zoom_out").click();
-      await page.getByTestId("zoom_out").click();
-      await page.getByTestId("canvas_controls_dropdown").click();
+      await adjustScreenView(page, { numberOfZoomOut: 2 });
 
       await page.getByText("Chat Input").first().click();
       await page.waitForSelector('[data-testid="more-options-modal"]', {
@@ -124,7 +117,7 @@ test(
       await page.getByTestId("icon-SaveAll").first().click();
       await page.keyboard.press("Escape");
 
-      await page.waitForSelector('[data-testid="icon-ChevronLeft"]', {
+      await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 100000,
       });
 

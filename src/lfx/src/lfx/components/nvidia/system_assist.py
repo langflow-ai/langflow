@@ -15,7 +15,7 @@ class NvidiaSystemAssistComponent(ComponentWithCache):
         "The user may query GPU specifications, state, and ask the NV-API to perform "
         "several GPU-editing acations. The prompt must be human-readable language."
     )
-    documentation = "https://docs.langflow.org/components-custom-components"
+    documentation = "https://docs.langflow.org/bundles-nvidia"
     icon = "NVIDIA"
     rise_initialized = False
 

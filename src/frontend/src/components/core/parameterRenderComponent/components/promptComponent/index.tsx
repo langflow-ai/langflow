@@ -24,7 +24,8 @@ export default function PromptAreaComponent({
   editNode = false,
   id = "",
   readonly = false,
-}: InputProps<string, PromptAreaComponentType>): JSX.Element {
+  showParameter = true,
+}: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
     .replace(/</g, "&lt;")
@@ -34,7 +35,7 @@ export default function PromptAreaComponent({
       // 1) Leave ```code``` blocks untouched
       if (codeFence) return match;
 
-      // 2) Balanced & odd-length brace runs mean “real variable”
+      // 2) Balanced & odd-length brace runs mean "real variable"
       const lenOpen = openRun?.length ?? 0;
       const lenClose = closeRun?.length ?? 0;
       const isVariable = lenOpen === lenClose && lenOpen % 2 === 1;
@@ -92,8 +93,17 @@ export default function PromptAreaComponent({
       <></>
     );
 
+  if (!showParameter) {
+    return null;
+  }
+
   return (
-    <div className={cn("w-full", disabled && "pointer-events-none")}>
+    <div
+      className={cn(
+        "w-full !max-h-[7.5rem]",
+        disabled && "pointer-events-none",
+      )}
+    >
       <PromptModal
         id={id}
         field_name={field_name}

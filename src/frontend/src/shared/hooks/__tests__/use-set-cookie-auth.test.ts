@@ -62,10 +62,11 @@ describe("setAuthCookie", () => {
 
     setAuthCookie(mockCookies, tokenName, tokenValue);
 
+    // Test environment uses HTTP, so expect non-secure cookies
     expect(mockCookies.set).toHaveBeenCalledWith(tokenName, tokenValue, {
       path: "/",
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
     });
   });
 
@@ -79,10 +80,11 @@ describe("setAuthCookie", () => {
     testCases.forEach(({ tokenName, value }) => {
       setAuthCookie(mockCookies, tokenName, value);
 
+      // Test environment uses HTTP, so expect non-secure cookies
       expect(mockCookies.set).toHaveBeenCalledWith(tokenName, value, {
         path: "/",
-        secure: true,
-        sameSite: "strict",
+        secure: false,
+        sameSite: "lax",
       });
     });
   });
@@ -93,10 +95,11 @@ describe("setAuthCookie", () => {
 
     setAuthCookie(mockCookies, tokenName, tokenValue);
 
+    // Test environment uses HTTP, so expect non-secure cookies
     expect(mockCookies.set).toHaveBeenCalledWith(tokenName, tokenValue, {
       path: "/",
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
     });
   });
 
@@ -105,10 +108,11 @@ describe("setAuthCookie", () => {
 
     const cookieOptions = mockCookies.set.mock.calls[0][2];
 
+    // Test environment uses HTTP, so expect non-secure cookies
     expect(cookieOptions).toEqual({
       path: "/",
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
     });
 
     // Ensure httpOnly is NOT set (removed from utils.ts)
@@ -121,10 +125,11 @@ describe("setAuthCookie", () => {
 
     setAuthCookie(mockCookies, tokenName, tokenValue);
 
+    // Test environment uses HTTP, so expect non-secure cookies
     expect(mockCookies.set).toHaveBeenCalledWith(tokenName, tokenValue, {
       path: "/",
-      secure: true,
-      sameSite: "strict",
+      secure: false,
+      sameSite: "lax",
     });
   });
 });

@@ -25,18 +25,27 @@ export default defineConfig({
   /* Opt out of parallel tests on CI. */
   workers: 2,
   /* Reporter to use. See https://playwright.dev/docs/test-reporters */
-  timeout: 3 * 60 * 750,
+  timeout: 5 * 60 * 1000, // 5 minutes
   // reporter: [
   //   ["html", { open: "never", outputFolder: "playwright-report/test-results" }],
   // ],
-  reporter: process.env.CI ? "blob" : "html",
+  reporter: process.env.CI
+    ? "blob"
+    : [
+        ["list"], // console output in terminal
+        ["html", { outputFolder: "playwright-report", open: "never" }], // generate HTML, don't open
+      ],
   /* Shared settings for all the projects below. See https://playwright.dev/docs/api/class-testoptions. */
   use: {
     /* Base URL to use in actions like `await page.goto('/')`. */
     baseURL: `http://localhost:${PORT || 3000}/`,
 
+    actionTimeout: 20000,
     /* Collect trace when retrying the failed test. See https://playwright.dev/docs/trace-viewer */
     trace: "on-first-retry",
+    contextOptions: {
+      javaScriptEnabled: true,
+    },
   },
 
   globalTeardown: require.resolve("./tests/globalTeardown.ts"),
@@ -104,11 +113,14 @@ export default defineConfig({
   webServer: [
     {
       command:
-        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio",
+        "uv run uvicorn --factory langflow.main:create_app --host localhost --port 7860 --loop asyncio --log-level error --no-access-log",
       port: 7860,
       env: {
         LANGFLOW_DATABASE_URL: "sqlite:///./temp",
         LANGFLOW_AUTO_LOGIN: "true",
+        LANGFLOW_DEACTIVATE_TRACING: "true",
+        LANGFLOW_LOG_LEVEL: "ERROR",
+        DO_NOT_TRACK: "true",
       },
       stdout: "ignore",
 
@@ -121,6 +133,7 @@ export default defineConfig({
       env: {
         VITE_PROXY_TARGET: "http://localhost:7860",
       },
+      reuseExistingServer: true,
     },
   ],
 });

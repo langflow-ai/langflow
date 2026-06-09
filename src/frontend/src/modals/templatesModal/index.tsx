@@ -7,6 +7,7 @@ import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
 import type { Category } from "@/types/templates/types";
+import { cn } from "@/utils/utils";
 import type { newFlowModalPropsType } from "../../types/components";
 import BaseModal from "../baseModal";
 import GetStartedComponent from "./components/GetStartedComponent";
@@ -18,9 +19,29 @@ export default function TemplatesModal({
   setOpen,
 }: newFlowModalPropsType): JSX.Element {
   const [currentTab, setCurrentTab] = useState("get-started");
+  const [loading, setLoading] = useState(false);
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
+
+  const handleFlowCreating = (isCreating: boolean) => {
+    setLoading(isCreating);
+  };
+
+  const handleCreateBlankFlow = () => {
+    if (loading) return;
+
+    handleFlowCreating(true);
+    track("New Flow Created", { template: "Blank Flow" });
+
+    addFlow()
+      .then((id) => {
+        navigate(`/flow/${id}${folderId ? `/folder/${folderId}` : ""}`);
+      })
+      .finally(() => {
+        handleFlowCreating(false);
+      });
+  };
 
   // Define categories and their items
   const categories: Category[] = [
@@ -69,11 +90,16 @@ export default function TemplatesModal({
             />
             <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
               {currentTab === "get-started" ? (
-                <GetStartedComponent />
+                <GetStartedComponent
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
+                />
               ) : (
                 <TemplateContentComponent
                   currentTab={currentTab}
                   categories={categories.flatMap((category) => category.items)}
+                  loading={loading}
+                  onFlowCreating={handleFlowCreating}
                 />
               )}
               <BaseModal.Footer>
@@ -85,17 +111,13 @@ export default function TemplatesModal({
                     </div>
                   </div>
                   <Button
-                    onClick={() => {
-                      addFlow().then((id) => {
-                        navigate(
-                          `/flow/${id}${folderId ? `/folder/${folderId}` : ""}`,
-                        );
-                      });
-                      track("New Flow Created", { template: "Blank Flow" });
-                    }}
+                    onClick={handleCreateBlankFlow}
                     size="sm"
                     data-testid="blank-flow"
-                    className="shrink-0"
+                    className={cn(
+                      "shrink-0",
+                      loading ? "cursor-default opacity-80" : "cursor-pointer",
+                    )}
                   >
                     <ForwardedIconComponent
                       name="Plus"

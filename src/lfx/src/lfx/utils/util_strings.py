@@ -34,22 +34,54 @@ def truncate_long_strings(data, max_length=None):
     return data
 
 
+def sanitize_database_url(url: str) -> str:
+    """Sanitize a database URL by masking sensitive credentials.
+
+    Removes or masks username and password from the URL to prevent
+    sensitive information from being exposed in logs or error messages.
+
+    Args:
+        url: Database connection URL to sanitize
+
+    Returns:
+        Sanitized URL with credentials masked as '***'
+    """
+    if not url:
+        return url
+
+    try:
+        from sqlalchemy.engine import make_url
+
+        parsed_url = make_url(url)
+        if parsed_url.username or parsed_url.password:
+            parsed_url = parsed_url.set(username="***", password="***")  # noqa: S106
+        return str(parsed_url)
+    except Exception:  # noqa: BLE001
+        # Fallback: use regex if SQLAlchemy fails to parse
+        import re
+
+        pattern = r"(://)[^:/@]*(?::[^@]*)?@"
+        return re.sub(pattern, r"\1***:***@", url)
+
+
 def is_valid_database_url(url: str) -> bool:
     """Validate database connection URLs compatible with SQLAlchemy.
 
     Args:
-        url (str): Database connection URL to validate
+        url: Database connection URL to validate
 
     Returns:
-        bool: True if URL is valid, False otherwise
+        True if URL is valid, False otherwise
     """
+    if not url:
+        return False
+
     try:
         from sqlalchemy.engine import make_url
 
         parsed_url = make_url(url)
         parsed_url.get_dialect()
         parsed_url.get_driver_name()
-
     except Exception:  # noqa: BLE001
         return False
 

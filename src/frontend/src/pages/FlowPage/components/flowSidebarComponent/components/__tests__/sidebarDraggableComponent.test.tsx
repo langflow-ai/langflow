@@ -1,6 +1,5 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import { SidebarDraggableComponent } from "../sidebarDraggableComponent";
 
 // Mock all external dependencies
@@ -12,7 +11,17 @@ jest.mock(
 );
 
 jest.mock("@/components/ui/badge", () => ({
-  Badge: ({ children, variant, size, className }: any) => (
+  Badge: ({
+    children,
+    variant,
+    size,
+    className,
+  }: {
+    children: React.ReactNode;
+    variant: string;
+    size: string;
+    className?: string;
+  }) => (
     <span data-testid={`badge-${variant}-${size}`} className={className}>
       {children}
     </span>
@@ -28,7 +37,15 @@ jest.mock("@/components/ui/button", () => ({
     size,
     tabIndex,
     ...props
-  }: any) => (
+  }: {
+    children: React.ReactNode;
+    onClick?: () => void;
+    className?: string;
+    variant?: string;
+    size?: string;
+    tabIndex?: number;
+    [key: string]: unknown;
+  }) => (
     <button
       onClick={onClick}
       className={className}
@@ -42,10 +59,11 @@ jest.mock("@/components/ui/button", () => ({
   ),
 }));
 
+const mockDeleteFlow = jest.fn();
 jest.mock("@/hooks/flows/use-delete-flow", () => ({
   __esModule: true,
   default: () => ({
-    deleteFlow: jest.fn(),
+    deleteFlow: mockDeleteFlow,
   }),
 }));
 
@@ -56,12 +74,18 @@ jest.mock("@/hooks/use-add-component", () => ({
 
 jest.mock("@/components/common/genericIconComponent", () => ({
   __esModule: true,
-  default: ({ name, className }: any) => (
+  default: ({ name, className }: { name: string; className?: string }) => (
     <span data-testid={`icon-${name}`} className={className}>
       {name}
     </span>
   ),
-  ForwardedIconComponent: ({ name, className }: any) => (
+  ForwardedIconComponent: ({
+    name,
+    className,
+  }: {
+    name: string;
+    className?: string;
+  }) => (
     <span data-testid={`forwarded-icon-${name}`} className={className}>
       {name}
     </span>
@@ -70,26 +94,65 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 
 jest.mock("@/components/common/shadTooltipComponent", () => ({
   __esModule: true,
-  default: ({ children, content, styleClasses }: any) => (
+  default: ({
+    children,
+    content,
+    styleClasses,
+  }: {
+    children: React.ReactNode;
+    content?: string;
+    styleClasses?: string;
+  }) => (
     <div data-testid="tooltip" data-content={content} className={styleClasses}>
       {children}
     </div>
   ),
 }));
 
+// Store the onValueChange function so we can call it in tests
+let mockOnValueChange: ((value: string) => void) | undefined;
+
 jest.mock("@/components/ui/select-custom", () => ({
-  Select: ({ children, onValueChange, onOpenChange, open, ...props }: any) => (
-    <div
-      data-testid="select"
-      data-open={open}
-      data-on-value-change={onValueChange?.toString()}
-      data-on-open-change={onOpenChange?.toString()}
-      {...props}
-    >
-      {children}
-    </div>
-  ),
-  SelectContent: ({ children, position, side, sideOffset, style }: any) => (
+  Select: ({
+    children,
+    onValueChange,
+    onOpenChange,
+    open,
+    ...props
+  }: {
+    children: React.ReactNode;
+    onValueChange?: (value: string) => void;
+    onOpenChange?: (open: boolean) => void;
+    open?: boolean;
+    [key: string]: unknown;
+  }) => {
+    // Store the onValueChange function so we can use it in tests
+    mockOnValueChange = onValueChange;
+    return (
+      <div
+        data-testid="select"
+        data-open={open}
+        data-on-value-change={onValueChange?.toString()}
+        data-on-open-change={onOpenChange?.toString()}
+        {...props}
+      >
+        {children}
+      </div>
+    );
+  },
+  SelectContent: ({
+    children,
+    position,
+    side,
+    sideOffset,
+    style,
+  }: {
+    children: React.ReactNode;
+    position?: string;
+    side?: string;
+    sideOffset?: number;
+    style?: React.CSSProperties;
+  }) => (
     <div
       data-testid="select-content"
       data-position={position}
@@ -100,12 +163,33 @@ jest.mock("@/components/ui/select-custom", () => ({
       {children}
     </div>
   ),
-  SelectItem: ({ children, value, ...props }: any) => (
-    <div data-testid={`select-item-${value}`} data-value={value} {...props}>
+  SelectItem: ({
+    children,
+    value,
+    ...props
+  }: {
+    children: React.ReactNode;
+    value: string;
+    [key: string]: unknown;
+  }) => (
+    <button
+      data-testid={props["data-testid"] || `select-item-${value}`}
+      data-value={value}
+      onClick={() => mockOnValueChange?.(value)}
+      {...props}
+    >
       {children}
-    </div>
+    </button>
   ),
-  SelectTrigger: ({ children, tabIndex, ...props }: any) => (
+  SelectTrigger: ({
+    children,
+    tabIndex,
+    ...props
+  }: {
+    children?: React.ReactNode;
+    tabIndex?: number;
+    [key: string]: unknown;
+  }) => (
     <div data-testid="select-trigger" tabIndex={tabIndex} {...props}>
       {children}
     </div>
@@ -120,12 +204,17 @@ jest.mock("@/stores/darkStore", () => ({
 
 jest.mock("@/stores/flowsManagerStore", () => ({
   __esModule: true,
-  default: () => ({
-    flows: [
-      { id: "flow1", name: "Test Flow" },
-      { id: "flow2", name: "Another Flow" },
-    ],
-  }),
+  default: (
+    selector: (state: {
+      flows: Array<{ id: string; name: string }>;
+    }) => unknown,
+  ) =>
+    selector({
+      flows: [
+        { id: "flow1", name: "Test Flow" },
+        { id: "flow2", name: "Another Flow" },
+      ],
+    }),
 }));
 
 jest.mock("@/utils/reactflowUtils", () => ({
@@ -135,7 +224,8 @@ jest.mock("@/utils/reactflowUtils", () => ({
 }));
 
 jest.mock("@/utils/utils", () => ({
-  cn: (...classes: any[]) => classes.filter(Boolean).join(" "),
+  cn: (...classes: (string | undefined | null | boolean)[]) =>
+    classes.filter(Boolean).join(" "),
   removeCountFromString: (str: string) => str.replace(/\d+$/, ""),
 }));
 
@@ -167,6 +257,8 @@ describe("SidebarDraggableComponent", () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    mockOnValueChange = undefined;
+    mockDeleteFlow.mockClear();
   });
 
   describe("Basic Rendering", () => {
@@ -226,7 +318,7 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithBeta} />);
 
-      expect(screen.getByTestId("badge-pinkStatic-xq")).toBeInTheDocument();
+      expect(screen.getByTestId("badge-purpleStatic-xq")).toBeInTheDocument();
       expect(screen.getByText("Beta")).toBeInTheDocument();
     });
 
@@ -246,7 +338,7 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...propsWithBoth} />);
 
-      expect(screen.getByTestId("badge-pinkStatic-xq")).toBeInTheDocument();
+      expect(screen.getByTestId("badge-purpleStatic-xq")).toBeInTheDocument();
       expect(
         screen.getByTestId("badge-secondaryStatic-xq"),
       ).toBeInTheDocument();
@@ -258,7 +350,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       expect(
-        screen.queryByTestId("badge-pinkStatic-xq"),
+        screen.queryByTestId("badge-purpleStatic-xq"),
       ).not.toBeInTheDocument();
       expect(
         screen.queryByTestId("badge-secondaryStatic-xq"),
@@ -446,7 +538,9 @@ describe("SidebarDraggableComponent", () => {
       const propsNotOfficial = { ...defaultProps, official: false };
       render(<SidebarDraggableComponent {...propsNotOfficial} />);
 
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
       expect(screen.getByText("Delete")).toBeInTheDocument();
       expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
     });
@@ -455,7 +549,7 @@ describe("SidebarDraggableComponent", () => {
       render(<SidebarDraggableComponent {...defaultProps} />);
 
       expect(
-        screen.queryByTestId("select-item-delete"),
+        screen.queryByTestId("draggable-component-menu-delete"),
       ).not.toBeInTheDocument();
     });
   });
@@ -599,7 +693,7 @@ describe("SidebarDraggableComponent", () => {
     it("should handle missing color", () => {
       const propsWithoutColor = {
         ...defaultProps,
-        color: undefined as any,
+        color: "",
       };
 
       expect(() => {
@@ -610,7 +704,7 @@ describe("SidebarDraggableComponent", () => {
     it("should handle missing onDragStart", () => {
       const propsWithoutDragStart = {
         ...defaultProps,
-        onDragStart: undefined as any,
+        onDragStart: jest.fn(),
       };
 
       expect(() => {
@@ -631,14 +725,16 @@ describe("SidebarDraggableComponent", () => {
 
       render(<SidebarDraggableComponent {...complexProps} />);
 
-      expect(screen.getByTestId("badge-pinkStatic-xq")).toBeInTheDocument();
+      expect(screen.getByTestId("badge-purpleStatic-xq")).toBeInTheDocument();
       expect(
         screen.getByTestId("badge-secondaryStatic-xq"),
       ).toBeInTheDocument();
       expect(
         screen.queryByTestId("add-component-button-test-component"),
       ).not.toBeInTheDocument();
-      expect(screen.getByTestId("select-item-delete")).toBeInTheDocument();
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
     });
   });
 
@@ -676,6 +772,181 @@ describe("SidebarDraggableComponent", () => {
       expect(selectContent).toHaveAttribute("data-position", "popper");
       expect(selectContent).toHaveAttribute("data-side", "bottom");
       expect(selectContent).toHaveAttribute("data-side-offset", "-25");
+    });
+  });
+
+  describe("OnDelete Behavior", () => {
+    it("should call onDelete prop when delete is selected and onDelete is provided", async () => {
+      const mockOnDelete = jest.fn();
+      const propsWithOnDelete = {
+        ...defaultProps,
+        onDelete: mockOnDelete,
+        official: true, // Even with official=true, delete should show when onDelete is provided
+      };
+
+      render(<SidebarDraggableComponent {...propsWithOnDelete} />);
+
+      // Verify delete option is shown when onDelete is provided
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+
+      // Click on the delete option to trigger the onValueChange
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
+      fireEvent.click(deleteItem);
+
+      // Verify that our custom onDelete function was called
+      expect(mockOnDelete).toHaveBeenCalledTimes(1);
+    });
+
+    it("should render delete option when onDelete prop is provided even if official is true", () => {
+      const mockOnDelete = jest.fn();
+      const propsWithOnDeleteAndOfficial = {
+        ...defaultProps,
+        onDelete: mockOnDelete,
+        official: true,
+      };
+
+      render(<SidebarDraggableComponent {...propsWithOnDeleteAndOfficial} />);
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
+    });
+
+    it("should render delete option when official is false even without onDelete", () => {
+      const propsNotOfficial = {
+        ...defaultProps,
+        official: false,
+        onDelete: undefined,
+      };
+
+      render(<SidebarDraggableComponent {...propsNotOfficial} />);
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
+    });
+
+    it("should not render delete option when official is true and no onDelete is provided", () => {
+      const propsOfficialWithoutOnDelete = {
+        ...defaultProps,
+        official: true,
+        onDelete: undefined,
+      };
+
+      render(<SidebarDraggableComponent {...propsOfficialWithoutOnDelete} />);
+
+      expect(
+        screen.queryByTestId("draggable-component-menu-delete"),
+      ).not.toBeInTheDocument();
+    });
+
+    it("should render delete option when both onDelete is provided and official is false", () => {
+      const mockOnDelete = jest.fn();
+      const propsWithBothConditions = {
+        ...defaultProps,
+        onDelete: mockOnDelete,
+        official: false,
+      };
+
+      render(<SidebarDraggableComponent {...propsWithBothConditions} />);
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Delete")).toBeInTheDocument();
+      expect(screen.getByTestId("icon-Trash2")).toBeInTheDocument();
+    });
+
+    it("should handle onDelete prop being undefined gracefully", () => {
+      const propsWithUndefinedOnDelete = {
+        ...defaultProps,
+        onDelete: undefined,
+        official: false, // Make delete option visible
+      };
+
+      expect(() => {
+        render(<SidebarDraggableComponent {...propsWithUndefinedOnDelete} />);
+      }).not.toThrow();
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+    });
+
+    it("should prioritize onDelete over default flow deletion when onDelete is provided", async () => {
+      const mockOnDelete = jest.fn();
+
+      const propsWithOnDelete = {
+        ...defaultProps,
+        onDelete: mockOnDelete,
+        official: false,
+        display_name: "Test Flow", // This exists in the mocked flows
+      };
+
+      render(<SidebarDraggableComponent {...propsWithOnDelete} />);
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+
+      // Click on the delete option
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
+      fireEvent.click(deleteItem);
+
+      // Verify that our custom onDelete function was called and deleteFlow was NOT called
+      expect(mockOnDelete).toHaveBeenCalledTimes(1);
+      expect(mockDeleteFlow).not.toHaveBeenCalled();
+    });
+
+    it("should use default flow deletion when onDelete is not provided", async () => {
+      const propsWithoutOnDelete = {
+        ...defaultProps,
+        onDelete: undefined,
+        official: false,
+        display_name: "Test Flow", // This exists in the mocked flows
+      };
+
+      render(<SidebarDraggableComponent {...propsWithoutOnDelete} />);
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+
+      // Click on the delete option
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
+      fireEvent.click(deleteItem);
+
+      // Verify that the default deleteFlow function was called
+      expect(mockDeleteFlow).toHaveBeenCalledTimes(1);
+      expect(mockDeleteFlow).toHaveBeenCalledWith({ id: "flow1" }); // Based on our mocked flows
+    });
+
+    it("should not call deleteFlow when onDelete is not provided and flow is not found", async () => {
+      const propsWithNonExistentFlow = {
+        ...defaultProps,
+        onDelete: undefined,
+        official: false,
+        display_name: "Non-existent Flow", // This doesn't exist in our mocked flows
+      };
+
+      render(<SidebarDraggableComponent {...propsWithNonExistentFlow} />);
+
+      expect(
+        screen.getByTestId("draggable-component-menu-delete"),
+      ).toBeInTheDocument();
+
+      // Click on the delete option
+      const deleteItem = screen.getByTestId("draggable-component-menu-delete");
+      fireEvent.click(deleteItem);
+
+      // Verify that deleteFlow was not called since flow was not found
+      expect(mockDeleteFlow).not.toHaveBeenCalled();
     });
   });
 });

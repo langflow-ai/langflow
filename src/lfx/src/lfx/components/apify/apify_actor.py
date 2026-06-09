@@ -22,7 +22,7 @@ class ApifyActorsComponent(Component):
         "Use Apify Actors to extract data from hundreds of places fast. "
         "This component can be used in a flow to retrieve data or as a tool with an agent."
     )
-    documentation: str = "http://docs.langflow.org/integrations-apify"
+    documentation: str = "https://docs.langflow.org/bundles-apify"
     icon = "Apify"
     name = "ApifyActors"
 
@@ -92,7 +92,7 @@ class ApifyActorsComponent(Component):
         """Run the Actor and return node output."""
         input_ = json.loads(self.run_input)
         fields = ApifyActorsComponent.parse_dataset_fields(self.dataset_fields) if self.dataset_fields else None
-        res = self._run_actor(self.actor_id, input_, fields=fields)
+        res = self.run_actor(self.actor_id, input_, fields=fields)
         if self.flatten_dataset:
             res = [ApifyActorsComponent.flatten(item) for item in res]
         data = [Data(data=item) for item in res]
@@ -159,7 +159,7 @@ class ApifyActorsComponent(Component):
                 # retrieve if nested, just in case
                 input_dict = input_dict.get("run_input", input_dict)
 
-                res = parent._run_actor(actor_id, input_dict)
+                res = parent.run_actor(actor_id, input_dict)
                 return "\n\n".join([ApifyActorsComponent.dict_to_json_str(item) for item in res])
 
         return ApifyActorRun
@@ -256,7 +256,7 @@ class ApifyActorsComponent(Component):
         valid_chars = string.ascii_letters + string.digits + "_-"
         return "".join(char if char in valid_chars else "_" for char in actor_id)
 
-    def _run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:
+    def run_actor(self, actor_id: str, run_input: dict, fields: list[str] | None = None) -> list[dict]:
         """Run an Apify Actor and return the output dataset.
 
         Args:

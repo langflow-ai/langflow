@@ -1,9 +1,14 @@
 module.exports = {
   docs: [
-    "Get-Started/welcome-to-langflow",
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Build</div>`,
+      className: "sidebar-group-divider",
+    },
     {
       type: "category",
       label: "Get started",
+      className: "sidebar-category-with-icon sidebar-icon-rocket",
       items: [
         {
           type: "doc",
@@ -35,15 +40,16 @@ module.exports = {
     {
       type: "category",
       label: "Flows",
+      className: "sidebar-category-with-icon sidebar-icon-workflow",
       items: [
         {
           type: "doc",
-          id: "Concepts/concepts-overview",
+          id: "Flows/concepts-overview",
           label: "Use the visual editor"
         },
         {
           type: "doc",
-          id: "Concepts/concepts-flows",
+          id: "Flows/concepts-flows",
           label: "Build flows"
         },
         {
@@ -52,31 +58,37 @@ module.exports = {
           items: [
             {
               type: "doc",
-              id: "Concepts/concepts-publish",
+              id: "Flows/concepts-publish",
               label: "Trigger flows with the Langflow API"
             },
             {
               type: "doc",
-              id: "Develop/webhook",
+              id: "Flows/webhook",
               label: "Trigger flows with webhooks"
             },
           ],
         },
         {
           type: "doc",
-          id: "Concepts/concepts-playground",
+          id: "Flows/concepts-playground",
           label: "Test flows"
         },
         {
           type: "doc",
-          id: "Concepts/concepts-flows-import",
+          id: "Flows/concepts-flows-import",
           label: "Import and export flows"
+        },
+        {
+          type: "doc",
+          id: "Flows/langflow-assistant",
+          label: "Build components with Langflow Assistant"
         },
       ],
     },
     {
       type: "category",
       label: "Agents",
+      className: "sidebar-category-with-icon sidebar-icon-bot",
       items: [
         "Agents/agents",
         "Agents/agents-tools",
@@ -85,27 +97,36 @@ module.exports = {
     {
       type: "category",
       label: "Model Context Protocol (MCP)",
+      className: "sidebar-category-with-icon sidebar-icon-plug",
       items: [
-        "Components/mcp-client",
-        "Concepts/mcp-server",
-        "Integrations/mcp-component-astra",
+        "Agents/mcp-client",
+        "Agents/mcp-server",
+        "Agents/langflow-mcp-client",
+        "Agents/mcp-component-astra",
       ],
+    },
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Develop & Deploy</div>`,
+      className: "sidebar-group-divider",
     },
     {
       type: "category",
       label: "Develop",
+      className: "sidebar-category-with-icon sidebar-icon-code",
       items: [
-        "Configuration/api-keys-and-authentication",
+        "Develop/api-keys-and-authentication",
+        "Develop/jwt-authentication",
         "Develop/install-custom-dependencies",
-        "Configuration/configuration-global-variables",
-        "Configuration/environment-variables",
+        "Develop/configuration-global-variables",
+        "Develop/environment-variables",
         {
           type: "category",
           label: "Storage and memory",
           items: [
             {
               type: "doc",
-              id: "Concepts/concepts-file-management",
+              id: "Develop/concepts-file-management",
               label: "Manage files"
             },
             {
@@ -118,12 +139,13 @@ module.exports = {
               id: "Develop/session-id",
               label: "Use Session IDs"
             },
-            "Configuration/configuration-custom-database",
+            "Develop/configuration-custom-database",
             {
               type: "doc",
               id: "Develop/enterprise-database-guide",
               label: "Database guide for enterprise administrators"
             },
+            "Develop/knowledge",
           ],
         },
         {
@@ -131,33 +153,36 @@ module.exports = {
           label: "Observability",
           items: [
             "Develop/logging",
+            "Develop/traces",
             {
               type: "category",
               label: "Monitoring",
               items: [
-                "Integrations/Arize/integrations-arize",
-                "Integrations/integrations-langfuse",
-                "Integrations/integrations-langsmith",
-                "Integrations/integrations-langwatch",
-                "Integrations/integrations-opik",
+                "Develop/integrations-arize",
+                "Develop/integrations-langfuse",
+                "Develop/integrations-langsmith",
+                "Develop/integrations-langwatch",
+                "Develop/integrations-openlayer",
+                "Develop/integrations-opik",
+                "Develop/integrations-instana-traceloop",
               ],
             },
-            "Contributing/contributing-telemetry",
+            "Develop/contributing-telemetry",
           ],
         },
         {
           type: "doc",
-          id: "Concepts/data-types",
+          id: "Develop/data-types",
           label: "Use Langflow data types"
         },
         {
           type: "doc",
-          id: "Concepts/concepts-voice-mode",
+          id: "Develop/concepts-voice-mode",
           label: "Use voice mode"
         },
         {
           type: "doc",
-          id: "Configuration/configuration-cli",
+          id: "Develop/configuration-cli",
           label: "Use the Langflow CLI"
         },
       ],
@@ -165,6 +190,7 @@ module.exports = {
     {
       type: "category",
       label: "Deploy",
+      className: "sidebar-category-with-icon sidebar-icon-cloud",
       items: [
         {
           type:"doc",
@@ -177,10 +203,15 @@ module.exports = {
           label: "Deploy a public Langflow server"
         },
         {
+          type: "doc",
+          id: "Deployment/deployment-nginx-ssl",
+          label: "Deploy Langflow with Nginx and SSL"
+        },
+        {
           type: "category",
           label: "Containerized deployments",
           items: [
-            "Develop/develop-application",
+            "Deployment/develop-application",
             {
               type: "doc",
               id: "Deployment/deployment-docker",
@@ -235,6 +266,11 @@ module.exports = {
             },
             {
               type: "doc",
+              id: "Deployment/deployment-wxo",
+              label: "IBM watsonx Orchestrate"
+            },
+            {
+              type: "doc",
               id: "Deployment/deployment-railway",
               label: "Railway"
             },
@@ -245,41 +281,120 @@ module.exports = {
             },
           ]
         },
+        {
+          type: "doc",
+          id: "Deployment/deployment-block-custom-components",
+          label: "Block custom components",
+        },
+        {
+          type: "doc",
+          id: "Deployment/security",
+          label: "Security",
+        },
       ],
+    },
+    {
+      type: "html",
+      value: `<div class="sidebar-group-label">Reference</div>`,
+      className: "sidebar-group-divider",
     },
     {
       type: "category",
       label: "Components reference",
+      className: "sidebar-category-with-icon sidebar-icon-blocks",
       items: [
-        "Concepts/concepts-components",
+        "Components/concepts-components",
         {
           type: "category",
           label: "Core components",
           items: [
-            "Components/components-io",
-            "Components/components-agents",
             {
               type: "category",
-              label: "Models",
+              label: "Input / Output",
               items: [
-                "Components/components-models",
-                "Components/components-embedding-models",
+                "Components/chat-input-and-output",
+                "Components/text-input-and-output",
+                "Components/webhook",
               ]
             },
-            "Components/components-data",
-            "Components/components-vector-stores",
             {
               type: "category",
               label: "Processing",
               items: [
-                "Components/components-processing",
-                "Components/components-prompts",
+                "Components/data-operations",
+                "Components/dataframe-operations",
+                "Components/dynamic-create-data",
+                "Components/parser",
+                "Components/split-text",
+                "Components/type-convert",
               ]
             },
-            "Components/components-logic",
-            "Components/components-helpers",
-            "Components/components-tools",
-            "Components/components-memories",
+            {
+              type: "category",
+              label: "Data Source",
+              items: [
+                "Components/api-request",
+                "Components/mock-data",
+                "Components/url",
+                "Components/web-search",
+              ]
+            },
+            {
+              type: "category",
+              label: "Files and Knowledge",
+              items: [
+                "Components/directory",
+                "Components/knowledge-base",
+                "Components/read-file",
+                "Components/write-file",
+              ]
+            },
+            {
+              type: "category",
+              label: "Flow Controls",
+              items: [
+                "Components/if-else",
+                "Components/loop",
+                "Components/notify-and-listen",
+                "Components/run-flow",
+              ]
+            },
+            {
+              type: "category",
+              label: "LLM Operations",
+              items: [
+                "Components/batch-run",
+                "Components/guardrails",
+                "Components/policies",
+                "Components/llm-selector",
+                "Components/smart-router",
+                "Components/smart-transform",
+                "Components/structured-output",
+              ]
+            },
+            {
+              type: "category",
+              label: "Models and Agents",
+              items: [
+                "Components/components-models",
+                "Components/components-prompts",
+                "Components/components-agents",
+                "Components/mcp-tools",
+                "Components/components-embedding-models",
+                "Components/message-history",
+              ]
+            },
+            {
+              type: "category",
+              label: "Utilities",
+              items: [
+                "Components/calculator",
+                "Components/current-date",
+                "Components/python-interpreter",
+                "Components/sql-database",
+              ]
+            },
+            "Components/legacy-core-components",
           ],
         },
         {
@@ -287,82 +402,68 @@ module.exports = {
           label: "Bundles",
           items: [
             "Components/components-bundles",
+            "Components/bundles-agentics",
             "Components/bundles-aiml",
+            "Components/bundles-altk",
             "Components/bundles-amazon",
             "Components/bundles-anthropic",
-            "Integrations/Apify/integrations-apify",
+            "Components/bundles-apify",
             "Components/bundles-arxiv",
-            "Integrations/integrations-assemblyai",
+            "Components/bundles-assemblyai",
             "Components/bundles-azure",
             "Components/bundles-baidu",
             "Components/bundles-bing",
-            "Integrations/Cleanlab/integrations-cleanlab",
+            "Components/bundles-cassandra",
+            "Components/bundles-chroma",
+            "Components/bundles-cleanlab",
+            "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
-            "Integrations/Composio/integrations-composio",
+            "Components/bundles-cometapi",
+            "Components/bundles-composio",
+            "Components/bundles-couchbase",
+            "Components/bundles-cuga",
             "Components/bundles-datastax",
             "Components/bundles-deepseek",
-            "Integrations/Docling/integrations-docling",
+            "Components/bundles-docling",
             "Components/bundles-duckduckgo",
+            "Components/bundles-elastic",
             "Components/bundles-exa",
+            "Components/bundles-faiss",
             "Components/bundles-glean",
-            {
-              type: 'category',
-              label: 'Google',
-              items: [
-                "Components/bundles-google",
-                "Integrations/Google/integrations-google-big-query",
-              ],
-            },
+            "Components/bundles-google",
             "Components/bundles-groq",
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
             "Components/bundles-langchain",
+            "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
             "Components/bundles-maritalk",
             "Components/bundles-mem0",
+            "Components/bundles-milvus",
             "Components/bundles-mistralai",
-            {
-              type: "category",
-              label: "Notion",
-              items: [
-                "Integrations/Notion/integrations-notion",
-                "Integrations/Notion/notion-agent-conversational",
-                "Integrations/Notion/notion-agent-meeting-notes",
-              ],
-            },
+            "Components/bundles-mongodb",
+            "Components/bundles-notion",
             "Components/bundles-novita",
-            {
-              type: "category",
-              label: "NVIDIA",
-              items: [
-                "Components/bundles-nvidia",
-                {
-                  type: "doc",
-                  id: "Integrations/Nvidia/integrations-nvidia-ingest",
-                  label: "NVIDIA Ingest"
-                },
-                {
-                  type: "doc",
-                  id: "Integrations/Nvidia/integrations-nvidia-nim-wsl2",
-                  label: "NVIDIA NIM on WSL2"
-                },
-                {
-                  type: "doc",
-                  id: "Integrations/Nvidia/integrations-nvidia-g-assist",
-                  label: "NVIDIA G-Assist"
-                },
-              ],
-            },
+            "Components/bundles-nvidia",
             "Components/bundles-ollama",
             "Components/bundles-openai",
             "Components/bundles-openrouter",
             "Components/bundles-perplexity",
+            "Components/bundles-pgvector",
+            "Components/bundles-pinecone",
+            "Components/bundles-qdrant",
             "Components/bundles-redis",
             "Components/bundles-sambanova",
             "Components/bundles-searchapi",
+            "Components/bundles-serper",
+            "Components/bundles-supabase",
+            "Components/bundles-upstash",
+            "Components/bundles-vllm",
+            "Components/bundles-vectara",
             "Components/bundles-vertexai",
+            "Components/bundles-weaviate",
             "Components/bundles-wikipedia",
             "Components/bundles-xai",
           ],
@@ -373,6 +474,7 @@ module.exports = {
     {
       type: "category",
       label: "API reference",
+      className: "sidebar-category-with-icon sidebar-icon-fileCode",
       items: [
         {
           type: "doc",
@@ -381,8 +483,13 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Develop/Clients/typescript-client",
+          id: "API-Reference/typescript-client",
           label: "Use the TypeScript client"
+        },
+        {
+          type: "doc",
+          id: "API-Reference/flow-devops-sdk",
+          label: "Flow DevOps Toolkit SDK",
         },
         {
           type: "doc",
@@ -390,40 +497,25 @@ module.exports = {
           label: "Flow trigger endpoints",
         },
         {
-          type: "doc",
-          id: "API-Reference/api-flows",
-          label: "Flow management endpoints",
+          type: "category",
+          label: "Developer API (Beta)",
+          items: [
+            "API-Reference/workflows-api",
+            {
+              type: "link",
+              label: "Workflow API specification (Beta)",
+              href: "/api/workflow",
+            },
+          ],
         },
-        {
-          type: "doc",
-          id: "API-Reference/api-files",
-          label: "Files endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-projects",
-          label: "Projects endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-logs",
-          label: "Logs endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-monitor",
-          label: "Monitor endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-build",
-          label: "Build endpoints",
-        },
-        {
-          type: "doc",
-          id: "API-Reference/api-users",
-          label: "Users endpoints",
-        },
+        "API-Reference/api-openai-responses",
+        "API-Reference/api-flows",
+        "API-Reference/api-files",
+        "API-Reference/api-projects",
+        "API-Reference/api-logs",
+        "API-Reference/api-monitor",
+        "API-Reference/api-build",
+        "API-Reference/api-users",
         {
           type: "link",
           label: "Langflow API specification",
@@ -432,31 +524,27 @@ module.exports = {
       ],
     },
     {
+      type: "html",
+      value: `<div class="sidebar-group-label">Community</div>`,
+      className: "sidebar-group-divider",
+    },
+    {
       type: "category",
       label: "Contribute",
+      className: "sidebar-category-with-icon sidebar-icon-gitPR",
       items: [
         "Contributing/contributing-community",
         "Contributing/contributing-how-to-contribute",
         "Contributing/contributing-components",
+        "Contributing/contributing-bundles",
         "Contributing/contributing-component-tests",
         "Contributing/contributing-templates",
-        "Contributing/contributing-bundles",
-      ],
-    },
-    {
-      type: "category",
-      label: "Release notes",
-      items: [
-        {
-          type: "doc",
-          id: "Support/release-notes",
-          label: "Release notes",
-        },
       ],
     },
     {
       type: "category",
       label: "Support",
+      className: "sidebar-category-with-icon sidebar-icon-helpCircle",
       items: [
         {
           type: "doc",
@@ -465,7 +553,7 @@ module.exports = {
         },
         {
           type: "doc",
-          id: "Contributing/contributing-github-issues",
+          id: "Support/contributing-github-issues",
           label: "Get help and request enhancements",
         },
         {
@@ -473,14 +561,19 @@ module.exports = {
           id: "Support/luna-for-langflow",
           label: "IBM Elite Support for Langflow",
         },
+        {
+          type: "doc",
+          id: "Support/release-notes",
+          label: "Release notes",
+        },
       ],
     },
     {
       type: "html",
       className: "sidebar-ad",
       value: `
-        <a href="https://www.langflow.org/desktop" target="_blank" class="menu__link">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <a href="https://www.langflow.org/desktop" target="_blank" rel="noopener noreferrer" class="menu__link">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
             <g clip-path="url(#clip0_1645_37)">
               <path d="M12 17H20C21.1046 17 22 16.1046 22 15V13M12 17H4C2.89543 17 2 16.1046 2 15V5C2 3.89543 2.89543 3 4 3H10M12 17V21M8 21H12M12 21H16M11.75 10.2917H13.2083L16.125 7.375H17.5833L20.5 4.45833H21.9583M16.125 11.75H17.5833L20.5 8.83333H21.9583M11.75 5.91667H13.2083L16.125 3H17.5833" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
             </g>

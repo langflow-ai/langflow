@@ -6,10 +6,12 @@ import json
 import os
 import sys
 import tempfile
+from functools import partial
 from pathlib import Path
 
 import typer
 import uvicorn
+from asyncer import syncify
 from dotenv import load_dotenv
 from rich.console import Console
 from rich.panel import Panel
@@ -32,7 +34,8 @@ console = Console()
 API_KEY_MASK_LENGTH = 8
 
 
-def serve_command(
+@partial(syncify, raise_sync_error=False)
+async def serve_command(
     script_path: str | None = typer.Argument(
         None,
         help=(
@@ -43,7 +46,7 @@ def serve_command(
     host: str = typer.Option("127.0.0.1", "--host", "-h", help="Host to bind the server to"),
     port: int = typer.Option(8000, "--port", "-p", help="Port to bind the server to"),
     verbose: bool = typer.Option(False, "--verbose", "-v", help="Show diagnostic output and execution details"),  # noqa: FBT001, FBT003
-    env_file: Path | None = typer.Option(  # noqa: B008
+    env_file: Path | None = typer.Option(
         None,
         "--env-file",
         help="Path to the .env file containing environment variables",
@@ -85,6 +88,11 @@ def serve_command(
         cat my_flow.json | lfx serve --stdin
         echo '{"nodes": [...]}' | lfx serve --stdin
     """
+    # Configure logging with the specified level and import logger
+    from lfx.log.logger import configure, logger
+
+    configure(log_level=log_level)
+
     verbose_print = create_verbose_printer(verbose=verbose)
 
     # Validate input sources - exactly one must be provided
@@ -134,11 +142,11 @@ def serve_command(
     temp_file_to_cleanup = None
 
     if flow_json is not None:
-        verbose_print("Processing inline JSON content...")
+        logger.info("Processing inline JSON content...")
         try:
             # Validate JSON syntax
             json_data = json.loads(flow_json)
-            verbose_print("✓ JSON content is valid")
+            logger.info("JSON content is valid")
 
             # Create a temporary file with the JSON content
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
@@ -146,7 +154,7 @@ def serve_command(
                 temp_file_to_cleanup = temp_file.name
 
             script_path = temp_file_to_cleanup
-            verbose_print(f"✓ Created temporary file: {script_path}")
+            logger.info(f"Created temporary file: {script_path}")
 
         except json.JSONDecodeError as e:
             typer.echo(f"Error: Invalid JSON content: {e}", err=True)
@@ -156,17 +164,17 @@ def serve_command(
             raise typer.Exit(1) from e
 
     elif stdin:
-        verbose_print("Reading JSON content from stdin...")
+        logger.info("Reading JSON content from stdin...")
         try:
             # Read all content from stdin
             stdin_content = sys.stdin.read().strip()
             if not stdin_content:
-                verbose_print("Error: No content received from stdin")
+                logger.error("No content received from stdin")
                 raise typer.Exit(1)
 
             # Validate JSON syntax
             json_data = json.loads(stdin_content)
-            verbose_print("✓ JSON content from stdin is valid")
+            logger.info("JSON content from stdin is valid")
 
             # Create a temporary file with the JSON content
             with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as temp_file:
@@ -174,7 +182,7 @@ def serve_command(
                 temp_file_to_cleanup = temp_file.name
 
             script_path = temp_file_to_cleanup
-            verbose_print(f"✓ Created temporary file from stdin: {script_path}")
+            logger.info(f"Created temporary file from stdin: {script_path}")
 
         except json.JSONDecodeError as e:
             verbose_print(f"Error: Invalid JSON content from stdin: {e}")
@@ -196,12 +204,12 @@ def serve_command(
             raise typer.Exit(1)
 
         if resolved_path.suffix == ".json":
-            graph = load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
+            graph = await load_graph_from_path(resolved_path, resolved_path.suffix, verbose_print, verbose=verbose)
         elif resolved_path.suffix == ".py":
             verbose_print("Loading graph from Python script...")
             from lfx.cli.script_loader import load_graph_from_script
 
-            graph = load_graph_from_script(resolved_path)
+            graph = await load_graph_from_script(resolved_path)
             verbose_print("✓ Graph loaded from Python script")
         else:
             err_msg = "Error: Only JSON flow files (.json) or Python scripts (.py) are supported. "
@@ -210,10 +218,10 @@ def serve_command(
             raise typer.Exit(1)
 
         # Prepare the graph
-        verbose_print("Preparing graph for serving...")
+        logger.info("Preparing graph for serving...")
         try:
             graph.prepare()
-            verbose_print("✓ Graph prepared successfully")
+            logger.info("Graph prepared successfully")
 
             # Validate global variables for environment compatibility
             if check_variables:
@@ -221,12 +229,12 @@ def serve_command(
 
                 validation_errors = validate_global_variables_for_env(graph)
                 if validation_errors:
-                    verbose_print("✗ Global variable validation failed:")
+                    logger.error("Global variable validation failed:")
                     for error in validation_errors:
-                        verbose_print(f"  - {error}")
+                        logger.error(f"  - {error}")
                     raise typer.Exit(1)
             else:
-                verbose_print("✓ Global variable validation skipped")
+                logger.info("Global variable validation skipped")
         except Exception as e:
             verbose_print(f"✗ Failed to prepare graph: {e}")
             raise typer.Exit(1) from e
@@ -295,13 +303,18 @@ def serve_command(
         console.print()
 
         # Start the server
+        # Use uvicorn.Server to properly handle async context
+        # uvicorn.run() uses asyncio.run() internally which fails when
+        # an event loop is already running (due to syncify decorator)
         try:
-            uvicorn.run(
+            config = uvicorn.Config(
                 serve_app,
                 host=host,
                 port=port,
                 log_level=log_level,
             )
+            server = uvicorn.Server(config)
+            await server.serve()
         except KeyboardInterrupt:
             verbose_print("\n👋 Server stopped")
             raise typer.Exit(0) from None

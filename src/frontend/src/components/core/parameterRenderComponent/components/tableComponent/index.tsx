@@ -1,12 +1,7 @@
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import {
-  DEFAULT_TABLE_ALERT_MSG,
-  DEFAULT_TABLE_ALERT_TITLE,
-  NO_COLUMN_DEFINITION_ALERT_DESCRIPTION,
-  NO_COLUMN_DEFINITION_ALERT_TITLE,
-} from "@/constants/constants";
 import { useDarkStore } from "@/stores/darkStore";
+import { useTranslation } from "react-i18next";
 import "@/style/ag-theme-shadcn.css"; // Custom CSS applied to the grid
 import type { ColDef } from "ag-grid-community";
 import type { TableOptionsTypeAPI } from "@/types/api";
@@ -46,14 +41,13 @@ const TableComponent = forwardRef<
   TableComponentProps
 >(
   (
-    {
-      alertTitle = DEFAULT_TABLE_ALERT_TITLE,
-      alertDescription = DEFAULT_TABLE_ALERT_MSG,
-      displayEmptyAlert = true,
-      ...props
-    },
+    { alertTitle, alertDescription, displayEmptyAlert = true, ...props },
     ref,
   ) => {
+    const { t } = useTranslation();
+    const resolvedAlertTitle = alertTitle ?? t("table.noDataTitle");
+    const resolvedAlertDescription =
+      alertDescription ?? t("table.noDataMessage");
     const isSingleToggleRowEditable = (
       colField: string,
       rowData: any,
@@ -117,8 +111,8 @@ const TableComponent = forwardRef<
         if (props.rowSelection && props.onSelectionChanged && index === 0) {
           newCol = {
             ...newCol,
-            checkboxSelection: true,
-            headerCheckboxSelection: true,
+            checkboxSelection: col.checkboxSelection !== false,
+            headerCheckboxSelection: col.headerCheckboxSelection !== false,
             headerCheckboxSelectionFilteredOnly: true,
           };
         }
@@ -340,8 +334,8 @@ const TableComponent = forwardRef<
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{alertTitle}</AlertTitle>
-            <AlertDescription>{alertDescription}</AlertDescription>
+            <AlertTitle>{resolvedAlertTitle}</AlertTitle>
+            <AlertDescription>{resolvedAlertDescription}</AlertDescription>
           </Alert>
         </div>
       );
@@ -355,14 +349,15 @@ const TableComponent = forwardRef<
               name="AlertCircle"
               className="h-5 w-5 text-primary"
             />
-            <AlertTitle>{NO_COLUMN_DEFINITION_ALERT_TITLE}</AlertTitle>
+            <AlertTitle>{t("table.noColumnTitle")}</AlertTitle>
             <AlertDescription>
-              {NO_COLUMN_DEFINITION_ALERT_DESCRIPTION}
+              {t("table.noColumnDescription")}
             </AlertDescription>
           </Alert>
         </div>
       );
     }
+
     return (
       <div
         className={cn(
@@ -396,61 +391,67 @@ const TableComponent = forwardRef<
           }}
           onGridReady={onGridReady}
           onColumnMoved={onColumnMoved}
-          onCellValueChanged={(e) => {
-            // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
-            const isSingleToggleField =
-              e.colDef.field === "Vectorize" ||
-              e.colDef.field === "vectorize" ||
-              e.colDef.field === "Identifier" ||
-              e.colDef.field === "identifier";
+          onCellValueChanged={
+            props.onCellValueChanged
+              ? (e) => {
+                  // Handle single-toggle column changes (Vectorize and Identifier) to refresh grid editability
+                  const isSingleToggleField =
+                    e.colDef.field === "Vectorize" ||
+                    e.colDef.field === "vectorize" ||
+                    e.colDef.field === "Identifier" ||
+                    e.colDef.field === "identifier";
 
-            if (isSingleToggleField) {
-              setTimeout(() => {
-                if (
-                  realRef.current?.api &&
-                  !realRef.current.api.isDestroyed()
-                ) {
-                  // Refresh all cells with force to update cell renderer params
-                  if (e.colDef.field) {
-                    realRef.current.api.refreshCells({
-                      force: true,
-                      columns: [e.colDef.field],
-                    });
+                  if (isSingleToggleField) {
+                    setTimeout(() => {
+                      if (
+                        realRef.current?.api &&
+                        !realRef.current.api.isDestroyed()
+                      ) {
+                        // Refresh all cells with force to update cell renderer params
+                        if (e.colDef.field) {
+                          realRef.current.api.refreshCells({
+                            force: true,
+                            columns: [e.colDef.field],
+                          });
+                        }
+                        // Also refresh all other single-toggle column cells if they exist
+                        const allSingleToggleColumns = realRef.current.api
+                          .getColumns()
+                          ?.filter((col) => {
+                            const field = col.getColDef().field;
+                            return (
+                              field === "Vectorize" ||
+                              field === "vectorize" ||
+                              field === "Identifier" ||
+                              field === "identifier"
+                            );
+                          });
+                        if (
+                          allSingleToggleColumns &&
+                          allSingleToggleColumns.length > 0
+                        ) {
+                          const columnFields = allSingleToggleColumns
+                            .map((col) => col.getColDef().field)
+                            .filter(
+                              (field): field is string => field !== undefined,
+                            );
+                          if (columnFields.length > 0) {
+                            realRef.current.api.refreshCells({
+                              force: true,
+                              columns: columnFields,
+                            });
+                          }
+                        }
+                      }
+                    }, 0);
                   }
-                  // Also refresh all other single-toggle column cells if they exist
-                  const allSingleToggleColumns = realRef.current.api
-                    .getColumns()
-                    ?.filter((col) => {
-                      const field = col.getColDef().field;
-                      return (
-                        field === "Vectorize" ||
-                        field === "vectorize" ||
-                        field === "Identifier" ||
-                        field === "identifier"
-                      );
-                    });
-                  if (
-                    allSingleToggleColumns &&
-                    allSingleToggleColumns.length > 0
-                  ) {
-                    const columnFields = allSingleToggleColumns
-                      .map((col) => col.getColDef().field)
-                      .filter((field): field is string => field !== undefined);
-                    if (columnFields.length > 0) {
-                      realRef.current.api.refreshCells({
-                        force: true,
-                        columns: columnFields,
-                      });
-                    }
+                  // Call original onCellValueChanged if it exists
+                  if (props.onCellValueChanged) {
+                    props.onCellValueChanged(e);
                   }
                 }
-              }, 0);
-            }
-            // Call original onCellValueChanged if it exists
-            if (props.onCellValueChanged) {
-              props.onCellValueChanged(e);
-            }
-          }}
+              : undefined
+          }
           onStateUpdated={(e) => {
             if (e.sources.some((source) => source.includes("column"))) {
               localStorage.setItem(

@@ -1,4 +1,5 @@
-import { type Page, test } from "@playwright/test";
+import { type Page } from "@playwright/test";
+import { test } from "../fixtures";
 
 type TestFunction = (args: { page: Page }) => Promise<void>;
 type TestConfig = Parameters<typeof test>[1];
@@ -15,16 +16,11 @@ export function withEventDeliveryModes(
   title: string,
   config: TestConfig,
   testFn: TestFunction,
-  { timeout = 10000 }: { timeout?: number } = {},
 ) {
   const eventDeliveryModes = ["streaming", "polling", "direct"] as const;
 
-  for (const [index, eventDelivery] of eventDeliveryModes.entries()) {
+  for (const eventDelivery of eventDeliveryModes) {
     test(`${title} - ${eventDelivery}`, config, async ({ page }) => {
-      if (index === 0) {
-        await new Promise((resolve) => setTimeout(resolve, timeout));
-      }
-
       // Intercept the config request and modify the event_delivery setting
       await page.route("**/api/v1/config", async (route) => {
         const response = await route.fetch();

@@ -18,7 +18,7 @@ class FirecrawlMapApi(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Firecrawl API Key",
             required=True,
             password=True,
             info="The API key to use Firecrawl API.",
@@ -48,7 +48,7 @@ class FirecrawlMapApi(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="map"),
+        Output(display_name="JSON", name="data", method="map"),
     ]
 
     def map(self) -> Data:

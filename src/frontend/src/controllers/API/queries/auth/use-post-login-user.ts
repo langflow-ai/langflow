@@ -31,6 +31,10 @@ export const useLoginUser: useMutationFunctionType<undefined, LoginType> = (
     {
       retry: false,
       ...options,
+      onSuccess: () => {
+        // Clear all cache to prevent data from previous user
+        queryClient.clear();
+      },
       onSettled: () => {
         queryClient.refetchQueries({ queryKey: ["useGetFolders"] });
         queryClient.refetchQueries({ queryKey: ["useGetTags"] });

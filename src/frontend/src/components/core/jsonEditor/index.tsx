@@ -394,7 +394,7 @@ const JsonEditor = ({
             size="sm"
             className={cn(
               "min-w-[60px] whitespace-nowrap",
-              showSuccess && "!bg-green-500 hover:!bg-green-600",
+              showSuccess && "!bg-accent-emerald-foreground hover:!bg-accent-emerald-foreground/90",
             )}
           >
             {showSuccess ? (

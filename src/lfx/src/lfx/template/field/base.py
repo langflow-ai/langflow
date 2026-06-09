@@ -208,6 +208,9 @@ class Output(BaseModel):
     allows_loop: bool = Field(default=False)
     """Specifies if the output allows looping."""
 
+    loop_types: list[str] | None = Field(default=None)
+    """List of additional types to include for loop inputs when allows_loop is True."""
+
     group_outputs: bool = Field(default=False)
     """Specifies if all outputs should be grouped and shown without dropdowns."""
 

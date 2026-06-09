@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -7,8 +8,11 @@ import {
   SidebarGroupLabel,
   SidebarMenu,
 } from "@/components/ui/sidebar";
+import { useDeleteMCPServer } from "@/controllers/API/queries/mcp/use-delete-mcp-server";
 import AddMcpServerModal from "@/modals/addMcpServerModal";
-import { APIClassType } from "@/types/api";
+import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
+import useAlertStore from "@/stores/alertStore";
+import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
@@ -21,11 +25,8 @@ type McpSidebarGroupProps = {
     data: { type: string; node?: APIClassType },
   ) => void;
   openCategories: string[];
-  setOpenCategories: React.Dispatch<React.SetStateAction<string[]>>;
-  mcpServers?: any[];
   mcpLoading?: boolean;
   mcpSuccess?: boolean;
-  mcpError?: boolean;
   search: string;
   hasMcpServers: boolean;
   showSearchConfigTrigger: boolean;
@@ -34,6 +35,7 @@ type McpSidebarGroupProps = {
 };
 
 const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
+  const { t } = useTranslation();
   const [addMcpOpen, setAddMcpOpen] = useState(false);
 
   const handleAddMcpServerClick = () => {
@@ -43,14 +45,15 @@ const McpEmptyState = ({ isLoading }: { isLoading?: boolean }) => {
   return (
     <>
       <div className="flex flex-col h-full w-full items-center justify-center py-8 px-4 text-center min-h-[200px]">
-        <p className="text-muted-foreground mb-4">No MCP Servers Added</p>
+        <p className="text-muted-foreground mb-4">{t("sidebar.mcp.empty")}</p>
         <Button
           variant="outline"
           size="sm"
           disabled={isLoading}
           onClick={handleAddMcpServerClick}
+          data-testid="add-mcp-server-button-sidebar"
         >
-          Add MCP Server
+          <span>{t("sidebar.mcp.add")}</span>
         </Button>
       </div>
       <AddMcpServerModal open={addMcpOpen} setOpen={setAddMcpOpen} />
@@ -63,23 +66,44 @@ const McpSidebarGroup = ({
   nodeColors,
   onDragStart,
   openCategories,
-  setOpenCategories,
-  mcpServers,
   mcpLoading,
   mcpSuccess,
-  mcpError,
   search,
   hasMcpServers,
   showSearchConfigTrigger,
   showConfig,
   setShowConfig,
 }: McpSidebarGroupProps) => {
+  const { t } = useTranslation();
   // Use props instead of hook call
   const isLoading = mcpLoading;
   const isSuccess = mcpSuccess;
 
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [serverToDelete, setServerToDelete] = useState<string | null>(null);
+
   const categoryName = "MCP";
   const isOpen = search === "" || openCategories.includes(categoryName);
+
+  const { mutate: deleteMcpServer } = useDeleteMCPServer();
+  const setSuccessData = useAlertStore((state) => state.setSuccessData);
+  const setErrorData = useAlertStore((state) => state.setErrorData);
+
+  const handleDeleteMcpServer = (mcpServer: string) => {
+    deleteMcpServer(
+      {
+        name: mcpServer,
+      },
+      {
+        onSuccess: (data) => {
+          setSuccessData({ title: data.message });
+        },
+        onError: (error) => {
+          setErrorData({ title: error.message });
+        },
+      },
+    );
+  };
 
   // Only render if the MCP category is open (when not searching) or if we have search results
   if (!isOpen) {
@@ -87,19 +111,17 @@ const McpSidebarGroup = ({
   }
 
   return (
-    <SidebarGroup className={`p-3${!hasMcpServers ? " h-full" : ""}`}>
+    <SidebarGroup className={`p-3 pr-2${!hasMcpServers ? " h-full" : ""}`}>
       {hasMcpServers && (
-        <>
-          <SidebarGroupLabel className="cursor-default">
-            MCP Servers
-          </SidebarGroupLabel>
+        <SidebarGroupLabel className="cursor-default w-full flex items-center justify-between">
+          <span>{t("sidebar.mcp.title")}</span>
           {showSearchConfigTrigger && (
             <SearchConfigTrigger
               showConfig={showConfig}
               setShowConfig={setShowConfig}
             />
           )}
-        </>
+        </SidebarGroupLabel>
       )}
       <SidebarGroupContent className="h-full">
         <SidebarMenu className={!hasMcpServers ? " h-full" : ""}>
@@ -114,7 +136,7 @@ const McpSidebarGroup = ({
               <ShadTooltip
                 content={mcpComponent.display_name || mcpComponent.name}
                 side="right"
-                key={idx}
+                key={mcpComponent.mcpServerName ?? mcpComponent.display_name}
               >
                 <SidebarDraggableComponent
                   sectionName={"mcp"}
@@ -135,11 +157,27 @@ const McpSidebarGroup = ({
                   official={mcpComponent.official === false ? false : true}
                   beta={mcpComponent.beta ?? false}
                   legacy={mcpComponent.legacy ?? false}
+                  onDelete={() => {
+                    setServerToDelete(
+                      mcpComponent.mcpServerName ?? mcpComponent.display_name,
+                    );
+                    setDeleteModalOpen(true);
+                  }}
                   disabled={false}
                   disabledTooltip={""}
                 />
               </ShadTooltip>
             ))}
+          <DeleteConfirmationModal
+            open={deleteModalOpen}
+            setOpen={setDeleteModalOpen}
+            onConfirm={() => {
+              if (serverToDelete) handleDeleteMcpServer(serverToDelete);
+              setDeleteModalOpen(false);
+              setServerToDelete(null);
+            }}
+            description={"MCP Server"}
+          />
         </SidebarMenu>
       </SidebarGroupContent>
     </SidebarGroup>

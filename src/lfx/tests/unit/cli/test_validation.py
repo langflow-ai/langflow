@@ -53,7 +53,7 @@ class TestIsValidEnvVarName:
 class TestValidateGlobalVariablesForEnv:
     """Test cases for validate_global_variables_for_env function."""
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_no_validation_when_database_available(self, mock_get_settings):
         """Test that no validation occurs when database is available."""
         # Mock settings to indicate database is available
@@ -65,14 +65,14 @@ class TestValidateGlobalVariablesForEnv:
         graph = MagicMock(spec=Graph)
         vertex = MagicMock(spec=Vertex)
         vertex.load_from_db_fields = ["api_key"]
-        vertex.params = {"api_key": "MY VAR WITH SPACES"}
+        vertex.params = {"api_key": "MY VAR WITH SPACES"}  # pragma: allowlist secret
         graph.vertices = [vertex]
 
         # Should return no errors since database is available
         errors = validate_global_variables_for_env(graph)
         assert errors == []
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_validation_when_noop_database(self, mock_get_settings):
         """Test that validation occurs when using noop database."""
         # Mock settings to indicate noop database
@@ -88,14 +88,14 @@ class TestValidateGlobalVariablesForEnv:
         vertex1.id = "vertex1"
         vertex1.display_name = "OpenAI Model"
         vertex1.load_from_db_fields = ["api_key"]
-        vertex1.params = {"api_key": "MY API KEY"}  # Invalid: contains spaces
+        vertex1.params = {"api_key": "MY API KEY"}  # Invalid: contains spaces  # pragma: allowlist secret
 
         # Vertex with valid variable name
         vertex2 = MagicMock(spec=Vertex)
         vertex2.id = "vertex2"
         vertex2.display_name = "Anthropic Model"
         vertex2.load_from_db_fields = ["api_key"]
-        vertex2.params = {"api_key": "ANTHROPIC_API_KEY"}  # Valid
+        vertex2.params = {"api_key": "ANTHROPIC_API_KEY"}  # Valid  # pragma: allowlist secret
 
         graph.vertices = [vertex1, vertex2]
 
@@ -107,7 +107,7 @@ class TestValidateGlobalVariablesForEnv:
         assert "MY API KEY" in errors[0]
         assert "invalid characters" in errors[0]
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_multiple_invalid_fields(self, mock_get_settings):
         """Test validation with multiple invalid fields in same vertex."""
         # Mock settings to indicate noop database
@@ -122,9 +122,9 @@ class TestValidateGlobalVariablesForEnv:
         vertex.id = "vertex1"
         vertex.display_name = "Database Connection"
         vertex.load_from_db_fields = ["username", "password", "host"]
-        vertex.params = {
+        vertex.params = {  # pragma: allowlist secret
             "username": "DB USER",  # Invalid: contains space
-            "password": "DB-PASSWORD",  # Invalid: contains hyphen
+            "password": "DB-PASSWORD",  # Invalid: contains hyphen  # pragma: allowlist secret
             "host": "DB_HOST",  # Valid
         }
 
@@ -140,7 +140,7 @@ class TestValidateGlobalVariablesForEnv:
         assert "DB-PASSWORD" in error_text
         assert "DB_HOST" not in error_text  # Valid variable should not be in errors
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_empty_or_none_values_ignored(self, mock_get_settings):
         """Test that empty or None values are ignored."""
         # Mock settings to indicate noop database
@@ -167,7 +167,7 @@ class TestValidateGlobalVariablesForEnv:
         errors = validate_global_variables_for_env(graph)
         assert errors == []
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_vertex_without_load_from_db_fields(self, mock_get_settings):
         """Test vertices without load_from_db_fields attribute."""
         # Mock settings to indicate noop database
@@ -190,7 +190,7 @@ class TestValidateGlobalVariablesForEnv:
         errors = validate_global_variables_for_env(graph)
         assert errors == []
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_non_string_values_ignored(self, mock_get_settings):
         """Test that non-string values are ignored."""
         # Mock settings to indicate noop database
@@ -217,7 +217,7 @@ class TestValidateGlobalVariablesForEnv:
         errors = validate_global_variables_for_env(graph)
         assert errors == []
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_check_variables_option_in_execute(self, mock_get_settings):
         """Test that check_variables option controls validation in execute command."""
         # This test verifies the check_variables option works correctly
@@ -234,7 +234,7 @@ class TestValidateGlobalVariablesForEnv:
         vertex.id = "vertex1"
         vertex.display_name = "Test Component"
         vertex.load_from_db_fields = ["api_key"]
-        vertex.params = {"api_key": "INVALID VAR NAME"}  # Invalid: contains spaces
+        vertex.params = {"api_key": "INVALID VAR NAME"}  # Invalid: contains spaces  # pragma: allowlist secret
         graph.vertices = [vertex]
 
         # When check_variables=True (default), validation should find errors
@@ -242,7 +242,7 @@ class TestValidateGlobalVariablesForEnv:
         assert len(errors) == 1
         assert "INVALID VAR NAME" in errors[0]
 
-    @patch("lfx.cli.validation.get_settings_service")
+    @patch("lfx.services.deps.get_settings_service")
     def test_check_variables_option_in_serve(self, mock_get_settings):
         """Test that check_variables option controls validation in serve command."""
         # This test verifies the check_variables option works correctly

@@ -1,6 +1,12 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import {
+  closeAdvancedOptions,
+  disableInspectPanel,
+  enableInspectPanel,
+  openAdvancedOptions,
+} from "../../utils/open-advanced-options";
 
 test(
   "InputListComponent",
@@ -12,16 +18,31 @@ test(
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("url");
 
-    await page.waitForSelector('[data-testid="dataURL"]', {
+    await page.waitForSelector('[data-testid="data_sourceURL"]', {
       timeout: 3000,
     });
     await page
-      .getByTestId("dataURL")
+      .getByTestId("data_sourceURL")
       .hover()
       .then(async () => {
         await page.getByTestId("add-component-button-url").click();
       });
     await adjustScreenView(page);
+
+    await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
+
+    // Test cursor position preservation
+    const input = page.getByTestId("inputlist_str_urls_0");
+    await input.click();
+    await input.press("Home"); // Move cursor to start
+    await input.press("ArrowRight"); // Move cursor to position 1
+    await input.press("ArrowRight"); // Move cursor to position 2
+    await input.pressSequentially("XD", { delay: 100 }); // Type at position 2
+
+    const cursorValue = await input.inputValue();
+    if (!cursorValue.startsWith("teXD")) {
+      expect(false).toBeTruthy();
+    }
 
     await page.getByTestId("inputlist_str_urls_0").fill("test test test test");
 
@@ -37,8 +58,10 @@ test(
       .getByTestId("inputlist_str_urls_2")
       .fill("test2 test2 test2 test2");
 
+    await disableInspectPanel(page);
+
     await page.getByTestId("div-generic-node").click();
-    await page.getByTestId("edit-button-modal").last().click();
+    await openAdvancedOptions(page);
 
     const value0 = await page.getByTestId("inputlist_str_urls_0").inputValue();
     const value1 = await page.getByTestId("inputlist_str_urls_1").inputValue();
@@ -65,7 +88,7 @@ test(
       await page.getByTestId("input-list-delete-btn-edit_urls-1").count(),
     ).toBe(0);
 
-    await page.getByText("Close").last().click();
+    await closeAdvancedOptions(page);
 
     await page.getByTestId("input-list-plus-btn_urls-0").click();
     await page.getByTestId("input-list-plus-btn_urls-0").click();
@@ -99,7 +122,7 @@ test(
       "",
     );
 
-    await page.getByTestId("edit-button-modal").click();
+    await openAdvancedOptions(page);
 
     expect(
       await page.getByTestId("inputlist_str_edit_urls_0").inputValue(),
@@ -108,5 +131,9 @@ test(
     expect(
       await page.getByTestId("inputlist_str_edit_urls_1").inputValue(),
     ).toBe("");
+
+    await closeAdvancedOptions(page);
+
+    await enableInspectPanel(page);
   },
 );

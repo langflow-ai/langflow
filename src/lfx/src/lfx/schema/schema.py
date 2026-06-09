@@ -2,6 +2,7 @@ from collections.abc import Generator
 from enum import Enum
 from typing import TYPE_CHECKING, Literal
 
+from pandas import Series
 from pydantic import BaseModel, ConfigDict, Field
 from typing_extensions import TypedDict
 
@@ -84,6 +85,9 @@ def get_message(payload):
     if message is None and isinstance(payload, dict | str | Data):
         message = payload.data if isinstance(payload, Data) else payload
 
+    if isinstance(message, Series):
+        return message if not message.empty else payload
+
     return message or payload
 
 
@@ -144,6 +148,11 @@ class InputValueRequest(BaseModel):
         "any",
         description="Defines on which components the input value should be applied. "
         "'any' applies to all input components.",
+    )
+    client_request_time: int | None = Field(
+        None,
+        description="Client-side timestamp in milliseconds when the request was initiated. "
+        "Used to calculate accurate end-to-end duration.",
     )
 
     # add an example

@@ -1,7 +1,6 @@
 import importlib
 
-from langchain.tools import StructuredTool
-from langchain_core.tools import ToolException
+from langchain_core.tools import StructuredTool, ToolException
 from langchain_experimental.utilities import PythonREPL
 from pydantic import BaseModel, Field
 
@@ -13,11 +12,12 @@ from lfx.schema.data import Data
 
 
 class PythonREPLToolComponent(LCToolComponent):
-    display_name = "Python REPL [DEPRECATED]"
+    display_name = "Python REPL"
     description = "A tool for running Python code in a REPL environment."
     name = "PythonREPLTool"
     icon = "Python"
     legacy = True
+    replacement = ["processing.PythonREPLComponent"]
 
     inputs = [
         StrInput(

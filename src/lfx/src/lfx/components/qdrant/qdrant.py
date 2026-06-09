@@ -1,5 +1,5 @@
-from langchain.embeddings.base import Embeddings
-from langchain_community.vectorstores import Qdrant
+from langchain_core.embeddings import Embeddings
+from langchain_qdrant import QdrantVectorStore
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -23,7 +23,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
         StrInput(name="host", display_name="Host", value="localhost", advanced=True),
         IntInput(name="port", display_name="Port", value=6333, advanced=True),
         IntInput(name="grpc_port", display_name="gRPC Port", value=6334, advanced=True),
-        SecretStrInput(name="api_key", display_name="API Key", advanced=True),
+        SecretStrInput(name="api_key", display_name="Qdrant API Key", advanced=True),
         StrInput(name="prefix", display_name="Prefix", advanced=True),
         IntInput(name="timeout", display_name="Timeout", advanced=True),
         StrInput(name="path", display_name="Path", advanced=True),
@@ -49,7 +49,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
     ]
 
     @check_cached_vector_store
-    def build_vector_store(self) -> Qdrant:
+    def build_vector_store(self) -> QdrantVectorStore:
         qdrant_kwargs = {
             "collection_name": self.collection_name,
             "content_payload_key": self.content_payload_key,
@@ -85,17 +85,19 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise TypeError(msg)
 
         if documents:
-            qdrant = Qdrant.from_documents(documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs)
+            qdrant = QdrantVectorStore.from_documents(
+                documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs
+            )
         else:
             from qdrant_client import QdrantClient
 
             client = QdrantClient(**server_kwargs)
-            qdrant = Qdrant(embeddings=self.embedding, client=client, **qdrant_kwargs)
+            qdrant = QdrantVectorStore(embedding=self.embedding, client=client, **qdrant_kwargs)
 
         return qdrant
 
     def search_documents(self) -> list[Data]:
-        vector_store = self.build_vector_store()
+        vector_store: QdrantVectorStore = self.build_vector_store()
 
         if self.search_query and isinstance(self.search_query, str) and self.search_query.strip():
             docs = vector_store.similarity_search(

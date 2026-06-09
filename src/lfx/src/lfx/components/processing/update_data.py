@@ -21,11 +21,12 @@ class UpdateDataComponent(Component):
     MAX_FIELDS = 15  # Define a constant for maximum number of fields
     icon = "FolderSync"
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(
             name="old_data",
-            display_name="Data",
+            display_name="JSON",
             info="The record to update.",
             is_list=True,  # Changed to True to handle list of Data objects
             required=True,
@@ -53,7 +54,7 @@ class UpdateDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_data"),
+        Output(display_name="JSON", name="data", method="build_data"),
     ]
 
     def update_build_config(self, build_config: dotdict, field_value: Any, field_name: str | None = None):
@@ -99,7 +100,7 @@ class UpdateDataComponent(Component):
                         display_name=f"Field {i}",
                         name=key,
                         info=f"Key for field {i}.",
-                        input_types=["Message", "Data"],
+                        input_types=["Message", "Data", "JSON"],
                     )
                     build_config[field.name] = field.to_dict()
 

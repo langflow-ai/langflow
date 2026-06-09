@@ -5,11 +5,14 @@ which is responsible for processing and managing parameters in vertices.
 """
 
 from unittest.mock import Mock
+from uuid import uuid4
 
-import pandas as pd
 import pytest
-
+from ag_ui.core import StepFinishedEvent, StepStartedEvent
+from lfx.components.input_output import ChatInput
 from lfx.graph.edge.base import Edge
+from lfx.graph.vertex import base as vertex_base_module
+from lfx.graph.vertex import vertex_types as vertex_types_module
 from lfx.graph.vertex.base import ParameterHandler, Vertex
 from lfx.services.storage.service import StorageService
 from lfx.utils.util import unescape_string
@@ -20,6 +23,7 @@ def mock_storage_service() -> Mock:
     """Create a mock storage service for testing."""
     storage = Mock(spec=StorageService)
     storage.build_full_path = Mock(return_value="/mocked/full/path")
+    storage.resolve_component_path = Mock(return_value="/mocked/full/path")
     return storage
 
 
@@ -45,6 +49,8 @@ def mock_vertex() -> Mock:
     }
     vertex.id = "test-vertex-id"
     vertex.display_name = "Test Vertex"
+    # Default: no incoming edges for any field
+    vertex.get_incoming_edge_by_target_param = Mock(return_value=None)
     return vertex
 
 
@@ -251,8 +257,9 @@ def test_process_field_parameters_table_field(parameter_handler, mock_vertex):
     parameter_handler.template_dict = new_template
 
     params, _ = parameter_handler.process_field_parameters()
-    expected_df = pd.DataFrame(sample_data)
-    pd.testing.assert_frame_equal(params["table_field"], expected_df)
+
+    # The function returns the original list, not a DataFrame
+    assert params["table_field"] == sample_data
 
 
 def test_process_field_parameters_table_field_invalid(parameter_handler, mock_vertex):
@@ -263,3 +270,255 @@ def test_process_field_parameters_table_field_invalid(parameter_handler, mock_ve
 
     with pytest.raises(ValueError, match="Invalid value type"):
         parameter_handler.process_field_parameters()
+
+
+def test_vertex_before_callback_event():
+    """Test that Vertex.before_callback_event generates the correct StepStartedEvent payload."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call before_callback_event
+    event = vertex.before_callback_event()
+
+    # Assert the event is a StepStartedEvent
+    assert isinstance(event, StepStartedEvent)
+
+    # Assert the event has the correct step_name
+    assert event.step_name == vertex.display_name
+
+    # Assert the raw_event contains the langflow metrics
+    assert event.raw_event is not None
+    assert isinstance(event.raw_event, dict)
+    assert "langflow" in event.raw_event
+
+    # Assert the langflow metrics contain expected fields
+    langflow_metrics = event.raw_event["langflow"]
+    assert isinstance(langflow_metrics, dict)
+    assert "timestamp" in langflow_metrics
+    assert isinstance(langflow_metrics["timestamp"], float)
+    assert "component_id" in langflow_metrics
+    assert langflow_metrics["component_id"] == vertex.id
+    assert langflow_metrics["component_id"] == "test_vertex_id"
+
+
+def test_vertex_after_callback_event():
+    """Test that Vertex.after_callback_event generates the correct StepFinishedEvent payload."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call after_callback_event with a result
+    test_result = "test_result_value"
+    event = vertex.after_callback_event(result=test_result)
+
+    # Assert the event is a StepFinishedEvent
+    assert isinstance(event, StepFinishedEvent)
+
+    # Assert the event has the correct step_name
+    assert event.step_name == vertex.display_name
+
+    # Assert the raw_event contains the langflow metrics
+    assert event.raw_event is not None
+    assert isinstance(event.raw_event, dict)
+    assert "langflow" in event.raw_event
+
+    # Assert the langflow metrics contain expected fields
+    langflow_metrics = event.raw_event["langflow"]
+    assert isinstance(langflow_metrics, dict)
+    assert "timestamp" in langflow_metrics
+    assert isinstance(langflow_metrics["timestamp"], float)
+    assert "component_id" in langflow_metrics
+    assert langflow_metrics["component_id"] == vertex.id
+    assert langflow_metrics["component_id"] == "test_vertex_id"
+
+
+def test_vertex_raw_event_metrics():
+    """Test that Vertex.raw_event_metrics generates the correct metrics dictionary."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call raw_event_metrics with optional fields
+    metrics = vertex.raw_event_metrics({"custom_field": "custom_value"})
+
+    # Assert metrics is a dictionary
+    assert isinstance(metrics, dict)
+
+    # Assert timestamp is present and is a float
+    assert "timestamp" in metrics
+    assert isinstance(metrics["timestamp"], float)
+
+    # Assert custom field is present
+    assert "custom_field" in metrics
+    assert metrics["custom_field"] == "custom_value"
+
+
+def test_vertex_raw_event_metrics_no_optional_fields():
+    """Test that Vertex.raw_event_metrics works without optional fields."""
+    # Create a graph with a ChatInput component, which creates a vertex
+    from lfx.graph import Graph
+
+    chat_input = ChatInput(_id="test_vertex_id")
+    chat_output = ChatInput(_id="output_id")  # Need two components for Graph
+    graph = Graph(chat_input, chat_output, flow_id="test_flow")
+
+    # Get the vertex from the graph
+    vertex = graph.vertices[0]  # First vertex should be chat_input
+    assert vertex.id == "test_vertex_id"
+
+    # Call raw_event_metrics without optional fields (pass None)
+    metrics = vertex.raw_event_metrics(None)
+
+    # Assert metrics is a dictionary
+    assert isinstance(metrics, dict)
+
+    # Assert timestamp is present and is a float
+    assert "timestamp" in metrics
+    assert isinstance(metrics["timestamp"], float)
+
+    # The metrics should contain only timestamp when no optional fields are provided
+    assert len(metrics) == 1
+
+
+def test_component_vertex_extract_messages_coerces_uuid_session_id():
+    """Model-level coercion should string-cast UUID in extracted messages."""
+    session_id = uuid4()
+    vertex = object.__new__(vertex_types_module.ComponentVertex)
+    vertex.id = "vertex-1"
+    vertex.artifacts_type = {"message": "chat"}
+    artifacts = {
+        "message": {
+            "text": "hi",
+            "sender": "Machine",
+            "sender_name": "AI",
+            "session_id": session_id,
+            "stream_url": None,
+            "files": [],
+        }
+    }
+
+    messages = vertex_types_module.ComponentVertex.extract_messages_from_artifacts(vertex, artifacts)
+    assert messages[0]["session_id"] == str(session_id)
+
+
+def test_vertex_base_extract_messages_coerces_uuid_session_id():
+    """Model-level coercion should string-cast UUID in base vertex messages."""
+    session_id = uuid4()
+    vertex = object.__new__(vertex_base_module.Vertex)
+    vertex.id = "vertex-2"
+    vertex.artifacts_type = "chat"
+    artifacts = {
+        "text": "hello",
+        "sender": "Machine",
+        "sender_name": "AI",
+        "session_id": session_id,
+        "stream_url": None,
+        "files": [],
+    }
+
+    messages = vertex_base_module.Vertex.extract_messages_from_artifacts(vertex, artifacts)
+    assert messages[0]["session_id"] == str(session_id)
+
+
+class TestStrFieldWithNonStringListElements:
+    """Regression: str field containing a list of Message dicts must not crash.
+
+    Bug: On subsequent agent calls, ChatInput's input_value field receives
+    a list of Message dicts from chat history. The param_handler's str case
+    matched `list()` and called `unescape_string(v)` on each element, but
+    v was a dict, causing 'dict' object has no attribute 'replace'.
+    """
+
+    def test_str_field_with_list_of_dicts_extracts_text(self, parameter_handler, mock_vertex):
+        """A str field with list of Message dicts must extract text, not crash."""
+        message_dict = {
+            "text_key": "text",
+            "text": "hello from user",
+            "data": {"text": "hello from user", "sender": "User"},
+            "default_value": "",
+        }
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": [message_dict],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["hello from user"]
+
+    def test_str_field_with_dict_nested_text(self, parameter_handler, mock_vertex):
+        """A Message dict without top-level text should fall back to data.text."""
+        message_dict = {
+            "text_key": "text",
+            "data": {"text": "nested hello", "sender": "User"},
+            "default_value": "",
+        }
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": [message_dict],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["nested hello"]
+
+    def test_str_field_with_list_of_strings_still_unescapes(self, parameter_handler, mock_vertex):
+        """A str field with list of strings must still unescape."""
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": ["hello\\nworld", "foo\\nbar"],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["hello\nworld", "foo\nbar"]
+
+    def test_str_field_with_mixed_list(self, parameter_handler, mock_vertex):
+        """A str field with mixed string and dict elements extracts text from dicts."""
+        message_dict = {"text_key": "text", "data": {"text": "msg"}}
+        new_template = {
+            "input_value": {
+                "type": "str",
+                "value": ["hello\\nworld", message_dict],
+                "show": True,
+            }
+        }
+        mock_vertex.data["node"]["template"] = new_template
+        parameter_handler.template_dict = new_template
+
+        params, _ = parameter_handler.process_field_parameters()
+        assert params["input_value"] == ["hello\nworld", "msg"]

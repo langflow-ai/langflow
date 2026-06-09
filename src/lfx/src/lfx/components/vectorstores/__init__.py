@@ -5,20 +5,14 @@ from typing import TYPE_CHECKING, Any
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
-    from .astradb import AstraDBVectorStoreComponent
     from .local_db import LocalDBComponent
-    from .mongodb_atlas import MongoVectorStoreComponent
 
 _dynamic_imports = {
     "LocalDBComponent": "local_db",
-    "AstraDBVectorStoreComponent": "astradb",
-    "MongoVectorStoreComponent": "mongodb_atlas",
 }
 
 __all__ = [
-    "AstraDBVectorStoreComponent",
     "LocalDBComponent",
-    "MongoVectorStoreComponent",
 ]
 
 

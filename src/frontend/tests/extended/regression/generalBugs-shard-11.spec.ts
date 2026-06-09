@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -25,12 +26,9 @@ test(
 
     await page.mouse.up();
     await page.mouse.down();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("zoom_out").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await zoomOut(page, 2);
 
     await expect(page.getByText("api_key")).toBeVisible({
       timeout: 3000,
@@ -54,10 +52,8 @@ test(
     await page.waitForSelector('[data-testid="searchapiSearchApi"]', {
       timeout: 1000,
     });
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 3);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page
       .getByTestId("searchapiSearchApi")
@@ -80,13 +76,7 @@ test(
         targetPosition: { x: 300, y: 300 },
       });
 
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 100000,
-    });
-
-    await page.getByTestId("canvas_controls_dropdown").click();
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("title-SearchApi").first().click();
     await page.getByTestId("tool-mode-button").click();
@@ -104,6 +94,6 @@ test(
     await toolCallingAgentInput.hover();
     await page.mouse.up();
 
-    expect(await page.locator(".react-flow__edge-interaction").count()).toBe(1);
+    expect(await page.locator(".react-flow__edge-interaction").count()).toBe(2);
   },
 );

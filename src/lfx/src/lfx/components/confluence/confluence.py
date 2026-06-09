@@ -29,7 +29,7 @@ class ConfluenceComponent(Component):
         ),
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="Confluence API Key",
             required=True,
             info="Atlassian Key. Create at: https://id.atlassian.com/manage-profile/security/api-tokens",
         ),
@@ -61,7 +61,7 @@ class ConfluenceComponent(Component):
     ]
 
     outputs = [
-        Output(name="data", display_name="Data", method="load_documents"),
+        Output(name="data", display_name="JSON", method="load_documents"),
     ]
 
     def build_confluence(self) -> ConfluenceLoader:

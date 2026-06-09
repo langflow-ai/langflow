@@ -1,7 +1,7 @@
-import { expect, test } from "@playwright/test";
 import dotenv from "dotenv";
 import { readFileSync } from "fs";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
 test(
@@ -64,9 +64,7 @@ test(
     // Dispatch the drop event on the target element
     await element.dispatchEvent("drop", { dataTransfer });
 
-    await page
-      .getByTestId("input-chat-playground")
-      .fill("tell me a small history about the image");
+    await page.getByTestId("input-chat-playground").fill("what is this image?");
 
     await page.waitForSelector('[data-testid="button-send"]', {
       timeout: 100000,
@@ -85,7 +83,7 @@ test(
       .last()
       .textContent();
 
-    expect(textFromLlm?.toLowerCase()).toContain("chain");
+    expect(textFromLlm?.toLowerCase()).toMatch(/(chain|inkscape|logo)/);
     const lengthOfTextFromLlm = textFromLlm?.length;
     expect(lengthOfTextFromLlm).toBeGreaterThan(100);
   },

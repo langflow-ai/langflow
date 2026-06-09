@@ -1,5 +1,6 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { zoomOut } from "../../utils/zoom-out";
 
@@ -26,10 +27,8 @@ test(
     await page
       .getByTestId("input_outputText Input")
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {});
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await zoomOut(page, 4);
-    await page.getByTestId("canvas_controls_dropdown").click();
 
     await page.waitForTimeout(500);
 
@@ -88,18 +87,18 @@ test(
       });
     //connection 1
     const elementCombineTextOutput0 = page
-      .getByTestId("div-handle-combinetext-shownode-combined text-right")
+      .getByTestId("handle-combinetext-shownode-combined text-right")
       .nth(0);
     await elementCombineTextOutput0.click();
 
     const blockedHandle = page
-      .getByTestId("div-handle-textinput-shownode-output text-right")
+      .getByTestId("handle-textinput-shownode-output text-right")
       .first();
     const secondBlockedHandle = page
-      .getByTestId("div-handle-combinetext-shownode-combined text-right")
+      .getByTestId("handle-combinetext-shownode-combined text-right")
       .nth(1);
     const thirdBlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-output text-right")
+      .getByTestId("handle-textoutput-shownode-output text-right")
       .first();
 
     const hasGradient = await blockedHandle?.evaluate((el) => {
@@ -117,21 +116,21 @@ test(
       return style.backgroundColor === "rgb(228, 228, 231)";
     });
 
-    expect(hasGradient).toBe(true);
-    expect(secondHasGradient).toBe(true);
-    expect(thirdHasGradient).toBe(true);
+    expect(hasGradient).toBe(false);
+    expect(secondHasGradient).toBe(false);
+    expect(thirdHasGradient).toBe(false);
 
     const unlockedHandle = page
-      .getByTestId("div-handle-textinput-shownode-text-left")
+      .getByTestId("handle-textinput-shownode-text-left")
       .last();
     const secondUnlockedHandle = page
-      .getByTestId("div-handle-combinetext-shownode-second text-left")
+      .getByTestId("handle-combinetext-shownode-second text-left")
       .last();
     const thirdUnlockedHandle = page
-      .getByTestId("div-handle-combinetext-shownode-second text-left")
+      .getByTestId("handle-combinetext-shownode-second text-left")
       .first();
     const fourthUnlockedHandle = page
-      .getByTestId("div-handle-textoutput-shownode-inputs-left")
+      .getByTestId("handle-textoutput-shownode-inputs-left")
       .first();
 
     const hasGradientUnlocked = await unlockedHandle?.evaluate((el) => {
@@ -158,31 +157,49 @@ test(
       },
     );
 
-    expect(hasGradientUnlocked).toBe(true);
-    expect(secondHasGradientUnlocked).toBe(true);
-    expect(thirdHasGradientLocked).toBe(true);
-    expect(fourthHasGradientUnlocked).toBe(true);
+    expect(hasGradientUnlocked).toBe(false);
+    expect(secondHasGradientUnlocked).toBe(false);
+    expect(thirdHasGradientLocked).toBe(false);
+    expect(fourthHasGradientUnlocked).toBe(false);
 
     const elementCombineTextInput1 = await page
       .getByTestId("handle-combinetext-shownode-first text-left")
       .nth(1);
     await elementCombineTextInput1.click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    await page.getByTitle("fit view").click();
+    // Select both Combine Text nodes using box selection (Shift+drag)
+    // Note: Ctrl/Meta+click doesn't work reliably in Playwright with ReactFlow
+    const combineTextNodes = page.locator(".react-flow__node").filter({
+      has: page.getByTestId("title-Combine Text"),
+    });
 
-    await zoomOut(page, 2);
+    const firstBox = await combineTextNodes.first().boundingBox();
+    const secondBox = await combineTextNodes.nth(1).boundingBox();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
+    if (firstBox && secondBox) {
+      // Calculate area to drag-select both nodes
+      const startX = Math.min(firstBox.x, secondBox.x) - 50;
+      const startY = Math.min(firstBox.y, secondBox.y) - 50;
+      const endX =
+        Math.max(firstBox.x + firstBox.width, secondBox.x + secondBox.width) +
+        50;
+      const endY =
+        Math.max(firstBox.y + firstBox.height, secondBox.y + secondBox.height) +
+        50;
 
-    await page
-      .getByTestId("title-Combine Text")
-      .first()
-      .click({ modifiers: ["ControlOrMeta"] });
+      // Use Shift+drag for box selection
+      await page.keyboard.down("Shift");
+      await page.mouse.move(startX, startY);
+      await page.mouse.down();
+      await page.mouse.move(endX, endY, { steps: 10 });
+      await page.mouse.up();
+      await page.keyboard.up("Shift");
+    }
 
     await page.waitForSelector('[data-testid="group-node"]', {
-      timeout: 3000,
+      timeout: 5000,
       state: "visible",
     });
 

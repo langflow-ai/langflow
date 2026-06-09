@@ -1,6 +1,7 @@
 import ast
 import contextlib
 import importlib
+import sys
 import warnings
 from types import FunctionType
 from typing import Optional, Union
@@ -162,12 +163,13 @@ def execute_function(code, function_name, *args, **kwargs):
         if isinstance(node, ast.Import):
             for alias in node.names:
                 try:
-                    exec(
-                        f"{alias.asname or alias.name} = importlib.import_module('{alias.name}')",
-                        exec_globals,
-                        locals(),
-                    )
-                    exec_globals[alias.asname or alias.name] = importlib.import_module(alias.name)
+                    imported = importlib.import_module(alias.name)
+                    if alias.asname:
+                        variable_name = alias.asname
+                        exec_globals[variable_name] = imported
+                    else:
+                        variable_name = alias.name.split(".")[0]
+                        exec_globals[variable_name] = sys.modules.get(variable_name, imported)
                 except ModuleNotFoundError as e:
                     msg = f"Module {alias.name} not found. Please install it and try again."
                     raise ModuleNotFoundError(msg) from e
@@ -212,7 +214,12 @@ def create_function(code, function_name):
                         )
                     else:
                         module_name = alias.name
-                        exec_globals[alias.asname or alias.name] = importlib.import_module(module_name)
+                        imported = importlib.import_module(module_name)
+                        if alias.asname:
+                            exec_globals[alias.asname] = imported
+                        else:
+                            top_level = module_name.split(".")[0]
+                            exec_globals[top_level] = sys.modules.get(top_level, imported)
                 except ModuleNotFoundError as e:
                     msg = f"Module {alias.name} not found. Please install it and try again."
                     raise ModuleNotFoundError(msg) from e
@@ -281,7 +288,7 @@ def create_class(code, class_name):
         error_message = "\n".join([message[1] if len(message) > 1 else message[0] for message in messages])
         raise ValueError(error_message) from e
     except Exception as e:
-        msg = f"Error creating class: {e!s}"
+        msg = f"Error creating class. {type(e).__name__}({e!s})."
         raise ValueError(msg) from e
 
 
@@ -296,6 +303,80 @@ def create_type_ignore_class():
         _fields = ()
 
     return TypeIgnore
+
+
+def _import_module_with_warnings(module_name):
+    """Import module with appropriate warning suppression."""
+    if "langchain" in module_name:
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", LangChainDeprecationWarning)
+            return importlib.import_module(module_name)
+    else:
+        return importlib.import_module(module_name)
+
+
+def _resolve_attribute(imported_module, module_name, attr_name):
+    """Resolve a single attribute from a module, falling back to langchain_classic if needed."""
+    try:
+        return getattr(imported_module, attr_name)
+    except AttributeError:
+        pass
+
+    # Try importing as a submodule
+    try:
+        return importlib.import_module(f"{module_name}.{attr_name}")
+    except ModuleNotFoundError:
+        pass
+
+    # For langchain modules, try the langchain_classic equivalent
+    if module_name.startswith("langchain."):
+        classic_module_name = module_name.replace("langchain.", "langchain_classic.", 1)
+        classic_module = importlib.import_module(classic_module_name)
+        return getattr(classic_module, attr_name)
+
+    msg = f"Cannot import name '{attr_name}' from '{module_name}'"
+    raise ImportError(msg)
+
+
+def _handle_module_attributes(imported_module, node, module_name, exec_globals):
+    """Handle importing specific attributes from a module."""
+    for alias in node.names:
+        key = alias.asname or alias.name
+        exec_globals[key] = _resolve_attribute(imported_module, module_name, alias.name)
+
+
+class _MissingModulePlaceholder:
+    """Placeholder for modules unavailable on the current platform (e.g. jq on Windows).
+
+    Allows class creation and update_build_config to succeed. Any attribute
+    access raises ModuleNotFoundError so that actual usage at runtime fails
+    with a clear error.
+    """
+
+    def __init__(self, module_name: str) -> None:
+        self._module_name = module_name
+
+    def __getattr__(self, name: str):
+        msg = f"No module named '{self._module_name}'"
+        raise ModuleNotFoundError(msg)
+
+
+def _get_module_fallbacks(module_name: str) -> list[str]:
+    """Return a list of module names to try, including compatibility fallbacks.
+
+    Handles langflow -> lfx and langchain -> langchain_classic remapping at the
+    module level (for entirely removed modules). Attribute-level fallback for
+    removed attributes in still-existing modules is handled by _resolve_attribute.
+
+    Both fallbacks only trigger on import failure, so new langchain 1.0 imports
+    are never replaced.
+    """
+    names = [module_name]
+    if module_name.startswith("langflow."):
+        names.append(module_name.replace("langflow.", "lfx.", 1))
+    if module_name.startswith("langchain."):
+        names.append(module_name.replace("langchain.", "langchain_classic.", 1))
+    return names
 
 
 def prepare_global_scope(module):
@@ -320,41 +401,71 @@ def prepare_global_scope(module):
             imports.append(node)
         elif isinstance(node, ast.ImportFrom) and node.module is not None:
             import_froms.append(node)
-        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign):
+        elif isinstance(node, ast.ClassDef | ast.FunctionDef | ast.Assign | ast.AnnAssign):
             definitions.append(node)
 
     for node in imports:
         for alias in node.names:
-            try:
-                module_name = alias.name
-                variable_name = alias.asname or alias.name
-                exec_globals[variable_name] = importlib.import_module(module_name)
-            except ModuleNotFoundError as e:
-                msg = f"Module {alias.name} not found. Please install it and try again."
-                raise ModuleNotFoundError(msg) from e
+            module_name = alias.name
+
+            module_obj = None
+            for name in _get_module_fallbacks(module_name):
+                try:
+                    module_obj = importlib.import_module(name)
+                    break
+                except ModuleNotFoundError:
+                    continue
+
+            if module_obj is None:
+                if sys.platform == "win32":
+                    # Some C-extension packages (e.g. jq) have no Windows
+                    # wheels.  Insert a lazy placeholder so that class creation
+                    # succeeds and update_build_config can run.  Any real usage
+                    # of the module at runtime will raise ModuleNotFoundError.
+                    variable_name = alias.asname or module_name.split(".")[0]
+                    exec_globals[variable_name] = _MissingModulePlaceholder(module_name)
+                    logger.debug("Module '%s' unavailable on Windows — inserted placeholder", module_name)
+                    continue
+                # On other platforms the package should be installable, so
+                # raise to surface the real error.
+                module_obj = importlib.import_module(module_name)
+
+            # Determine the variable name
+            if alias.asname:
+                # For aliased imports like "import yfinance as yf", use the imported module directly
+                variable_name = alias.asname
+                exec_globals[variable_name] = module_obj
+            else:
+                # For dotted imports like "urllib.request", set the variable to the top-level package.
+                # importlib.import_module returns the *leaf* module, but Python's import statement
+                # binds the top-level package name. Retrieve it from sys.modules instead.
+                variable_name = module_name.split(".")[0]
+                exec_globals[variable_name] = sys.modules.get(variable_name, module_obj)
 
     for node in import_froms:
-        try:
-            module_name = node.module
-            # Apply warning suppression only when needed
-            if "langchain" in module_name:
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore", LangChainDeprecationWarning)
-                    imported_module = importlib.import_module(module_name)
-            else:
-                imported_module = importlib.import_module(module_name)
+        module_names_to_try = _get_module_fallbacks(node.module)
 
-            for alias in node.names:
-                try:
-                    # First try getting it as an attribute
-                    exec_globals[alias.name] = getattr(imported_module, alias.name)
-                except AttributeError:
-                    # If that fails, try importing the full module path
-                    full_module_path = f"{module_name}.{alias.name}"
-                    exec_globals[alias.name] = importlib.import_module(full_module_path)
-        except ModuleNotFoundError as e:
+        success = False
+        last_error = None
+
+        for module_name in module_names_to_try:
+            try:
+                imported_module = _import_module_with_warnings(module_name)
+                _handle_module_attributes(imported_module, node, module_name, exec_globals)
+
+                success = True
+                break
+
+            except ModuleNotFoundError as e:
+                last_error = e
+                continue
+
+        if not success:
+            # Re-raise the last error to preserve the actual missing module information
+            if last_error:
+                raise last_error
             msg = f"Module {node.module} not found. Please install it and try again"
-            raise ModuleNotFoundError(msg) from e
+            raise ModuleNotFoundError(msg)
 
     if definitions:
         combined_module = ast.Module(body=definitions, type_ignores=[])

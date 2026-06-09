@@ -8,6 +8,7 @@ class SequentialTaskComponent(Component):
     description: str = "Each task must have a description, an expected output and an agent responsible for execution."
     icon = "CrewAI"
     legacy = True
+    replacement = "agents.Agent"
     inputs = [
         MultilineInput(
             name="task_description",

@@ -10,11 +10,12 @@ class FilterDataComponent(Component):
     beta = True
     name = "FilterData"
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(
             name="data",
-            display_name="Data",
+            display_name="JSON",
             info="Data object to filter.",
         ),
         MessageTextInput(

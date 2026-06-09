@@ -1,29 +1,40 @@
+import contextlib
+import logging
+import tempfile
 import unicodedata
 from collections.abc import Callable
 from concurrent import futures
+from contextvars import copy_context
+from io import BytesIO
 from pathlib import Path
 
 import chardet
 import orjson
 import yaml
 from defusedxml import ElementTree
+from pypdf import PdfReader
 
+from lfx.base.data.storage_utils import read_file_bytes
 from lfx.schema.data import Data
+from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
+
+logger = logging.getLogger(__name__)
 
 # Types of files that can be read simply by file.read()
 # and have 100% to be completely readable
 TEXT_FILE_TYPES = [
+    "csv",
+    "json",
+    "pdf",
     "txt",
     "md",
     "mdx",
-    "csv",
-    "json",
     "yaml",
     "yml",
     "xml",
     "html",
     "htm",
-    "pdf",
     "docx",
     "py",
     "sh",
@@ -34,6 +45,34 @@ TEXT_FILE_TYPES = [
 ]
 
 IMG_FILE_TYPES = ["jpg", "jpeg", "png", "bmp", "image"]
+
+
+def parse_structured_text(text: str, file_path: str) -> str | dict | list:
+    """Parse structured text formats (JSON, YAML, XML) and normalize text.
+
+    Args:
+        text: The text content to parse
+        file_path: The file path (used to determine format)
+
+    Returns:
+        Parsed content (dict/list for JSON, dict for YAML, str for XML)
+    """
+    if file_path.endswith(".json"):
+        loaded_json = orjson.loads(text)
+        if isinstance(loaded_json, dict):
+            loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
+        elif isinstance(loaded_json, list):
+            loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
+        return orjson.dumps(loaded_json).decode("utf-8")
+
+    if file_path.endswith((".yaml", ".yml")):
+        return yaml.safe_load(text)
+
+    if file_path.endswith(".xml"):
+        xml_element = ElementTree.fromstring(text)
+        return ElementTree.tostring(xml_element, encoding="unicode")
+
+    return text
 
 
 def normalize_text(text):
@@ -108,33 +147,195 @@ def partition_file_to_data(file_path: str, *, silent_errors: bool) -> Data | Non
     return Data(text=text, data=metadata)
 
 
+def _detect_encoding_with_fallbacks(raw_data: bytes) -> list[str]:
+    """Detect encoding and build a fallback chain for decoding.
+
+    Returns a list of encodings to try in order, ending with latin-1
+    which always succeeds as it maps all 256 byte values.
+    """
+    result = chardet.detect(raw_data)
+    detected_encoding = result.get("encoding") if result else None
+
+    if detected_encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
+        detected_encoding = "utf-8"
+
+    encodings: list[str] = []
+    if detected_encoding:
+        encodings.append(detected_encoding)
+    for fallback in ("utf-8", "gb18030"):
+        if fallback not in encodings:
+            encodings.append(fallback)
+    encodings.append("latin-1")
+    return encodings
+
+
 def read_text_file(file_path: str) -> str:
+    """Read a text file with automatic encoding detection.
+
+    Args:
+        file_path: Path to the file (local path only, not storage service path)
+
+    Returns:
+        str: The file content as text
+    """
     file_path_ = Path(file_path)
     raw_data = file_path_.read_bytes()
-    result = chardet.detect(raw_data)
-    encoding = result["encoding"]
 
-    if encoding in {"Windows-1252", "Windows-1254", "MacRoman"}:
-        encoding = "utf-8"
+    for enc in _detect_encoding_with_fallbacks(raw_data):
+        try:
+            return file_path_.read_text(encoding=enc)
+        except (UnicodeDecodeError, LookupError):
+            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
 
-    return file_path_.read_text(encoding=encoding)
+    # Unreachable: latin-1 in the fallback chain always succeeds
+    return raw_data.decode("latin-1")
+
+
+async def read_text_file_async(file_path: str) -> str:
+    """Read a text file with automatic encoding detection (async, storage-aware).
+
+    Args:
+        file_path: Path to the file (S3 key format "flow_id/filename" or local path)
+
+    Returns:
+        str: The file content as text
+    """
+    from .storage_utils import read_file_bytes
+
+    # Use storage-aware read to get bytes
+    raw_data = await read_file_bytes(file_path)
+
+    for enc in _detect_encoding_with_fallbacks(raw_data):
+        try:
+            return raw_data.decode(enc)
+        except (UnicodeDecodeError, LookupError):
+            logger.debug("Encoding '%s' failed for %s, trying next fallback", enc, file_path)
+
+    # Unreachable: latin-1 in the fallback chain always succeeds
+    return raw_data.decode("latin-1")
 
 
 def read_docx_file(file_path: str) -> str:
+    """Read a DOCX file and extract text.
+
+    ote: python-docx requires a file path, so this only works with local files.
+    For storage service files, use read_docx_file_async which downloads to temp.
+
+    Args:
+        file_path: Path to the DOCX file (local path only)
+
+    Returns:
+        str: Extracted text from the document
+    """
     from docx import Document
 
     doc = Document(file_path)
     return "\n\n".join([p.text for p in doc.paragraphs])
 
 
-def parse_pdf_to_text(file_path: str) -> str:
-    from pypdf import PdfReader
+async def read_docx_file_async(file_path: str) -> str:
+    """Read a DOCX file and extract text (async, storage-aware).
 
+    For S3 storage, downloads to temp file (python-docx requires file path).
+    For local storage, reads directly.
+
+    Args:
+        file_path: Path to the DOCX file (S3 key format "flow_id/filename" or local path)
+
+    Returns:
+        str: Extracted text from the document
+    """
+    from docx import Document
+
+    from .storage_utils import read_file_bytes
+
+    settings = get_settings_service().settings
+
+    if settings.storage_type == "local":
+        # Local storage - read directly
+        doc = Document(file_path)
+        return "\n\n".join([p.text for p in doc.paragraphs])
+
+    # S3 storage - need temp file for python-docx (doesn't support BytesIO)
+    content = await read_file_bytes(file_path)
+
+    # Create temp file with .docx extension
+    # Extract filename from path for suffix
+    suffix = Path(file_path.split("/")[-1]).suffix
+    with tempfile.NamedTemporaryFile(mode="wb", suffix=suffix, delete=False) as tmp_file:
+        tmp_file.write(content)
+        temp_path = tmp_file.name
+
+    try:
+        doc = Document(temp_path)
+        return "\n\n".join([p.text for p in doc.paragraphs])
+    finally:
+        with contextlib.suppress(Exception):
+            Path(temp_path).unlink()
+
+
+def extract_text_from_bytes(file_name: str, file_content: bytes) -> str:
+    """Extract text from binary file content based on file extension.
+
+    Supports PDF (via pypdf), DOCX (via python-docx), and plain text files.
+
+    Raises:
+        ValueError: If the file content is corrupted or cannot be parsed.
+    """
+    lower_name = file_name.lower()
+    if lower_name.endswith(".pdf"):
+        try:
+            with BytesIO(file_content) as f, PdfReader(f) as reader:
+                return "\n\n".join(page.extract_text() or "" for page in reader.pages)
+        except Exception as e:
+            msg = f"Failed to parse PDF file '{file_name}': {e}"
+            raise ValueError(msg) from e
+    if lower_name.endswith(".docx"):
+        try:
+            from docx import Document
+
+            doc = Document(BytesIO(file_content))
+            return "\n\n".join(p.text for p in doc.paragraphs)
+        except Exception as e:
+            msg = f"Failed to parse DOCX file '{file_name}': {e}"
+            raise ValueError(msg) from e
+    return file_content.decode("utf-8", errors="ignore")
+
+
+def parse_pdf_to_text(file_path: str) -> str:
     with Path(file_path).open("rb") as f, PdfReader(f) as reader:
         return "\n\n".join([page.extract_text() for page in reader.pages])
 
 
+async def parse_pdf_to_text_async(file_path: str) -> str:
+    """Parse a PDF file to extract text (async, storage-aware).
+
+    Uses storage-aware file reading to support both local and S3 storage.
+
+    Args:
+        file_path: Path to the PDF file (S3 key format "flow_id/filename" or local path)
+
+    Returns:
+        str: Extracted text from all pages
+    """
+    content = await read_file_bytes(file_path)
+    with BytesIO(content) as f, PdfReader(f) as reader:
+        return "\n\n".join([page.extract_text() for page in reader.pages])
+
+
 def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | None:
+    """Parse a text file to Data (sync version).
+
+    For S3 storage, this will use async operations to fetch the file.
+    For local storage, reads directly from filesystem.
+    """
+    settings = get_settings_service().settings
+
+    # If using S3 storage, we need to use async operations
+    if settings.storage_type == "s3":
+        # Run the async version safely (handles existing event loops)
+        return run_until_complete(parse_text_file_to_data_async(file_path, silent_errors=silent_errors))
+
     try:
         if file_path.endswith(".pdf"):
             text = parse_pdf_to_text(file_path)
@@ -143,20 +344,7 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         else:
             text = read_text_file(file_path)
 
-        # if file is json, yaml, or xml, we can parse it
-        if file_path.endswith(".json"):
-            loaded_json = orjson.loads(text)
-            if isinstance(loaded_json, dict):
-                loaded_json = {k: normalize_text(v) if isinstance(v, str) else v for k, v in loaded_json.items()}
-            elif isinstance(loaded_json, list):
-                loaded_json = [normalize_text(item) if isinstance(item, str) else item for item in loaded_json]
-            text = orjson.dumps(loaded_json).decode("utf-8")
-
-        elif file_path.endswith((".yaml", ".yml")):
-            text = yaml.safe_load(text)
-        elif file_path.endswith(".xml"):
-            xml_element = ElementTree.fromstring(text)
-            text = ElementTree.tostring(xml_element, encoding="unicode")
+        text = parse_structured_text(text, file_path)
     except Exception as e:
         if not silent_errors:
             msg = f"Error loading file {file_path}: {e}"
@@ -164,6 +352,35 @@ def parse_text_file_to_data(file_path: str, *, silent_errors: bool) -> Data | No
         return None
 
     return Data(data={"file_path": file_path, "text": text})
+
+
+async def parse_text_file_to_data_async(file_path: str, *, silent_errors: bool) -> Data | None:
+    """Parse a text file to Data (async version, supports storage service).
+
+    This version properly handles storage service files:
+    - For text/JSON/YAML/XML: reads bytes directly (no temp file)
+    - For PDF: reads bytes directly via BytesIO (no temp file)
+    - For DOCX: downloads to temp file (python-docx requires file path)
+    """
+    try:
+        if file_path.endswith(".pdf"):
+            text = await parse_pdf_to_text_async(file_path)
+        elif file_path.endswith(".docx"):
+            text = await read_docx_file_async(file_path)
+        else:
+            # Text files - read directly, no temp file needed
+            text = await read_text_file_async(file_path)
+
+        # Parse structured formats (JSON, YAML, XML)
+        text = parse_structured_text(text, file_path)
+
+        return Data(data={"file_path": file_path, "text": text})
+
+    except Exception as e:
+        if not silent_errors:
+            msg = f"Error loading file {file_path}: {e}"
+            raise ValueError(msg) from e
+        return None
 
 
 # ! Removing unstructured dependency until
@@ -189,10 +406,13 @@ def parallel_load_data(
     max_concurrency: int,
     load_function: Callable = parse_text_file_to_data,
 ) -> list[Data | None]:
+    # Each thread gets its own context copy so ContextVars (e.g. component_context_var)
+    # are available in thread pool workers across all Python versions.
+    def _run_in_context(file_path: str) -> Data | None:
+        ctx = copy_context()
+        return ctx.run(load_function, file_path, silent_errors=silent_errors)
+
     with futures.ThreadPoolExecutor(max_workers=max_concurrency) as executor:
-        loaded_files = executor.map(
-            lambda file_path: load_function(file_path, silent_errors=silent_errors),
-            file_paths,
-        )
+        loaded_files = executor.map(_run_in_context, file_paths)
     # loaded_files is an iterator, so we need to convert it to a list
     return list(loaded_files)

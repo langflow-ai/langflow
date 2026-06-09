@@ -19,13 +19,14 @@ jobs:
     strategy:
       matrix:
         python-version:
+          - "3.14"
           - "3.13"
           - "3.12"
           - "3.11"
           - "3.10"
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           ref: ${{ inputs.branch || github.ref }}
           persist-credentials: true

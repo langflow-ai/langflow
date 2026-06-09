@@ -9,7 +9,6 @@ from unittest.mock import MagicMock, Mock, patch
 
 import pytest
 import typer
-
 from lfx.cli.common import (
     create_verbose_printer,
     execute_graph_with_capture,
@@ -116,7 +115,7 @@ class TestApiKey:
 
     def test_get_api_key_success(self):
         """Test getting API key when it exists."""
-        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):
+        with patch.dict(os.environ, {"LANGFLOW_API_KEY": "test-api-key"}):  # pragma: allowlist secret
             assert get_api_key() == "test-api-key"
 
     def test_get_api_key_not_set(self):
@@ -168,7 +167,8 @@ class TestFlowId:
 class TestLoadGraph:
     """Test graph loading functionality."""
 
-    def test_load_graph_from_path_success(self):
+    @pytest.mark.asyncio
+    async def test_load_graph_from_path_success(self):
         """Test successful graph loading from JSON."""
         mock_graph = MagicMock()
         mock_graph.nodes = [1, 2, 3]
@@ -177,21 +177,22 @@ class TestLoadGraph:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
-            result = load_graph_from_path(path, ".json", verbose_print, verbose=True)
+            result = await load_graph_from_path(path, ".json", verbose_print, verbose=True)
 
             assert result == mock_graph
             mock_load_flow.assert_called_once_with(path, disable_logs=False)
             verbose_print.assert_any_call(f"Analyzing JSON flow: {path}")
             verbose_print.assert_any_call("Loading JSON flow...")
 
-    def test_load_graph_from_path_failure(self):
+    @pytest.mark.asyncio
+    async def test_load_graph_from_path_failure(self):
         """Test graph loading failure."""
         with patch("lfx.cli.common.load_flow_from_json", side_effect=Exception("Load error")) as mock_load_flow:
             verbose_print = Mock()
             path = Path("/test/flow.json")
 
             with pytest.raises(typer.Exit) as exc_info:
-                load_graph_from_path(path, ".json", verbose_print, verbose=False)
+                await load_graph_from_path(path, ".json", verbose_print, verbose=False)
 
             assert exc_info.value.exit_code == 1
             mock_load_flow.assert_called_once_with(path, disable_logs=True)
@@ -207,7 +208,7 @@ class TestGraphExecution:
         # Mock graph and async iterator
         mock_result = MagicMock(results={"text": "Test result"})
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield mock_result
 
         mock_graph = MagicMock()
@@ -228,13 +229,13 @@ class TestGraphExecution:
         # Ensure results attribute doesn't exist
         delattr(mock_result, "results")
 
-        async def mock_async_start(inputs):  # noqa: ARG001
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
             yield mock_result
 
         mock_graph = MagicMock()
         mock_graph.async_start = mock_async_start
 
-        results, logs = await execute_graph_with_capture(mock_graph, "test input")
+        results, _ = await execute_graph_with_capture(mock_graph, "test input")
 
         assert len(results) == 1
         assert results[0].message.text == "Message text"
@@ -243,7 +244,7 @@ class TestGraphExecution:
     async def test_execute_graph_with_capture_error(self):
         """Test graph execution with error."""
 
-        async def mock_async_start_error(inputs):  # noqa: ARG001
+        async def mock_async_start_error(inputs, **kwargs):  # noqa: ARG001
             msg = "Execution failed"
             raise RuntimeError(msg)
             yield  # This line never executes but makes it an async generator
@@ -253,6 +254,160 @@ class TestGraphExecution:
 
         with pytest.raises(RuntimeError, match="Execution failed"):
             await execute_graph_with_capture(mock_graph, "test input")
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_autogenerates_session_id(self):
+        """Auto-generate a session_id when none is provided.
+
+        Message-store validators reject empty session_id, so the helper assigns one
+        to keep streaming/persistence paths functional in lfx serve.
+        """
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert mock_graph.session_id, "session_id should be auto-generated"
+        assert isinstance(mock_graph.session_id, str)
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_with_capture_preserves_caller_session_id(self):
+        """An explicit session_id wins over auto-generation."""
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input", session_id="fixed-session")
+
+        assert mock_graph.session_id == "fixed-session"
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_propagates_session_id_to_vertices(self):
+        """Session_id must reach Memory/MessageHistory inputs on the lfx serve path.
+
+        ``execute_graph_with_capture`` uses ``graph.async_start``, which bypasses
+        the propagation loop in ``Graph._run``. The helper has to replicate it
+        so served ``/run`` and ``/stream`` requests behave like the playground.
+        """
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        memory_vertex = MagicMock()
+        memory_vertex.raw_params = {}
+        memory_vertex.update_raw_params = MagicMock()
+        mock_graph.has_session_id_vertices = ["memory-1"]
+        mock_graph.get_vertex = MagicMock(return_value=memory_vertex)
+
+        await execute_graph_with_capture(mock_graph, "test input", session_id="my-conversation")
+
+        memory_vertex.update_raw_params.assert_called_once_with({"session_id": "my-conversation"}, overwrite=True)
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_does_not_overwrite_hardcoded_session_id(self):
+        """Hardcoded session_id on a Memory component (set in flow JSON) wins over the request value.
+
+        Mirrors Langflow's playground precedence in ``build_graph_from_data``.
+        """
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        pinned_vertex = MagicMock()
+        pinned_vertex.raw_params = {"session_id": "hardcoded-in-flow"}
+        pinned_vertex.update_raw_params = MagicMock()
+        mock_graph.has_session_id_vertices = ["memory-pinned"]
+        mock_graph.get_vertex = MagicMock(return_value=pinned_vertex)
+
+        await execute_graph_with_capture(mock_graph, "test input", session_id="from-request")
+
+        pinned_vertex.update_raw_params.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_autogenerates_user_id_when_unset(self):
+        """When the graph arrives without a user_id (typical for lfx serve), assign a UUID.
+
+        AgentComponent's variable lookup precheck requires a non-empty user_id; the
+        env-fallback variable service does not use it for scoping, so a random UUID is
+        ceremonial but necessary.
+        """
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        mock_graph.user_id = None
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert mock_graph.user_id, "user_id should be auto-assigned when graph has none"
+        assert isinstance(mock_graph.user_id, str)
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_preserves_existing_user_id(self):
+        """A user_id already set on the graph (e.g., by an upstream caller) is left alone."""
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        mock_graph.user_id = "preset-user-uuid"
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert mock_graph.user_id == "preset-user-uuid"
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_passes_fallback_from_settings_default(self):
+        """Default settings (fallback_to_env_var=True) reach async_start.
+
+        Lets components fall through to os.environ when a load_from_db variable
+        has no DB row — matching langflow's API path behavior.
+        """
+        captured: dict = {}
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            captured.update(kwargs)
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+
+        await execute_graph_with_capture(mock_graph, "test input")
+
+        assert captured.get("fallback_to_env_vars") is True
+
+    @pytest.mark.asyncio
+    async def test_execute_graph_respects_disabled_fallback_setting(self):
+        """When the user opts out of env fallback in settings, the flag is False."""
+        captured: dict = {}
+
+        async def mock_async_start(inputs, **kwargs):  # noqa: ARG001
+            captured.update(kwargs)
+            yield MagicMock(results={"text": "ok"})
+
+        mock_graph = MagicMock()
+        mock_graph.async_start = mock_async_start
+        mock_settings = MagicMock()
+        mock_settings.settings.fallback_to_env_var = False
+
+        with patch("lfx.run._defaults.get_settings_service", return_value=mock_settings):
+            await execute_graph_with_capture(mock_graph, "test input")
+
+        assert captured.get("fallback_to_env_vars") is False
 
 
 class TestResultExtraction:

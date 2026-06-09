@@ -11,11 +11,12 @@ class SelectDataComponent(Component):
     name: str = "SelectData"
     icon = "prototypes"
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(
             name="data_list",
-            display_name="Data List",
+            display_name="JSON List",
             info="List of data to select from.",
             is_list=True,  # Specify that this input takes a list of Data objects
         ),

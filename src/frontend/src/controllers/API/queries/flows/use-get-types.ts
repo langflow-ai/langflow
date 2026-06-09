@@ -1,3 +1,5 @@
+import { ENABLE_KNOWLEDGE_BASES } from "@/customization/feature-flags";
+import { recomputeComponentsToUpdateIfNeeded } from "@/stores/flowStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import { useTypesStore } from "@/stores/typesStore";
 import type {
@@ -10,7 +12,7 @@ import { UseRequestProcessor } from "../../services/request-processor";
 
 export const useGetTypes: useQueryFunctionType<
   undefined,
-  any,
+  APIObjectType,
   { checkCache?: boolean }
 > = (options) => {
   const { query } = UseRequestProcessor();
@@ -30,7 +32,13 @@ export const useGetTypes: useQueryFunctionType<
         `${getURL("ALL")}?force_refresh=true`,
       );
       const data = response?.data;
+
+      if (!ENABLE_KNOWLEDGE_BASES) {
+        delete data.knowledge_bases;
+      }
+
       setTypes(data);
+      recomputeComponentsToUpdateIfNeeded();
       return data;
     } catch (error) {
       console.error("[Types] Error fetching types:", error);

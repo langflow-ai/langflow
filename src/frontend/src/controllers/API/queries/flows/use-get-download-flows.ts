@@ -1,3 +1,4 @@
+import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
 import type { FlowType } from "@/types/flow";
 import { downloadFlow, processFlows } from "@/utils/reactflowUtils";
 import type { useMutationFunctionType } from "../../../../types/api";
@@ -37,6 +38,7 @@ export const useGetDownloadFlows: useMutationFunctionType<
           "Content-Type": "application/json",
           Accept: "application/x-zip-compressed",
         },
+        credentials: getFetchCredentials(),
       });
       if (!response.ok) {
         throw new Error(`Failed to download flows: ${response.statusText}`);

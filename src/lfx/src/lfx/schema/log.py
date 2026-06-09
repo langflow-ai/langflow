@@ -34,6 +34,7 @@ class SendMessageFunctionType(Protocol):
         id_: str | None = None,
         *,
         allow_markdown: bool = True,
+        skip_db_update: bool = False,
     ) -> Message: ...
 
 

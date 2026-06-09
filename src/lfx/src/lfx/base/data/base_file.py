@@ -1,20 +1,25 @@
 import ast
-import json
 import shutil
 import tarfile
 from abc import ABC, abstractmethod
+from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 from zipfile import ZipFile, is_zipfile
 
+import orjson
 import pandas as pd
 
+from lfx.base.data.storage_utils import get_file_size, parse_storage_path, read_file_bytes
 from lfx.custom.custom_component.component import Component
 from lfx.io import BoolInput, FileInput, HandleInput, Output, StrInput
 from lfx.schema.data import Data
 from lfx.schema.dataframe import DataFrame
 from lfx.schema.message import Message
+from lfx.services.deps import get_settings_service
+from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.helpers import build_content_type_from_extension
 
 if TYPE_CHECKING:
     from collections.abc import Callable
@@ -26,6 +31,8 @@ class BaseFileComponent(Component, ABC):
     This class provides common functionality for resolving, validating, and
     processing file paths. Child classes must define valid file extensions
     and implement the `process_files` method.
+
+    # TODO: May want to subclass for local and remote files
     """
 
     class BaseFile:
@@ -129,6 +136,7 @@ class BaseFileComponent(Component, ABC):
             required=False,
             list=True,
             value=[],
+            tool_mode=True,
         ),
         HandleInput(
             name="file_path",
@@ -138,7 +146,7 @@ class BaseFileComponent(Component, ABC):
                 " or a Message object with a path to the file. Supercedes 'Path' but supports same file types."
             ),
             required=False,
-            input_types=["Data", "Message"],
+            input_types=["Data", "JSON", "Message"],
             is_list=True,
             advanced=True,
         ),
@@ -222,7 +230,6 @@ class BaseFileComponent(Component, ABC):
             # Delete temporary directories
             for temp_dir in self._temp_dirs:
                 temp_dir.cleanup()
-
             # Delete files marked for deletion
             for file in final_files:
                 if file.delete_after_processing and file.path.exists():
@@ -232,35 +239,115 @@ class BaseFileComponent(Component, ABC):
                         file.path.unlink()
 
     def load_files_core(self) -> list[Data]:
-        """Load files and return as Data objects.
+        """Load files and return as Data objects, with per-instance caching.
+
+        Results are cached keyed by the ``markdown`` attribute so that multiple
+        output methods that share the same processing parameters (e.g.
+        ``load_files_message`` and ``load_files_dataframe`` when both run with
+        ``markdown=False``) do not trigger redundant file processing.
 
         Returns:
             list[Data]: List of Data objects from all files
         """
+        # Use the markdown flag (default False) as the cache key so that
+        # structured and markdown outputs are cached independently.
+        markdown_flag = getattr(self, "markdown", False)
+        cache_attr = f"_load_files_core_cache_{markdown_flag}"
+        cache_paths_attr = f"_load_files_core_paths_{markdown_flag}"
+
+        current_paths = tuple(getattr(self, "path", []) or [])
+        if hasattr(self, cache_attr) and getattr(self, cache_paths_attr, None) == current_paths:
+            return getattr(self, cache_attr)
+
         data_list = self.load_files_base()
-        if not data_list:
-            return [Data()]
-        return data_list
+        result = data_list if data_list else [Data()]
+        setattr(self, cache_attr, result)
+        setattr(self, cache_paths_attr, current_paths)
+        return result
+
+    def _extract_file_metadata(self, data_item) -> dict:
+        """Extract metadata from a data item with file_path."""
+        metadata: dict[str, Any] = {}
+        if not hasattr(data_item, "file_path"):
+            return metadata
+
+        file_path = data_item.file_path
+        file_path_obj = Path(file_path)
+        filename = file_path_obj.name
+
+        settings = get_settings_service().settings
+        if settings.storage_type == "s3":
+            try:
+                file_size = get_file_size(file_path)
+            except (FileNotFoundError, ValueError):
+                # If we can't get file size, set to 0 or omit
+                file_size = 0
+        else:
+            try:
+                file_size_stat = file_path_obj.stat()
+                file_size = file_size_stat.st_size
+            except OSError:
+                file_size = 0
+
+        # Basic file metadata
+        metadata["filename"] = filename
+        metadata["file_size"] = file_size
+
+        # Add MIME type from extension
+        extension = filename.split(".")[-1]
+        if extension:
+            metadata["mimetype"] = build_content_type_from_extension(extension)
+
+        # Copy additional metadata from data if available
+        if hasattr(data_item, "data") and isinstance(data_item.data, dict):
+            metadata_fields = ["mimetype", "file_size", "created_time", "modified_time"]
+            for field in metadata_fields:
+                if field in data_item.data:
+                    metadata[field] = data_item.data[field]
+
+        return metadata
+
+    def _extract_text(self, data_item) -> str:
+        """Extract text content from a data item."""
+        if isinstance(data_item.data, dict):
+            text = getattr(data_item, "get_text", lambda: None)() or data_item.data.get("text")
+            return text if text is not None else str(data_item)
+        return str(data_item)
 
     def load_files_message(self) -> Message:
         """Load files and return as Message.
 
         Returns:
-            Message: Message containing all file data
+          Message: Message containing all file data
         """
         data_list = self.load_files_core()
         if not data_list:
-            return Message()  # No data -> empty message
+            return Message()
+
+        # Extract metadata from the first data item
+        metadata = self._extract_file_metadata(data_list[0])
 
         sep: str = getattr(self, "separator", "\n\n") or "\n\n"
-
         parts: list[str] = []
         for d in data_list:
-            # Prefer explicit text if available, fall back to full dict, lastly str()
-            text = (getattr(d, "get_text", lambda: None)() or d.data.get("text")) if isinstance(d.data, dict) else None
-            parts.append(text if text is not None else str(d))
+            try:
+                data_text = self._extract_text(d)
+                if data_text and isinstance(data_text, str):
+                    parts.append(data_text)
+                elif data_text:
+                    # get_text() returned non-string, convert it
+                    parts.append(str(data_text))
+                elif isinstance(d.data, dict):
+                    # convert the data dict to a readable string
+                    parts.append(orjson.dumps(d.data, option=orjson.OPT_INDENT_2, default=str).decode())
+                else:
+                    parts.append(str(d))
+            except Exception:  # noqa: BLE001
+                # Final fallback - just try to convert to string
+                # TODO: Consider downstream error case more. Should this raise an error?
+                parts.append(str(d))
 
-        return Message(text=sep.join(parts))
+        return Message(text=sep.join(parts), **metadata)
 
     def load_files_path(self) -> Message:
         """Returns a Message containing file paths from loaded files.
@@ -269,7 +356,16 @@ class BaseFileComponent(Component, ABC):
             Message: Message containing file paths
         """
         files = self._validate_and_resolve_paths()
-        paths = [file.path.as_posix() for file in files if file.path.exists()]
+        settings = get_settings_service().settings
+
+        # For S3 storage, paths are virtual storage keys that don't exist on the local filesystem.
+        # Skip the exists() check for S3 files to preserve them in the output.
+        # Validation of S3 file existence is deferred until file processing (see _validate_and_resolve_paths).
+        # If a file was removed from S3, it will fail when attempting to read/process it later.
+        if settings.storage_type == "s3":
+            paths = [file.path.as_posix() for file in files]
+        else:
+            paths = [file.path.as_posix() for file in files if file.path.exists()]
 
         return Message(text="\n".join(paths) if paths else "")
 
@@ -277,16 +373,35 @@ class BaseFileComponent(Component, ABC):
         if not file_path:
             return None
 
-        # Map file extensions to pandas read functions with type annotation
+        # Get file extension in lowercase
+        ext = Path(file_path).suffix.lower()
+
+        settings = get_settings_service().settings
+
+        # For S3 storage, download file bytes first
+        if settings.storage_type == "s3":
+            # Download file content from S3
+            content = run_until_complete(read_file_bytes(file_path))
+
+            # Map file extensions to pandas read functions that support BytesIO
+            if ext == ".csv":
+                result = pd.read_csv(BytesIO(content))
+            elif ext == ".xlsx":
+                result = pd.read_excel(BytesIO(content))
+            elif ext == ".parquet":
+                result = pd.read_parquet(BytesIO(content))
+            else:
+                return None
+
+            return result.to_dict("records")
+
+        # Local storage - read directly from filesystem
         file_readers: dict[str, Callable[[str], pd.DataFrame]] = {
             ".csv": pd.read_csv,
             ".xlsx": pd.read_excel,
             ".parquet": pd.read_parquet,
             # TODO: sqlite and json support?
         }
-
-        # Get file extension in lowercase
-        ext = Path(file_path).suffix.lower()
 
         # Get the appropriate reader function or None
         reader = file_readers.get(ext)
@@ -325,10 +440,10 @@ class BaseFileComponent(Component, ABC):
     def parse_string_to_dict(self, s: str) -> dict:
         # Try JSON first (handles true/false/null)
         try:
-            result = json.loads(s)
+            result = orjson.loads(s)
             if isinstance(result, dict):
                 return result
-        except json.JSONDecodeError:
+        except orjson.JSONDecodeError:
             pass
 
         # Fall back to Python literal evaluation
@@ -506,16 +621,38 @@ class BaseFileComponent(Component, ABC):
         resolved_files = []
 
         def add_file(data: Data, path: str | Path, *, delete_after_processing: bool):
-            resolved_path = Path(self.resolve_path(str(path)))
+            path_str = str(path)
+            settings = get_settings_service().settings
 
-            if not resolved_path.exists():
-                msg = f"File or directory not found: {path}"
-                self.log(msg)
-                if not self.silent_errors:
-                    raise ValueError(msg)
-            resolved_files.append(
-                BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
-            )
+            # When using object storage (S3), file paths are storage keys (e.g., "<flow_id>/<filename>")
+            # that don't exist on the local filesystem. We defer validation until file processing.
+            # For local storage, validate the file exists immediately to fail fast.
+            if settings.storage_type == "s3":
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data, Path(path_str), delete_after_processing=delete_after_processing)
+                )
+            else:
+                # Check if path looks like a storage path (flow_id/filename format)
+                # If so, use get_full_path to resolve it to the actual storage location
+                if parse_storage_path(path_str):
+                    try:
+                        resolved_path = Path(self.get_full_path(path_str))
+                        self.log(f"Resolved storage path '{path_str}' to '{resolved_path}'")
+                    except (ValueError, AttributeError) as e:
+                        # Fallback to resolve_path if get_full_path fails
+                        self.log(f"get_full_path failed for '{path_str}': {e}, falling back to resolve_path")
+                        resolved_path = Path(self.resolve_path(path_str))
+                else:
+                    resolved_path = Path(self.resolve_path(path_str))
+
+                if not resolved_path.exists():
+                    msg = f"File not found: '{path}' (resolved to: '{resolved_path}'). Please upload the file again."
+                    self.log(msg)
+                    if not self.silent_errors:
+                        raise ValueError(msg)
+                resolved_files.append(
+                    BaseFileComponent.BaseFile(data, resolved_path, delete_after_processing=delete_after_processing)
+                )
 
         file_path = self._file_path_as_list()
 
@@ -565,7 +702,10 @@ class BaseFileComponent(Component, ABC):
             data = file.data
 
             if path.is_dir():
-                # Recurse into directories
+                # Recurse into directories. Skip symlinks defensively so that a
+                # link planted in a previously-extracted bundle (or a directory
+                # the user pointed at) cannot be dereferenced into an arbitrary
+                # host file (GHSA-ccv6-r384-xp75).
                 collected_files.extend(
                     [
                         BaseFileComponent.BaseFile(
@@ -574,7 +714,7 @@ class BaseFileComponent(Component, ABC):
                             delete_after_processing=delete_after_processing,
                         )
                         for sub_path in path.rglob("*")
-                        if sub_path.is_file()
+                        if sub_path.is_file() and not sub_path.is_symlink()
                     ]
                 )
             elif path.suffix[1:] in self.SUPPORTED_BUNDLE_EXTENSIONS:
@@ -583,7 +723,11 @@ class BaseFileComponent(Component, ABC):
                 self._temp_dirs.append(temp_dir)
                 temp_dir_path = Path(temp_dir.name)
                 self._unpack_bundle(path, temp_dir_path)
-                subpaths = list(temp_dir_path.iterdir())
+                # Drop any symlink that may have slipped through extraction.
+                # `_unpack_bundle` rejects link members for TAR archives, but
+                # this guard keeps the contract in place for any future bundle
+                # type added to SUPPORTED_BUNDLE_EXTENSIONS.
+                subpaths = [p for p in temp_dir_path.iterdir() if not p.is_symlink()]
                 self.log(f"Unpacked bundle {path.name} into {subpaths}")
                 collected_files.extend(
                     [
@@ -620,6 +764,9 @@ class BaseFileComponent(Component, ABC):
         def _safe_extract_zip(bundle: ZipFile, output_dir: Path):
             """Safely extract ZIP files."""
             for member in bundle.namelist():
+                # Filter out resource fork information for automatic production of mac
+                if Path(member).name.startswith("._"):
+                    continue
                 member_path = output_dir / member
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
@@ -628,8 +775,24 @@ class BaseFileComponent(Component, ABC):
                 bundle.extract(member, path=output_dir)
 
         def _safe_extract_tar(bundle: tarfile.TarFile, output_dir: Path):
-            """Safely extract TAR files."""
+            """Safely extract TAR files.
+
+            Only regular files and directories are extracted. Symlinks, hardlinks,
+            and device/FIFO members are rejected because they could be made to
+            point at arbitrary locations on the host filesystem and lead to
+            arbitrary file read once the extracted entries are subsequently
+            ingested by `process_files()` (GHSA-ccv6-r384-xp75).
+            """
             for member in bundle.getmembers():
+                # Filter out resource fork information for automatic production of mac
+                if Path(member.name).name.startswith("._"):
+                    continue
+                if member.issym() or member.islnk():
+                    msg = f"Refusing to extract link member from TAR File: {member.name!r} -> {member.linkname!r}"
+                    raise ValueError(msg)
+                if not (member.isfile() or member.isdir()):
+                    msg = f"Refusing to extract non-regular TAR member: {member.name!r}"
+                    raise ValueError(msg)
                 member_path = output_dir / member.name
                 # Ensure no path traversal outside `output_dir`
                 if not member_path.resolve().is_relative_to(output_dir.resolve()):
@@ -649,7 +812,7 @@ class BaseFileComponent(Component, ABC):
             raise ValueError(msg)
 
     def _filter_and_mark_files(self, files: list[BaseFile]) -> list[BaseFile]:
-        """Validate file types and mark files for removal.
+        """Validate file types and filter out invalid files.
 
         Args:
             files (list[BaseFile]): List of BaseFile instances.
@@ -660,18 +823,26 @@ class BaseFileComponent(Component, ABC):
         Raises:
             ValueError: If unsupported files are encountered and `ignore_unsupported_extensions` is False.
         """
+        settings = get_settings_service().settings
+        is_s3_storage = settings.storage_type == "s3"
         final_files = []
         ignored_files = []
 
         for file in files:
-            if not file.path.is_file():
+            # For local storage, verify the path is actually a file
+            # For S3 storage, paths are virtual keys that don't exist locally
+            if not is_s3_storage and not file.path.is_file():
                 self.log(f"Not a file: {file.path.name}")
                 continue
 
-            if file.path.suffix[1:].lower() not in self.valid_extensions:
-                if self.ignore_unsupported_extensions:
+            # Validate file extension
+            extension = file.path.suffix[1:].lower() if file.path.suffix else ""
+            if extension not in self.valid_extensions:
+                # For local storage, optionally ignore unsupported extensions
+                if not is_s3_storage and self.ignore_unsupported_extensions:
                     ignored_files.append(file.path.name)
                     continue
+
                 msg = f"Unsupported file extension: {file.path.suffix}"
                 self.log(msg)
                 if not self.silent_errors:

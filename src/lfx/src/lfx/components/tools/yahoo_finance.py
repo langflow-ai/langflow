@@ -2,8 +2,7 @@ import ast
 import pprint
 from enum import Enum
 
-from langchain.tools import StructuredTool
-from langchain_core.tools import ToolException
+from langchain_core.tools import StructuredTool, ToolException
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -48,12 +47,13 @@ class YahooFinanceSchema(BaseModel):
 
 
 class YfinanceToolComponent(LCToolComponent):
-    display_name = "Yahoo! Finance [DEPRECATED]"
+    display_name = "Yahoo! Finance"
     description = """Uses [yfinance](https://pypi.org/project/yfinance/) (unofficial package) \
 to access financial data and market information from Yahoo! Finance."""
     icon = "trending-up"
     name = "YahooFinanceTool"
     legacy = True
+    replacement = ["yahoosearch.YfinanceComponent"]
 
     inputs = [
         MessageTextInput(

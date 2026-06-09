@@ -1,7 +1,6 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import _, { cloneDeep } from "lodash";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { countHandlesFn } from "@/CustomNodes/helpers/count-handles";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useHandleOnNewValue from "@/CustomNodes/hooks/use-handle-new-value";
 import useHandleNodeClass from "@/CustomNodes/hooks/use-handle-node-class";
@@ -26,6 +25,7 @@ import useFlowStore from "../../../../stores/flowStore";
 import useFlowsManagerStore from "../../../../stores/flowsManagerStore";
 import { useShortcutsStore } from "../../../../stores/shortcuts";
 import { useStoreStore } from "../../../../stores/storeStore";
+import { useUtilityStore } from "../../../../stores/utilityStore";
 import type { nodeToolbarPropsType } from "../../../../types/components";
 import type { FlowType } from "../../../../types/flow";
 import {
@@ -56,7 +56,10 @@ const NodeToolbarComponent = memo(
     isUserEdited,
     hasBreakingChange,
     setOpenShowMoreOptions,
-  }: nodeToolbarPropsType): JSX.Element => {
+    openDropdownOnRightClick = false,
+  }: nodeToolbarPropsType & {
+    openDropdownOnRightClick?: boolean;
+  }): JSX.Element => {
     const version = useDarkStore((state) => state.version);
     const [showModalAdvanced, setShowModalAdvanced] = useState(false);
     const [showconfirmShare, setShowconfirmShare] = useState(false);
@@ -75,12 +78,14 @@ const NodeToolbarComponent = memo(
     const shortcuts = useShortcutsStore((state) => state.shortcuts);
     const currentFlowId = useFlowsManagerStore((state) => state.currentFlowId);
     const [openModal, setOpenModal] = useState(false);
+    const [dropdownOpen, setDropdownOpen] = useState(false);
     const frozen = data.node?.frozen ?? false;
     const updateNodeInternals = useUpdateNodeInternals();
 
     const paste = useFlowStore((state) => state.paste);
     const setNodes = useFlowStore((state) => state.setNodes);
     const setEdges = useFlowStore((state) => state.setEdges);
+    const edges = useFlowStore((state) => state.edges);
     const getNodePosition = useFlowStore((state) => state.getNodePosition);
     const flows = useFlowsManagerStore((state) => state.flows);
     const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
@@ -103,11 +108,16 @@ const NodeToolbarComponent = memo(
       Object.values(flow).includes(data.node?.display_name!),
     );
 
+    const allowCustomComponents = useUtilityStore(
+      (state) => state.allowCustomComponents,
+    );
+
     const nodeLength = useMemo(() => getNodeLength(data), [data]);
     const hasCode = useMemo(
       () => Object.keys(data.node!.template).includes("code"),
       [data.node],
     );
+    const canEditCode = hasCode && allowCustomComponents;
     const isGroup = useMemo(
       () => (data.node?.flow ? true : false),
       [data.node],
@@ -119,10 +129,19 @@ const NodeToolbarComponent = memo(
     );
     const addFlow = useAddFlow();
 
-    const isMinimal = useMemo(
-      () => countHandlesFn(data) <= 1 && numberOfOutputHandles <= 1,
-      [data, numberOfOutputHandles],
+    const hasGroupOutputs = data.node?.outputs?.some?.(
+      (output) => output.group_outputs,
     );
+    const hasOutputs =
+      data.node?.outputs?.length && data.node?.outputs?.length > 1;
+
+    const hasSelectOutput = hasOutputs && !hasGroupOutputs;
+    const hasOnlyOneOutput = data.node?.outputs?.length === 1;
+    const hasMaximumOneConnectedInput =
+      edges.filter((edge) => edge.target === data.id).length <= 1;
+
+    const isMinimal =
+      (hasSelectOutput || hasOnlyOneOutput) && hasMaximumOneConnectedInput;
 
     const [toolMode, setToolMode] = useState(
       () =>
@@ -177,7 +196,7 @@ const NodeToolbarComponent = memo(
       }
       setNoticeData({
         title:
-          "Minimization only available for components with one handle or fewer.",
+          "Minimization is only available for components with one active connection or fewer.",
       });
     }, [isMinimal, showNode, data.id]);
 
@@ -224,9 +243,16 @@ const NodeToolbarComponent = memo(
     const handleCodeModal = useCallback(() => {
       if (!hasCode) {
         setNoticeData({ title: `You can not access ${data.id} code` });
+        return;
+      }
+      if (!allowCustomComponents) {
+        setNoticeData({
+          title: `Custom component editing is disabled`,
+        });
+        return;
       }
       setOpenModal((state) => !state);
-    }, [hasCode, data.id]);
+    }, [hasCode, allowCustomComponents, data.id]);
 
     const saveComponent = useCallback(() => {
       if (isSaved) {
@@ -248,6 +274,22 @@ const NodeToolbarComponent = memo(
         title: `${data.id} docs is not available at the moment.`,
       });
     }, [data.id, data.node?.documentation]);
+
+    const handleDownloadNode = useCallback(async () => {
+      try {
+        await downloadNode(flowComponent!);
+        setSuccessData({
+          title: `${flowComponent?.name || "Node"} downloaded successfully`,
+        });
+      } catch (error) {
+        console.error("Error downloading node:", error);
+        const nodeName = flowComponent?.name || "Node";
+        setErrorData({
+          title: `Failed to download ${nodeName}`,
+          list: [error instanceof Error ? error.message : "Unknown error"],
+        });
+      }
+    }, [flowComponent]);
 
     useShortcuts({
       showOverrideModal,
@@ -274,6 +316,15 @@ const NodeToolbarComponent = memo(
         onCloseAdvancedModal!(false);
       }
     }, [showModalAdvanced]);
+
+    // Open dropdown when right-clicked
+    useEffect(() => {
+      if (openDropdownOnRightClick) {
+        setDropdownOpen(true);
+      } else {
+        setDropdownOpen(false);
+      }
+    }, [openDropdownOnRightClick]);
 
     const setLastCopiedSelection = useFlowStore(
       (state) => state.setLastCopiedSelection,
@@ -302,6 +353,13 @@ const NodeToolbarComponent = memo(
         let nodes;
         setSelectedValue(event);
 
+        // Clear right-clicked state when user selects an option
+        if (openDropdownOnRightClick) {
+          const setRightClickedNodeId =
+            useFlowStore.getState().setRightClickedNodeId;
+          setRightClickedNodeId(null);
+        }
+
         switch (event) {
           case "save":
             saveComponent();
@@ -311,7 +369,7 @@ const NodeToolbarComponent = memo(
             FreezeAllVertices({ flowId: currentFlowId, stopNodeId: data.id });
             break;
           case "code":
-            setOpenModal(!openModal);
+            handleCodeModal();
             break;
           case "advanced":
             setShowModalAdvanced(true);
@@ -324,7 +382,7 @@ const NodeToolbarComponent = memo(
             shareComponent();
             break;
           case "Download":
-            downloadNode(flowComponent!);
+            handleDownloadNode();
             break;
           case "SaveAll":
             addFlow({
@@ -408,6 +466,10 @@ const NodeToolbarComponent = memo(
       handleOnNewValueHook({ value });
     };
 
+    const inspectionPanelVisible = useFlowStore(
+      (state) => state.inspectionPanelVisible,
+    );
+
     const selectTriggerRef = useRef(null);
 
     const handleButtonClick = () => {
@@ -416,11 +478,19 @@ const NodeToolbarComponent = memo(
 
     const handleOpenChange = (open: boolean) => {
       setOpenShowMoreOptions && setOpenShowMoreOptions(open);
+      setDropdownOpen(open);
+
+      // Clear right-clicked state when dropdown closes without selection
+      if (!open && openDropdownOnRightClick) {
+        const setRightClickedNodeId =
+          useFlowStore.getState().setRightClickedNodeId;
+        setRightClickedNodeId(null);
+      }
     };
 
     const isCustomComponent = useMemo(() => {
       const isCustom = data.type === "CustomComponent" && !data.node?.edited;
-      if (isCustom) {
+      if (isCustom && !inspectionPanelVisible) {
         data.node.edited = true;
       }
       return isCustom;
@@ -429,19 +499,19 @@ const NodeToolbarComponent = memo(
     const renderToolbarButtons = useMemo(
       () => (
         <>
-          {hasCode && (
+          {canEditCode && (
             <ToolbarButton
               className={isCustomComponent ? "animate-pulse-pink" : ""}
               icon="Code"
               label="Code"
-              onClick={() => setOpenModal(true)}
+              onClick={handleCodeModal}
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("code"),
               )}
               dataTestId="code-button-modal"
             />
           )}
-          {nodeLength > 0 && (
+          {nodeLength > 0 && !inspectionPanelVisible && (
             <ToolbarButton
               icon="SlidersHorizontal"
               label="Controls"
@@ -452,7 +522,7 @@ const NodeToolbarComponent = memo(
               dataTestId="edit-button-modal"
             />
           )}
-          {!hasToolMode && (
+          {(!hasToolMode || inspectionPanelVisible) && (
             <ToolbarButton
               icon="FreezeAll"
               label="Freeze"
@@ -467,7 +537,10 @@ const NodeToolbarComponent = memo(
               shortcut={shortcuts.find((s) =>
                 s.name.toLowerCase().startsWith("freeze"),
               )}
-              className={cn("node-toolbar-buttons", frozen && "text-blue-500")}
+              className={cn(
+                "node-toolbar-buttons",
+                frozen && "text-accent-indigo-foreground",
+              )}
             />
           )}
           {hasToolMode && (
@@ -482,47 +555,56 @@ const NodeToolbarComponent = memo(
               side="top"
             >
               <Button
+                asChild
                 className={cn(
                   "node-toolbar-buttons h-[2rem]",
                   toolMode && "text-primary",
                 )}
                 variant="ghost"
-                onClick={(event) => {
-                  event.preventDefault();
-                  takeSnapshot();
-                  handleSelectChange("toolMode");
-                }}
                 size="node-toolbar"
                 data-testid="tool-mode-button"
               >
-                <IconComponent
-                  name="Hammer"
-                  className={cn(
-                    "h-4 w-4 transition-all",
-                    toolMode ? "text-primary" : "",
-                  )}
-                />
-                <span className="text-mmd font-medium">Tool Mode</span>
-                <ToggleShadComponent
-                  value={toolMode}
-                  editNode={false}
-                  handleOnNewValue={() => {
+                <div
+                  className="flex items-center gap-2"
+                  role="button"
+                  tabIndex={0}
+                  onClick={(event) => {
+                    event.preventDefault();
                     takeSnapshot();
                     handleSelectChange("toolMode");
                   }}
-                  disabled={false}
-                  size="medium"
-                  showToogle={false}
-                  id="tool-mode-toggle"
-                />
+                >
+                  <IconComponent
+                    name="Hammer"
+                    className={cn(
+                      "h-4 w-4 transition-all",
+                      toolMode ? "text-primary" : "",
+                    )}
+                  />
+                  <span className="text-mmd font-medium">Tool Mode</span>
+                  <ToggleShadComponent
+                    value={toolMode}
+                    editNode={false}
+                    handleOnNewValue={() => {
+                      takeSnapshot();
+                      handleSelectChange("toolMode");
+                    }}
+                    disabled={false}
+                    size="medium"
+                    showToogle={false}
+                    id="tool-mode-toggle"
+                  />
+                </div>
               </Button>
             </ShadTooltip>
           )}
         </>
       ),
       [
-        hasCode,
+        canEditCode,
+        isCustomComponent,
         nodeLength,
+        inspectionPanelVisible,
         hasToolMode,
         toolMode,
         data.id,
@@ -532,6 +614,7 @@ const NodeToolbarComponent = memo(
         shortcuts,
         frozen,
         handleSelectChange,
+        handleCodeModal,
       ],
     );
 
@@ -544,6 +627,7 @@ const NodeToolbarComponent = memo(
               onValueChange={handleSelectChange}
               value={selectedValue!}
               onOpenChange={handleOpenChange}
+              open={dropdownOpen}
             >
               <SelectTrigger className="w-62">
                 <ShadTooltip content="Show More" side="top">
@@ -644,10 +728,13 @@ const NodeToolbarComponent = memo(
                     dataTestId="docs-button-modal"
                   />
                 </SelectItem>
+
                 {(isMinimal || !showNode) && (
                   <SelectItem
                     value={"show"}
-                    data-testid={`${showNode ? "minimize" : "expand"}-button-modal`}
+                    data-testid={`${
+                      showNode ? "minimize" : "expand"
+                    }-button-modal`}
                   >
                     <ToolbarSelectItem
                       shortcut={
@@ -671,7 +758,7 @@ const NodeToolbarComponent = memo(
                     />
                   </SelectItem>
                 )}
-                {hasToolMode && (
+                {hasToolMode && !inspectionPanelVisible && (
                   <SelectItem
                     value="freezeAll"
                     data-testid="freeze-all-button-modal"
@@ -700,7 +787,10 @@ const NodeToolbarComponent = memo(
                     dataTestId="download-button-modal"
                   />
                 </SelectItem>
-                <SelectItem value={"delete"} className="focus:bg-red-400/[.20]">
+                <SelectItem
+                  value={"delete"}
+                  className="focus:bg-destructive/[.20]"
+                >
                   <div className="font-red flex text-status-red">
                     <IconComponent
                       name="Trash2"
@@ -712,7 +802,7 @@ const NodeToolbarComponent = memo(
                     >
                       <IconComponent
                         name="Delete"
-                        className="h-4 w-4 stroke-2 text-red-400"
+                        className="h-4 w-4 stroke-2 text-destructive"
                       ></IconComponent>
                     </span>
                   </div>

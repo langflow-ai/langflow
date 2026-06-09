@@ -3,7 +3,7 @@ from lfx.base.composio.composio_base import ComposioBaseComponent
 
 class ComposioSlackbotAPIComponent(ComposioBaseComponent):
     display_name: str = "Slackbot"
-    icon = "Slack"
+    icon = "SlackComposio"
     documentation: str = "https://docs.composio.dev"
     app_name = "slackbot"
 

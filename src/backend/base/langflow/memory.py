@@ -20,6 +20,7 @@ def _get_variable_query(
     sender: str | None = None,
     sender_name: str | None = None,
     session_id: str | UUID | None = None,
+    context_id: str | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -32,6 +33,8 @@ def _get_variable_query(
         stmt = stmt.where(MessageTable.sender_name == sender_name)
     if session_id:
         stmt = stmt.where(MessageTable.session_id == session_id)
+    if context_id:
+        stmt = stmt.where(MessageTable.context_id == context_id)
     if flow_id:
         stmt = stmt.where(MessageTable.flow_id == flow_id)
     if order_by:
@@ -46,6 +49,7 @@ def get_messages(
     sender: str | None = None,
     sender_name: str | None = None,
     session_id: str | UUID | None = None,
+    context_id: str | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -59,6 +63,7 @@ def get_messages(
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
         session_id (Optional[str]): The session ID associated with the messages.
+        context_id (Optional[str]): The context ID associated with the messages.
         order_by (Optional[str]): The field to order the messages by. Defaults to "timestamp".
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
@@ -67,13 +72,25 @@ def get_messages(
     Returns:
         List[Data]: A list of Data objects representing the retrieved messages.
     """
-    return run_until_complete(aget_messages(sender, sender_name, session_id, order_by, order, flow_id, limit))
+    return run_until_complete(
+        aget_messages(
+            sender,
+            sender_name,
+            session_id,
+            context_id,
+            order_by,
+            order,
+            flow_id,
+            limit,
+        )
+    )
 
 
 async def aget_messages(
     sender: str | None = None,
     sender_name: str | None = None,
     session_id: str | UUID | None = None,
+    context_id: str | None = None,
     order_by: str | None = "timestamp",
     order: str | None = "DESC",
     flow_id: UUID | None = None,
@@ -85,6 +102,7 @@ async def aget_messages(
         sender (Optional[str]): The sender of the messages (e.g., "Machine" or "User")
         sender_name (Optional[str]): The name of the sender.
         session_id (Optional[str]): The session ID associated with the messages.
+        context_id (Optional[str]): The context ID associated with the messages.
         order_by (Optional[str]): The field to order the messages by. Defaults to "timestamp".
         order (Optional[str]): The order in which to retrieve the messages. Defaults to "DESC".
         flow_id (Optional[UUID]): The flow ID associated with the messages.
@@ -94,7 +112,7 @@ async def aget_messages(
         List[Data]: A list of Data objects representing the retrieved messages.
     """
     async with session_scope() as session:
-        stmt = _get_variable_query(sender, sender_name, session_id, order_by, order, flow_id, limit)
+        stmt = _get_variable_query(sender, sender_name, session_id, context_id, order_by, order, flow_id, limit)
         messages = await session.exec(stmt)
         return [await Message.create(**d.model_dump()) for d in messages]
 
@@ -146,29 +164,50 @@ async def aupdate_messages(messages: Message | list[Message]) -> list[Message]:
                 # Convert flow_id to UUID if it's a string preventing error when saving to database
                 if msg.flow_id and isinstance(msg.flow_id, str):
                     msg.flow_id = UUID(msg.flow_id)
-                session.add(msg)
-                await session.commit()
-                await session.refresh(msg)
+                result = session.add(msg)
+                if asyncio.iscoroutine(result):
+                    await result
                 updated_messages.append(msg)
             else:
                 error_message = f"Message with id {message.id} not found"
                 await logger.awarning(error_message)
                 raise ValueError(error_message)
+
         return [MessageRead.model_validate(message, from_attributes=True) for message in updated_messages]
 
 
-async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession):
+async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession, retry_count: int = 0):
+    """Add messages to the database with retry logic for CancelledError.
+
+    Args:
+        messages: List of MessageTable objects to add
+        session: Database session
+        retry_count: Internal retry counter (max 3 retries to prevent infinite loops)
+
+    This function includes a workaround for CancelledError that can occur during
+    session.commit() when called from build_public_tmp but not from build_flow.
+    The retry mechanism has a limit to prevent infinite recursion.
+    """
+    max_retries = 3
     try:
         try:
             for message in messages:
-                session.add(message)
+                result = session.add(message)
+                if asyncio.iscoroutine(result):
+                    await result
             await session.commit()
             # This is a hack.
             # We are doing this because build_public_tmp causes the CancelledError to be raised
             # while build_flow does not.
         except asyncio.CancelledError:
             await session.rollback()
-            return await aadd_messagetables(messages, session)
+            if retry_count >= max_retries:
+                await logger.awarning(
+                    f"Max retries ({max_retries}) reached for aadd_messagetables due to CancelledError"
+                )
+                error_msg = "Add Message operation cancelled after multiple retries"
+                raise ValueError(error_msg) from None
+            return await aadd_messagetables(messages, session, retry_count + 1)
         for message in messages:
             await session.refresh(message)
     except asyncio.CancelledError as e:
@@ -189,27 +228,37 @@ async def aadd_messagetables(messages: list[MessageTable], session: AsyncSession
     return [MessageRead.model_validate(message, from_attributes=True) for message in new_messages]
 
 
-def delete_messages(session_id: str) -> None:
+def delete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
     """DEPRECATED - Delete messages from the monitor service based on the provided session ID.
 
     DEPRECATED: Use `adelete_messages` instead.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
+        context_id (str): The context ID associated with the messages to delete.
     """
-    return run_until_complete(adelete_messages(session_id))
+    return run_until_complete(adelete_messages(session_id, context_id))
 
 
-async def adelete_messages(session_id: str) -> None:
+async def adelete_messages(session_id: str | None = None, context_id: str | None = None) -> None:
     """Delete messages from the monitor service based on the provided session ID.
 
     Args:
         session_id (str): The session ID associated with the messages to delete.
+        context_id (str): The context ID associated with the messages to delete.
     """
     async with session_scope() as session:
+        if not session_id and not context_id:
+            msg = "Either session_id or context_id must be provided to delete messages."
+            raise ValueError(msg)
+
+        # Determine which field to filter by
+        filter_column = MessageTable.context_id if context_id else MessageTable.session_id
+        filter_value = context_id if context_id else session_id
+
         stmt = (
             delete(MessageTable)
-            .where(col(MessageTable.session_id) == session_id)
+            .where(col(filter_column) == filter_value)
             .execution_options(synchronize_session="fetch")
         )
         await session.exec(stmt)
@@ -225,7 +274,6 @@ async def delete_message(id_: str) -> None:
         message = await session.get(MessageTable, id_)
         if message:
             await session.delete(message)
-            await session.commit()
 
 
 def store_message(
@@ -296,20 +344,24 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         self,
         flow_id: str,
         session_id: str,
+        context_id: str | None = None,
     ) -> None:
         self.flow_id = flow_id
         self.session_id = session_id
+        self.context_id = context_id
 
     @property
     def messages(self) -> list[BaseMessage]:
         messages = get_messages(
             session_id=self.session_id,
+            context_id=self.context_id,
         )
         return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
     async def aget_messages(self) -> list[BaseMessage]:
         messages = await aget_messages(
             session_id=self.session_id,
+            context_id=self.context_id,
         )
         return [m.to_lc_message() for m in messages if not m.error]  # Exclude error messages
 
@@ -317,16 +369,18 @@ class LCBuiltinChatMemory(BaseChatMessageHistory):
         for lc_message in messages:
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
+            message.context_id = self.context_id
             store_message(message, flow_id=self.flow_id)
 
     async def aadd_messages(self, messages: Sequence[BaseMessage]) -> None:
         for lc_message in messages:
             message = Message.from_lc_message(lc_message)
             message.session_id = self.session_id
+            message.context_id = self.context_id
             await astore_message(message, flow_id=self.flow_id)
 
     def clear(self) -> None:
-        delete_messages(self.session_id)
+        delete_messages(self.session_id, self.context_id)
 
     async def aclear(self) -> None:
-        await adelete_messages(self.session_id)
+        await adelete_messages(self.session_id, self.context_id)

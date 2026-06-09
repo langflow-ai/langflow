@@ -2,40 +2,6 @@ name: Langflow Nightly Build
 run-name: Langflow Nightly Release by @${{ github.actor }}
 
 on:
-  workflow_dispatch:
-    inputs:
-      build_docker_base:
-        description: "Build Docker Image for Langflow Nightly Base"
-        required: true
-        type: boolean
-        default: false
-      build_docker_main:
-        description: "Build Docker Image for Langflow Nightly"
-        required: true
-        type: boolean
-        default: false
-      build_docker_ep:
-        description: "Build Docker Image for Langflow Nightly with Entrypoint"
-        required: false
-        type: boolean
-        default: false
-      build_lfx:
-        description: "Build and release LFX package"
-        required: false
-        type: boolean
-        default: false
-      nightly_tag_main:
-        description: "Tag for the nightly main build"
-        required: true
-        type: string
-      nightly_tag_base:
-        description: "Tag for the nightly base build"
-        required: true
-        type: string
-      nightly_tag_lfx:
-        description: "Tag for the nightly LFX build"
-        required: false
-        type: string
   workflow_call:
     inputs:
       build_docker_base:
@@ -58,7 +24,7 @@ on:
         required: false
         type: boolean
         default: false
-      nightly_tag_main:
+      nightly_tag_release:
         description: "Tag for the nightly main build"
         required: true
         type: string
@@ -70,6 +36,15 @@ on:
         description: "Tag for the nightly LFX build"
         required: false
         type: string
+      nightly_tag_sdk:
+        description: "Tag for the nightly SDK build"
+        required: false
+        type: string
+      push_to_registry:
+        description: "Whether to push images to registries. Set to false for testing builds without publishing."
+        required: true
+        type: boolean
+        default: false
 
 env:
   POETRY_VERSION: "1.8.3"
@@ -78,7 +53,7 @@ env:
 jobs:
   build-nightly-lfx:
     name: Build LFX Nightly
-    if: ${{ inputs.build_lfx == true }}
+    if: ${{ inputs.build_lfx }}
     runs-on: ubuntu-latest
     outputs:
       version: ${{ steps.verify.outputs.version }}
@@ -87,9 +62,9 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -100,6 +75,20 @@ jobs:
           prune-cache: false
       - name: Install LFX dependencies
         run: cd src/lfx && uv sync
+
+      - name: Verify SDK Nightly Name and Version
+        if: ${{ inputs.build_lfx }}
+        run: |
+          name=$(grep '^name = "' src/sdk/pyproject.toml | head -n 1 | sed 's/.*"\(.*\)".*/\1/')
+          version=$(grep '^version = "' src/sdk/pyproject.toml | head -n 1 | sed 's/.*"\(.*\)".*/\1/')
+          if [ "$name" != "langflow-sdk-nightly" ]; then
+            echo "Name $name does not match langflow-sdk-nightly. Exiting the workflow."
+            exit 1
+          fi
+          if [ "v$version" != "${{ inputs.nightly_tag_sdk }}" ]; then
+            echo "Version v$version does not match nightly tag ${{ inputs.nightly_tag_sdk }}. Exiting the workflow."
+            exit 1
+          fi
 
       - name: Verify Nightly Name and Version
         id: verify
@@ -119,6 +108,10 @@ jobs:
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
 
+      - name: Build langflow-sdk for distribution
+        run: |
+          make sdk_build args="--wheel"
+
       - name: Build LFX for distribution
         run: |
           cd src/lfx
@@ -128,14 +121,23 @@ jobs:
       - name: Test LFX CLI
         run: |
           cd src/lfx
-          uv pip install dist/*.whl --force-reinstall
-          uv run lfx --help
+          # Use a clean venv and install both wheels together so uv can resolve
+          # the local SDK dependency without falling back to PyPI.
+          uv venv test-env --seed
+          uv pip install --python ./test-env/bin/python --force-reinstall ../sdk/dist/*.whl dist/*.whl
+          ./test-env/bin/lfx --help
           echo "LFX CLI test completed successfully"
 
       # PyPI publishing moved to after cross-platform testing
 
+      - name: Upload langflow-sdk Artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-nightly-sdk
+          path: src/sdk/dist
+
       - name: Upload LFX Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -143,7 +145,7 @@ jobs:
   build-nightly-base:
     name: Build Langflow Nightly Base
     needs: [build-nightly-lfx]
-    if: always() && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false)
+    if: ${{ always() && (needs.build-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -153,9 +155,9 @@ jobs:
       skipped: ${{ steps.verify.outputs.skipped }}
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main }}
+          ref: ${{ inputs.nightly_tag_release }}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -164,42 +166,61 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
+
+      - name: Download LFX artifact
+        if: inputs.build_lfx
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-lfx
+          path: lfx-dist
+
       - name: Install the project
         run: uv sync
 
-      - name: Wait for PyPI Propagation
-        if: ${{ inputs.build_lfx == true }}
-        run: sleep 300 # wait for 5 minutes to ensure PyPI propagation of LFX
+      - name: Force reinstall LFX from built wheel
+        if: inputs.build_lfx
+        run: |
+          echo "Installing LFX from built wheel to test the actual distribution package..."
+          # While workspace resolution installs from source, we want to test the exact
+          # wheel that will be published to PyPI to catch any packaging issues
+          uv pip install --force-reinstall --no-deps lfx-dist/*.whl
 
       - name: Verify Nightly Name and Version
         id: verify
         run: |
           name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
           version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
-          if [ "$name" != "langflow-base-nightly" ]; then
-            echo "Name $name does not match langflow-base-nightly. Exiting the workflow."
+          # Strip extras from package name (e.g., "langflow-base-nightly[complete]" -> "langflow-base-nightly")
+          name_without_extras=$(echo $name | sed 's/\[.*\]//')
+          if [ "$name_without_extras" != "langflow-base-nightly" ]; then
+            echo "Name $name_without_extras does not match langflow-base-nightly. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           # Strip the leading `v` from the version
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
+          echo "skipped=false" >> $GITHUB_OUTPUT
 
       - name: Build Langflow Base for distribution
         run: |
           rm -rf src/backend/base/dist
           rm -rf dist
-          make build base=true args="--wheel"
+          make build base=true args="--no-sources --wheel"
 
       - name: Test Langflow Base CLI
         run: |
           # TODO: Unsure why the whl is not built in src/backend/base/dist
           mkdir src/backend/base/dist
           mv dist/*.whl src/backend/base/dist/
-          uv pip install src/backend/base/dist/*.whl
+          # Install with [complete] extra to test all optional dependencies
+          WHEEL_FILE=$(ls src/backend/base/dist/*.whl)
+          uv pip install "${WHEEL_FILE}[complete]"
           uv run python -m langflow run --host localhost --port 7860 --backend-only &
           SERVER_PID=$!
           # Wait for the server to start
@@ -218,7 +239,7 @@ jobs:
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -234,9 +255,9 @@ jobs:
         shell: bash
     steps:
       - name: Check out the code at a specific ref
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.nightly_tag_main}}
+          ref: ${{ inputs.nightly_tag_release}}
           persist-credentials: true
       - name: "Setup Environment"
         uses: astral-sh/setup-uv@v6
@@ -245,20 +266,45 @@ jobs:
           cache-dependency-glob: "uv.lock"
           python-version: ${{ env.PYTHON_VERSION }}
           prune-cache: false
+
+      - name: Download LFX artifact
+        if: inputs.build_lfx
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-lfx
+          path: lfx-dist
+
+      - name: Download base artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-base
+          path: base-dist
+
       - name: Install the project
         run: uv sync
+
+      - name: Force reinstall packages from built wheels
+        run: |
+          # While workspace resolution installs from source, we want to test the exact
+          # wheels that will be published to PyPI to catch any packaging issues
+          if [ "${{ inputs.build_lfx }}" == "true" ]; then
+            echo "Installing LFX from built wheel..."
+            uv pip install --force-reinstall --no-deps lfx-dist/*.whl
+          fi
+          echo "Installing langflow-base from built wheel..."
+          uv pip install --force-reinstall --no-deps base-dist/*.whl
 
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $1}')
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | awk '{print $2}')
+          name=$(uv tree | grep -E '^langflow(-nightly)?[[:space:]]' | awk '{print $1}')
+          version=$(uv tree | grep -E '^langflow(-nightly)?[[:space:]]' | awk '{print $2}')
           if [ "$name" != "langflow-nightly" ]; then
             echo "Name $name does not match langflow-nightly. Exiting the workflow."
             exit 1
           fi
-          if [ "$version" != "${{ inputs.nightly_tag_main }}" ]; then
-            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_main }}. Exiting the workflow."
+          if [ "$version" != "${{ inputs.nightly_tag_release }}" ]; then
+            echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_release }}. Exiting the workflow."
             exit 1
           fi
           # Strip the leading `v` from the version
@@ -288,13 +334,50 @@ jobs:
             echo "Server terminated successfully"
           fi
 
+      - name: Prepare Langflow Main artifact
+        run: |
+          shopt -s nullglob
+          MAIN_WHEELS=(dist/langflow_nightly-*.whl)
+          if [ ${#MAIN_WHEELS[@]} -ne 1 ]; then
+            echo "Expected exactly one langflow-nightly wheel in dist/, found ${#MAIN_WHEELS[@]}"
+            ls -la dist/
+            exit 1
+          fi
+          rm -rf main-dist
+          mkdir -p main-dist
+          cp "${MAIN_WHEELS[0]}" main-dist/
+
+      - name: Build bundle wheels for cross-platform test
+        run: |
+          shopt -s nullglob
+          bundles=(src/bundles/*/pyproject.toml)
+          if [ ${#bundles[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/"
+            exit 1
+          fi
+          rm -rf bundles-dist
+          mkdir -p bundles-dist
+          BUNDLES_DIST="$PWD/bundles-dist"
+          for bundle_pyproject in "${bundles[@]}"; do
+            bundle_dir=$(dirname "$bundle_pyproject")
+            echo "Building wheel for $bundle_dir"
+            (cd "$bundle_dir" && uv build --wheel --out-dir "$BUNDLES_DIST")
+          done
+          ls -la bundles-dist/
+
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: dist-nightly-main
-          path: dist
+          path: main-dist
+
+      - name: Upload bundles artifact
+        uses: actions/upload-artifact@v6
+        with:
+          name: dist-nightly-bundles
+          path: bundles-dist
 
   test-cross-platform:
     name: Test Cross-Platform Installation
@@ -304,17 +387,22 @@ jobs:
       base-artifact-name: "dist-nightly-base"
       main-artifact-name: "dist-nightly-main"
       lfx-artifact-name: "dist-nightly-lfx"
+      sdk-artifact-name: "dist-nightly-sdk"
+      bundles-artifact-name: "dist-nightly-bundles"
 
   publish-nightly-lfx:
     name: Publish LFX Nightly to PyPI
-    needs: [build-nightly-lfx, test-cross-platform]
-    if: ${{ inputs.build_lfx == true }}
+    needs: [build-nightly-lfx, test-cross-platform, publish-nightly-sdk]
+    if: ${{ inputs.build_lfx }}
     runs-on: ubuntu-latest
     steps:
       - name: Check out the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
       - name: Download LFX artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dist-nightly-lfx
           path: src/lfx/dist
@@ -330,16 +418,47 @@ jobs:
         run: |
           make lfx_publish
 
+  publish-nightly-sdk:
+    name: Publish SDK Nightly to PyPI
+    needs: [build-nightly-lfx, test-cross-platform]
+    if: ${{ inputs.build_lfx }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
+      - name: Download langflow-sdk artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-sdk
+          path: src/sdk/dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish SDK to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          make sdk_publish
+
   publish-nightly-base:
     name: Publish Langflow Base Nightly to PyPI
     needs: [build-nightly-base, test-cross-platform, publish-nightly-lfx]
-    if: always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false)
+    if: ${{ always() && needs.build-nightly-base.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
       - name: Download base artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dist-nightly-base
           path: src/backend/base/dist
@@ -356,15 +475,69 @@ jobs:
         run: |
           make publish base=true
 
+  publish-nightly-bundles:
+    name: Publish Langflow Bundles Nightly to PyPI
+    # langflow-nightly pins each `lfx-<name>-nightly==<dev>` exactly, so the
+    # bundles must be on PyPI before main is published (publish-nightly-main
+    # gates on this job). They depend on `lfx-nightly`, so gate on the lfx
+    # publish too (or skip it when lfx isn't being rebuilt).
+    needs: [build-nightly-main, test-cross-platform, publish-nightly-lfx]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && (needs.publish-nightly-lfx.result == 'success' || inputs.build_lfx == false) }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download bundles artifact
+        uses: actions/download-artifact@v7
+        with:
+          name: dist-nightly-bundles
+          path: bundles-dist
+      - name: Setup Environment
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: false
+          python-version: "3.13"
+      - name: Publish bundles to PyPI
+        env:
+          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_API_TOKEN }}
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          shopt -s nullglob
+          wheels=(bundles-dist/*.whl)
+          if [ ${#wheels[@]} -eq 0 ]; then
+            echo "No bundle wheels to publish."
+            exit 1
+          fi
+          failed=0
+          for wheel in "${wheels[@]}"; do
+            echo "Publishing $wheel"
+            # Capture stderr so a re-run without a version bump is a no-op for
+            # an already-published bundle instead of failing the whole job.
+            if ! err=$(uv publish "$wheel" 2>&1); then
+              echo "$err"
+              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
+                echo "Skipping $wheel: already published."
+              else
+                echo "Publish failed for $wheel"
+                failed=1
+              fi
+            fi
+          done
+          if [ "$failed" = "1" ]; then
+            exit 1
+          fi
+
   publish-nightly-main:
     name: Publish Langflow Main Nightly to PyPI
-    needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
+    needs: [build-nightly-main, test-cross-platform, publish-nightly-base, publish-nightly-bundles]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' && needs.publish-nightly-bundles.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.nightly_tag_release }}
+          persist-credentials: true
       - name: Download main artifact
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v7
         with:
           name: dist-nightly-main
           path: dist
@@ -382,23 +555,24 @@ jobs:
 
   call_docker_build_base:
     name: Call Docker Build Workflow for Langflow Base
-    if: always() && ${{ inputs.build_docker_base == 'true' }}
+    if: ${{ always() && inputs.build_docker_base }}
     needs: [build-nightly-base, build-nightly-main]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-nightly-build.yml
     with:
+      ref: ${{ inputs.nightly_tag_release }}
       release_type: nightly-base
-      base_version: ${{ inputs.nightly_tag_base }}
-      main_version: ${{ inputs.nightly_tag_main }}
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
 
   call_docker_build_main:
     name: Call Docker Build Workflow for Langflow
-    if: always() && ${{ inputs.build_docker_main == 'true' }}
+    if: ${{ always() && inputs.build_docker_main }}
     needs: [build-nightly-main, call_docker_build_base]
-    uses: ./.github/workflows/docker-build.yml
+    uses: ./.github/workflows/docker-nightly-build.yml
     with:
+      ref: ${{ inputs.nightly_tag_release }}
       release_type: nightly-main
-      main_version: ${{ inputs.nightly_tag_main }}
+      push_to_registry: ${{ inputs.push_to_registry }}
     secrets: inherit
 
   # TODO: Uncomment this when our runner can fit the builds that contain pytorch (and other large dependencies)
@@ -406,18 +580,20 @@ jobs:
   #   name: Call Docker Build Workflow for langflow-all
   #   if: always() && ${{ inputs.build_docker_main == 'true' }}
   #   needs: [build-nightly-main]
-  #   uses: ./.github/workflows/docker-build.yml
+  #   uses: ./.github/workflows/docker-nightly-build.yml
   #   with:
+  #     ref: ${{ inputs.nightly_tag_release }}
   #     release_type: nightly-main-all
-  #     main_version: ${{ inputs.nightly_tag_main }}
+  #     main_version: ${{ inputs.nightly_tag_release }}
   #   secrets: inherit
 
-  call_docker_build_main_ep:
-    name: Call Docker Build Workflow for Langflow with Entrypoint
-    if: always() && ${{ inputs.build_docker_ep == 'true' }}
-    needs: [build-nightly-main, call_docker_build_main]
-    uses: ./.github/workflows/docker-build.yml
-    with:
-      release_type: main-ep
-      main_version: ${{ inputs.nightly_tag_main }}
-    secrets: inherit
+  # call_docker_build_main_ep:
+  #   name: Call Docker Build Workflow for Langflow with Entrypoint
+  #   if: ${{ always() && inputs.build_docker_ep }}
+  #   needs: [build-nightly-main, call_docker_build_main]
+  #   uses: ./.github/workflows/docker-build-v2.yml
+  #   with:
+  #     ref: ${{ inputs.nightly_tag_release }}
+  #     release_type: main-ep
+  #     push_to_registry: ${{ inputs.push_to_registry }}
+  #   secrets: inherit

@@ -1,7 +1,8 @@
-import { expect, test } from "@playwright/test";
 import * as dotenv from "dotenv";
 import path from "path";
+import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
+import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
@@ -21,14 +22,8 @@ test(
 
     await page.getByTestId("side_nav_options_all-templates").click();
     await page.getByRole("heading", { name: "Basic Prompting" }).click();
-    await page.getByTestId("canvas_controls_dropdown").click();
 
-    await page.waitForSelector('[data-testid="fit_view"]', {
-      timeout: 2000,
-    });
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("message history");
@@ -66,7 +61,7 @@ test(
     await page.mouse.up();
 
     await page
-      .getByTestId("helpersMessage History")
+      .getByTestId("models_and_agentsMessage History")
       .first()
       .dragTo(page.locator('//*[@id="react-flow-id"]'), {
         targetPosition: { x: 200, y: 600 },
@@ -84,21 +79,18 @@ User: {user_input}
 AI:
   `;
 
-    await page.getByTestId("title-Prompt").last().click();
+    await page.getByTestId("title-Prompt Template").last().click();
     await page.getByTestId("button_open_prompt_modal").nth(0).click();
 
     await page.getByTestId("modal-promptarea_prompt_template").fill(prompt);
     await page.getByText("Edit Prompt", { exact: true }).click();
     await page.getByText("Check & Save").last().click();
 
-    await page.getByTestId("canvas_controls_dropdown").click();
-
-    await page.getByTestId("fit_view").click();
-    await page.getByTestId("canvas_controls_dropdown").click();
+    await adjustScreenView(page);
 
     //connection 1
     await page
-      .getByTestId("handle-memory-shownode-message-right")
+      .getByTestId("handle-memory-shownode-messages-right")
       .first()
       .click();
 
@@ -126,10 +118,13 @@ AI:
 
     await page.getByTestId("button-send").click();
 
-    await page.waitForSelector("text=AI", { timeout: 30000 });
-
-    await page.waitForSelector('[data-testid="div-chat-message"]', {
-      timeout: 100000,
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "visible",
+      timeout: 30000,
+    });
+    await page.getByTestId("stop_building_button").waitFor({
+      state: "hidden",
+      timeout: 180000,
     });
 
     // Wait for the first chat message element to be available

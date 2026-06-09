@@ -17,7 +17,7 @@ class AgentQL(Component):
     inputs = [
         SecretStrInput(
             name="api_key",
-            display_name="API Key",
+            display_name="AgentQL API Key",
             required=True,
             password=True,
             info="Your AgentQL API key from dev.agentql.com",
@@ -90,7 +90,7 @@ class AgentQL(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="build_output"),
+        Output(display_name="JSON", name="data", method="build_output"),
     ]
 
     def build_output(self) -> Data:

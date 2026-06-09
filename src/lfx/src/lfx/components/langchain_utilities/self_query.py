@@ -1,5 +1,5 @@
-from langchain.chains.query_constructor.base import AttributeInfo
-from langchain.retrievers.self_query.base import SelfQueryRetriever
+from langchain_classic.chains.query_constructor.base import AttributeInfo
+from langchain_classic.retrievers.self_query.base import SelfQueryRetriever
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import HandleInput, MessageTextInput
@@ -32,7 +32,7 @@ class SelfQueryRetrieverComponent(Component):
             name="attribute_infos",
             display_name="Metadata Field Info",
             info="Metadata Field Info to be passed as input.",
-            input_types=["Data"],
+            input_types=["Data", "JSON"],
             is_list=True,
         ),
         MessageTextInput(

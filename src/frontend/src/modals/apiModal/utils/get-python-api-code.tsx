@@ -1,11 +1,11 @@
-import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
+import {
+  getApiSampleHeaders,
+  getBaseUrl,
+} from "@/customization/utils/custom-code-samples";
 import {
   getAllChatInputNodeIds,
   getAllFileNodeIds,
-  getChatInputNodeId,
-  getFileNodeId,
   getNonFileTypeTweaks,
-  hasChatInputFiles,
   hasFileTweaks,
 } from "./detect-file-tweaks";
 
@@ -21,8 +21,7 @@ export function getNewPythonApiCode({
   processedPayload: any;
   shouldDisplayApiKey: boolean;
 }): string {
-  const { protocol, host } = customGetHostProtocol();
-  const baseUrl = `${protocol}//${host}`;
+  const baseUrl = getBaseUrl();
 
   // Check if there are file uploads
   const tweaks = processedPayload.tweaks || {};
@@ -42,13 +41,14 @@ export function getNewPythonApiCode({
 
     const headersSection = shouldDisplayApiKey
       ? `headers = {"x-api-key": api_key}`
-      : "";
+      : getApiSampleHeaders("python");
 
     return `import requests
 import os
 import uuid
 
-${authSection}url = "${apiUrl}"  # The complete API endpoint URL for this flow
+${authSection}
+url = "${apiUrl}"  # The complete API endpoint URL for this flow
 
 # Request payload configuration
 payload = ${payloadString}
@@ -90,7 +90,7 @@ except ValueError as e:
 
   const headersSection = shouldDisplayApiKey
     ? `headers = {"x-api-key": api_key}`
-    : "";
+    : getApiSampleHeaders("python");
 
   // Build upload steps for each file component
   const uploadSteps: string[] = [];

@@ -10,11 +10,12 @@ from lfx.schema.data import Data
 
 
 class WikipediaAPIComponent(LCToolComponent):
-    display_name = "Wikipedia API [Deprecated]"
+    display_name = "Wikipedia API"
     description = "Call Wikipedia API."
     name = "WikipediaAPI"
     icon = "Wikipedia"
     legacy = True
+    replacement = ["wikipedia.WikipediaComponent"]
 
     inputs = [
         MultilineInput(

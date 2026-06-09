@@ -1,5 +1,4 @@
-import urllib.request
-from urllib.parse import urlparse
+import urllib
 from xml.etree.ElementTree import Element
 
 from defusedxml.ElementTree import fromstring
@@ -38,15 +37,21 @@ class ArXivComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="DataFrame", name="dataframe", method="search_papers_dataframe"),
+        Output(display_name="Table", name="dataframe", method="search_papers_dataframe"),
     ]
 
     def build_query_url(self) -> str:
         """Build the arXiv API query URL."""
         base_url = "http://export.arxiv.org/api/query?"
 
-        # Build the search query
-        search_query = f"{self.search_type}:{self.search_query}"
+        # Build the search query based on search type
+        if self.search_type == "all":
+            search_query = self.search_query  # No prefix for all fields
+        else:
+            # Map dropdown values to ArXiv API prefixes
+            prefix_map = {"title": "ti", "abstract": "abs", "author": "au", "cat": "cat"}
+            prefix = prefix_map.get(self.search_type, "")
+            search_query = f"{prefix}:{self.search_query}"
 
         # URL parameters
         params = {
@@ -115,7 +120,7 @@ class ArXivComponent(Component):
             url = self.build_query_url()
 
             # Validate URL scheme and host
-            parsed_url = urlparse(url)
+            parsed_url = urllib.parse.urlparse(url)
             if parsed_url.scheme not in {"http", "https"}:
                 error_msg = f"Invalid URL scheme: {parsed_url.scheme}"
                 raise ValueError(error_msg)

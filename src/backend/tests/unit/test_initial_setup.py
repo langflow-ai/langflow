@@ -1,15 +1,20 @@
 import asyncio
 import os
+import shutil
 import tempfile
 import uuid
+from copy import deepcopy
 from datetime import datetime
+from pathlib import Path as SyncPath
 from unittest.mock import AsyncMock, patch
+from urllib.parse import urlparse
 
 import pytest
 from anyio import Path
 from httpx import AsyncClient
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.initial_setup.setup import (
+    copy_profile_pictures,
     detect_github_url,
     get_project_data,
     load_bundles_from_urls,
@@ -23,9 +28,6 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, session_scope
 from sqlalchemy.orm import selectinload
 from sqlmodel import select
-
-from lfx.constants import BASE_COMPONENTS_PATH
-from lfx.custom.directory_reader.utils import abuild_custom_component_list_from_path
 
 
 async def test_load_starter_projects():
@@ -60,6 +62,35 @@ async def test_get_project_data():
         assert isinstance(project_icon_bg_color, str) or project_icon_bg_color is None, (
             f"Project {project_name} has no icon_bg_color"
         )
+
+
+async def test_should_not_leak_caio_contexts_when_loading_starter_projects():
+    """Test that load_starter_projects does not leak caio async I/O contexts.
+
+    Bug: On Linux CI, aiofile's async_open creates caio.AsyncioContext objects
+    keyed by event loop in a global dict (DEFAULT_CONTEXT_STORE) that are never
+    cleaned up. With pytest-asyncio creating a new event loop per test function,
+    these contexts accumulate until the OS limit (aio-max-nr) is exhausted,
+    causing SystemError: (11, 'Resource temporarily unavailable') (EAGAIN).
+
+    This test verifies that load_starter_projects does not increase the number
+    of leaked caio contexts after being called.
+    """
+    try:
+        from aiofile.aio import DEFAULT_CONTEXT_STORE
+    except ImportError:
+        pytest.skip("aiofile not installed")
+
+    contexts_before = len(DEFAULT_CONTEXT_STORE)
+    await load_starter_projects()
+    contexts_after = len(DEFAULT_CONTEXT_STORE)
+
+    assert contexts_after == contexts_before, (
+        f"load_starter_projects leaked {contexts_after - contexts_before} caio context(s). "
+        f"This causes SystemError(11, 'Resource temporarily unavailable') on Linux CI "
+        f"when many tests accumulate leaked contexts. "
+        f"Use anyio.Path.read_text() instead of aiofile.async_open()."
+    )
 
 
 @pytest.mark.usefixtures("client")
@@ -143,12 +174,11 @@ def add_edge(source, target, from_output, to_input):
 
 
 async def test_refresh_starter_projects():
-    # Use lfx components path since components have been moved there
-    data_path = BASE_COMPONENTS_PATH
-    components = await abuild_custom_component_list_from_path(data_path)
+    all_types = await get_and_cache_all_types_dict(get_settings_service())
+    copy_all_types = deepcopy(all_types)
 
-    chat_input = find_component_by_name(components, "ChatInput")
-    chat_output = find_component_by_name(components, "ChatOutput")
+    chat_input = find_component_by_name(copy_all_types, "ChatInput")
+    chat_output = find_component_by_name(copy_all_types, "ChatOutput")
     chat_output["template"]["code"]["value"] = "changed !"
     del chat_output["template"]["should_store_message"]
     graph_data = {
@@ -158,7 +188,7 @@ async def test_refresh_starter_projects():
         ],
         "edges": [add_edge("ChatInput" + "chat-input-1", "ChatOutput" + "chat-output-1", "message", "input_value")],
     }
-    all_types = await get_and_cache_all_types_dict(get_settings_service())
+
     new_change = update_projects_components_with_latest_component_versions(graph_data, all_types)
     assert graph_data["nodes"][1]["data"]["node"]["template"]["code"]["value"] == "changed !"
     assert new_change["nodes"][1]["data"]["node"]["template"]["code"]["value"] != "changed !"
@@ -228,7 +258,8 @@ async def test_detect_github_url(url, expected):
         assert result == expected
 
         # Verify the API call was only made for GitHub repo URLs
-        if "github.com" in url and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
+        parsed = urlparse(url)
+        if parsed.hostname == "github.com" and not any(x in url for x in ["/tree/", "/releases/", "/commit/"]):
             mock_get.assert_called_once()
         else:
             mock_get.assert_not_called()
@@ -246,7 +277,11 @@ async def test_load_bundles_from_urls():
     async with session_scope() as session:
         await create_super_user(
             username=settings_service.auth_settings.SUPERUSER,
-            password=settings_service.auth_settings.SUPERUSER_PASSWORD,
+            password=(
+                settings_service.auth_settings.SUPERUSER_PASSWORD.get_secret_value()
+                if hasattr(settings_service.auth_settings.SUPERUSER_PASSWORD, "get_secret_value")
+                else settings_service.auth_settings.SUPERUSER_PASSWORD
+            ),
             db=session,
         )
 
@@ -279,17 +314,31 @@ def set_fs_flows_polling_interval():
 
 @pytest.mark.usefixtures("set_fs_flows_polling_interval")
 async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
-    flow_file = Path(tempfile.tempdir) / f"{uuid.uuid4()}.json"
+    # Use a relative path which will be placed in the user's flows directory
+    # The path validation requires paths to be within the user's flows directory for security
+    flow_filename = f"{uuid.uuid4()}.json"
     try:
         basic_case = {
             "name": "string",
             "description": "string",
             "data": {},
             "locked": False,
-            "fs_path": str(flow_file),
+            "fs_path": flow_filename,
         }
-        await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+        response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
+        assert response.status_code == 201, f"Failed to create flow: {response.text}"
+        created_flow = response.json()
+        flow_id = created_flow["id"]
+        user_id = created_flow["user_id"]
 
+        # Construct the full path where the file was saved
+        # The API saves relative paths to: storage_service.data_dir / "flows" / user_id / filename
+        from langflow.services.deps import get_storage_service
+
+        storage_service = get_storage_service()
+        flow_file = storage_service.data_dir / "flows" / str(user_id) / flow_filename
+
+        # Read the file created by the API
         content = await flow_file.read_text(encoding="utf-8")
         fs_flow = Flow.model_validate_json(content)
         fs_flow.name = "new name"
@@ -301,7 +350,7 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
 
         result = {}
         for i in range(10):
-            response = await client.get(f"api/v1/flows/{fs_flow.id}", headers=logged_in_headers)
+            response = await client.get(f"api/v1/flows/{flow_id}", headers=logged_in_headers)
             result = response.json()
             if result["name"] == "new name":
                 break
@@ -312,4 +361,430 @@ async def test_sync_flows_from_fs(client: AsyncClient, logged_in_headers):
         assert result["data"] == {"nodes": {}, "edges": {}}
         assert result["locked"] is True
     finally:
-        await flow_file.unlink(missing_ok=True)
+        if "flow_file" in locals():
+            await flow_file.unlink(missing_ok=True)
+
+
+# ==================== Profile Pictures Tests ====================
+
+
+@pytest.fixture
+def profile_pictures_temp_config(monkeypatch):
+    """Fixture that sets up a temporary config directory for profile picture tests."""
+    temp_dir = tempfile.mkdtemp()
+    config_path = SyncPath(temp_dir)
+
+    # Set the config_dir to our temp directory
+    monkeypatch.setenv("LANGFLOW_CONFIG_DIR", str(config_path))
+
+    yield config_path
+
+    # Cleanup
+    shutil.rmtree(temp_dir, ignore_errors=True)
+
+
+@pytest.mark.usefixtures("client")
+async def test_copy_profile_pictures_creates_directories():
+    """Test that copy_profile_pictures creates the profile_pictures directories."""
+    settings_service = get_settings_service()
+    config_dir = settings_service.settings.config_dir
+    config_path = SyncPath(config_dir)
+
+    # The function should have been called during app startup (client fixture)
+    # Verify the directories exist
+    people_dir = config_path / "profile_pictures" / "People"
+    space_dir = config_path / "profile_pictures" / "Space"
+
+    assert people_dir.exists(), "People directory should exist after copy_profile_pictures"
+    assert space_dir.exists(), "Space directory should exist after copy_profile_pictures"
+
+
+@pytest.mark.usefixtures("client")
+async def test_copy_profile_pictures_copies_files():
+    """Test that copy_profile_pictures copies all profile picture files."""
+    settings_service = get_settings_service()
+    config_dir = settings_service.settings.config_dir
+    config_path = SyncPath(config_dir)
+
+    people_dir = config_path / "profile_pictures" / "People"
+    space_dir = config_path / "profile_pictures" / "Space"
+
+    # Check that files were copied
+    people_files = list(people_dir.glob("*.svg")) if people_dir.exists() else []
+    space_files = list(space_dir.glob("*.svg")) if space_dir.exists() else []
+
+    assert len(people_files) > 0, "Should have People profile pictures copied"
+    assert len(space_files) > 0, "Should have Space profile pictures copied"
+
+
+@pytest.mark.usefixtures("client")
+async def test_copy_profile_pictures_specific_files_exist():
+    """Test that specific known profile picture files exist after copying."""
+    settings_service = get_settings_service()
+    config_dir = settings_service.settings.config_dir
+    config_path = SyncPath(config_dir)
+
+    # Check for the default rocket profile picture (used as default in the app)
+    rocket_path = config_path / "profile_pictures" / "Space" / "046-rocket.svg"
+    assert rocket_path.exists(), "Default rocket profile picture should exist"
+
+    # Check that the file has content
+    content = rocket_path.read_bytes()
+    assert len(content) > 0, "Profile picture file should have content"
+    assert b"<svg" in content or b"<?xml" in content, "Profile picture should be a valid SVG"
+
+
+@pytest.mark.usefixtures("client")
+async def test_copy_profile_pictures_is_idempotent():
+    """Test that copy_profile_pictures can be called multiple times without issues."""
+    settings_service = get_settings_service()
+    config_dir = settings_service.settings.config_dir
+    config_path = SyncPath(config_dir)
+
+    # Get initial file count
+    people_dir = config_path / "profile_pictures" / "People"
+    initial_count = len(list(people_dir.glob("*.svg"))) if people_dir.exists() else 0
+
+    # Call copy_profile_pictures again
+    await copy_profile_pictures()
+
+    # Count should remain the same (no duplicates)
+    final_count = len(list(people_dir.glob("*.svg"))) if people_dir.exists() else 0
+    assert final_count == initial_count, "Calling copy_profile_pictures again should not create duplicates"
+
+
+async def test_copy_profile_pictures_source_exists():
+    """Test that the source profile pictures directory exists in the package."""
+    from langflow.initial_setup import setup
+
+    source_path = Path(setup.__file__).parent / "profile_pictures"
+    assert await source_path.exists(), "Source profile_pictures directory should exist in package"
+
+    people_source = source_path / "People"
+    space_source = source_path / "Space"
+
+    assert await people_source.exists(), "Source People directory should exist"
+    assert await space_source.exists(), "Source Space directory should exist"
+
+    # Count source files
+    people_files = [f async for f in people_source.glob("*.svg")]
+    space_files = [f async for f in space_source.glob("*.svg")]
+
+    assert len(people_files) > 0, "Source should have People profile pictures"
+    assert len(space_files) > 0, "Source should have Space profile pictures"
+
+
+@pytest.mark.usefixtures("client")
+async def test_profile_pictures_available_via_api(client: AsyncClient, logged_in_headers):
+    """Test that profile pictures are available via the API after app startup."""
+    response = await client.get("api/v1/files/profile_pictures/list", headers=logged_in_headers)
+
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}: {response.json()}"
+
+    data = response.json()
+    assert "files" in data, "Response should contain 'files' key"
+
+    files = data["files"]
+    assert len(files) > 0, "Should have profile pictures available via API"
+
+    # Check for expected file format
+    assert any(f.startswith("People/") for f in files), "Should have People profile pictures"
+    assert any(f.startswith("Space/") for f in files), "Should have Space profile pictures"
+
+    # Check for the default rocket profile picture
+    assert "Space/046-rocket.svg" in files, "Default rocket profile picture should be available"
+
+
+@pytest.mark.usefixtures("client")
+async def test_profile_picture_can_be_downloaded(client: AsyncClient, logged_in_headers):
+    """Test that a profile picture can be downloaded via the API."""
+    response = await client.get(
+        "api/v1/files/profile_pictures/Space/046-rocket.svg",
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == 200, f"Expected 200, got {response.status_code}"
+    assert "image/svg+xml" in response.headers["content-type"], "Should return SVG content type"
+    assert len(response.content) > 0, "Should have content"
+
+
+async def test_copy_profile_pictures_handles_missing_config_dir():
+    """Test that copy_profile_pictures raises error when config_dir is not set."""
+    with patch("langflow.initial_setup.setup.get_storage_service") as mock_storage:
+        mock_settings = AsyncMock()
+        mock_settings.settings_service.settings.config_dir = None
+        mock_storage.return_value = mock_settings
+
+        with pytest.raises(ValueError, match="Config dir is not set"):
+            await copy_profile_pictures()
+
+
+def test_update_projects_handles_components_without_metadata():
+    """Test that components without metadata are handled gracefully."""
+    all_types_dict = {
+        "agents": {
+            "Agent": {
+                "template": {
+                    "code": {"value": "test code"},
+                    "_type": "Component",
+                },
+                "display_name": "Agent",
+                # No metadata field at all
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Agent",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    # Should not raise an error
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    assert updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"] == "test code"
+
+
+def test_update_projects_resolves_prompt_via_component_type_alias():
+    """Test that legacy Prompt nodes resolve via the explicit legacy alias.
+
+    Prompt Template is keyed as "Prompt Template" in the component dictionary,
+    but starter projects may still reference the legacy "Prompt" type.
+    """
+    all_types_dict = {
+        "models_and_agents": {
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "new_prompt_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",  # Old type name, doesn't match key "Prompt Template"
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_prompt_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_prompt_code_v2", (
+        f"Expected code to be updated to 'new_prompt_code_v2' but got '{updated_code}'. "
+        "The legacy 'Prompt' type should resolve to 'Prompt Template'."
+    )
+
+
+def test_update_projects_direct_key_takes_precedence_over_alias():
+    """Test that a direct key match is preferred over the derived alias."""
+    all_types_dict = {
+        "category": {
+            "Prompt": {
+                "template": {
+                    "code": {"value": "direct_match_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt",
+            },
+            "Prompt Template": {
+                "template": {
+                    "code": {"value": "renamed_code"},
+                    "_type": "Component",
+                },
+                "display_name": "Prompt Template",
+            },
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "Prompt",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_code"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "direct_match_code", (
+        "Direct key match ('Prompt') should take precedence over the derived alias to 'Prompt Template'"
+    )
+
+
+def test_update_projects_resolves_url_via_component_type_alias():
+    """Test that legacy URL nodes resolve via the component class alias."""
+    all_types_dict = {
+        "tools": {
+            "URLComponent": {
+                "template": {
+                    "code": {"value": "new_url_code_v2"},
+                    "_type": "URLComponent",
+                },
+                "display_name": "URL",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "URL",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_url_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_url_code_v2"
+
+
+def test_update_projects_resolves_parser_via_component_type_alias():
+    """Test that legacy lowercase parser nodes resolve via the explicit alias."""
+    all_types_dict = {
+        "processing": {
+            "ParserComponent": {
+                "template": {
+                    "code": {"value": "new_parser_code_v2"},
+                    "_type": "Component",
+                },
+                "display_name": "Parser",
+            }
+        }
+    }
+
+    project_data = {
+        "nodes": [
+            {
+                "data": {
+                    "type": "parser",
+                    "node": {
+                        "template": {
+                            "code": {"value": "old_parser_code_v1"},
+                            "_type": "Component",
+                        },
+                        "outputs": [],
+                    },
+                }
+            }
+        ]
+    }
+
+    updated_project = update_projects_components_with_latest_component_versions(project_data, all_types_dict)
+    updated_code = updated_project["nodes"][0]["data"]["node"]["template"]["code"]["value"]
+    assert updated_code == "new_parser_code_v2"
+
+
+# ==================== Update Project File Tests ====================
+
+
+async def test_update_project_file_success():
+    """Test that update_project_file successfully writes to a writable path."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        await update_project_file(project_path, project, updated_data)
+
+        # Verify the file was written
+        assert await project_path.exists()
+        content = await project_path.read_text(encoding="utf-8")
+        import orjson
+
+        written_project = orjson.loads(content)
+        assert written_project["data"] == updated_data
+        assert written_project["name"] == "Test Project"
+
+
+async def test_update_project_file_readonly_filesystem():
+    """Test that update_project_file handles read-only filesystem gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    # This should NOT raise an exception - it should handle the error gracefully
+    await update_project_file(project_path, project, updated_data)
+
+    # Verify the project dict was still updated (in-memory)
+    assert project["data"] == updated_data
+
+
+async def test_update_project_file_permission_denied():
+    """Test that update_project_file handles permission denied gracefully."""
+    from langflow.initial_setup.setup import update_project_file
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        project_path = Path(temp_dir) / "test_project.json"
+        project = {"name": "Test Project", "data": {"old": "data"}}
+        updated_data = {"new": "data"}
+
+        # Mock aiofiles.open to raise OSError (permission denied)
+        with patch("langflow.initial_setup.setup.aiofiles.open") as mock_open:
+            mock_open.side_effect = OSError(13, "Permission denied")
+
+            # Should not raise
+            await update_project_file(project_path, project, updated_data)
+
+            # Verify the project dict was still updated (in-memory)
+            assert project["data"] == updated_data
+
+
+async def test_update_project_file_logs_debug_on_oserror():
+    """Test that update_project_file logs a debug message on OSError."""
+    from langflow.initial_setup.setup import update_project_file
+
+    project_path = Path("/nonexistent/readonly/path/test_project.json")
+    project = {"name": "Test Project", "data": {"old": "data"}}
+    updated_data = {"new": "data"}
+
+    with patch("langflow.initial_setup.setup.logger") as mock_logger:
+        mock_logger.adebug = AsyncMock()
+        await update_project_file(project_path, project, updated_data)
+        # Verify debug log was called (either success or error path)
+        assert mock_logger.adebug.called

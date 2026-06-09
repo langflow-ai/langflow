@@ -50,6 +50,16 @@ class Logger(glogging.Logger):
         logging.getLogger("gunicorn.error").handlers = [InterceptHandler()]
         logging.getLogger("gunicorn.access").handlers = [InterceptHandler()]
 
+    def error(self, msg, *args, **kwargs):
+        """Override error method to filter out SIGSEGV messages."""
+        # Filter out "Worker was sent SIGSEGV" messages which are common on macOS
+        # with multiprocessing issues - these are typically handled by worker restart
+        if "SIGSEGV" in str(msg):
+            # Log at debug level instead of error
+            self.log.debug(msg, *args, **kwargs)
+        else:
+            super().error(msg, *args, **kwargs)
+
 
 class LangflowApplication(BaseApplication):
     def __init__(self, app, options=None) -> None:
@@ -61,6 +71,18 @@ class LangflowApplication(BaseApplication):
         super().__init__()
 
     def load_config(self) -> None:
+        # Apply options from GUNICORN_CMD_ARGS env var before programmatic options
+        parser = self.cfg.parser()
+        cmd_args = self.cfg.get_cmd_args_from_env()
+        if cmd_args:
+            env_args = parser.parse_args(cmd_args)
+            for k, v in vars(env_args).items():
+                # Skip unset/positional args and only apply known settings
+                if v is None or k == "args" or k not in self.cfg.settings:
+                    continue
+                self.cfg.set(k.lower(), v)
+
+        # Programmatic options override env args
         config = {key: value for key, value in self.options.items() if key in self.cfg.settings and value is not None}
         for key, value in config.items():
             self.cfg.set(key.lower(), value)

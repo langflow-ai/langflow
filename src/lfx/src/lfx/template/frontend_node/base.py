@@ -55,6 +55,8 @@ class FrontendNode(BaseModel):
     """Whether the frontend node is in beta."""
     legacy: bool = False
     """Whether the frontend node is legacy."""
+    replacement: list[str] | None = None
+    """Replacement for the frontend node when it is deprecated."""
     error: str | None = None
     """Error message for the frontend node."""
     edited: bool = False

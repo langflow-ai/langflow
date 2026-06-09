@@ -2,7 +2,7 @@ import json
 from typing import Any
 
 import requests
-from langchain.tools import StructuredTool
+from langchain_core.tools import StructuredTool
 from pydantic import BaseModel, Field
 
 from lfx.base.langchain_utilities.model import LCToolComponent
@@ -15,7 +15,7 @@ from lfx.schema.data import Data
 class NotionPageUpdate(LCToolComponent):
     display_name: str = "Update Page Property "
     description: str = "Update the properties of a Notion page."
-    documentation: str = "https://docs.langflow.org/integrations/notion/page-update"
+    documentation: str = "https://docs.langflow.org/bundles-notion"
     icon = "NotionDirectoryLoader"
 
     inputs = [

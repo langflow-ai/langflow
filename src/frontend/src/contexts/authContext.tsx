@@ -1,5 +1,4 @@
 import { createContext, useEffect, useState } from "react";
-import { Cookies } from "react-cookie";
 import {
   LANGFLOW_ACCESS_TOKEN,
   LANGFLOW_API_TOKEN,
@@ -9,8 +8,8 @@ import {
 import { useGetUserData } from "@/controllers/API/queries/auth";
 import { useGetGlobalVariablesMutation } from "@/controllers/API/queries/variables/use-get-mutation-global-variables";
 import useAuthStore from "@/stores/authStore";
+import { cookieManager } from "@/utils/cookie-manager";
 import { setLocalStorage } from "@/utils/local-storage-util";
-import { getAuthCookie, setAuthCookie } from "@/utils/utils";
 import { useStoreStore } from "../stores/storeStore";
 import type { Users } from "../types/api";
 import type { AuthContextType } from "../types/contexts/auth";
@@ -25,19 +24,17 @@ const initialValue: AuthContextType = {
   apiKey: null,
   storeApiKey: () => {},
   getUser: () => {},
+  clearAuthSession: () => {},
 };
 
 export const AuthContext = createContext<AuthContextType>(initialValue);
 
 export function AuthProvider({ children }): React.ReactElement {
-  const cookies = new Cookies();
-  const [accessToken, setAccessToken] = useState<string | null>(
-    getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN) ?? null,
-  );
+  // Authentication state is now managed via session validation
+  // instead of reading cookies directly (supports HttpOnly cookies)
+  const [accessToken, setAccessToken] = useState<string | null>(null);
   const [userData, setUserData] = useState<Users | null>(null);
-  const [apiKey, setApiKey] = useState<string | null>(
-    getAuthCookie(cookies, LANGFLOW_API_TOKEN),
-  );
+  const [apiKey, setApiKey] = useState<string | null>(null);
 
   const checkHasStore = useStoreStore((state) => state.checkHasStore);
   const fetchApiData = useStoreStore((state) => state.fetchApiData);
@@ -46,19 +43,8 @@ export function AuthProvider({ children }): React.ReactElement {
   const { mutate: mutateLoggedUser } = useGetUserData();
   const { mutate: mutateGetGlobalVariables } = useGetGlobalVariablesMutation();
 
-  useEffect(() => {
-    const storedAccessToken = getAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN);
-    if (storedAccessToken) {
-      setAccessToken(storedAccessToken);
-    }
-  }, []);
-
-  useEffect(() => {
-    const apiKey = getAuthCookie(cookies, LANGFLOW_API_TOKEN);
-    if (apiKey) {
-      setApiKey(apiKey);
-    }
-  }, []);
+  // Session validation is now handled by components that need it
+  // (e.g., via useGetAuthSession hook) rather than reading cookies here
 
   function getUser() {
     mutateLoggedUser(
@@ -83,25 +69,74 @@ export function AuthProvider({ children }): React.ReactElement {
     autoLogin: string,
     refreshToken?: string,
   ) {
-    setAuthCookie(cookies, LANGFLOW_ACCESS_TOKEN, newAccessToken);
-    setAuthCookie(cookies, LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
+    cookieManager.set(LANGFLOW_ACCESS_TOKEN, newAccessToken);
+    cookieManager.set(LANGFLOW_AUTO_LOGIN_OPTION, autoLogin);
     setLocalStorage(LANGFLOW_ACCESS_TOKEN, newAccessToken);
 
     if (refreshToken) {
-      setAuthCookie(cookies, LANGFLOW_REFRESH_TOKEN, refreshToken);
+      cookieManager.set(LANGFLOW_REFRESH_TOKEN, refreshToken);
     }
     setAccessToken(newAccessToken);
-    setIsAuthenticated(true);
-    getUser();
-    getGlobalVariables();
+
+    let userLoaded = false;
+    let variablesLoaded = false;
+
+    const checkAndSetAuthenticated = () => {
+      if (userLoaded && variablesLoaded) {
+        setIsAuthenticated(true);
+      }
+    };
+
+    const executeAuthRequests = () => {
+      mutateLoggedUser(
+        {},
+        {
+          onSuccess: async (user) => {
+            setUserData(user);
+            const isSuperUser = user!.is_superuser;
+            useAuthStore.getState().setIsAdmin(isSuperUser);
+            checkHasStore();
+            fetchApiData();
+            userLoaded = true;
+            checkAndSetAuthenticated();
+          },
+          onError: () => {
+            setUserData(null);
+            userLoaded = true;
+            checkAndSetAuthenticated();
+          },
+        },
+      );
+
+      mutateGetGlobalVariables(
+        {},
+        {
+          onSettled: () => {
+            variablesLoaded = true;
+            checkAndSetAuthenticated();
+          },
+        },
+      );
+    };
+
+    // Execute auth requests directly
+    // Cookies are set by the server and browser handles them automatically
+    executeAuthRequests();
   }
 
   function storeApiKey(apikey: string) {
     setApiKey(apikey);
   }
 
-  function getGlobalVariables() {
-    mutateGetGlobalVariables({});
+  function clearAuthSession() {
+    cookieManager.clearAuthCookies();
+    localStorage.removeItem(LANGFLOW_ACCESS_TOKEN);
+    localStorage.removeItem(LANGFLOW_API_TOKEN);
+    localStorage.removeItem(LANGFLOW_REFRESH_TOKEN);
+    setAccessToken(null);
+    setApiKey(null);
+    setUserData(null);
+    setIsAuthenticated(false);
   }
 
   return (
@@ -117,6 +152,7 @@ export function AuthProvider({ children }): React.ReactElement {
         apiKey,
         storeApiKey,
         getUser,
+        clearAuthSession,
       }}
     >
       {children}

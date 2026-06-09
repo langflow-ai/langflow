@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { useUpdateUser } from "@/controllers/API/queries/auth";
 import CustomGetStartedProgress from "@/customization/components/custom-get-started-progress";
 import useAuthStore from "@/stores/authStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { AddFolderButton } from "./add-folder-button";
 import { UploadFolderButton } from "./upload-folder-button";
 
@@ -18,7 +20,11 @@ export const HeaderButtons = ({
   isPending: boolean;
   addNewFolder: () => void;
 }) => {
+  const { t } = useTranslation();
   const userData = useAuthStore((state) => state.userData);
+  const hideGettingStartedProgress = useUtilityStore(
+    (state) => state.hideGettingStartedProgress,
+  );
 
   const [isDismissedDialog, setIsDismissedDialog] = useState(
     userData?.optins?.dialog_dismissed,
@@ -55,7 +61,7 @@ export const HeaderButtons = ({
 
   return (
     <>
-      {!isDismissedDialog && userData && (
+      {!hideGettingStartedProgress && !isDismissedDialog && userData && (
         <>
           <CustomGetStartedProgress
             userData={userData!}
@@ -75,7 +81,9 @@ export const HeaderButtons = ({
           <IconComponent name="PanelLeftClose" className="h-4 w-4" />
         </SidebarTrigger>
 
-        <div className="flex-1 text-sm font-medium">Projects</div>
+        <div className="flex-1 text-sm font-medium">
+          {t("sidebar.projects")}
+        </div>
         <div className="flex items-center gap-1">
           <UploadFolderButton
             onClick={handleUploadFlowsToFolder}

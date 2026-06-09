@@ -5,12 +5,11 @@ import pytest
 from langflow.services.auth.utils import create_super_user
 from langflow.services.database.models.user.model import User
 from langflow.services.utils import teardown_superuser
-from sqlalchemy.exc import IntegrityError
-
 from lfx.services.settings.constants import (
     DEFAULT_SUPERUSER,
     DEFAULT_SUPERUSER_PASSWORD,
 )
+from sqlalchemy.exc import IntegrityError
 
 # @patch("langflow.services.deps.get_session")
 # @patch("langflow.services.utils.create_super_user")
@@ -160,7 +159,7 @@ async def test_create_super_user_race_condition():
 
     mock_session.commit.side_effect = IntegrityError("statement", "params", Exception("orig"))
     with (
-        patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username),
+        patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
         patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
         patch("langflow.services.database.models.user.model.User") as mock_user_class,
     ):
@@ -196,7 +195,7 @@ async def test_create_super_user_race_condition_no_user_found():
     mock_session.commit.side_effect = integrity_error
 
     with (
-        patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username),
+        patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username),
         patch("langflow.services.auth.utils.get_password_hash", mock_get_password_hash),
         patch("langflow.services.database.models.user.model.User", return_value=mock_user),
         pytest.raises(IntegrityError),
@@ -231,7 +230,7 @@ async def test_create_super_user_concurrent_workers():
     # get_user_by_username returns None initially, then the created user for worker 2
     mock_get_user_by_username.side_effect = [None, None, mock_user]
 
-    with patch("langflow.services.auth.utils.get_user_by_username", mock_get_user_by_username):
+    with patch("langflow.services.auth.service.get_user_by_username", mock_get_user_by_username):
         # Simulate concurrent execution using asyncio.gather
         result1, result2 = await asyncio.gather(
             create_super_user("admin", "password", mock_session1),

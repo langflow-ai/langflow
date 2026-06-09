@@ -20,6 +20,7 @@ class MergeDataComponent(Component):
     icon = "merge"
     MIN_INPUTS_REQUIRED = 2
     legacy = True
+    replacement = ["processing.DataOperations"]
 
     inputs = [
         DataInput(name="data_inputs", display_name="Data Inputs", info="Data to combine", is_list=True, required=True),
@@ -30,7 +31,7 @@ class MergeDataComponent(Component):
             value=DataOperation.CONCATENATE.value,
         ),
     ]
-    outputs = [Output(display_name="DataFrame", name="combined_data", method="combine_data")]
+    outputs = [Output(display_name="Table", name="combined_data", method="combine_data")]
 
     def combine_data(self) -> DataFrame:
         if not self.data_inputs or len(self.data_inputs) < self.MIN_INPUTS_REQUIRED:

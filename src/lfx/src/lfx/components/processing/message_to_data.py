@@ -11,6 +11,7 @@ class MessageToDataComponent(Component):
     beta = True
     name = "MessagetoData"
     legacy = True
+    replacement = ["processing.TypeConverterComponent"]
 
     inputs = [
         MessageInput(
@@ -21,7 +22,7 @@ class MessageToDataComponent(Component):
     ]
 
     outputs = [
-        Output(display_name="Data", name="data", method="convert_message_to_data"),
+        Output(display_name="JSON", name="data", method="convert_message_to_data"),
     ]
 
     def convert_message_to_data(self) -> Data:
