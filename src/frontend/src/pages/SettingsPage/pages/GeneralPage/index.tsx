@@ -2,6 +2,7 @@ import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
+import { getAxiosErrorMessage } from "@/controllers/API/helpers/get-axios-error-message";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import {
   useResetPassword,
@@ -68,8 +69,7 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
-              // biome-ignore lint/suspicious/noExplicitAny: legacy
-              list: [(error as any)?.response?.data?.detail],
+              list: [getAxiosErrorMessage(error, t("errors.generic"))],
             });
           },
         },
@@ -93,8 +93,7 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
-              // biome-ignore lint/suspicious/noExplicitAny: legacy
-              list: [(error as any)?.response?.data?.detail],
+              list: [getAxiosErrorMessage(error, t("errors.generic"))],
             });
           },
         },
@@ -115,8 +114,7 @@ export const GeneralPage = () => {
     onError: (error) => {
       setErrorData({
         title: t("errors.saveApiKey"),
-        // biome-ignore lint/suspicious/noExplicitAny: legacy
-        list: [(error as any)?.response?.data?.detail],
+        list: [getAxiosErrorMessage(error, t("errors.generic"))],
       });
       setHasApiKey(false);
       setValidApiKey(false);
