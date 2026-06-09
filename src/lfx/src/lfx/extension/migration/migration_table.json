@@ -1560,6 +1560,406 @@
       "legacy_slot": "ext:xai:XAIModelComponent@official-pre-a",
       "target": "ext:xai:XAIModelComponent@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraDBCQLToolComponent",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_cql.AstraDBCQLToolComponent",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBCQLToolComponent",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBCQLToolComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBCQLToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraDBChatMemory",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_chatmemory.AstraDBChatMemory",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBChatMemory",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBChatMemory@official-pre-a",
+      "target": "ext:datastax:AstraDBChatMemory@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraDBDataAPIComponent",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_data_api.AstraDBDataAPIComponent",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBDataAPIComponent",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBDataAPIComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBDataAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraDBGraphVectorStoreComponent",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_graph.AstraDBGraphVectorStoreComponent",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBGraphVectorStoreComponent",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBGraphVectorStoreComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBGraphVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraDBToolComponent",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_tool.AstraDBToolComponent",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBToolComponent",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBToolComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBToolComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraDBVectorStoreComponent",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraDBVectorStoreComponent",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraDBVectorStoreComponent@official-pre-a",
+      "target": "ext:datastax:AstraDBVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AstraVectorizeComponent",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.astradb_vectorize.AstraVectorizeComponent",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.AstraVectorizeComponent",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:AstraVectorizeComponent@official-pre-a",
+      "target": "ext:datastax:AstraVectorizeComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "Dotenv",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.dotenv.Dotenv",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.Dotenv",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:Dotenv@official-pre-a",
+      "target": "ext:datastax:Dotenv@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "GraphRAGComponent",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.graph_rag.GraphRAGComponent",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.GraphRAGComponent",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:GraphRAGComponent@official-pre-a",
+      "target": "ext:datastax:GraphRAGComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "HCDVectorStoreComponent",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.hcd.HCDVectorStoreComponent",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.datastax.HCDVectorStoreComponent",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:datastax:HCDVectorStoreComponent@official-pre-a",
+      "target": "ext:datastax:HCDVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OpenAIEmbeddingsComponent",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.openai.openai.OpenAIEmbeddingsComponent",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.openai.OpenAIEmbeddingsComponent",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:openai:OpenAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:openai:OpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OpenAIModelComponent",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.openai.openai_chat_model.OpenAIModelComponent",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.openai.OpenAIModelComponent",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:openai:OpenAIModelComponent@official-pre-a",
+      "target": "ext:openai:OpenAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AnthropicModelComponent",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.anthropic.anthropic.AnthropicModelComponent",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.anthropic.AnthropicModelComponent",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:anthropic:AnthropicModelComponent@official-pre-a",
+      "target": "ext:anthropic:AnthropicModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AmazonBedrockEmbeddingsComponent",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.amazon_bedrock_embedding.AmazonBedrockEmbeddingsComponent",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.AmazonBedrockEmbeddingsComponent",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:AmazonBedrockEmbeddingsComponent@official-pre-a",
+      "target": "ext:amazon:AmazonBedrockEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AmazonBedrockComponent",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.amazon_bedrock_model.AmazonBedrockComponent",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.AmazonBedrockComponent",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:AmazonBedrockComponent@official-pre-a",
+      "target": "ext:amazon:AmazonBedrockComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "S3BucketUploaderComponent",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.s3_bucket_uploader.S3BucketUploaderComponent",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.S3BucketUploaderComponent",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:S3BucketUploaderComponent@official-pre-a",
+      "target": "ext:amazon:S3BucketUploaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AmazonBedrockConverseComponent",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.amazon_bedrock_converse.AmazonBedrockConverseComponent",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.amazon.AmazonBedrockConverseComponent",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:amazon:AmazonBedrockConverseComponent@official-pre-a",
+      "target": "ext:amazon:AmazonBedrockConverseComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CohereComponent",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.cohere_models.CohereComponent",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.CohereComponent",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cohere:CohereComponent@official-pre-a",
+      "target": "ext:cohere:CohereComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CohereEmbeddingsComponent",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.cohere_embeddings.CohereEmbeddingsComponent",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.CohereEmbeddingsComponent",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cohere:CohereEmbeddingsComponent@official-pre-a",
+      "target": "ext:cohere:CohereEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CohereRerankComponent",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.cohere_rerank.CohereRerankComponent",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cohere.CohereRerankComponent",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cohere:CohereRerankComponent@official-pre-a",
+      "target": "ext:cohere:CohereRerankComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

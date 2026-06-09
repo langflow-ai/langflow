@@ -1,7 +1,7 @@
 from lfx.components.input_output import ChatInput, ChatOutput
 from lfx.components.models_and_agents import PromptComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.graph import Graph
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 
 def basic_prompting_graph(template: str | None = None):

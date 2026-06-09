@@ -2,8 +2,8 @@ from unittest.mock import Mock, patch
 
 import pytest
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 
 
 class TestToolCallingAgentUpdateBuildConfig:
