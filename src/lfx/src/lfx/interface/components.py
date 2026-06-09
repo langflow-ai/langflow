@@ -21,6 +21,7 @@ from lfx.extension import (
     format_extension_error,
     load_dev_extensions,
     load_installed_extensions,
+    load_lfx_bundles_extensions,
     load_seed_extensions,
 )
 from lfx.extension.bundle_registry import BundleRecord, get_default_registry
@@ -759,22 +760,34 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
 # Discovery-source precedence for cross-source bundle-name collisions.
 # Higher in the list wins.  Ordered from most-authoritative (pip-installed
 # distribution = explicit, packaged install) to least (LANGFLOW_COMPONENTS_PATH
-# = loose, legacy custom-components path).  Operators who stage a bundle in
-# multiple places almost always *want* the more-authoritative copy to win;
-# the typed warning is what catches the unintentional case.
-_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "dev", "inline")
+# = loose, legacy custom-components path).  ``lfx_bundles`` is the
+# manifest-less metapackage tier: it sits BELOW the two manifest sources
+# (installed > seed) so a graduated ``lfx-<provider>`` shipping a manifest
+# always shadows the same-named provider in the metapackage -- the property
+# that lets a provider graduate with no lockstep release -- and ABOVE the
+# loose dev/inline sources.  Operators who stage a bundle in multiple places
+# almost always *want* the more-authoritative copy to win; the typed warning
+# is what catches the unintentional case.
+_DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "lfx_bundles", "dev", "inline")
 
 
 def _resolve_bundle_shadowing(
     *,
     extension_results: list[LoadResult],
     seed_results: list[LoadResult],
+    lfx_bundles_results: list[LoadResult],
     dev_results: list[LoadResult],
     inline_results: list[LoadResult],
-) -> tuple[list[LoadResult], list[LoadResult], list[LoadResult], list[LoadResult]]:
+) -> tuple[
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+    list[LoadResult],
+]:
     """Drop loser components and emit typed shadow warnings on lower-precedence dups.
 
-    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > dev > inline).
+    Precedence is :data:`_DISCOVERY_PRECEDENCE` (installed > seed > lfx_bundles > dev > inline).
     For each bundle name claimed by more than one source, the highest-precedence
     source keeps its components; every other source has its ``components`` cleared
     AND gains a typed warning naming the winning source's path so the operator can
@@ -802,6 +815,7 @@ def _resolve_bundle_shadowing(
     sources: dict[str, list[LoadResult]] = {
         "installed": extension_results,
         "seed": seed_results,
+        "lfx_bundles": lfx_bundles_results,
         "dev": dev_results,
         "inline": inline_results,
     }
@@ -862,7 +876,7 @@ def _resolve_bundle_shadowing(
                         location=loser_path,
                         content=result.bundle,
                         hint=(
-                            "Discovery precedence is installed > seed > dev > inline. "
+                            "Discovery precedence is installed > seed > lfx_bundles > dev > inline. "
                             f"Either remove the {kind} copy of this bundle or rename it so each "
                             "bundle name comes from exactly one source."
                         ),
@@ -872,7 +886,7 @@ def _resolve_bundle_shadowing(
             # loops naturally skip this result; the typed warning still emits.
             result.components = []
 
-    return extension_results, seed_results, dev_results, inline_results
+    return extension_results, seed_results, lfx_bundles_results, dev_results, inline_results
 
 
 async def import_extension_components(
@@ -911,6 +925,13 @@ async def import_extension_components(
     # When neither $LANGFLOW_SEED_DIR is set nor /opt/langflow/bundles
     # exists this is a no-op, so it costs nothing in Mode A.
     seed_results = load_seed_extensions()
+    # Manifest-less lfx.bundles metapackage roots are the third @official
+    # production source (after installed-manifest and seed): a distribution
+    # declaring the ``lfx.bundles`` entry-point ships a package whose
+    # subdirectories are bundles, registered at @official with no manifest.
+    # Loaded here so they enter the same shadow-resolution + registry +
+    # palette pathway; a no-op when no distribution declares the group.
+    lfx_bundles_results = load_lfx_bundles_extensions()
     # Dev extensions registered via ``lfx extension dev`` ship the same v0
     # manifest contract as installed extensions; load them through the
     # @official-slot pathway so they enter the BundleRegistry, expose the
@@ -923,8 +944,9 @@ async def import_extension_components(
     inline_results = discover_inline_bundles(_components_path_extension_paths(settings_service))
 
     # Resolve cross-source bundle-name shadowing in a single pass.  Discovery
-    # surfaces four sources -- installed (pip) > seed (filesystem-staged) >
-    # dev (`lfx extension dev`) > inline (LANGFLOW_COMPONENTS_PATH) -- and the
+    # surfaces five sources -- installed (pip) > seed (filesystem-staged) >
+    # lfx_bundles (manifest-less metapackage) > dev (`lfx extension dev`) >
+    # inline (LANGFLOW_COMPONENTS_PATH) -- and the
     # registry is keyed by bundle name.  Without an explicit precedence the
     # registry-population loop would silently overwrite earlier records with
     # later ones (last-wins by iteration order), and the reload endpoint would
@@ -933,17 +955,28 @@ async def import_extension_components(
     # surface the typed warning before either the registry or the palette
     # mapping is built so the operator sees the shadow once with the actual
     # paths involved.
-    deduped_extension_results, deduped_seed_results, deduped_dev_results, deduped_inline_results = (
-        _resolve_bundle_shadowing(
-            extension_results=extension_results,
-            seed_results=seed_results,
-            dev_results=dev_results,
-            inline_results=inline_results,
-        )
+    (
+        deduped_extension_results,
+        deduped_seed_results,
+        deduped_lfx_bundles_results,
+        deduped_dev_results,
+        deduped_inline_results,
+    ) = _resolve_bundle_shadowing(
+        extension_results=extension_results,
+        seed_results=seed_results,
+        lfx_bundles_results=lfx_bundles_results,
+        dev_results=dev_results,
+        inline_results=inline_results,
     )
 
     _emit_extension_diagnostics(
-        [*deduped_extension_results, *deduped_seed_results, *deduped_dev_results, *deduped_inline_results]
+        [
+            *deduped_extension_results,
+            *deduped_seed_results,
+            *deduped_lfx_bundles_results,
+            *deduped_dev_results,
+            *deduped_inline_results,
+        ]
     )
 
     # Populate the process-default BundleRegistry so the reload endpoint
@@ -960,6 +993,7 @@ async def import_extension_components(
     all_results = [
         *deduped_extension_results,
         *deduped_seed_results,
+        *deduped_lfx_bundles_results,
         *deduped_dev_results,
         *deduped_inline_results,
     ]

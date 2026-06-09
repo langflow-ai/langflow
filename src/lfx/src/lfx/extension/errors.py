@@ -86,6 +86,11 @@ ERROR_CODES: frozenset[str] = frozenset(
         "seed-directory-not-found",
         "seed-bundle-shadowed",
         "bundle-shadowed",
+        # Manifest-less lfx.bundles root whose entry-point declaration could
+        # not be resolved to a real package directory. Surfaced as a *warning*
+        # (never aborts startup) so a broken third-party declaration degrades
+        # to "that bundle root is skipped".
+        "bundle-discovery-malformed",
         "duplicate-extension-id",
         # Reload-specific codes
         "reload-in-progress",
@@ -283,6 +288,9 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     "bundle-shadowed": (
         "Bundle {content!r} is registered from multiple discovery sources; the lower-precedence copy "
         "at {location} is being skipped in favor of the higher-precedence one."
+    ),
+    "bundle-discovery-malformed": (
+        "lfx.bundles entry point {content!r} could not be resolved to a package directory: {message}"
     ),
     "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (
