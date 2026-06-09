@@ -9,10 +9,28 @@ import {
   createContext,
   type ReactNode,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 import "./lothal-theme.css";
+
+// The dockyard fonts load only when a lothal surface actually mounts — the
+// rest of Langflow never pays the two Google-Fonts requests. The link is
+// injected once (id-guarded) and intentionally never removed: the fonts are
+// cached, and removing it would flash unstyled text on the next visit.
+const FONTS_LINK_ID = "lothal-fonts";
+const FONTS_HREF =
+  "https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Geist:wght@300;400;500;600;700&family=Geist+Mono:wght@400;500;600&display=swap";
+
+function ensureLothalFonts() {
+  if (document.getElementById(FONTS_LINK_ID)) return;
+  const link = document.createElement("link");
+  link.id = FONTS_LINK_ID;
+  link.rel = "stylesheet";
+  link.href = FONTS_HREF;
+  document.head.appendChild(link);
+}
 
 export type LothalThemeMode = "light" | "dark";
 export type LothalDensity = "compact" | "regular" | "comfy";
@@ -51,6 +69,10 @@ export function LothalSurface({
 }) {
   const [theme, setTheme] = useState<LothalThemeMode>(defaultTheme);
   const [density, setDensity] = useState<LothalDensity>(defaultDensity);
+
+  useEffect(() => {
+    ensureLothalFonts();
+  }, []);
 
   const value = useMemo<LothalThemeContextValue>(
     () => ({

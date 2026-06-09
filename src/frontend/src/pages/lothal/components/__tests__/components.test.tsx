@@ -162,6 +162,25 @@ describe("NotReady — structured 501 detection", () => {
 });
 
 describe("LothalSurface", () => {
+  it("injects the dockyard fonts once, on mount", () => {
+    // The fonts left index.html so non-lothal pages never load them; the
+    // surface injects the stylesheet link exactly once, even when several
+    // surfaces mount.
+    render(
+      <LothalSurface>
+        <LothalSurface>
+          <span>nested</span>
+        </LothalSurface>
+      </LothalSurface>,
+    );
+    const links = document.querySelectorAll("#lothal-fonts");
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute(
+      "href",
+      expect.stringContaining("Instrument+Serif"),
+    );
+  });
+
   it("applies theme + density data attributes and renders children", () => {
     const { container } = render(
       <LothalSurface defaultTheme="dark" defaultDensity="compact">
