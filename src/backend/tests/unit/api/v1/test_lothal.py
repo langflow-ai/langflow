@@ -18,24 +18,30 @@ from langflow.services.deps import session_scope
 from sqlalchemy import inspect as sa_inspect
 from sqlmodel import select
 
-# A non-existent project id is fine for the stubbed routes: they short-circuit
-# before any lookup.
+# A non-existent project id — used where a request must fail before reaching a
+# handler (auth) or to prove project-scoped routes 404 for unknown projects.
 PROJECT_ID = "00000000-0000-0000-0000-000000000000"
 
-# (method, path, json body) for the endpoints still backed by a `501` stub.
-# Bodies are valid so the only thing that can fail is auth (401/403) or the stub
-# itself (501) — never request validation (422).
-STUBBED_ENDPOINTS = [
-    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/chat", {"content": "hi"}),
-    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/messages", None),
-    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/prd", None),
-    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/diagram", None),
-    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/diagram/save", {"nodes": [], "edges": []}),
-    ("POST", f"api/v1/lothal/projects/{PROJECT_ID}/diagram/approve", None),
-    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/code", None),
-    ("GET", f"api/v1/lothal/projects/{PROJECT_ID}/download", None),
+# (method, path template, json body) for the endpoints still backed by a `501`
+# stub. Bodies are valid so a request can only fail on auth (401/403), the
+# shared ownership check (404), or the stub itself (501) — never validation
+# (422).
+STUB_TEMPLATES = [
+    ("POST", "api/v1/lothal/projects/{project_id}/chat", {"content": "hi"}),
+    ("GET", "api/v1/lothal/projects/{project_id}/messages", None),
+    ("GET", "api/v1/lothal/projects/{project_id}/prd", None),
+    ("GET", "api/v1/lothal/projects/{project_id}/diagram", None),
+    ("POST", "api/v1/lothal/projects/{project_id}/diagram/save", {"nodes": [], "edges": []}),
+    ("POST", "api/v1/lothal/projects/{project_id}/diagram/approve", None),
+    ("GET", "api/v1/lothal/projects/{project_id}/code", None),
+    ("GET", "api/v1/lothal/projects/{project_id}/download", None),
     ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
+
+# Project-scoped stubs resolve ownership before stubbing; `debug/llm` is global.
+PROJECT_SCOPED_STUB_TEMPLATES = [t for t in STUB_TEMPLATES if "{project_id}" in t[1]]
+
+STUBBED_ENDPOINTS = [(m, p.format(project_id=PROJECT_ID), b) for m, p, b in STUB_TEMPLATES]
 
 # The project CRUD routes that went live in B.2. Still require auth, but no
 # longer return `501`.
@@ -49,14 +55,20 @@ LIVE_PROJECT_ENDPOINTS = [
 ALL_ENDPOINTS = LIVE_PROJECT_ENDPOINTS + STUBBED_ENDPOINTS
 
 
-@pytest.mark.parametrize(("method", "path", "json_body"), STUBBED_ENDPOINTS)
+@pytest.mark.parametrize(("method", "path_template", "json_body"), STUB_TEMPLATES)
 async def test_stub_returns_structured_501(
     client: AsyncClient,
     logged_in_headers: dict,
     method: str,
-    path: str,
+    path_template: str,
     json_body: dict | None,
 ):
+    # Stubs only answer for an existing, owned project — the shared
+    # `OwnedProject` dependency resolves ownership before the stub body runs.
+    response = await client.post("api/v1/lothal/projects/", json={"name": "Stub"}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    path = path_template.format(project_id=response.json()["id"])
+
     response = await client.request(method, path, json=json_body, headers=logged_in_headers)
 
     assert response.status_code == status.HTTP_501_NOT_IMPLEMENTED
@@ -64,6 +76,35 @@ async def test_stub_returns_structured_501(
     assert body["status"] == "not_implemented"
     assert isinstance(body["detail"], str)
     assert body["detail"]
+
+
+async def test_project_scoped_stubs_404_when_project_not_owned(client: AsyncClient, logged_in_headers: dict, user_two):
+    # Ownership comes from the shared dependency, so every project-scoped stub
+    # behaves like the live CRUD: a missing project and another user's project
+    # are both an indistinguishable 404 — never a 501 that would confirm a
+    # foreign project exists.
+    async with session_scope() as session:
+        foreign = Project(name="Theirs", user_id=user_two.id)
+        session.add(foreign)
+        await session.flush()
+        foreign_pk = foreign.id
+
+    try:
+        for project_id in (PROJECT_ID, str(foreign_pk)):
+            for method, path_template, json_body in PROJECT_SCOPED_STUB_TEMPLATES:
+                response = await client.request(
+                    method,
+                    path_template.format(project_id=project_id),
+                    json=json_body,
+                    headers=logged_in_headers,
+                )
+                assert response.status_code == status.HTTP_404_NOT_FOUND, (method, path_template, project_id)
+    finally:
+        # SQLite test DBs don't enforce the FK cascade, so clean up explicitly.
+        async with session_scope() as session:
+            leftover = await session.get(Project, foreign_pk)
+            if leftover:
+                await session.delete(leftover)
 
 
 @pytest.mark.parametrize(("method", "path", "json_body"), ALL_ENDPOINTS)

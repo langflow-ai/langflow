@@ -10,8 +10,14 @@ Auth is enforced router-wide via `get_current_active_user`. A missing token
 returns `403` (mapped from `MissingCredentialsError` by `_auth_error_to_http`
 in `services/auth/utils.py`); an invalid or expired token returns `401`. The
 auth tests accept either status.
+
+Ownership is enforced per-route via the `OwnedProject` dependency: every
+project-scoped route — stubs included — resolves `{project_id}` to a project
+owned by the caller or 404s, so an endpoint going live can never forget the
+check.
 """
 
+from typing import Annotated
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -82,17 +88,24 @@ def _to_project_read(project: Project) -> ProjectRead:
     )
 
 
-async def _get_owned_project(session: DbSession, project_id: UUID, user_id: UUID) -> Project:
-    """Fetch a project owned by `user_id`, or raise 404.
+async def _get_owned_project(session: DbSession, current_user: CurrentActiveUser, project_id: UUID) -> Project:
+    """Resolve the `{project_id}` path param to a project owned by the caller, or raise 404.
 
     Ownership is enforced by the `user_id` predicate: another user's project is
     indistinguishable from a missing one, so it 404s rather than 403 — we never
     confirm a project's existence to a user who can't see it.
     """
-    project = (await session.exec(select(Project).where(Project.id == project_id, Project.user_id == user_id))).first()
+    project = (
+        await session.exec(select(Project).where(Project.id == project_id, Project.user_id == current_user.id))
+    ).first()
     if project is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Project not found.")
     return project
+
+
+# Declared on every project-scoped route (stubs included) so ownership is
+# checked at declaration time — replacing a stub body can't drop the check.
+OwnedProject = Annotated[Project, Depends(_get_owned_project)]
 
 
 # --- Projects ----------------------------------------------------------------
@@ -140,13 +153,7 @@ async def list_projects(
     "/projects/{project_id}",
     summary="Get a project",
 )
-async def get_project(
-    *,
-    session: DbSession,
-    current_user: CurrentActiveUser,
-    project_id: UUID,
-) -> ProjectRead:
-    project = await _get_owned_project(session, project_id, current_user.id)
+async def get_project(*, project: OwnedProject) -> ProjectRead:
     return _to_project_read(project)
 
 
@@ -158,11 +165,9 @@ async def get_project(
 async def delete_project(
     *,
     session: DbSession,
-    current_user: CurrentActiveUser,
-    project_id: UUID,
+    project: OwnedProject,
 ) -> Response:
     """Delete a project, cascading to its messages and code files (404 if not owned)."""
-    project = await _get_owned_project(session, project_id, current_user.id)
     await session.delete(project)
     # Flush eagerly so cascade/constraint errors surface in-request (as a 5xx)
     # rather than at the post-response teardown commit — by then the client has
@@ -180,7 +185,7 @@ async def delete_project(
     responses=_NOT_IMPLEMENTED,
     summary="Send a chat message (routes to the phase engine)",
 )
-async def chat(project_id: UUID, body: ChatRequest) -> JSONResponse:
+async def chat(project: OwnedProject, body: ChatRequest) -> JSONResponse:
     return stub("Chat is not implemented yet.")
 
 
@@ -190,7 +195,7 @@ async def chat(project_id: UUID, body: ChatRequest) -> JSONResponse:
     responses=_NOT_IMPLEMENTED,
     summary="List a project's messages",
 )
-async def list_messages(project_id: UUID) -> JSONResponse:
+async def list_messages(project: OwnedProject) -> JSONResponse:
     return stub("Listing messages is not implemented yet.")
 
 
@@ -203,7 +208,7 @@ async def list_messages(project_id: UUID) -> JSONResponse:
     responses=_NOT_IMPLEMENTED,
     summary="Get the project's PRD summary",
 )
-async def get_prd(project_id: UUID) -> JSONResponse:
+async def get_prd(project: OwnedProject) -> JSONResponse:
     return stub("The PRD endpoint is not implemented yet.")
 
 
@@ -216,7 +221,7 @@ async def get_prd(project_id: UUID) -> JSONResponse:
     responses=_NOT_IMPLEMENTED,
     summary="Get the diagram (Mermaid + xyflow)",
 )
-async def get_diagram(project_id: UUID) -> JSONResponse:
+async def get_diagram(project: OwnedProject) -> JSONResponse:
     return stub("The diagram endpoint is not implemented yet.")
 
 
@@ -226,7 +231,7 @@ async def get_diagram(project_id: UUID) -> JSONResponse:
     responses=_NOT_IMPLEMENTED,
     summary="Save the canvas (xyflow → Mermaid + validate)",
 )
-async def save_diagram(project_id: UUID, body: DiagramSaveRequest) -> JSONResponse:
+async def save_diagram(project: OwnedProject, body: DiagramSaveRequest) -> JSONResponse:
     return stub("Saving the diagram is not implemented yet.")
 
 
@@ -236,7 +241,7 @@ async def save_diagram(project_id: UUID, body: DiagramSaveRequest) -> JSONRespon
     responses=_NOT_IMPLEMENTED,
     summary="Approve the diagram and advance to code generation",
 )
-async def approve_diagram(project_id: UUID) -> JSONResponse:
+async def approve_diagram(project: OwnedProject) -> JSONResponse:
     return stub("Approving the diagram is not implemented yet.")
 
 
@@ -249,7 +254,7 @@ async def approve_diagram(project_id: UUID) -> JSONResponse:
     responses=_NOT_IMPLEMENTED,
     summary="Get generated code files",
 )
-async def get_code(project_id: UUID) -> JSONResponse:
+async def get_code(project: OwnedProject) -> JSONResponse:
     return stub("The code endpoint is not implemented yet.")
 
 
@@ -267,7 +272,7 @@ async def get_code(project_id: UUID) -> JSONResponse:
     },
     summary="Download the project as a ZIP",
 )
-async def download_project(project_id: UUID) -> JSONResponse:
+async def download_project(project: OwnedProject) -> JSONResponse:
     return stub("Downloading the project is not implemented yet.")
 
 

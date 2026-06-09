@@ -281,6 +281,7 @@ external = ["RUF027"]
 "src/backend/base/langflow/api/v1/lothal.py" = [
     "TCH",   # FastAPI needs to evaluate types at runtime
     "ARG001",  # Stub handlers declare the contract's path/body params before using them
+    "FAST003",  # `{project_id}` is consumed by the shared `OwnedProject` dependency, not the handler signature
 ]
 "src/backend/base/langflow/api/v2/*" = [
     "TCH",  # FastAPI needs to evaluate types at runtime
