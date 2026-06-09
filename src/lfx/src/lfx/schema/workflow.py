@@ -11,11 +11,7 @@ from pydantic import BaseModel, BeforeValidator, ConfigDict, Field, StringConstr
 
 from lfx.schema.validators import null_check_validator, uuid_validator
 
-# Bounds on body-transported global variables. Keys are intentionally liberal
-# (the Langflow UI accepts lowercase, digits, underscore, hyphen, and spaces);
-# we only constrain length so a single field can't push the request past a
-# reasonable size. Values are capped at 64 KB, which comfortably exceeds the
-# longest tokens/secrets stored as global variables in practice.
+# Length-only bounds on body-transported globals so one field can't bloat the request.
 GLOBAL_KEY_MAX_LEN = 256
 GLOBAL_VALUE_MAX_LEN = 64 * 1024
 
@@ -32,6 +28,7 @@ class JobStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
     TIMED_OUT = "timed_out"
+    SUSPENDED = "suspended"
 
 
 JobId = Annotated[
