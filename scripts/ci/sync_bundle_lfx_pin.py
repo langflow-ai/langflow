@@ -70,10 +70,22 @@ def lfx_floor_spec(version: str) -> str:
 def rewrite_lfx_dep(content: str, floor_spec: str) -> str:
     """Rewrite the bundle's ``lfx`` runtime dep to ``floor_spec``. Idempotent.
 
-    Only the first (runtime) ``"lfx<op>..."`` specifier is touched; self-refs
-    and the nightly form do not match ``_LFX_DEP_PATTERN``.
+    Only the first (runtime) ``"lfx<op>..."`` specifier on a NON-comment line
+    is touched; self-refs and the nightly form do not match
+    ``_LFX_DEP_PATTERN``.  Comment lines are skipped because the
+    ``port_bundle.py`` pyproject template quotes an example pin in a comment
+    ABOVE the dependencies block -- a whole-text first-match rewrite would
+    update the example and silently leave the real dep stale.
     """
-    return _LFX_DEP_PATTERN.sub(f'"{floor_spec}"', content, count=1)
+    lines = content.splitlines(keepends=True)
+    for i, line in enumerate(lines):
+        if line.lstrip().startswith("#"):
+            continue
+        new_line, n = _LFX_DEP_PATTERN.subn(f'"{floor_spec}"', line, count=1)
+        if n:
+            lines[i] = new_line
+            return "".join(lines)
+    return content
 
 
 def sync_bundles(version: str, bundles_dir: Path) -> list[tuple[str, bool]]:
