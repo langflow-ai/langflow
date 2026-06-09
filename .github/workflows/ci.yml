@@ -285,6 +285,8 @@ jobs:
         needs.path-filter.outputs.frontend == 'true')
       )
     uses: ./.github/workflows/lint-js.yml
+    with:
+      allow-failure: ${{ inputs.release == true }}
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]

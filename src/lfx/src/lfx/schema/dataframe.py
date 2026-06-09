@@ -153,6 +153,14 @@ class Table(pandas_DataFrame):
         """
         return not self.empty
 
+    def __repr__(self) -> str:
+        # Disable column-width truncation so agent observations include full content.
+        # Pandas default (50 chars) silently truncates Memory Base / Knowledge Base results.
+        with pd.option_context("display.max_colwidth", None):
+            return super().__repr__()
+
+    __str__ = __repr__
+
     __hash__ = None  # Tables are mutable and shouldn't be hashable
 
     _CONTENT_COLUMNS = frozenset(
