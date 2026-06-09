@@ -391,6 +391,37 @@ def _warm_circular_imports() -> None:
             importlib.import_module(modname)
 
 
+_LFX_BUNDLES_SHIM_MARKER = "# lfx-bundles-shim"
+
+
+def _discover_shimmed_component_dirs(search_paths: list[str]) -> set[str]:
+    """Top-level ``lfx.components`` subdirs that are lfx-bundles import shims.
+
+    A provider consolidated into the lfx-bundles metapackage leaves a one-file
+    shim at ``lfx/components/<provider>/__init__.py`` (first line
+    ``# lfx-bundles-shim``) re-pointing to ``lfx_bundles.<provider>``.  Those
+    components load dynamically at the @official slot via the lfx.bundles
+    discovery path, so the in-tree walk must skip them or each component would
+    be registered twice (once in-tree, once at @official).
+    """
+    shimmed: set[str] = set()
+    for root in search_paths:
+        root_path = Path(root)
+        if not root_path.is_dir():
+            continue
+        for child in sorted(root_path.iterdir()):
+            init_py = child / "__init__.py"
+            if not (child.is_dir() and init_py.is_file()):
+                continue
+            try:
+                head = init_py.read_text(encoding="utf-8").lstrip()
+            except OSError:
+                continue
+            if head.startswith(_LFX_BUNDLES_SHIM_MARKER):
+                shimmed.add(child.name)
+    return shimmed
+
+
 async def _load_components_dynamically(
     target_modules: list[str] | None = None,
 ) -> dict[str, Any]:
@@ -410,6 +441,11 @@ async def _load_components_dynamically(
         await logger.aerror(f"Failed to import langflow.components package: {e}", exc_info=True)
         return modules_dict
 
+    # Providers consolidated into lfx-bundles leave an import shim here; they load
+    # dynamically at @official via lfx.bundles discovery, so exclude them from the
+    # in-tree walk to avoid registering each component twice.
+    shimmed_providers = _discover_shimmed_component_dirs(list(components_pkg.__path__))
+
     # Collect all module names to process
     module_names = []
     for _, modname, _ in pkgutil.walk_packages(components_pkg.__path__, prefix=components_pkg.__name__ + "."):
@@ -421,6 +457,11 @@ async def _load_components_dynamically(
         parts = modname.split(".")
         if len(parts) > MIN_MODULE_PARTS:
             component_type = parts[2]
+
+            # Consolidated providers (lfx-bundles shims) load at @official via
+            # lfx.bundles discovery, not in-tree -- skip to avoid double registration.
+            if component_type in shimmed_providers:
+                continue
 
             # Skip disabled components when ASTRA_CLOUD_DISABLE_COMPONENT is true
             if len(parts) >= MIN_MODULE_PARTS_WITH_FILENAME:

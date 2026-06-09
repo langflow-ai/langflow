@@ -180,6 +180,146 @@
       "legacy_slot": "ext:docling:ExportDoclingDocumentComponent@official-pre-a",
       "target": "ext:docling:ExportDoclingDocumentComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ExaSearchToolkit",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.exa.exa_search.ExaSearchToolkit",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.exa.ExaSearchToolkit",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:exa:ExaSearchToolkit@official-pre-a",
+      "target": "ext:exa:ExaSearchToolkit@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "TavilyExtractComponent",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.tavily_extract.TavilyExtractComponent",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.TavilyExtractComponent",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:tavily:TavilyExtractComponent@official-pre-a",
+      "target": "ext:tavily:TavilyExtractComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "TavilySearchComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.tavily_search.TavilySearchComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.tavily.TavilySearchComponent",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:tavily:TavilySearchComponent@official-pre-a",
+      "target": "ext:tavily:TavilySearchComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "WikidataComponent",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.wikidata.WikidataComponent",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.WikidataComponent",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:wikipedia:WikidataComponent@official-pre-a",
+      "target": "ext:wikipedia:WikidataComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "WikipediaComponent",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.wikipedia.WikipediaComponent",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.wikipedia.WikipediaComponent",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:wikipedia:WikipediaComponent@official-pre-a",
+      "target": "ext:wikipedia:WikipediaComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "WolframAlphaAPIComponent",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.wolframalpha.wolfram_alpha_api.WolframAlphaAPIComponent",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.wolframalpha.WolframAlphaAPIComponent",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:wolframalpha:WolframAlphaAPIComponent@official-pre-a",
+      "target": "ext:wolframalpha:WolframAlphaAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "YfinanceComponent",
+      "target": "ext:yahoosearch:YfinanceComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.yahoosearch.yahoo.YfinanceComponent",
+      "target": "ext:yahoosearch:YfinanceComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.yahoosearch.YfinanceComponent",
+      "target": "ext:yahoosearch:YfinanceComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:yahoosearch:YfinanceComponent@official-pre-a",
+      "target": "ext:yahoosearch:YfinanceComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [
