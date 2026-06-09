@@ -421,6 +421,10 @@ export const lazyIconsMapping = {
     })),
   Searx: () =>
     import("@/icons/Searx").then((mod) => ({ default: mod.SearxIcon })),
+  SemanticScholar: () =>
+    import("@/icons/SemanticScholar").then((mod) => ({
+      default: mod.SemanticScholarIcon,
+    })),
   SerpSearch: () =>
     import("@/icons/SerpSearch").then((mod) => ({
       default: mod.SerpSearchIcon,
