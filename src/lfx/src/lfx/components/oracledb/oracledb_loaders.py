@@ -44,6 +44,9 @@ class OracleDocLoaderComponent(Component):
         Output(name="data", display_name="JSON", method="load_documents"),
     ]
 
+    def build_template_config(self) -> dict[str, Any]:
+        return self.get_template_config(self)
+
     def load_documents(self) -> list[Data]:
         connection_params = build_connection_params(
             self.connection_params,

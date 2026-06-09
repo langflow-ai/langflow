@@ -111,6 +111,9 @@ class OracleVectorStoreComponent(LCVectorStoreComponent):
         ),
     ]
 
+    def build_template_config(self) -> dict[str, Any]:
+        return self.get_template_config(self)
+
     @check_cached_vector_store
     def build_vector_store(self) -> OracleVS:
         # Convert DataFrame to Data if needed using parent's method

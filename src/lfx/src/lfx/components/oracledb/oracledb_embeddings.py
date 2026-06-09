@@ -1,4 +1,5 @@
 from contextlib import suppress
+from typing import Any
 
 import oracledb
 from langchain_oracledb import OracleEmbeddings
@@ -43,6 +44,9 @@ class OracleEmbeddingsComponent(LCModelComponent):
     outputs = [
         Output(display_name="Embeddings", name="embeddings", method="build_embeddings"),
     ]
+
+    def build_template_config(self) -> dict[str, Any]:
+        return self.get_template_config(self)
 
     def build_embeddings(self) -> Embeddings:
         connection_params = build_connection_params(
