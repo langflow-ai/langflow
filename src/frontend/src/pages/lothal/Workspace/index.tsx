@@ -26,6 +26,7 @@ import {
   ChatDock,
   CodeView,
   EmptyHint,
+  isCodePhase,
   isNotImplemented,
   LothalMark,
   NotReady,
@@ -36,12 +37,6 @@ import {
   TopBar,
 } from "../components";
 import { LothalSurface } from "../theme/LothalSurface";
-
-// The code surface takes over the right pane once generation begins; before
-// that it's the diagram canvas.
-function isCodePhase(phase: string): boolean {
-  return phase === "CODE_GENERATION" || phase === "DONE";
-}
 
 // The line shown when the conversation crosses a phase boundary.
 function transitionNote(toPhase: string): string {

@@ -21,11 +21,15 @@ export {
 } from "./NotReady";
 export { PhaseStepper, type PhaseStepperStyle } from "./PhaseStepper";
 export {
+  isCodePhase,
   type LothalPhaseId,
+  PHASE_IDS,
   PHASES,
   type PhaseMeta,
+  type PhaseStatus,
   phaseIndex,
   phaseLabel,
+  phaseStatus,
 } from "./phases";
 export { StatusDot } from "./StatusDot";
 export { SystemBlock } from "./SystemBlock";

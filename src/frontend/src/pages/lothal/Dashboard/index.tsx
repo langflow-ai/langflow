@@ -17,6 +17,7 @@ import {
   EmptyHint,
   HarborWatermark,
   LothalMark,
+  phaseStatus,
   StatusDot,
   TopBar,
 } from "../components";
@@ -50,27 +51,6 @@ function relativeTime(iso: string): string {
   if (day === 1) return "yesterday";
   if (day < 7) return `${day} days ago`;
   return formatDate(iso);
-}
-
-// The card-footer line. The design shows turns/commits here, but those counts
-// aren't on the project list yet, so we surface what we *do* know — a
-// phase-derived status. `action` flags the phases waiting on the user (shown in
-// accent, like the design's "needs your input").
-function cardStatus(phase: string): { text: string; action: boolean } {
-  switch (phase) {
-    case "CLARIFICATION":
-      return { text: "needs your input", action: true };
-    case "DIAGRAM_GENERATION":
-      return { text: "drafting the diagram", action: false };
-    case "DIAGRAM_REFINEMENT":
-      return { text: "needs your review", action: true };
-    case "CODE_GENERATION":
-      return { text: "writing the code", action: false };
-    case "DONE":
-      return { text: "ready to ship", action: false };
-    default:
-      return { text: "in progress", action: false };
-  }
 }
 
 function PlusGlyph({ size = 14 }: { size?: number }) {
@@ -282,7 +262,10 @@ function ProjectCard({
   onDelete: () => void;
 }) {
   const [hover, setHover] = useState(false);
-  const status = cardStatus(project.phase);
+  // The card-footer line. The design shows turns/commits here, but those
+  // counts aren't on the project list yet, so we surface the phase-derived
+  // status from the shared phase metadata.
+  const status = phaseStatus(project.phase);
   return (
     <div
       role="button"

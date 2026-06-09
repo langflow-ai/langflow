@@ -1,15 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import type { LothalPhaseId } from "@/pages/lothal/components/phases";
 import { api } from "../../api";
 
 // Types use plain names within the `lothal` namespace and mirror the
-// `/api/v1/lothal/` contract (api-endpoints.md) exactly.
+// `/api/v1/lothal/` contract (api-endpoints.md) exactly. Phase ids are
+// declared once — in pages/lothal/components/phases.ts — and re-exported
+// here under the contract's name (a type-only import, erased at build).
 
-export type Phase =
-  | "CLARIFICATION"
-  | "DIAGRAM_GENERATION"
-  | "DIAGRAM_REFINEMENT"
-  | "CODE_GENERATION"
-  | "DONE";
+export type Phase = LothalPhaseId;
 
 export type Project = {
   id: string;
