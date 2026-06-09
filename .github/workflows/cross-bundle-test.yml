@@ -1,0 +1,140 @@
+name: Cross-Bundle Test
+
+# Tests every extracted bundle (the lfx-bundles metapackage + each graduated
+# lfx-<provider>) against the lfx contract surface it depends on. lfx is the
+# PRIMARY axis because the BUNDLE_API contract lives in lfx: a bundle that
+# imports cleanly, validates, and passes its tests against a given lfx is
+# compatible with that lfx minor.
+#
+# Cost-control shape (from the bundle-separation epic):
+#   - contract-smoke (install + import + discover + validate): every bundle,
+#     on the oldest and latest supported Python.
+#   - bundle tests (pytest the bundle's own tests/): same matrix.
+#   - scheduled run: weekly, the exhaustive grid.
+#
+# The lfx-minor axis is currently a single entry -- the IN-REPO lfx -- because
+# the 1.10 line is not yet published to PyPI. When lfx minors publish, add an
+# explicit lfx-version matrix dimension here (oldest + latest get the full
+# tests; every supported minor gets contract-smoke), and wire langflow RCs as
+# the secondary axis via workflow_call from the release pipeline.
+
+on:
+  workflow_call:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "src/bundles/**"
+      - "src/lfx/**"
+      - ".github/workflows/cross-bundle-test.yml"
+  schedule:
+    - cron: "0 6 * * 1" # Monday 06:00 UTC -- exhaustive grid
+
+jobs:
+  discover:
+    name: Discover bundles
+    runs-on: ubuntu-latest
+    outputs:
+      bundles: ${{ steps.find.outputs.bundles }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - id: find
+        name: Enumerate src/bundles/*/pyproject.toml
+        run: |
+          shopt -s nullglob
+          dirs=()
+          for p in src/bundles/*/pyproject.toml; do
+            dirs+=("$(dirname "$p")")
+          done
+          if [ ${#dirs[@]} -eq 0 ]; then
+            echo "No bundles found under src/bundles/*/" >&2
+            echo "bundles=[]" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          json=$(printf '%s\n' "${dirs[@]}" | sort | jq -R . | jq -cs .)
+          echo "bundles=$json" >> "$GITHUB_OUTPUT"
+          echo "Discovered bundles: $json"
+
+  bundle:
+    name: ${{ matrix.bundle }} (py${{ matrix.python-version }})
+    needs: discover
+    if: needs.discover.outputs.bundles != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        bundle: ${{ fromJson(needs.discover.outputs.bundles) }}
+        # Oldest + latest supported Python; the lfx-minor axis collapses to the
+        # in-repo lfx until the 1.10 line publishes (see header).
+        python-version: ["3.10", "3.13"]
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install in-repo lfx + the bundle into a clean venv
+        run: |
+          uv venv
+          # The in-repo lfx satisfies the bundle's `lfx>=X,<Y` pin and is the
+          # contract surface under test; pytest is for the bundle's own tests.
+          uv pip install ./src/lfx "./${{ matrix.bundle }}" pytest pytest-asyncio
+
+      - name: Contract smoke -- import + discovery
+        run: |
+          .venv/bin/python - "${{ matrix.bundle }}" <<'PY'
+          import importlib
+          import sys
+          import tomllib
+          from pathlib import Path
+
+          bundle_dir = Path(sys.argv[1])
+          meta = tomllib.loads((bundle_dir / "pyproject.toml").read_text())
+          name = meta["project"]["name"]
+          eps = meta["project"].get("entry-points", {})
+
+          # Manifest bundles declare langflow.extensions; the manifest-less
+          # metapackage declares lfx.bundles. Either way the declared package
+          # must import.
+          modules = list(eps.get("langflow.extensions", {}).values()) or list(eps.get("lfx.bundles", {}).values())
+          assert modules, f"{name}: no langflow.extensions or lfx.bundles entry-point declared"
+          for value in modules:
+              importlib.import_module(value.split(":", 1)[0])
+              print(f"  imported {value}")
+
+          # The manifest-less metapackage must be discoverable by the loader
+          # with no errors (zero providers is fine for an empty skeleton).
+          if "lfx.bundles" in eps:
+              from lfx.extension import load_lfx_bundles_extensions
+
+              results = load_lfx_bundles_extensions()
+              bad = [e.code for r in results for e in r.errors]
+              assert not bad, f"{name}: lfx.bundles discovery errors: {bad}"
+              providers = sum(1 for r in results if r.bundle)
+              print(f"  lfx.bundles discovery OK ({providers} providers)")
+          print(f"{name}: contract smoke OK")
+          PY
+
+      - name: Validate manifest (manifest-shipping bundles only)
+        run: |
+          # Manifest bundles ship extension.json; the manifest-less metapackage
+          # has none and is exempt from `lfx extension validate`.
+          manifest=$(ls "${{ matrix.bundle }}"/src/*/extension.json 2>/dev/null | head -1 || true)
+          if [ -n "$manifest" ]; then
+            .venv/bin/lfx extension validate "$(dirname "$manifest")"
+          else
+            echo "manifest-less bundle; skipping extension validate"
+          fi
+
+      - name: Run the bundle's own tests
+        run: |
+          if [ -d "${{ matrix.bundle }}/tests" ]; then
+            .venv/bin/python -m pytest "${{ matrix.bundle }}/tests" -q
+          else
+            echo "no tests/ directory in ${{ matrix.bundle }}; skipping"
+          fi
