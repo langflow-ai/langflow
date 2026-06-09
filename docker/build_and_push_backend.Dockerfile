@@ -37,9 +37,17 @@ RUN uv venv /app/.venv
 ENV PATH="/app/.venv/bin:$PATH"
 ENV VIRTUAL_ENV="/app/.venv"
 
-# Install langflow-base with all extras except dev (which includes Playwright)
+# Install langflow-base with all extras except dev (which includes Playwright).
+# This image ships the langflow-base core only.  Extension bundles
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# installed here -- they belong to the full ``langflow`` distribution, not
+# the lean core.  Use the ``langflow`` image, or ``pip install`` the bundle
+# alongside this image, to add those components.
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv pip install ./src/sdk ./src/lfx "./src/backend/base[complete,postgresql]"
+    uv pip install \
+        ./src/sdk \
+        ./src/lfx \
+        "./src/backend/base[complete,postgresql]"
 
 ################################
 # RUNTIME

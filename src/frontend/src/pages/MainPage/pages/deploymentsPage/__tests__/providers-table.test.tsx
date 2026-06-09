@@ -29,13 +29,14 @@ const makeProvider = (
 
 const noop = jest.fn();
 
-function renderTable(
+function renderCards(
   providers: ProviderAccount[] = [makeProvider()],
   overrides: Partial<Parameters<typeof ProvidersTable>[0]> = {},
 ) {
   return render(
     <ProvidersTable
       providers={providers}
+      onConfigureProvider={noop}
       onDeleteProvider={noop}
       {...overrides}
     />,
@@ -46,21 +47,22 @@ beforeEach(() => {
   jest.clearAllMocks();
 });
 
-// ---------------------------------------------------------------------------
-// Row rendering
-// ---------------------------------------------------------------------------
+describe("Card rendering", () => {
+  it("renders provider card with name, endpoint, provider label, and count", () => {
+    renderCards([makeProvider()], {
+      deploymentTotalsByProvider: { "prov-1": 8 },
+    });
 
-describe("Row rendering", () => {
-  it("renders a provider row with name, URL, and provider key", () => {
-    renderTable();
     expect(screen.getByTestId("provider-row-prov-1")).toBeInTheDocument();
     expect(screen.getByText("Production WxO")).toBeInTheDocument();
+    expect(screen.getByText("watsonx Orchestrate")).toBeInTheDocument();
     expect(screen.getByText("https://api.example.com")).toBeInTheDocument();
-    expect(screen.getByText("watsonx-orchestrate")).toBeInTheDocument();
+    expect(screen.getByText("Deployments")).toBeInTheDocument();
+    expect(screen.getByText("8")).toBeInTheDocument();
   });
 
-  it("renders multiple provider rows", () => {
-    renderTable([
+  it("renders multiple provider cards", () => {
+    renderCards([
       makeProvider({ id: "prov-1", name: "Prod" }),
       makeProvider({ id: "prov-2", name: "Staging" }),
     ]);
@@ -68,78 +70,62 @@ describe("Row rendering", () => {
     expect(screen.getByTestId("provider-row-prov-2")).toBeInTheDocument();
   });
 
-  it("shows dash when created_at is null", () => {
-    renderTable([makeProvider({ created_at: null })]);
+  it("shows dash when updated and created dates are null", () => {
+    renderCards([makeProvider({ created_at: null, updated_at: null })]);
     expect(screen.getByText("—")).toBeInTheDocument();
   });
-});
 
-// ---------------------------------------------------------------------------
-// Column headers
-// ---------------------------------------------------------------------------
-
-describe("Column headers", () => {
-  it("renders all expected column headers", () => {
-    renderTable();
-    for (const header of ["Name", "URL", "Provider Key", "Created"]) {
-      expect(screen.getByText(header)).toBeInTheDocument();
-    }
+  it("shows zero deployments when totals are missing", () => {
+    renderCards();
+    expect(screen.getByText("0")).toBeInTheDocument();
   });
 });
 
-// ---------------------------------------------------------------------------
-// Delete action
-// ---------------------------------------------------------------------------
+describe("Actions", () => {
+  it("calls onConfigureProvider when Configure is clicked", async () => {
+    const user = userEvent.setup();
+    const onConfigure = jest.fn();
+    const provider = makeProvider();
 
-describe("Delete action", () => {
+    renderCards([provider], { onConfigureProvider: onConfigure });
+
+    await user.click(screen.getByTestId("configure-provider-prov-1"));
+    expect(onConfigure).toHaveBeenCalledWith(provider);
+  });
+
   it("calls onDeleteProvider when Delete is clicked", async () => {
     const user = userEvent.setup();
     const onDelete = jest.fn();
     const provider = makeProvider();
-    renderTable([provider], { onDeleteProvider: onDelete });
 
-    await user.click(screen.getByTestId("actions-provider-prov-1"));
-    await user.click(screen.getByText("Delete"));
+    renderCards([provider], { onDeleteProvider: onDelete });
+
+    await user.click(screen.getByTestId("delete-provider-prov-1"));
     expect(onDelete).toHaveBeenCalledWith(provider);
-  });
-
-  it("has correct aria-label on actions button", () => {
-    renderTable();
-    expect(screen.getByTestId("actions-provider-prov-1")).toHaveAttribute(
-      "aria-label",
-      "Actions for Production WxO",
-    );
   });
 });
 
-// ---------------------------------------------------------------------------
-// Deleting state
-// ---------------------------------------------------------------------------
-
 describe("Deleting state", () => {
   it("shows loading spinner when deleting", () => {
-    renderTable([makeProvider()], { deletingId: "prov-1" });
+    renderCards([makeProvider()], { deletingId: "prov-1" });
     expect(screen.getByTestId("loading-spinner")).toBeInTheDocument();
-    expect(
-      screen.queryByTestId("actions-provider-prov-1"),
-    ).not.toBeInTheDocument();
   });
 
-  it("applies opacity to the deleting row", () => {
-    renderTable([makeProvider()], { deletingId: "prov-1" });
-    const row = screen.getByTestId("provider-row-prov-1");
-    expect(row.className).toContain("opacity-50");
+  it("applies opacity to deleting card", () => {
+    renderCards([makeProvider()], { deletingId: "prov-1" });
+    const card = screen.getByTestId("provider-row-prov-1");
+    expect(card.className).toContain("opacity-50");
   });
 
-  it("does not affect other rows", () => {
-    renderTable(
+  it("does not affect other cards", () => {
+    renderCards(
       [
         makeProvider({ id: "prov-1" }),
         makeProvider({ id: "prov-2", name: "Other" }),
       ],
       { deletingId: "prov-1" },
     );
-    const otherRow = screen.getByTestId("provider-row-prov-2");
-    expect(otherRow.className).not.toContain("opacity-50");
+    const otherCard = screen.getByTestId("provider-row-prov-2");
+    expect(otherCard.className).not.toContain("opacity-50");
   });
 });

@@ -716,11 +716,19 @@ class TestStarterProjects:
         assert "lfx" in result
         assert "langchain-anthropic" in result
 
-    def test_simple_agent_has_community(self, simple_agent_flow):
-        """Simple Agent should require langchain-community for its tools."""
+    def test_simple_agent_requirements(self, simple_agent_flow):
+        """Simple Agent requires lfx and no longer drags in langchain-community.
+
+        The Simple Agent ships the URL component, which historically imported
+        ``langchain_community`` via ``RecursiveUrlLoader``. The URL component was
+        rewritten to fetch with ``httpx`` plus DNS-pinned SSRF protection and no
+        longer imports ``langchain_community``, so the generated requirements
+        include ``lfx`` but never ``langchain-community`` (regardless of whether
+        lfx happens to provide it transitively in a given environment).
+        """
         result = generate_requirements_from_flow(simple_agent_flow, pin_versions=False)
         assert "lfx" in result
-        assert "langchain-community" in result
+        assert "langchain-community" not in result
 
     def test_basic_prompting_from_file(self):
         """Test the file-based API.

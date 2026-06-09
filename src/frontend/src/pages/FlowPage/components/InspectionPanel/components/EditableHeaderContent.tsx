@@ -1,4 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -18,6 +19,7 @@ export default function EditableHeaderContent({
   editMode,
   setEditMode,
 }: EditableHeaderContentProps) {
+  const { t } = useTranslation();
   const [localName, setLocalName] = useState<string>(
     data.node?.display_name ?? data.type,
   );
@@ -206,7 +208,7 @@ export default function EditableHeaderContent({
         onChange={handleDescriptionChange}
         onKeyDown={handleDescriptionKeyDown}
         className="nowheel w-full mt-1 text-muted-foreground !text-xs focus:border-primary focus:ring-0 px-2 py-0.5 min-h-[60px]"
-        placeholder="Add a description..."
+        placeholder={t("flow.addDescription")}
         data-testid="inspection-panel-description"
       />
     ) : (

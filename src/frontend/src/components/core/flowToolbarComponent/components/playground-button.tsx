@@ -14,7 +14,7 @@ const ButtonLabel = () => {
 
 const DisabledButton = () => (
   <div
-    className="relative inline-flex h-8 w-[7.2rem] items-center justify-start gap-1.5 rounded px-2 text-sm font-normal cursor-not-allowed text-muted-foreground"
+    className="relative inline-flex h-8 w-auto items-center justify-start gap-1.5 rounded px-2 text-sm font-normal cursor-not-allowed text-muted-foreground"
     data-testid="playground-btn-flow"
   >
     <ForwardedIconComponent name="Play" className="h-4 w-4" />
@@ -23,12 +23,13 @@ const DisabledButton = () => (
 );
 
 const PlaygroundButton = ({ hasIO }: PlaygroundButtonProps) => {
+  const { t } = useTranslation();
   return hasIO ? (
     <SimpleSidebarTrigger>
       <ButtonLabel />
     </SimpleSidebarTrigger>
   ) : (
-    <ShadTooltip content="Add a Chat Input or Chat Output to use the playground">
+    <ShadTooltip content={t("misc.addChatInputOutputPlayground")}>
       <div>
         <DisabledButton />
       </div>

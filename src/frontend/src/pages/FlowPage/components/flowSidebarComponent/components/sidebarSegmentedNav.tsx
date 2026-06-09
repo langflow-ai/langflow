@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -11,59 +12,15 @@ import {
 import { usePlaygroundStore } from "@/stores/playgroundStore";
 import { cn } from "@/utils/utils";
 import { useSearchContext } from "../index";
+import { NAV_ITEMS } from "./sidebar-nav-items";
 
 export type { SidebarSection };
-
-interface NavItem {
-  id: SidebarSection;
-  icon: string;
-  label: string;
-  tooltip: string;
-}
-
-export const NAV_ITEMS: NavItem[] = [
-  {
-    id: "search",
-    icon: "search",
-    label: "sidebar.nav.search",
-    tooltip: "sidebar.nav.search",
-  },
-  {
-    id: "components",
-    icon: "component",
-    label: "sidebar.nav.components",
-    tooltip: "sidebar.nav.components",
-  },
-  {
-    id: "mcp",
-    icon: "Mcp",
-    label: "sidebar.nav.mcp",
-    tooltip: "sidebar.nav.mcp",
-  },
-  {
-    id: "bundles",
-    icon: "blocks",
-    label: "sidebar.nav.bundles",
-    tooltip: "sidebar.nav.bundles",
-  },
-  {
-    id: "versions",
-    icon: "History",
-    label: "sidebar.nav.versions",
-    tooltip: "sidebar.nav.versionHistory",
-  },
-  {
-    id: "traces",
-    icon: "Activity",
-    label: "sidebar.nav.traces",
-    tooltip: "sidebar.nav.traces",
-  },
-];
+export { NAV_ITEMS };
 
 const SidebarSegmentedNav = () => {
   const { t } = useTranslation();
   const { activeSection, setActiveSection, toggleSidebar, open } = useSidebar();
-  const { focusSearch, setSearch } = useSearchContext();
+  const { setSearch } = useSearchContext();
   const setPlaygroundOpen = usePlaygroundStore((state) => state.setIsOpen);
   const setPlaygroundFullscreen = usePlaygroundStore(
     (state) => state.setIsFullscreen,
@@ -74,6 +31,9 @@ const SidebarSegmentedNav = () => {
       <SidebarMenu className="gap-2 py-1">
         {NAV_ITEMS.map((item) => (
           <div key={item.id}>
+            {item.id === "memories" && (
+              <Separator className="mx-auto my-1 w-5" />
+            )}
             <SidebarMenuItem className="px-1 pt-1">
               <ShadTooltip content={t(item.tooltip)} side="right">
                 <SidebarMenuButton
@@ -86,7 +46,7 @@ const SidebarSegmentedNav = () => {
 
                     setSearch?.("");
                     if (activeSection === item.id && open) {
-                      if (item.id === "traces") {
+                      if (item.id === "traces" || item.id === "memories") {
                         setActiveSection("components");
                       } else {
                         toggleSidebar();
@@ -95,9 +55,6 @@ const SidebarSegmentedNav = () => {
                       setActiveSection(item.id);
                       if (!open) {
                         toggleSidebar();
-                      }
-                      if (item.id === "search") {
-                        setTimeout(() => focusSearch(), 100);
                       }
                     }
                   }}

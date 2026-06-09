@@ -67,7 +67,7 @@ def ungroup_node(group_node_data, base_flow):
     g_edges = flow["data"]["edges"]
 
     # Redirect edges to the correct proxy node
-    updated_edges = get_updated_edges(base_flow, g_nodes, g_edges, group_node_data["id"])
+    updated_edges = get_updated_edges(base_flow, g_nodes, g_edges, group_node_data)
 
     # Update template values
     update_template(template, g_nodes)
@@ -199,18 +199,87 @@ def set_new_target_handle(proxy_id, new_edge, target_handle, node) -> None:
     new_edge["data"]["targetHandle"] = new_target_handle
 
 
-def update_source_handle(new_edge, g_nodes, g_edges):
-    """Updates the source handle of a given edge to the last node in the flow data.
+def _get_node_by_id(nodes, node_id):
+    return next((node for node in nodes if node["id"] == node_id), None)
+
+
+def _get_group_output_proxy(group_node_data, source_handle, g_nodes):
+    if not group_node_data:
+        return None
+
+    source_name = source_handle.get("name")
+    if not source_name:
+        return None
+
+    for output in group_node_data.get("node", {}).get("outputs", []):
+        if output.get("name") == source_name:
+            if proxy := output.get("proxy"):
+                return proxy
+            break
+
+    for node in sorted(g_nodes, key=lambda item: len(item["id"]), reverse=True):
+        prefix = f"{node['id']}_"
+        if source_name.startswith(prefix):
+            return {"id": node["id"], "name": source_name.removeprefix(prefix)}
+
+    return None
+
+
+def _get_output_types(node, output_name):
+    outputs = node.get("data", {}).get("node", {}).get("outputs", [])
+    output = next((item for item in outputs if item.get("name") == output_name), None)
+    if output:
+        return output.get("types")
+    return None
+
+
+def _update_source_handle_from_group_output(new_edge, group_node_data, g_nodes):
+    source_handle = new_edge["data"]["sourceHandle"]
+    proxy = _get_group_output_proxy(group_node_data, source_handle, g_nodes)
+    if not proxy:
+        return False
+
+    proxy_id = proxy["id"]
+    output_name = proxy.get("name") or proxy.get("field")
+    if not output_name:
+        return False
+
+    node = _get_node_by_id(g_nodes, proxy_id)
+    if node is None:
+        msg = f"Group output proxy references missing node {proxy_id}"
+        raise ValueError(msg)
+
+    new_edge["source"] = proxy_id
+    new_source_handle = copy.deepcopy(source_handle)
+    new_source_handle["id"] = proxy_id
+    new_source_handle["name"] = output_name
+    if data_type := node.get("data", {}).get("type"):
+        new_source_handle["dataType"] = data_type
+    if output_types := source_handle.get("output_types") or _get_output_types(node, output_name):
+        new_source_handle["output_types"] = output_types
+    new_edge["data"]["sourceHandle"] = new_source_handle
+    return True
+
+
+def update_source_handle(new_edge, g_nodes, g_edges, group_node_data=None):
+    """Updates the source handle of a group output edge.
 
     Args:
         new_edge (dict): The edge to update.
         g_nodes: The graph nodes.
         g_edges: The graph edges.
+        group_node_data: The group node data containing output proxy metadata.
 
     Returns:
         dict: The updated edge with the new source handle.
     """
+    if _update_source_handle_from_group_output(new_edge, group_node_data, g_nodes):
+        return new_edge
+
     last_node = copy.deepcopy(find_last_node(g_nodes, g_edges))
+    if last_node is None:
+        msg = "Unable to resolve group output source node"
+        raise ValueError(msg)
     new_edge["source"] = last_node["id"]
     new_source_handle = new_edge["data"]["sourceHandle"]
     new_source_handle["id"] = last_node["id"]
@@ -218,7 +287,7 @@ def update_source_handle(new_edge, g_nodes, g_edges):
     return new_edge
 
 
-def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
+def get_updated_edges(base_flow, g_nodes, g_edges, group_node_data):
     """Get updated edges.
 
     Given a base flow, a list of graph nodes and a group node id, returns a list of updated edges.
@@ -228,11 +297,17 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
         base_flow (dict): The base flow containing a list of edges.
         g_nodes (list): A list of graph nodes.
         g_edges (list): A list of graph edges.
-        group_node_id (str): The id of the group node.
+        group_node_data (dict | str): The group node data or id.
 
     Returns:
         list: A list of updated edges.
     """
+    if isinstance(group_node_data, str):
+        group_node_id = group_node_data
+        group_node_data = None
+    else:
+        group_node_id = group_node_data["id"]
+
     updated_edges = []
     for edge in base_flow["edges"]:
         new_edge = copy.deepcopy(edge)
@@ -240,7 +315,7 @@ def get_updated_edges(base_flow, g_nodes, g_edges, group_node_id):
             new_edge = update_target_handle(new_edge, g_nodes)
 
         if new_edge["source"] == group_node_id:
-            new_edge = update_source_handle(new_edge, g_nodes, g_edges)
+            new_edge = update_source_handle(new_edge, g_nodes, g_edges, group_node_data)
 
         if group_node_id in {edge["target"], edge["source"]}:
             updated_edges.append(new_edge)

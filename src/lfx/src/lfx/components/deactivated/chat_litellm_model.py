@@ -1,5 +1,3 @@
-from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
-
 from lfx.base.constants import STREAM_INFO_TEXT
 from lfx.base.models.model import LCModelComponent
 from lfx.field_typing import LanguageModel
@@ -119,6 +117,8 @@ class ChatLiteLLMModelComponent(LCModelComponent):
     ]
 
     def build_model(self) -> LanguageModel:  # type: ignore[type-var]
+        from langchain_community.chat_models.litellm import ChatLiteLLM, ChatLiteLLMException
+
         try:
             import litellm
 

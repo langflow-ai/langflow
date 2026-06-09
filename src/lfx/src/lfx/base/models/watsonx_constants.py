@@ -19,6 +19,8 @@ WATSONX_DEFAULT_LLM_MODELS = [
     ),
 ]
 
+# Marked deprecated: not natively supported by the Knowledge Base ingestion
+# flow; hidden from the embedding model picker until support is added.
 WATSONX_DEFAULT_EMBEDDING_MODELS = [
     create_model_metadata(
         provider="IBM WatsonX",
@@ -27,6 +29,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         model_type="embeddings",
         tool_calling=True,
         default=True,
+        deprecated=True,
     ),
     create_model_metadata(
         provider="IBM WatsonX",
@@ -35,6 +38,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         model_type="embeddings",
         tool_calling=True,
         default=True,
+        deprecated=True,
     ),
     create_model_metadata(
         provider="IBM WatsonX",
@@ -43,6 +47,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         model_type="embeddings",
         tool_calling=True,
         default=True,
+        deprecated=True,
     ),
     create_model_metadata(
         provider="IBM WatsonX",
@@ -51,6 +56,7 @@ WATSONX_DEFAULT_EMBEDDING_MODELS = [
         model_type="embeddings",
         tool_calling=True,
         default=True,
+        deprecated=True,
     ),
 ]
 

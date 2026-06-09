@@ -1,11 +1,12 @@
 from __future__ import annotations
 
 import asyncio
+import os
 import re
 import sqlite3
 import sys
 import time
-from contextlib import asynccontextmanager, nullcontext
+from contextlib import asynccontextmanager, contextmanager, nullcontext
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import TYPE_CHECKING
@@ -49,6 +50,119 @@ class UnsupportedPostgreSQLVersionError(Exception):
 
 _PG_VERSION_QUERY = sa.text("SELECT current_setting('server_version_num'), current_setting('server_version')")
 
+# Stable namespace for the schema-migration advisory lock. The lock serializes
+# concurrent ``alembic upgrade`` runs across workers so they do not race to
+# CREATE TYPE / CREATE TABLE on a fresh database. Picked once and never changed
+# so independent processes converge on the same lock; the value itself is
+# arbitrary, just has to fit in a Postgres bigint and not collide with other
+# advisory locks the application takes (currently none).
+_MIGRATION_ADVISORY_LOCK_ID = 0x4C616E67666C6F77  # ASCII "Langflow"
+_MIGRATION_LOCK_DEFAULT_TIMEOUT_S = 300.0
+_MIGRATION_LOCK_POLL_INTERVAL_S = 2.0
+
+
+def _migration_lock_timeout_s() -> float:
+    raw = os.getenv("LANGFLOW_MIGRATION_LOCK_TIMEOUT_S")
+    if raw is None:
+        return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+    try:
+        return float(raw)
+    except ValueError:
+        logger.warning(
+            "Ignoring invalid LANGFLOW_MIGRATION_LOCK_TIMEOUT_S=%r; falling back to %.0fs.",
+            raw,
+            _MIGRATION_LOCK_DEFAULT_TIMEOUT_S,
+        )
+        return _MIGRATION_LOCK_DEFAULT_TIMEOUT_S
+
+
+def _acquire_migration_lock_or_raise(conn, lock_id: int) -> None:
+    """Acquire the advisory lock with a bounded wait, logging progress.
+
+    Blocking ``pg_advisory_lock`` has no upper bound and ``lock_timeout`` does
+    not apply to advisory locks, so a worker hung mid-migration would silently
+    block every other worker forever. Instead poll ``pg_try_advisory_lock`` with
+    a configurable timeout and log when we're waiting, so operators see why
+    boot is stuck.
+    """
+    if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+        return
+
+    timeout = _migration_lock_timeout_s()
+    logger.info(
+        "Migration advisory lock %s held by another worker; waiting up to %.0fs.",
+        lock_id,
+        timeout,
+    )
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        time.sleep(_MIGRATION_LOCK_POLL_INTERVAL_S)
+        if conn.execute(sa.text(f"SELECT pg_try_advisory_lock({lock_id})")).scalar():
+            logger.info("Acquired migration advisory lock %s after waiting.", lock_id)
+            return
+
+    msg = (
+        f"Could not acquire migration advisory lock {lock_id} within "
+        f"{timeout:.0f}s. Another worker is likely hung mid-migration. "
+        "Investigate the worker holding the lock or restart the deployment "
+        "with a single worker so migrations can run cleanly. Override the "
+        "wait via LANGFLOW_MIGRATION_LOCK_TIMEOUT_S (seconds) if your migration "
+        "legitimately needs longer."
+    )
+    raise RuntimeError(msg)
+
+
+def _normalize_sync_postgres_url(database_url: str) -> str:
+    """Return a sync-driver Postgres URL from a possibly async one.
+
+    Strips the ``+asyncpg`` / ``+aiosqlite`` suffix and upgrades the legacy
+    ``postgres://`` scheme to ``postgresql://`` so :func:`sa.create_engine`
+    picks the default sync driver. Centralised so the advisory-lock helper and
+    the table-creation lock path stay in sync with :func:`check_postgresql_version_sync`.
+    """
+    sync_url = database_url
+    if sync_url.startswith("postgres://"):
+        sync_url = "postgresql://" + sync_url.split("://", 1)[1]
+    for async_driver in ("+asyncpg", "+aiosqlite"):
+        sync_url = sync_url.replace(async_driver, "")
+    return sync_url
+
+
+@contextmanager
+def _postgres_migration_lock(database_url: str):
+    """Hold a Postgres session-level advisory lock for the duration of the block.
+
+    Workers starting concurrently against a fresh PostgreSQL each call
+    ``command.upgrade("head")``; without coordination they race on
+    ``CREATE TYPE`` / ``CREATE TABLE`` and the losers fail with
+    ``UniqueViolation``. Holding a session-level advisory lock serialises the
+    upgrade so only one worker mutates the schema at a time; the others wait
+    here (bounded, with progress logging) and then find the schema already at
+    head.
+
+    No-op for non-PostgreSQL URLs. SQLite has no advisory locks (and Langflow
+    runs single-process on it anyway).
+    """
+    if not database_url.startswith(("postgresql", "postgres")):
+        yield
+        return
+
+    engine = sa.create_engine(_normalize_sync_postgres_url(database_url))
+    try:
+        with engine.connect() as conn:
+            logger.debug("Acquiring migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+            _acquire_migration_lock_or_raise(conn, _MIGRATION_ADVISORY_LOCK_ID)
+            try:
+                yield
+            finally:
+                logger.debug("Releasing migration advisory lock %s", _MIGRATION_ADVISORY_LOCK_ID)
+                # Session-level locks auto-release on connection close, but
+                # explicit unlock keeps the connection reusable if alembic
+                # internals ever hand us one back.
+                conn.execute(sa.text(f"SELECT pg_advisory_unlock({_MIGRATION_ADVISORY_LOCK_ID})"))
+    finally:
+        engine.dispose()
+
 
 def _check_version_row(version_num_str: str, version_str: str) -> None:
     """Raise ``UnsupportedPostgreSQLVersionError`` when the version is too old."""
@@ -70,15 +184,7 @@ def check_postgresql_version_sync(database_url: str) -> None:
 
     from sqlalchemy import create_engine
 
-    # Normalise the async URL to a sync-compatible one.
-    url = database_url
-    if url.startswith("postgres://"):
-        url = "postgresql://" + url.split("://", 1)[1]
-    # Strip async driver suffixes so create_engine picks the default sync driver.
-    for async_driver in ("+asyncpg", "+aiosqlite"):
-        url = url.replace(async_driver, "")
-
-    engine = create_engine(url)
+    engine = create_engine(_normalize_sync_postgres_url(database_url))
     try:
         with engine.connect() as conn:
             row = conn.execute(_PG_VERSION_QUERY).fetchone()
@@ -425,7 +531,9 @@ class DatabaseService(Service):
         buffer_context = (
             nullcontext(sys.stdout) if self.alembic_log_to_stdout else self.alembic_log_path.open("w", encoding="utf-8")  # type: ignore[union-attr]
         )
-        with buffer_context as buffer:
+        # The advisory lock serialises concurrent migration runs across workers
+        # so they do not race on CREATE TYPE / CREATE TABLE against a fresh PG.
+        with _postgres_migration_lock(self.database_url), buffer_context as buffer:
             alembic_cfg = Config(stdout=buffer)
             # alembic_cfg.attributes["connection"] = session
             alembic_cfg.set_main_option("script_location", str(self.script_location))
@@ -578,17 +686,44 @@ class DatabaseService(Service):
         await self.create_db_and_tables()
 
     async def create_db_and_tables(self) -> None:
-        async with self.engine.begin() as conn:
-            await conn.run_sync(self._create_db_and_tables)
+        if not self.database_url.startswith(("postgresql", "postgres")):
+            # SQLite / non-PG: original async path; advisory lock does not apply.
+            async with self.engine.begin() as conn:
+                await conn.run_sync(self._create_db_and_tables)
+            return
+
+        # Postgres: serialise CREATE TYPE / CREATE TABLE across workers under
+        # the same advisory lock that protects run_migrations. Without this,
+        # concurrent workers booting against a fresh database race on
+        # ``table.create(checkfirst=True)`` and the losers fail with
+        # ``UniqueViolation`` on ``pg_type_typname_nsp_index``. The lock is
+        # acquired synchronously; run in a worker thread so a contended-lock
+        # poll does not block the event loop.
+        await asyncio.to_thread(self._create_db_and_tables_with_lock)
+
+    def _create_db_and_tables_with_lock(self) -> None:
+        """Postgres path: hold the migration advisory lock for the DDL.
+
+        Opens its own sync engine so the DDL runs on the same driver the lock
+        uses; the application's async engine is unaffected.
+        """
+        with _postgres_migration_lock(self.database_url):
+            sync_engine = sa.create_engine(_normalize_sync_postgres_url(self.database_url))
+            try:
+                with sync_engine.begin() as conn:
+                    self._create_db_and_tables(conn)
+            finally:
+                sync_engine.dispose()
 
     async def teardown(self) -> None:
         await logger.adebug("Tearing down database")
         try:
             settings_service = get_settings_service()
-            # remove the default superuser if auto_login is enabled
-            # using the SUPERUSER to get the user
+            # When AUTO_LOGIN is off, remove the unused default superuser (see teardown_superuser).
             async with session_scope() as session:
                 await teardown_superuser(settings_service, session)
-        except Exception:  # noqa: BLE001
+        except Exception:
             await logger.aexception("Error tearing down database")
-        await self.engine.dispose()
+            raise
+        finally:
+            await self.engine.dispose()

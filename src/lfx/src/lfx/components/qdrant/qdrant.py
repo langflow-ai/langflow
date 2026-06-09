@@ -1,3 +1,6 @@
+import json
+import uuid
+
 from langchain_core.embeddings import Embeddings
 from langchain_qdrant import QdrantVectorStore
 
@@ -10,7 +13,7 @@ from lfx.io import (
     SecretStrInput,
     StrInput,
 )
-from lfx.schema.data import Data
+from lfx.schema.data import Data, custom_serializer
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -85,8 +88,17 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             raise TypeError(msg)
 
         if documents:
+            ids = [
+                str(
+                    uuid.uuid5(
+                        uuid.NAMESPACE_X500,
+                        f"{doc.page_content}{json.dumps(doc.metadata, sort_keys=True, default=custom_serializer)}",
+                    )
+                )
+                for doc in documents
+            ]
             qdrant = QdrantVectorStore.from_documents(
-                documents, embedding=self.embedding, **qdrant_kwargs, **server_kwargs
+                documents, embedding=self.embedding, ids=ids, **qdrant_kwargs, **server_kwargs
             )
         else:
             from qdrant_client import QdrantClient

@@ -5,8 +5,6 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react";
-import userEvent from "@testing-library/user-event";
-import React from "react";
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -23,7 +21,19 @@ const mockGetChunks = jest.fn();
 jest.mock(
   "@/controllers/API/queries/knowledge-bases/use-get-knowledge-base-chunks",
   () => ({
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     useGetKnowledgeBaseChunks: (params: any) => mockGetChunks(params),
+  }),
+);
+
+jest.mock(
+  "@/controllers/API/queries/knowledge-bases/use-get-kb-metadata-keys",
+  () => ({
+    useGetKbMetadataKeys: () => ({
+      data: { keys: {}, truncated: false },
+      isLoading: false,
+      refetch: jest.fn(),
+    }),
   }),
 );
 
@@ -40,6 +50,7 @@ jest.mock("@/components/ui/loading", () => ({
 }));
 
 jest.mock("@/components/ui/sidebar", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   SidebarTrigger: ({ children }: any) => <div>{children}</div>,
 }));
 

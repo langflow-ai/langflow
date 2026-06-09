@@ -19,8 +19,12 @@ class TestCORSConfiguration:
         with tempfile.TemporaryDirectory() as temp_dir, patch.dict(os.environ, {"LANGFLOW_CONFIG_DIR": temp_dir}):
             settings = Settings()
 
-            # Current behavior: wildcard origins with credentials ENABLED (insecure)
-            assert settings.cors_origins == "*"
+            # Current behavior: wildcard origins with credentials ENABLED (insecure).
+            # pydantic-settings normalizes the env var "*" differently across Python
+            # versions (Python 3.13 -> "*", Python 3.14+ -> ["*"]). Both shapes mean
+            # "all origins" semantically; the test must accept either to stay
+            # cross-version stable.
+            assert settings.cors_origins in ("*", ["*"])
             assert settings.cors_allow_credentials is True  # Currently defaults to True (insecure)
             assert settings.cors_allow_methods == "*"
             assert settings.cors_allow_headers == "*"
@@ -92,7 +96,11 @@ class TestCORSConfiguration:
             ),
         ):
             settings = Settings()
-            assert settings.cors_origins == "*"
+            # pydantic-settings parses LANGFLOW_CORS_ORIGINS="*" as the raw string
+            # on Python 3.13 and as ["*"] on Python 3.14+ (the str | list[str] union
+            # resolves differently across versions). Accept either; both represent
+            # the same "all origins" semantic.
+            assert settings.cors_origins in ("*", ["*"])
             # Current behavior: credentials are NOT prevented (INSECURE!)
             assert settings.cors_allow_credentials is True
 
@@ -123,9 +131,9 @@ class TestCORSConfiguration:
             assert settings.cors_origins == ["https://app.example.com"]
             assert settings.cors_allow_credentials is True
 
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
     @patch("langflow.main.get_settings_service")
-    def test_cors_middleware_configuration(self, mock_get_settings, mock_setup_sentry):
+    def test_cors_middleware_configuration(self, mock_get_settings, mock_add_sentry_middleware):
         """Test that CORS middleware is configured correctly in the app."""
         from langflow.main import create_app
 
@@ -141,7 +149,7 @@ class TestCORSConfiguration:
         mock_get_settings.return_value = mock_settings
 
         # Create app
-        mock_setup_sentry.return_value = None  # Use the mock
+        mock_add_sentry_middleware.return_value = None  # Use the mock
         app = create_app()
 
         # Find CORS middleware
@@ -157,11 +165,11 @@ class TestCORSConfiguration:
         assert cors_middleware.kwargs["allow_methods"] == ["GET", "POST"]
         assert cors_middleware.kwargs["allow_headers"] == ["Content-Type"]
 
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
     @patch("langflow.main.get_settings_service")
     @patch("langflow.main.logger")
     def test_cors_wildcard_credentials_runtime_check_current_behavior(
-        self, mock_logger, mock_get_settings, mock_setup_sentry
+        self, mock_logger, mock_get_settings, mock_add_sentry_middleware
     ):
         """Test runtime validation prevents wildcard with credentials (current behavior)."""
         from langflow.main import create_app
@@ -178,7 +186,7 @@ class TestCORSConfiguration:
         mock_get_settings.return_value = mock_settings
 
         # Create app
-        mock_setup_sentry.return_value = None  # Use the mock
+        mock_add_sentry_middleware.return_value = None  # Use the mock
         app = create_app()
 
         # Check that warning was logged about deprecation/security
@@ -354,8 +362,8 @@ class TestCORSIntegration:
     """Integration tests for CORS with actual HTTP requests."""
 
     @pytest.mark.asyncio
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
-    async def test_cors_headers_in_response_current_behavior(self, mock_setup_sentry):
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    async def test_cors_headers_in_response_current_behavior(self, mock_add_sentry_middleware):
         """Test that CORS headers are properly set in responses (current behavior)."""
         from fastapi.testclient import TestClient
 
@@ -373,7 +381,7 @@ class TestCORSIntegration:
 
             from langflow.main import create_app
 
-            mock_setup_sentry.return_value = None  # Use the mock
+            mock_add_sentry_middleware.return_value = None  # Use the mock
             app = create_app()
             client = TestClient(app)
 
@@ -403,8 +411,8 @@ class TestCORSIntegration:
         # This test represents the behavior we want in v1.7 with secure defaults
 
     @pytest.mark.asyncio
-    @patch("langflow.main.setup_sentry")  # Mock Sentry setup
-    async def test_cors_blocks_unauthorized_origin_current_behavior(self, mock_setup_sentry):
+    @patch("langflow.main.add_sentry_middleware")  # Mock Sentry setup
+    async def test_cors_blocks_unauthorized_origin_current_behavior(self, mock_add_sentry_middleware):
         """Test that CORS blocks requests from unauthorized origins."""
         from fastapi.testclient import TestClient
 
@@ -422,7 +430,7 @@ class TestCORSIntegration:
 
             from langflow.main import create_app
 
-            mock_setup_sentry.return_value = None  # Use the mock
+            mock_add_sentry_middleware.return_value = None  # Use the mock
             app = create_app()
             client = TestClient(app)
 

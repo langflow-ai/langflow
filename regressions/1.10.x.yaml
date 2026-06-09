@@ -1,0 +1,26 @@
+schema_version: 1
+release: 1.10.x
+
+entries:
+
+- id: GH-13538
+  title: Python Code Structured tool disabled then removed (unauthenticated RCE fix)
+  status: ship_with_note
+  area: components
+  first_bad_version: 1.10.0
+  last_known_good_version: 1.9.x
+  fix_pr: https://github.com/langflow-ai/langflow/pull/13538
+  workaround: Rebuild the step with the Python Interpreter (PythonREPLComponent) component.
+
+# To add an entry, copy the template below and fill in the fields.
+# For more information, see regressions/README.md.
+#
+# {
+#   "id": "GH-12345",
+#   "title": "Short plain-language description",
+#   "status": "triage",
+#   "area": "flow_editor",
+#   "first_bad_version": "1.10.0",
+#   "last_known_good_version": "1.9.0",
+#   "workaround": "none"
+# }

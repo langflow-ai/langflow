@@ -8,14 +8,14 @@ import { UseRequestProcessor } from "../../services/request-processor";
  *
  * Identity contract: Langflow tracks provider tools by their immutable
  * `provider_snapshot_id` (wxO tool_id), never by name.
- * - Tool renamed in provider → same snapshot ID, new `provider_data.tool_name`.
+ * - Tool renamed in provider → same snapshot ID, new `provider_data.tool_display_name`.
  * - Tool deleted in provider → missing from snapshot list, so
  *   `provider_data` is null for that attachment.
  * - Tool deleted + new tool created with same name → different ID, our
  *   attachment still points to the old (missing) ID. The new tool is
  *   invisible to Langflow until explicitly attached.
  *
- * When `provider_data` is non-null, `tool_name` is always present.
+ * When `provider_data` is non-null, `tool_display_name` is always present.
  * Fall back to `flow_name` when `provider_data` is null.
  * Use `provider_snapshot_id` for operations.
  */
@@ -28,7 +28,8 @@ export interface DeploymentFlowVersionItem {
   provider_snapshot_id: string | null;
   provider_data: {
     app_ids?: string[];
-    tool_name: string;
+    tool_name?: string;
+    tool_display_name: string;
   } | null;
 }
 

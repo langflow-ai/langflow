@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +16,8 @@ export function ChatHeaderActions({
   onClose,
   renderPrefix,
 }: ChatHeaderActionsProps) {
+  const { t } = useTranslation();
+
   if (!onToggleFullscreen) {
     return null;
   }
@@ -31,8 +34,8 @@ export function ChatHeaderActions({
           variant="ghost"
           size="icon"
           className={actionButtonClasses}
-          title="Enter fullscreen"
-          aria-label="Enter fullscreen"
+          title={t("playgroundComponent.enterFullscreen")}
+          aria-label={t("playgroundComponent.enterFullscreen")}
         >
           <ForwardedIconComponent
             name="Expand"
@@ -47,8 +50,8 @@ export function ChatHeaderActions({
           size="icon"
           onClick={onClose}
           className={actionButtonClasses}
-          title="Close and go back to flow"
-          aria-label="Close and go back to flow"
+          title={t("playgroundComponent.closeAndGoBack")}
+          aria-label={t("playgroundComponent.closeAndGoBack")}
           data-testid="playground-close-button"
         >
           <ForwardedIconComponent

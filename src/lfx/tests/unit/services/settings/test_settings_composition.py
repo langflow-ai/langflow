@@ -23,8 +23,10 @@ from lfx.services.settings.base import (
     save_settings_to_yaml,
 )
 
-# Fields that existed on the monolithic Settings before the split. Asserted as
-# a set so a missing group in the inheritance chain trips the test loudly.
+# Every field the composed Settings must expose: the original monolith fields
+# plus the settings added in 1.10.0 (folded into the mixins during the release
+# back-merge). Asserted as a set so a missing group in the inheritance chain —
+# or a dropped 1.10.0 field — trips the test loudly.
 EXPECTED_FIELDS = {
     # PathSettings
     "config_dir",
@@ -145,6 +147,54 @@ EXPECTED_FIELDS = {
     "variables_to_get_from_environment",
     "agentic_experience",
     "developer_api_enabled",
+    # ---- Added in 1.10.0, folded into the mixins during the release back-merge ----
+    # PathSettings
+    "kb_allowed_folder_roots",
+    # McpSettings
+    "mcp_tool_execution_timeout",
+    "mcp_servers_locked",
+    # ComponentsSettings
+    "load_flows_overwrite_on_name_match",
+    "enable_extension_reload",
+    # SecuritySettings
+    "rate_limit_enabled",
+    "rate_limit_per_minute",
+    "rate_limit_storage_uri",
+    "rate_limit_trust_proxy",
+    "custom_component_admin_only",
+    "allow_components_paths_override",
+    # RuntimeSettings
+    "job_queue_type",
+    "redis_queue_host",
+    "redis_queue_port",
+    "redis_queue_db",
+    "redis_queue_url",
+    "redis_queue_ttl",
+    "redis_queue_startup_grace_s",
+    "redis_queue_cancel_channel_enabled",
+    "redis_queue_cancel_marker_ttl",
+    "redis_queue_polling_stale_threshold_s",
+    "redis_queue_polling_watchdog_interval_s",
+    "max_ingestion_timeout_secs",
+    # UiSettings
+    "embedded_mode",
+    "hide_getting_started_progress",
+    "hide_logout_button",
+    "hide_new_project_button",
+    "hide_new_flow_button",
+    "hide_starter_projects",
+    # TelemetrySettings
+    "telemetry_writer_enabled",
+    "telemetry_writer_batch_size",
+    "telemetry_writer_flush_interval_s",
+    "telemetry_writer_cleanup_interval_s",
+    "telemetry_writer_max_queue",
+    "telemetry_writer_outbox_dir",
+    "telemetry_writer_shutdown_drain_s",
+    "telemetry_writer_orphan_max_age_s",
+    "telemetry_writer_size_strategy",
+    "telemetry_writer_batch_size_bytes",
+    "telemetry_writer_max_queue_bytes",
 }
 
 
@@ -159,7 +209,7 @@ def test_all_expected_fields_present():
 
 
 def test_field_count_unchanged():
-    """The total field count matches the pre-refactor count."""
+    """The total field count matches the curated expected set (no stray adds/drops)."""
     assert len(Settings.model_fields) == len(EXPECTED_FIELDS)
 
 

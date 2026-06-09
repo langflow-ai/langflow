@@ -13,6 +13,8 @@ const mockSetSelectedLlm = jest.fn();
 let mockIsEditMode = false;
 let mockDeploymentType = "agent";
 let mockDeploymentName = "";
+let mockIsDeploymentNameValid = false;
+let mockHasDeploymentNameFormatError = false;
 let mockDeploymentDescription = "";
 let mockSelectedLlm = "";
 let mockSelectedInstance: { id: string } | null = { id: "inst-1" };
@@ -26,6 +28,8 @@ jest.mock("../contexts/deployment-stepper-context", () => ({
     setDeploymentType: mockSetDeploymentType,
     deploymentName: mockDeploymentName,
     setDeploymentName: mockSetDeploymentName,
+    isDeploymentNameValid: mockIsDeploymentNameValid,
+    hasDeploymentNameFormatError: mockHasDeploymentNameFormatError,
     deploymentDescription: mockDeploymentDescription,
     setDeploymentDescription: mockSetDeploymentDescription,
     selectedLlm: mockSelectedLlm,
@@ -61,6 +65,8 @@ beforeEach(() => {
   mockIsEditMode = false;
   mockDeploymentType = "agent";
   mockDeploymentName = "";
+  mockIsDeploymentNameValid = false;
+  mockHasDeploymentNameFormatError = false;
   mockDeploymentDescription = "";
   mockSelectedLlm = "";
   mockSelectedInstance = { id: "inst-1" };
@@ -91,7 +97,7 @@ describe("Basic rendering", () => {
 
   it("renders required field indicators", () => {
     render(<StepType />);
-    expect(screen.getByText("Agent Name")).toBeInTheDocument();
+    expect(screen.getByText("Name")).toBeInTheDocument();
     expect(screen.getByText("Model")).toBeInTheDocument();
   });
 
@@ -123,25 +129,39 @@ describe("Name input", () => {
     expect(mockSetDeploymentName).toHaveBeenCalled();
   });
 
-  it("is disabled in edit mode", () => {
+  it("can be changed in edit mode", () => {
     mockIsEditMode = true;
     render(<StepType />);
-    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toBeDisabled();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toBeEnabled();
   });
 
-  it("shows helper text in edit mode", () => {
-    mockIsEditMode = true;
+  it("shows validation error when display name format error is active", () => {
+    mockDeploymentName = "";
+    mockHasDeploymentNameFormatError = true;
     render(<StepType />);
-    expect(
-      screen.getByText("Name cannot be changed after creation."),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Name is required.")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
+      "aria-invalid",
+      "true",
+    );
   });
 
-  it("does not show helper text in create mode", () => {
+  it("does not show available state when format error is active", () => {
+    mockDeploymentName = "";
+    mockHasDeploymentNameFormatError = true;
+
     render(<StepType />);
-    expect(
-      screen.queryByText("Name cannot be changed after creation."),
-    ).not.toBeInTheDocument();
+
+    expect(screen.getByText("Name is required.")).toBeInTheDocument();
+  });
+
+  it("does not show validation error for empty name", () => {
+    render(<StepType />);
+    expect(screen.queryByText("Name is required.")).not.toBeInTheDocument();
+    expect(screen.getByPlaceholderText("e.g., Sales Bot")).toHaveAttribute(
+      "aria-invalid",
+      "false",
+    );
   });
 });
 

@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -28,6 +29,7 @@ export default function FileRendererComponent({
   index: number;
   isShiftPressed?: boolean;
 }) {
+  const { t } = useTranslation();
   const type = file.path.split(".").pop() ?? "";
 
   const [openRename, setOpenRename] = useState(false);
@@ -51,7 +53,7 @@ export default function FileRendererComponent({
 
   return (
     <ShadTooltip
-      content={file.disabled ? "Type not supported by component" : ""}
+      content={file.disabled ? t("fileManager.typeNotSupported") : ""}
       side="bottom"
       align="start"
     >

@@ -20,11 +20,13 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, ClassVar
+from urllib.parse import urlparse
 
 from ibm_cloud_sdk_core.authenticators import IAMAuthenticator, MCSPAuthenticator
 from ibm_watsonx_orchestrate_core.types.connections import KeyValueConnectionCredentials
 from lfx.services.adapters.deployment.exceptions import AuthSchemeError, CredentialResolutionError
 from lfx.services.adapters.deployment.schema import EnvVarSource, EnvVarValueSpec, IdLike
+from lfx.utils.secrets import secret_value_to_str
 
 from langflow.services.adapters.deployment.context import DeploymentProviderIDContext
 from langflow.services.adapters.deployment.watsonx_orchestrate.constants import WxOAuthURL
@@ -154,10 +156,16 @@ def set_request_context_provider_clients(*, provider_id: UUID, user_id: UUID | s
 
 
 def get_authenticator(instance_url: str, api_key: str) -> IAMAuthenticator | MCSPAuthenticator:
-    """Return the appropriate authenticator for the Watsonx Orchestrate API."""
-    if ".cloud.ibm.com" in instance_url:
+    """Return the appropriate authenticator for the Watsonx Orchestrate API.
+
+    Scheme selection is driven by the *hostname* of ``instance_url`` — never by a
+    raw substring match against the full URL string, which would let a URL like
+    ``https://evil.example.com/.cloud.ibm.com`` bypass the branching intent.
+    """
+    hostname = (urlparse(instance_url).hostname or "").lower()
+    if hostname == "cloud.ibm.com" or hostname.endswith(".cloud.ibm.com"):
         authenticator = IAMAuthenticator(apikey=api_key, url=WxOAuthURL.IBM_IAM.value)
-    elif ".ibm.com" in instance_url:
+    elif hostname == "ibm.com" or hostname.endswith(".ibm.com"):
         authenticator = MCSPAuthenticator(apikey=api_key, url=WxOAuthURL.MCSP.value)
     else:
         msg = f"Could not determine authentication scheme for instance URL: {instance_url}"
@@ -290,6 +298,7 @@ async def resolve_variable_value(
             field="value",
             session=db,
         )
+        value = secret_value_to_str(value)
         if value is not None:
             return value
     except CredentialResolutionError:

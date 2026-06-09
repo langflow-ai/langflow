@@ -25,7 +25,10 @@ let mockAttachmentsData: {
     version_number: number;
     attached_at: string | null;
     provider_snapshot_id: string | null;
-    provider_data: { app_ids?: string[]; tool_name?: string | null } | null;
+    provider_data: {
+      app_ids?: string[];
+      tool_display_name?: string | null;
+    } | null;
   }>;
 } | null = null;
 let mockIsFetchingAttachments = false;
@@ -68,12 +71,15 @@ import DeploymentDetailsModal from "../components/deployment-details-modal/deplo
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   id: "dep-1",
   provider_id: "prov-1",
-  name: "My Agent",
   description: "A sales agent",
   type: "agent",
   created_at: "2025-05-01T00:00:00Z",
   updated_at: "2025-06-10T00:00:00Z",
-  provider_data: { llm: "granite-13b-chat" },
+  provider_data: {
+    display_name: "My Agent",
+    name: "my_agent",
+    llm: "granite-13b-chat",
+  },
   resource_key: "rk-1",
   attached_count: 2,
   ...overrides,
@@ -111,7 +117,10 @@ beforeEach(() => {
         version_number: 3,
         attached_at: "2025-06-01T00:00:00Z",
         provider_snapshot_id: "snap-1",
-        provider_data: { app_ids: ["cfg-1", "cfg-2"], tool_name: "sales_tool" },
+        provider_data: {
+          app_ids: ["cfg-1", "cfg-2"],
+          tool_display_name: "Sales Tool",
+        },
       },
     ],
   };
@@ -158,7 +167,7 @@ describe("Info grid rendering", () => {
     expect(screen.getByText("agent")).toBeInTheDocument();
   });
 
-  it("shows deployment name", () => {
+  it("shows deployment display name", () => {
     renderModal();
     expect(screen.getByText("My Agent")).toBeInTheDocument();
   });
@@ -195,12 +204,12 @@ describe("Flow list with versions and connections", () => {
     expect(screen.getByText("v3")).toBeInTheDocument();
   });
 
-  it("shows tool name from provider_data", () => {
+  it("shows tool display name from provider_data", () => {
     renderModal();
-    expect(screen.getByText("sales_tool")).toBeInTheDocument();
+    expect(screen.getByText("Sales Tool")).toBeInTheDocument();
   });
 
-  it("does not render tool section when tool_name is null", () => {
+  it("does not render tool section when tool_display_name is null", () => {
     mockAttachmentsData = {
       flow_versions: [
         {

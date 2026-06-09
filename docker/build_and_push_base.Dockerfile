@@ -49,6 +49,12 @@ COPY ./src/lfx/README.md /app/src/lfx/README.md
 # Copy sdk metadata files since it's a workspace member
 COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
 COPY ./src/sdk/README.md /app/src/sdk/README.md
+# Workspace bundles (LE-1023 pilot+): every directory under ``src/bundles``
+# is a uv workspace member, so each bundle's pyproject.toml must be present
+# for ``uv sync --no-install-project`` to resolve the workspace.  Copy the
+# whole tree once rather than enumerating each bundle, so a new bundle does
+# not require a Dockerfile edit.
+COPY ./src/bundles /app/src/bundles
 
 # Install the project's dependencies using the lockfile and settings
 # We need to mount the root uv.lock and pyproject.toml to build the base with uv because we're still using uv workspaces
@@ -68,6 +74,13 @@ RUN npm install \
     && rm -rf /tmp/src/frontend
 
 WORKDIR /app/src/backend/base
+# langflow-base ships the core framework only.  The extension bundles
+# (lfx-duckduckgo, lfx-arxiv, lfx-ibm, lfx-docling) are intentionally NOT
+# installed in this image: they are dependencies of the full ``langflow``
+# distribution, not of the lean ``langflow-base`` core, and we keep that
+# boundary at the image layer too.  Consumers who want those components
+# should use the ``langflow`` image, or ``pip install`` the bundle (e.g.
+# ``lfx-duckduckgo``) alongside langflow-base.
 RUN --mount=type=cache,target=/root/.cache/uv \
     RUSTFLAGS='--cfg reqwest_unstable' \
     uv sync --frozen --no-dev --no-editable --extra postgresql

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import { useUtilityStore } from "@/stores/utilityStore";
@@ -89,6 +90,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
   undefined,
   IGetBuilds
 > = (options?) => {
+  const { t } = useTranslation();
   const { mutate } = UseRequestProcessor();
   const webhookPollingInterval = useUtilityStore(
     (state) => state.webhookPollingInterval,
@@ -115,6 +117,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
       requestInProgressRef.current[payload.flowId] = true;
       const config = {};
       config["params"] = { flow_id: payload.flowId };
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const res = await api.get<any>(`${getURL("BUILDS")}`, config);
 
       if (currentFlow) {
@@ -154,7 +157,7 @@ export const useGetBuildsMutation: useMutationFunctionType<
               const errorMessage = nodeBuild?.[0]?.params || "Unknown error";
               if (errorMessage) {
                 setErrorData({
-                  title: "Last build failed",
+                  title: t("errors.lastBuildFailed"),
                   list: [errorMessage],
                 });
                 errorDisplayCountRef.current = MAX_ERROR_DISPLAY_COUNT;
