@@ -63,9 +63,12 @@ export function AssistantQuestion({
       }}
     >
       <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-        {suggestions.map((s) => (
+        {/* LLM-produced suggestions can repeat, so the text alone is not a
+            safe key; the index disambiguates duplicates and the text keeps
+            chip state from leaking across different suggestion sets. */}
+        {suggestions.map((s, i) => (
           <Chip
-            key={s}
+            key={`${i}-${s}`}
             label={s}
             disabled={disabled}
             onClick={() => onPick(s)}

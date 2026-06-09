@@ -236,6 +236,27 @@ describe("AssistantQuestion", () => {
     fireEvent.click(screen.getByRole("button", { name: "A" }));
     expect(onPick).not.toHaveBeenCalled();
   });
+
+  it("renders duplicate suggestions without React key collisions", () => {
+    // LLM-produced suggestion arrays can repeat a string; every chip must
+    // still render, with no duplicate-key warning from React.
+    const errorSpy = jest.spyOn(console, "error").mockImplementation(() => {});
+    try {
+      render(
+        <AssistantQuestion
+          suggestions={["Yes", "No", "Yes"]}
+          onPick={jest.fn()}
+        />,
+      );
+      expect(screen.getAllByRole("button")).toHaveLength(3);
+      const keyWarnings = errorSpy.mock.calls.filter((args) =>
+        String(args[0]).includes("same key"),
+      );
+      expect(keyWarnings).toHaveLength(0);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
 });
 
 describe("SystemBlock", () => {
