@@ -15,6 +15,7 @@ from fastapi import status
 from httpx import AsyncClient
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
+from sqlalchemy import inspect as sa_inspect
 from sqlmodel import select
 
 # A non-existent project id is fine for the stubbed routes: they short-circuit
@@ -177,9 +178,10 @@ async def test_projects_are_scoped_to_the_owner(client: AsyncClient, logged_in_h
             await client.delete(f"api/v1/lothal/projects/{foreign_id}", headers=logged_in_headers)
         ).status_code == status.HTTP_404_NOT_FOUND
     finally:
-        # Remove the seeded row before user_two's teardown deletes the user
-        # (the FK has no ON DELETE CASCADE). Look up by the UUID primary key so
-        # the match is type-exact.
+        # The user_id FK now cascades at the DB level, but SQLite test DBs
+        # don't enforce FKs at all — clean the seeded row up explicitly so the
+        # test leaves no orphans behind on any engine. Look up by the UUID
+        # primary key so the match is type-exact.
         async with session_scope() as session:
             leftover = await session.get(Project, foreign_pk)
             if leftover:
@@ -210,6 +212,37 @@ async def test_delete_project_cascades_to_messages_and_code_files(client: AsyncC
         code_files = (await session.exec(select(CodeFile).where(CodeFile.project_id == project_pk))).all()
         assert messages == []
         assert code_files == []
+
+
+async def test_lothal_fks_cascade_on_delete(client: AsyncClient):  # noqa: ARG001 — client boots the test DB
+    # FK *enforcement* differs by engine (SQLite test DBs don't enforce FKs at
+    # all), so pin the schema itself: every lothal FK must carry ON DELETE
+    # CASCADE. Deleting a user must never be blocked by — or orphan — lothal
+    # rows, and project deletes that bypass the ORM must still take messages
+    # and code files with them.
+    expected = {
+        ("lothal_project", "user_id", "user"),
+        ("lothal_message", "project_id", "lothal_project"),
+        ("lothal_code_file", "project_id", "lothal_project"),
+    }
+
+    def _cascading_fks(sync_session) -> set[tuple[str, str, str]]:
+        inspector = sa_inspect(sync_session.get_bind())
+        found = set()
+        for table, column, referred in expected:
+            for fk in inspector.get_foreign_keys(table):
+                if (
+                    column in fk["constrained_columns"]
+                    and fk["referred_table"] == referred
+                    and (fk["options"].get("ondelete") or "").upper() == "CASCADE"
+                ):
+                    found.add((table, column, referred))
+        return found
+
+    async with session_scope() as session:
+        found = await session.run_sync(_cascading_fks)
+
+    assert found == expected
 
 
 async def test_malformed_diagram_layout_reads_as_null(client: AsyncClient, logged_in_headers: dict):

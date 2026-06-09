@@ -2,7 +2,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from uuid import uuid4
 
-from sqlalchemy import Text
+from sqlalchemy import ForeignKey, Text, Uuid
 from sqlmodel import JSON, Column, Field, Relationship, SQLModel
 
 from langflow.schema.serialize import UUIDstr
@@ -27,7 +27,11 @@ class Project(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "lothal_project"
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
-    user_id: UUIDstr = Field(index=True, foreign_key="user.id")
+    # DB-level CASCADE so deleting a user can't be blocked by (or orphan) their
+    # lothal rows, no matter which code path issues the DELETE.
+    user_id: UUIDstr = Field(
+        sa_column=Column(Uuid(), ForeignKey("user.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
     name: str = Field(index=True)
     phase: str = Field(default=ProjectPhase.CLARIFICATION)
     # Synthesised PRD; null until clarification completes. Primary LLM context source.
@@ -55,7 +59,10 @@ class Message(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "lothal_message"
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
-    project_id: UUIDstr = Field(index=True, foreign_key="lothal_project.id")
+    # DB-level CASCADE backs the ORM cascade for deletes that bypass the ORM.
+    project_id: UUIDstr = Field(
+        sa_column=Column(Uuid(), ForeignKey("lothal_project.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
     role: str = Field()
     content: str = Field(sa_column=Column(Text, nullable=False))
     # Clarification chips; [] for USER messages and non-clarification replies.
@@ -72,7 +79,10 @@ class CodeFile(SQLModel, table=True):  # type: ignore[call-arg]
     __tablename__ = "lothal_code_file"
 
     id: UUIDstr = Field(default_factory=uuid4, primary_key=True)
-    project_id: UUIDstr = Field(index=True, foreign_key="lothal_project.id")
+    # DB-level CASCADE backs the ORM cascade for deletes that bypass the ORM.
+    project_id: UUIDstr = Field(
+        sa_column=Column(Uuid(), ForeignKey("lothal_project.id", ondelete="CASCADE"), nullable=False, index=True)
+    )
     path: str = Field()
     content: str = Field(sa_column=Column(Text, nullable=False))
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
