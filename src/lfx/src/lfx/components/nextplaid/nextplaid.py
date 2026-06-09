@@ -122,6 +122,17 @@ class NextPlaidVectorStoreComponent(LCVectorStoreComponent):
                 documents.append(_input)
 
         if documents:
+            import hashlib
+
+            for doc in documents:
+                if doc.id is None:
+                    # Use document_id from metadata if present, else stable hash of content
+                    doc.id = (
+                        doc.metadata.get("document_id")
+                        or doc.metadata.get("doc_id")
+                        or doc.metadata.get("did")
+                        or hashlib.sha256((doc.page_content or "").strip().encode("utf-8")).hexdigest()
+                    )
             nextplaid_store.add_documents(documents)
 
         return nextplaid_store
