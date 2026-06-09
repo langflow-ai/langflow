@@ -40,7 +40,7 @@ class PublicFlowValidationError(CustomComponentValidationError):
 # unauthenticated public path — authenticated builds are unaffected.
 CODE_EXECUTION_COMPONENT_TYPES: frozenset[str] = frozenset(
     {
-        "PythonCodeStructuredTool",  # legacy raw exec() (now a disabled stub)
+        "PythonCodeStructuredTool",  # legacy raw exec() (component removed; type retained to block stored code)
         "PythonREPLComponent",  # "Python Interpreter"
         "PythonREPLTool",  # legacy "Python REPL" tool
         "Smart Transform",  # LambdaFilterComponent — eval()s a generated lambda
