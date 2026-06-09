@@ -18,7 +18,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "providers"]
 # depends on (``lfx-bundles[all]``) so ``pip install langflow`` stays
 # functionally identical to today.
 dependencies = [
-    "lfx>=1.10.0,<2.0.0",
+    "lfx>=1.11.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
