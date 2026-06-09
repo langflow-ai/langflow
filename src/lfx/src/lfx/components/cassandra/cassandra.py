@@ -186,7 +186,6 @@ class CassandraVectorStoreComponent(LCVectorStoreComponent):
                 table_name=self.table_name,
                 keyspace=self.keyspace,
                 ttl_seconds=self.ttl_seconds or None,
-                batch_size=self.batch_size,
                 body_index_options=body_index_options,
             )
         else:
