@@ -139,8 +139,11 @@ chmod 600 .env
 ```bash
 cd /opt/lothal
 docker compose -f docker-compose.prod.yml pull
-# Run DB migrations before starting the new backend:
-docker compose -f docker-compose.prod.yml run --rm backend python -m langflow migration --fix
+# Run DB migrations before starting the new backend. `migration` (no --fix) applies
+# `alembic upgrade head` non-destructively, then verifies. Do NOT pass --fix: it is
+# destructive ("delete all data to fix migrations") and interactive (prompts for
+# confirmation), so it hangs in CI.
+docker compose -f docker-compose.prod.yml run --rm backend python -m langflow migration
 docker compose -f docker-compose.prod.yml up -d
 # Health check:
 curl -fsS https://lothal.app/health && echo " OK"

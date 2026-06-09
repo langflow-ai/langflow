@@ -1,0 +1,170 @@
+# Lothal production deploy — manual dispatch (story C.3).
+#
+# Build backend + frontend images from the chosen ref, tag them with the short
+# git SHA, push to GHCR, then SSH to the RackNerd box and roll the stack:
+#   pull → run alembic migrations → `docker compose up -d` → health-check /health.
+#
+# Pairs with docker-compose.prod.yml (repo root) and deploy/RUNBOOK.md. The box's
+# /opt/lothal/.env stays the single source of prod config; this workflow only
+# overrides the two image refs (BACKEND_IMAGE / FRONTEND_IMAGE) with SHA-tagged
+# images. GHCR auth (push here, pull on the box) uses the built-in GITHUB_TOKEN —
+# no PAT. SSH access uses the SSH_HOST / SSH_USER / SSH_KEY secrets (see RUNBOOK).
+name: Deploy Lothal (manual)
+run-name: Deploy ${{ inputs.ref }} to RackNerd by @${{ github.actor }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "Git ref (branch, tag, or SHA) to build and deploy."
+        required: true
+        type: string
+        default: dev
+
+concurrency:
+  group: deploy-lothal
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: realbytecode/lothal-backend
+  FRONTEND_IMAGE_NAME: realbytecode/lothal-frontend
+
+jobs:
+  build:
+    name: Build & push images
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      sha: ${{ steps.refs.outputs.sha }}
+      backend_image: ${{ steps.refs.outputs.backend_image }}
+      frontend_image: ${{ steps.refs.outputs.frontend_image }}
+    steps:
+      - name: Check out ${{ inputs.ref }}
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref }}
+
+      - name: Compute image refs
+        id: refs
+        run: |
+          sha="$(git rev-parse --short=12 HEAD)"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "backend_image=${REGISTRY}/${BACKEND_IMAGE_NAME}:${sha}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${REGISTRY}/${FRONTEND_IMAGE_NAME}:${sha}" >> "$GITHUB_OUTPUT"
+          echo "Building from $(git rev-parse HEAD) -> sha tag ${sha}"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # The RackNerd box is x86_64 and ubuntu-latest runners are amd64, so a single
+      # linux/amd64 build is all that's needed — no QEMU, no multi-arch manifest.
+      - name: Build & push backend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/build_and_push_backend.Dockerfile
+          push: true
+          platforms: linux/amd64
+          provenance: false
+          tags: |
+            ${{ steps.refs.outputs.backend_image }}
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=lothal-backend
+          cache-to: type=gha,mode=max,scope=lothal-backend
+
+      - name: Build & push frontend
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./docker/frontend/build_and_push_frontend.Dockerfile
+          push: true
+          platforms: linux/amd64
+          provenance: false
+          tags: |
+            ${{ steps.refs.outputs.frontend_image }}
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          cache-from: type=gha,scope=lothal-frontend
+          cache-to: type=gha,mode=max,scope=lothal-frontend
+
+  deploy:
+    name: Deploy to RackNerd
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - name: SSH → pull, migrate, up, health-check
+        uses: appleboy/ssh-action@v1
+        env:
+          BACKEND_IMAGE: ${{ needs.build.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ needs.build.outputs.frontend_image }}
+          GHCR_USER: ${{ github.actor }}
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          envs: BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_USER,GHCR_TOKEN
+          command_timeout: 20m
+          script_stop: true
+          script: |
+            set -eu
+            cd /opt/lothal
+
+            # GHCR pull auth: the images are private under ghcr.io/realbytecode/*.
+            # The deploy job's GITHUB_TOKEN (packages: read) is valid for this run.
+            echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
+
+            # Override only the image refs; everything else comes from /opt/lothal/.env,
+            # which `docker compose` auto-loads (shell env wins over .env on interpolation).
+            export BACKEND_IMAGE FRONTEND_IMAGE
+            echo "Deploying:"
+            echo "  backend  = $BACKEND_IMAGE"
+            echo "  frontend = $FRONTEND_IMAGE"
+
+            docker compose -f docker-compose.prod.yml pull
+
+            # Apply DB migrations (non-destructive: `migration` runs `alembic upgrade head`
+            # via initialize_services, then a migration test — NO --fix, which is destructive
+            # and interactive). Fail the deploy here rather than crash-loop a new backend.
+            docker compose -f docker-compose.prod.yml run --rm backend python -m langflow migration
+
+            docker compose -f docker-compose.prod.yml up -d
+
+            # Health-check the published frontend port; its nginx proxies /health -> backend,
+            # so a 200 proves frontend + backend + DB are all up. Backend start_period is 90s.
+            ok=
+            for i in $(seq 1 30); do
+              code="$(curl -fsS -o /dev/null -w '%{http_code}' http://127.0.0.1:8080/health 2>/dev/null || true)"
+              if [ "$code" = "200" ]; then ok=1; echo "health OK after ${i} attempt(s)"; break; fi
+              echo "waiting for /health (attempt ${i}/30, got '${code}')"
+              sleep 5
+            done
+            if [ -z "$ok" ]; then
+              echo "::error::health check failed"
+              docker compose -f docker-compose.prod.yml ps
+              docker compose -f docker-compose.prod.yml logs --tail=120 backend
+              docker logout ghcr.io || true
+              exit 1
+            fi
+
+            docker image prune -f
+            docker logout ghcr.io || true
+
+      - name: Public health & /lothal route check
+        run: |
+          set -eu
+          curl -fsS https://lothal.app/health && echo "  -> https://lothal.app/health OK"
+          code="$(curl -fsS -o /dev/null -w '%{http_code}' https://lothal.app/lothal)"
+          echo "https://lothal.app/lothal -> HTTP ${code}"
