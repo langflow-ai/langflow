@@ -1,6 +1,7 @@
-from unittest.mock import patch
+import os
 
 import pytest
+from langchain_core.tools import ToolException
 from langflow.components.tools.python_code_structured_tool import PythonCodeStructuredTool
 
 from tests.base import ComponentTestBaseWithoutClient
@@ -85,24 +86,38 @@ class TestPythonCodeStructuredTool(ComponentTestBaseWithoutClient):
         assert hasattr(component, "outputs")
         assert len(component.outputs) > 0
 
-    @pytest.mark.asyncio
-    async def test_build_tool_method_exists(self, component_class, default_kwargs):
-        """Test that build_tool method exists and can be called."""
+    async def test_build_tool_returns_non_executable_stub(self, component_class, default_kwargs):
+        """build_tool returns a tool that refuses to run instead of exec()'ing tool_code.
+
+        Security regression for report H1-3754930: this legacy component used to
+        ``exec()`` the ``tool_code`` field at build time, which was reachable as
+        an unauthenticated RCE through public flows.
+        """
         component = await self.component_setup(component_class, default_kwargs)
-        # Set up required attributes for build_tool
-        component.tool_code = "def test_func(): return 42"
-        component.tool_name = "test_tool"
-        component.tool_description = "Test description"
-        component.return_direct = False
-        component.tool_function = "test_func"
-        component.global_variables = []
+        tool = await component.build_tool()
 
-        # Mock the internal parsing methods
-        with patch.object(component, "_parse_code") as mock_parse:
-            mock_parse.return_value = ({}, [{"name": "test_func", "args": []}])
+        # The tool exists but is inert: invoking it raises a clear deprecation error.
+        with pytest.raises(ToolException) as exc_info:
+            tool.func()
 
-            # The method should exist and be callable
-            assert hasattr(component, "build_tool")
-            assert callable(component.build_tool)
+        message = str(exc_info.value)
+        assert "disabled" in message.lower()
+        assert "PythonREPLComponent" in message
 
-            # We won't test the full execution due to complex setup requirements
+    async def test_build_tool_does_not_execute_tool_code(self, component_class, default_kwargs):
+        """Neither building nor invoking the tool may execute attacker-supplied tool_code."""
+        sentinel = "PCT_SHOULD_NEVER_RUN"
+        assert sentinel not in os.environ
+
+        component = await self.component_setup(component_class, default_kwargs)
+        # Code that would set an env var if it were ever exec()'d.
+        component.tool_code = f"import os\nos.environ['{sentinel}'] = 'pwned'\ndef test_func():\n    return 42"
+
+        tool = await component.build_tool()
+        # Building must not have executed the payload.
+        assert sentinel not in os.environ
+
+        # Invoking must refuse rather than execute the payload.
+        with pytest.raises(ToolException):
+            tool.func()
+        assert sentinel not in os.environ

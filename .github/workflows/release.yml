@@ -646,12 +646,16 @@ jobs:
           CURRENT_CONSTRAINT=$(grep -E '^\s*"lfx' pyproject.toml | head -1)
           echo "Current constraint: $CURRENT_CONSTRAINT"
 
-          # Extract the major.minor version (e.g., "0.3" from "~=0.3.0")
-          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/.*[~>=<]+([0-9]+\.[0-9]+).*/\1/')
-          NEXT_MAJOR=$((${MAJOR_MINOR%.*} + 1))
+          # Extract the major.minor version (e.g., "1.10" from "~=1.10.0", or from the
+          # lower bound of the range form ">=1.10.0,<1.11.dev0"). Anchor to the FIRST
+          # version in the line so a greedy match can't pick up the range's upper bound.
+          MAJOR_MINOR=$(echo "$CURRENT_CONSTRAINT" | sed -E 's/^[^0-9]*([0-9]+\.[0-9]+).*/\1/')
+          MAJOR=${MAJOR_MINOR%.*}
+          MINOR=${MAJOR_MINOR#*.}
+          NEXT_MINOR=$((MINOR + 1))
 
-          # Create new constraint: >=LFX_VERSION,<NEXT_MAJOR.dev0
-          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$NEXT_MAJOR.dev0\""
+          # Create new constraint: >=LFX_VERSION,<MAJOR.(MINOR+1).dev0
+          NEW_CONSTRAINT="\"lfx>=$LFX_VERSION,<$MAJOR.$NEXT_MINOR.dev0\""
 
           echo "New constraint: $NEW_CONSTRAINT"
 
@@ -884,6 +888,23 @@ jobs:
           prune-cache: false
       - name: Install the project
         run: uv sync
+      - name: Relax bundle lfx floor for pre-release
+        if: ${{ inputs.pre_release }}
+        run: |
+          # Bundles floor lfx at the release line (e.g. lfx>=1.10.0). A pre-release
+          # such as 1.10.0rc0 sorts BELOW 1.10.0 under PEP 440, so it fails that
+          # floor and the cross-platform install test cannot resolve. Mirror what
+          # build-base / build-main / build-lfx already do for pre-release: rewrite
+          # the floor to the exact pre-release lfx version, preserving the bundle's
+          # wide <2.0.0 BUNDLE_API cap. Stable source stays at >=1.10.0 -- only the
+          # RC wheels are relaxed, at build time.
+          LFX_VERSION="${{ needs.determine-lfx-version.outputs.version }}"
+          echo "Relaxing bundle lfx floor to pre-release version: $LFX_VERSION"
+          for pyproject in src/bundles/*/pyproject.toml; do
+            sed -i.bak -E "s|\"lfx>=[^\"]*\"|\"lfx>=${LFX_VERSION},<2.0.0\"|" "$pyproject"
+            rm -f "${pyproject}.bak"
+            grep -E '"lfx>=' "$pyproject" | sed "s|^|  ${pyproject}: |"
+          done
       - name: Build bundle wheels
         id: build
         run: |
@@ -991,10 +1012,25 @@ jobs:
             echo "No bundle wheels to publish."
             exit 0
           fi
+          failed=0
           for wheel in "${wheels[@]}"; do
             echo "Publishing $wheel"
-            uv publish "$wheel"
+            # Tolerate "already exists" so reruns -- or a bundle whose version is
+            # unchanged and already on PyPI -- do not fail the job. Matches the
+            # duplicate-tolerant publish in release_bundles.yml.
+            if ! err=$(uv publish "$wheel" 2>&1); then
+              echo "$err"
+              if echo "$err" | grep -qiE 'already exists|file already exists|HTTP 400|duplicate'; then
+                echo "Skipping $wheel: already published."
+              else
+                echo "Publish failed for $wheel"
+                failed=1
+              fi
+            fi
           done
+          if [ "$failed" = "1" ]; then
+            exit 1
+          fi
 
   publish-main:
     name: Publish Langflow Main to PyPI

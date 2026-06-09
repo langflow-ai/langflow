@@ -1,0 +1,104 @@
+---
+title: Knowledge Base
+slug: /knowledge-base
+---
+
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import PartialParams from '@site/docs/_partial-hidden-params.mdx';
+import PartialKbSummary from '@site/docs/_partial-kb-summary.mdx';
+import PartialLegacy from '@site/docs/_partial-legacy.mdx';
+
+<PartialKbSummary />
+
+The **Knowledge Base** component reads from and writes to knowledge bases using a mode selector.
+
+Select **Ingest** mode to embed and index data into a knowledge base, or **Retrieve** mode to search an existing knowledge base using semantic search.
+
+The output for both modes is a [`Table`](/data-types#table) containing the results.
+
+## Knowledge Base parameters
+
+<PartialParams />
+
+The following parameters are shared across both modes.
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| mode | Mode | Input parameter. Tab selector that switches the component between **Ingest** and **Retrieve** modes. |
+| knowledge_base | Knowledge | Input parameter. Select the knowledge base to ingest data into or retrieve data from. |
+
+<Tabs>
+<TabItem value="ingest" label="Ingest mode">
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| input_df | Input | Input parameter. Table with all original columns (already chunked or processed). Accepts Message, Data, or DataFrame. |
+| column_config | Column Configuration | Input parameter. Configure column behavior. Use the **Vectorize** flag to create embeddings for a column, and the **Identifier** flag to use a column as a unique identifier. |
+| api_key | Embedding Provider API Key | Input parameter. Optional. Overrides the globally configured API key for the embedding provider. Leave blank to use the pre-configured key. |
+| chunk_size | Chunk Size | Input parameter. Batch size for processing embeddings. Default: `1000`. |
+| allow_duplicates | Allow Duplicates | Input parameter. If enabled, allows duplicate rows in the knowledge base. Default: Disabled (false). |
+| metadata_json | Metadata | Input parameter. Optional JSON object of user metadata applied to every chunk in this run (for example, `{"tag": "invoice", "year": "2026"}`). This metadata is compatible with the **Metadata Filter** parameter in Retrieve mode. Malformed JSON is ignored with a warning. |
+
+</TabItem>
+<TabItem value="retrieve" label="Retrieve mode">
+
+| Name | Display Name | Info |
+|------|--------------|------|
+| search_query | Search Query | Input parameter. Optional search query to filter knowledge base data using semantic similarity. If omitted, the top results are returned. |
+| api_key | Embedding Provider API Key | Input parameter. Optional API key for the embedding provider to override a previously-provided key. The embedding provider and model are chosen when you create a knowledge base. |
+| top_k | Top K Results | Input parameter. Number of search results to return. Default: `5`. |
+| include_metadata | Include Metadata | Input parameter. Whether to include all metadata in the output. If enabled, each output row includes all metadata and content. If disabled, only the content is returned. Default: Enabled (true). |
+| include_embeddings | Include Embeddings | Input parameter. Whether to include raw embedding vectors in the output. Only applicable when **Include Metadata** is enabled. Default: Disabled (false). |
+| metadata_filter | Metadata Filter | Input parameter. Optional JSON object of key/value pairs to filter results by user metadata (for example, `{"tag": "invoice"}` or `{"tag": ["invoice", "audit"]}` for OR-of-values matching). Backends without native filtering apply the match client-side after retrieval. |
+
+</TabItem>
+</Tabs>
+
+## Use the Knowledge Base component in a flow
+
+<Tabs>
+<TabItem value="ingest" label="Ingest mode">
+
+After you create a knowledge base, you can use the **Knowledge Base** component in **Ingest** mode to populate it from a DataFrame in your flow.
+
+1. Add a **Knowledge Base** component to your flow.
+
+2. In the **Mode** tab, select **Ingest**.
+
+3. In the **Knowledge** field, select the knowledge base you want to ingest into, or create a new one.
+
+4. Connect a source component, such as a [**Read File** component](/read-file) or [**JSON Operations** component](/data-operations) to the **Input** handle to provide the DataFrame to embed.
+
+5. In the **Column Configuration** table, configure each column:
+   - Enable **Vectorize** for columns whose text should be embedded for semantic search.
+   - Enable **Identifier** for columns that uniquely identify each row (used for duplicate detection).
+
+6. Click <Icon name="Play" aria-hidden="true"/> **Run component** to embed and index the data into your knowledge base.
+
+</TabItem>
+<TabItem value="retrieve" label="Retrieve mode">
+
+After you create and load data to a [knowledge base](/knowledge), you can use the **Knowledge Base** component in **Retrieve** mode to search it using semantic similarity.
+
+1. Add a **Knowledge Base** component to your flow.
+
+2. In the **Mode** tab, select **Retrieve**.
+
+3. In the **Knowledge** field, select the knowledge base you want to search, such as the customer sales data knowledge base created in the previous steps.
+
+4. To view the search results as chat messages, connect the **Results** output to a [**Chat Output** component](/chat-input-and-output).
+
+5. In **Search Query**, enter a query that relates to your embedded data.
+
+   For the customer sales data example, enter a product name like `laptop` or `wireless devices`.
+
+6. Click <Icon name="Play" aria-hidden="true"/> **Run component** on the **Knowledge Base** component, and then open the **Playground** to view the output.
+
+</TabItem>
+</Tabs>
+
+## See also
+
+* [Manage vector data](/knowledge)

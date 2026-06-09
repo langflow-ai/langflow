@@ -151,8 +151,13 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
         for component_name in components
     ]
     json_response = response.json()
+    # Bundle/extension components are namespaced "ext:<bundle>:<Class>@<slot>" and are served
+    # from installed bundle packages (e.g. docling, ibm, arxiv), not from BASE_COMPONENTS_PATH,
+    # so they are not backed by files in that directory. Exclude them before comparing against
+    # the on-disk file count.
+    base_component_names = [name for name in all_names if not name.startswith("ext:")]
     # We need to test the custom nodes
-    assert len(all_names) <= len(
+    assert len(base_component_names) <= len(
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["input_output"]

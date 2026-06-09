@@ -1,0 +1,88 @@
+---
+title: File Processing
+slug: /bundles-files-ingestion
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+Langflow integrates with [OpenDsStar](https://github.com/IBM/OpenDsStar) through a bundle of file processing components for ingesting, indexing, and retrieving content from large collections of files in agent workflows.
+
+## Prerequisites
+
+* **OpenDsStar package (File Description Generator only)**: The **File Description Generator** component requires the `OpenDsStar` package and Python 3.11 or later.
+
+    Install the dependency with:
+
+    ```bash
+    uv pip install OpenDsStar
+    ```
+
+    For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+## Use File Processing components in a flow
+
+For an example of using this component, see the **Structured Data Agent** starter template.
+
+## File Processing components
+
+The following sections describe the purpose and configuration options for each component in the **File Processing** bundle.
+
+### File Content Retriever
+
+The **File Content Retriever** component takes file outputs from a [**Read File** component](/read-file) and exposes two tools so an agent can look up file content by path:
+
+- **File Content** (`retrieve_content`): Returns the file content as text ([`Message`](/data-types#message)).
+- **Table** (`retrieve_content_as_dataframe`): Returns the file content as a [`Table`](/data-types#table) for tabular formats (CSV, Excel, Parquet, SON, and TSV).
+
+File maps are built once and cached in memory after the first build. Set **Persistent Directory** to cache maps to disk and preserve them across flow runs.
+
+#### File Content Retriever parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| file_data | Data, Table, or Message | Input parameter. Output from a **Read File** component. |
+| persistent_dir | String | Input parameter. Optional path to a directory for persisting file maps across runs. If empty, maps are kept in memory only. |
+| file_path | String | Input parameter (Tool Mode). The full file path as a string, for example `/path/to/file.csv`. Used by agents to request a specific file's content. |
+
+### File Description Generator
+
+The **File Description Generator** component runs the OpenDsStar Docling-based ingestion pipeline to produce natural-language descriptions of each file.
+
+For each file, the pipeline converts the document with [Docling](https://docling-project.github.io/docling/), shortens the Markdown output, and prompts the connected LLM to write a searchable description. Processing runs in a subprocess to avoid memory pressure when handling large files.
+
+The component outputs a list of [`Data`](/data-types#data) objects, each containing `file_path` and the generated description text. Connect this output to a vector store's **Ingest Data** input to make the files searchable by an agent.
+
+Descriptions are cached in the **Cache Directory** to avoid regenerating them on subsequent runs with the same files.
+
+#### File Description Generator parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| file_data | Data, Table, or Message | Input parameter. Output from a **Read File** component. |
+| llm | LanguageModel | Input parameter. The LLM used to generate file descriptions. |
+| cache_dir | String | Input parameter. Directory for caching Docling analysis and LLM-generated descriptions. Default: `./opendsstar_cache`. |
+| embedding_model | String | Input parameter. Embedding model name used for cache keying. Default: `ibm-granite/granite-embedding-english-r2`. |
+| timeout | Integer | Input parameter. Maximum time in seconds allowed for the ingestion subprocess. Default: `3600`. Increase this value for large file sets. |
+| batch_size | Integer | Input parameter. Number of files to process per LLM batch. Default: `8`. |
+
+### Merge Flows
+
+The **Merge Flows** component connects multiple upstream component outputs and triggers all of them when the component executes.
+
+Use this component to synchronize parallel setup pipelines, such as running the **File Description Generator** ingestion flow and the **File Content Retriever** initialization together before starting an agent.
+
+The component outputs a [`Message`](/data-types#message) that confirms how many upstream flows completed.
+
+#### Merge Flows parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| inputs | Data, Table, Message, Tool, or JSON | Input parameter. Connect any number of upstream component outputs here. All connected components will run when this component executes. |
+
+## See also
+
+* [Code Agents bundle](./bundles-codeagents) — CodeAct Agent and OpenDsStar Agent for analyzing the retrieved file content
+* [OpenDsStar GitHub repository](https://github.com/IBM/OpenDsStar)
+* [Docling documentation](https://docling-project.github.io/docling/)
