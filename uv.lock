@@ -31,6 +31,7 @@ members = [
     "langflow-stepflow",
     "lfx",
     "lfx-arxiv",
+    "lfx-bundles",
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-ibm",
@@ -7405,6 +7406,7 @@ source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
     { name = "lfx-arxiv" },
+    { name = "lfx-bundles" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-ibm" },
@@ -7495,6 +7497,7 @@ requires-dist = [
     { name = "ctransformers", marker = "extra == 'local'", specifier = ">=0.2.10" },
     { name = "langflow-base", extras = ["complete"], editable = "src/backend/base" },
     { name = "lfx-arxiv", editable = "src/bundles/arxiv" },
+    { name = "lfx-bundles", extras = ["all"], editable = "src/bundles/lfx-bundles" },
     { name = "lfx-docling", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["chunking"], marker = "extra == 'docling-chunking'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
@@ -9052,6 +9055,18 @@ requires-dist = [
     { name = "defusedxml", specifier = ">=0.7.1,<1.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
+
+[[package]]
+name = "lfx-bundles"
+version = "1.0.0"
+source = { editable = "src/bundles/lfx-bundles" }
+dependencies = [
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "lfx", editable = "src/lfx" }]
+provides-extras = ["all"]
 
 [[package]]
 name = "lfx-docling"
