@@ -72,6 +72,17 @@ class Message(SQLModel, table=True):  # type: ignore[call-arg]
 
     project: Project | None = Relationship(back_populates="messages")
 
+    def __init__(self, **data) -> None:
+        # Table models skip pydantic validation, so a missing phase would
+        # otherwise surface only as an IntegrityError at flush time — far from
+        # the bug (the column is NOT NULL and has no meaningful static
+        # default; it must mirror the project's phase at send time). Fail at
+        # construction instead. Rows loaded from the DB bypass __init__.
+        if data.get("phase") is None:
+            msg = "Message.phase is required — pass the project's current phase."
+            raise TypeError(msg)
+        super().__init__(**data)
+
 
 class CodeFile(SQLModel, table=True):  # type: ignore[call-arg]
     """One generated source file. Populated during CODE_GENERATION; assembled into a ZIP on download."""

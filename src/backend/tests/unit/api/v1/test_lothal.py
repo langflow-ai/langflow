@@ -8,7 +8,7 @@ endpoint is still a stub and is asserted to return the structured `501`.
 Common to both: every endpoint requires auth and appears in the OpenAPI schema.
 """
 
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
@@ -253,6 +253,16 @@ async def test_delete_project_cascades_to_messages_and_code_files(client: AsyncC
         code_files = (await session.exec(select(CodeFile).where(CodeFile.project_id == project_pk))).all()
         assert messages == []
         assert code_files == []
+
+
+def test_message_requires_phase_at_construction():
+    # SQLModel table models skip pydantic validation, so without the __init__
+    # guard a missing phase only surfaces as an IntegrityError at flush time —
+    # far from the bug. The guard fails at construction instead.
+    with pytest.raises(TypeError, match="phase"):
+        Message(project_id=uuid4(), role="USER", content="hi")
+    with pytest.raises(TypeError, match="phase"):
+        Message(project_id=uuid4(), role="USER", content="hi", phase=None)
 
 
 async def test_lothal_fks_cascade_on_delete(client: AsyncClient):  # noqa: ARG001 — client boots the test DB
