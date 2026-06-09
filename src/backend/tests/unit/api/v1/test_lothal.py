@@ -210,3 +210,32 @@ async def test_delete_project_cascades_to_messages_and_code_files(client: AsyncC
         code_files = (await session.exec(select(CodeFile).where(CodeFile.project_id == project_pk))).all()
         assert messages == []
         assert code_files == []
+
+
+async def test_malformed_diagram_layout_reads_as_null(client: AsyncClient, logged_in_headers: dict):
+    # One corrupted row must never 500 a project read — or, worse, the whole
+    # list. Layouts are seeded straight into the DB: the save endpoint that
+    # will write them (story 3.2) is still a stub.
+    response = await client.post("api/v1/lothal/projects/", json={"name": "Layout"}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_201_CREATED
+    project_pk = UUID(response.json()["id"])
+
+    cases = [
+        ("not json", None),
+        ("   ", None),
+        ("[1, 2]", None),  # valid JSON but not an object
+        ('{"n1": {"x": 1, "y": 2}}', {"n1": {"x": 1, "y": 2}}),
+    ]
+    for raw, expected in cases:
+        async with session_scope() as session:
+            project = await session.get(Project, project_pk)
+            project.diagram_layout = raw
+
+        response = await client.get(f"api/v1/lothal/projects/{project_pk}", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        assert response.json()["diagram_layout"] == expected
+
+        response = await client.get("api/v1/lothal/projects/", headers=logged_in_headers)
+        assert response.status_code == status.HTTP_200_OK
+        listed = next(p for p in response.json() if p["id"] == str(project_pk))
+        assert listed["diagram_layout"] == expected

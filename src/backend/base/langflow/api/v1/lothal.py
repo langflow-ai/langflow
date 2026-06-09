@@ -12,7 +12,6 @@ in `services/auth/utils.py`); an invalid or expired token returns `401`. The
 auth tests accept either status.
 """
 
-import json
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
@@ -66,10 +65,10 @@ def _to_project_read(project: Project) -> ProjectRead:
     """Map the ORM row to the contract shape.
 
     `diagram_layout` is stored as a JSON string of xyflow positions but the
-    contract exposes it as an object, so parse it back here (it is `None` for
-    every B.2 flow — only the diagram stories populate it).
+    contract exposes it as an object; `ProjectRead`'s validator parses it once
+    at the schema boundary (it is `None` for every B.2 flow — only the diagram
+    stories populate it).
     """
-    layout = project.diagram_layout
     return ProjectRead(
         id=project.id,
         user_id=project.user_id,
@@ -77,7 +76,7 @@ def _to_project_read(project: Project) -> ProjectRead:
         phase=project.phase,
         prd_content=project.prd_content,
         diagram_mmd=project.diagram_mmd,
-        diagram_layout=json.loads(layout) if layout else None,
+        diagram_layout=project.diagram_layout,
         created_at=project.created_at,
         updated_at=project.updated_at,
     )
