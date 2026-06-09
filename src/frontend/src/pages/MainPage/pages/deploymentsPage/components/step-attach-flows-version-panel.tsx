@@ -123,7 +123,7 @@ export const VersionPanel = memo(function VersionPanel({
                     }
                   }}
                   className={cn(
-                    "flex w-full items-center gap-4 rounded-xl border p-3 text-left transition-colors",
+                    "flex w-full cursor-pointer items-center gap-4 rounded-xl border p-3 text-left transition-colors",
                     isAttachedVersion && !isRemoved
                       ? "border-accent-blue-foreground bg-accent-blue-muted/40"
                       : isRemoved
