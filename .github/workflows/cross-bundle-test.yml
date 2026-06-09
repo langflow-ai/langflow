@@ -29,6 +29,11 @@ on:
   schedule:
     - cron: "0 6 * * 1" # Monday 06:00 UTC -- exhaustive grid
 
+# Stacked bundle PRs would otherwise queue N-bundles x N-pythons jobs per push.
+concurrency:
+  group: cross-bundle-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   discover:
     name: Discover bundles
@@ -65,9 +70,11 @@ jobs:
       fail-fast: false
       matrix:
         bundle: ${{ fromJson(needs.discover.outputs.bundles) }}
-        # Oldest + latest supported Python; the lfx-minor axis collapses to the
-        # in-repo lfx until the 1.10 line publishes (see header).
-        python-version: ["3.10", "3.13"]
+        # PR runs: oldest + latest supported Python (cost-control smoke).
+        # Scheduled runs: every supported Python (the exhaustive grid).
+        # The lfx-minor axis collapses to the in-repo lfx until the 1.10 line
+        # publishes (see header).
+        python-version: ${{ github.event_name == 'schedule' && fromJson('["3.10", "3.11", "3.12", "3.13", "3.14"]') || fromJson('["3.10", "3.13"]') }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -107,16 +114,24 @@ jobs:
               importlib.import_module(value.split(":", 1)[0])
               print(f"  imported {value}")
 
-          # The manifest-less metapackage must be discoverable by the loader
-          # with no errors (zero providers is fine for an empty skeleton).
+          # The manifest-less metapackage must be discoverable by the loader.
+          # This venv installs the bundle WITHOUT its per-provider extras, so
+          # providers whose modules import their SDK at top level degrade with
+          # `module-import-failed` -- that is the expected graceful-degradation
+          # contract, not a failure. Structural errors (bundle-empty,
+          # path-escape, invalid names, ...) still fail the smoke. A provider
+          # whose every module failed import also reports no components, which
+          # is fine here; the bundle's own tests cover behavior with SDKs.
           if "lfx.bundles" in eps:
               from lfx.extension import load_lfx_bundles_extensions
 
+              EXPECTED_WITHOUT_EXTRAS = {"module-import-failed"}
               results = load_lfx_bundles_extensions()
-              bad = [e.code for r in results for e in r.errors]
-              assert not bad, f"{name}: lfx.bundles discovery errors: {bad}"
+              bad = [e.code for r in results for e in r.errors if e.code not in EXPECTED_WITHOUT_EXTRAS]
+              assert not bad, f"{name}: lfx.bundles structural discovery errors: {bad}"
               providers = sum(1 for r in results if r.bundle)
-              print(f"  lfx.bundles discovery OK ({providers} providers)")
+              degraded = sum(1 for r in results for e in r.errors if e.code in EXPECTED_WITHOUT_EXTRAS)
+              print(f"  lfx.bundles discovery OK ({providers} providers; {degraded} module(s) degraded sans extras)")
           print(f"{name}: contract smoke OK")
           PY
 
