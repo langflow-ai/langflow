@@ -58,6 +58,12 @@ that does not list `str(BUNDLE_API_VERSION)` is rejected at install time with
 | `DataFrame` | `lfx.schema.dataframe` |
 | `Message` | `lfx.schema.message` |
 
+### Lazy-import helper (consumed by bundle ``__init__.py`` files)
+
+| Symbol | Source |
+| --- | --- |
+| `import_mod(attr_name, module_name, package)` | `lfx.utils.lazy_import` (canonical; `lfx.components._importing` re-exports it for backward compatibility) |
+
 ### Manifest contract (consumed by the loader)
 
 | Symbol | Source |
@@ -419,6 +425,13 @@ the deserialize half is covered by
   `version-constraint-unsatisfied` API-version gate by construction (no
   manifest to carry `lfx.compat`); install-time compatibility rides on the
   metapackage's PEP 508 `lfx>=X,<Y` pin instead.
+- **`import_mod` promoted to a stable public home.**  The lazy-import helper
+  that bundle packages call from their `__getattr__`-based `__init__.py`
+  files moved from the internal `lfx.components._importing` to
+  `lfx.utils.lazy_import` and is now part of the BUNDLE_API surface (name,
+  signature, and semantics contract-stable).  `lfx.components._importing`
+  re-exports it unchanged, so existing in-tree and third-party callers are
+  unaffected (additive).
 - **Validator accepts inherited entry-points.**  `validate_extension` no
   longer emits `build-method-missing` for a Component subclass whose base
   is a *derived* Component base (name ends with `Component`, e.g.

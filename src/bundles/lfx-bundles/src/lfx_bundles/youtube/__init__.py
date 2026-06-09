@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from lfx.components._importing import import_mod
+from lfx.utils.lazy_import import import_mod
 
 if TYPE_CHECKING:
     from .channel import YouTubeChannelComponent
