@@ -8,6 +8,14 @@
 // emitting `plain` for anything else. CodeView maps the token types onto theme
 // colors. It is deliberately approximate — correctness of the *render*, not of a
 // real parser.
+//
+// Reviewed 2026-06-09 (code-review finding 7) and kept as a conscious
+// won't-fix: react-syntax-highlighter is already a dependency (four upstream
+// components use it), but the dockyard palette maps exactly onto these five
+// token types, CodeView's hand-built gutter/tab layout doesn't fit the
+// library's renderer, and these regexes were verified free of catastrophic
+// backtracking. Revisit only if the Code view ever needs real language
+// coverage beyond a readable scaffold.
 
 export type TokenType = "comment" | "string" | "keyword" | "number" | "plain";
 
