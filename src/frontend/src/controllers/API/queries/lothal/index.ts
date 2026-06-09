@@ -71,19 +71,28 @@ export type CodeFile = {
 const BASE = "/api/v1/lothal/projects/";
 
 const PROJECTS_KEY = ["lothal", "projects"] as const;
+// Single-project keys extend PROJECTS_KEY, so list-level invalidations
+// (create/delete/chat) cascade to every open single-project query too.
+const projectKey = (projectId: string) => [...PROJECTS_KEY, projectId] as const;
 const messagesKey = (projectId: string) =>
   ["lothal", "messages", projectId] as const;
 const diagramKey = (projectId: string) =>
   ["lothal", "diagram", projectId] as const;
 const codeKey = (projectId: string) => ["lothal", "code", projectId] as const;
 
-// A structured 501 (the contract's "not implemented yet" stub) is terminal —
-// retrying just delays the NotReady state. Real transient failures still retry.
-const skip501Retry = (count: number, error: unknown): boolean => {
-  const status = (error as { response?: { status?: number } })?.response
-    ?.status;
-  return status !== 501 && count < 2;
-};
+// Deterministic failures must not be retried — retrying only delays the state
+// the UI keys off them: a structured 501 (contract stub), a 403 (phase gate),
+// a 404 (missing or foreign project). Real transient failures (network, 5xx)
+// still get a couple of attempts.
+const retrySkipping =
+  (...statuses: number[]) =>
+  (count: number, error: unknown): boolean => {
+    const status = (error as { response?: { status?: number } })?.response
+      ?.status;
+    return (status === undefined || !statuses.includes(status)) && count < 2;
+  };
+
+const skip501Retry = retrySkipping(501);
 
 // --- Projects --------------------------------------------------------------
 
@@ -103,6 +112,19 @@ async function deleteProject(id: string): Promise<void> {
 
 export function useProjects() {
   return useQuery({ queryKey: PROJECTS_KEY, queryFn: listProjects });
+}
+
+export function useProject(id: string) {
+  return useQuery({
+    queryKey: projectKey(id),
+    queryFn: async () => {
+      const res = await api.get<Project>(`${BASE}${id}`);
+      return res.data;
+    },
+    enabled: id.length > 0,
+    // A 404 is deterministic — the project is gone, or another user's.
+    retry: retrySkipping(404),
+  });
 }
 
 export function useCreateProject() {
@@ -165,16 +187,10 @@ export function useDiagram(projectId: string, enabled = true) {
       return res.data;
     },
     // Phase-gated: the canvas only enables this past CLARIFICATION (no diagram
-    // exists before then). The endpoint is a 501 stub until Epic 2 — don't
-    // retry that (the UI keys NotReady off the error) and don't retry the 403
-    // phase gate either; both are deterministic. Real transient failures still
-    // get a couple of attempts.
+    // exists before then). The 501 stub (until Epic 2) and the 403 phase gate
+    // are both deterministic — the UI keys NotReady off them.
     enabled,
-    retry: (count, error) => {
-      const status = (error as { response?: { status?: number } })?.response
-        ?.status;
-      return status !== 501 && status !== 403 && count < 2;
-    },
+    retry: retrySkipping(501, 403),
   });
 }
 

@@ -14,7 +14,7 @@ import {
   type Project,
   useCode,
   useMessages,
-  useProjects,
+  useProject,
   useSendMessage,
 } from "@/controllers/API/queries/lothal";
 import useAuthStore from "@/stores/authStore";
@@ -340,10 +340,11 @@ function CodePanel({ project }: { project: Project }) {
 function WorkspaceView() {
   const { projectId } = useParams<{ projectId: string }>();
   const navigate = useNavigate();
-  const { data: projects, isLoading } = useProjects();
+  // One project, fetched directly — the workspace doesn't need (or wait for)
+  // the whole harbor. A 404 leaves `project` unset → the not-found state.
+  const { data: project, isLoading } = useProject(projectId ?? "");
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
-  const project = projects?.find((p) => p.id === projectId);
 
   if (isLoading) {
     return (

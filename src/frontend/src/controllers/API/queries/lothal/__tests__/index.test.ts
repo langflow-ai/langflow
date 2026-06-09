@@ -23,6 +23,7 @@ import {
   useCreateProject,
   useDeleteProject,
   useMessages,
+  useProject,
   useProjects,
   useSendMessage,
 } from "../index";
@@ -87,6 +88,33 @@ describe("lothal queries", () => {
 
       await waitFor(() => expect(result.current.isError).toBe(true));
       expect(result.current.data).toBeUndefined();
+    });
+  });
+
+  describe("useProject", () => {
+    it("GETs a single project by id", async () => {
+      mockApiGet.mockResolvedValue({ data: PROJECT });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useProject("p1"), { wrapper });
+
+      await waitFor(() => expect(result.current.isSuccess).toBe(true));
+      expect(mockApiGet).toHaveBeenCalledWith("/api/v1/lothal/projects/p1");
+      expect(result.current.data).toEqual(PROJECT);
+    });
+
+    it("surfaces a 404 (deleted or foreign project) as an error", async () => {
+      mockApiGet.mockRejectedValue({ response: { status: 404 } });
+      const { wrapper } = setup();
+      const { result } = renderHook(() => useProject("gone"), { wrapper });
+
+      await waitFor(() => expect(result.current.isError).toBe(true));
+      expect(result.current.data).toBeUndefined();
+    });
+
+    it("does not fire without an id", () => {
+      const { wrapper } = setup();
+      renderHook(() => useProject(""), { wrapper });
+      expect(mockApiGet).not.toHaveBeenCalled();
     });
   });
 

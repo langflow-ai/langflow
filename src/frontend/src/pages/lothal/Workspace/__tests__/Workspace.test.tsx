@@ -10,13 +10,13 @@ jest.mock("react-router-dom", () => ({
   useParams: () => mockParams,
 }));
 
-const mockUseProjects = jest.fn();
+const mockUseProject = jest.fn();
 const mockUseMessages = jest.fn();
 const mockUseDiagram = jest.fn();
 const mockUseCode = jest.fn();
 const mockSendMutate = jest.fn();
 jest.mock("@/controllers/API/queries/lothal", () => ({
-  useProjects: () => mockUseProjects(),
+  useProject: () => mockUseProject(),
   useMessages: () => mockUseMessages(),
   useDiagram: () => mockUseDiagram(),
   useCode: () => mockUseCode(),
@@ -95,13 +95,13 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows a themed loading state while projects load", () => {
-    mockUseProjects.mockReturnValue({ data: undefined, isLoading: true });
+    mockUseProject.mockReturnValue({ data: undefined, isLoading: true });
     render(<Workspace />);
     expect(screen.getByText("Opening the workshop…")).toBeInTheDocument();
   });
 
   it("shows a not-found state when no project matches the id", () => {
-    mockUseProjects.mockReturnValue({ data: [], isLoading: false });
+    mockUseProject.mockReturnValue({ data: undefined, isLoading: false });
     render(<Workspace />);
     expect(screen.getByText("Project not found")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Back to the harbor" }));
@@ -109,7 +109,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("renders the shell — name, phase stepper, and status verb", () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
     expect(screen.getByText("Tide Tracker")).toBeInTheDocument();
     // PhaseStepper label + StatusDot verb for CLARIFICATION.
@@ -118,7 +118,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows NotReady (not an error) when the messages endpoint 501s", () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     mockUseMessages.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -136,7 +136,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows the empty-conversation prompt (no scripted welcome) when live and empty", () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
     expect(screen.getByText("Start the conversation")).toBeInTheDocument();
     // The input dock is always available.
@@ -144,7 +144,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("renders messages in order with a transition block at a phase boundary", () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     mockUseMessages.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -178,7 +178,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("renders suggestion chips only on the latest clarification reply and sends on pick", () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     mockUseMessages.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -197,7 +197,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("sends a typed message and clears the input", async () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
     const input = screen.getByLabelText("Message") as HTMLTextAreaElement;
     fireEvent.change(input, { target: { value: "A tide app" } });
@@ -211,7 +211,7 @@ describe("Lothal Workspace", () => {
   // --- Code surface (right pane in code phases) ---
 
   it("shows the canvas (not code) while still in a diagram phase", () => {
-    mockUseProjects.mockReturnValue({ data: [project], isLoading: false });
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
     render(<Workspace />);
     expect(
       screen.getByText("The diagram takes shape here"),
@@ -219,7 +219,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("renders the code surface with the file tree in a code phase", () => {
-    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
     mockUseCode.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -237,7 +237,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows a file's content when selected in the code tree", () => {
-    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
     mockUseCode.mockReturnValue({
       isLoading: false,
       isError: false,
@@ -252,7 +252,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows NotReady (not an error) when the code endpoint 501s", () => {
-    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
     mockUseCode.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -267,7 +267,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows a generic failure (not NotReady) when /code fails non-501", () => {
-    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
     mockUseCode.mockReturnValue({
       data: undefined,
       isLoading: false,
@@ -284,7 +284,7 @@ describe("Lothal Workspace", () => {
   });
 
   it("shows the generating state while code files are still empty", () => {
-    mockUseProjects.mockReturnValue({ data: [codeProject], isLoading: false });
+    mockUseProject.mockReturnValue({ data: codeProject, isLoading: false });
     mockUseCode.mockReturnValue({ data: [], isLoading: false, isError: false });
     render(<Workspace />);
     expect(screen.getByText("Generating the code…")).toBeInTheDocument();
