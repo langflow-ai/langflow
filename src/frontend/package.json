@@ -177,6 +177,7 @@
     "@types/sortablejs": "^1.15.8",
     "@types/uuid": "^9.0.8",
     "@vitejs/plugin-react-swc": "^4.2.2",
+    "accessibility-checker": "^4.0.26",
     "autoprefixer": "^10.4.19",
     "jest": "^30.0.3",
     "jest-environment-jsdom": "^30.0.2",

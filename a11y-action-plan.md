@@ -25,9 +25,10 @@ Work top-to-bottom. Early phases fix shared primitives first, then page surfaces
 
 ### 0.1 — Set up IBM Equal Access Checker in Playwright
 
-- [ ] **Fix:** Add `accessibility-checker` and wire `runA11yScan` into Playwright fixtures. Ensure reports write to `coverage/accessibility-reports/`.
+- [ ] **Fix:** Add `accessibility-checker` and wire `runA11yScan` into Playwright fixtures. Start in report mode with `RUN_A11Y=true`; gate assertion separately with `RUN_A11Y_ASSERT=true`. Ensure reports write to `coverage/accessibility-reports/`.
   - [ ] **Auto:** `RUN_A11Y=true npx playwright test` produces IBM reports without crashing.
   - [ ] **Manual:** Open generated HTML report and confirm IBM rules + code snippets are present.
+  - [ ] **Note:** IBM checker scans `IBM_Accessibility` policy, not a direct `Level 1` policy. Use report output as evidence source, then map findings back to current Level 1 scope.
 
 ### 0.2 — Restore visible focus indicators globally
 
