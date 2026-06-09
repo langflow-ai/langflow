@@ -1280,6 +1280,286 @@
       "legacy_slot": "ext:zep:ZepChatMemory@official-pre-a",
       "target": "ext:zep:ZepChatMemory@official",
       "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AIMLModelComponent",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.aiml.AIMLModelComponent",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.AIMLModelComponent",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:aiml:AIMLModelComponent@official-pre-a",
+      "target": "ext:aiml:AIMLModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AIMLEmbeddingsComponent",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.aiml_embeddings.AIMLEmbeddingsComponent",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.aiml.AIMLEmbeddingsComponent",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:aiml:AIMLEmbeddingsComponent@official-pre-a",
+      "target": "ext:aiml:AIMLEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AzureChatOpenAIComponent",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.azure.azure_openai.AzureChatOpenAIComponent",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.azure.AzureChatOpenAIComponent",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:azure:AzureChatOpenAIComponent@official-pre-a",
+      "target": "ext:azure:AzureChatOpenAIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "AzureOpenAIEmbeddingsComponent",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.azure.azure_openai_embeddings.AzureOpenAIEmbeddingsComponent",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.azure.AzureOpenAIEmbeddingsComponent",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:azure:AzureOpenAIEmbeddingsComponent@official-pre-a",
+      "target": "ext:azure:AzureOpenAIEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "CometAPIComponent",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cometapi.cometapi.CometAPIComponent",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.cometapi.CometAPIComponent",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:cometapi:CometAPIComponent@official-pre-a",
+      "target": "ext:cometapi:CometAPIComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "DeepSeekModelComponent",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.deepseek.deepseek.DeepSeekModelComponent",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.deepseek.DeepSeekModelComponent",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:deepseek:DeepSeekModelComponent@official-pre-a",
+      "target": "ext:deepseek:DeepSeekModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "LiteLLMProxyComponent",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.litellm.litellm_proxy.LiteLLMProxyComponent",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.litellm.LiteLLMProxyComponent",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:litellm:LiteLLMProxyComponent@official-pre-a",
+      "target": "ext:litellm:LiteLLMProxyComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "LMStudioEmbeddingsComponent",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.lmstudioembeddings.LMStudioEmbeddingsComponent",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.LMStudioEmbeddingsComponent",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:lmstudio:LMStudioEmbeddingsComponent@official-pre-a",
+      "target": "ext:lmstudio:LMStudioEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "LMStudioModelComponent",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.lmstudiomodel.LMStudioModelComponent",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.lmstudio.LMStudioModelComponent",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:lmstudio:LMStudioModelComponent@official-pre-a",
+      "target": "ext:lmstudio:LMStudioModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "NovitaModelComponent",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.novita.novita.NovitaModelComponent",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.novita.NovitaModelComponent",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:novita:NovitaModelComponent@official-pre-a",
+      "target": "ext:novita:NovitaModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OpenRouterComponent",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.openrouter.openrouter.OpenRouterComponent",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.openrouter.OpenRouterComponent",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:openrouter:OpenRouterComponent@official-pre-a",
+      "target": "ext:openrouter:OpenRouterComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VllmComponent",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.vllm.VllmComponent",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.VllmComponent",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vllm:VllmComponent@official-pre-a",
+      "target": "ext:vllm:VllmComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "VllmEmbeddingsComponent",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.vllm_embeddings.VllmEmbeddingsComponent",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.vllm.VllmEmbeddingsComponent",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:vllm:VllmEmbeddingsComponent@official-pre-a",
+      "target": "ext:vllm:VllmEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "XAIModelComponent",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.xai.xai.XAIModelComponent",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.xai.XAIModelComponent",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:xai:XAIModelComponent@official-pre-a",
+      "target": "ext:xai:XAIModelComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

@@ -26,24 +26,32 @@ dependencies = [
 # PEP 685-normalized (lowercase, hyphen-separated). ``all`` is GENERATED
 # from the per-provider keys -- never hand-edit it. Managed by
 # scripts/migrate/consolidate_bundles.py.
+aiml = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 apify = ["apify-client>=1.8.1", "langchain-community>=0.4.1,<1.0.0"]
 assemblyai = ["assemblyai>=0.33.0,<1.0.0"]
+azure = ["langchain-openai>=1.1.6"]
 chroma = ["chromadb>=1.0.0,<2.0.0", "langchain-chroma~=0.2.6", "langchain-community>=0.4.1,<1.0.0"]
 clickhouse = ["clickhouse-connect==0.7.19", "langchain-community>=0.4.1,<1.0.0"]
+cometapi = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 confluence = ["atlassian-python-api==3.41.16", "langchain-community>=0.4.1,<1.0.0"]
 couchbase = ["couchbase>=4.2.1", "langchain-community>=0.4.1,<1.0.0"]
+deepseek = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 exa = ["metaphor-python==0.1.23"]
 firecrawl = ["firecrawl-py>=1.0.16,<2.0.0"]
 git = ["GitPython>=3.1.50", "langchain-community>=0.4.1,<1.0.0"]
 glean = []
 groq = ["langchain-groq~=1.1.1"]
 icosacomputing = ["requests>=2.32.0"]
+litellm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
+lmstudio = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"]
 mem0 = ["mem0ai>=2.0.2,<3.0.0"]
 milvus = ["langchain-milvus~=0.3.2"]
 mistral = ["langchain-mistralai~=1.1.1"]
 mongodb = ["pymongo>=4.10.1", "langchain-mongodb>=0.11.0"]
 needle = ["needle-python>=0.4.0", "langchain-community>=0.4.1,<1.0.0"]
+novita = ["langchain-openai>=1.1.6", "requests>=2.32.0"]
 ollama = ["langchain-ollama~=0.3.10"]
+openrouter = ["langchain-openai>=1.1.6"]
 perplexity = ["langchain-perplexity>=1.0.0,<2.0.0"]
 pgvector = ["pgvector>=0.4.2", "langchain-community>=0.4.1,<1.0.0"]
 pinecone = ["langchain-pinecone~=0.2.13; python_version < '3.14'"]
@@ -55,31 +63,41 @@ supabase = ["supabase>=2.6.0,<3.0.0", "langchain-community>=0.4.1,<1.0.0"]
 tavily = []
 unstructured = ["langchain-unstructured~=1.0.0"]
 upstash = ["upstash-vector==0.6.0", "langchain-community>=0.4.1,<1.0.0"]
+vllm = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"]
 weaviate = ["weaviate-client>=4.10.2,<5.0.0", "langchain-weaviate>=0.0.6"]
 wikipedia = ["wikipedia==1.4.0", "langchain-community>=0.4.1,<1.0.0"]
 wolframalpha = ["wolframalpha==5.1.3", "langchain-community>=0.4.1,<1.0.0"]
+xai = ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"]
 yahoosearch = ["yfinance==0.2.50"]
 youtube = ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"]
 zep = ["zep-python==2.0.2"]
 all = [
+    "lfx-bundles[aiml]",
     "lfx-bundles[apify]",
     "lfx-bundles[assemblyai]",
+    "lfx-bundles[azure]",
     "lfx-bundles[chroma]",
     "lfx-bundles[clickhouse]",
+    "lfx-bundles[cometapi]",
     "lfx-bundles[confluence]",
     "lfx-bundles[couchbase]",
+    "lfx-bundles[deepseek]",
     "lfx-bundles[exa]",
     "lfx-bundles[firecrawl]",
     "lfx-bundles[git]",
     "lfx-bundles[glean]",
     "lfx-bundles[groq]",
     "lfx-bundles[icosacomputing]",
+    "lfx-bundles[litellm]",
+    "lfx-bundles[lmstudio]",
     "lfx-bundles[mem0]",
     "lfx-bundles[milvus]",
     "lfx-bundles[mistral]",
     "lfx-bundles[mongodb]",
     "lfx-bundles[needle]",
+    "lfx-bundles[novita]",
     "lfx-bundles[ollama]",
+    "lfx-bundles[openrouter]",
     "lfx-bundles[perplexity]",
     "lfx-bundles[pgvector]",
     "lfx-bundles[pinecone]",
@@ -91,9 +109,11 @@ all = [
     "lfx-bundles[tavily]",
     "lfx-bundles[unstructured]",
     "lfx-bundles[upstash]",
+    "lfx-bundles[vllm]",
     "lfx-bundles[weaviate]",
     "lfx-bundles[wikipedia]",
     "lfx-bundles[wolframalpha]",
+    "lfx-bundles[xai]",
     "lfx-bundles[yahoosearch]",
     "lfx-bundles[youtube]",
     "lfx-bundles[zep]",

@@ -98,6 +98,22 @@ PROVIDER_DEPS: dict[str, list[str]] = {
     "unstructured": ["langchain-unstructured~=1.0.0"],
     "youtube": ["pytube==15.0.0", "youtube-transcript-api>=1.0.0,<2.0.0", "google-api-python-client~=2.161"],
     "zep": ["zep-python==2.0.2"],
+    # --- tranche 3: openai-SDK family (post partner graduation) ---
+    # All ride the langchain-openai wrapper; the openai SDK is declared only
+    # where a component imports it directly (otherwise wrapper-transitive).
+    "aiml": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
+    "azure": ["langchain-openai>=1.1.6"],
+    "cometapi": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
+    "deepseek": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
+    # NOTE: the component drives LiteLLM-served endpoints through the OpenAI
+    # client; it does not import the `litellm` package (langflow-base's
+    # litellm extra serves other consumers and stays put).
+    "litellm": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
+    "lmstudio": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "langchain-nvidia-ai-endpoints~=1.0.0"],
+    "novita": ["langchain-openai>=1.1.6", "requests>=2.32.0"],
+    "openrouter": ["langchain-openai>=1.1.6"],
+    "vllm": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0"],
+    "xai": ["langchain-openai>=1.1.6", "openai>=1.68.2,<3.0.0", "requests>=2.32.0"],
 }
 
 _OPTIONAL_DEPS_HEADER = (
