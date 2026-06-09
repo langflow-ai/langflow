@@ -31,11 +31,19 @@ _SKIP = {"__pycache__"}
 
 
 def _current_dirs() -> set[str]:
-    """Top-level provider directories present in the working tree."""
+    """Top-level provider directories present in the working tree.
+
+    A directory only counts as a provider when it ships an ``__init__.py`` --
+    a stray empty directory (or one holding only ``__pycache__`` bytecode left
+    behind by a branch switch) is not a provider and must not trip the gate.
+    """
     return {
         entry.name
         for entry in COMPONENTS_DIR.iterdir()
-        if entry.is_dir() and entry.name not in _SKIP and not entry.name.startswith(".")
+        if entry.is_dir()
+        and entry.name not in _SKIP
+        and not entry.name.startswith(".")
+        and (entry / "__init__.py").is_file()
     }
 
 
