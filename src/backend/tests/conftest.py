@@ -418,6 +418,16 @@ def deactivate_tracing(monkeypatch):
     monkeypatch.undo()
 
 
+@pytest.fixture(autouse=True)
+def disable_telemetry_writer(monkeypatch):
+    # Tests assert on freshly-written transactions / vertex_builds rows. The
+    # batched writer is a production optimization; in tests we want the
+    # synchronous legacy DB path so reads-after-writes are visible.
+    monkeypatch.setenv("LANGFLOW_TELEMETRY_WRITER_ENABLED", "false")
+    yield
+    monkeypatch.undo()
+
+
 @pytest.fixture
 def use_noop_session(monkeypatch):
     monkeypatch.setenv("LANGFLOW_USE_NOOP_DATABASE", "1")
@@ -445,6 +455,7 @@ async def client_fixture(
             db_path = Path(db_dir) / "test.db"
             monkeypatch.setenv("LANGFLOW_DATABASE_URL", f"sqlite:///{db_path}")
             monkeypatch.setenv("LANGFLOW_AUTO_LOGIN", "false")
+            monkeypatch.setenv("DO_NOT_TRACK", "true")
             if "load_flows" in request.keywords:
                 shutil.copyfile(
                     pytest.BASIC_EXAMPLE_PATH, Path(load_flows_dir) / "c54f9130-f2fa-4a3e-b22a-3856d946351b.json"

@@ -1,0 +1,109 @@
+---
+title: Langflow Extension quickstart
+slug: /extensions-quickstart
+---
+
+Build, validate, and run a Langflow Extension bundle to create a single-component extension you can `pip-install` or load using `lfx extension dev`.
+
+## Prerequisites
+
+* Python 3.11 or greater
+* `langflow` installed with `uv pip install langflow`. The `lfx` CLI provides every command in this guide. For more information, see [Install the Langflow OSS package](/get-started-installation#install-and-run-the-langflow-oss-python-package).
+
+## Create an extension
+
+1. Scaffold a new extension:
+
+    ```bash
+    lfx extension init my-extension
+    cd my-extension
+    ```
+
+    This creates the canonical layout the loader expects:
+
+    ```
+    my-extension/
+    ├── extension.json           # the v0 manifest
+    ├── pyproject.toml           # so the bundle is pip-installable
+    └── src/
+        └── lfx_my_extension/
+            ├── __init__.py
+            ├── extension.json   # symlink/copy used by importlib at runtime
+            └── components/
+                └── my_bundle/
+                    ├── __init__.py
+                    └── my_component.py
+    ```
+
+    For more information, see [Manifest reference](./extensions-manifest.mdx).
+
+2. To edit the component, open `src/lfx_my_extension/components/my_bundle/my_component.py`.
+The scaffold ships a working `Component` subclass that prints `"Hello, {name}!"`
+
+    ```python
+    from lfx.custom.custom_component.component import Component
+    from lfx.io import MessageTextInput, Output
+    from lfx.schema.message import Message
+
+    class HelloComponent(Component):
+        display_name = "Hello"
+        description = "Greets the caller."
+
+        inputs = [MessageTextInput(name="who", display_name="Who?", value="world")]
+        outputs = [Output(display_name="Greeting", name="greeting", method="build_message")]
+
+        def build_message(self) -> Message:
+            return Message(text=f"Hello, {self.who}!")
+    ```
+
+    The full surface available to bundle code is enumerated in [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md).
+    Anything outside of [`BUNDLE_API.md`](https://github.com/langflow-ai/langflow/blob/main/BUNDLE_API.md) is not part of the API contract, and may move or break between releases.
+
+3. Before launching Langflow, run the static extension checker.
+
+    ```bash
+    lfx extension validate .
+    ```
+
+    The validator parses the manifest and reports typed errors.
+    It does not execute imports by default, so it is safe to run against an extension you just downloaded. Use `--execute-imports` only when you trust the source — it runs the import probe in a subprocess.
+
+4. Run Langflow with the extension loaded.
+
+    ```bash
+    lfx extension dev .
+    ```
+
+    This launches a Langflow dev server with `my-extension` registered at the `@official` slot. The Hello component appears in the Langflow UI component list under the bundle name in `extension.json`.
+
+    To see what the loader picked up:
+
+    ```bash
+    lfx extension list --format json
+    ```
+
+5. Iterate with reload.
+    Edit the component, save, then click the **Reload** action in the palette's bundle header (or run `lfx extension reload --bundle my_bundle`). The atomic-swap reload pipeline replaces the component in place; in-flight flows keep the pre-swap class so a running execution is never interrupted.
+
+    Reload only works in Mode A (local dev). Production deployments rebuild the Docker image.
+
+6. Ship the extension.
+
+    Once the extension works locally, publish the package to PyPI:
+
+    ```bash
+    python -m build         # builds the wheel + sdist
+    twine upload dist/*     # publish to PyPI
+    ```
+
+    To install the extension into a Langflow environment with a regular `pip install`:
+
+    ```bash
+    pip install lfx-my-extension
+    langflow run
+    ```
+
+    Discovery happens at server startup.
+    The bundle appears in the palette without further configuration.
+
+## See also

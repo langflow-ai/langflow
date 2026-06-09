@@ -161,6 +161,7 @@ module.exports = {
               label: "Monitoring",
               items: [
                 "Develop/integrations-arize",
+                "Develop/observability-grafana-loki",
                 "Develop/integrations-langfuse",
                 "Develop/integrations-langsmith",
                 "Develop/integrations-langwatch",
@@ -295,7 +296,12 @@ module.exports = {
         {
           type: "doc",
           id: "Deployment/deployment-multi-worker",
-          label: "Deploy with multiple workers",
+          label: "Deploy Langflow with multiple workers",
+        },
+        {
+          type: "doc",
+          id: "Deployment/deployment-lfx-compatibility",
+          label: "LFX and Langflow version compatibility",
         },
         {
           type: "doc",
@@ -433,6 +439,7 @@ module.exports = {
             "Components/bundles-cassandra",
             "Components/bundles-chroma",
             "Components/bundles-cleanlab",
+            "Components/bundles-codeagents",
             "Components/bundles-clickhouse",
             "Components/bundles-cloudflare",
             "Components/bundles-cohere",
@@ -447,6 +454,7 @@ module.exports = {
             "Components/bundles-elastic",
             "Components/bundles-exa",
             "Components/bundles-faiss",
+            "Components/bundles-files-ingestion",
             "Components/bundles-firecrawl",
             "Components/bundles-glean",
             "Components/bundles-google",

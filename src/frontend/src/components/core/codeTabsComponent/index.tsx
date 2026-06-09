@@ -41,7 +41,7 @@ export default function SimplifiedCodeTabComponent({
       className="mt-2 flex w-full flex-col overflow-hidden rounded-md text-left"
       data-testid="chat-code-tab"
     >
-      <div className="flex w-full items-center justify-between rounded-t-md border border-b-0 border-border bg-primary-foreground px-4 py-2">
+      <div className="flex w-full items-center justify-between rounded-t-md border border-b-0 border-border bg-canvas px-4 py-2">
         <span className="text-sm font-semibold text-foreground">
           {language}
         </span>
@@ -62,7 +62,7 @@ export default function SimplifiedCodeTabComponent({
       <SyntaxHighlighter
         language={language.toLowerCase()}
         style={dark ? oneDark : oneLight}
-        className="!mt-0 h-full w-full overflow-auto !bg-primary-foreground [&_code]:!bg-primary-foreground !rounded-b-md !rounded-t-none border border-border text-left custom-scroll"
+        className="!mt-0 h-full w-full overflow-auto !bg-canvas [&_code]:!bg-canvas !rounded-b-md !rounded-t-none border border-border text-left custom-scroll"
         customStyle={maxHeight ? { maxHeight } : undefined}
       >
         {code}
