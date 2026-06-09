@@ -68,6 +68,11 @@ To see what extensions are currently loaded, run:
 lfx extension list
 ```
 
+:::note
+`lfx extension list` shows manifest-shipping extensions only.
+Manifest-less packages such as `lfx-bundles` are discovered and loaded at server startup but are not listed by this command.
+:::
+
 ## Legacy import paths and the shim error
 
 Code that imports components by their old in-tree path, such as `from lfx.components.qdrant import QdrantVectorStoreComponent`, keeps working as long as the bundle that now ships the provider is installed — which `pip install langflow` always guarantees.

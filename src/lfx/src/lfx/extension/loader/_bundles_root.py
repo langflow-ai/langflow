@@ -43,7 +43,7 @@ import importlib.util
 from pathlib import Path
 from typing import TYPE_CHECKING, NamedTuple
 
-from lfx.extension._paths import SKIP_DIR_NAMES
+from lfx.extension._paths import SKIP_DIR_NAMES, is_within
 from lfx.extension.errors import ExtensionError
 from lfx.extension.loader._orchestrator import _load_bundle_directory
 from lfx.extension.loader._types import SLOT_OFFICIAL, LoadResult
@@ -185,6 +185,23 @@ def _load_bundle_roots(roots: Iterable[_BundleRoot]) -> list[LoadResult]:
                 continue
             name = child.name
             if name.startswith((".", "_")) or name in SKIP_DIR_NAMES:
+                continue
+            # Same containment rule as the seed-directory walk: a symlinked
+            # provider directory that resolves outside the bundle root is not
+            # loaded.  The file-level walk inside _load_bundle_directory checks
+            # containment against the (possibly symlinked-out) child itself,
+            # so this directory-level check is what anchors the trust boundary
+            # to the installed package tree.
+            if not is_within(child, root.path):
+                result = LoadResult(slot=None, source_path=child)
+                result.warnings.append(
+                    _malformed_error(
+                        name,
+                        f"provider directory {name!r} resolves outside the bundle root {root.path}; skipped.",
+                        location=str(child),
+                    )
+                )
+                results.append(result)
                 continue
 
             result = LoadResult(slot=SLOT_OFFICIAL, source_path=child)

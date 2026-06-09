@@ -141,6 +141,28 @@ def test_internal_directories_skipped_silently(tmp_path: Path) -> None:
     assert not [e for r in results for e in r.warnings]
 
 
+def test_symlinked_provider_escaping_root_is_skipped(tmp_path: Path) -> None:
+    """A provider dir symlinked outside the bundle root is rejected, not loaded.
+
+    Mirrors the seed-directory walk's containment rule: the trust boundary is
+    the installed package tree, so a symlink pointing elsewhere (e.g. into an
+    operator's filesystem) must not be folder-walked and imported.
+    """
+    outside = tmp_path / "outside" / "evil"
+    outside.mkdir(parents=True)
+    (outside / "thing.py").write_text(component_source("EvilThing"), encoding="utf-8")
+
+    root = _make_bundles_root(tmp_path, "good")
+    (root / "escapee").symlink_to(outside, target_is_directory=True)
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0")])
+
+    loaded = {r.bundle for r in results if r.bundle and r.components}
+    assert loaded == {"good"}  # the symlinked-out provider did not load
+    malformed = [e for r in results for e in r.warnings if e.code == "bundle-discovery-malformed"]
+    assert any(e.content == "escapee" and "outside the bundle root" in e.message for e in malformed)
+
+
 def test_duplicate_provider_across_roots_first_wins(tmp_path: Path) -> None:
     """Two roots shipping the same provider name: first wins, loser warns."""
     root_a = _make_bundles_root(tmp_path / "a", "dup", pkg="lfx_bundles")
