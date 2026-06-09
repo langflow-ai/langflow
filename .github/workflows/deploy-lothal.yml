@@ -117,7 +117,8 @@ jobs:
           key: ${{ secrets.SSH_KEY }}
           envs: BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_USER,GHCR_TOKEN
           command_timeout: 20m
-          script_stop: true
+          # Fail-fast on any remote command error comes from `set -eu` in the
+          # script below (appleboy/ssh-action@v1 has no script_stop input).
           script: |
             set -eu
             cd /opt/lothal
