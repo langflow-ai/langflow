@@ -104,7 +104,8 @@ class TestGetVersionInfo:
 
         assert result["version"] == "1.0.0.dev123"
         assert result["main_version"] == "1.0.0"
-        assert result["package"] == "Langflow Base"
+        # A `.dev` version is labeled a nightly regardless of which package name resolved it.
+        assert result["package"] == "Langflow Base Nightly"
 
     @patch("langflow.utils.version.metadata")
     def test_get_version_info_nightly_package(self, mock_metadata):
@@ -149,6 +150,30 @@ class TestGetVersionInfo:
         assert result["version"] == "1.0.0.a1"
         assert result["main_version"] == "1.0.0"
         assert result["package"] == "Langflow Base Nightly"
+
+    @patch("langflow.utils.version.metadata")
+    def test_get_version_info_canonical_dev_is_nightly(self, mock_metadata):
+        """A canonical ``langflow`` install at a ``.dev`` version is labeled a nightly.
+
+        The nightly now publishes as ``langflow==X.Y.Z.devN`` (the canonical name matches first),
+        so the "Nightly" label must come from the ``.dev`` marker, not the package name.
+        """
+        from importlib import metadata as real_metadata
+
+        mock_metadata.PackageNotFoundError = real_metadata.PackageNotFoundError
+
+        def mock_version(pkg_name):
+            if pkg_name == "langflow":
+                return "1.11.0.dev5"
+            raise mock_metadata.PackageNotFoundError
+
+        mock_metadata.version.side_effect = mock_version
+
+        result = _get_version_info()
+
+        assert result["version"] == "1.11.0.dev5"
+        assert result["main_version"] == "1.11.0"
+        assert result["package"] == "Langflow Nightly"
 
     @patch("langflow.utils.version.metadata")
     def test_get_version_info_no_package_found(self, mock_metadata):
