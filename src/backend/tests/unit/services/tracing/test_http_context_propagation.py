@@ -129,13 +129,16 @@ class TestArizePhoenixHttpInstrumentation:
     """Test HTTP client instrumentation in ArizePhoenixTracer."""
 
     @pytest.fixture(autouse=True)
-    def reset_manager(self):
-        """Reset the singleton manager between tests."""
+    def reset_singletons(self):
+        """Reset singleton managers between tests."""
+        from langflow.services.tracing.arize_phoenix import _reset_arize_provider
         from langflow.services.tracing.http_instrumentation import HTTPClientInstrumentationManager
 
         HTTPClientInstrumentationManager._instance = None
+        _reset_arize_provider()
         yield
         HTTPClientInstrumentationManager._instance = None
+        _reset_arize_provider()
 
     @pytest.fixture
     def mock_phoenix_imports(self):

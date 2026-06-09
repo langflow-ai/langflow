@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import sys
+import threading
 from typing import TYPE_CHECKING, Any, cast
 
 import nanoid
@@ -12,7 +13,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from typing_extensions import override
 
 from langflow.schema.data import Data
-from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.otlp_base import OTLPTracerBase
 
 if TYPE_CHECKING:
     from collections.abc import Sequence
@@ -25,7 +26,46 @@ if TYPE_CHECKING:
     from langflow.services.tracing.schema import Log
 
 
-class LangWatchTracer(BaseTracer):
+# ---------------------------------------------------------------------------
+# Module-level shared provider singleton
+# ---------------------------------------------------------------------------
+
+_langwatch_lock = threading.Lock()
+_shared_provider: TracerProvider | None = None
+
+
+def shutdown_langwatch_provider() -> None:
+    """Shutdown the shared LangWatch TracerProvider, flushing pending spans.
+
+    Safe to call multiple times or when no provider has been created.
+    Should be called at process/service shutdown.
+    """
+    global _shared_provider  # noqa: PLW0603
+
+    with _langwatch_lock:
+        if _shared_provider is not None:
+            try:
+                _shared_provider.shutdown()
+            except (ValueError, RuntimeError, OSError) as e:
+                logger.warning(f"Error shutting down LangWatch tracer provider: {e}")
+            finally:
+                _shared_provider = None
+
+
+def _reset_langwatch_provider() -> None:
+    """Reset the shared provider without calling shutdown. For tests only."""
+    global _shared_provider  # noqa: PLW0603
+
+    with _langwatch_lock:
+        _shared_provider = None
+
+
+# ---------------------------------------------------------------------------
+# Per-run tracer
+# ---------------------------------------------------------------------------
+
+
+class LangWatchTracer(OTLPTracerBase):
     flow_id: str
     tracer_provider = None
     # Guards the missing-``langwatch``-package warning so it is logged once per process
@@ -33,6 +73,7 @@ class LangWatchTracer(BaseTracer):
     _missing_dependency_warned = False
 
     def __init__(self, trace_name: str, trace_type: str, project_name: str, trace_id: UUID):
+        super().__init__()
         self.trace_name = trace_name
         self.trace_type = trace_type
         self.project_name = project_name
@@ -40,12 +81,12 @@ class LangWatchTracer(BaseTracer):
         self.flow_id = trace_name.split(" - ")[-1]
 
         try:
-            self._ready: bool = self.setup_langwatch()
+            self._ready = self._setup_langwatch()
             if not self._ready:
                 return
 
             # Pass the dedicated tracer_provider here
-            self.trace = self._client.trace(trace_id=str(self.trace_id), tracer_provider=self.tracer_provider)
+            self.trace = self._client.trace(trace_id=str(self.trace_id), tracer_provider=_shared_provider)
             self.trace.__enter__()
             self.spans: dict[str, ContextSpan] = {}
 
@@ -61,44 +102,43 @@ class LangWatchTracer(BaseTracer):
             logger.debug("Error setting up LangWatch tracer")
             self._ready = False
 
-    @property
-    def ready(self):
-        return self._ready
+    def _setup_langwatch(self) -> bool:
+        global _shared_provider  # noqa: PLW0603
 
-    def setup_langwatch(self) -> bool:
         if "LANGWATCH_API_KEY" not in os.environ:
             return False
         try:
             import langwatch
             from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
 
-            # Initialize the shared provider if it doesn't exist
-            if self.tracer_provider is None:
-                api_key = os.environ["LANGWATCH_API_KEY"]
-                endpoint = os.environ.get("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
+            # Initialize the shared provider if it doesn't exist (thread-safe)
+            if _shared_provider is None:
+                with _langwatch_lock:
+                    if _shared_provider is None:
+                        api_key = os.environ["LANGWATCH_API_KEY"]
+                        endpoint = os.environ.get("LANGWATCH_ENDPOINT", "https://app.langwatch.ai")
 
-                resource = Resource.create(attributes={"service.name": "langflow"})
-                exporter = OTLPSpanExporter(
-                    endpoint=f"{endpoint}/api/otel/v1/traces", headers={"Authorization": f"Bearer {api_key}"}
-                )
-                provider = TracerProvider(resource=resource)
-                provider.add_span_processor(BatchSpanProcessor(exporter))
-                LangWatchTracer.tracer_provider = provider
+                        resource = Resource.create(attributes={"service.name": "langflow"})
+                        exporter = OTLPSpanExporter(
+                            endpoint=f"{endpoint}/api/otel/v1/traces",
+                            headers={"Authorization": f"Bearer {api_key}"},
+                        )
+                        provider = TracerProvider(resource=resource)
+                        provider.add_span_processor(BatchSpanProcessor(exporter))
 
-                # Initialize LangWatch client but skip OTEL setup to avoid touching the global provider
-                # causing it to not receive traces from FastAPIInstrumentor
-                langwatch.setup(
-                    api_key=api_key,
-                    endpoint_url=endpoint,
-                    skip_open_telemetry_setup=True,
-                )
+                        # Initialize LangWatch client but skip OTEL setup to avoid touching the global provider
+                        # causing it to not receive traces from FastAPIInstrumentor
+                        langwatch.setup(
+                            api_key=api_key,
+                            endpoint_url=endpoint,
+                            skip_open_telemetry_setup=True,
+                        )
+
+                        # Assign only after setup succeeds
+                        _shared_provider = provider
 
             self._client = langwatch
-
-            # Instrument HTTP clients to propagate W3C TraceContext on outgoing requests
-            from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
-
-            get_http_instrumentation_manager().enable(self.tracer_provider)
+            self._enable_http_context_propagation(_shared_provider)
         except ImportError as e:
             self._warn_langwatch_unavailable()
             logger.debug(f"LangWatch tracing disabled; 'langwatch' import failed: {e}")
@@ -209,9 +249,7 @@ class LangWatchTracer(BaseTracer):
                 # Ignore "token was created in a different Context" errors
                 self.trace.__exit__(None, None, None)
 
-        from langflow.services.tracing.http_instrumentation import get_http_instrumentation_manager
-
-        get_http_instrumentation_manager().disable()
+        self._disable_http_context_propagation()
 
     def _convert_to_langwatch_types(self, io_dict: dict[str, Any] | None):
         from langwatch.utils import autoconvert_typed_values

@@ -112,3 +112,8 @@ class HTTPClientInstrumentationManager:
 def get_http_instrumentation_manager() -> HTTPClientInstrumentationManager:
     """Get the singleton HTTP client instrumentation manager."""
     return HTTPClientInstrumentationManager()
+
+
+def _reset_http_instrumentation_manager() -> None:
+    """Reset the HTTP instrumentation manager singleton. For tests only."""
+    HTTPClientInstrumentationManager._instance = None

@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from langflow.services.tracing.base import BaseTracer
+from langflow.services.tracing.otlp import _reset_shared_provider
 from langflow.services.tracing.service import (
     TracingService,
     component_context_var,
@@ -12,6 +13,17 @@ from langflow.services.tracing.service import (
 )
 from lfx.services.settings.base import Settings
 from lfx.services.settings.service import SettingsService
+
+
+@pytest.fixture(autouse=True)
+def _reset_otlp_provider():
+    """Reset the shared OTLP TracerProvider before and after each test.
+
+    Ensures test isolation since the singleton persists across test runs.
+    """
+    _reset_shared_provider()
+    yield
+    _reset_shared_provider()
 
 
 class MockTracer(BaseTracer):
@@ -158,6 +170,10 @@ def mock_tracers():
             "langflow.services.tracing.service._get_openlayer_tracer",
             return_value=MockTracer,
         ),
+        patch(
+            "langflow.services.tracing.service._get_otlp_tracer",
+            return_value=MockTracer,
+        ),
     ):
         yield
 
@@ -192,6 +208,7 @@ async def test_start_end_tracers(tracing_service):
     assert "traceloop" in trace_context.tracers
     assert "native" in trace_context.tracers
     assert "openlayer" in trace_context.tracers
+    assert "otlp" in trace_context.tracers
 
     await tracing_service.end_tracers(outputs)
 
@@ -623,9 +640,8 @@ async def test_concurrent_tracing(tracing_service, mock_component):
                 ts.set_outputs(trace_name, outputs)
 
         task1 = asyncio.create_task(run_component_task(mock_component, f"{run_id} trace_name1", f"{run_id} component1"))
-        await task1
         task2 = asyncio.create_task(run_component_task(mock_component, f"{run_id} trace_name2", f"{run_id} component2"))
-        await task2
+        await asyncio.gather(task1, task2)
 
         await tracing_service.end_tracers({"final_output": f"{task_prefix}_final_output"})
         trace_context = trace_context_var.get()
@@ -696,3 +712,799 @@ def test_set_outputs_without_component_context(tracing_service):
     component_context_var.set(None)
     # Should not raise
     tracing_service.set_outputs("some_trace", {"key": "value"})
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_with_valid_endpoint():
+    """Test OTLP tracer initialization with valid endpoint."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        test_trace_id = uuid.uuid4()
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=test_trace_id,
+            user_id="test_user",
+            session_id="test_session",
+        )
+        assert tracer.ready is True
+        assert tracer.tracer is not None
+        assert tracer.root_span is not None
+        assert tracer.root_span.name == "test_trace"
+        assert tracer.root_span.is_recording()
+        # Verify trace context propagation carrier
+        assert tracer.carrier != {}
+        assert "traceparent" in tracer.carrier
+        # Verify traceparent contains valid trace_id from root span
+        parts = tracer.carrier["traceparent"].split("-")
+        assert len(parts) == 4
+        assert parts[1] == format(tracer.root_span.context.trace_id, "032x")
+        tracer.close()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_with_generic_endpoint():
+    """Test OTLP tracer initialization with generic OTEL_EXPORTER_OTLP_ENDPOINT."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict("os.environ", {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318"}, clear=True):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        assert tracer.tracer is not None
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_without_endpoint():
+    """Test OTLP tracer fails gracefully when no endpoint is configured."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict("os.environ", {}, clear=True):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is False
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_protocol_http_protobuf():
+    """Test OTLP tracer with HTTP protobuf protocol."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+            },
+            clear=True,
+        ),
+        patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter") as mock_http_exporter,
+    ):
+        mock_http_exporter.return_value = MagicMock()
+
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        # Verify HTTP exporter was used
+        mock_http_exporter.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_protocol_grpc():
+    """Test OTLP tracer with gRPC protocol."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4317",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "grpc",
+            },
+            clear=True,
+        ),
+        patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_grpc_exporter,
+    ):
+        mock_grpc_exporter.return_value = MagicMock()
+
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        # Verify gRPC exporter was used
+        mock_grpc_exporter.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_service_name():
+    """Test OTLP tracer respects OTEL_SERVICE_NAME."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {
+            "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces",
+            "OTEL_SERVICE_NAME": "custom-service",
+        },
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        # Verify service name in resource attributes via the shared provider
+        from langflow.services.tracing import otlp as otlp_mod
+
+        assert otlp_mod._shared_provider.resource.attributes["service.name"] == "custom-service"
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_resource_attributes():
+    """Test OTLP tracer includes resource attributes from environment."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {
+            "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces",
+            "OTEL_RESOURCE_ATTRIBUTES": "environment=production,version=1.0",
+        },
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        # Verify resource attributes were parsed and included
+        from langflow.services.tracing import otlp as otlp_mod
+
+        resource_attrs = otlp_mod._shared_provider.resource.attributes
+        assert resource_attrs["environment"] == "production"
+        assert resource_attrs["version"] == "1.0"
+        assert resource_attrs["langflow.project_name"] == "test_project"
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_add_and_end_trace():
+    """Test OTLP tracer add_trace and end_trace methods."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+
+        trace_id = "test_child_trace_id"
+        inputs = {"input_key": "input_value"}
+        outputs = {"output_key": "output_value"}
+
+        # Add trace
+        tracer.add_trace(
+            trace_id=trace_id,
+            trace_name="child_trace",
+            trace_type="component",
+            inputs=inputs,
+            metadata={"meta_key": "meta_value"},
+        )
+
+        assert trace_id in tracer.child_spans
+
+        # Verify span attributes were set
+        child_span = tracer.child_spans[trace_id]
+        assert child_span.name == "child_trace"
+        # Note: attributes are set but not easily accessible from the span object
+        # The span.attributes property is internal and may not be directly testable
+
+        # End trace
+        tracer.end_trace(
+            trace_id=trace_id,
+            trace_name="child_trace",
+            outputs=outputs,
+        )
+
+        assert trace_id not in tracer.child_spans
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_end_with_error():
+    """Test OTLP tracer end method with error."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+
+        # Mock record_exception to verify it's called
+        tracer.root_span.record_exception = MagicMock()
+
+        test_error = ValueError("Test error")
+        tracer.end(
+            inputs={"input_key": "input_value"},
+            outputs={"output_key": "output_value"},
+            error=test_error,
+        )
+
+        # Verify the tracer handled the error without raising
+        assert tracer.ready is True
+        # Verify exception was recorded
+        tracer.root_span.record_exception.assert_called_once_with(test_error)
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_child_trace_with_error():
+    """Test OTLP tracer end_trace method with error."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+
+        trace_id = "test_child_trace_id"
+
+        # Add trace
+        tracer.add_trace(
+            trace_id=trace_id,
+            trace_name="child_trace",
+            trace_type="component",
+            inputs={"input_key": "input_value"},
+        )
+
+        # Mock record_exception
+        child_span = tracer.child_spans[trace_id]
+        child_span.record_exception = MagicMock()
+
+        # End trace with error
+        test_error = ValueError("Child trace error")
+        tracer.end_trace(
+            trace_id=trace_id,
+            trace_name="child_trace",
+            error=test_error,
+        )
+
+        # Verify exception was recorded
+        child_span.record_exception.assert_called_once_with(test_error)
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_close_is_noop():
+    """Test OTLP tracer close() is a no-op (provider lifecycle is module-level)."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+
+        # close() should not raise and should be a no-op
+        tracer.close()
+        assert tracer.ready is True
+
+
+@pytest.mark.asyncio
+async def test_otlp_shutdown_provider():
+    """Test shutdown_otlp_provider flushes and clears the shared provider."""
+    from langflow.services.tracing import otlp as otlp_mod
+    from langflow.services.tracing.otlp import OTLPTracer, shutdown_otlp_provider
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert otlp_mod._shared_provider is not None
+
+        shutdown_otlp_provider()
+
+        assert otlp_mod._shared_provider is None
+        assert otlp_mod._shared_tracer is None
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_not_ready_operations():
+    """Test that OTLP tracer operations are no-ops when not ready."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict("os.environ", {}, clear=True):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is False
+
+        # These should not raise exceptions
+        tracer.add_trace(
+            trace_id="test_id",
+            trace_name="test_name",
+            trace_type="test_type",
+            inputs={"key": "value"},
+        )
+
+        tracer.end_trace(
+            trace_id="test_id",
+            trace_name="test_name",
+            outputs={"key": "value"},
+        )
+
+        tracer.end(
+            inputs={"key": "value"},
+            outputs={"key": "value"},
+        )
+
+        # Verify tracer remains not ready after all operations
+        assert tracer.ready is False
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_setup_failure():
+    """Test OTLP tracer handles setup failures gracefully."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with (
+        patch.dict(
+            "os.environ",
+            {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+            clear=True,
+        ),
+        patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter") as mock_exporter,
+    ):
+        # Make the exporter instantiation fail
+        mock_exporter.side_effect = Exception("Connection refused")
+
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        # Tracer should not be ready when setup fails
+        assert tracer.ready is False
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_optional_params():
+    """Test OTLP tracer with optional user_id and session_id."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+            # user_id and session_id are omitted
+        )
+        assert tracer.ready is True
+        assert tracer.user_id is None
+        assert tracer.session_id is None
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_span_attributes():
+    """Test that OTLP tracer sets correct span attributes."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    # Create a mock exporter to capture spans
+    class SpanCapturingExporter:
+        """In-memory span exporter that records exported spans for test assertions."""
+
+        def __init__(self):
+            self.exported_spans = []
+
+        def export(self, spans):
+            """Append finished spans to the internal list."""
+            self.exported_spans.extend(spans)
+            return MagicMock()
+
+        def shutdown(self):
+            """No-op shutdown."""
+
+        def force_flush(self, _timeout_millis=None):
+            """No-op flush; all spans are already stored synchronously."""
+            return True
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        # Patch the OTLPSpanExporter to use our capturing exporter instead
+        span_exporter = SpanCapturingExporter()
+        with patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter") as mock_exporter:
+            mock_exporter.return_value = span_exporter
+
+            test_trace_id = uuid.uuid4()
+            tracer = OTLPTracer(
+                trace_name="test_trace",
+                trace_type="chain",
+                project_name="test_project",
+                trace_id=test_trace_id,
+                user_id="test_user",
+                session_id="test_session",
+            )
+
+            # Add a child trace
+            tracer.add_trace(
+                trace_id="child_1",
+                trace_name="child_trace",
+                trace_type="component",
+                inputs={"input_key": "input_value"},
+                metadata={"meta_key": "meta_value"},
+            )
+
+            # End the child trace
+            tracer.end_trace(
+                trace_id="child_1",
+                trace_name="child_trace",
+                outputs={"output_key": "output_value"},
+            )
+
+            # End the root trace
+            tracer.end(
+                inputs={"root_input": "value"},
+                outputs={"root_output": "value"},
+            )
+
+            # Force flush to export spans
+            from langflow.services.tracing import otlp as otlp_mod
+
+            otlp_mod._shared_provider.force_flush()
+
+            # Verify spans were exported
+            assert len(span_exporter.exported_spans) == 2  # root + child
+
+            # Find the root span
+            root_spans = [s for s in span_exporter.exported_spans if s.name == "test_trace"]
+            assert len(root_spans) == 1
+            root_span = root_spans[0]
+
+            # Verify root span attributes
+            assert root_span.attributes["langflow.trace_id"] == str(test_trace_id)
+            assert root_span.attributes["langflow.trace_name"] == "test_trace"
+            assert root_span.attributes["langflow.trace_type"] == "chain"
+            assert root_span.attributes["langflow.project_name"] == "test_project"
+            assert root_span.attributes["langflow.user_id"] == "test_user"
+            assert root_span.attributes["langflow.session_id"] == "test_session"
+
+            # Find the child span
+            child_spans = [s for s in span_exporter.exported_spans if s.name == "child_trace"]
+            assert len(child_spans) == 1
+            child_span = child_spans[0]
+
+            # Verify child span attributes
+            assert child_span.attributes["trace_id"] == "child_1"
+            assert child_span.attributes["trace_name"] == "child_trace"
+            assert child_span.attributes["trace_type"] == "component"
+            assert "inputs" in child_span.attributes
+            assert "outputs" in child_span.attributes
+
+            # Verify parent-child relationship via trace IDs
+            root_trace_id = format(root_span.context.trace_id, "032x")
+            child_trace_id = format(child_span.context.trace_id, "032x")
+            assert child_trace_id == root_trace_id, (
+                f"Child trace_id {child_trace_id} should match root trace_id {root_trace_id}"
+            )
+
+            # Child span's parent should be the root span
+            assert child_span.parent is not None, "Child span should have a parent"
+            child_parent_span_id = format(child_span.parent.span_id, "016x")
+            root_span_id = format(root_span.context.span_id, "016x")
+            assert child_parent_span_id == root_span_id, (
+                f"Child parent span_id {child_parent_span_id} should match root span_id {root_span_id}"
+            )
+
+            # Verify outputs are JSON-encoded strings
+            import json
+
+            root_outputs = json.loads(root_span.attributes["outputs"])
+            assert root_outputs["root_output"] == "value"
+            child_outputs = json.loads(child_span.attributes["outputs"])
+            assert child_outputs["output_key"] == "output_value"
+            child_inputs = json.loads(child_span.attributes["inputs"])
+            assert child_inputs["input_key"] == "input_value"
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_missing_both_endpoints():
+    """Test OTLP tracer is not ready when neither endpoint env var is set."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict("os.environ", {}, clear=True):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is False
+        assert tracer.root_span is None
+        assert tracer.tracer is None
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_generic_endpoint_fallback():
+    """Test OTLP tracer works with OTEL_EXPORTER_OTLP_ENDPOINT (generic) when traces-specific is absent."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_ENDPOINT": "http://localhost:4318"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        assert tracer.root_span is not None
+        tracer.close()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_traces_protocol_overrides_generic():
+    """Test OTEL_EXPORTER_OTLP_TRACES_PROTOCOL takes priority over OTEL_EXPORTER_OTLP_PROTOCOL."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with (
+        patch.dict(
+            "os.environ",
+            {
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4317",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": "http/protobuf",
+                "OTEL_EXPORTER_OTLP_TRACES_PROTOCOL": "grpc",
+            },
+            clear=True,
+        ),
+        patch("opentelemetry.exporter.otlp.proto.grpc.trace_exporter.OTLPSpanExporter") as mock_grpc,
+    ):
+        mock_grpc.return_value = MagicMock()
+
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+        # gRPC exporter should be used despite generic protocol saying http/protobuf
+        mock_grpc.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_unsupported_protocol_falls_back():
+    """Test OTLP tracer falls back to http/protobuf for unsupported protocol values (including http/json)."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    for bad_protocol in ("invalid_protocol", "http/json"):
+        with patch.dict(
+            "os.environ",
+            {
+                "OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces",
+                "OTEL_EXPORTER_OTLP_PROTOCOL": bad_protocol,
+            },
+            clear=True,
+        ):
+            tracer = OTLPTracer(
+                trace_name="test_trace",
+                trace_type="chain",
+                project_name="test_project",
+                trace_id=uuid.uuid4(),
+            )
+            assert tracer.ready is True, f"Tracer should fall back gracefully for protocol={bad_protocol}"
+            tracer.close()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_setup_exception_types():
+    """Test OTLP tracer catches various exception types during setup."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    for exc_cls in (RuntimeError, ConnectionError, OSError, TypeError):
+        with (
+            patch.dict(
+                "os.environ",
+                {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+                clear=True,
+            ),
+            patch(
+                "opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter",
+                side_effect=exc_cls("setup failed"),
+            ),
+        ):
+            tracer = OTLPTracer(
+                trace_name="test_trace",
+                trace_type="chain",
+                project_name="test_project",
+                trace_id=uuid.uuid4(),
+            )
+            assert tracer.ready is False, f"Tracer should not be ready after {exc_cls.__name__}"
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_end_trace_unknown_id():
+    """Test that ending a trace with an unknown ID is a safe no-op."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        tracer = OTLPTracer(
+            trace_name="test_trace",
+            trace_type="chain",
+            project_name="test_project",
+            trace_id=uuid.uuid4(),
+        )
+        assert tracer.ready is True
+
+        # Ending a non-existent child trace should not raise
+        tracer.end_trace(
+            trace_id="nonexistent_id",
+            trace_name="nonexistent",
+            outputs={"key": "value"},
+        )
+
+        # Tracer should still be functional
+        assert tracer.ready is True
+        tracer.close()
+
+
+@pytest.mark.asyncio
+async def test_otlp_tracer_nested_metadata_stringified():
+    """Test that nested dicts/lists in metadata are JSON-stringified for span attributes."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    class SpanCapturingExporter:
+        """In-memory span exporter that records exported spans for test assertions."""
+
+        def __init__(self):
+            self.exported_spans = []
+
+        def export(self, spans):
+            """Append finished spans to the internal list."""
+            self.exported_spans.extend(spans)
+            return MagicMock()
+
+        def shutdown(self):
+            """No-op shutdown."""
+
+        def force_flush(self, _timeout_millis=None):
+            """No-op flush; all spans are already stored synchronously."""
+            return True
+
+    with patch.dict(
+        "os.environ",
+        {"OTEL_EXPORTER_OTLP_TRACES_ENDPOINT": "http://localhost:4318/v1/traces"},
+        clear=True,
+    ):
+        span_exporter = SpanCapturingExporter()
+        with patch("opentelemetry.exporter.otlp.proto.http.trace_exporter.OTLPSpanExporter") as mock_exp:
+            mock_exp.return_value = span_exporter
+
+            tracer = OTLPTracer(
+                trace_name="test_trace",
+                trace_type="chain",
+                project_name="test_project",
+                trace_id=uuid.uuid4(),
+            )
+
+            nested_metadata = {
+                "simple_key": "simple_value",
+                "nested_dict": {"inner_key": "inner_value", "deep": {"a": 1}},
+                "nested_list": [1, {"b": 2}, [3, 4]],
+                "number": 42,
+            }
+
+            # Test via add_trace (child span metadata)
+            tracer.add_trace(
+                trace_id="child_1",
+                trace_name="child",
+                trace_type="component",
+                inputs={"x": "y"},
+                metadata=nested_metadata,
+            )
+            tracer.end_trace(trace_id="child_1", trace_name="child")
+
+            # Test via end() (root span metadata)
+            tracer.end(
+                inputs={},
+                outputs={},
+                metadata=nested_metadata,
+            )
+
+            from langflow.services.tracing import otlp as otlp_mod
+
+            otlp_mod._shared_provider.force_flush()
+
+            import json
+
+            # Verify child span metadata attributes
+            child_span = next(s for s in span_exporter.exported_spans if s.name == "child")
+            assert child_span.attributes["metadata.simple_key"] == "simple_value"
+            assert child_span.attributes["metadata.number"] == 42
+            # Nested dict should be JSON-stringified
+            parsed_dict = json.loads(child_span.attributes["metadata.nested_dict"])
+            assert parsed_dict["inner_key"] == "inner_value"
+            assert parsed_dict["deep"]["a"] == 1
+            # Nested list should be JSON-stringified
+            parsed_list = json.loads(child_span.attributes["metadata.nested_list"])
+            assert parsed_list == [1, {"b": 2}, [3, 4]]
+
+            # Verify root span metadata attributes
+            root_span = next(s for s in span_exporter.exported_spans if s.name == "test_trace")
+            assert root_span.attributes["metadata.simple_key"] == "simple_value"
+            assert root_span.attributes["metadata.number"] == 42
+            parsed_dict = json.loads(root_span.attributes["metadata.nested_dict"])
+            assert parsed_dict["deep"]["a"] == 1

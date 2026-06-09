@@ -71,6 +71,13 @@ def _get_openlayer_tracer():
     return OpenlayerTracer
 
 
+def _get_otlp_tracer():
+    """Lazily import and return the OTLPTracer class."""
+    from langflow.services.tracing.otlp import OTLPTracer
+
+    return OTLPTracer
+
+
 trace_context_var: ContextVar[TraceContext | None] = ContextVar("trace_context", default=None)
 component_context_var: ContextVar[ComponentTraceContext | None] = ContextVar("component_trace_context", default=None)
 
@@ -147,6 +154,16 @@ class TracingService(Service):
     def __init__(self, settings_service: SettingsService):
         self.settings_service = settings_service
         self.deactivated = self.settings_service.settings.deactivate_tracing
+
+    async def teardown(self) -> None:
+        """Shutdown shared tracer providers at service teardown."""
+        from langflow.services.tracing.arize_phoenix import shutdown_arize_provider
+        from langflow.services.tracing.langwatch import shutdown_langwatch_provider
+        from langflow.services.tracing.otlp import shutdown_otlp_provider
+
+        shutdown_otlp_provider()
+        shutdown_arize_provider()
+        shutdown_langwatch_provider()
 
     async def _trace_worker(self, trace_context: TraceContext) -> None:
         while trace_context.running or not trace_context.traces_queue.empty():
@@ -273,6 +290,20 @@ class TracingService(Service):
             session_id=trace_context.session_id,
         )
 
+    def _initialize_otlp_tracer(self, trace_context: TraceContext) -> None:
+        """Create and register an OTLPTracer in the given trace context."""
+        if self.deactivated:
+            return
+        otlp_tracer = _get_otlp_tracer()
+        trace_context.tracers["otlp"] = otlp_tracer(
+            trace_name=trace_context.run_name,
+            trace_type="chain",
+            project_name=trace_context.project_name,
+            trace_id=trace_context.run_id,
+            user_id=trace_context.user_id,
+            session_id=trace_context.session_id,
+        )
+
     async def start_tracers(
         self,
         run_id: UUID,
@@ -318,6 +349,7 @@ class TracingService(Service):
             self._initialize_traceloop_tracer(trace_context)
             self._initialize_native_tracer(trace_context)
             self._initialize_openlayer_tracer(trace_context)
+            self._initialize_otlp_tracer(trace_context)
         except Exception as e:  # noqa: BLE001
             await logger.adebug(f"Error initializing tracers: {e}")
 
