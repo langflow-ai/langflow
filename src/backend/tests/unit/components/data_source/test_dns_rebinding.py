@@ -1,7 +1,8 @@
-"""Test DNS rebinding protection in API Request component.
+"""Test DNS rebinding protection in API Request and URL components.
 
 This test suite verifies that the DNS pinning implementation prevents
-DNS rebinding attacks that could bypass SSRF protection.
+DNS rebinding attacks that could bypass SSRF protection in both the
+API Request component and the URL component.
 """
 # ruff: noqa: ARG001, SIM117
 
@@ -13,6 +14,7 @@ import httpcore
 import httpx
 import pytest
 from lfx.components.data_source.api_request import APIRequestComponent
+from lfx.components.data_source.url import URLComponent
 from lfx.schema import Data
 
 
@@ -372,3 +374,447 @@ class TestDNSRebindingProtection:
             # Verify the result (should succeed with second IP)
             assert isinstance(result, Data)
             assert result.data is not None
+
+    @pytest.mark.asyncio
+    async def test_dns_pinning_applies_to_redirect_hops(self, component):
+        """Test that DNS pinning is enforced on every redirect hop, not just the first.
+
+        Simulates a redirect from a validated public host to a second host. With
+        per-hop validation + pinning, both connections must go to the validated public
+        IP - a rebinding attacker who flips the redirect target to 127.0.0.1 after
+        validation can never cause a connection to the internal address.
+        """
+        component.url_input = "http://public.example.com/start"
+        component.follow_redirects = True
+
+        resolved = []
+
+        def mock_getaddrinfo(host, *_args, **_kwargs):
+            """Every host resolves to a public IP at validation time."""
+            resolved.append(host)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
+
+        connect_calls = []
+        redirect_response = [
+            b"HTTP/1.1 302 Found\r\n",
+            b"Location: http://rebind.example.com/secret\r\n",
+            b"Content-Length: 0\r\n",
+            b"\r\n",
+        ]
+        final_response = [
+            b"HTTP/1.1 200 OK\r\n",
+            b"Content-Type: application/json\r\n",
+            b"Content-Length: 15\r\n",
+            b"\r\n",
+            b'{"status":"ok"}',
+        ]
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture every IP connected to; first hop redirects, second succeeds."""
+            connect_calls.append(host)
+            stream = redirect_response if len(connect_calls) == 1 else final_response
+            return httpcore.AsyncMockStream(list(stream))
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            result = await component.make_api_request()
+
+        assert isinstance(result, Data)
+        # Both the initial request and the redirect hop connected to the pinned public IP.
+        assert connect_calls == ["8.8.8.8", "8.8.8.8"], connect_calls
+        # The redirect target was resolved exactly once (validation only); httpx never
+        # re-resolved it, so a rebinding flip after validation has no effect.
+        assert resolved.count("rebind.example.com") == 1, resolved
+
+
+class TestURLComponentDNSRebindingProtection:
+    """Test DNS rebinding attack prevention in URL component.
+
+    This test suite verifies that the URL component is protected against DNS rebinding
+    attacks where an attacker controls a DNS server that returns different IPs on
+    successive queries.
+    """
+
+    @pytest.mark.asyncio
+    async def test_url_component_prevents_dns_rebinding_attack(self):
+        """Test that URL component prevents DNS rebinding attacks via DNS pinning.
+
+        This is a regression test for the SSRF vulnerability reported in the security disclosure.
+        It verifies that only ONE DNS query occurs during the entire fetch operation.
+
+        Attack scenario:
+        1. First DNS query: attacker.test -> 1.1.1.1 (public IP, passes validation)
+        2. Attacker changes DNS with TTL=0
+        3. Second DNS query: attacker.test -> 127.0.0.1 (localhost, should be blocked)
+        4. Without DNS pinning: fetch reaches localhost (SSRF bypass)
+        5. With DNS pinning: fetch uses pinned 1.1.1.1 (attack prevented)
+        """
+        call_count = 0
+        connected_to_ip = None
+
+        def mock_getaddrinfo(_hostname, _port, *_args, **_kwargs):
+            """Mock DNS resolution to simulate rebinding attack."""
+            nonlocal call_count
+            call_count += 1
+
+            if call_count == 1:
+                # First call (during validation): return public IP
+                return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+            # Second call (during httpx request): return localhost
+            # This simulates the DNS rebinding attack
+            # With DNS pinning, this should NOT be called
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+
+        # Mock the network backend's connect_tcp to capture the actual IP being connected to
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Capture the IP that's actually being connected to."""
+            nonlocal connected_to_ip
+            connected_to_ip = host
+            # Return a mock stream with HTML content
+            return httpcore.AsyncMockStream(
+                [
+                    b"HTTP/1.1 200 OK\r\n",
+                    b"Content-Type: text/html\r\n",
+                    b"Content-Length: 38\r\n",
+                    b"\r\n",
+                    b"<html><body>Test content</body></html>",
+                ]
+            )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            # Create URL component
+            component = URLComponent()
+            component.urls = ["http://attacker.test/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = [{"key": "User-Agent", "value": "Test"}]
+            component.timeout = 30
+            component.prevent_outside = True
+            component.use_async = True
+            component.filter_text_html = False
+            component.continue_on_failure = False
+            component.check_response_status = False
+            component.autoset_encoding = True
+
+            # Execute the component
+            result = await component.fetch_url_contents()
+
+            # Verify results
+            assert len(result) == 1
+            assert "Test content" in result[0]["text"]
+
+            # CRITICAL VERIFICATION: Only ONE DNS query should have occurred
+            assert call_count == 1, (
+                f"DNS rebinding attack NOT prevented! "
+                f"Expected 1 DNS query (during validation), but {call_count} occurred. "
+                f"The URL component is vulnerable to DNS rebinding attacks."
+            )
+
+            # Verify the connection was made to the pinned IP
+            assert connected_to_ip is not None, "No TCP connection was made"
+            assert connected_to_ip == "1.1.1.1", (
+                f"Connection should be to pinned IP 1.1.1.1, but was to {connected_to_ip}. DNS pinning failed!"
+            )
+
+    @pytest.mark.asyncio
+    async def test_url_component_blocks_localhost_on_first_query(self):
+        """Test that localhost is blocked even on the first DNS query."""
+
+        def mock_getaddrinfo_localhost(hostname, port, *args, **kwargs):
+            """Return localhost immediately."""
+            return [
+                (
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("127.0.0.1", port or 0),
+                )
+            ]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo_localhost),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            component = URLComponent()
+            component.urls = ["http://localhost-test.example/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = []
+            component.timeout = 30
+
+            # Should raise ValueError due to SSRF protection
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.fetch_url_contents()
+
+    @pytest.mark.asyncio
+    async def test_url_component_blocks_aws_metadata_on_first_query(self):
+        """Test that AWS metadata endpoint is blocked even on the first DNS query."""
+
+        def mock_getaddrinfo_metadata(hostname, port, *args, **kwargs):
+            """Return AWS metadata IP immediately."""
+            return [
+                (
+                    socket.AF_INET,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("169.254.169.254", port or 0),
+                )
+            ]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo_metadata),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            component = URLComponent()
+            component.urls = ["http://metadata.example/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = []
+            component.timeout = 30
+
+            # Should raise ValueError due to SSRF protection
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.fetch_url_contents()
+
+    @pytest.mark.asyncio
+    async def test_url_component_revalidates_discovered_links(self):
+        """Test that each discovered link during recursive crawling is re-validated.
+
+        This ensures that even if the initial URL is safe, any links discovered
+        during crawling are also validated before being fetched.
+        """
+        call_count = 0
+        validated_hosts = []
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Track which hosts are validated."""
+            nonlocal call_count
+            call_count += 1
+            validated_hosts.append(hostname)
+
+            # First host (safe.com) resolves to public IP
+            if hostname == "safe.com":
+                return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("1.1.1.1", 0))]
+            # Second host (evil.com) resolves to localhost - should be blocked
+            if hostname == "evil.com":
+                return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0))]
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0))]
+
+        async def mock_connect_tcp(self, host, port, **kwargs):
+            """Return HTML with a link to evil.com."""
+            return httpcore.AsyncMockStream(
+                [
+                    b"HTTP/1.1 200 OK\r\n",
+                    b"Content-Type: text/html\r\n",
+                    b"Content-Length: 61\r\n",
+                    b"\r\n",
+                    b'<html><body><a href="http://evil.com/">Link</a></body></html>',
+                ]
+            )
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+            patch.object(httpcore.AnyIOBackend, "connect_tcp", mock_connect_tcp),
+        ):
+            component = URLComponent()
+            component.urls = ["http://safe.com/"]
+            component.max_depth = 2  # Allow following links
+            component.format = "Text"
+            component.headers = []
+            component.timeout = 30
+            component.prevent_outside = False  # Allow external links
+            component.continue_on_failure = True  # Continue even if evil.com is blocked
+
+            # Execute - should fetch safe.com but block evil.com
+            result = await component.fetch_url_contents()
+
+            # Verify safe.com was fetched
+            assert len(result) >= 1
+
+            # Verify both hosts were validated
+            assert "safe.com" in validated_hosts, "Initial URL should be validated"
+            assert "evil.com" in validated_hosts, "Discovered link should be validated"
+
+            # Verify evil.com was blocked (only safe.com content returned)
+            assert len(result) == 1, "evil.com should have been blocked, only safe.com content returned"
+
+    @pytest.mark.asyncio
+    async def test_url_component_blocks_mixed_safe_unsafe_dns_answers(self):
+        """Test that hostnames resolving to both safe and unsafe IPs are blocked.
+
+        This prevents attacks where a hostname resolves to multiple IPs including
+        both public (safe) and private/localhost (unsafe) addresses. The entire
+        hostname must be blocked if ANY resolved IP is unsafe.
+        """
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Return both safe and unsafe IPs for the same hostname."""
+            return [
+                # First IP: safe public address
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0)),
+                # Second IP: unsafe localhost
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0)),
+            ]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            component = URLComponent()
+            component.urls = ["http://mixed-dns.example/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = []
+            component.timeout = 30
+
+            # Should raise ValueError due to SSRF protection blocking the unsafe IP
+            with pytest.raises(ValueError, match=r"SSRF Protection.*127\.0\.0\.1"):
+                await component.fetch_url_contents()
+
+    @pytest.mark.asyncio
+    async def test_url_component_blocks_ipv4_mapped_ipv6_localhost(self):
+        """Test that IPv4-mapped IPv6 localhost addresses are blocked.
+
+        IPv4-mapped IPv6 addresses like ::ffff:127.0.0.1 are a common SSRF bypass
+        technique. The protection must recognize and block these.
+        """
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Return IPv4-mapped IPv6 localhost."""
+            return [
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("::ffff:127.0.0.1", 0),
+                )
+            ]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            component = URLComponent()
+            component.urls = ["http://ipv4-mapped.example/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = []
+            component.timeout = 30
+
+            # Should raise ValueError due to SSRF protection
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.fetch_url_contents()
+
+    @pytest.mark.asyncio
+    async def test_url_component_blocks_ipv4_mapped_ipv6_private_network(self):
+        """Test that IPv4-mapped IPv6 private network addresses are blocked.
+
+        Tests ::ffff:192.168.1.1 (IPv4-mapped private network).
+        """
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Return IPv4-mapped IPv6 private network address."""
+            return [
+                (
+                    socket.AF_INET6,
+                    socket.SOCK_STREAM,
+                    6,
+                    "",
+                    ("::ffff:192.168.1.1", 0),
+                )
+            ]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            component = URLComponent()
+            component.urls = ["http://ipv4-mapped-private.example/"]
+            component.max_depth = 1
+            component.format = "Text"
+            component.headers = []
+            component.timeout = 30
+
+            # Should raise ValueError due to SSRF protection
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.fetch_url_contents()
+
+
+class TestAPIRequestDNSRebindingEdgeCases:
+    """Additional edge case tests for API Request component DNS rebinding protection."""
+
+    @pytest.fixture
+    def component(self):
+        """Create a basic API request component."""
+        return APIRequestComponent(
+            url_input="http://test.example:8080/api",
+            method="GET",
+            headers=[],
+            body=[],
+            timeout=30,
+            follow_redirects=False,
+            save_to_file=False,
+            include_httpx_metadata=False,
+            mode="URL",
+            curl_input="",
+            query_params={},
+        )
+
+    @pytest.mark.asyncio
+    async def test_api_request_blocks_mixed_safe_unsafe_dns_answers(self, component):
+        """Test that hostnames resolving to both safe and unsafe IPs are blocked."""
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Return both safe and unsafe IPs."""
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("8.8.8.8", 0)),
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("127.0.0.1", 0)),
+            ]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            with pytest.raises(ValueError, match=r"SSRF Protection.*127\.0\.0\.1"):
+                await component.make_api_request()
+
+    @pytest.mark.asyncio
+    async def test_api_request_blocks_ipv4_mapped_ipv6_localhost(self, component):
+        """Test that IPv4-mapped IPv6 localhost is blocked."""
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Return IPv4-mapped IPv6 localhost."""
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:127.0.0.1", 0))]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.make_api_request()
+
+    @pytest.mark.asyncio
+    async def test_api_request_blocks_ipv4_mapped_ipv6_metadata(self, component):
+        """Test that IPv4-mapped IPv6 AWS metadata is blocked."""
+
+        def mock_getaddrinfo(hostname, port, *args, **kwargs):
+            """Return IPv4-mapped IPv6 AWS metadata address."""
+            return [(socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("::ffff:169.254.169.254", 0))]
+
+        with (
+            patch("socket.getaddrinfo", side_effect=mock_getaddrinfo),
+            patch.dict(os.environ, {"LANGFLOW_SSRF_PROTECTION_ENABLED": "true"}),
+        ):
+            with pytest.raises(ValueError, match="SSRF Protection"):
+                await component.make_api_request()

@@ -9,7 +9,7 @@ from typing import Any, Literal
 import aiofiles
 import orjson
 import yaml
-from pydantic import AliasChoices, Field, field_validator
+from pydantic import AliasChoices, Field, field_validator, model_validator
 from pydantic.fields import FieldInfo
 from pydantic_settings import BaseSettings, EnvSettingsSource, PydanticBaseSettingsSource, SettingsConfigDict
 from typing_extensions import override
@@ -68,6 +68,16 @@ class Settings(BaseSettings):
 
     knowledge_bases_dir: str | None = "~/.langflow/knowledge_bases"
     """The directory to store knowledge bases."""
+
+    kb_allowed_folder_roots: list[str] = []
+    """Allow-list of directories the folder-ingestion endpoint may read from.
+
+    Comma-separated when set via env (``LANGFLOW_KB_ALLOWED_FOLDER_ROOTS``),
+    e.g. ``/srv/docs,/data/shared``. Empty by default — operators must opt in.
+    ``POST /api/v1/knowledge_bases/{kb_name}/ingest/folder`` refuses to walk any
+    directory that is not equal to or inside one of these roots; symlink escapes
+    are blocked because the path is resolved before the containment check. Leave
+    empty in multi-tenant cloud deployments to refuse arbitrary-path access."""
 
     dev: bool = False
     """If True, Langflow will run in development mode."""
@@ -245,6 +255,16 @@ class Settings(BaseSettings):
     redis_url: str | None = None
     redis_cache_expire: int = 3600
 
+    # Rate Limiting
+    rate_limit_enabled: bool = True
+    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    rate_limit_per_minute: int = 5
+    """Number of login attempts allowed per minute per IP."""
+    rate_limit_storage_uri: str = "memory://"
+    """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
+    rate_limit_trust_proxy: bool = False
+    """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
+
     # Job Queue
     job_queue_type: Literal["asyncio", "redis"] = "asyncio"
     """The job queue backend. Use 'redis' for multi-worker deployments to solve cross-worker JobQueueNotFoundError."""
@@ -377,6 +397,58 @@ class Settings(BaseSettings):
     vertex_builds_storage_enabled: bool = True
     """If set to True, Langflow will keep track of each vertex builds (outputs) in the UI for any flow."""
 
+    telemetry_writer_enabled: bool = True
+    """Route transaction and vertex_build writes through an async batched writer backed by a
+    disk-persisted outbox and a dedicated database connection. Eliminates SQLite
+    'database is locked' errors and Postgres pool-timeouts under heavy load by keeping
+    telemetry traffic off the request-handling connection pool.
+    Set to False to fall back to the legacy direct-write path."""
+    telemetry_writer_batch_size: int = 200
+    """Maximum rows per batched INSERT executed by the telemetry writer."""
+    telemetry_writer_flush_interval_s: float = 0.5
+    """Maximum seconds the writer waits before flushing a partial batch."""
+    telemetry_writer_cleanup_interval_s: int = 60
+    """Cadence (seconds) of the retention sweeper that enforces max_transactions_to_keep
+    and max_vertex_builds_to_keep. Retention is amortized rather than per-row to avoid
+    inflating per-write cost."""
+    telemetry_writer_max_queue: int = 100_000
+    """Per-outbox cap. When exceeded, oldest entries are dropped and a counter is
+    incremented. Bounds disk usage in pathological backlog scenarios."""
+    telemetry_writer_outbox_dir: str | None = None
+    """Directory for the disk-backed outbox. Defaults to
+    <tempdir>/langflow_telemetry_outbox. Each worker process uses an isolated
+    subdirectory keyed by PID; sibling subdirectories from crashed workers are
+    automatically adopted on startup."""
+    telemetry_writer_shutdown_drain_s: float = 5.0
+    """Maximum seconds the writer waits to drain in-flight batches on shutdown
+    before disposing the dedicated engine."""
+    telemetry_writer_orphan_max_age_s: float = 3600.0
+    """Cross-host orphan outboxes (e.g. dead pods on a shared volume) are pruned
+    when their owner file hasn't been heartbeated within this many seconds.
+    Same-host orphans are adopted regardless of age via owner-file identity."""
+    telemetry_writer_size_strategy: Literal["count", "bytes", "either"] = "count"
+    """How the writer bounds memory and flushes.
+
+    - 'count' (default): preserve legacy row-count semantics. ``batch_size`` and
+      ``max_queue`` are the only thresholds.
+    - 'bytes': bound by the byte thresholds below; row caps are ignored.
+    - 'either': whichever (rows or bytes) trips first wins. Recommended for
+      deployments with variable payload sizes (large vertex_build artifacts,
+      doc-loader outputs)."""
+    telemetry_writer_batch_size_bytes: int = 262_144
+    """Cap on per-flush batch size in *encoded JSON bytes*. Consulted when
+    ``telemetry_writer_size_strategy`` is 'bytes' or 'either'. Sized around a
+    single TCP frame so individual INSERTs stay below DB packet limits.
+
+    Note: this measures the payload's serialized size, not Python's in-memory
+    footprint (dicts carry significant overhead beyond their JSON form)."""
+    telemetry_writer_max_queue_bytes: int = 209_715_200
+    """Per-outbox cap in *encoded JSON bytes*. When exceeded under 'bytes' or
+    'either' strategy, oldest entries are dropped until the buffer fits.
+    Defaults to ~200MB so a single worker's telemetry buffer can't dominate
+    container memory. As with ``batch_size_bytes`` this is serialized size, not
+    Python in-memory size — actual RSS will be 2-5x higher."""
+
     # Config
     host: str = "localhost"
     """The host on which Langflow will run."""
@@ -506,14 +578,28 @@ class Settings(BaseSettings):
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
     as a safety measure.
 
-    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
-    that will be allowed to execute, even when allow_custom_components is False.
+    Note: LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH can be used to define
+    an allow-list of custom components that will be allowed to execute, even when
+    allow_custom_components is False. That bypass can be disabled with
+    allow_components_paths_override.
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
     custom_component_admin_only: bool = False
     """If set to True, only admin users can edit custom component code. Regular editors
     are blocked from modifying custom component templates."""
+
+    allow_components_paths_override: bool = True
+    """If set to False, LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH will
+    not bypass the allow_custom_components=False restriction — only components matching
+    built-in server templates will be executable.
+
+    Default is True, which preserves the existing behavior: components loaded from those
+    env-var paths act as an admin-curated allow-list that remains executable even when
+    allow_custom_components is False.
+
+    Has no effect when allow_custom_components is True (the flag is not blocking anything
+    to override)."""
 
     # SSRF Protection
     ssrf_protection_enabled: bool = True
@@ -870,6 +956,56 @@ class Settings(BaseSettings):
         elif isinstance(value, list):
             value = [str(p) if isinstance(p, Path) else p for p in value]
         return value
+
+    @model_validator(mode="after")
+    def _enforce_components_paths_override(self):
+        """Strip env-var-provided component paths when their bypass is disabled.
+
+        When ``allow_custom_components`` is False the server only trusts components
+        matching built-in templates. By default ``LANGFLOW_COMPONENTS_PATH`` and
+        ``LANGFLOW_COMPONENTS_INDEX_PATH`` still contribute to that trust set (an
+        admin-curated allow-list). Setting ``allow_components_paths_override=False``
+        disables that bypass: here we remove the env-contributed entries so nothing
+        downstream loads or trusts them.
+        """
+        if self.allow_custom_components or self.allow_components_paths_override:
+            return self
+
+        env_components_path = os.getenv("LANGFLOW_COMPONENTS_PATH")
+        if env_components_path:
+            # The env var may be a comma-separated list; CustomSource splits it
+            # before the field validator runs, so self.components_path contains
+            # individual entries rather than the raw comma-joined string.
+            # In-place removal avoids re-triggering ``set_components_path``, which
+            # would re-read LANGFLOW_COMPONENTS_PATH and append the paths again.
+            env_paths = [p.strip() for p in env_components_path.split(",") if p.strip()]
+            stripped_any = False
+            for env_path in env_paths:
+                while env_path in self.components_path:
+                    self.components_path.remove(env_path)
+                    stripped_any = True
+            if stripped_any:
+                logger.warning(
+                    "Ignoring LANGFLOW_COMPONENTS_PATH=%s: "
+                    "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                    "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                    env_components_path,
+                )
+
+        # Only strip the index path when it came from the env var, mirroring the
+        # components_path handling above. A value set via config/YAML is not part of
+        # the env-var bypass this flag governs, so leave it untouched.
+        env_components_index_path = os.getenv("LANGFLOW_COMPONENTS_INDEX_PATH")
+        if env_components_index_path and self.components_index_path == env_components_index_path:
+            logger.warning(
+                "Ignoring LANGFLOW_COMPONENTS_INDEX_PATH=%s: "
+                "LANGFLOW_ALLOW_CUSTOM_COMPONENTS=False and "
+                "LANGFLOW_ALLOW_COMPONENTS_PATHS_OVERRIDE=False.",
+                self.components_index_path,
+            )
+            self.components_index_path = None
+
+        return self
 
     model_config = SettingsConfigDict(validate_assignment=True, extra="ignore", env_prefix="LANGFLOW_")
 

@@ -2,15 +2,13 @@
 
 import asyncio
 import hashlib
-import tempfile
-from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import AsyncMock, patch
 
 import pytest
 from asgi_lifespan import LifespanManager
 from httpx import ASGITransport, AsyncClient
-from lfx.cli.serve_app import FlowMeta, StreamRequest, create_multi_serve_app
+from lfx.cli.serve_app import FlowMeta, FlowRegistry, StreamRequest, create_multi_serve_app
 from lfx.interface.components import component_cache
 
 
@@ -124,24 +122,24 @@ def multi_serve_app(mock_graphs, mock_metas, monkeypatch):
             "Execution completed successfully",
         )
 
-        with tempfile.TemporaryDirectory() as temp_dir:
-            app = create_multi_serve_app(
-                root_dir=Path(temp_dir), graphs=mock_graphs, metas=mock_metas, verbose_print=lambda _: None
-            )
+        registry = FlowRegistry()
+        for flow_id, graph in mock_graphs.items():
+            registry.add(graph, mock_metas[flow_id])
+        app = create_multi_serve_app(registry=registry)
 
-            # Override the dependency after app creation
-            def mock_verify_api_key(query_param: str | None = None, header_param: str | None = None) -> str:  # noqa: ARG001
-                return "test-api-key"
+        # Override the dependency after app creation
+        def mock_verify_api_key(query_param: str | None = None, header_param: str | None = None) -> str:  # noqa: ARG001
+            return "test-api-key"
 
-            # Import the original dependency
-            from lfx.cli.serve_app import verify_api_key
+        # Import the original dependency
+        from lfx.cli.serve_app import verify_api_key
 
-            app.dependency_overrides[verify_api_key] = mock_verify_api_key
+        app.dependency_overrides[verify_api_key] = mock_verify_api_key
 
-            yield app
+        yield app
 
-            # Clean up
-            app.dependency_overrides.clear()
+        # Clean up
+        app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -431,12 +429,10 @@ class TestMultiServeStreaming:
         monkeypatch.setenv("LANGFLOW_API_KEY", "test-api-key")
         mock_graphs["flow1"].raw_graph_data = _blocked_raw_graph()
 
-        app = create_multi_serve_app(
-            root_dir=Path("/tmp"),
-            graphs=mock_graphs,
-            metas=mock_metas,
-            verbose_print=lambda _: None,
-        )
+        registry = FlowRegistry()
+        for flow_id, graph in mock_graphs.items():
+            registry.add(graph, mock_metas[flow_id])
+        app = create_multi_serve_app(registry=registry)
 
         from lfx.cli.serve_app import verify_api_key
 
@@ -481,3 +477,48 @@ class TestMultiServeStreaming:
         assert response.status_code == 200
         assert "custom components are not allowed" in response.text
         mock_run_flow.assert_not_called()
+
+    @pytest.mark.asyncio
+    async def test_stream_setup_error_returns_valid_json(self, mock_graphs, mock_metas, monkeypatch):
+        """Error messages with special characters must not break the SSE JSON payload."""
+        monkeypatch.setenv("LANGFLOW_API_KEY", "test-api-key")
+
+        registry = FlowRegistry()
+        for flow_id, graph in mock_graphs.items():
+            registry.add(graph, mock_metas[flow_id])
+        app = create_multi_serve_app(registry=registry)
+
+        from lfx.cli.serve_app import verify_api_key
+
+        app.dependency_overrides[verify_api_key] = lambda: "test-api-key"
+
+        # Exception message contains characters that would break hand-crafted JSON
+        nasty_message = 'failed: "quotes" and\nnewlines'
+
+        async with (
+            LifespanManager(app, startup_timeout=None, shutdown_timeout=None) as manager,
+            AsyncClient(
+                transport=ASGITransport(app=manager.app),
+                base_url="http://testserver/",
+                http2=True,
+            ) as client,
+        ):
+            with patch(
+                "lfx.cli.serve_app.validate_flow_for_current_settings",
+                side_effect=RuntimeError(nasty_message),
+            ):
+                response = await client.post(
+                    "/flows/flow1/stream",
+                    json={"input_value": "test"},
+                    headers={"x-api-key": "test-api-key"},
+                )
+
+        assert response.status_code == 200
+        # Strip the SSE framing and parse as JSON — must not raise
+        for line in response.text.splitlines():
+            if line.startswith("data: "):
+                import json
+
+                payload = json.loads(line[len("data: ") :])
+                assert payload["success"] is False
+                assert nasty_message in payload["error"]
