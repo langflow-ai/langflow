@@ -235,7 +235,9 @@ jobs:
             echo "LANGFLOW_ENG_SLACK_WEBHOOK_URL not set; skipping Slack alert"
             exit 0
           fi
-          curl -X POST -H 'Content-type: application/json' \
+          # --fail-with-body: a Slack 4xx (e.g. rotated/revoked webhook) must
+          # fail this job, or a broken alert path stays green unnoticed.
+          curl --fail-with-body -X POST -H 'Content-type: application/json' \
             --data "{
               \"blocks\": [
                 {
