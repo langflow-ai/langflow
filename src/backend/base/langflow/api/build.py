@@ -55,6 +55,32 @@ from langflow.services.telemetry.schema import (
 STREAMING_ACTIVITY_REFRESH_S = 10.0
 
 
+def _output_meta_for_vertex(graph: Graph, vertex_id: str) -> dict:
+    """Authoritative per-output metadata for the v2 ``output`` stream event.
+
+    Sourced from the real graph vertex (the only place ``display_name`` /
+    ``is_output`` / declared output types are authoritative) so the streamed
+    ``OutputEvent`` matches the sync ``outputs[id]`` ``ComponentOutput``. Shipped as
+    an additive ``output_meta`` key on ``end_vertex``; existing consumers read
+    ``build_data`` and ignore this. ``is_terminal`` mirrors the sync ``outputs`` set
+    so the stream emits an ``output`` event for exactly the same components.
+    """
+    vertex = graph.get_vertex(vertex_id)
+    output_types = vertex.outputs[0].get("types", []) if (vertex.outputs and len(vertex.outputs) > 0) else []
+    try:
+        terminal_ids = set(graph.get_terminal_nodes())
+    except AttributeError:
+        terminal_ids = {v.id for v in graph.vertices if not graph.successor_map.get(v.id, [])}
+    return {
+        "component_id": vertex.id,
+        "display_name": vertex.display_name or vertex.vertex_type,
+        "vertex_type": vertex.vertex_type,
+        "is_output": bool(vertex.is_output),
+        "is_terminal": vertex_id in terminal_ids,
+        "output_types": output_types,
+    }
+
+
 def _log_component_input_telemetry(
     vertex,
     vertex_id: str,
@@ -615,7 +641,9 @@ async def generate_flow_events(
             msg = f"Error serializing vertex build response: {exc}"
             raise ValueError(msg) from exc
 
-        event_manager.on_end_vertex(data={"build_data": build_data})
+        event_manager.on_end_vertex(
+            data={"build_data": build_data, "output_meta": _output_meta_for_vertex(graph, vertex_id)}
+        )
 
         if vertex_build_response.valid and vertex_build_response.next_vertices_ids:
             tasks = []

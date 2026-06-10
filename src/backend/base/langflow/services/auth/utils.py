@@ -9,7 +9,7 @@ from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSoc
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
 from lfx.log.logger import logger
-from lfx.services.deps import injectable_session_scope
+from lfx.services.deps import injectable_session_scope, session_scope
 
 from langflow.services.auth.exceptions import (
     AuthenticationError,
@@ -225,6 +225,36 @@ async def get_current_user_for_sse(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Missing or invalid credentials (cookie or API key).",
         ) from e
+
+
+async def get_current_user_for_workflow(
+    token: Annotated[str | None, Security(oauth2_login)],
+    query_param: Annotated[str | None, Security(api_key_query)],
+    header_param: Annotated[str | None, Security(api_key_header)],
+) -> UserRead:
+    """Combined session-or-API-key auth that does not hold a DB session.
+
+    Resolves the user from a session cookie/token *or* an API key inside a
+    short-lived session that is committed and closed before the path operation
+    runs. Unlike `get_current_active_user` (a generator dependency whose session
+    stays open for the whole request), this is required by endpoints that
+    execute a graph inline: a held auth connection contends with the run's own
+    writes (on SQLite it blocks the run's INSERTs with "database is locked").
+    """
+    from langflow.services.database.models.user.model import UserRead
+
+    async with session_scope() as db:
+        try:
+            user = await _auth_service().get_current_user(token, query_param, header_param, db)
+        except AuthenticationError as e:
+            raise _auth_error_to_http(e) from e
+        active_user = await _auth_service().get_current_active_user(user)
+        if active_user is None:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="User account is inactive",
+            )
+        return UserRead.model_validate(active_user, from_attributes=True)
 
 
 async def get_optional_user(

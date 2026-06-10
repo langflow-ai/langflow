@@ -286,6 +286,12 @@ def get_memory_base_service():
     return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())
 
 
+def get_background_execution_service():
+    """Retrieves the BackgroundExecutionService instance from the service manager."""
+    from langflow.services.background_execution.factory import BackgroundExecutionServiceFactory
+
+    return get_service(ServiceType.BACKGROUND_EXECUTION_SERVICE, BackgroundExecutionServiceFactory())
+
 def get_telemetry_writer_service():
     """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
     from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory

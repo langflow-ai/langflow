@@ -175,6 +175,12 @@ EXPECTED_FIELDS = {
     "redis_queue_cancel_marker_ttl",
     "redis_queue_polling_stale_threshold_s",
     "redis_queue_polling_watchdog_interval_s",
+    "background_max_concurrency",
+    "background_job_timeout",
+    "background_lease_ttl_s",
+    "background_heartbeat_interval_s",
+    "background_watchdog_interval_s",
+    "test_redis_url",
     "max_ingestion_timeout_secs",
     # UiSettings
     "embedded_mode",

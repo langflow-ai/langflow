@@ -7557,6 +7557,7 @@ name = "langflow-base"
 version = "0.11.0"
 source = { editable = "src/backend/base" }
 dependencies = [
+    { name = "ag-ui-protocol" },
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
     { name = "aiofile", version = "3.11.1", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.11'" },
     { name = "aiofiles" },
@@ -8272,6 +8273,7 @@ dev = [
 
 [package.metadata]
 requires-dist = [
+    { name = "ag-ui-protocol", specifier = "==0.1.18" },
     { name = "ag2", marker = "extra == 'ag2'", specifier = ">=0.1.0" },
     { name = "agent-lifecycle-toolkit", marker = "(platform_machine != 'x86_64' and extra == 'altk') or (sys_platform != 'darwin' and extra == 'altk')", specifier = ">=0.10.1,<1.0" },
     { name = "aioboto3", marker = "extra == 'aioboto3'", specifier = ">=15.2.0,<16.0.0" },
