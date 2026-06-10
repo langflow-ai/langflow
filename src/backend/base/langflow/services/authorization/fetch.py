@@ -38,7 +38,8 @@ async def authorized_or_owner_scoped(
 
 
 def deny_to_404(exc: HTTPException, detail: str = "Not found") -> HTTPException:
-    """Map 403 from permission checks to 404; sanitize other error details."""
+    """Map a 403 permission-deny to 404 (UUID privacy); return any other error unchanged."""
     if exc.status_code == status.HTTP_403_FORBIDDEN:
         return HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-    return HTTPException(status_code=exc.status_code, detail=detail)
+    # Never relabel a non-403 (e.g. 4xx/5xx) as "not found"; surface it unchanged.
+    return exc

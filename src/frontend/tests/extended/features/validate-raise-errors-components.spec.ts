@@ -47,7 +47,7 @@ class CustomComponent(Component):
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
       {
-        timeout: 3000,
+        timeout: 30000,
       },
     );
 
@@ -57,7 +57,7 @@ class CustomComponent(Component):
     await page.waitForTimeout(1000);
 
     await page.waitForSelector('[data-testid="title-Custom Component"]', {
-      timeout: 3000,
+      timeout: 10000,
     });
     await page.getByTestId("title-Custom Component").click();
 
@@ -73,8 +73,11 @@ class CustomComponent(Component):
 
     await page.getByTestId("button_run_custom component").click();
 
+    // Building and running a custom component that raises a runtime error can
+    // take well over 3s on slower (e.g. Windows) CI runners, so give the error
+    // popup the same generous window used by other build-dependent assertions.
     await page.waitForSelector("text=THIS IS A TEST ERROR MESSAGE", {
-      timeout: 3000,
+      timeout: 30000,
     });
 
     const numberOfErrorMessages = await page

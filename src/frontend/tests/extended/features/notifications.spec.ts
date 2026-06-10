@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { TEXTS } from "../../utils/constants/texts";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
@@ -7,6 +8,9 @@ test(
   { tag: ["@release"] },
   async ({ page }) => {
     await openBlankFlow(page);
+
+    await addLegacyComponents(page);
+
     await page.waitForSelector('[data-testid="disclosure-input & output"]', {
       timeout: 30000,
       state: "visible",
