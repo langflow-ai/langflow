@@ -207,6 +207,27 @@ def test_empty_entry_point_value_is_malformed() -> None:
     assert [e.code for s in sentinels for e in s.warnings] == ["bundle-discovery-malformed"]
 
 
+def test_plain_module_entry_point_is_malformed_not_scanned(tmp_path: Path, monkeypatch) -> None:
+    """A declaration pointing at a single-file module is malformed, not a root.
+
+    A plain module has no provider subdirectories; treating its parent
+    directory as a bundle root would folder-walk unrelated siblings (here a
+    provider-shaped directory next to the module file).
+    """
+    module_name = "lfx_bundles_plain_module_fixture"
+    (tmp_path / f"{module_name}.py").write_text("", encoding="utf-8")
+    _make_provider(tmp_path, "sneaky_sibling")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    try:
+        roots, sentinels = _resolve_bundle_roots([_FakeBundlesEntryPoint(module_name)])
+        assert roots == []
+        assert [e.code for s in sentinels for e in s.warnings] == ["bundle-discovery-malformed"]
+        assert all(s.ok for s in sentinels)
+    finally:
+        importlib.invalidate_caches()
+
+
 def test_no_entry_points_is_empty_no_op() -> None:
     """Engine-only install (no distribution declares lfx.bundles) -> []."""
     assert load_lfx_bundles_extensions(entry_points=[]) == []
