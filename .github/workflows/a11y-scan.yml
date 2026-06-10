@@ -1,6 +1,10 @@
 name: Run Accessibility Scans (IBM Equal Access)
 
 on:
+  # TEMP: remove before merging — allows testing the workflow from this
+  # branch, since workflow_dispatch only registers once the file is on main.
+  push:
+    branches: [feat/a11y]
   schedule:
     # Run nightly at 02:00 UTC, after the nightly build window
     - cron: "0 2 * * *"
