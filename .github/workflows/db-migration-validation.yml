@@ -182,13 +182,16 @@ jobs:
               # Install latest nightly (canonical pre-release) from PyPI
               uv pip install --upgrade --prerelease=allow 'langflow[postgresql]'
             else
-              # Install specific version
-              uv pip install --upgrade "langflow[postgresql]==$VERSION"
+              # Install specific version. --prerelease=allow is required even for an
+              # exact ==X.Y.Z.devN pin: uv only implicitly allows the pre-release for
+              # the directly requested package, while langflow's metadata pins
+              # langflow-base==X.Y.Z.devN transitively, which uv rejects without it.
+              uv pip install --upgrade --prerelease=allow "langflow[postgresql]==$VERSION"
             fi
           else
             # Direct version string (strip 'v' prefix if present)
             VERSION="${NIGHTLY_TAG#v}"
-            uv pip install --upgrade "langflow[postgresql]==$VERSION"
+            uv pip install --upgrade --prerelease=allow "langflow[postgresql]==$VERSION"
           fi
 
           # Verify upgrade
