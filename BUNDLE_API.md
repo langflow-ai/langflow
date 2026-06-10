@@ -406,7 +406,10 @@ the deserialize half is covered by
   distribution may declare `[project.entry-points."lfx.bundles"]` whose
   value is an importable package; each immediate subdirectory is loaded as
   one bundle at the `@official` slot with **no `extension.json`** (the
-  langchain-community model; exempt from `lfx extension validate`).
+  langchain-community model; these directories are not inputs to
+  `lfx extension validate` -- the validator requires an `extension.json` or
+  `[tool.langflow.extension]` manifest and reports `manifest-not-found`
+  without one).
   `load_lfx_bundles_extensions` is exported from `lfx.extension` (additive).
   Discovery precedence for cross-source bundle-name collisions becomes
   `installed > seed > lfx_bundles > dev > inline` -- **manifest always
