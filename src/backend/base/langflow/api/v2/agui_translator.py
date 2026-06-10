@@ -116,7 +116,14 @@ class AGUITranslator:
         if event_type == "log":
             return [CustomEvent(name="langflow.log", value=data)]
         if event_type == "remove_message":
-            return [CustomEvent(name="langflow.message.removed", value={"message_id": str(data.get("id") or "")})]
+            removed_id = str(data.get("id") or "")
+            # A retracted message (e.g. the agent error path removing its
+            # partial message) must not flush its buffered text later as if
+            # it were real. Tombstone it so late tokens are dropped too.
+            if removed_id in self._buffered_messages:
+                del self._buffered_messages[removed_id]
+                self._emitted_text_message_ids.add(removed_id)
+            return [CustomEvent(name="langflow.message.removed", value={"message_id": removed_id})]
 
         # Only terminal events close an open text message. Non-terminal events
         # (build_start, end_vertex, log, ...) interleave with tokens of the same
@@ -232,18 +239,25 @@ class AGUITranslator:
                         self._translate_custom_content(message_id, block, block_index, content_index, content)
                     )
 
-        # Message text.
+        # Message text. The agent path re-fires ``add_message`` with
+        # ``properties.state == "partial"`` mid-run (tool start/end updates)
+        # for a message it is still streaming; only a non-partial add_message
+        # is a finalizer. ``state`` defaults to "complete", so payloads
+        # without properties finalize as before.
+        is_partial = (data.get("properties") or {}).get("state") == "partial"
         if message_id and message_id == self._open_message_id:
             # Finalizer of the wire-open streamed message: close it. The text
             # was already streamed token by token, so it must not be re-emitted
             # now or by any later add_message that re-fires for the same id.
-            events.extend(self._close_open_message())
+            if not is_partial:
+                events.extend(self._close_open_message())
         elif message_id and message_id in self._buffered_messages:
             # Finalizer for a message still waiting for the wire: record the
             # authoritative full text; the trio is emitted on promotion.
-            self._buffered_messages[message_id].final_text = (
-                data.get("text") or self._buffered_messages[message_id].text
-            )
+            if not is_partial:
+                self._buffered_messages[message_id].final_text = (
+                    data.get("text") or self._buffered_messages[message_id].text
+                )
         else:
             text = data.get("text") or ""
             # Skip text-message lifecycle emission without a stable message_id;
