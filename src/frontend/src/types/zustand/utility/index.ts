@@ -40,4 +40,32 @@ export type UtilityStoreType = {
   setAllowCustomComponents: (allowCustomComponents: boolean) => void;
   mcpBaseUrl: string;
   setMcpBaseUrl: (mcpBaseUrl: string) => void;
+  /**
+   * Mode A only: gates the palette Bundle-header Reload action at runtime.
+   * Sourced from the backend ``/config`` response (mirrors
+   * ``settings.enable_extension_reload``) so a ``langflow run`` started
+   * with ``LANGFLOW_ENABLE_EXTENSION_RELOAD=true`` (or via ``--env-file``,
+   * or by ``lfx extension dev``) lights up the Reload button without a
+   * frontend rebuild.  The build-time Vite flag (ENABLE_EXTENSION_RELOAD)
+   * still gates first paint; the UI consults BOTH so Mode B/C deployments
+   * with the build flag off keep the button hidden even if a misconfigured
+   * backend turns it on.
+   */
+  enableExtensionReload: boolean;
+  setEnableExtensionReload: (enableExtensionReload: boolean) => void;
+  // Embedded mode flags
+  embeddedMode: boolean;
+  setEmbeddedMode: (embeddedMode: boolean) => void;
+  hideLogoutButton: boolean;
+  setHideLogoutButton: (hideLogoutButton: boolean) => void;
+  hideNewProjectButton: boolean;
+  setHideNewProjectButton: (hideNewProjectButton: boolean) => void;
+  hideNewFlowButton: boolean;
+  setHideNewFlowButton: (hideNewFlowButton: boolean) => void;
+  hideStarterProjects: boolean;
+  setHideStarterProjects: (hideStarterProjects: boolean) => void;
+  mcpServersLocked: boolean;
+  setMcpServersLocked: (mcpServersLocked: boolean) => void;
+  customComponentAdminOnly: boolean;
+  setCustomComponentAdminOnly: (customComponentAdminOnly: boolean) => void;
 };

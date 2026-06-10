@@ -6,7 +6,7 @@ import time
 from collections.abc import AsyncGenerator
 from http import HTTPStatus
 from typing import TYPE_CHECKING, Annotated
-from uuid import uuid4
+from uuid import UUID, uuid4
 
 import orjson
 import sqlalchemy as sa
@@ -35,6 +35,7 @@ from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession, extract_global_variables_from_headers, parse_value
 from langflow.api.v1.files import get_flow
+from langflow.api.v1.global_variable_defaults import apply_global_variable_defaults
 from langflow.api.v1.schemas import (
     ConfigResponse,
     CustomComponentRequest,
@@ -59,15 +60,33 @@ from langflow.services.auth.utils import (
     get_current_user_for_sse,
     get_optional_user,
 )
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.cache.utils import save_uploaded_file
 from langflow.services.database.models.flow.model import Flow, FlowRead
 from langflow.services.database.models.flow.utils import get_all_webhook_components_in_flow
+from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import User, UserRead
-from langflow.services.deps import get_auth_service, get_session_service, get_settings_service, get_telemetry_service
+from langflow.services.deps import (
+    get_auth_service,
+    get_job_service,
+    get_memory_base_service,
+    get_session_service,
+    get_settings_service,
+    get_task_service,
+    get_telemetry_service,
+)
 from langflow.services.event_manager import create_webhook_event_manager, webhook_event_manager
 from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
+
+
+def _requires_component_hash_lookups(settings: object, user: CurrentActiveUser) -> bool:
+    requires_admin_only_hashes = (
+        getattr(settings, "custom_component_admin_only", False) is True and not user.is_superuser
+    )
+    return requires_admin_only_hashes or not settings.allow_custom_components
+
 
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
@@ -78,11 +97,53 @@ router = APIRouter(tags=["Base"])
 SSE_HEARTBEAT_TIMEOUT_SECONDS = 30.0
 
 
+_SIMPLIFIED_API_FORM_FIELDS = (
+    "input_value",
+    "input_type",
+    "output_type",
+    "output_component",
+    "session_id",
+    "user_id",
+)
+
+
+async def _parse_multipart_form_data(http_request: Request) -> SimplifiedAPIRequest:
+    """Parse SimplifiedAPIRequest fields from a multipart/form-data request.
+
+    Reads the form via ``http_request.form()`` so uploaded file streams are not
+    consumed by an upstream JSON parse attempt. Only string-valued fields that
+    map to ``SimplifiedAPIRequest`` are extracted; any ``UploadFile`` entries
+    (e.g. inline file uploads) are intentionally ignored here and remain
+    available to downstream handlers.
+    """
+    form = await http_request.form()
+    data: dict = {}
+
+    for field in _SIMPLIFIED_API_FORM_FIELDS:
+        value = form.get(field)
+        if isinstance(value, str):
+            data[field] = value
+
+    raw_tweaks = form.get("tweaks")
+    if isinstance(raw_tweaks, (str, bytes)) and raw_tweaks:
+        try:
+            data["tweaks"] = orjson.loads(raw_tweaks)
+        except orjson.JSONDecodeError as exc:
+            logger.warning(f"Failed to parse 'tweaks' form field as JSON: {exc}")
+
+    return SimplifiedAPIRequest(**data)
+
+
 async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIRequest:
     """Parse SimplifiedAPIRequest from HTTP request body.
 
     This function handles the case where FastAPI can't automatically parse the request body
     due to the presence of a Request parameter in the endpoint signature.
+
+    Supports both ``application/json`` and ``multipart/form-data`` bodies. For
+    multipart requests, form fields matching ``SimplifiedAPIRequest`` (including
+    ``session_id``) are extracted via ``request.form()`` rather than being lost
+    to a failing JSON parse.
 
     Args:
         http_request: The FastAPI Request object
@@ -90,7 +151,12 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
     Returns:
         SimplifiedAPIRequest: Parsed request or default instance if parsing fails
     """
+    content_type = (http_request.headers.get("content-type") or "").lower()
+
     try:
+        if content_type.startswith("multipart/form-data"):
+            return await _parse_multipart_form_data(http_request)
+
         body = await http_request.body()
         if body:
             body_data = orjson.loads(body)
@@ -102,17 +168,23 @@ async def parse_input_request_from_body(http_request: Request) -> SimplifiedAPIR
 
 
 @router.get("/all", dependencies=[Depends(get_current_active_user)])
-async def get_all():
+async def get_all(request: Request):
     """Retrieve all component types with compression for better performance.
 
-    Returns a compressed response containing all available component types.
+    Returns a compressed response containing all available component types,
+    with display_names translated to the locale indicated by Accept-Language.
     """
     from langflow.interface.components import get_and_cache_all_types_dict
+    from langflow.utils.i18n import build_component_display_names, translate_component_dict
 
     try:
-        all_types = await get_and_cache_all_types_dict(settings_service=get_settings_service())
-        # Return compressed response using our utility function
-        return compress_response(all_types)
+        all_types_en = await get_and_cache_all_types_dict(settings_service=get_settings_service())
+
+        locale = getattr(request.state, "locale", "en")
+        all_types = translate_component_dict(all_types_en, locale) if locale != "en" else all_types_en
+
+        component_display_names = build_component_display_names(all_types_en)
+        return compress_response({**all_types, "component_display_names": component_display_names})
 
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc)) from exc
@@ -170,11 +242,23 @@ async def simple_run_flow(
             raise ValueError(msg)
         graph_data = flow.data.copy()
         graph_data = process_tweaks(graph_data, input_request.tweaks or {}, stream=stream)
+        # Mirror the Playground's one-time fix in-memory: bind empty fields whose
+        # display_name matches a user global variable's default_fields. Without
+        # this, API-only workflows never trigger the frontend hook that persists
+        # load_from_db=true, so variables with "Apply to Fields" silently fail.
+        # See: https://github.com/langflow-ai/langflow/issues/11781
+        if user_id is not None:
+            graph_data = await apply_global_variable_defaults(graph_data, user_id)
         graph = Graph.from_payload(
             graph_data, flow_id=flow_id_str, user_id=str(user_id), flow_name=flow.name, context=context
         )
-        if run_id is None:
-            run_id = str(uuid4())
+        # Forward the caller-supplied identifier to tracing providers without
+        # affecting authn/authz. The API-key owner remains the effective user
+        # for permissions, global variables, and job ownership.
+        if input_request.user_id:
+            graph.tracing_user_id = input_request.user_id
+        run_id_uuid = uuid4() if run_id is None else UUID(run_id)
+        run_id = str(run_id_uuid)
         graph.set_run_id(run_id)
         inputs = None
         if input_request.input_value is not None:
@@ -197,15 +281,57 @@ async def simple_run_flow(
                     and (input_request.output_type == "any" or input_request.output_type in vertex.id.lower())  # type: ignore[operator]
                 )
             ]
-        task_result, session_id = await run_graph_internal(
-            graph=graph,
-            flow_id=flow_id_str,
-            session_id=input_request.session_id,
-            inputs=inputs,
-            outputs=outputs,
-            stream=stream,
-            event_manager=event_manager,
-        )
+
+        # Create a WORKFLOW job record so memory-base on_flow_output can track this run.
+        if user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Authentication required to run flows.",
+            )
+
+        try:
+            _job_svc = get_job_service()
+            await _job_svc.create_job(
+                job_id=run_id_uuid,
+                flow_id=flow.id,
+                user_id=user_id,
+                job_type=JobType.WORKFLOW,
+            )
+            task_result, session_id = await _job_svc.execute_with_status(
+                run_id_uuid,
+                run_graph_internal,
+                graph=graph,
+                flow_id=flow_id_str,
+                session_id=input_request.session_id,
+                inputs=inputs,
+                outputs=outputs,
+                stream=stream,
+                event_manager=event_manager,
+            )
+        except Exception as exc:
+            await logger.aerror(
+                "Workflow job execution failed for flow %s: %s",
+                flow.id,
+                str(exc),
+                exc_info=True,
+            )
+            raise APIException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                exception=exc,
+                flow=flow,
+            ) from exc
+
+        # Fire memory-base auto-capture hook — non-blocking background effect.
+        try:
+            _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+            await get_task_service().fire_and_forget_task(
+                get_memory_base_service().on_flow_output,
+                flow_id=flow.id,
+                session_id=session_id,
+                job_id=_run_id_uuid,
+            )
+        except (RuntimeError, ValueError, OSError):
+            await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
         return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -395,23 +521,6 @@ async def run_flow_generator(
         await event_manager.queue.put((None, None, time.time))
 
 
-async def check_flow_user_permission(
-    flow: FlowRead | None,
-    api_key_user: UserRead,
-) -> None:
-    """Check if the user associated with the API key has permission to run the flow.
-
-    Args:
-        flow (FlowRead | None): The flow to check permissions for
-        api_key_user (UserRead): The user associated with the API key
-
-    Raises:
-        HTTPException: If the user does not have permission to run the flow
-    """
-    if flow and flow.user_id != api_key_user.id:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to run this flow")
-
-
 async def get_flow_for_api_key_user(
     flow_id_or_name: str,
     api_key_user: Annotated[UserRead, Depends(api_key_security)],
@@ -420,15 +529,17 @@ async def get_flow_for_api_key_user(
 
     Using the raw helper as a FastAPI ``Depends`` exposed ``user_id`` as a
     plain query parameter that no real caller sets, so flow lookups on the
-    ``/run*`` routes bypassed user scoping entirely and relied on
-    ``check_flow_user_permission`` later in the handler for a 403.  That gave
-    attackers a 403-vs-404 existence oracle on flow UUIDs.  This wrapper
-    pulls the authenticated user from ``api_key_security`` and passes it to
-    the helper, so cross-user access fails closed with 404 at the helper
-    layer.  ``check_flow_user_permission`` is kept in the handler chain as
-    defense in depth.
+    ``/run*`` routes bypassed user scoping entirely. This wrapper pulls the
+    authenticated user from ``api_key_security`` and passes it to the helper,
+    so cross-user access fails closed with 404 at the helper layer.
+
+    When an authorization plugin is registered, the lookup is
+    share-aware (load by id, route guard decides access). The OSS pass-through
+    default keeps the owner-scoped lookup.
     """
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id)
+    # These wrappers always pair with ``ensure_flow_permission`` in the route
+    # handler, so opting in to share-aware widening is safe.
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, api_key_user.id, widen_for_shares=True)
 
 
 async def get_flow_for_current_user(
@@ -436,7 +547,55 @@ async def get_flow_for_current_user(
     current_user: CurrentActiveUser,
 ) -> FlowRead:
     """Session-auth variant of :func:`get_flow_for_api_key_user`."""
-    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id)
+    return await get_flow_by_id_or_endpoint_name(flow_id_or_name, current_user.id, widen_for_shares=True)
+
+
+class SseAuth:
+    """Helper to carry both authenticated user and flow for SSE subscription."""
+
+    def __init__(self, user: User | UserRead, flow: FlowRead):
+        self.user = user
+        self.flow = flow
+
+
+async def get_flow_for_sse_user(
+    flow_id_or_name: str,
+    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
+) -> SseAuth:
+    """Auth-aware dependency for SSE routes.
+
+    Returns both the SSE user and the flow so the route can call
+    ``ensure_flow_permission`` *before* subscribing to the event stream.
+    Widening to share-aware lookup is safe here only because the route
+    immediately enforces ``flow:read``; without that enforcement, a non-owner
+    with cross-user fetch enabled could subscribe to another user's webhook
+    event stream and exfiltrate flow id/name plus event payloads.
+    """
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=user.id, widen_for_shares=True)
+    return SseAuth(user=user, flow=flow)
+
+
+class WebhookAuth:
+    """Helper to carry both authenticated user and flow for webhook execution."""
+
+    def __init__(self, user: UserRead, flow: FlowRead):
+        self.user = user
+        self.flow = flow
+
+
+async def get_webhook_auth(
+    flow_id_or_name: str,
+    request: Request,
+) -> WebhookAuth:
+    """Auth-aware dependency that resolves both the webhook user and the flow.
+
+    Centralizes the security logic for webhook run endpoints.
+    """
+    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    # Webhook route also calls ``ensure_flow_permission`` after, so widening
+    # for shared resources is acceptable here.
+    flow = await get_flow_by_id_or_endpoint_name(flow_id_or_name, user_id=webhook_user.id, widen_for_shares=True)
+    return WebhookAuth(user=webhook_user, flow=flow)
 
 
 async def _run_flow_internal(
@@ -470,8 +629,12 @@ async def _run_flow_internal(
         HTTPException: For flow not found (404) or invalid input (400)
         APIException: For internal execution errors (500)
     """
-    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
-
+    # Authorization happens upstream: every caller of _run_flow_internal must
+    # have called ensure_flow_permission(FlowAction.EXECUTE, ...) before
+    # invoking us. The owner-only check that used to live here would reject any
+    # plugin execute-grant on a shared flow, defeating the plugin's
+    # purpose. Adding a defense-in-depth check here would re-introduce the
+    # same regression.
     telemetry_service = get_telemetry_service()
 
     # If input_request is None, manually parse the request body
@@ -626,6 +789,14 @@ async def simplified_run_flow(
             - "end": Final execution result
         - Authentication: Requires API key (Bearer token)
     """
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -694,6 +865,14 @@ async def simplified_run_flow_session(
             detail="This endpoint is not available",
         )
 
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
     return await _run_flow_internal(
         background_tasks=background_tasks,
         flow=flow,
@@ -707,9 +886,7 @@ async def simplified_run_flow_session(
 
 @router.get("/webhook-events/{flow_id_or_name}", include_in_schema=False)
 async def webhook_events_stream(
-    flow_id_or_name: str,  # noqa: ARG001 - Used by get_flow_by_id_or_endpoint_name dependency
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
-    user: Annotated[User | UserRead, Depends(get_current_user_for_sse)],
+    auth: Annotated[SseAuth, Depends(get_flow_for_sse_user)],
     request: Request,
 ):
     """Server-Sent Events (SSE) endpoint for real-time webhook build updates.
@@ -718,14 +895,21 @@ async def webhook_events_stream(
     of webhook execution progress, similar to clicking "Play" in the UI.
 
     Authentication: Requires user to be logged in (via cookie) or provide API key.
-    The user must own the flow to subscribe to its events.
+    The user must own the flow OR have an authorization-plugin-granted
+    ``flow:read`` permission to subscribe to its events.
     """
-    # Verify user owns the flow
-    if str(flow.user_id) != str(user.id):
-        raise HTTPException(
-            status_code=HTTPStatus.FORBIDDEN,
-            detail="Access denied: You can only subscribe to events for flows you own",
-        )
+    flow = auth.flow
+    # Enforce flow:read before subscribing — the SSE fetcher uses share-aware
+    # lookup, so without this check a non-owner with cross-user fetch enabled
+    # would receive another user's webhook event payloads.
+    await ensure_flow_permission(
+        auth.user,
+        FlowAction.READ,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=getattr(flow, "workspace_id", None),
+        folder_id=getattr(flow, "folder_id", None),
+    )
 
     async def event_generator() -> AsyncGenerator[str, None]:
         """Generate SSE events from the webhook event manager."""
@@ -766,15 +950,13 @@ async def webhook_events_stream(
 
 @router.post("/webhook/{flow_id_or_name}", response_model=dict, status_code=HTTPStatus.ACCEPTED)  # noqa: RUF100, FAST003
 async def webhook_run_flow(
-    flow_id_or_name: str,
-    flow: Annotated[Flow, Depends(get_flow_by_id_or_endpoint_name)],
+    auth: Annotated[WebhookAuth, Depends(get_webhook_auth)],
     request: Request,
 ):
     """Run a flow using a webhook request.
 
     Args:
-        flow_id_or_name: The flow ID or endpoint name (used by dependency).
-        flow: The flow to be executed.
+        auth: Resolved webhook user and flow, scoped to the authenticated caller.
         request: The incoming HTTP request.
 
     Returns:
@@ -788,8 +970,18 @@ async def webhook_run_flow(
     await logger.adebug("Received webhook request")
     error_msg = ""
 
-    # Get the appropriate user for webhook execution based on auth settings
-    webhook_user = await get_auth_service().get_webhook_user(flow_id_or_name, request)
+    # Webhook user and flow are resolved by the dependency
+    webhook_user = auth.user
+    flow = auth.flow
+
+    await ensure_flow_permission(
+        webhook_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     try:
         data = await request.body()
@@ -907,8 +1099,14 @@ async def experimental_run_flow(
     This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,
     catering to diverse application requirements.
     """  # noqa: E501
-    # Get the flow from the id or name
-    await check_flow_user_permission(flow=flow, api_key_user=api_key_user)
+    await ensure_flow_permission(
+        api_key_user,
+        FlowAction.EXECUTE,
+        flow_id=flow.id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
 
     session_service = get_session_service()
     flow_id_str = str(flow.id)
@@ -969,6 +1167,18 @@ async def experimental_run_flow(
         )
     except Exception as exc:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(exc)) from exc
+
+    # Fire memory-base auto-capture hook — non-blocking background effect.
+    try:
+        _run_id_uuid = UUID(graph.run_id) if graph.run_id else None  # type-cast only
+        await get_task_service().fire_and_forget_task(
+            get_memory_base_service().on_flow_output,
+            flow_id=flow.id,
+            session_id=session_id,
+            job_id=_run_id_uuid,
+        )
+    except (RuntimeError, ValueError, OSError):
+        await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
     return RunResponse(outputs=task_result, session_id=session_id)
 
@@ -1061,9 +1271,12 @@ async def get_version():
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
-    if not settings_service.settings.allow_custom_components:
+    settings = settings_service.settings
+    all_known = None
+    if _requires_component_hash_lookups(settings, user):
         # Lazily compute hash lookups if they haven't been built yet
         # (e.g. during startup before the cache is fully populated).
         get_component_hash_lookups_for_validation()
@@ -1073,13 +1286,26 @@ async def custom_component(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Component templates are still initializing. Please try again in a few seconds.",
             )
+
+    # In admin-only mode, non-admin users may create/refresh only known server
+    # templates. Truly custom code creation remains restricted to administrators.
+    if (
+        getattr(settings, "custom_component_admin_only", False) is True
+        and not user.is_superuser
+        and not code_hash_matches_any_template(raw_code.code, all_known)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is restricted to administrators",
+        )
+
+    if not settings.allow_custom_components and not code_hash_matches_any_template(raw_code.code, all_known):
         # Allow updating to a known server template (core component update),
         # but block truly custom code.
-        if not code_hash_matches_any_template(raw_code.code, all_known):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is disabled",
+        )
 
     component = Component(_code=raw_code.code)
 
@@ -1095,6 +1321,14 @@ async def custom_component(
             field_value=tool_mode,
         )
     type_ = get_instance_name(component_instance)
+    locale = getattr(request.state, "locale", "en")
+    if locale != "en":
+        from langflow.utils.i18n import translate_component_node
+
+        try:
+            built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to translate component node", extra={"locale": locale})
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
@@ -1102,6 +1336,7 @@ async def custom_component(
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -1114,7 +1349,8 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     settings_service = get_settings_service()
-    if not settings_service.settings.allow_custom_components:
+    all_known = None
+    if _requires_component_hash_lookups(settings_service.settings, user):
         get_component_hash_lookups_for_validation()
         all_known = component_cache.all_known_hashes
         if all_known is None:
@@ -1122,11 +1358,26 @@ async def custom_component_update(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Component templates are still initializing. Please try again in a few seconds.",
             )
-        if not code_hash_matches_any_template(code_request.code, all_known):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+
+    # In admin-only mode, non-admin users may refresh/update only known server
+    # templates. Truly custom code edits remain restricted to administrators.
+    if (
+        getattr(settings_service.settings, "custom_component_admin_only", False) is True
+        and not user.is_superuser
+        and not code_hash_matches_any_template(code_request.code, all_known)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component editing is restricted to administrators",
+        )
+
+    if not settings_service.settings.allow_custom_components and not code_hash_matches_any_template(
+        code_request.code, all_known
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is disabled",
+        )
 
     try:
         component = Component(_code=code_request.code)
@@ -1190,6 +1441,15 @@ async def custom_component_update(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    locale = getattr(request.state, "locale", "en")
+    if locale != "en":
+        from langflow.utils.i18n import translate_component_node
+
+        try:
+            component_node = translate_component_node(get_instance_name(cc_instance), component_node, locale)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to translate component node", extra={"locale": locale})
+
     try:
         return jsonable_encoder(component_node)
     except Exception as exc:
@@ -1219,7 +1479,10 @@ async def get_config(
         settings_service: SettingsService = get_settings_service()
 
         if user is None:
-            return PublicConfigResponse.from_settings(settings_service.settings)
+            return PublicConfigResponse.from_settings(
+                settings_service.settings,
+                settings_service.auth_settings,
+            )
 
         return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 

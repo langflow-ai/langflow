@@ -33,6 +33,7 @@ export const URLs = {
   MCP: `mcp/project`,
   MCP_SERVERS: `mcp/servers`,
   KNOWLEDGE_BASES: `knowledge_bases`,
+  MEMORIES: `memories`,
   MODELS: `models`,
   MODEL_PROVIDERS: `models/providers`,
   RUN: `run`,
@@ -43,6 +44,8 @@ export const URLs = {
   AGENTIC_ASSIST: `agentic/assist`,
   AGENTIC_ASSIST_STREAM: `agentic/assist/stream`,
   AGENTIC_CHECK_CONFIG: `agentic/check-config`,
+  AGENTIC_FILES: `agentic/files`,
+  EXTENSIONS: `extensions`,
 } as const;
 
 // IMPORTANT: FOLDERS endpoint now points to 'projects' for backward compatibility

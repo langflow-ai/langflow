@@ -19,24 +19,23 @@ def test_remote_chroma_server_uses_http_client() -> None:
     mock_chroma.get.return_value = {"ids": [], "documents": [], "metadatas": []}
 
     with (
-        patch("chromadb.Client", return_value=mock_client),
+        patch("chromadb.HttpClient", return_value=mock_client) as mock_http_client,
         patch("langchain_chroma.Chroma", return_value=mock_chroma) as mock_chroma_class,
     ):
         component = ChromaVectorStoreComponent().set(
             collection_name="remote_collection",
             persist_directory=None,
             embedding=None,
+            chroma_server_host="chroma.example.com",
+            chroma_server_http_port=8100,
+            chroma_server_ssl_enabled=True,
             ingest_data=[],
-            chroma_server_cors_allow_origins=[],
-            chroma_server_host="localhost",
-            chroma_server_http_port=8000,
-            chroma_server_grpc_port=None,
-            chroma_server_ssl_enabled=False,
+            limit=None,
         )
-        component._cached_vector_store = None
 
-        component.build_vector_store()
+        assert component.build_vector_store() is mock_chroma
 
+    mock_http_client.assert_called_once_with(host="chroma.example.com", port=8100, ssl=True)
     mock_chroma_class.assert_called_once_with(
         persist_directory=None,
         client=mock_client,

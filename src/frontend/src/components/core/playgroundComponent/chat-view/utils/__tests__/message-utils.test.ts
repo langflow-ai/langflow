@@ -4,6 +4,7 @@ import {
   addUserMessage,
   findLastBotMessage,
   removePlaceholderUserMessage,
+  updateMessage,
   updateMessageProperties,
 } from "../message-utils";
 
@@ -209,5 +210,106 @@ describe("removePlaceholderUserMessage", () => {
     const after = queryClient.getQueryData<Message[]>(QUERY_KEY);
     expect(after).toHaveLength(1);
     expect(after![0].id).toBe("msg-real");
+  });
+});
+
+describe("updateMessage — streaming token preservation (UI-014)", () => {
+  // QA UI-014 (PR #12992): Pokédex Agent runs, but tool invocations do not
+  // appear in the Playground "agent-steps" panel. The backend API stream emits
+  // them correctly (API-011 PASS) — the loss happens in the FE store: the
+  // `token` event handler in `message-event-handler.ts` builds a token Message
+  // that omits `content_blocks`/`properties`/`category`, and `updateMessage`
+  // replaces the cached message with it. Any tool steps added by prior
+  // `add_message` events get clobbered when the first token chunk arrives.
+
+  it("should_preserve_content_blocks_when_streaming_token_overwrites_message", () => {
+    // Arrange — an existing bot message with tool steps (delivered by an
+    // earlier `add_message` event with `on_tool_start` / `on_tool_end`
+    // content blocks). State is "partial" because streaming is still in
+    // progress, matching the live `add_message` payload the agent emits.
+    const existing = buildMessage({
+      id: "msg-1",
+      text: "",
+      sender: "Machine",
+      flow_id: "flow-1",
+      session_id: "s1",
+      properties: { state: "partial" } as Message["properties"],
+      content_blocks: [
+        {
+          title: "Agent Steps",
+          contents: [
+            {
+              type: "tool_use",
+              name: "fetch_pokemon",
+              tool_input: { name: "pikachu" },
+              output: '{"name":"pikachu","type":"electric"}',
+              error: null,
+              header: { title: "Executed **fetch_pokemon**", icon: "Hammer" },
+              duration: 412,
+            },
+          ],
+        },
+      ] as unknown as Message["content_blocks"],
+    });
+    queryClient.setQueryData(QUERY_KEY, [existing]);
+
+    // Act — a streaming token chunk arrives. The message-event-handler builds
+    // a Message that has the partial-state property but does NOT carry the
+    // content_blocks (tokens only carry chunk + id + sender/timestamp).
+    updateMessage({
+      id: "msg-1",
+      flow_id: "flow-1",
+      session_id: "s1",
+      text: "Pika",
+      sender: "Machine",
+      sender_name: "AI",
+      timestamp: existing.timestamp,
+      files: [],
+      properties: { state: "partial" } as Message["properties"],
+    } as Message);
+
+    // Assert — the tool-step content_blocks must survive the token update.
+    const updated = queryClient.getQueryData<Message[]>(QUERY_KEY);
+    expect(updated).toHaveLength(1);
+    expect(updated![0].content_blocks).toBeDefined();
+    expect(updated![0].content_blocks).toHaveLength(1);
+    expect(updated![0].content_blocks![0].contents[0]).toMatchObject({
+      type: "tool_use",
+      name: "fetch_pokemon",
+    });
+  });
+
+  it("should_still_accumulate_text_chunks_after_preserving_content_blocks", () => {
+    // Regression guard: the fix for the content_blocks loss must not break
+    // the existing token-accumulation behavior asserted elsewhere in the
+    // updateMessage path.
+    const existing = buildMessage({
+      id: "msg-1",
+      text: "Hello ",
+      sender: "Machine",
+      flow_id: "flow-1",
+      session_id: "s1",
+      properties: { state: "partial" } as Message["properties"],
+      content_blocks: [
+        { title: "Agent Steps", contents: [] },
+      ] as unknown as Message["content_blocks"],
+    });
+    queryClient.setQueryData(QUERY_KEY, [existing]);
+
+    updateMessage({
+      id: "msg-1",
+      flow_id: "flow-1",
+      session_id: "s1",
+      text: "world",
+      sender: "Machine",
+      sender_name: "AI",
+      timestamp: existing.timestamp,
+      files: [],
+      properties: { state: "partial" } as Message["properties"],
+    } as Message);
+
+    const updated = queryClient.getQueryData<Message[]>(QUERY_KEY);
+    expect(updated![0].text).toBe("Hello world");
+    expect(updated![0].content_blocks).toHaveLength(1);
   });
 });

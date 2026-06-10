@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 test(
   "should be able to see error when something goes wrong on Code Modal",
@@ -13,14 +14,7 @@ test(
       testInfo.project.name.includes("win") || process.platform === "win32",
       "Import error detection differs on Windows due to C-extension handling",
     );
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.waitForSelector(
       '[data-testid="sidebar-custom-component-button"]',
@@ -65,7 +59,7 @@ class CustomComponent(Component):
     await page.locator("textarea").press("Control+a");
     await page.locator("textarea").fill(customCodeWithError);
 
-    await page.getByText("Check & Save").last().click();
+    await page.getByText(TEXTS.checkAndSave).last().click();
 
     // Wait for the error message to appear and have sufficient length
     await page.waitForFunction(

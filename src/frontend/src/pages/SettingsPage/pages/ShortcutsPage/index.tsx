@@ -24,6 +24,10 @@ export default function ShortcutsPage() {
       flex: 1,
       editable: false,
       resizable: false,
+      valueFormatter: (params) =>
+        t(`shortcuts.name.${toCamelCase(params.data.name)}`, {
+          defaultValue: params.value,
+        }),
     }, //This column will be twice as wide as the others
     {
       headerName: t("shortcuts.columnKeyboardShortcut"),

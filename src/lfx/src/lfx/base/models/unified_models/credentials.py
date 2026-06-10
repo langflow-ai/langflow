@@ -11,7 +11,9 @@ from uuid import UUID
 
 from lfx.log.logger import logger
 from lfx.services.deps import get_variable_service, session_scope
+from lfx.services.variable.request_scope import is_env_fallback_disabled
 from lfx.utils.async_helpers import run_until_complete
+from lfx.utils.secrets import secret_value_to_str
 
 from .provider_queries import (
     get_model_provider_variable_mapping,
@@ -19,19 +21,25 @@ from .provider_queries import (
 )
 
 
-def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: str | None = None) -> str | None:
+def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key: Any = None) -> str | None:
     """Get API key from component input or global variables.
 
     When api_key is set to an environment variable name (e.g. ANTHROPIC_API_KEY),
     that name is resolved from os.environ or global variables so imported flows
     can reference credentials without storing the raw key.
     """
+    # SecretStrInput-backed fields arrive as SecretStr to prevent leakage through
+    # stringification. Unwrap here because provider clients need the raw value.
+    api_key = secret_value_to_str(api_key, strip=True)
 
-    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from env or global vars
+    # Resolve variable name (canonical or custom e.g. MY_OPENAI_API_KEY) from
+    # global vars or env. The user's per-user, encrypted DB global variable is
+    # the source of truth (it's what the Agent component resolves via
+    # load_from_db) and MUST win over a process-wide ``.env`` value — otherwise
+    # a stale/revoked .env key silently shadows the key the user configured in
+    # the UI (and, in multi-tenant deploys, every user shares a server-wide env
+    # key). Env is the fallback for the no-user (lfx run) / no-DB-value case.
     def _resolve_var_name(var_name: str) -> str | None:
-        env_value = os.environ.get(var_name)
-        if env_value and env_value.strip():
-            return env_value.strip()
         if user_id and not (isinstance(user_id, str) and user_id == "None"):
 
             async def _get_by_var_name():
@@ -50,8 +58,15 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
                         return None
 
             value = run_until_complete(_get_by_var_name())
-            if value and str(value).strip():
-                return str(value).strip()
+            value = secret_value_to_str(value, strip=True)
+            if value:
+                return value
+        # Honor the request's no-env-fallback contract: skip os.environ when disabled so a
+        # served flow stays isolated from process-wide credentials (matches VariableService).
+        if not is_env_fallback_disabled():
+            env_value = os.environ.get(var_name)
+            if env_value and env_value.strip():
+                return env_value.strip()
         return None
 
     if api_key and api_key.strip():
@@ -100,10 +115,33 @@ def get_api_key_for_provider(user_id: UUID | str | None, provider: str, api_key:
         except (ValueError, Exception):  # noqa: BLE001
             api_key = None
 
+    api_key = secret_value_to_str(api_key, strip=True)
     if api_key:
         return api_key
 
+    if is_env_fallback_disabled():
+        return None
     return os.getenv(variable_name)
+
+
+def _env_value_for(var_key: str) -> str | None:
+    """Read a provider key from the environment, accepting a LANGFLOW_ alias.
+
+    Provider keys are conventionally bare (``GOOGLE_API_KEY``), but some .env
+    templates prefix everything with ``LANGFLOW_`` (matching how Langflow reads
+    its own settings). Accept ``LANGFLOW_<VAR>`` as a fallback so e.g.
+    ``LANGFLOW_GOOGLE_API_KEY`` enables Gemini exactly like ``GOOGLE_API_KEY``.
+    The bare name keeps precedence — no behavior change when it is set. The
+    resolved value is always stored under the bare canonical key by callers, so
+    downstream detection (available_model_providers, get_llm) is unaffected.
+    """
+    value = os.environ.get(var_key)
+    if value and value.strip():
+        return value
+    prefixed = os.environ.get(f"LANGFLOW_{var_key}")
+    if prefixed and prefixed.strip():
+        return prefixed
+    return None
 
 
 def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) -> dict[str, str]:
@@ -115,13 +153,18 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
     if not provider_vars:
         return result
 
-    # If no user_id, only check environment variables
+    # If no user_id, only check environment variables. Honor the request's no-env-fallback
+    # contract: a served flow under no_env_fallback stays isolated from process-wide
+    # credentials, so return nothing rather than leaking os.environ into provider_vars
+    # (which would defeat the _env_if_allowed guards in instantiation.py).
     if user_id is None or (isinstance(user_id, str) and user_id == "None"):
+        if is_env_fallback_disabled():
+            return result
         for var_info in provider_vars:
             var_key = var_info.get("variable_key")
             if var_key:
-                env_value = os.environ.get(var_key)
-                if env_value and env_value.strip():
+                env_value = _env_value_for(var_key)
+                if env_value:
                     result[var_key] = env_value
         return result
 
@@ -147,17 +190,36 @@ def get_all_variables_for_provider(user_id: UUID | str | None, provider: str) ->
                         field="",
                         session=session,
                     )
-                    if value and str(value).strip():
-                        values[var_key] = str(value)
+                    value = secret_value_to_str(value, strip=True)
+                    if value:
+                        values[var_key] = value
                 except (ValueError, Exception):  # noqa: BLE001
-                    # Variable not found - check environment
-                    env_value = os.environ.get(var_key)
-                    if env_value and env_value.strip():
+                    # Variable not found - check environment, unless the request disables
+                    # env fallback (keeps served flows isolated from process-wide credentials).
+                    if is_env_fallback_disabled():
+                        continue
+                    env_value = _env_value_for(var_key)
+                    if env_value:
                         values[var_key] = env_value
 
             return values
 
-    return run_until_complete(_get_all_variables())
+    db_values = run_until_complete(_get_all_variables())
+
+    # decrypt_api_key swallows Fernet InvalidToken silently and returns "",
+    # so a SECRET_KEY rotation leaves required keys missing from db_values
+    # even when the env var is set. Mirror get_api_key_for_provider's
+    # post-async env fallback so the assistant doesn't reject the request
+    # with "Missing required configuration" while the env var is present.
+    for var_info in provider_vars:
+        var_key = var_info.get("variable_key")
+        if not var_key or db_values.get(var_key):
+            continue
+        env_value = _env_value_for(var_key)
+        if env_value:
+            db_values[var_key] = env_value
+
+    return db_values
 
 
 def _validate_and_get_enabled_providers(
@@ -347,8 +409,10 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
     except Exception as e:  # noqa: BLE001
         logger.error(f"Error getting unified models for provider {provider}: {e}")
 
+    validation_model = model_name or first_model
+
     # For providers that need a model to test credentials
-    if not first_model and provider in [
+    if not validation_model and provider in [
         "OpenAI",
         "Anthropic",
         "Google Generative AI",
@@ -363,7 +427,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("OPENAI_API_KEY")
             if not api_key:
                 return
-            llm = ChatOpenAI(api_key=api_key, model_name=first_model, max_tokens=1)
+            llm = ChatOpenAI(api_key=api_key, model_name=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Anthropic":
@@ -372,7 +436,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("ANTHROPIC_API_KEY")
             if not api_key:
                 return
-            llm = ChatAnthropic(anthropic_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatAnthropic(anthropic_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "Google Generative AI":
@@ -381,7 +445,7 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             api_key = variables.get("GOOGLE_API_KEY")
             if not api_key:
                 return
-            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=first_model, max_tokens=1)
+            llm = ChatGoogleGenerativeAI(google_api_key=api_key, model=validation_model, max_tokens=1)
             llm.invoke("test")
 
         elif provider == "IBM WatsonX":
@@ -395,11 +459,45 @@ def validate_model_provider_key(provider: str, variables: dict[str, str], model_
             llm = ChatWatsonx(
                 apikey=api_key,
                 url=url,
-                model_id=first_model,
+                model_id=validation_model,
                 project_id=project_id,
                 params={"max_new_tokens": 1},
             )
             llm.invoke("test")
+
+        elif provider == "OpenRouter":
+            from http import HTTPStatus
+
+            import requests
+
+            api_key = variables.get("OPENROUTER_API_KEY")
+            if not api_key:
+                return
+
+            # ``/api/v1/models`` is a public OpenRouter endpoint (200 for any
+            # bearer, including missing/invalid). Use ``/api/v1/auth/key``
+            # instead — it's documented for key validation, returns 401 on
+            # invalid keys, and only costs a tiny metadata round-trip.
+            try:
+                response = requests.get(
+                    "https://openrouter.ai/api/v1/auth/key",
+                    headers={"Authorization": f"Bearer {api_key}"},
+                    timeout=5,
+                )
+                if response.status_code == HTTPStatus.UNAUTHORIZED:
+                    msg = "Invalid OpenRouter API key"
+                    logger.error(msg)
+                    raise ValueError(msg)
+                response.raise_for_status()
+            except ValueError:
+                raise
+            except requests.RequestException as e:
+                # Network/timeout/5xx during validation: surface as ValueError so
+                # the variable API returns a user-facing 400 instead of an
+                # unhandled 500 (api/v1/variable.py only catches ValueError).
+                msg = f"Could not reach OpenRouter to validate the API key: {e}"
+                logger.warning(msg)
+                raise ValueError(msg) from e
 
         elif provider == "Ollama":
             import requests

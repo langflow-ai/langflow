@@ -1,5 +1,6 @@
 import { memo, useMemo, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import IconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -11,7 +12,6 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
-import { useTranslation } from "react-i18next";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -75,7 +75,7 @@ export const MenuBar = memo((): JSX.Element => {
   const handleSave = () => {
     if (!onFlowPage) return;
     saveFlow().then(() => {
-      setSuccessData({ title: "Saved successfully" });
+      setSuccessData({ title: t("flow.savedSuccessfully") });
     });
   };
 
@@ -140,7 +140,7 @@ export const MenuBar = memo((): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
-                {currentFlowName || "Untitled Flow"}
+                {currentFlowName || t("flow.untitledFlow")}
               </span>
               <IconComponent
                 name="pencil"
@@ -158,15 +158,15 @@ export const MenuBar = memo((): JSX.Element => {
                 content={
                   changesNotSaved
                     ? saveLoading
-                      ? "Saving..."
-                      : "Save Changes"
+                      ? t("flow.saving")
+                      : t("flow.saveChanges")
                     : t("flow.savedHover") +
                       (updatedAt
                         ? new Date(updatedAt).toLocaleString("en-US", {
                             hour: "numeric",
                             minute: "numeric",
                           })
-                        : "Never")
+                        : t("flow.never"))
                 }
                 side="bottom"
                 styleClasses="cursor-default z-10"

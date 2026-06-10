@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { GRADIENT_CLASS } from "@/constants/constants";
 import { customGetHostProtocol } from "@/customization/utils/custom-get-host-protocol";
 import { getCurlWebhookCode } from "@/modals/apiModal/utils/get-curl-code";
@@ -8,6 +8,7 @@ import { cn } from "../../../../../utils/utils";
 import IconComponent from "../../../../common/genericIconComponent";
 import { Input } from "../../../../ui/input";
 import { getPlaceholder } from "../../helpers/get-placeholder-disabled";
+import { normalizeNFC, useIMEInput } from "../../hooks/use-ime-input";
 import type { InputProps, TextAreaComponentType } from "../../types";
 import { getIconName } from "../inputComponent/components/helpers/get-icon-name";
 
@@ -79,6 +80,20 @@ export default function TextAreaComponent({
   const webhookAuthEnable = useUtilityStore((state) => state.webhookAuthEnable);
   const [cursor, setCursor] = useState<number | null>(null);
 
+  const commitValue = useCallback(
+    (newValue: string) => handleOnNewValue({ value: newValue }),
+    [handleOnNewValue],
+  );
+
+  const { displayValue, inputProps, flushPendingComposition } =
+    useIMEInput<HTMLInputElement>({
+      value: value ?? "",
+      onCommit: commitValue,
+      inputRef,
+      cursor,
+      setCursor,
+    });
+
   const isWebhook = useMemo(
     () => nodeInformationMetadata?.nodeType === "webhook",
     [nodeInformationMetadata?.nodeType],
@@ -110,13 +125,6 @@ export default function TextAreaComponent({
     webhookAuthEnable,
   ]);
 
-  // Restore cursor position after value changes
-  useEffect(() => {
-    if (cursor !== null && inputRef.current) {
-      inputRef.current.setSelectionRange(cursor, cursor);
-    }
-  }, [cursor, value]);
-
   const getInputClassName = () => {
     return cn(
       inputClasses.base({ isFocused, password: password! }),
@@ -125,11 +133,6 @@ export default function TextAreaComponent({
       password && !passwordVisible && "text-clip",
       isFocused && "pr-10",
     );
-  };
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setCursor(e.target.selectionStart);
-    handleOnNewValue({ value: e.target.value });
   };
 
   const changeWebhookFormat = (format: "multiline" | "singleline") => {
@@ -195,15 +198,18 @@ export default function TextAreaComponent({
     <div className={cn("w-full", disabled && "pointer-events-none")}>
       <Input
         onFocus={() => setIsFocused(true)}
-        onBlur={() => setIsFocused(false)}
         id={id}
         data-testid={id}
-        value={disabled ? "" : value}
-        onChange={handleInputChange}
+        {...inputProps}
+        onBlur={() => {
+          flushPendingComposition();
+          setIsFocused(false);
+        }}
+        value={disabled ? "" : displayValue}
         disabled={disabled}
         className={getInputClassName()}
         placeholder={getPlaceholder(disabled, placeholder)}
-        aria-label={disabled ? value : undefined}
+        aria-label={disabled ? displayValue : undefined}
         ref={inputRef}
         type={password ? (passwordVisible ? "text" : "password") : "text"}
         readOnly={isWebhook}
@@ -211,8 +217,8 @@ export default function TextAreaComponent({
 
       <ComponentTextModal
         changeVisibility={updateVisibility}
-        value={value}
-        setValue={(newValue) => handleOnNewValue({ value: newValue })}
+        value={displayValue}
+        setValue={(newValue) => commitValue(normalizeNFC(newValue))}
         disabled={disabled}
         onCloseModal={() => changeWebhookFormat("singleline")}
       >

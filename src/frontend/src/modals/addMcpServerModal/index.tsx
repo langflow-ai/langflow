@@ -1,6 +1,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useLocation } from "react-router-dom";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import InputListComponent from "@/components/core/parameterRenderComponent/components/inputListComponent";
@@ -20,7 +21,7 @@ import { usePatchMCPServer } from "@/controllers/API/queries/mcp/use-patch-mcp-s
 import { CustomLink } from "@/customization/components/custom-link";
 import BaseModal from "@/modals/baseModal";
 import IOKeyPairInput, {
-  KeyPairRow,
+  type KeyPairRow,
 } from "@/modals/IOModal/components/IOFieldView/components/key-pair-input";
 import IOKeyPairInputWithVariables from "@/modals/IOModal/components/IOFieldView/components/key-pair-input-with-variables";
 import type { MCPServerType } from "@/types/mcp";
@@ -55,6 +56,31 @@ const keyPairRowToObject = (arr: KeyPairRow[]): Record<string, string> => {
   }, {});
 };
 
+const buildKeyPairPayload = (
+  rows: KeyPairRow[],
+  existing?: Record<string, string>,
+) => {
+  const nextValue = keyPairRowToObject(rows);
+  if (Object.keys(nextValue).length > 0) {
+    return nextValue;
+  }
+  if (existing && Object.keys(existing).length > 0) {
+    return {};
+  }
+  return undefined;
+};
+
+const buildArgsPayload = (args: string[], existing?: string[]) => {
+  const nextValue = args.filter((arg) => arg.trim() !== "");
+  if (nextValue.length > 0) {
+    return nextValue;
+  }
+  if (existing && existing.length > 0) {
+    return [];
+  }
+  return undefined;
+};
+
 export default function AddMcpServerModal({
   children,
   initialData,
@@ -68,6 +94,7 @@ export default function AddMcpServerModal({
   setOpen?: (a: boolean | ((o?: boolean) => boolean)) => void;
   onSuccess?: (server: string) => void;
 }): JSX.Element {
+  const { t } = useTranslation();
   const [open, setOpen] =
     mySetOpen !== undefined && myOpen !== undefined
       ? [myOpen, mySetOpen]
@@ -147,24 +174,33 @@ export default function AddMcpServerModal({
     setError(null);
     if (type === "STDIO") {
       if (!stdioName.trim() || !stdioCommand.trim()) {
-        setError("Name and command are required.");
+        setError(t("mcp.modal.errorNameCommandRequired"));
         return;
       }
       if (stdioEnv.some((item) => item.error)) {
-        setError("Duplicate keys found in environment variables.");
+        setError(t("mcp.modal.errorDuplicateEnvKeys"));
         return;
       }
-      const name = parseString(stdioName, [
-        "mcp_name_case",
-        "no_blank",
-        "lowercase",
-      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      // The server name is the immutable identifier: it is the storage key and
+      // the URL path PATCH targets. When editing, always reuse the original
+      // name so the update hits the existing record. Re-deriving it from the
+      // input would let a name change retarget the request and create a
+      // duplicate server instead of updating the original.
+      const name = initialData
+        ? initialData.name
+        : parseString(stdioName, [
+            "mcp_name_case",
+            "no_blank",
+            "lowercase",
+          ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      const argsPayload = buildArgsPayload(stdioArgs, initialData?.args);
+      const envPayload = buildKeyPairPayload(stdioEnv, initialData?.env);
       try {
         await modifyMCPServer({
           name,
           command: stdioCommand,
-          args: stdioArgs.filter((a) => a.trim() !== ""),
-          env: keyPairRowToObject(stdioEnv),
+          ...(argsPayload !== undefined ? { args: argsPayload } : {}),
+          ...(envPayload !== undefined ? { env: envPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -186,35 +222,47 @@ export default function AddMcpServerModal({
         setError(null);
       } catch (err: unknown) {
         setError(
-          err instanceof Error ? err.message : "Failed to add MCP server.",
+          err instanceof Error ? err.message : t("mcp.modal.errorFailedAdd"),
         );
       }
       return;
     }
     if (type === "HTTP") {
       if (!httpName.trim() || !httpUrl.trim()) {
-        setError("Name and URL are required.");
+        setError(t("mcp.modal.errorNameUrlRequired"));
         return;
       }
       if (httpEnv.some((item) => item.error)) {
-        setError("Duplicate keys found in environment variables.");
+        setError(t("mcp.modal.errorDuplicateEnvKeys"));
         return;
       }
       if (httpHeaders.some((item) => item.error)) {
-        setError("Duplicate keys found in headers.");
+        setError(t("mcp.modal.errorDuplicateHeaders"));
         return;
       }
-      const name = parseString(httpName, [
-        "mcp_name_case",
-        "no_blank",
-        "lowercase",
-      ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      // The server name is the immutable identifier: it is the storage key and
+      // the URL path PATCH targets. When editing, always reuse the original
+      // name so the update hits the existing record. Re-deriving it from the
+      // input would let a name change retarget the request and create a
+      // duplicate server instead of updating the original.
+      const name = initialData
+        ? initialData.name
+        : parseString(httpName, [
+            "mcp_name_case",
+            "no_blank",
+            "lowercase",
+          ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH);
+      const envPayload = buildKeyPairPayload(httpEnv, initialData?.env);
+      const headersPayload = buildKeyPairPayload(
+        httpHeaders,
+        initialData?.headers,
+      );
       try {
         await modifyMCPServer({
           name,
-          env: keyPairRowToObject(httpEnv),
           url: httpUrl,
-          headers: keyPairRowToObject(httpHeaders),
+          ...(envPayload !== undefined ? { env: envPayload } : {}),
+          ...(headersPayload !== undefined ? { headers: headersPayload } : {}),
         });
         if (!initialData) {
           await queryClient.setQueryData(
@@ -236,7 +284,7 @@ export default function AddMcpServerModal({
         setError(null);
       } catch (err: unknown) {
         setError(
-          err instanceof Error ? err.message : "Failed to add MCP server.",
+          err instanceof Error ? err.message : t("mcp.modal.errorFailedAdd"),
         );
       }
       return;
@@ -253,11 +301,13 @@ export default function AddMcpServerModal({
         ]).slice(0, MAX_MCP_SERVER_NAME_LENGTH),
       }));
     } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : "Invalid input");
+      setError(
+        e instanceof Error ? e.message : t("mcp.modal.errorNoServerFound"),
+      );
       return;
     }
     if (servers.length === 0) {
-      setError("No valid MCP server found in the input.");
+      setError(t("mcp.modal.errorNoServerFound"));
       return;
     }
     try {
@@ -281,7 +331,7 @@ export default function AddMcpServerModal({
       setError(
         err instanceof Error
           ? err.message
-          : "Failed to add one or more MCP servers.",
+          : t("mcp.modal.errorFailedAddMultiple"),
       );
     }
   }
@@ -292,7 +342,7 @@ export default function AddMcpServerModal({
       setOpen={setOpen}
       size="x-small-h-full"
       onSubmit={submitForm}
-      className="!p-0 min-h-[250px] flex-grow"
+      className="!p-0 min-h-[250px] max-h-[75vh] flex-grow"
     >
       <BaseModal.Trigger>{children}</BaseModal.Trigger>
       <BaseModal.Content className="flex flex-1 flex-col overflow-hidden min-h-0">
@@ -304,20 +354,22 @@ export default function AddMcpServerModal({
                 className="h-4 w-4 text-primary"
                 aria-hidden="true"
               />
-              {initialData ? "Update MCP Server" : "Add MCP Server"}
+              {initialData
+                ? t("mcp.modal.updateTitle")
+                : t("mcp.modal.addTitle")}
             </div>
             <span className="text-mmd font-normal text-muted-foreground">
               {isOnMcpSettingsPage ? (
-                "Add and save MCP servers to use across your flows."
+                t("mcp.modal.descriptionSettings")
               ) : (
                 <>
-                  Add and save MCP servers. Manage servers in{" "}
+                  {t("mcp.modal.descriptionFlow")}{" "}
                   <CustomLink
                     className="underline"
                     to={MCP_SETTINGS_PAGE}
                     onClick={() => setOpen(false)}
                   >
-                    settings
+                    {t("mcp.modal.descriptionFlowLink")}
                   </CustomLink>
                   .
                 </>
@@ -337,7 +389,7 @@ export default function AddMcpServerModal({
                   data-testid="json-tab"
                   value="JSON"
                 >
-                  JSON
+                  {t("mcp.modal.tabJson")}
                 </TabsTrigger>
                 <TabsTrigger
                   className="flex-1"
@@ -345,7 +397,7 @@ export default function AddMcpServerModal({
                   disabled={!!initialData && type !== "STDIO"}
                   value="STDIO"
                 >
-                  STDIO
+                  {t("mcp.modal.tabStdio")}
                 </TabsTrigger>
                 <TabsTrigger
                   className="flex-1"
@@ -353,12 +405,12 @@ export default function AddMcpServerModal({
                   disabled={!!initialData && type !== "HTTP"}
                   value="HTTP"
                 >
-                  Streamable HTTP/SSE
+                  {t("mcp.modal.tabStreamableHttp")}
                 </TabsTrigger>
               </TabsList>
             </div>
             <div
-              className="flex w-full flex-1 flex-col border-y p-4 min-h-0"
+              className="flex w-full flex-1 flex-col overflow-y-auto border-y p-4 min-h-0"
               id="global-variable-modal-inputs"
             >
               {error && (
@@ -367,13 +419,15 @@ export default function AddMcpServerModal({
                 </div>
               )}
               <TabsContent value="JSON" className="flex flex-col p-0 m-0">
-                <Label className="!text-mmd mb-2">Paste in JSON config</Label>
+                <Label className="!text-mmd mb-2">
+                  {t("mcp.modal.jsonTabLabel")}
+                </Label>
                 <Textarea
                   value={jsonValue}
                   data-testid="json-input"
                   onChange={(e) => setJsonValue(e.target.value)}
                   className="min-h-[300px] font-mono text-mmd resize-none"
-                  placeholder="Paste in JSON config to add server"
+                  placeholder={t("mcp.modal.jsonPlaceholder")}
                   disabled={isPending}
                 />
               </TabsContent>
@@ -384,43 +438,49 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Name <span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldName")}{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioName}
                       onChange={(e) => setStdioName(e.target.value)}
-                      placeholder="Type server name..."
+                      placeholder={t("mcp.modal.placeholderServerName")}
                       data-testid="stdio-name-input"
-                      disabled={isPending}
+                      disabled={isPending || !!initialData}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Command<span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldCommand")}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={stdioCommand}
                       onChange={(e) => setStdioCommand(e.target.value)}
-                      placeholder="Type command..."
+                      placeholder={t("mcp.modal.placeholderCommand")}
                       data-testid="stdio-command-input"
                       disabled={isPending}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">Arguments</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldArguments")}
+                    </Label>
                     <InputListComponent
                       value={stdioArgs}
                       handleOnNewValue={({ value }) => setStdioArgs(value)}
                       disabled={isPending}
-                      placeholder="Type argument..."
-                      listAddLabel="Add Argument"
+                      placeholder={t("mcp.modal.placeholderArgument")}
+                      listAddLabel={t("mcp.modal.addArgumentButton")}
                       editNode={false}
                       id="stdio-args"
                       data-testid="stdio-args-input"
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">Environment Variables</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldEnvironmentVariables")}
+                    </Label>
                     <IOKeyPairInput
                       value={stdioEnv}
                       onChange={setStdioEnv}
@@ -439,31 +499,34 @@ export default function AddMcpServerModal({
                 <div className="flex h-full flex-col gap-4">
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Name<span className="text-destructive">*</span>
+                      {t("mcp.modal.fieldName")}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={httpName}
                       onChange={(e) => setHttpName(e.target.value)}
-                      placeholder="Name"
+                      placeholder={t("mcp.modal.placeholderHttpName")}
                       data-testid="http-name-input"
-                      disabled={isPending}
+                      disabled={isPending || !!initialData}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
                     <Label className="flex items-start gap-1 !text-mmd">
-                      Streamable HTTP/SSE URL
+                      {t("mcp.modal.fieldStreamableUrl")}
                       <span className="text-destructive">*</span>
                     </Label>
                     <Input
                       value={httpUrl}
                       onChange={(e) => setHttpUrl(e.target.value)}
-                      placeholder="Streamable HTTP/SSE URL"
+                      placeholder={t("mcp.modal.placeholderHttpUrl")}
                       data-testid="http-url-input"
                       disabled={isPending}
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">Headers</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldHeaders")}
+                    </Label>
                     <IOKeyPairInputWithVariables
                       value={httpHeaders}
                       onChange={setHttpHeaders}
@@ -475,7 +538,9 @@ export default function AddMcpServerModal({
                     />
                   </div>
                   <div className="flex flex-col gap-2">
-                    <Label className="!text-mmd">Environment Variables</Label>
+                    <Label className="!text-mmd">
+                      {t("mcp.modal.fieldEnvironmentVariables")}
+                    </Label>
                     <IOKeyPairInput
                       value={httpEnv}
                       onChange={setHttpEnv}
@@ -490,9 +555,11 @@ export default function AddMcpServerModal({
             </div>
           </Tabs>
         </div>
-        <div className="flex justify-end gap-2 p-4">
+        <div className="flex shrink-0 justify-end gap-2 p-4">
           <Button variant="outline" size="sm" onClick={() => setOpen(false)}>
-            <span className="text-mmd font-normal">Cancel</span>
+            <span className="text-mmd font-normal">
+              {t("mcp.modal.cancelButton")}
+            </span>
           </Button>
           <Button
             size="sm"
@@ -501,7 +568,9 @@ export default function AddMcpServerModal({
             loading={isPending}
           >
             <span className="text-mmd">
-              {initialData ? "Update Server" : "Add Server"}
+              {initialData
+                ? t("mcp.modal.updateServerButton")
+                : t("mcp.modal.addServerButton")}
             </span>
           </Button>
         </div>

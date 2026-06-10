@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -11,6 +12,7 @@ import type {
   Deployment,
   ProviderAccount,
 } from "@/pages/MainPage/pages/deploymentsPage/types";
+import { getDeploymentDisplayName } from "@/pages/MainPage/pages/deploymentsPage/types";
 
 const NEW_DEPLOYMENT_VALUE = "__new__";
 
@@ -41,14 +43,17 @@ export default function DeploymentPhaseContent({
   onContinue,
   onCancel,
 }: DeploymentPhaseContentProps) {
+  const { t } = useTranslation();
   return (
     <>
       <DialogHeader>
-        <DialogTitle>Select Deployment</DialogTitle>
+        <DialogTitle>{t("deployments.selectDeployment")}</DialogTitle>
         <DialogDescription>
           {selectedProvider
-            ? `Deployments on ${selectedProvider.name} for this flow.`
-            : "Select a deployment to update or create a new one."}
+            ? t("deployments.deploymentsOnProvider", {
+                name: selectedProvider.name,
+              })
+            : t("deployments.selectDeploymentDescription")}
         </DialogDescription>
       </DialogHeader>
 
@@ -64,26 +69,29 @@ export default function DeploymentPhaseContent({
           value={selectedDeployment}
           onValueChange={onSelectDeployment}
         >
-          {deployments.map((deployment) => (
-            <div
-              key={deployment.id}
-              className="flex items-center gap-3 rounded-lg border p-3"
-            >
-              <RadioGroupItem
-                value={deployment.id}
-                id={`deploy-${deployment.id}`}
-              />
-              <Label
-                htmlFor={`deploy-${deployment.id}`}
-                className="flex flex-1 cursor-pointer flex-col gap-0.5"
+          {deployments.map((deployment) => {
+            const displayName = getDeploymentDisplayName(deployment);
+            return (
+              <div
+                key={deployment.id}
+                className="flex items-center gap-3 rounded-lg border p-3"
               >
-                <span className="text-sm font-medium">{deployment.name}</span>
-                <span className="text-xs text-muted-foreground">
-                  {deployment.type} deployment
-                </span>
-              </Label>
-            </div>
-          ))}
+                <RadioGroupItem
+                  value={deployment.id}
+                  id={`deploy-${deployment.id}`}
+                />
+                <Label
+                  htmlFor={`deploy-${deployment.id}`}
+                  className="flex flex-1 cursor-pointer flex-col gap-0.5"
+                >
+                  <span className="text-sm font-medium">{displayName}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {deployment.type} deployment
+                  </span>
+                </Label>
+              </div>
+            );
+          })}
 
           <div className="flex items-center gap-3 rounded-lg border p-3">
             <RadioGroupItem value={NEW_DEPLOYMENT_VALUE} id="deploy-new" />
@@ -91,11 +99,15 @@ export default function DeploymentPhaseContent({
               htmlFor="deploy-new"
               className="flex flex-1 cursor-pointer flex-col gap-0.5"
             >
-              <span className="text-sm font-medium">Create new deployment</span>
+              <span className="text-sm font-medium">
+                {t("deployments.createNewDeployment")}
+              </span>
               <span className="text-xs text-muted-foreground">
                 {selectedProvider
-                  ? `New deployment on ${selectedProvider.name}`
-                  : "Set up a new deployment from scratch"}
+                  ? t("deployments.newDeploymentOnProvider", {
+                      name: selectedProvider.name,
+                    })
+                  : t("deployments.setupNewDeployment")}
               </span>
             </Label>
           </div>
@@ -104,16 +116,16 @@ export default function DeploymentPhaseContent({
 
       <div className="flex items-center justify-between pt-4">
         <Button variant="ghost" onClick={onCancel} disabled={isBusy}>
-          Cancel
+          {t("deployments.cancel")}
         </Button>
         <div className="flex items-center gap-3">
           {showBack && (
             <Button variant="outline" onClick={onBack} disabled={isBusy}>
-              Back
+              {t("deployments.back")}
             </Button>
           )}
           <Button onClick={onContinue} disabled={isBusy}>
-            Continue
+            {t("deployments.continue")}
           </Button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { jsonquery } from "@jsonquerylang/jsonquery";
 import { type KeyboardEvent, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import {
   type Content,
   createJSONEditor,
@@ -15,6 +16,7 @@ interface JsonEditorProps {
   data?: Content;
   onChange?: (data: Content) => void;
   readOnly?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   options?: any;
   jsonRef?: React.MutableRefObject<VanillaJsonEditor | null>;
   width?: string;
@@ -38,6 +40,7 @@ const JsonEditor = ({
   allowFilter = false,
   initialFilter,
 }: JsonEditorProps) => {
+  const { t } = useTranslation();
   const containerRef = useRef<HTMLDivElement>(null);
   const jsonEditorRef = useRef<VanillaJsonEditor | null>(null);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -58,6 +61,7 @@ const JsonEditor = ({
     }
   }, [initialFilter, newRef.current]);
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const isValidResult = (result: any): boolean => {
     // Only allow objects and arrays
     return (
@@ -67,6 +71,7 @@ const JsonEditor = ({
     );
   };
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const applyFilter = (filtered: { json: any }, query: string) => {
     onChange?.(filtered);
     setFilter?.(query.trim());
@@ -112,7 +117,7 @@ const JsonEditor = ({
               return;
             } catch (_jsonError) {
               setErrorData({
-                title: "Invalid Result",
+                title: t("jsonEditor.invalidResult"),
                 list: [
                   "The filtered result contains values that cannot be serialized to JSON",
                 ],
@@ -121,7 +126,7 @@ const JsonEditor = ({
             }
           } else {
             setErrorData({
-              title: "Invalid Result",
+              title: t("jsonEditor.invalidResult"),
               list: [
                 "The filtered result must be a JSON object or array, not a primitive value",
               ],
@@ -145,7 +150,7 @@ const JsonEditor = ({
       for (const key of path) {
         if (result === undefined || result === null) {
           setErrorData({
-            title: "Invalid Path",
+            title: t("jsonEditor.invalidPath"),
             list: [`Path '${transformQuery}' led to undefined or null value`],
           });
           return;
@@ -157,7 +162,7 @@ const JsonEditor = ({
             const index = parseInt(indexMatch[1]);
             if (index >= result.length) {
               setErrorData({
-                title: "Invalid Array Index",
+                title: t("jsonEditor.invalidArrayIndex"),
                 list: [
                   `Index ${index} is out of bounds for array of length ${result.length}`,
                 ],
@@ -172,7 +177,7 @@ const JsonEditor = ({
             .map((item) => {
               if (!(key in item)) {
                 setErrorData({
-                  title: "Invalid Property",
+                  title: t("jsonEditor.invalidProperty"),
                   list: [`Property '${key}' does not exist in array items`],
                 });
                 return undefined;
@@ -183,7 +188,7 @@ const JsonEditor = ({
         } else {
           if (!(key in result)) {
             setErrorData({
-              title: "Invalid Property",
+              title: t("jsonEditor.invalidProperty"),
               list: [`Property '${key}' does not exist in object`],
             });
             return;
@@ -210,7 +215,7 @@ const JsonEditor = ({
             return;
           } catch (_jsonError) {
             setErrorData({
-              title: "Invalid Result",
+              title: t("jsonEditor.invalidResult"),
               list: [
                 "The filtered result contains values that cannot be serialized to JSON",
               ],
@@ -218,7 +223,7 @@ const JsonEditor = ({
           }
         } else {
           setErrorData({
-            title: "Invalid Result",
+            title: t("jsonEditor.invalidResult"),
             list: [
               "The filtered result must be a JSON object or array, not a primitive value",
             ],
@@ -226,14 +231,14 @@ const JsonEditor = ({
         }
       } else {
         setErrorData({
-          title: "Invalid Result",
-          list: ["Transform resulted in undefined value"],
+          title: t("jsonEditor.invalidResult"),
+          list: [t("errors.transformUndefined")],
         });
       }
     } catch (error) {
       console.error("Error applying transform:", error);
       setErrorData({
-        title: "Transform Error",
+        title: t("jsonEditor.transformError"),
         list: [(error as Error).message],
       });
     }
@@ -257,8 +262,10 @@ const JsonEditor = ({
   };
 
   const getFilteredContent = (
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     sourceJson: any,
     query: string,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
   ): { json: any } | undefined => {
     // Try JSONQuery first
     try {
@@ -382,7 +389,7 @@ const JsonEditor = ({
       {/* {allowFilter && (
         <div className="mb-2 flex shrink-0 gap-2">
           <Input
-            placeholder="Enter path (e.g. users[0].name) or JSONQuery (e.g. .users | filter(.age > 25))"
+            placeholder={t("jsonEditor.pathPlaceholder")}
             value={transformQuery}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}

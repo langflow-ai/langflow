@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useLocation, useParams } from "react-router-dom";
 import PaginatorComponent from "@/components/common/paginatorComponent";
 import CardsWrapComponent from "@/components/core/cardsWrapComponent";
+import { useStartNewFlow } from "@/components/core/flowBuilderWelcome/hooks/use-start-new-flow";
 import { IS_MAC } from "@/constants/constants";
 import { useGetFolderQuery } from "@/controllers/API/queries/folders/use-get-folder";
 import { CustomBanner } from "@/customization/components/custom-banner";
@@ -36,7 +37,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   const [pageIndex, setPageIndex] = useState(1);
   const [pageSize, setPageSize] = useState(12);
   const [search, setSearch] = useState("");
-  const [isEmptyFolder, setIsEmptyFolder] = useState(true);
+  const [isEmptyFolder, setIsEmptyFolder] = useState<boolean | null>(null);
   const navigate = useCustomNavigate();
 
   const [flowType, setFlowType] = useState<FlowTabType>(
@@ -51,6 +52,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     folders[0]?.name ??
     "";
   const flows = useFlowsManagerStore((state) => state.flows);
+  // The primary "New Flow" handler — creates an empty flow, primes the
+  // welcome overlay store, and navigates to the canvas. Replaces the old
+  // "open the templates modal" behavior. The templates modal is still
+  // reachable from inside the welcome via "Browse more templates".
+  const startNewFlow = useStartNewFlow();
 
   useEffect(() => {
     // Only check if we have a folderId and folders have loaded
@@ -102,6 +108,14 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
   }, []);
 
   useEffect(() => {
+    // Wait until both the global flows store has populated and the folder
+    // query has settled (success or error) before deciding whether the
+    // folder is empty. This avoids a one-frame flash of <EmptyFolder> on
+    // initial mount and right after login, when the store is briefly
+    // stale. Gating on isLoading instead of folderData lets us still
+    // resolve when the query errors out (e.g. when there is no valid
+    // folder id to query, after deleting all folders).
+    if (flows === undefined || isLoading) return;
     setIsEmptyFolder(
       isFolderEmpty({
         flows,
@@ -110,7 +124,7 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
         enableMcp: ENABLE_MCP,
       }),
     );
-  }, [flows, folderId, myCollectionId, folderData]);
+  }, [flows, folderId, myCollectionId, folderData, isLoading]);
 
   const handleFileDrop = useFileDrop(isEmptyFolder ? undefined : flowType);
 
@@ -277,15 +291,19 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                 view={view}
                 setView={setView}
                 setNewProjectModal={setNewProjectModal}
+                onNewFlow={startNewFlow}
                 setSearch={onSearch}
-                isEmptyFolder={isEmptyFolder}
+                isEmptyFolder={isEmptyFolder === true}
                 selectedFlows={selectedFlows}
               />
-              {isEmptyFolder ? (
-                <EmptyFolder setOpenModal={setNewProjectModal} />
+              {isEmptyFolder === true ? (
+                <EmptyFolder
+                  setOpenModal={setNewProjectModal}
+                  onNewFlow={startNewFlow}
+                />
               ) : (
                 <div className="flex h-full flex-col">
-                  {isLoading ? (
+                  {isLoading || isEmptyFolder === null ? (
                     view === "grid" ? (
                       <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">
                         <ListSkeleton />

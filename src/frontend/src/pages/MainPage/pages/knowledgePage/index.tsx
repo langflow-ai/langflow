@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import type { KnowledgeBaseInfo } from "@/controllers/API/queries/knowledge-bases/use-get-knowledge-bases";
@@ -17,6 +18,7 @@ export const KnowledgePage = () => {
   const [selectedKnowledgeBase, setSelectedKnowledgeBase] =
     useState<KnowledgeBaseInfo | null>(null);
 
+  const { t } = useTranslation();
   const navigate = useCustomNavigate();
   const drawerRef = useRef<HTMLDivElement>(null);
 
@@ -51,8 +53,14 @@ export const KnowledgePage = () => {
       ) {
         const clickedElement = event.target as HTMLElement;
         const isTableRowClick = clickedElement.closest(".ag-row");
+        // Radix renders dropdowns/menus/popovers/tooltips/dialogs into a portal
+        // on document.body. Without this guard, clicking a menu item dismisses
+        // the drawer (and reflow tears the menu down before the click lands).
+        const isPortalClick = clickedElement.closest(
+          '[data-radix-popper-content-wrapper],[role="menu"],[role="menuitem"],[role="dialog"],[role="tooltip"]',
+        );
 
-        if (!isTableRowClick) {
+        if (!isTableRowClick && !isPortalClick) {
           closeDrawer();
         }
       }
@@ -68,6 +76,11 @@ export const KnowledgePage = () => {
   }, [isDrawerOpen]);
 
   const handleKnowledgeBaseSelect = (knowledgeBase: KnowledgeBaseInfo) => {
+    setSelectedKnowledgeBase(knowledgeBase);
+    setIsDrawerOpen(true);
+  };
+
+  const handleViewChunks = (knowledgeBase: KnowledgeBaseInfo) => {
     navigate(`/assets/knowledge-bases/${knowledgeBase.dir_name}/chunks`);
   };
 
@@ -85,6 +98,7 @@ export const KnowledgePage = () => {
     setQuantitySelected: setSelectionCount,
     isShiftPressed,
     onRowClick: handleKnowledgeBaseSelect,
+    onViewChunks: handleViewChunks,
   };
 
   return (
@@ -111,7 +125,7 @@ export const KnowledgePage = () => {
                     </SidebarTrigger>
                   </div>
                 </div>
-                Knowledge
+                {t("knowledge.pageTitle")}
               </div>
               <div className="flex h-full flex-col">
                 <KnowledgeBasesTab {...tabProps} />

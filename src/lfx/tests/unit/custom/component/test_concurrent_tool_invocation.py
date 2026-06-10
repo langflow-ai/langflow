@@ -220,6 +220,28 @@ def test_should_isolate_inputs_when_input_has_non_picklable_value():
     assert product_ids == {"P1", "P2"}
 
 
+def test_deepcopy_preserves_component_reference_cycles():
+    """Component.__deepcopy__ must register itself in memo before copying _components.
+
+    A feedback loop links components through _components in a cycle (A -> B -> A).
+    If the memo entry is set only after the recursive deepcopy calls, the cycle is
+    duplicated into a second copy instead of preserved.
+    """
+    a = SlowLabelComponent(_id="a")
+    b = SlowLabelComponent(_id="b")
+    a._components = [b]
+    b._components = [a]
+
+    a_copy = deepcopy(a)
+    b_copy = a_copy._components[0]
+
+    # The cycle must round-trip back to the same copied objects.
+    assert b_copy._components[0] is a_copy
+    # And the copies must be distinct from the originals.
+    assert a_copy is not a
+    assert b_copy is not b
+
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

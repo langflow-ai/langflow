@@ -14,7 +14,23 @@ class McpSettings(BaseModel):
     the browser's window.location.origin."""
 
     mcp_server_timeout: int = 20
-    """Timeout in seconds for MCP server operations (tool calls, server requests)."""
+    """The number of seconds to wait before giving up on establishing a connection to the MCP server."""
+
+    mcp_tool_execution_timeout: float = 180.0
+    """Maximum seconds to wait for MCP tool execution before timing out.
+    Default is 180 seconds (3 minutes) to support long-running operations.
+    Supports decimal values for sub-second timeouts (e.g., 0.5 for 500ms).
+    Individual components can override this with their own timeout setting.
+    Must be a positive number greater than 0."""
+
+    @field_validator("mcp_tool_execution_timeout")
+    @classmethod
+    def validate_mcp_tool_execution_timeout(cls, v: float) -> float:
+        """Validate that mcp_tool_execution_timeout is positive."""
+        if v <= 0:
+            msg = "mcp_tool_execution_timeout must be greater than 0"
+            raise ValueError(msg)
+        return v
 
     # ---------------------------------------------------------------------
     # MCP Session-manager tuning
@@ -47,6 +63,14 @@ class McpSettings(BaseModel):
     """If set to False, Langflow will not start the MCP Composer service."""
     mcp_composer_version: str = "==0.1.0.8.10"
     """Version constraint for mcp-composer when using uvx. Uses PEP 440 syntax."""
+
+    # MCP Server management
+    mcp_servers_locked: bool = False
+    """If set to True, users cannot add or modify MCP servers via the UI/API.
+
+    This control is independent from ``embedded_mode`` and must be enabled
+    explicitly when you want to lock MCP server management.
+    """
 
     @field_validator("mcp_composer_version", mode="before")
     @classmethod

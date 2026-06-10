@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import MultiselectComponent from "@/components/core/parameterRenderComponent/components/multiselectComponent";
@@ -52,7 +53,11 @@ export interface ProviderConfigurationFormProps {
 }
 
 // Generate a stable random placeholder for a given variable type
-const getPlaceholder = (variableName: string, provider: string) => {
+const getPlaceholder = (
+  variableName: string,
+  provider: string,
+  t: (key: string, opts?: Record<string, string>) => string,
+) => {
   const name = variableName.toLowerCase();
   const providerLower = provider.toLowerCase();
 
@@ -70,7 +75,7 @@ const getPlaceholder = (variableName: string, provider: string) => {
     if (providerLower.includes("openai")) return "sk-...";
   }
 
-  return `Enter your ${variableName}`;
+  return t("modelProviders.enterVariable", { variableName });
 };
 
 const ProviderConfigurationForm = ({
@@ -94,6 +99,7 @@ const ProviderConfigurationForm = ({
   requiresConfiguration,
   isFetchingAfterDisconnect,
 }: ProviderConfigurationFormProps) => {
+  const { t } = useTranslation();
   const [showDisconnectWarning, setShowDisconnectWarning] = useState(false);
   const [editingSecret, setEditingSecret] = useState<Record<string, boolean>>(
     {},
@@ -108,7 +114,7 @@ const ProviderConfigurationForm = ({
   useEffect(() => {
     if (validationState === "invalid" && validationError) {
       setErrorData({
-        title: "Validation Failed",
+        title: t("modelProviders.validationFailed"),
         list: [validationError],
       });
     }
@@ -134,14 +140,14 @@ const ProviderConfigurationForm = ({
               )}
             </>
           ) : (
-            `${selectedProvider.provider || "Unknown Provider"} ${requiresConfiguration && " Configuration"}`
+            `${selectedProvider.provider || t("modelProviders.unknownProvider")} ${requiresConfiguration && ` ${t("modelProviders.configuration")}`}`
           )}
         </span>
       </div>
       <span className="text-[13px] text-muted-foreground pt-1 pb-2">
         {requiresConfiguration ? (
           <>
-            Configure your{" "}
+            {t("modelProviders.configurePrefix")}{" "}
             <span
               className="underline cursor-pointer hover:text-primary"
               onClick={() => {
@@ -150,12 +156,18 @@ const ProviderConfigurationForm = ({
                 }
               }}
             >
-              {selectedProvider.provider} credentials
+              {t("modelProviders.credentialsLink", {
+                provider: selectedProvider.provider,
+              })}
             </span>{" "}
-            to enable these models
+            {t("modelProviders.toEnableModels")}
           </>
         ) : (
-          <>Activate {selectedProvider.provider} to enable these models</>
+          <>
+            {t("modelProviders.activateToEnable", {
+              provider: selectedProvider.provider,
+            })}
+          </>
         )}
       </span>
       {requiresConfiguration ? (
@@ -243,9 +255,11 @@ const ProviderConfigurationForm = ({
                 ) : (
                   // Render input for text/secret variables
                   <Input
+                    data-testid={`provider-variable-input-${variable.variable_key}`}
                     placeholder={getPlaceholder(
                       variable.variable_name,
                       selectedProvider.provider,
+                      t,
                     )}
                     value={
                       isConfigured &&
@@ -322,7 +336,7 @@ const ProviderConfigurationForm = ({
                 loading={isDeleting || isFetchingAfterDisconnect}
                 disabled={isDeleting || isFetchingAfterDisconnect || isSaving}
               >
-                Disconnect
+                {t("modelProviders.disconnectButton")}
               </Button>
             )}
             <Button
@@ -332,10 +346,10 @@ const ProviderConfigurationForm = ({
               disabled={!canSave || isLoading || isFetchingModels}
             >
               {validationFailed
-                ? "Retry Save"
+                ? t("modelProviders.retrySaveButton")
                 : isAlreadyConfigured
-                  ? "Replace"
-                  : "Save"}
+                  ? t("modelProviders.replaceButton")
+                  : t("modelProviders.saveButton")}
             </Button>
           </div>
         </div>
@@ -347,8 +361,12 @@ const ProviderConfigurationForm = ({
             disabled={selectedProvider.is_enabled}
           >
             {selectedProvider.is_enabled
-              ? `${selectedProvider.provider} Activated`
-              : `Activate ${selectedProvider.provider}`}
+              ? t("modelProviders.activatedButton", {
+                  provider: selectedProvider.provider,
+                })
+              : t("modelProviders.activateButton", {
+                  provider: selectedProvider.provider,
+                })}
           </Button>
           {selectedProvider.is_enabled && (
             <Button
@@ -356,7 +374,9 @@ const ProviderConfigurationForm = ({
               onClick={() => setShowDisconnectWarning(true)}
               disabled={isDeleting || isPending}
             >
-              Deactivate {selectedProvider.provider}
+              {t("modelProviders.deactivateButton", {
+                provider: selectedProvider.provider,
+              })}
             </Button>
           )}
         </div>
@@ -366,8 +386,10 @@ const ProviderConfigurationForm = ({
         show={showDisconnectWarning}
         message={
           requiresConfiguration
-            ? "Disconnecting an API key will disable all of the provider's models being used in a flow."
-            : `Deactivating ${selectedProvider.provider} will disable all of the provider's models being used in a flow.`
+            ? t("modelProviders.disconnectApiKeyWarning")
+            : t("modelProviders.deactivateWarning", {
+                provider: selectedProvider.provider,
+              })
         }
         onCancel={() => setShowDisconnectWarning(false)}
         onConfirm={() => {

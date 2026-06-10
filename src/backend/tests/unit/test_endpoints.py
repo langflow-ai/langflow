@@ -144,10 +144,20 @@ async def test_get_all(client: AsyncClient, logged_in_headers):
     dir_reader = DirectoryReader(BASE_COMPONENTS_PATH)
     files = dir_reader.get_files()
     # json_response is a dict of dicts
-    all_names = [component_name for _, components in response.json().items() for component_name in components]
+    all_names = [
+        component_name
+        for key, components in response.json().items()
+        if key != "component_display_names"
+        for component_name in components
+    ]
     json_response = response.json()
+    # Bundle/extension components are namespaced "ext:<bundle>:<Class>@<slot>" and are served
+    # from installed bundle packages (e.g. docling, ibm, arxiv), not from BASE_COMPONENTS_PATH,
+    # so they are not backed by files in that directory. Exclude them before comparing against
+    # the on-disk file count.
+    base_component_names = [name for name in all_names if not name.startswith("ext:")]
     # We need to test the custom nodes
-    assert len(all_names) <= len(
+    assert len(base_component_names) <= len(
         files
     )  # Less or equal because we might have some files that don't have the dependencies installed
     assert "ChatInput" in json_response["input_output"]
@@ -272,9 +282,18 @@ async def test_various_prompts(client, logged_in_headers, prompt, expected_input
 
 
 async def test_get_vertices_flow_not_found(client, logged_in_headers):
+    """A nonexistent flow id on the deprecated /build/{flow_id}/vertices route returns 404.
+
+    The handler now does an owner-or-public ownership check before reaching
+    ``build_graph_from_db`` (which previously raised ``ValueError("Invalid
+    flow ID")`` and surfaced as 500). Unknown flow ids — and other users'
+    private flows — fail closed with 404, matching the supported
+    /build/{flow_id}/flow contract and the rest of the API's UUID-privacy
+    behavior.
+    """
     uuid = uuid4()
     response = await client.post(f"/api/v1/build/{uuid}/vertices", headers=logged_in_headers)
-    assert response.status_code == 500
+    assert response.status_code == 404
 
 
 async def test_get_vertices(client, added_flow_webhook_test, logged_in_headers):
@@ -303,9 +322,108 @@ async def test_get_vertices_blocks_custom_components_when_disabled(
 
 
 async def test_build_vertex_invalid_flow_id(client, logged_in_headers):
+    """A nonexistent flow id on the deprecated /build/{flow_id}/vertices/{vertex_id} route returns 404.
+
+    Same contract as test_get_vertices_flow_not_found — the new ownership
+    check raises 404 before the graph-cache lookup that previously produced
+    a generic 500.
+    """
     uuid = uuid4()
     response = await client.post(f"/api/v1/build/{uuid}/vertices/vertex_id", headers=logged_in_headers)
-    assert response.status_code == 500
+    assert response.status_code == 404
+
+
+@pytest.fixture
+async def second_user_headers(client):
+    """Log in as a second, distinct user.
+
+    The conftest's ``active_user`` / ``logged_in_headers`` fixtures hard-code
+    a single ``activeuser`` account. Cross-user authorization tests need a
+    second login token, which this fixture provides by registering and
+    logging in as ``second_active_user`` for the lifetime of the test.
+    """
+    from langflow.services.database.models.user.model import User, UserRead
+    from langflow.services.deps import get_auth_service, session_scope
+    from sqlmodel import select
+
+    username = "second_active_user"
+    password = "testpassword"  # noqa: S105  # pragma: allowlist secret
+
+    async with session_scope() as session:
+        user = User(
+            username=username,
+            password=get_auth_service().get_password_hash(password),
+            is_active=True,
+            is_superuser=False,
+        )
+        stmt = select(User).where(User.username == username)
+        if existing := (await session.exec(stmt)).first():
+            user = existing
+        else:
+            session.add(user)
+            await session.flush()
+            await session.refresh(user)
+        user_id = UserRead.model_validate(user, from_attributes=True).id
+
+    login_response = await client.post("api/v1/login", data={"username": username, "password": password})
+    assert login_response.status_code == 200
+    token = login_response.json()["access_token"]
+    yield {"Authorization": f"Bearer {token}"}
+
+    async with session_scope() as session:
+        if existing := await session.get(User, user_id):
+            await session.delete(existing)
+
+
+async def test_get_vertices_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """A second user attempting to build vertices on someone else's private flow gets 404.
+
+    Behavioral regression for the deprecated /build/{flow_id}/vertices guard.
+    The flow is created by ``active_user`` via ``added_flow_webhook_test``;
+    ``second_user_headers`` is a different account, so the owner-or-public
+    fetch returns None and the handler raises 404 (preserving UUID-privacy)
+    before reaching the graph builder that previously had no owner filter.
+    """
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
+async def test_get_vertices_with_supplied_data_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """A non-owner cannot pollute another user's graph cache via the deprecated supplied-data path.
+
+    Regression for the reported cache-pollution scenario: a second user POSTs
+    attacker-controlled graph ``data`` for someone else's private flow UUID. The
+    owner-or-public ownership guard runs *before* the build-and-cache branch
+    (``build_and_cache_graph_from_data`` -> ``set_cache(str(flow_id), ...)``), so the
+    request fails closed with 404 and no graph is cached under the victim flow id.
+
+    Complements ``test_get_vertices_returns_404_for_other_users_private_flow`` (which
+    exercises the no-data branch) by covering the supplied-data branch specifically.
+    The payload is a schema-valid ``FlowDataRequest`` so the request clears body
+    validation and actually reaches the ownership guard.
+    """
+    flow_id = added_flow_webhook_test["id"]
+    attacker_data = {
+        "nodes": [{"id": "attacker-node", "data": {"type": "AttackerControlled"}}],
+        "edges": [],
+        "viewport": {"x": 1, "y": 2, "zoom": 0.75},
+    }
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices", json=attacker_data, headers=second_user_headers)
+    assert response.status_code == 404, response.text
+
+
+async def test_build_vertex_returns_404_for_other_users_private_flow(
+    client, added_flow_webhook_test, second_user_headers
+):
+    """Same cross-user 404 behavior on the per-vertex deprecated build route."""
+    flow_id = added_flow_webhook_test["id"]
+    response = await client.post(f"/api/v1/build/{flow_id}/vertices/some-vertex-id", headers=second_user_headers)
+    assert response.status_code == 404, response.text
 
 
 async def test_build_vertex_invalid_vertex_id(client, added_flow_webhook_test, logged_in_headers):
@@ -719,7 +837,7 @@ async def test_user_can_run_own_flow(client: AsyncClient, simple_api_test, creat
 async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that a user cannot run another user's flow.
 
-    LE-639: post-fix behavior is 404 (not 403) so we don't leak flow existence
+    Post-fix behavior is 404 (not 403) so we don't leak flow existence
     via a 403-vs-404 oracle.  See ``get_flow_for_api_key_user`` in
     ``api/v1/endpoints.py``.
     """
@@ -736,7 +854,7 @@ async def test_user_cannot_run_other_users_flow(client: AsyncClient, simple_api_
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_with_payload(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow even with valid payload (LE-639)."""
+    """Test that a user cannot run another user's flow even with valid payload."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -769,7 +887,7 @@ async def test_user_can_run_own_flow_with_streaming(client: AsyncClient, simple_
 
 @pytest.mark.benchmark
 async def test_user_cannot_run_other_users_flow_with_streaming(client: AsyncClient, simple_api_test, user_two_api_key):
-    """Test that a user cannot run another user's flow with streaming (LE-639)."""
+    """Test that a user cannot run another user's flow with streaming."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -808,7 +926,7 @@ async def test_user_can_run_own_flow_advanced_endpoint(client: AsyncClient, simp
 async def test_user_cannot_run_other_users_flow_advanced_endpoint(
     client: AsyncClient, simple_api_test, user_two_api_key
 ):
-    """Test that a user cannot run another user's flow using the advanced endpoint (LE-639)."""
+    """Test that a user cannot run another user's flow using the advanced endpoint."""
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
     payload = {
@@ -828,7 +946,7 @@ async def test_user_cannot_run_other_users_flow_advanced_endpoint(
 async def test_user_cannot_run_other_users_flow_session_endpoint(
     client: AsyncClient, simple_api_test, logged_in_headers, monkeypatch
 ):
-    """LE-639 regression: cross-user access on /run/session/{flow_id} returns 404.
+    """Regression: cross-user access on /run/session/{flow_id} returns 404.
 
     ``simplified_run_flow_session`` is feature-flagged behind
     ``agentic_experience`` and uses session auth (``CurrentActiveUser``).
@@ -846,7 +964,7 @@ async def test_user_cannot_run_other_users_flow_session_endpoint(
     monkeypatch.setattr(settings_service.settings, "agentic_experience", True)
 
     # Create a second user with session credentials and log in.
-    other_username = "le639_session_user"
+    other_username = "cross_user_session_user"
     other_password = "testpassword"  # noqa: S105  # pragma: allowlist secret
     async with session_scope() as session:
         existing = (await session.exec(select(User).where(User.username == other_username))).first()
@@ -885,7 +1003,7 @@ async def test_user_cannot_run_other_users_flow_session_endpoint(
 
 @pytest.mark.benchmark
 async def test_run_rejects_malformed_user_id_query_param(client: AsyncClient, simple_api_test, created_api_key):
-    """LE-639 regression: a malformed ``?user_id=`` query param returns 404, not 500.
+    """Regression: a malformed ``?user_id=`` query param returns 404, not 500.
 
     FastAPI exposes ``user_id`` as a free query parameter on routes that
     previously used ``Depends(get_flow_by_id_or_endpoint_name)``.  The auth-aware
@@ -936,10 +1054,10 @@ async def test_permission_check_with_invalid_flow_id(client: AsyncClient, create
 async def test_permission_check_blocks_before_execution(client: AsyncClient, simple_api_test, user_two_api_key):
     """Test that permission check happens before flow execution to prevent resource usage.
 
-    LE-639: post-fix behavior is 404 from the helper rather than 403 from
-    ``check_flow_user_permission`` so we avoid the 403-vs-404 existence oracle.
-    The "block before execution" guarantee still holds -- we short-circuit
-    earlier now, not later.
+    The 404 comes from ``get_flow_for_api_key_user`` which scopes lookups by
+    user_id, so cross-user access fails closed at the dependency layer rather
+    than via a downstream 403 (which would have given attackers a
+    403-vs-404 existence oracle on flow UUIDs).
     """
     headers = {"x-api-key": user_two_api_key}
     flow_id = simple_api_test["id"]
@@ -1077,12 +1195,12 @@ async def test_openai_responses_rejects_cross_user_flow_access(
     simple_api_test,
     created_api_key,  # noqa: ARG001 - used only to establish the owner's API key
 ):
-    """Regression (LE-639): authenticated user cannot execute another user's flow.
+    """Regression: authenticated user cannot execute another user's flow.
 
-    Reproduces the IDOR PoC from the Jira ticket: a user with a valid API key
-    passes a flow UUID owned by a different user in the ``model`` field.  The
-    pre-fix behavior was that the endpoint executed the victim's flow and
-    returned 200 with real output; after the fix the helper resolves to
+    Reproduces the IDOR scenario: a user with a valid API key passes a flow
+    UUID owned by a different user in the ``model`` field.  The pre-fix
+    behavior was that the endpoint executed the victim's flow and returned
+    200 with real output; after the fix the helper resolves to
     flow_not_found because UUID lookups now enforce user scope.
     """
     from langflow.services.auth.utils import get_password_hash

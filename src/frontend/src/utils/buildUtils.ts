@@ -5,9 +5,10 @@ import {
   findLastBotMessage,
   updateMessageProperties,
 } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
-import i18n from "../i18n";
 import { POLLING_MESSAGES } from "@/constants/constants";
 import { performStreamingRequest } from "@/controllers/API/api";
+import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
+import { transformBuildErrorMessages } from "@/customization/utils/custom-build-error-transform";
 import {
   customBuildUrl,
   customCancelBuildUrl,
@@ -15,11 +16,10 @@ import {
 } from "@/customization/utils/custom-buildUtils";
 import { customPollBuildEvents } from "@/customization/utils/custom-poll-build-events";
 import { getFetchCredentials } from "@/customization/utils/get-fetch-credentials";
-import { transformBuildErrorMessages } from "@/customization/utils/custom-build-error-transform";
 import { BuildStatus, EventDeliveryType } from "../constants/enums";
 import { getVerticesOrder, postBuildVertex } from "../controllers/API";
+import i18n from "../i18n";
 import useAlertStore from "../stores/alertStore";
-import { persistMessageProperties } from "@/controllers/API/helpers/persist-message-properties";
 import useFlowStore from "../stores/flowStore";
 import { useMessagesStore } from "../stores/messagesStore";
 import type { VertexBuildTypeAPI } from "../types/api";
@@ -30,6 +30,7 @@ import { isStringArray, tryParseJson } from "./utils";
 
 type BuildVerticesParams = {
   flowId: string; // Assuming FlowType is the type for your flow
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   input_value?: any; // Replace any with the actual type if it's not any
   files?: string[];
   startNodeId?: string | null; // Assuming nodeId is of type string, and it's optional
@@ -90,6 +91,7 @@ function getInactiveVertexData(vertexId: string): VertexBuildTypeAPI {
   return inactiveVertexData;
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: legacy
 function logFlowLoad(message: string, data?: any) {
   console.warn(`[FlowLoad] ${message}`, data || "");
 }
@@ -119,6 +121,7 @@ export async function updateVerticesOrder(
         edges,
       );
       logFlowLoad("Got vertices order response:", orderResponse);
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       logFlowLoad("Error getting vertices order:", error);
       setErrorData({
@@ -161,6 +164,7 @@ export async function buildFlowVerticesWithFallback(
   try {
     // Use the event_delivery parameter directly
     return await buildFlowVertices({ ...params });
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
   } catch (e: any) {
     if (
       e.message === POLLING_MESSAGES.ENDPOINT_NOT_AVAILABLE ||
@@ -181,6 +185,7 @@ async function pollBuildEvents(
   buildResults: Array<boolean>,
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildComplete?: (allNodesValid: boolean) => void;
     onBuildError?: (
@@ -240,7 +245,7 @@ export async function buildFlowVertices({
 
   queryParams.append(
     "event_delivery",
-    eventDelivery ?? EventDeliveryType.POLLING,
+    eventDelivery ?? EventDeliveryType.STREAMING,
   );
 
   if (queryParams.toString()) {
@@ -449,10 +454,12 @@ export async function buildFlowVertices({
  * React 18's synchronous state-update batching).
  */
 export function processEndVertexEvent(
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any,
   buildResults: boolean[],
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildError?: (
       title: string,
@@ -601,6 +608,7 @@ export async function processBatchedEvents(
   buildResults: boolean[],
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildComplete?: (allNodesValid: boolean) => void;
     onBuildError?: (
@@ -613,6 +621,7 @@ export async function processBatchedEvents(
   },
   onEventFallback: (
     type: string,
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     data: any,
     buildResults: boolean[],
     callbacks: object,
@@ -676,10 +685,12 @@ export async function processBatchedEvents(
  */
 export async function onEvent(
   type: string,
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any,
   buildResults: boolean[],
   callbacks: {
     onBuildStart?: (idList: VertexLayerElementType[]) => void;
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     onBuildUpdate?: (data: any, status: BuildStatus, buildId: string) => void;
     onBuildComplete?: (allNodesValid: boolean) => void;
     onBuildError?: (
@@ -989,6 +1000,7 @@ async function buildVertex({
   id: string;
   input_value: string;
   files?: string[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   onBuildUpdate?: (data: any, status: BuildStatus) => void;
   onBuildError?: (title, list, idList: VertexLayerElementType[]) => void;
   verticesIds: string[];
@@ -1030,7 +1042,9 @@ async function buildVertex({
   } catch (error) {
     console.error(error);
     let errorMessage: string | string[] =
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       (error as AxiosError<any>).response?.data?.detail ||
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       (error as AxiosError<any>).response?.data?.message ||
       "An unexpected error occurred while building the Component. Please try again.";
     errorMessage = tryParseJson(errorMessage as string) ?? errorMessage;

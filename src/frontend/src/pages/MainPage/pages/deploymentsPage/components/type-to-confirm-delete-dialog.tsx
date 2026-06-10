@@ -1,6 +1,7 @@
 import { DialogClose } from "@radix-ui/react-dialog";
 import { AlertTriangle } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,6 +25,7 @@ export default function TypeToConfirmDeleteDialog({
   deploymentName,
   onConfirm,
 }: TypeToConfirmDeleteDialogProps) {
+  const { t } = useTranslation();
   const [inputValue, setInputValue] = useState("");
 
   useEffect(() => {
@@ -44,17 +46,16 @@ export default function TypeToConfirmDeleteDialog({
                 className="mr-2 h-6 w-6 text-destructive"
                 strokeWidth={1.5}
               />
-              <span className="pl-2">Delete</span>
+              <span className="pl-2">{t("deleteModal.title")}</span>
             </div>
           </DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-3 pb-3 text-sm">
           <p>
-            Permanently delete the deployment <strong>{deploymentName}</strong>{" "}
-            in Langflow and Watsonx Orchestrate.
+            {t("deployments.deleteDeploymentConfirm", { name: deploymentName })}
           </p>
           <label htmlFor="confirm-delete-input" className="text-sm">
-            Type the deployment name to confirm:{" "}
+            {t("deployments.typeNameToConfirm")}{" "}
             <code className="font-mono bg-muted px-1 rounded text-sm">
               {deploymentName}
             </code>
@@ -67,7 +68,7 @@ export default function TypeToConfirmDeleteDialog({
             onChange={(e) => setInputValue(e.target.value)}
             data-testid="input-type-to-confirm-delete"
           />
-          <p>This can't be undone.</p>
+          <p>{t("deleteModal.cannotBeUndone")}</p>
         </div>
         <DialogFooter>
           <DialogClose asChild>
@@ -77,7 +78,7 @@ export default function TypeToConfirmDeleteDialog({
               variant="outline"
               data-testid="btn-cancel-type-to-confirm-delete"
             >
-              Cancel
+              {t("deleteModal.cancel")}
             </Button>
           </DialogClose>
           <Button
@@ -87,7 +88,7 @@ export default function TypeToConfirmDeleteDialog({
             onClick={onConfirm}
             data-testid="btn-delete-type-to-confirm-delete"
           >
-            Delete
+            {t("deleteModal.delete")}
           </Button>
         </DialogFooter>
       </DialogContent>

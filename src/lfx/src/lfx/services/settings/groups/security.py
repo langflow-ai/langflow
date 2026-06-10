@@ -46,24 +46,43 @@ class SecuritySettings(BaseModel):
     when the cache is not yet loaded (e.g., during startup), all flow execution is blocked
     as a safety measure.
 
-    Note: LANGFLOW_COMPONENTS_PATH can be used to define an allow-list of custom components
-    that will be allowed to execute, even when allow_custom_components is False.
+    Note: LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH can be used to define
+    an allow-list of custom components that will be allowed to execute, even when
+    allow_custom_components is False. That bypass can be disabled with
+    allow_components_paths_override.
 
     Note: this is a beta feature. For security in a multi-tenant environment,
     use hardware-level isolation to restrict access."""
+    custom_component_admin_only: bool = False
+    """If set to True, only admin users can edit custom component code. Regular editors
+    are blocked from modifying custom component templates."""
+
+    allow_components_paths_override: bool = True
+    """If set to False, LANGFLOW_COMPONENTS_PATH and LANGFLOW_COMPONENTS_INDEX_PATH will
+    not bypass the allow_custom_components=False restriction — only components matching
+    built-in server templates will be executable.
+
+    Default is True, which preserves the existing behavior: components loaded from those
+    env-var paths act as an admin-curated allow-list that remains executable even when
+    allow_custom_components is False.
+
+    Has no effect when allow_custom_components is True (the flag is not blocking anything
+    to override)."""
+
+    # Rate Limiting
+    rate_limit_enabled: bool = True
+    """Enable rate limiting for login endpoint. Set to False to disable (useful for testing)."""
+    rate_limit_per_minute: int = 5
+    """Number of login attempts allowed per minute per IP."""
+    rate_limit_storage_uri: str = "memory://"
+    """Storage backend for rate limiting. Use 'memory://' for single-server or 'redis://host:port' for multi-server."""
+    rate_limit_trust_proxy: bool = False
+    """Trust X-Forwarded-For header when behind a reverse proxy. Only enable when behind a trusted proxy."""
 
     @field_validator("cors_origins", mode="before")
     @classmethod
     def validate_cors_origins(cls, value):
-        """Convert comma-separated string to list if needed.
-
-        Pydantic-settings on Python 3.14 parses the env var "*" into ["*"]
-        before this validator runs (the union list[str] | str resolves
-        differently). Collapse that back to the bare-string wildcard so
-        downstream consumers see the same shape on every Python version.
-        """
-        if isinstance(value, list) and value == ["*"]:
-            return "*"
+        """Convert comma-separated string to list if needed."""
         if isinstance(value, str) and value != "*":
             if "," in value:
                 return [origin.strip() for origin in value.split(",")]

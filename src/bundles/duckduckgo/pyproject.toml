@@ -1,0 +1,57 @@
+[project]
+name = "lfx-duckduckgo"
+version = "0.1.1"
+description = "DuckDuckGo Search component as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "duckduckgo", "search"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) and the langchain-community
+# binding that wraps the duckduckgo-search Python client.  lfx is floored at
+# the current major.minor line (>=1.10.0) and capped below the next lfx major
+# (<2.0.0) so the bundle resolves a compatible lfx; fine-grained BUNDLE_API
+# compatibility is enforced separately via extension.json's
+# "lfx": {"compat": [...]} contract.  langchain-community uses the same
+# range the lfx tree does to keep co-installation lockstep.
+dependencies = [
+    "lfx>=1.10.0.dev0,<2.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
+    "ddgs>=9.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  The value is the dotted path
+# to the package containing ``extension.json`` -- the loader walks
+# ``importlib.metadata.files()`` from there to find the manifest, and
+# falls back to this entry-point for editable installs whose dist.files
+# only surfaces dist-info entries.
+[project.entry-points."langflow.extensions"]
+lfx-duckduckgo = "lfx_duckduckgo"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_duckduckgo package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_duckduckgo"]
+include = ["src/lfx_duckduckgo/extension.json", "src/lfx_duckduckgo/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_duckduckgo",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

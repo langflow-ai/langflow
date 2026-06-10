@@ -1,7 +1,7 @@
 import { cloneDeep } from "lodash";
 import { useContext, useState } from "react";
-import { useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { useParams } from "react-router-dom";
 import { usePostAddApiKey } from "@/controllers/API/queries/api-keys";
 import {
   useResetPassword,
@@ -21,6 +21,7 @@ import type {
 } from "../../../../types/components";
 import useScrollToElement from "../hooks/use-scroll-to-element";
 import GeneralPageHeaderComponent from "./components/GeneralPageHeader";
+import LanguageFormComponent from "./components/LanguageForm";
 import PasswordFormComponent from "./components/PasswordForm";
 import ProfilePictureFormComponent from "./components/ProfilePictureForm";
 
@@ -67,6 +68,7 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               list: [(error as any)?.response?.data?.detail],
             });
           },
@@ -91,6 +93,7 @@ export const GeneralPage = () => {
           onError: (error) => {
             setErrorData({
               title: t("errors.saveChanges"),
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               list: [(error as any)?.response?.data?.detail],
             });
           },
@@ -112,6 +115,7 @@ export const GeneralPage = () => {
     onError: (error) => {
       setErrorData({
         title: t("errors.saveApiKey"),
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         list: [(error as any)?.response?.data?.detail],
       });
       setHasApiKey(false);
@@ -138,6 +142,8 @@ export const GeneralPage = () => {
       <GeneralPageHeaderComponent />
 
       <div className="flex w-full flex-col gap-6">
+        <LanguageFormComponent />
+
         {ENABLE_PROFILE_ICONS && (
           <ProfilePictureFormComponent
             profilePicture={profilePicture}

@@ -7,6 +7,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "@/controllers/API/api";
 import { getURL } from "@/controllers/API/helpers/constants";
 import {
@@ -26,6 +27,7 @@ import {
 import { CURRENT_DRAFT_ID } from "./constants";
 
 export function useFlowVersionSidebar(flowId: string) {
+  const { t } = useTranslation();
   const setSuccessData = useAlertStore((state) => state.setSuccessData);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setPreview = useVersionPreviewStore((s) => s.setPreview);
@@ -55,7 +57,9 @@ export function useFlowVersionSidebar(flowId: string) {
   // in an effect) so the values are available before the preview layoutEffect.
   // Falls back to empty arrays if the store is not yet initialized to prevent
   // setting `undefined` into the store on cleanup.
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const originalDraftNodesRef = useRef<any[] | null>(null);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const originalDraftEdgesRef = useRef<any[] | null>(null);
   if (originalDraftNodesRef.current === null) {
     originalDraftNodesRef.current =
@@ -99,7 +103,9 @@ export function useFlowVersionSidebar(flowId: string) {
   }, [isLoadingEntry, setPreviewLoading]);
 
   const processedPreview = useMemo<{
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     nodes: any[];
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     edges: any[];
     error?: boolean;
     errorMessage?: string;
@@ -109,6 +115,7 @@ export function useFlowVersionSidebar(flowId: string) {
 
     try {
       const clonedData = cloneDeep(selectedEntryFull.data);
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       const flow = { data: clonedData, is_component: false } as any;
       processFlows([flow]);
       return { nodes: flow.data.nodes, edges: flow.data.edges };
@@ -140,7 +147,7 @@ export function useFlowVersionSidebar(flowId: string) {
   useEffect(() => {
     if (processedPreview?.error) {
       setErrorData({
-        title: "This version's data could not be rendered for preview",
+        title: t("flowVersion.dataCannotBeRendered"),
         ...(processedPreview.errorMessage
           ? { list: [processedPreview.errorMessage] }
           : {}),
@@ -160,6 +167,7 @@ export function useFlowVersionSidebar(flowId: string) {
         processedPreview.edges,
         tag,
         selectedId,
+        selectedEntryFull?.description ?? null,
       );
     } else if (selectedId === CURRENT_DRAFT_ID || processedPreview?.error) {
       setPreview(
@@ -173,12 +181,15 @@ export function useFlowVersionSidebar(flowId: string) {
     processedPreview,
     selectedId,
     selectedEntryFull?.version_tag,
+    selectedEntryFull?.description,
     setPreview,
   ]);
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const autoSaveFnRef = useRef<any>(null);
   const inspectionPanelWasVisible = useRef(false);
   useLayoutEffect(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     const currentAutoSave = useFlowStore.getState().autoSaveFlow as any;
     if (currentAutoSave) {
       if (typeof currentAutoSave.flush === "function") {
@@ -265,7 +276,7 @@ export function useFlowVersionSidebar(flowId: string) {
         const data = response.data?.data;
         const tag = response.data?.version_tag ?? "version";
         if (!data) {
-          setErrorData({ title: "No data available to export" });
+          setErrorData({ title: t("errors.noDataToExport") });
           return;
         }
         const flowName = `${currentFlow?.name || "flow"}_${tag}`;
@@ -275,13 +286,15 @@ export function useFlowVersionSidebar(flowId: string) {
           name: flowName,
           description: currentFlow?.description ?? "",
           is_component: false,
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
         } as any);
         downloadFlow(flowToExport, flowName, currentFlow?.description ?? "");
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (err: any) {
         const detail = err?.response?.data?.detail;
         const message = detail ?? err?.message ?? "Unknown error";
         setErrorData({
-          title: "Failed to export version",
+          title: t("errors.failedToExportVersion"),
           list: [message],
         });
       }
@@ -302,7 +315,7 @@ export function useFlowVersionSidebar(flowId: string) {
         { flowId, versionId: entry.id },
         {
           onSuccess: () => {
-            setSuccessData({ title: "Version deleted" });
+            setSuccessData({ title: t("success.versionDeleted") });
             // Select the next entry (triggers fetch + preview via existing
             // effects) instead of setting empty arrays into the store which
             // would cause a blank canvas flash.
@@ -313,10 +326,11 @@ export function useFlowVersionSidebar(flowId: string) {
               clearPreview();
             }
           },
+          // biome-ignore lint/suspicious/noExplicitAny: legacy
           onError: (err: any) => {
             const detail = err?.response?.data?.detail;
             setErrorData({
-              title: "Failed to delete version",
+              title: t("errors.failedToDeleteVersion"),
               ...(detail ? { list: [detail] } : {}),
             });
           },

@@ -1,6 +1,7 @@
 import { useUpdateNodeInternals } from "@xyflow/react";
 import { cloneDeep, debounce } from "lodash";
 import { useCallback, useMemo, useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { DEBOUNCE_FIELD_LIST } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import { track } from "@/customization/utils/analytics";
@@ -49,6 +50,7 @@ const useHandleOnNewValue = ({
     update: AllNodeType | ((oldState: AllNodeType) => AllNodeType),
   ) => void;
 }) => {
+  const { t } = useTranslation();
   const takeSnapshot = useFlowsManagerStore((state) => state.takeSnapshot);
   const setNode = setNodeExternal ?? useFlowStore((state) => state.setNode);
   const updateNodeInternals = useUpdateNodeInternals();
@@ -89,6 +91,7 @@ const useHandleOnNewValue = ({
     [nodeId, setNode, updateNodeInternals],
   );
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const debouncedMutateRef = useRef<any>(null);
 
   const handleOnNewValue: handleOnNewValueType = useCallback(
@@ -104,14 +107,14 @@ const useHandleOnNewValue = ({
       }
 
       if (!template) {
-        setErrorData({ title: "Template not found in the component" });
+        setErrorData({ title: t("errors.templateNotFound") });
         return;
       }
 
       const parameter = template[name];
 
       if (!parameter) {
-        setErrorData({ title: "Parameter not found in the template" });
+        setErrorData({ title: t("errors.parameterNotFound") });
         return;
       }
 

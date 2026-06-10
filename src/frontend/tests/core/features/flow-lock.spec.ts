@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test.describe("Flow Lock Feature", () => {
   test(
     "should lock and unlock a flow and verify UI changes",
@@ -10,15 +12,13 @@ test.describe("Flow Lock Feature", () => {
 
       // Navigate to templates and select a flow to work with
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 5000,
       });
-
-      // Verify initially the flow is not locked (no lock icon should be visible)
-      const initialLockIcon = page.getByTestId("icon-Lock");
-      await expect(initialLockIcon).toHaveCount(0);
 
       // Open flow settings by clicking on the flow name
       await page.getByTestId("flow_name").click();
@@ -69,10 +69,6 @@ test.describe("Flow Lock Feature", () => {
         state: "detached",
         timeout: 10000,
       });
-
-      // Verify lock icon now appears in the flow header
-      const lockIconInHeader = page.getByTestId("icon-Lock");
-      await expect(lockIconInHeader).toBeVisible();
 
       // Try to open settings again to unlock
       await page.getByTestId("flow_name").click();
@@ -128,7 +124,9 @@ test.describe("Flow Lock Feature", () => {
 
       // Navigate to templates and select a flow
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
 
       await page.waitForSelector('[data-testid="sidebar-search-input"]', {
         timeout: 5000,

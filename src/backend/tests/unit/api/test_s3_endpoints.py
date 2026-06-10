@@ -59,10 +59,12 @@ class TestS3FileEndpoints:
             mock_file = MagicMock()
             mock_file.path = "user_123/subfolder/document.pdf"
             mock_file.name = "document"
+            mock_file.user_id = "user_123"
 
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+                patch("langflow.api.v2.files.ensure_file_permission", new=AsyncMock()),
             ):
                 from langflow.api.v2.files import download_file
 
@@ -90,10 +92,12 @@ class TestS3FileEndpoints:
             mock_file = MagicMock()
             mock_file.path = "user_123/document.pdf"
             mock_file.name = "document"
+            mock_file.user_id = "user_123"
 
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+                patch("langflow.api.v2.files.ensure_file_permission", new=AsyncMock()),
             ):
                 from fastapi.responses import StreamingResponse
                 from langflow.api.v2.files import download_file
@@ -125,10 +129,12 @@ class TestS3FileEndpoints:
             mock_file = MagicMock()
             mock_file.path = "user_123/document.txt"
             mock_file.name = "document"
+            mock_file.user_id = "user_123"
 
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+                patch("langflow.api.v2.files.ensure_file_permission", new=AsyncMock()),
             ):
                 from langflow.api.v2.files import download_file
 
@@ -157,6 +163,7 @@ class TestS3FileEndpoints:
             mock_file = MagicMock()
             mock_file.path = "user_123/folder/document.pdf"
             mock_file.name = "document"
+            mock_file.user_id = "user_123"
 
             mock_session = MagicMock()
             mock_session.delete = AsyncMock()
@@ -164,6 +171,7 @@ class TestS3FileEndpoints:
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+                patch("langflow.api.v2.files.ensure_file_permission", new=AsyncMock()),
             ):
                 from langflow.api.v2.files import delete_file
 
@@ -196,10 +204,12 @@ class TestS3FileEndpoints:
             mock_file = MagicMock()
             mock_file.path = "user_123/missing.pdf"
             mock_file.name = "missing"
+            mock_file.user_id = "user_123"
 
             with (
                 patch("langflow.api.v2.files.fetch_file_object", return_value=mock_file),
                 patch("langflow.api.v2.files.CurrentActiveUser", return_value=mock_user),
+                patch("langflow.api.v2.files.ensure_file_permission", new=AsyncMock()),
             ):
                 from langflow.api.v2.files import download_file
 

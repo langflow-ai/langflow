@@ -1,5 +1,5 @@
-import { FaDiscord, FaGithub } from "react-icons/fa";
 import { useTranslation } from "react-i18next";
+import { FaDiscord, FaGithub } from "react-icons/fa";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import {
   DATASTAX_DOCS_URL,
@@ -14,6 +14,7 @@ import { ENABLE_DATASTAX_LANGFLOW } from "@/customization/feature-flags";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import useAuthStore from "@/stores/authStore";
 import { useDarkStore } from "@/stores/darkStore";
+import { useUtilityStore } from "@/stores/utilityStore";
 import { cn, stripReleaseStageFromVersion } from "@/utils/utils";
 import {
   HeaderMenu,
@@ -30,6 +31,7 @@ export const AccountMenu = () => {
   const latestVersion = useDarkStore((state) => state.latestVersion);
   const navigate = useCustomNavigate();
   const { mutate: mutationLogout } = useLogout();
+  const hideLogoutButton = useUtilityStore((state) => state.hideLogoutButton);
 
   const { isAdmin, autoLogin } = useAuthStore((state) => ({
     isAdmin: state.isAdmin,
@@ -171,7 +173,7 @@ export const AccountMenu = () => {
             </div>
           </div>
 
-          {!autoLogin && (
+          {!autoLogin && !hideLogoutButton && (
             <div>
               <HeaderMenuItemButton onClick={handleLogout} icon="log-out">
                 {t("account.logout")}

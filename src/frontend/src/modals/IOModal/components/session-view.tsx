@@ -2,6 +2,7 @@ import { useIsFetching } from "@tanstack/react-query";
 import type { NewValueParams, SelectionChangedEvent } from "ag-grid-community";
 import cloneDeep from "lodash/cloneDeep";
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { removeMessages } from "@/components/core/playgroundComponent/chat-view/utils/message-utils";
 import Loading from "@/components/ui/loading";
 import {
@@ -22,6 +23,7 @@ export default function SessionView({
   session?: string;
   id?: string;
 }) {
+  const { t } = useTranslation();
   const messages = useMessagesStore((state) => state.messages);
   const setMessages = useMessagesStore((state) => state.setMessages);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -62,7 +64,20 @@ export default function SessionView({
     }
   }, [queryData, setMessages]);
 
-  const columns = extractColumnsFromRows(messages, "intersection");
+  const columnHeaderMap: Record<string, string> = {
+    timestamp: t("messages.column.timestamp"),
+    text: t("messages.column.text"),
+    sender: t("messages.column.sender"),
+    sender_name: t("messages.column.senderName"),
+    session_id: t("messages.column.sessionId"),
+    files: t("messages.column.files"),
+  };
+
+  const columns = extractColumnsFromRows(messages, "intersection").map((col) =>
+    col.field && columnHeaderMap[col.field]
+      ? { ...col, headerName: columnHeaderMap[col.field] }
+      : col,
+  );
   const isFetchingCount = useIsFetching({
     queryKey: ["useGetMessagesQuery"],
     exact: false,
@@ -77,12 +92,12 @@ export default function SessionView({
       }
       setSelectedRows([]);
       setSuccessData({
-        title: "Messages deleted successfully.",
+        title: t("success.messagesDeleted"),
       });
     },
     onError: () => {
       setErrorData({
-        title: "Error deleting messages.",
+        title: t("errors.deletingMessages"),
       });
     },
   });
@@ -106,12 +121,12 @@ export default function SessionView({
           updateMessage(data);
           // Set success message
           setSuccessData({
-            title: "Messages updated successfully.",
+            title: t("success.messagesUpdated"),
           });
         },
         onError: () => {
           setErrorData({
-            title: "Error updating messages.",
+            title: t("errors.updatingMessages"),
           });
           event.data[field] = event.oldValue;
           event.api.refreshCells();
@@ -150,7 +165,7 @@ export default function SessionView({
       onDelete={playgroundPage ? undefined : handleRemoveMessages}
       readOnlyEdit
       editable={editable}
-      overlayNoRowsTemplate="No data available"
+      overlayNoRowsTemplate={t("table.noRowsToShow")}
       onSelectionChanged={(event: SelectionChangedEvent) => {
         setSelectedRows(event.api.getSelectedRows().map((row) => row.id));
       }}

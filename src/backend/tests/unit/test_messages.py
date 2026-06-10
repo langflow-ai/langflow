@@ -58,7 +58,7 @@ def test_get_messages():
         ]
     )
     limit = 2
-    messages = get_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = get_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -73,7 +73,7 @@ async def test_aget_messages():
         ]
     )
     limit = 2
-    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit)
+    messages = await aget_messages(sender="User", session_id="session_id2", limit=limit, order="ASC")
     assert len(messages) == limit
     assert messages[0].text == "Test message 1"
     assert messages[1].text == "Test message 2"
@@ -93,6 +93,21 @@ async def test_aadd_messages():
     messages = await aadd_messages(message)
     assert len(messages) == 1
     assert messages[0].text == "New Test message"
+
+
+@pytest.mark.usefixtures("client")
+async def test_aadd_messages_persists_run_id():
+    run_id = uuid4()
+    message = Message(
+        text="New Test message",
+        sender="User",
+        sender_name="User",
+        session_id="new_session_id_run_id",
+        run_id=str(run_id),
+    )
+    messages = await aadd_messages(message)
+    assert len(messages) == 1
+    assert str(messages[0].run_id) == str(run_id)
 
 
 @pytest.mark.usefixtures("client")
@@ -174,14 +189,14 @@ def test_convert_to_langchain(method_name):
 
 
 def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
-    warnings: list[str] = []
+    events: list[str] = []
 
-    def warning(event: str, **_kwargs):
-        warnings.append(event)
+    def record(event: str, **_kwargs):
+        events.append(event)
 
     monkeypatch.setattr(
         "lfx.schema.message.logger",
-        SimpleNamespace(warning=warning, error=lambda *_args, **_kwargs: None),
+        SimpleNamespace(debug=record, warning=record, error=lambda *_args, **_kwargs: None),
     )
 
     message = Message(
@@ -196,7 +211,7 @@ def test_to_lc_message_skips_unsupported_file_attachments(monkeypatch):
 
     assert lc_message.type == "human"
     assert lc_message.content == [{"type": "text", "text": "Hello"}]
-    assert any("Skipping attachment during message conversion" in event for event in warnings)
+    assert any("Skipping attachment during message conversion" in event for event in events)
 
 
 def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
@@ -217,7 +232,7 @@ def test_to_lc_message_keeps_supported_csv_attachments_as_text(tmp_path):
     assert isinstance(lc_message.content, list)
     assert lc_message.content[0] == {"type": "text", "text": "Hello"}
     assert lc_message.content[1]["type"] == "text"
-    assert "Attachment: table.csv" in lc_message.content[1]["text"]
+    assert "File 'table.csv' contents:" in lc_message.content[1]["text"]
     assert "name,role" in lc_message.content[1]["text"]
 
 
@@ -457,6 +472,62 @@ async def test_aupdate_message_with_nested_properties(created_message):
     assert updated[0].properties.allow_markdown is True
     assert updated[0].properties.state == "complete"
     assert updated[0].properties.targets == []
+
+
+@pytest.mark.usefixtures("client")
+async def test_aupdate_message_with_dataframe_in_tool_output(created_message):
+    """Regression test: a Table/DataFrame leaked into a ContentBlock should not break persistence.
+
+    When a flow wires a Memory Base (or any component that emits a Table) through
+    a Parser into an Agent, the raw Table can be captured by message tracking
+    and reach the SQL UPDATE before the consumer converts it to text. The
+    persistence layer must coerce the Table — and the numpy scalars it carries
+    — to JSON-native types rather than failing the message save.
+    """
+    import json
+
+    import numpy as np
+    import pandas as pd
+
+    table = pd.DataFrame([{"chunk": "hello world", "_score": 0.9}, {"chunk": "another row", "_score": 0.8}])
+
+    tool_content = ToolContent(
+        type="tool_use",
+        name="MemoryBase",
+        tool_input={"search_query": "hello"},
+        output=table,
+        duration=12,
+    )
+    content_block = ContentBlock(title="Agent Steps", contents=[tool_content])
+
+    created_message.content_blocks = [content_block]
+    created_message.text = "Agent response after Memory Base retrieval"
+
+    updated = await aupdate_messages(created_message)
+
+    assert len(updated) == 1
+    assert updated[0].text == "Agent response after Memory Base retrieval"
+    assert len(updated[0].content_blocks) == 1
+
+    stored_tool = updated[0].content_blocks[0].contents[0]
+    assert stored_tool.type == "tool_use"
+    assert stored_tool.name == "MemoryBase"
+
+    # The output must be free of pandas / numpy types and fully JSON-encodable.
+    def _assert_json_native(value):
+        if isinstance(value, dict):
+            for v in value.values():
+                _assert_json_native(v)
+        elif isinstance(value, list):
+            for v in value:
+                _assert_json_native(v)
+        else:
+            assert not isinstance(value, np.generic), f"numpy scalar leaked: {value!r}"
+            assert not isinstance(value, pd.DataFrame), "DataFrame leaked into persisted output"
+
+    _assert_json_native(stored_tool.output)
+    # Strict JSON dump must succeed without a fallback encoder.
+    json.dumps(stored_tool.output, allow_nan=False)
 
 
 # =============================================================================
@@ -1075,6 +1146,23 @@ class TestMessageEdgeCases:
 
         assert str(result.flow_id) == flow_id_str
 
+    def test_from_message_uses_message_run_id_when_explicit_run_id_missing(self):
+        """Test from_message falls back to message.run_id."""
+        from langflow.services.database.models.message.model import MessageTable
+
+        run_id = uuid4()
+        message = Message(
+            text="Test",
+            sender="User",
+            sender_name="User",
+            session_id="session",
+            run_id=str(run_id),
+        )
+
+        result = MessageTable.from_message(message, flow_id=uuid4())
+
+        assert result.run_id == run_id
+
     def test_from_message_with_iterator_text(self):
         """Test from_message handles iterator text gracefully."""
         from langflow.services.database.models.message.model import MessageTable
@@ -1311,21 +1399,18 @@ class TestSanitizeJson:
         assert MessageTable._sanitize_json(None) is None
 
     def test_sanitize_decimal_nan(self):
-        """Decimal('NaN') should be handled gracefully.
+        """Decimal('NaN') is normalized to None via the JSON-encoder fallback.
 
-        Decimal NaN is neither a float nor passes math.isnan/isinf, so the
-        current implementation passes it through as-is (it is not a float).
-        This test documents the current behaviour; if Decimal support is added
-        later (as suggested in review), update this test accordingly.
+        Decimal NaN is not directly JSON-encodable and would otherwise reach
+        the jsonb column unchanged. The fallback path converts it to a float
+        NaN, which is then sanitized to None like any other non-finite float.
         """
         import decimal
 
         from langflow.services.database.models.message.model import MessageTable
 
         d = decimal.Decimal("NaN")
-        # Current implementation: non-float types are returned unchanged
-        result = MessageTable._sanitize_json(d)
-        assert result is d  # passed through unchanged
+        assert MessageTable._sanitize_json(d) is None
 
     # ------------------------------------------------------------------
     # Integration: validator strips NaN before reaching the DB layer

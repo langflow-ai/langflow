@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -28,9 +29,10 @@ export const generateUniqueVariableName = (
     ? /\{\{([a-zA-Z_][a-zA-Z0-9_]*)\}\}/g
     : /\{([^{}]+)\}/g;
   const existingVariables = new Set<string>();
-  let match: RegExpExecArray | null;
-  while ((match = variableRegex.exec(templateValue)) !== null) {
+  let match: RegExpExecArray | null = variableRegex.exec(templateValue);
+  while (match !== null) {
     existingVariables.add(match[1]);
+    match = variableRegex.exec(templateValue);
   }
 
   let variableName = "variable_name";
@@ -57,6 +59,7 @@ export default function AccordionPromptComponent({
   showParameter = false,
   isDoubleBrackets = false,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element {
+  const { t } = useTranslation();
   const [isOpen, setIsOpen] = useState(true);
   const [internalValue, setInternalValue] = useState(value);
   const [isScrollable, setIsScrollable] = useState(false);
@@ -564,7 +567,7 @@ export default function AccordionPromptComponent({
             onClick={handleAddVariable}
             disabled={disabled || readonly}
             className="h-6 w-6 p-0 text-muted-foreground"
-            title="Add variable"
+            title={t("accordion.addVariable")}
           >
             <span className="text-xs">
               {isDoubleBrackets ? "{{+}}" : "{+}"}
@@ -632,7 +635,7 @@ export default function AccordionPromptComponent({
                     variant="ghost"
                     size="sm"
                     className="h-6 w-6 p-0 text-muted-foreground"
-                    title="Fullscreen"
+                    title={t("accordion.fullscreen")}
                     data-testid={
                       isDoubleBrackets
                         ? "button_open_mustache_prompt_modal"

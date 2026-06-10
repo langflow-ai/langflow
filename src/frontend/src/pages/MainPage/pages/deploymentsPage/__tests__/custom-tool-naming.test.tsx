@@ -34,49 +34,64 @@ describe("Custom tool naming", () => {
     expect(result.current.toolNameByFlow.get("flow-1")).toBe("My Custom Tool");
   });
 
-  it("buildDeploymentPayload includes tool_name when set", () => {
+  it("buildDeploymentPayload includes tool_display_name when set", () => {
     const { result } = renderStepperHook();
 
     // Set up required fields
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", "My Custom Tool"]]));
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlowItem = payload.provider_data.add_flows[0];
-    expect(addFlowItem.tool_name).toBe("My Custom Tool");
+    expect(addFlowItem.tool_display_name).toBe("My Custom Tool");
   });
 
-  it("buildDeploymentPayload omits tool_name when empty", () => {
+  it("buildDeploymentPayload uses a default tool display name when empty", () => {
     const { result } = renderStepperHook();
 
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlowItem = payload.provider_data.add_flows[0];
-    expect(addFlowItem.tool_name).toBeUndefined();
+    expect(addFlowItem.tool_display_name).toBe("Flow");
   });
 
-  it("buildDeploymentPayload omits tool_name when whitespace-only", () => {
+  it("buildDeploymentPayload uses a default tool display name when whitespace-only", () => {
     const { result } = renderStepperHook();
 
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", "   "]]));
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlowItem = payload.provider_data.add_flows[0];
-    expect(addFlowItem.tool_name).toBeUndefined();
+    expect(addFlowItem.tool_display_name).toBe("Flow");
   });
 
   it("tool name with special characters is preserved in payload", () => {
@@ -85,14 +100,19 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(
         new Map([["flow-1", "my-tool_v2.0 (beta) [test]"]]),
       );
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toBe(
+    expect(payload.provider_data.add_flows[0].tool_display_name).toBe(
       "my-tool_v2.0 (beta) [test]",
     );
   });
@@ -103,14 +123,19 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(
         new Map([["flow-1", "ferramenta_análise"]]),
       );
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toBe(
+    expect(payload.provider_data.add_flows[0].tool_display_name).toBe(
       "ferramenta_análise",
     );
   });
@@ -122,13 +147,20 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
       result.current.setToolNameByFlow(new Map([["flow-1", longName]]));
     });
 
     const payload = result.current.buildDeploymentPayload("provider-1");
-    expect(payload.provider_data.add_flows[0].tool_name).toBe(longName);
-    expect(payload.provider_data.add_flows[0].tool_name).toHaveLength(500);
+    expect(payload.provider_data.add_flows[0].tool_display_name).toBe(longName);
+    expect(payload.provider_data.add_flows[0].tool_display_name).toHaveLength(
+      500,
+    );
   });
 
   it("two flows can have the same tool name (no client-side collision check)", () => {
@@ -137,8 +169,18 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
-      result.current.handleSelectVersion("flow-2", "ver-2", "v2");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+      result.current.handleSelectVersion({
+        flowId: "flow-2",
+        flowName: "Flow",
+        versionId: "ver-2",
+        versionTag: "v2",
+      });
       result.current.setToolNameByFlow(
         new Map([
           ["flow-1", "Same Name"],
@@ -150,8 +192,8 @@ describe("Custom tool naming", () => {
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlows = payload.provider_data.add_flows;
     expect(addFlows).toHaveLength(2);
-    expect(addFlows[0].tool_name).toBe("Same Name");
-    expect(addFlows[1].tool_name).toBe("Same Name");
+    expect(addFlows[0].tool_display_name).toBe("Same Name");
+    expect(addFlows[1].tool_display_name).toBe("Same Name");
   });
 
   it("each flow can have its own tool name", () => {
@@ -160,8 +202,18 @@ describe("Custom tool naming", () => {
     act(() => {
       result.current.setDeploymentName("Test Agent");
       result.current.setSelectedLlm("test-model");
-      result.current.handleSelectVersion("flow-1", "ver-1", "v1");
-      result.current.handleSelectVersion("flow-2", "ver-2", "v2");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+      result.current.handleSelectVersion({
+        flowId: "flow-2",
+        flowName: "Flow",
+        versionId: "ver-2",
+        versionTag: "v2",
+      });
       result.current.setToolNameByFlow(
         new Map([
           ["flow-1", "Tool Alpha"],
@@ -173,11 +225,31 @@ describe("Custom tool naming", () => {
     const payload = result.current.buildDeploymentPayload("provider-1");
     const addFlows = payload.provider_data.add_flows;
     expect(addFlows).toHaveLength(2);
-    expect(addFlows.find((o) => o.flow_version_id === "ver-1")?.tool_name).toBe(
-      "Tool Alpha",
-    );
-    expect(addFlows.find((o) => o.flow_version_id === "ver-2")?.tool_name).toBe(
-      "Tool Beta",
-    );
+    expect(
+      addFlows.find((o) => o.flow_version_id === "ver-1")?.tool_display_name,
+    ).toBe("Tool Alpha");
+    expect(
+      addFlows.find((o) => o.flow_version_id === "ver-2")?.tool_display_name,
+    ).toBe("Tool Beta");
+  });
+
+  it("allows create payload when display name does not start with a letter", () => {
+    const { result } = renderStepperHook();
+
+    act(() => {
+      result.current.setDeploymentName("1 Agent");
+      result.current.setSelectedLlm("test-model");
+      result.current.handleSelectVersion({
+        flowId: "flow-1",
+        flowName: "Flow",
+        versionId: "ver-1",
+        versionTag: "v1",
+      });
+    });
+
+    expect(
+      result.current.buildDeploymentPayload("provider-1").provider_data
+        .display_name,
+    ).toBe("1 Agent");
   });
 });

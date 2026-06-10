@@ -8,11 +8,12 @@ from typing import Annotated
 from uuid import UUID
 
 import orjson
-from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from fastapi.encoders import jsonable_encoder
 from fastapi_pagination import Page, Params
 from fastapi_pagination.ext.sqlmodel import apaginate
 from lfx.services.cache.utils import CACHE_MISS
+from pydantic import ValidationError
 from sqlmodel import and_, col, select
 
 from langflow.api.utils import (
@@ -23,6 +24,12 @@ from langflow.api.utils import (
     validate_is_component,
 )
 from langflow.api.utils.zip_utils import extract_flows_from_zip
+from langflow.api.v1.authz_route_dependencies import (
+    AuthorizedDeleteFlow,
+    AuthorizedReadFlow,
+    AuthorizedWriteFlow,
+    RequireFlowCreate,
+)
 from langflow.api.v1.flows_helpers import (
     _build_flows_download_response,
     _get_safe_flow_path,
@@ -36,9 +43,11 @@ from langflow.api.v1.flows_helpers import (
 )
 from langflow.api.v1.mappers.deployments.sync import retry_flow_operation_on_deployment_guard
 from langflow.api.v1.schemas import FlowListCreate
-from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.initial_setup.constants import STARTER_FOLDER_NAME
 from langflow.services.auth.utils import get_current_active_user
+from langflow.services.authorization import FlowAction, ensure_flow_permission, filter_visible_resources
+from langflow.services.authorization.fetch import deny_to_404
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.cache.service import ThreadingInMemoryCache
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
@@ -60,6 +69,7 @@ from langflow.services.database.models.folder.model import Folder
 from langflow.services.deps import get_settings_service, get_storage_service
 from langflow.services.storage.service import StorageService
 from langflow.utils.compression import compress_response
+from langflow.utils.i18n import translate_flow_notes, translate_starter_flows
 
 # Re-export helpers so existing ``from langflow.api.v1.flows import ...`` still works.
 __all__ = [
@@ -92,6 +102,7 @@ async def create_flow(
     session: DbSession,
     flow: FlowCreate,
     current_user: CurrentActiveUser,
+    _create: RequireFlowCreate,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     try:
@@ -153,6 +164,15 @@ async def read_flows(
                 flows = [flow for flow in flows if flow.is_component]
             if remove_example_flows and starter_folder_id:
                 flows = [flow for flow in flows if flow.folder_id != starter_folder_id]
+            # Filter list rows when AUTHZ_ENABLED (per-flow domain_extractor).
+            flows = await filter_visible_resources(
+                current_user,
+                resource_type="flow",
+                candidates=list(flows),
+                domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+                owner_extractor=lambda flow: flow.user_id,
+                act=FlowAction.READ,
+            )
             if header_flows:
                 # Convert to FlowHeader objects and compress the response
                 flow_headers = [FlowHeader.model_validate(flow, from_attributes=True) for flow in flows]
@@ -170,7 +190,18 @@ async def read_flows(
             warnings.filterwarnings(
                 "ignore", category=DeprecationWarning, module=r"fastapi_pagination\.ext\.sqlalchemy"
             )
-            return await apaginate(session, stmt, params=params)
+            page = await apaginate(session, stmt, params=params)
+
+        # Same authz filter as get_all (page.total may overcount denied rows).
+        page.items = await filter_visible_resources(
+            current_user,
+            resource_type="flow",
+            candidates=list(page.items),
+            domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
+            owner_extractor=lambda flow: flow.user_id,
+            act=FlowAction.READ,
+        )
+        return page  # noqa: TRY300 — final return inside try matches the existing style of this handler
 
     except Exception as e:
         import logging as _logging
@@ -182,15 +213,46 @@ async def read_flows(
 @router.get("/{flow_id}", response_model=FlowRead, status_code=200)
 async def read_flow(
     *,
-    session: DbSession,
-    flow_id: UUID,
-    current_user: CurrentActiveUser,
+    flow_id: UUID,  # noqa: ARG001
+    flow: AuthorizedReadFlow,
 ):
     """Read a flow."""
-    if user_flow := await _read_flow(session, flow_id, current_user.id):
-        # Convert to FlowRead while session is still active to avoid detached instance errors
-        return FlowRead.model_validate(user_flow, from_attributes=True)
-    raise HTTPException(status_code=404, detail="Flow not found")
+    return FlowRead.model_validate(flow, from_attributes=True)
+
+
+@router.get("/{flow_id}/note_translations", status_code=200)
+async def get_note_translations(
+    *,
+    flow_id: UUID,  # noqa: ARG001
+    flow: AuthorizedReadFlow,
+    request: Request,
+) -> dict[str, str]:
+    """Return translated note node descriptions for the current locale.
+
+    Returns a mapping of node_id → translated markdown text.  Only nodes
+    with a matching translation key are included; nodes without translations
+    are omitted so the caller can leave them unchanged.
+
+    A missing or inaccessible flow yields 404 (via ``AuthorizedReadFlow``),
+    consistent with ``GET /flows/{id}``; the sole frontend caller (NoteNode)
+    treats that as "no translations" and renders the original text.
+    """
+    from langflow.utils.i18n import translate
+
+    if not flow.data:
+        return {}
+
+    locale = getattr(request.state, "locale", "en")
+    nodes = flow.data.get("nodes", [])
+    result: dict[str, str] = {}
+    for node in nodes:
+        if node.get("type") == "noteNode":
+            i18n_key = node.get("data", {}).get("node", {}).get("i18n_key")
+            if i18n_key:
+                translated = translate(i18n_key, locale, "")
+                if translated:
+                    result[node.get("id")] = translated
+    return result
 
 
 @router.get("/public_flow/{flow_id}", response_model=FlowRead, status_code=200)
@@ -199,13 +261,13 @@ async def read_public_flow(
     session: DbSession,
     flow_id: UUID,
 ):
-    """Read a public flow."""
-    access_type = (await session.exec(select(Flow.access_type).where(Flow.id == flow_id))).first()
-    if access_type is not AccessTypeEnum.PUBLIC:
+    """Read a public flow without requiring authorization (public means public)."""
+    flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
+    if flow is None:
+        raise HTTPException(status_code=404, detail="Flow not found")
+    if flow.access_type is not AccessTypeEnum.PUBLIC:
         raise HTTPException(status_code=403, detail="Flow is not public")
-
-    current_user = await get_user_by_flow_id_or_endpoint_name(str(flow_id))
-    return await read_flow(session=session, flow_id=flow_id, current_user=current_user)
+    return FlowRead.model_validate(flow, from_attributes=True)
 
 
 @router.patch("/{flow_id}", response_model=FlowRead, status_code=200)
@@ -213,15 +275,32 @@ async def update_flow(
     *,
     session: DbSession,
     flow_id: UUID,
+    db_flow: AuthorizedWriteFlow,
     flow: FlowUpdate,
     current_user: CurrentActiveUser,
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Update a flow."""
     try:
-        db_flow = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
-        if not db_flow:
-            raise HTTPException(status_code=404, detail="Flow not found")
+        # Destination check: if the payload moves the flow into a new
+        # workspace/folder, the caller must also be authorized to write at the
+        # destination scope. ``_patch_flow`` applies payload values via
+        # ``model_dump(exclude_unset=True, exclude_none=True)``, so None means
+        # "no change" and falls back to the existing scope.
+        target_workspace_id = flow.workspace_id if flow.workspace_id is not None else db_flow.workspace_id
+        target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow.folder_id
+        if target_workspace_id != db_flow.workspace_id or target_folder_id != db_flow.folder_id:
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=db_flow.user_id,
+                    workspace_id=target_workspace_id,
+                    folder_id=target_folder_id,
+                )
+            except HTTPException as exc:
+                raise deny_to_404(exc, detail="Flow not found") from exc
 
         # Explicit folder_id=None is ignored here because _patch_flow builds
         # update_data with exclude_none=True, so null folder_id is a no-op.
@@ -234,6 +313,41 @@ async def update_flow(
             db_flow_for_attempt = await _read_flow(session=session, flow_id=flow_id, user_id=current_user.id)
             if not db_flow_for_attempt:
                 raise HTTPException(status_code=404, detail="Flow not found")
+            # TOCTOU: a concurrent PATCH could have moved this flow to a
+            # different workspace/folder between the destination check above
+            # and this retry attempt. Re-authorize against the freshly
+            # reloaded source AND destination so the writer cannot ride a
+            # stale check across a race.
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=db_flow_for_attempt.user_id,
+                    workspace_id=db_flow_for_attempt.workspace_id,
+                    folder_id=db_flow_for_attempt.folder_id,
+                )
+            except HTTPException as exc:
+                raise deny_to_404(exc, detail="Flow not found") from exc
+            attempt_target_workspace_id = (
+                flow.workspace_id if flow.workspace_id is not None else db_flow_for_attempt.workspace_id
+            )
+            attempt_target_folder_id = flow.folder_id if flow.folder_id is not None else db_flow_for_attempt.folder_id
+            if (
+                attempt_target_workspace_id != db_flow_for_attempt.workspace_id
+                or attempt_target_folder_id != db_flow_for_attempt.folder_id
+            ):
+                try:
+                    await ensure_flow_permission(
+                        current_user,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=db_flow_for_attempt.user_id,
+                        workspace_id=attempt_target_workspace_id,
+                        folder_id=attempt_target_folder_id,
+                    )
+                except HTTPException as exc:
+                    raise deny_to_404(exc, detail="Flow not found") from exc
             return await _patch_flow(
                 session=session,
                 db_flow=db_flow_for_attempt,
@@ -280,9 +394,45 @@ async def upsert_flow(
         existing_flow = (await session.exec(select(Flow).where(Flow.id == flow_id))).first()
 
         if existing_flow is not None:
-            # Flow exists - check ownership (return 404 to avoid leaking resource existence)
-            if existing_flow.user_id != current_user.id:
+            # Block non-owner upsert when cross-user fetch is off (UUID privacy).
+            from langflow.services.deps import get_authorization_service
+
+            authz = get_authorization_service()
+            can_widen = await authz.supports_cross_user_fetch() and await authz.is_enabled()
+            if not can_widen and existing_flow.user_id != current_user.id:
                 raise HTTPException(status_code=404, detail="Flow not found")
+
+            try:
+                await ensure_flow_permission(
+                    current_user,
+                    FlowAction.WRITE,
+                    flow_id=flow_id,
+                    flow_user_id=existing_flow.user_id,
+                    workspace_id=existing_flow.workspace_id,
+                    folder_id=existing_flow.folder_id,
+                )
+            except HTTPException as exc:
+                raise deny_to_404(exc, detail="Flow not found") from exc
+
+            # Destination check (see update_flow above): if the payload moves
+            # the flow into a new workspace/folder, also authorize WRITE at the
+            # destination. ``_update_existing_flow`` applies payload values via
+            # ``model_dump(exclude_unset=True, exclude_none=True)``, so None
+            # means "keep existing" and a non-None differing value means "move".
+            target_workspace_id = flow.workspace_id if flow.workspace_id is not None else existing_flow.workspace_id
+            target_folder_id = flow.folder_id if flow.folder_id is not None else existing_flow.folder_id
+            if target_workspace_id != existing_flow.workspace_id or target_folder_id != existing_flow.folder_id:
+                try:
+                    await ensure_flow_permission(
+                        current_user,
+                        FlowAction.WRITE,
+                        flow_id=flow_id,
+                        flow_user_id=existing_flow.user_id,
+                        workspace_id=target_workspace_id,
+                        folder_id=target_folder_id,
+                    )
+                except HTTPException as exc:
+                    raise deny_to_404(exc, detail="Flow not found") from exc
 
             # Sync deployment state before folder changes
             # Explicit folder_id=None is ignored here because _update_existing_flow
@@ -318,6 +468,9 @@ async def upsert_flow(
             status_code = 200
         else:
             # CREATE path - flow doesn't exist
+            await ensure_flow_permission(
+                current_user, FlowAction.CREATE, workspace_id=flow.workspace_id, folder_id=flow.folder_id
+            )
             flow_read = await _new_flow(
                 session=session,
                 flow=flow,
@@ -345,17 +498,11 @@ async def upsert_flow(
 async def delete_flow(
     *,
     session: DbSession,
-    flow_id: UUID,
+    flow_id: UUID,  # noqa: ARG001
+    flow: AuthorizedDeleteFlow,
     current_user: CurrentActiveUser,
 ):
     """Delete a flow."""
-    flow = await _read_flow(
-        session=session,
-        flow_id=flow_id,
-        user_id=current_user.id,
-    )
-    if not flow:
-        raise HTTPException(status_code=404, detail="Flow not found")
     await retry_flow_operation_on_deployment_guard(
         db=session,
         user_id=current_user.id,
@@ -373,6 +520,16 @@ async def create_flows(
     current_user: CurrentActiveUser,
 ):
     """Create multiple new flows."""
+    # Per-flow CREATE check: each flow's destination (workspace_id + folder_id) is
+    # caller-supplied, so we must authorize the actual target instead of trusting
+    # a single coarse check at the route boundary.
+    for flow in flow_list.flows:
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.CREATE,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
     # Guard against duplicate IDs up-front so callers get a clean 422 instead
     # of an unhandled DB IntegrityError.  Use upload_file() for upsert semantics.
     requested_ids = [f.id for f in flow_list.flows if f.id is not None]
@@ -413,6 +570,11 @@ async def upload_file(
     storage_service: Annotated[StorageService, Depends(get_storage_service)],
 ):
     """Upload flows from a JSON or ZIP file (upsert semantics for flows with stable IDs)."""
+    # Authorization is enforced per-flow below, after parsing — the per-flow
+    # check uses the actual workspace_id/folder_id each uploaded flow targets.
+    # A coarse pre-parse check here would over-reject (it would authorize the
+    # caller against ``domain="*", obj="flow:*"`` regardless of where the
+    # uploaded flows actually land).
     if file is None:
         raise HTTPException(status_code=400, detail="No file provided")
 
@@ -437,15 +599,49 @@ async def upload_file(
 
     # Normalise code fields: if exported with code-as-lines format, rejoin to
     # strings before creating the Pydantic models so the DB always stores strings.
-    if "flows" in data:
-        data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
-        flow_list = FlowListCreate(**data)
-    else:
-        flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    if not isinstance(data, dict):
+        raise HTTPException(
+            status_code=422,
+            detail="Invalid JSON: expected an object with 'flows' or a single flow object",
+        )
+    try:
+        if "flows" in data:
+            if not isinstance(data["flows"], list):
+                raise HTTPException(
+                    status_code=422,
+                    detail="Invalid JSON: 'flows' must be a list of flow objects",
+                )
+            non_dict = [i for i, f in enumerate(data["flows"]) if not isinstance(f, dict)]
+            if non_dict:
+                raise HTTPException(
+                    status_code=422,
+                    detail=f"Invalid JSON: flows[{non_dict[0]}] is not an object",
+                )
+            data = {**data, "flows": [normalize_code_for_import(f) for f in data["flows"]]}
+            flow_list = FlowListCreate(**data)
+        else:
+            flow_list = FlowListCreate(flows=[FlowCreate(**normalize_code_for_import(data))])
+    except HTTPException:
+        raise
+    except ValidationError as e:
+        raise HTTPException(status_code=422, detail=str(e)) from e
 
     # TODO: Full-version import is planned as a follow-up feature.
     # When implemented, extract raw flow dicts here to read embedded "version"
     # arrays and create FlowVersion entries for each imported flow.
+
+    # Per-flow CREATE check on the effective destination. _upsert_flow_list lets
+    # the query `folder_id` override each flow's `folder_id`, but it preserves
+    # each flow's `workspace_id`, so a payload could otherwise route flows into
+    # workspaces the caller has no create permission on.
+    for flow in flow_list.flows:
+        effective_folder_id = folder_id if folder_id is not None else flow.folder_id
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.CREATE,
+            workspace_id=flow.workspace_id,
+            folder_id=effective_folder_id,
+        )
 
     try:
         return await _upsert_flow_list(
@@ -473,9 +669,26 @@ async def delete_multiple_flows(
         async def _delete_operation() -> int:
             if not flow_ids:
                 return 0
-            flows_to_delete = (
-                await db.exec(select(Flow).where(col(Flow.id).in_(flow_ids)).where(Flow.user_id == user.id))
-            ).all()
+            # Widen fetch when cross-user DELETE is supported; else owner-scoped.
+            from langflow.services.deps import get_authorization_service
+
+            authz = get_authorization_service()
+            base_stmt = select(Flow).where(col(Flow.id).in_(flow_ids))
+            if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+                stmt = base_stmt
+            else:
+                stmt = base_stmt.where(Flow.user_id == user.id)
+            flows_to_delete = (await db.exec(stmt)).all()
+            for flow in flows_to_delete:
+                # Propagate plugin deny (403) so bulk delete fails audibly.
+                await ensure_flow_permission(
+                    user,
+                    FlowAction.DELETE,
+                    flow_id=flow.id,
+                    flow_user_id=flow.user_id,
+                    workspace_id=flow.workspace_id,
+                    folder_id=flow.folder_id,
+                )
             for flow in flows_to_delete:
                 await cascade_delete_flow(db, flow.id)
             await db.flush()
@@ -510,10 +723,33 @@ async def download_multiple_file(
     # TODO: Full-version download (include_version parameter) is planned as a follow-up feature.
     # When implemented, add an include_version: bool = False parameter and embed version
     # entries in each flow dict using get_flow_versions_with_provider_status and strip_version_data.
-    flows = (await db.exec(select(Flow).where(and_(Flow.user_id == user.id, Flow.id.in_(flow_ids))))).all()  # type: ignore[attr-defined]
+    # Widen fetch when cross-user READ is supported; else owner-scoped.
+    from langflow.services.deps import get_authorization_service
+
+    authz = get_authorization_service()
+    base_stmt = select(Flow).where(col(Flow.id).in_(flow_ids))  # type: ignore[attr-defined]
+    if await authz.supports_cross_user_fetch() and await authz.is_enabled():
+        stmt = base_stmt
+    else:
+        stmt = base_stmt.where(and_(Flow.user_id == user.id))
+    flows = (await db.exec(stmt)).all()
 
     if not flows:
         raise HTTPException(status_code=404, detail="No flows found.")
+
+    for flow in flows:
+        # Plugin deny → 404 (UUID privacy).
+        try:
+            await ensure_flow_permission(
+                user,
+                FlowAction.READ,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=flow.workspace_id,
+                folder_id=flow.folder_id,
+            )
+        except HTTPException as exc:
+            raise deny_to_404(exc, detail="No flows found.") from exc
 
     return _build_flows_download_response(flows)
 
@@ -524,6 +760,10 @@ _starter_flows_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemor
     max_size=1,
     expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
 )
+_starter_flows_translated_cache: ThreadingInMemoryCache[threading.RLock] = ThreadingInMemoryCache(
+    max_size=16,  # Why: 16 > 7 current supported locales, leaves headroom for future additions
+    expiration_time=int(_STARTER_FLOWS_TTL_SECONDS),
+)
 _starter_flows_lock = asyncio.Lock()
 
 
@@ -531,38 +771,64 @@ _starter_flows_lock = asyncio.Lock()
 async def read_basic_examples(
     *,
     session: DbSession,
+    request: Request,
 ):
     """Retrieve a list of basic example flows."""
-    cached_response = _starter_flows_cache.get("starter_flows")
-    if cached_response is not CACHE_MISS:
-        return cached_response
+    locale = getattr(request.state, "locale", "en")
+    translated_cache_key = f"starter_flows_{locale}"
+
+    # Fast path: translated result already cached for this locale
+    cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
+    if cached_translated is not CACHE_MISS:
+        return compress_response(cached_translated)
 
     async with _starter_flows_lock:
-        cached_response = _starter_flows_cache.get("starter_flows")
-        if cached_response is not CACHE_MISS:
-            return cached_response
+        # Double-check inside lock to prevent thundering herd
+        cached_translated = _starter_flows_translated_cache.get(translated_cache_key)
+        if cached_translated is not CACHE_MISS:
+            return compress_response(cached_translated)
 
-        try:
-            starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
+        # Ensure raw DB data is cached
+        cached_flow_reads = _starter_flows_cache.get("starter_flows")
+        if cached_flow_reads is CACHE_MISS:
+            try:
+                starter_folder = (await session.exec(select(Folder).where(Folder.name == STARTER_FOLDER_NAME))).first()
 
-            if not starter_folder:
-                return []
+                if not starter_folder:
+                    return compress_response([])
 
-            all_starter_folder_flows = (
-                await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
-            ).all()
+                all_starter_folder_flows = (
+                    await session.exec(select(Flow).where(Flow.folder_id == starter_folder.id))
+                ).all()
 
-            flow_reads = [FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows]
-            response = compress_response(flow_reads)
-            _starter_flows_cache.set("starter_flows", response)
+                cached_flow_reads = [
+                    FlowRead.model_validate(flow, from_attributes=True) for flow in all_starter_folder_flows
+                ]
+                _starter_flows_cache.set("starter_flows", cached_flow_reads)
 
-        except Exception as e:
-            import logging as _logging
+            except Exception as e:
+                import logging as _logging
 
-            _logging.getLogger(__name__).exception("Error loading basic examples")
-            raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
-        else:
-            return response
+                _logging.getLogger(__name__).exception("Error loading basic examples")
+                raise HTTPException(status_code=500, detail="An internal error occurred while loading examples.") from e
+
+        # Translate once per locale and cache the result
+        # Why: cached uncompressed so the same result can be re-compressed per
+        # response — keeps locale-switching working without storing per-locale
+        # compressed blobs.
+        translated = translate_starter_flows(cached_flow_reads, locale)
+        result = []
+        for flow in translated:
+            flow_copy = flow.model_copy()
+            if flow_copy.data and isinstance(flow_copy.data, dict):
+                nodes = flow_copy.data.get("nodes", [])
+                translated_nodes = translate_flow_notes(nodes, locale)
+                flow_copy.data = {**flow_copy.data, "nodes": translated_nodes}
+            result.append(flow_copy)
+
+        _starter_flows_translated_cache.set(translated_cache_key, result)
+
+    return compress_response(result)
 
 
 @router.post("/expand/", status_code=200, dependencies=[Depends(get_current_active_user)], include_in_schema=False)

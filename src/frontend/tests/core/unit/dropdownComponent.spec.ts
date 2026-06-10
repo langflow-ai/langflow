@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -12,13 +14,7 @@ test(
   "dropDownComponent",
   { tag: ["@release", "@workspace"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     // Allow for legacy components
     await page.getByTestId("sidebar-options-trigger").click();
@@ -143,7 +139,7 @@ test(
     await page.getByTestId("code-button-modal").last().click();
 
     await page.locator("textarea").press("Control+a");
-    const emptyOptionsCode = `from langchain_aws import ChatBedrock
+    const emptyOptionsCode = `from langchain_aws import ChatBedrock as BedrockChat
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent
@@ -151,7 +147,6 @@ from langflow.field_typing import BaseLanguageModel, Text
 from langflow.io import BoolInput, DictInput, DropdownInput, StrInput
 from langflow.io import MessageInput
 from langflow.io import Output
-
 
 class AmazonBedrockComponent(LCModelComponent):
     display_name: str = "Amazon Bedrock"
@@ -234,7 +229,7 @@ class AmazonBedrockComponent(LCModelComponent):
         cache = self.cache
         stream = self.stream
         try:
-            output = ChatBedrock(
+            output = BedrockChat(
                 credentials_profile_name=credentials_profile_name,
                 model_id=model_id,
                 region_name=region_name,
@@ -248,7 +243,7 @@ class AmazonBedrockComponent(LCModelComponent):
         return output
   `;
     await page.locator("textarea").fill(emptyOptionsCode);
-    await page.getByRole("button", { name: "Check & Save" }).click();
+    await page.getByRole("button", { name: TEXTS.checkAndSave }).click();
     await page
       .getByText("No parameters are available for display.")
       .isVisible();

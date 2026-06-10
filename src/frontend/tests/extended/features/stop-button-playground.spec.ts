@@ -1,59 +1,13 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
+import { TIMEOUTS } from "../../utils/constants/timeouts";
+import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
+import { replaceComponentCode } from "../../utils/flow/replace-component-code";
 
-import { zoomOut } from "../../utils/zoom-out";
-
-test(
-  "User must be able to stop building from inside Playground",
-  { tag: ["@release", "@api"] },
-  async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("blank-flow").click();
-
-    await page.waitForSelector(
-      '[data-testid="sidebar-custom-component-button"]',
-      {
-        timeout: 3000,
-      },
-    );
-
-    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
-      timeout: 3000,
-    });
-
-    await page.getByTestId("sidebar-custom-component-button").click();
-    await adjustScreenView(page);
-
-    await page.getByTestId("sidebar-search-input").click();
-    await page.waitForTimeout(500);
-    await page.getByTestId("sidebar-search-input").fill("chat output");
-    await page.waitForTimeout(500);
-
-    await page.waitForSelector('[data-testid="input_outputChat Output"]', {
-      timeout: 3000,
-    });
-
-    await page
-      .getByTestId("input_outputChat Output")
-      .dragTo(page.locator('//*[@id="react-flow-id"]'), {
-        targetPosition: { x: 400, y: 400 },
-      });
-
-    await adjustScreenView(page);
-
-    await page.getByTestId("div-generic-node").nth(1).click();
-
-    await page.getByTestId("more-options-modal").click();
-
-    await page.getByTestId("expand-button-modal").click();
-
-    await page.getByTestId("div-generic-node").nth(0).click();
-
-    await page.getByTestId("code-button-modal").nth(0).click();
-
-    const waitTimeoutCode = `
+const SLEEP_60_CUSTOM_COMPONENT = `
 # from langflow.field_typing import Data
 from langflow.custom import Component
 from langflow.io import MessageTextInput, Output
@@ -82,14 +36,45 @@ class CustomComponent(Component):
         sleep(60)
         return data`;
 
-    await page.locator(".ace_content").click();
-    await page.keyboard.press(`ControlOrMeta+A`);
-    await page.locator("textarea").fill(waitTimeoutCode);
+test(
+  "User must be able to stop building from inside Playground",
+  { tag: ["@release", "@api"] },
+  async ({ page }) => {
+    await openBlankFlow(page);
 
-    await page.getByText("Check & Save").last().click();
+    await page.waitForSelector(
+      `[data-testid="${TID.sidebarCustomComponentButton}"]`,
+      { timeout: TIMEOUTS.short },
+    );
+
+    await page.waitForSelector(
+      `[data-testid="${TID.canvasControlsDropdown}"]`,
+      {
+        timeout: TIMEOUTS.short,
+      },
+    );
+
+    await page.getByTestId(TID.sidebarCustomComponentButton).click();
+    await adjustScreenView(page);
+
+    await addComponentFromSidebar(page, {
+      search: "chat output",
+      testId: "input_outputChat Output",
+      position: { x: 400, y: 400 },
+    });
+
+    await adjustScreenView(page);
+
+    await page.getByTestId(TID.divGenericNode).nth(1).click();
+    await page.getByTestId("more-options-modal").click();
+    await page.getByTestId("expand-button-modal").click();
+
+    await page.getByTestId(TID.divGenericNode).nth(0).click();
+
+    await replaceComponentCode(page, SLEEP_60_CUSTOM_COMPONENT);
     await adjustScreenView(page, { numberOfZoomOut: 2 });
 
-    //connection 1
+    // Connect Custom Component output → Chat Output input
     const elementCustomComponentOutput = await page
       .getByTestId("handle-customcomponent-shownode-output-right")
       .first();
@@ -102,30 +87,32 @@ class CustomComponent(Component):
     await elementChatOutput.hover();
     await page.mouse.up();
 
-    await page.waitForSelector('[data-testid="button_run_chat output"]', {
-      timeout: 3000,
+    await page.waitForSelector(`[data-testid="${TID.buttonRunChatOutput}"]`, {
+      timeout: TIMEOUTS.short,
     });
 
-    await page.getByTestId("button_run_chat output").click();
+    await page.getByTestId(TID.buttonRunChatOutput).click();
 
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
+    await page
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
 
-    await page.waitForSelector('[data-testid="button-stop"]', {
-      timeout: 30000,
+    await page.waitForSelector(`[data-testid="${TID.buttonStop}"]`, {
+      timeout: TIMEOUTS.standard,
     });
 
-    const elements = await page.$$('[data-testid="button-stop"]');
-
+    const elements = await page.$$(`[data-testid="${TID.buttonStop}"]`);
     if (elements.length > 0) {
       const lastElement = elements[elements.length - 1];
       await lastElement.waitForElementState("visible");
     }
 
-    expect(await page.getByTestId("button-stop").last()).toBeVisible();
+    await expect(page.getByTestId(TID.buttonStop).last()).toBeVisible();
+    await page.getByTestId(TID.buttonStop).last().click();
 
-    await page.getByTestId("button-stop").last().click();
-
-    await page.waitForSelector("text=build stopped", { timeout: 30000 });
-    expect(await page.getByText("build stopped").isVisible()).toBeTruthy();
+    await page.waitForSelector("text=build stopped", {
+      timeout: TIMEOUTS.standard,
+    });
+    await expect(page.getByText("build stopped")).toBeVisible();
   },
 );
