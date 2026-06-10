@@ -1,0 +1,128 @@
+name: Run Accessibility Scans (IBM Equal Access)
+
+on:
+  schedule:
+    # Run nightly at 02:00 UTC, after the nightly build window
+    - cron: "0 2 * * *"
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: "(Optional) ref to checkout"
+        required: false
+        type: string
+      assert:
+        description: "Fail the run on a11y violations (RUN_A11Y_ASSERT)"
+        required: false
+        type: boolean
+        default: false
+
+env:
+  NODE_VERSION: "22"
+  PYTHON_VERSION: "3.13"
+  # Define the directory where Playwright browsers will be installed.
+  # This path is used for caching across workflows
+  PLAYWRIGHT_BROWSERS_PATH: "ms-playwright"
+  PLAYWRIGHT_VERSION: "1.59.1"
+
+jobs:
+  a11y-scan:
+    name: IBM Accessibility Scans
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.ref || github.ref }}
+
+      - name: Setup Node.js Environment
+        uses: actions/setup-node@v6
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Get npm cache directory
+        id: npm-cache-dir
+        shell: bash
+        run: echo "dir=$(npm config get cache)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache npm dependencies
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ${{ steps.npm-cache-dir.outputs.dir }}
+          key: ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-${{ hashFiles('src/frontend/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-npm-${{ env.NODE_VERSION }}-
+
+      - name: Install Frontend Dependencies
+        run: npm ci
+        working-directory: ./src/frontend
+
+      - name: Cache Playwright Browsers
+        id: cache-playwright
+        uses: actions/cache@v5
+        continue-on-error: true
+        with:
+          path: ${{ env.PLAYWRIGHT_BROWSERS_PATH }}
+          key: playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+          restore-keys: |
+            playwright-${{ env.PLAYWRIGHT_VERSION }}-chromium-${{ runner.os }}
+
+      - name: Install Playwright Browser Dependencies
+        if: steps.cache-playwright.outputs.cache-hit != 'true'
+        shell: bash
+        run: |
+          cd ./src/frontend
+          npx playwright install --with-deps chromium
+
+      - name: "Setup Environment"
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
+          python-version: ${{ env.PYTHON_VERSION }}
+          prune-cache: false
+
+      - name: Install Python Dependencies
+        run: uv sync
+
+      - name: Run Playwright Specs With IBM Scans
+        shell: bash
+        env:
+          RUN_A11Y: "true"
+          RUN_A11Y_ASSERT: ${{ inputs.assert == true && 'true' || 'false' }}
+          LANGFLOW_DEACTIVE_TRACING: "true"
+        run: |
+          cd src/frontend
+          # Only specs that call runA11yScan produce reports; discover them
+          # so new scan hosts are picked up without editing this workflow.
+          SCAN_SPECS=$(grep -rl "runA11yScan(" tests --include="*.spec.ts" | sort)
+          echo "Specs with a11y scans:"
+          echo "$SCAN_SPECS"
+          npx playwright test $SCAN_SPECS --project=chromium --workers 1 --retries=2
+
+      - name: Build Aggregated A11y Summary
+        if: always()
+        shell: bash
+        run: |
+          cd src/frontend
+          if ls coverage/accessibility-reports/*.json > /dev/null 2>&1; then
+            npm run a11y:report --silent
+            {
+              echo '```text'
+              npm run a11y:report --silent
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "No accessibility reports were generated." | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Upload Accessibility Reports
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: accessibility-reports-${{ github.run_attempt }}
+          path: src/frontend/coverage/accessibility-reports
+          retention-days: 30
+          overwrite: true
