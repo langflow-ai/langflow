@@ -20,8 +20,8 @@ import requests
 sys.path.insert(0, str(Path(__file__).parent))
 import pypi_nightly_tag as nt
 
-MAIN_URL = nt.PYPI_LANGFLOW_NIGHTLY_URL
-BASE_URL = nt.PYPI_LANGFLOW_BASE_NIGHTLY_URL
+MAIN_URL = nt.PYPI_LANGFLOW_URL
+BASE_URL = nt.PYPI_LANGFLOW_BASE_URL
 
 
 class _FakeResponse:
