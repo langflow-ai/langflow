@@ -30,6 +30,9 @@ REDIRECT_STATUS_CODES = frozenset({301, 302, 303, 307, 308})
 # matches httpx's default and the API Request component.
 MAX_REDIRECTS = 20
 
+# Default ports per scheme, used to compare redirect origins.
+DEFAULT_SCHEME_PORTS = {"http": 80, "https": 443}
+
 
 URL_REGEX = re.compile(
     r"^(https?:\/\/)?" r"(www\.)?" r"([a-zA-Z0-9.-]+)" r"(\.[a-zA-Z]{2,})?" r"(:\d+)?" r"(\/[^\s]*)?$",
@@ -310,15 +313,28 @@ class URLComponent(Component):
 
     @staticmethod
     def _headers_for_redirect(headers: dict | None, current_url: str, next_url: str) -> dict | None:
-        """Drop sensitive headers when a redirect crosses to a different host.
+        """Drop sensitive headers when a redirect crosses to a different origin.
 
         Mirrors httpx's auto-follow behavior so manually following redirects does not
-        leak credentials (Authorization / Cookie) to a different host than the one the
-        caller intended them for. Same-host redirects keep all headers.
+        leak credentials (Authorization / Cookie) to an origin other than the one the
+        caller intended them for. Headers are kept only when the redirect stays on the
+        same origin (scheme, host, port) or is a direct https upgrade of the same host
+        on default ports - the exact cases where httpx keeps the Authorization header.
         """
         if not headers:
             return headers
-        if urlparse(current_url).hostname == urlparse(next_url).hostname:
+        current, nxt = urlparse(current_url), urlparse(next_url)
+        current_port = current.port or DEFAULT_SCHEME_PORTS.get(current.scheme)
+        next_port = nxt.port or DEFAULT_SCHEME_PORTS.get(nxt.scheme)
+        same_origin = (current.scheme, current.hostname, current_port) == (nxt.scheme, nxt.hostname, next_port)
+        https_upgrade = (
+            current.hostname == nxt.hostname
+            and current.scheme == "http"
+            and nxt.scheme == "https"
+            and current_port == DEFAULT_SCHEME_PORTS["http"]
+            and next_port == DEFAULT_SCHEME_PORTS["https"]
+        )
+        if same_origin or https_upgrade:
             return headers
         sensitive = {"authorization", "proxy-authorization", "cookie"}
         return {k: v for k, v in headers.items() if k.lower() not in sensitive}
@@ -491,6 +507,13 @@ class URLComponent(Component):
         # Fetch the current URL
         html_content, metadata = await self._fetch_url_with_pinning(start_url, validated_ips, headers)
 
+        # Redirects may have landed on a different canonical URL (http->https, www
+        # normalization). Resolve relative links and the prevent_outside check against
+        # the URL the content actually came from, and mark it visited so links back to
+        # the canonical form are not re-crawled.
+        base_url = metadata.get("source") or start_url
+        visited.add(base_url)
+
         if not html_content:
             return documents
 
@@ -520,7 +543,7 @@ class URLComponent(Component):
                 for link in links:
                     href = link["href"]
                     # Resolve relative URLs
-                    absolute_url = urljoin(start_url, href)
+                    absolute_url = urljoin(base_url, href)
 
                     # Skip if already visited
                     if absolute_url in visited:
@@ -528,7 +551,7 @@ class URLComponent(Component):
 
                     # Check if we should prevent going outside the domain
                     if self.prevent_outside:
-                        start_domain = urlparse(start_url).netloc
+                        start_domain = urlparse(base_url).netloc
                         link_domain = urlparse(absolute_url).netloc
                         if start_domain != link_domain:
                             continue
