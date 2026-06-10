@@ -91,6 +91,12 @@ ERROR_CODES: frozenset[str] = frozenset(
         # (never aborts startup) so a broken third-party declaration degrades
         # to "that bundle root is skipped".
         "bundle-discovery-malformed",
+        # lfx.bundles tier intra-tier diagnostics, mirroring the inline
+        # tier's split (inline-bundle-name-invalid / inline-path-unreadable /
+        # duplicate-inline-bundle).  All warning-only: never abort startup.
+        "bundles-provider-name-invalid",
+        "bundles-root-unreadable",
+        "duplicate-lfx-bundles-provider",
         "duplicate-extension-id",
         # Reload-specific codes
         "reload-in-progress",
@@ -295,6 +301,15 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "bundle-discovery-malformed": (
         "lfx.bundles entry point {content!r} could not be resolved to a package directory: {message}"
+    ),
+    "bundles-provider-name-invalid": (
+        "lfx.bundles provider directory {content!r} (at {location}) is not a valid bundle name; "
+        "bundle names are lowercase snake_case (a-z, 0-9, _), 2-64 characters."
+    ),
+    "bundles-root-unreadable": ("lfx.bundles root {location} could not be enumerated: {message}"),
+    "duplicate-lfx-bundles-provider": (
+        "Provider {content!r} appears in more than one lfx.bundles root; the copy at {location} "
+        "is skipped (the first discovered root wins)."
     ),
     "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (
