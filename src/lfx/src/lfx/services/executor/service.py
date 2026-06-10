@@ -13,6 +13,7 @@ from lfx.log.logger import logger
 from lfx.services.base import Service
 
 if TYPE_CHECKING:
+    from lfx.services.capability import CapabilityService
     from lfx.services.settings.service import SettingsService
 
 
@@ -24,9 +25,10 @@ class ExecutorService(Service):
 
     name = "executor_service"
 
-    def __init__(self, settings_service: SettingsService) -> None:
+    def __init__(self, settings_service: SettingsService, capability_service: CapabilityService | None = None) -> None:
         super().__init__()
         self._settings_service = settings_service
+        self._capability_service = capability_service
         self._registry = ExecutorRegistry()
         self._coordinator: Coordinator | None = None
         self._populate_registry()
@@ -63,7 +65,11 @@ class ExecutorService(Service):
     def coordinator(self) -> Coordinator:
         if self._coordinator is None:
             kind = self._settings_service.settings.executor_kind
-            self._coordinator = Coordinator(registry=self._registry, executor_kind=kind)
+            self._coordinator = Coordinator(
+                registry=self._registry,
+                executor_kind=kind,
+                capability_service=self._capability_service,
+            )
         return self._coordinator
 
     def set_coordinator(self, coordinator: Coordinator) -> None:

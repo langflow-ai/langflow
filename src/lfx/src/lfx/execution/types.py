@@ -43,6 +43,7 @@ class Unit:
     graph: Any
     inputs: list[dict[str, Any]] = field(default_factory=list)
     runtime_options: dict[str, Any] = field(default_factory=dict)
+    executor_kind: str | None = None
 
 
 @dataclass
