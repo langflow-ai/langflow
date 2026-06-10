@@ -146,14 +146,20 @@ jobs:
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
-            const { data: pulls } = await github.rest.pulls.list({
+            // Paginate: the repo has far more open PRs than one page, and a
+            // months-old stale durations PR never appears in the first 30
+            // results (which is how #6225..#8669 piled up unclosed).
+            const pulls = await github.paginate(github.rest.pulls.list, {
               owner: context.repo.owner,
               repo: context.repo.repo,
-              state: 'open'
+              state: 'open',
+              per_page: 100
             });
 
             for (const pull of pulls) {
-              if (pull.title === "chore: update test durations") {
+              if (pull.title === "chore: update test durations" &&
+                  pull.head.ref.startsWith("update-test-durations")) {
+                console.log(`Closing stale durations PR #${pull.number}`);
                 await github.rest.pulls.update({
                   owner: context.repo.owner,
                   repo: context.repo.repo,
