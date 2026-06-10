@@ -38,6 +38,7 @@ class SetupSuperuserResult(str, Enum):
 
 
 async def get_or_create_super_user(session: AsyncSession, username, password, is_default):
+    """Return an existing matching superuser or create one with the supplied credentials."""
     from langflow.services.database.models.user.model import User
 
     stmt = select(User).where(User.username == username)
@@ -81,7 +82,36 @@ async def get_or_create_super_user(session: AsyncSession, username, password, is
     return await auth.create_super_user(username, password, db=session)
 
 
+async def initialize_superuser_variables(session: AsyncSession, username: str) -> None:
+    """Initialize environment-backed variables for the configured superuser."""
+    from langflow.services.database.models.user.model import User
+    from langflow.services.deps import get_variable_service
+
+    stmt = select(User).where(User.username == username, User.is_superuser == True)  # noqa: E712
+    super_user = (await session.exec(stmt)).first()
+    if super_user is None:
+        await logger.awarning("Could not initialize environment variables: configured superuser was not found.")
+        return
+
+    await get_variable_service().initialize_user_variables(super_user.id, session)
+
+
+async def try_initialize_superuser_variables(session: AsyncSession, username: str) -> None:
+    """Best-effort wrapper for superuser variable initialization.
+
+    Variable bootstrap failures should not prevent Langflow from creating or
+    reusing the superuser account, so this runs inside a nested transaction and
+    logs failures without propagating them.
+    """
+    try:
+        async with session.begin_nested():
+            await initialize_superuser_variables(session, username)
+    except Exception as exc:  # noqa: BLE001
+        await logger.aexception(f"Failed to initialize environment variables for configured superuser: {exc}")
+
+
 async def setup_superuser(settings_service: SettingsService, session: AsyncSession) -> SetupSuperuserResult:
+    """Create or verify the configured superuser and bootstrap its startup resources."""
     if settings_service.auth_settings.AUTO_LOGIN:
         await logger.adebug("AUTO_LOGIN is set to True. Creating default superuser with full initialization.")
         # Use file lock to prevent race conditions in multi-worker environments
@@ -102,12 +132,11 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 super_user = await get_or_create_super_user(session, username, password, is_default=True)
                 if super_user:  # Only initialize if user was created
                     from langflow.initial_setup.setup import get_or_create_default_folder
-                    from langflow.services.deps import get_variable_service
 
                     # Recover MCP server config files orphaned when DB was reset but LANGFLOW_CONFIG_DIR was kept.
                     await migrate_orphaned_mcp_servers_config(session, settings_service, super_user)
 
-                    await get_variable_service().initialize_user_variables(super_user.id, session)
+                    await try_initialize_superuser_variables(session, username)
 
                     # NOTE: Agentic variables are initialized separately in preload or main lifespan
                     # via initialize_agentic_global_variables() which handles all users at once.
@@ -116,6 +145,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                     _ = await get_or_create_default_folder(session, super_user.id)
                     await logger.adebug("Auto-login superuser initialized successfully")
                     return SetupSuperuserResult.AUTO_LOGIN_INITIALIZED
+                await try_initialize_superuser_variables(session, username)
                 return SetupSuperuserResult.AUTO_LOGIN_ALREADY_SATISFIED
         except TimeoutError as exc:
             # Another worker may be handling it - but a stale/abandoned lock or dead holder
@@ -140,6 +170,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 )
                 await logger.aerror(msg)
                 raise RuntimeError(msg) from exc
+            await try_initialize_superuser_variables(session, username)
             return SetupSuperuserResult.AUTO_LOGIN_LOCK_TIMEOUT_SUPERUSER_PRESENT
     # Remove the default superuser if it exists
     await teardown_superuser(settings_service, session)
@@ -173,6 +204,7 @@ async def setup_superuser(settings_service: SettingsService, session: AsyncSessi
                 await migrate_orphaned_mcp_servers_config(session, settings_service, user)
         else:
             outcome = SetupSuperuserResult.SUPERUSER_UNCHANGED
+        await try_initialize_superuser_variables(session, username)
     except Exception as exc:
         await logger.aexception(f"Failed to create superuser: {exc}")
         msg = "Could not create superuser. Please create a superuser manually."
@@ -263,6 +295,7 @@ async def migrate_orphaned_mcp_servers_config(
             return True
 
         def _find_orphans() -> list[tuple[float, Path]]:
+            """Find orphaned MCP config files from previous default-superuser IDs."""
             orphans: list[tuple[float, Path]] = []
             for entry in config_dir.iterdir():
                 if not entry.is_dir() or entry.name == current_user_dir:

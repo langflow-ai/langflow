@@ -52,7 +52,6 @@ from langflow.services.deps import (
     get_auth_service,
     get_settings_service,
     get_storage_service,
-    get_variable_service,
     session_scope,
 )
 
@@ -1326,8 +1325,10 @@ async def initialize_auto_login_default_superuser() -> None:
     password = DEFAULT_SUPERUSER_PASSWORD.get_secret_value()
 
     async with session_scope() as async_session:
+        from langflow.services.utils import try_initialize_superuser_variables
+
         super_user = await get_auth_service().create_super_user(username, password, db=async_session)
-        await get_variable_service().initialize_user_variables(super_user.id, async_session)
+        await try_initialize_superuser_variables(async_session, username)
         # Initialize agentic variables if agentic experience is enabled
         from langflow.api.utils.mcp.agentic_mcp import initialize_agentic_user_variables
 
