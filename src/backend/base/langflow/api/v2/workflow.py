@@ -105,8 +105,12 @@ async def generate_flow_events(*args, **kwargs) -> None:
 async def _cancel_workflow_queue_job(job_id: str) -> bool:
     """Lazily call the shared build cancellation path to avoid import cycles."""
     from langflow.api.build import cancel_flow_build
+    from langflow.services.job_queue.service import JobQueueNotFoundError
 
-    return await cancel_flow_build(job_id=job_id, queue_service=get_queue_service())
+    try:
+        return await cancel_flow_build(job_id=job_id, queue_service=get_queue_service())
+    except JobQueueNotFoundError:
+        return False
 
 
 def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPException:

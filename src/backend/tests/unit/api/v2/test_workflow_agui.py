@@ -2025,6 +2025,7 @@ class TestStopWorkflowEndToEnd:
 
         job_id = uuid4()
         current_user_id = uuid4()
+        events: list[tuple[str, object, object | None]] = []
 
         class FakeJobService:
             def __init__(self) -> None:
@@ -2039,6 +2040,7 @@ class TestStopWorkflowEndToEnd:
                 )
 
             async def update_job_status(self, seen_job_id, status):
+                events.append(("update", seen_job_id, status))
                 self.updates.append((seen_job_id, status))
 
         class CrossWorkerQueueService:
@@ -2056,6 +2058,7 @@ class TestStopWorkflowEndToEnd:
                 self.local_cancels.append(seen_job_id)
 
             async def signal_cancel(self, seen_job_id):
+                events.append(("signal", seen_job_id, None))
                 self.signals.append(seen_job_id)
                 return 0
 
@@ -2073,3 +2076,7 @@ class TestStopWorkflowEndToEnd:
         assert queue_service.local_cancels == []
         assert queue_service.signals == [str(job_id)]
         assert job_service.updates == [(job_id, workflow_module.JobStatus.CANCELLED)]
+        assert events == [
+            ("signal", str(job_id), None),
+            ("update", job_id, workflow_module.JobStatus.CANCELLED),
+        ]

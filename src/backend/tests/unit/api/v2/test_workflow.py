@@ -300,6 +300,45 @@ class TestWorkflowStop:
             mock_cancel_workflow_queue_job.assert_awaited_once_with(job_id)
             mock_job_service.update_job_status.assert_called_once_with(UUID(job_id), JobStatus.CANCELLED)
 
+    async def test_stop_workflow_returns_503_when_queue_cancel_cannot_be_confirmed(
+        self,
+        client: AsyncClient,
+        created_api_key,
+    ):
+        """Do not mark persisted jobs cancelled when no queue owner can be reached."""
+        from langflow.services.job_queue.service import JobQueueNotFoundError
+
+        job_id = str(uuid4())
+
+        mock_job = MagicMock()
+        mock_job.job_id = job_id
+        mock_job.status = JobStatus.IN_PROGRESS
+        mock_job.type = JobType.WORKFLOW
+        mock_job.user_id = None
+
+        class MissingQueueService:
+            def get_queue_data(self, seen_job_id):
+                raise JobQueueNotFoundError(seen_job_id)
+
+        with (
+            patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
+            patch("langflow.api.v2.workflow.get_queue_service", return_value=MissingQueueService()),
+        ):
+            mock_job_service = MagicMock()
+            mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
+            mock_job_service.update_job_status = AsyncMock()
+            mock_get_job_service.return_value = mock_job_service
+
+            response = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": job_id},
+                headers={"x-api-key": created_api_key.api_key},
+            )
+
+            assert response.status_code == 503
+            assert response.json()["detail"]["code"] == "WORKFLOW_CANCEL_UNAVAILABLE"
+            mock_job_service.update_job_status.assert_not_awaited()
+
     async def test_stop_workflow_not_found(
         self,
         client: AsyncClient,
