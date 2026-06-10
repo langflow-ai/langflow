@@ -90,15 +90,20 @@ jobs:
           uv venv
           # The in-repo lfx satisfies the bundle's `lfx>=X,<Y` pin and is the
           # contract surface under test; pytest is for the bundle's own tests.
-          uv pip install ./src/lfx "./${{ matrix.bundle }}" pytest pytest-asyncio
+          # tomli backports stdlib tomllib for the py3.10 matrix leg.
+          uv pip install ./src/lfx "./${{ matrix.bundle }}" pytest pytest-asyncio tomli
 
       - name: Contract smoke -- import + discovery
         run: |
           .venv/bin/python - "${{ matrix.bundle }}" <<'PY'
           import importlib
           import sys
-          import tomllib
           from pathlib import Path
+
+          try:
+              import tomllib  # stdlib from 3.11
+          except ModuleNotFoundError:
+              import tomli as tomllib  # py3.10 backport, installed above
 
           bundle_dir = Path(sys.argv[1])
           meta = tomllib.loads((bundle_dir / "pyproject.toml").read_text())
