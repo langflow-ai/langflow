@@ -9,9 +9,8 @@
 
 import "@testing-library/jest-dom";
 import { fireEvent, render, screen } from "@testing-library/react";
-
-import { AssistantFileCard } from "../assistant-file-card";
 import type { WrittenFile } from "../../assistant-panel.types";
+import { AssistantFileCard } from "../assistant-file-card";
 
 function makeFile(overrides: Partial<WrittenFile> = {}): WrittenFile {
   return {
@@ -25,7 +24,9 @@ function makeFile(overrides: Partial<WrittenFile> = {}): WrittenFile {
 }
 
 beforeEach(() => {
+  // biome-ignore lint/suspicious/noExplicitAny: stubbing global URL method in test
   (global.URL as any).createObjectURL = jest.fn().mockReturnValue("blob:mock");
+  // biome-ignore lint/suspicious/noExplicitAny: stubbing global URL method in test
   (global.URL as any).revokeObjectURL = jest.fn();
 });
 

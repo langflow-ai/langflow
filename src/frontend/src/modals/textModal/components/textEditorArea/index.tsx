@@ -10,6 +10,7 @@ const TextEditorArea = ({
 }: {
   left: boolean | undefined;
   resizable?: boolean;
+  // biome-ignore lint/suspicious/noExplicitAny: polymorphic value (string | object | ...) rendered as text
   value: any;
   onChange?: (string) => void;
   readonly: boolean;

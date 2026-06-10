@@ -11,7 +11,6 @@ if TYPE_CHECKING:
     from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
 
     from .calculator import CalculatorToolComponent
-    from .python_code_structured_tool import PythonCodeStructuredTool
     from .python_repl import PythonREPLToolComponent
     from .search_api import SearchAPIComponent
     from .searxng import SearXNGToolComponent
@@ -26,7 +25,6 @@ _dynamic_imports = {
     # FileSystemToolComponent was moved to files_and_knowledge; forward it here
     # so existing flows / imports referencing lfx.components.tools keep working.
     "FileSystemToolComponent": ("filesystem", "files_and_knowledge"),
-    "PythonCodeStructuredTool": "python_code_structured_tool",
     "PythonREPLToolComponent": "python_repl",
     "SearchAPIComponent": "search_api",
     "SearXNGToolComponent": "searxng",
@@ -40,7 +38,6 @@ _dynamic_imports = {
 __all__ = [
     "CalculatorToolComponent",
     "FileSystemToolComponent",
-    "PythonCodeStructuredTool",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
