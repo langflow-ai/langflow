@@ -9,6 +9,7 @@ reportLevels:
   # - manual
 outputFormat:
   - html
+  - json
 outputFilenameTimestamp: false
 baselineFolder: tests/baselines
 outputFolder: coverage/accessibility-reports

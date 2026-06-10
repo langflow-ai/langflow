@@ -68,7 +68,14 @@ chromium__files-page.html
 chromium__folders-flows-page.html
 ```
 
-One scan produces one HTML report.
+One scan produces one HTML report and one JSON report.
+
+Aggregate all JSON reports into one grouped summary (from `src/frontend`):
+
+```bash
+npm run a11y:report          # table grouped by rule, deduped by DOM path
+npm run a11y:report -- --json
+```
 
 ## Add a scan to an existing test
 
