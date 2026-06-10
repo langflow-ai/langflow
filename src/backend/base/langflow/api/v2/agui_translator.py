@@ -12,6 +12,7 @@ list. The translator is stateful: one instance per run.
 from __future__ import annotations
 
 import json
+from dataclasses import dataclass, field
 
 from ag_ui.core import (
     BaseEvent,
@@ -37,6 +38,28 @@ from ag_ui.core import (
 _CUSTOM_CONTENT_TYPES = frozenset({"json", "code", "media", "error"})
 
 
+@dataclass
+class _BufferedMessage:
+    """A text message waiting for the wire while another message is open.
+
+    AG-UI allows one open text message at a time, but parallel components
+    stream tokens for different message ids interleaved. Tokens for a message
+    that cannot open yet accumulate here; ``final_text`` is set when its
+    ``add_message`` finalizer arrives before it ever reached the wire.
+    """
+
+    chunks: list[str] = field(default_factory=list)
+    final_text: str | None = None
+
+    @property
+    def complete(self) -> bool:
+        return self.final_text is not None
+
+    @property
+    def text(self) -> str:
+        return self.final_text if self.final_text is not None else "".join(self.chunks)
+
+
 class AGUITranslator:
     """Translates Langflow ``EventManager`` events into AG-UI protocol events.
 
@@ -47,11 +70,16 @@ class AGUITranslator:
     def __init__(self, run_id: str, thread_id: str) -> None:
         self.run_id = run_id
         self.thread_id = thread_id
-        # Id of the text message currently being streamed by ``token`` events,
-        # or ``None`` when no message is open.
+        # Id of the text message currently open on the wire, or ``None``.
         self._open_message_id: str | None = None
-        # Message ids already emitted as a complete (non-streamed) text message.
+        # Message ids whose TEXT_MESSAGE_END has been emitted; the protocol
+        # considers them closed, so nothing may reopen them.
         self._emitted_text_message_ids: set[str] = set()
+        # Messages from parallel components waiting for the wire, in arrival
+        # order (dict preserves insertion order). Invariant: non-empty only
+        # while another message holds the wire — closing the open message
+        # immediately promotes the next buffered one.
+        self._buffered_messages: dict[str, _BufferedMessage] = {}
         # Tool-call ids already emitted as TOOL_CALL_START / already resolved
         # with a TOOL_CALL_RESULT. ``add_message`` can re-fire with the same
         # (append-only) content_blocks, so emissions must be deduplicated.
@@ -95,11 +123,11 @@ class AGUITranslator:
         # streamed message and must stay transparent, or the message would be
         # split into multiple START/END pairs reusing an already-ended id.
         if event_type == "end":
-            events = self._close_open_message()
+            events = self._drain_messages()
             events.append(RunFinishedEvent(run_id=self.run_id, thread_id=self.thread_id))
             return events
         if event_type == "error":
-            events = self._close_open_message()
+            events = self._drain_messages()
             # The ``error`` payload varies by emission path: a full ErrorMessage
             # dump carries the reason in ``text``; the minimal path sends
             # ``{"error": str}``.
@@ -111,11 +139,13 @@ class AGUITranslator:
     def _translate_token(self, data: dict) -> list[BaseEvent]:
         """Map a ``token`` event to text-message events.
 
-        The first token of a message opens it with ``TEXT_MESSAGE_START``; a
-        token for a different message id closes the previous one first. A
-        token whose id was already ended via ``add_message`` (or a prior
-        token boundary) is dropped: re-opening it would emit a second
-        ``TEXT_MESSAGE_START`` for an id the protocol considers closed.
+        The first token of a message opens it with ``TEXT_MESSAGE_START``.
+        While a message holds the wire, tokens for other message ids (parallel
+        components stream interleaved) buffer instead of closing it; the
+        buffered message flushes when the open one genuinely ends. A token
+        whose id was already ended via ``add_message`` is dropped: re-opening
+        it would emit a second ``TEXT_MESSAGE_START`` for an id the protocol
+        considers closed.
         """
         message_id = str(data.get("id") or "")
         if not message_id:
@@ -123,16 +153,22 @@ class AGUITranslator:
             # be correlated. Dropping the event is preferable to emitting a
             # malformed stream with empty message_ids.
             return []
-        if message_id in self._emitted_text_message_ids and self._open_message_id != message_id:
+        if message_id in self._emitted_text_message_ids:
             return []
         chunk = data.get("chunk", "")
-        events: list[BaseEvent] = []
-        if self._open_message_id != message_id:
-            events.extend(self._close_open_message())
-            events.append(TextMessageStartEvent(message_id=message_id, role="assistant"))
+        if self._open_message_id == message_id:
+            return [TextMessageContentEvent(message_id=message_id, delta=chunk)]
+        if self._open_message_id is None:
             self._open_message_id = message_id
-        events.append(TextMessageContentEvent(message_id=message_id, delta=chunk))
-        return events
+            return [
+                TextMessageStartEvent(message_id=message_id, role="assistant"),
+                TextMessageContentEvent(message_id=message_id, delta=chunk),
+            ]
+        # Another message holds the wire: buffer this one until it is free.
+        buffered = self._buffered_messages.setdefault(message_id, _BufferedMessage())
+        if not buffered.complete:
+            buffered.chunks.append(chunk)
+        return []
 
     def _translate_vertices_sorted(self, data: dict) -> list[BaseEvent]:
         """Map ``vertices_sorted`` to a ``STATE_SNAPSHOT`` of the node graph.
@@ -198,21 +234,32 @@ class AGUITranslator:
 
         # Message text.
         if message_id and message_id == self._open_message_id:
-            # Finalizer of a token-streamed message: close it. The text was
-            # already streamed token by token, so it must not be re-emitted now
-            # or by any later add_message that re-fires for the same id.
-            self._emitted_text_message_ids.add(message_id)
+            # Finalizer of the wire-open streamed message: close it. The text
+            # was already streamed token by token, so it must not be re-emitted
+            # now or by any later add_message that re-fires for the same id.
             events.extend(self._close_open_message())
+        elif message_id and message_id in self._buffered_messages:
+            # Finalizer for a message still waiting for the wire: record the
+            # authoritative full text; the trio is emitted on promotion.
+            self._buffered_messages[message_id].final_text = (
+                data.get("text") or self._buffered_messages[message_id].text
+            )
         else:
             text = data.get("text") or ""
             # Skip text-message lifecycle emission without a stable message_id;
             # tool-call events above are namespaced by block/content index so
             # they can still ride a missing id, but TEXT_MESSAGE_* cannot.
             if text and message_id and message_id not in self._emitted_text_message_ids:
-                self._emitted_text_message_ids.add(message_id)
-                events.append(TextMessageStartEvent(message_id=message_id, role="assistant"))
-                events.append(TextMessageContentEvent(message_id=message_id, delta=text))
-                events.append(TextMessageEndEvent(message_id=message_id))
+                if self._open_message_id is None:
+                    self._emitted_text_message_ids.add(message_id)
+                    events.append(TextMessageStartEvent(message_id=message_id, role="assistant"))
+                    events.append(TextMessageContentEvent(message_id=message_id, delta=text))
+                    events.append(TextMessageEndEvent(message_id=message_id))
+                else:
+                    # A parallel component finished while another message holds
+                    # the wire: buffer the complete message instead of opening
+                    # a second text message mid-stream.
+                    self._buffered_messages[message_id] = _BufferedMessage(final_text=text)
         return events
 
     def _translate_tool_use(
@@ -286,17 +333,57 @@ class AGUITranslator:
         return {"op": "add", "path": f"/nodes/{node_id}", "value": {"status": status, "output": output}}
 
     def _close_open_message(self) -> list[BaseEvent]:
-        """Emit ``TEXT_MESSAGE_END`` for the open message, if any.
+        """Emit ``TEXT_MESSAGE_END`` for the open message and free the wire.
 
         The closed id is recorded in ``_emitted_text_message_ids`` so a later
-        token (e.g. an interleaved ``A, B, A`` sequence) cannot re-open it
-        and emit a second ``TEXT_MESSAGE_START`` for an id the protocol
-        already considers closed.
+        token cannot re-open it and emit a second ``TEXT_MESSAGE_START`` for
+        an id the protocol already considers closed. With the wire free, the
+        next buffered parallel message (if any) is promoted onto it.
         """
         if self._open_message_id is None:
             return []
         closed_id = self._open_message_id
-        end = TextMessageEndEvent(message_id=closed_id)
         self._emitted_text_message_ids.add(closed_id)
         self._open_message_id = None
-        return [end]
+        events: list[BaseEvent] = [TextMessageEndEvent(message_id=closed_id)]
+        events.extend(self._promote_next_buffered())
+        return events
+
+    def _promote_next_buffered(self) -> list[BaseEvent]:
+        """Move buffered parallel messages onto the freed wire, in arrival order.
+
+        Already-complete messages emit their full START/CONTENT/END trio and the
+        promotion continues; the first still-streaming message replays its
+        buffered chunks, takes the wire, and stays open for its live tokens.
+        """
+        events: list[BaseEvent] = []
+        while self._buffered_messages and self._open_message_id is None:
+            message_id, buffered = next(iter(self._buffered_messages.items()))
+            del self._buffered_messages[message_id]
+            if message_id in self._emitted_text_message_ids:
+                continue
+            text = buffered.text
+            if buffered.complete:
+                self._emitted_text_message_ids.add(message_id)
+                if text:
+                    events.append(TextMessageStartEvent(message_id=message_id, role="assistant"))
+                    events.append(TextMessageContentEvent(message_id=message_id, delta=text))
+                    events.append(TextMessageEndEvent(message_id=message_id))
+                continue
+            self._open_message_id = message_id
+            events.append(TextMessageStartEvent(message_id=message_id, role="assistant"))
+            if text:
+                events.append(TextMessageContentEvent(message_id=message_id, delta=text))
+        return events
+
+    def _drain_messages(self) -> list[BaseEvent]:
+        """Close the open message and flush every buffered one (run boundary).
+
+        At ``end``/``error`` nothing else will free the wire, so buffered
+        parallel messages flush now — each promoted, emitted, and closed —
+        rather than being silently lost.
+        """
+        events = self._close_open_message()
+        while self._open_message_id is not None:
+            events.extend(self._close_open_message())
+        return events
