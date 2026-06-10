@@ -13,10 +13,9 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
-from qdrant_client.models import Distance
-
 from lfx.components.qdrant import QdrantVectorStoreComponent
 from lfx.schema.data import Data
+from qdrant_client.models import Distance
 
 
 def _make_component(documents: list[Document]) -> QdrantVectorStoreComponent:

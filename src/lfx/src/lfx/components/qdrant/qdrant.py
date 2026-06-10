@@ -17,7 +17,6 @@ from lfx.io import (
 )
 from lfx.schema.data import Data, custom_serializer
 
-
 DISTANCE_MAP = {
     "Cosine": Distance.COSINE,
     "Euclidean": Distance.EUCLID,
