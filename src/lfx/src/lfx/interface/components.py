@@ -771,6 +771,30 @@ def _emit_extension_diagnostics(results: list[LoadResult]) -> None:
 _DISCOVERY_PRECEDENCE: tuple[str, ...] = ("installed", "seed", "lfx_bundles", "dev", "inline")
 
 
+def _claimed_official_bundles(
+    extension_results: list[LoadResult],
+    seed_results: list[LoadResult],
+) -> dict[str, tuple[str, str]]:
+    """Map bundle names won by installed/seed sources to ``(kind, path)``.
+
+    Fed to :func:`load_lfx_bundles_extensions` so the manifest-less
+    metapackage tier skips *importing* providers that would lose shadow
+    resolution anyway -- the @official sources share one
+    ``_lfx_ext.official.<bundle>.*`` sys.modules namespace, and a
+    lower-precedence import would overwrite the winner's live modules.
+    Mirrors the winner-picking rule in :func:`_resolve_bundle_shadowing`:
+    only results that actually produced components claim a name, and the
+    first (highest-precedence) claimant wins.
+    """
+    claimed: dict[str, tuple[str, str]] = {}
+    for kind, results in (("installed", extension_results), ("seed", seed_results)):
+        for result in results:
+            if not result.bundle or not result.components or result.bundle in claimed:
+                continue
+            claimed[result.bundle] = (kind, str(result.source_path) if result.source_path else "<unknown>")
+    return claimed
+
+
 def _resolve_bundle_shadowing(
     *,
     extension_results: list[LoadResult],
@@ -931,7 +955,18 @@ async def import_extension_components(
     # subdirectories are bundles, registered at @official with no manifest.
     # Loaded here so they enter the same shadow-resolution + registry +
     # palette pathway; a no-op when no distribution declares the group.
-    lfx_bundles_results = load_lfx_bundles_extensions()
+    #
+    # ``claimed_bundles`` carries the names already won by the two
+    # higher-precedence sources so the metapackage loader never *imports* a
+    # losing copy: all @official sources share the
+    # ``_lfx_ext.official.<bundle>.*`` sys.modules namespace, so importing a
+    # shadowed provider would overwrite the winner's live modules even though
+    # _resolve_bundle_shadowing later drops its components.  This collision is
+    # the expected post-graduation state (standalone lfx-<provider> installed
+    # alongside an older metapackage), not a misconfiguration.
+    lfx_bundles_results = load_lfx_bundles_extensions(
+        claimed_bundles=_claimed_official_bundles(extension_results, seed_results)
+    )
     # Dev extensions registered via ``lfx extension dev`` ship the same v0
     # manifest contract as installed extensions; load them through the
     # @official-slot pathway so they enter the BundleRegistry, expose the
@@ -1008,6 +1043,7 @@ async def import_extension_components(
             components=tuple(result.components),
             distribution=result.distribution,
             source_path=result.source_path,
+            manifestless=result.manifestless,
         )
         registry.install_bundle(record)
 
