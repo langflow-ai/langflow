@@ -7402,7 +7402,7 @@ wheels = [
 
 [[package]]
 name = "langflow"
-version = "1.10.0"
+version = "1.11.0"
 source = { editable = "." }
 dependencies = [
     { name = "langflow-base", extra = ["complete"] },
@@ -7556,7 +7556,7 @@ dev = [
 
 [[package]]
 name = "langflow-base"
-version = "0.10.0"
+version = "0.11.0"
 source = { editable = "src/backend/base" }
 dependencies = [
     { name = "aiofile", version = "3.9.0", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.11'" },
@@ -8897,7 +8897,7 @@ wheels = [
 
 [[package]]
 name = "lfx"
-version = "1.10.0"
+version = "1.11.0"
 source = { editable = "src/lfx" }
 dependencies = [
     { name = "ag-ui-protocol" },
@@ -9042,7 +9042,7 @@ integration = [
 
 [[package]]
 name = "lfx-arxiv"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/arxiv" }
 dependencies = [
     { name = "defusedxml" },
@@ -9057,7 +9057,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-docling"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/docling" }
 dependencies = [
     { name = "docling-core" },
@@ -9126,7 +9126,7 @@ provides-extras = ["local", "chunking", "image-description", "all"]
 
 [[package]]
 name = "lfx-duckduckgo"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/duckduckgo" }
 dependencies = [
     { name = "ddgs" },
@@ -9143,7 +9143,7 @@ requires-dist = [
 
 [[package]]
 name = "lfx-ibm"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "src/bundles/ibm" }
 dependencies = [
     { name = "ibm-db", marker = "platform_machine != 'aarch64' or sys_platform != 'linux'" },

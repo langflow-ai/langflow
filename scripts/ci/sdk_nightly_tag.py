@@ -1,63 +1,69 @@
-"""Script to generate nightly tags for the SDK package."""
+"""Generate the nightly tag for the canonical ``langflow-sdk`` package.
+
+Mirrors ``lfx_nightly_tag.py`` but for the SDK -- the nightly publishes ``langflow-sdk==<base>.devN``
+to the canonical ``langflow-sdk`` PyPI project, so the dev counter is computed against that
+project's ``.devN`` history (stable finals never contribute). ``<base>`` comes from
+``src/sdk/pyproject.toml``. See ``src/bundles/NIGHTLY.md``.
+"""
+
+from pathlib import Path
 
 import packaging.version
 import requests
+import tomllib
 from packaging.version import Version
 
 PYPI_SDK_URL = "https://pypi.org/pypi/langflow-sdk/json"
-PYPI_SDK_NIGHTLY_URL = "https://pypi.org/pypi/langflow-sdk-nightly/json"
 
 
-def get_latest_published_version(*, is_nightly: bool) -> Version:
-    url = PYPI_SDK_NIGHTLY_URL if is_nightly else PYPI_SDK_URL
-
-    res = requests.get(url, timeout=10)
-    if res.status_code == requests.codes.not_found:
-        msg = "Package not found on PyPI"
-        raise requests.RequestException(msg)
-
-    try:
-        version_str = res.json()["info"]["version"]
-    except (KeyError, ValueError) as e:
-        msg = "Got unexpected response from PyPI"
-        raise requests.RequestException(msg) from e
-    return Version(version_str)
-
-
-def create_sdk_tag():
-    from pathlib import Path
-
-    import tomllib
-
+def _sdk_base_version() -> str:
+    """Return the base_version (e.g. "0.1.0") from src/sdk/pyproject.toml."""
     sdk_pyproject_path = Path(__file__).parent.parent.parent / "src" / "sdk" / "pyproject.toml"
     pyproject_data = tomllib.loads(sdk_pyproject_path.read_text())
+    return Version(pyproject_data["project"]["version"]).base_version
 
-    current_version_str = pyproject_data["project"]["version"]
-    current_version = Version(current_version_str)
 
+def _dev_numbers(url: str, base_version: str) -> list[int]:
+    """Dev numbers of every release at ``url`` whose base_version matches ``base_version``.
+
+    A 404 means the package has no releases yet and returns an empty list. Every other failure --
+    a network error, a non-404 HTTP status, or a malformed 200 -- is fatal and raises, so the
+    nightly job aborts BEFORE mutating tags rather than regenerating an already-published version.
+    """
+    res = requests.get(url, timeout=10)
+    if res.status_code == requests.codes.not_found:
+        return []
+    res.raise_for_status()
     try:
-        current_nightly_version = get_latest_published_version(is_nightly=True)
-        nightly_base_version = current_nightly_version.base_version
-    except (requests.RequestException, KeyError, ValueError):
-        current_nightly_version = None
-        nightly_base_version = None
+        releases = res.json()["releases"]
+    except (ValueError, KeyError) as e:
+        msg = f"Unexpected response from {url!r}: missing 'releases' mapping"
+        raise RuntimeError(msg) from e
 
-    build_number = "0"
-    latest_base_version = current_version.base_version
+    dev_numbers: list[int] = []
+    for version_str in releases:
+        try:
+            version = Version(version_str)
+        except packaging.version.InvalidVersion:
+            continue
+        if version.base_version == base_version and version.dev is not None:
+            dev_numbers.append(version.dev)
+    return dev_numbers
 
-    if current_nightly_version and latest_base_version == nightly_base_version:
-        build_number = str(current_nightly_version.dev + 1)
 
-    new_nightly_version = latest_base_version + ".dev" + build_number
+def create_sdk_tag() -> str:
+    """Return the next ``langflow-sdk`` nightly tag (with a leading ``v``)."""
+    base_version = _sdk_base_version()
+    dev_numbers = _dev_numbers(PYPI_SDK_URL, base_version)
+    next_dev = max(dev_numbers) + 1 if dev_numbers else 0
 
-    if not new_nightly_version.startswith("v"):
-        new_nightly_version = "v" + new_nightly_version
+    new_nightly_version = f"v{base_version}.dev{next_dev}"
 
+    # Verify the version is PEP 440 compliant.
     packaging.version.Version(new_nightly_version)
 
     return new_nightly_version
 
 
 if __name__ == "__main__":
-    tag = create_sdk_tag()
-    print(tag)
+    print(create_sdk_tag())

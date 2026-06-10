@@ -17,6 +17,7 @@ from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     validate_flow_for_current_settings,
+    validate_public_flow_no_code_execution,
 )
 from sqlmodel import select
 
@@ -837,6 +838,12 @@ async def build_public_tmp(
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
                 validate_flow_for_current_settings(flow.data)
+                # Block unauthenticated builds of flows that run arbitrary code
+                # (Python interpreter/REPL, legacy Python Code Structured tool,
+                # Smart Transform lambda). Without this, any public flow
+                # containing such a component is an unauthenticated server-side
+                # code-execution primitive (report H1-3754930).
+                validate_public_flow_no_code_execution(flow.data)
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.
