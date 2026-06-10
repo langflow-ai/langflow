@@ -112,8 +112,27 @@ const ListComponent = ({
       <Card
         key={flowData.id}
         draggable
+        // role/tabIndex instead of a native button: the card nests other
+        // interactive elements (checkbox, dropdown), which a <button>
+        // wrapper would make invalid markup.
+        role="button"
+        tabIndex={0}
+        aria-label={
+          isComponent
+            ? flowData.name
+            : t("flow.openFlow", { defaultValue: `Open ${flowData.name}` })
+        }
         onDragStart={onDragStart}
         onClick={handleClick}
+        onKeyDown={(e) => {
+          if (
+            (e.key === "Enter" || e.key === " ") &&
+            e.target === e.currentTarget
+          ) {
+            e.preventDefault();
+            handleClick();
+          }
+        }}
         className={`flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}

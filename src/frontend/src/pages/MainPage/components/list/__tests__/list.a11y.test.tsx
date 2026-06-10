@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import type { FlowType } from "@/types/flow";
 import ListComponent from "../index";
 
@@ -39,8 +39,10 @@ const flowData = {
   updated_at: new Date().toISOString(),
 } as FlowType;
 
-const renderCard = () =>
-  render(
+// The card resolves its icon asynchronously (getIcon().then(setIcon));
+// flush that update inside the test to avoid act() warnings.
+const renderCard = async () => {
+  const view = render(
     <ListComponent
       flowData={flowData}
       selected={false}
@@ -48,10 +50,13 @@ const renderCard = () =>
       shiftPressed={false}
     />,
   );
+  await act(async () => {});
+  return view;
+};
 
 describe("Flow list card accessibility", () => {
-  it("should_render_flow_name", () => {
-    renderCard();
+  it("should_render_flow_name", async () => {
+    await renderCard();
 
     expect(screen.getByText("My Flow")).toBeInTheDocument();
   });
@@ -59,8 +64,8 @@ describe("Flow list card accessibility", () => {
   // Known gap (a11y-action-plan 2.2): the card is a click-only container —
   // no link or button role for the primary "open flow" action and no
   // keyboard focusability. Fails until the fix lands.
-  it("should_expose_card_as_focusable_interactive_element", () => {
-    renderCard();
+  it("should_expose_card_as_focusable_interactive_element", async () => {
+    await renderCard();
 
     const card = screen.getByTestId("list-card");
     const role = card.getAttribute("role");
@@ -72,11 +77,13 @@ describe("Flow list card accessibility", () => {
     );
   });
 
-  it("should_make_card_keyboard_focusable", () => {
-    renderCard();
+  it("should_make_card_keyboard_focusable", async () => {
+    await renderCard();
 
     const card = screen.getByTestId("list-card");
-    card.focus();
+    act(() => {
+      card.focus();
+    });
     expect(card).toHaveFocus();
   });
 });

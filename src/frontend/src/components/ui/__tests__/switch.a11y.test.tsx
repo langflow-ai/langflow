@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "@/utils/a11y-test";
 import { Switch } from "../switch";
@@ -25,7 +25,9 @@ describe("Switch accessibility", () => {
     );
 
     const toggle = screen.getByRole("switch");
-    toggle.focus();
+    act(() => {
+      toggle.focus();
+    });
     await user.keyboard(" ");
     expect(onCheckedChange).toHaveBeenCalledWith(true);
   });

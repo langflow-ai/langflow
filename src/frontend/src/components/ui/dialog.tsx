@@ -93,9 +93,13 @@ const DialogContent = React.forwardRef<
           onOpenAutoFocus={(e) => {
             if (onOpenAutoFocus) {
               onOpenAutoFocus(e);
-            } else {
-              e.preventDefault();
+              return;
             }
+            // Focus must enter the dialog on open (WCAG 2.4.3), but not
+            // land on the close button — that would pop its tooltip.
+            // Focus the dialog container itself instead.
+            e.preventDefault();
+            (e.target as HTMLElement | null)?.focus();
           }}
           {...props}
         >

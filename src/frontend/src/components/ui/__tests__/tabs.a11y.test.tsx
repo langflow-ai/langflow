@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { axe } from "@/utils/a11y-test";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../tabs";
@@ -40,7 +40,9 @@ describe("Tabs accessibility", () => {
     const user = userEvent.setup();
     renderTabs();
 
-    screen.getByRole("tab", { name: "Flows" }).focus();
+    act(() => {
+      screen.getByRole("tab", { name: "Flows" }).focus();
+    });
     await user.keyboard("{ArrowRight}");
 
     expect(screen.getByRole("tab", { name: "Components" })).toHaveAttribute(

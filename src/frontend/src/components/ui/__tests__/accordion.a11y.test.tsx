@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Accordion,
@@ -40,7 +40,9 @@ describe("AccordionTrigger accessibility", () => {
     renderAccordion();
 
     const trigger = screen.getByText("Section title");
-    trigger.focus();
+    act(() => {
+      trigger.focus();
+    });
     expect(trigger).toHaveFocus();
   });
 });

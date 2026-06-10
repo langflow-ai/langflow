@@ -42,7 +42,10 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       );
 
     return (
-      <label
+      // Neutral wrapper: a wrapping <label> would add the visual placeholder
+      // span to the input's accessible name and double-label fields that are
+      // already labeled externally (a11y-action-plan 1.2).
+      <div
         className={cn(
           "relative block h-fit w-full text-sm",
           icon ? className : "",
@@ -68,6 +71,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         <span
+          aria-hidden="true"
           className={cn(
             "pointer-events-none absolute top-1/2 -translate-y-1/2 pl-px text-placeholder-foreground",
             icon ? "left-9" : "left-3",
@@ -84,7 +88,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
             {resolvedEndIcon}
           </div>
         )}
-      </label>
+      </div>
     );
   },
 );

@@ -325,6 +325,11 @@ export type IconComponentProps = {
   id?: string;
   skipFallback?: boolean;
   dataTestId?: string;
+  /** Icons are decorative (aria-hidden) by default; pass false to expose. */
+  ariaHidden?: boolean;
+  /** Accessible name for meaningful icons; implies ariaHidden=false. */
+  ariaLabel?: string;
+  title?: string;
 };
 
 export type InputProps = {
