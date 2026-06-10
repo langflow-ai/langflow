@@ -71,6 +71,10 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
     }
   }, [folderId, folders, navigate]);
 
+  // The page loads from `folderId ?? myCollectionId` (the default-collection
+  // route omits the id), so permission checks must scope to the same project.
+  const permissionsFolderId = folderId ?? myCollectionId;
+
   const { data: folderData, isLoading } = useGetFolderQuery({
     id: folderId ?? myCollectionId!,
     page: pageIndex,
@@ -326,7 +330,11 @@ const HomePage = ({ type }: { type: "flows" | "components" | "mcp" }) => {
                     <PermissionsProvider
                       resourceType="flow"
                       resourceIds={data.flows.map((flow) => flow.id)}
-                      domain={folderId ? `project:${folderId}` : undefined}
+                      domain={
+                        permissionsFolderId
+                          ? `project:${permissionsFolderId}`
+                          : undefined
+                      }
                     >
                       {view === "grid" ? (
                         <div className="mt-4 grid grid-cols-1 gap-1 md:grid-cols-2 lg:grid-cols-3">

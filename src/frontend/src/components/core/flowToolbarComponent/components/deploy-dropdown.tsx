@@ -52,7 +52,9 @@ export default function PublishDropdown({
   const hasIO = useFlowStore((state) => state.hasIO);
   const isAuth = useAuthStore((state) => !!state.autoLogin);
   const { can } = usePermissions();
-  // Sharing/publishing changes the flow's access settings → gate on write.
+  // Publishing changes the flow's access settings → gate on write. Only the
+  // publish controls are gated; the rest of the menu (API access, export,
+  // MCP, embed) stays available to read-only users.
   const canShare = can(flowId, "write");
   const [openExportModal, setOpenExportModal] = useState(false);
   const { t } = useTranslation();
@@ -104,7 +106,6 @@ export default function PublishDropdown({
             size="md"
             className="!px-2.5 font-normal"
             data-testid="publish-button"
-            disabled={!canShare}
           >
             {t("misc.share")}
             <IconComponent name="ChevronDown" className="!h-5 !w-5" />
@@ -163,7 +164,7 @@ export default function PublishDropdown({
           {ENABLE_PUBLISH && (
             <DropdownMenuItem
               className="deploy-dropdown-item group"
-              disabled={!hasIO}
+              disabled={!canShare || !hasIO}
               onClick={() => {}}
               data-testid="shareable-playground"
             >
@@ -209,7 +210,7 @@ export default function PublishDropdown({
                   data-testid="publish-switch"
                   className="scale-[85%]"
                   checked={isPublished}
-                  disabled={!hasIO}
+                  disabled={!canShare || !hasIO}
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();

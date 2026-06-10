@@ -65,7 +65,9 @@ export default function DeploymentsContent({
     return (
       <PermissionsProvider
         resourceType="deployment"
-        resourceIds={deployments.map((deployment) => deployment.id)}
+        resourceIds={deployments
+          .map((deployment) => deployment.id)
+          .filter(Boolean)}
       >
         <DeploymentsTable
           deployments={deployments}
