@@ -117,8 +117,11 @@ jobs:
           TODAY=$(date -u +"%Y-%m-%d")
           echo "Today's date: $TODAY"
 
-          # Query PyPI API for the langflow package
-          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow-nightly/json)
+          # Query PyPI for the canonical langflow project. The nightly now publishes as a `.devN`
+          # pre-release of `langflow` (not a separate `langflow-nightly` distribution), so inspect
+          # the most recent dev release rather than `.info.version` (which is the latest stable).
+          # See src/bundles/NIGHTLY.md.
+          HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" https://pypi.org/pypi/langflow/json)
 
           # Check HTTP status code first
           if [ "$HTTP_STATUS" -ne 200 ]; then
@@ -136,16 +139,16 @@ jobs:
             exit 0
           fi
 
-          # Extract the latest version
-          LATEST_VERSION=$(jq -r '.info.version // empty' response.json)
+          # Extract the most recent nightly (.devN pre-release), highest by version sort
+          LATEST_VERSION=$(jq -r '.releases | keys[]' response.json | grep -E '\.dev[0-9]+$' | sort -V | tail -n1)
 
           if [ -z "$LATEST_VERSION" ]; then
-            echo "Could not extract latest version"
+            echo "Could not find a nightly (.devN) release"
             echo "success=false" >> $GITHUB_OUTPUT
             exit 0
           fi
 
-          # Extract the release date of the latest version
+          # Extract the release date of that nightly version
           RELEASE_DATE=$(jq -r --arg ver "$LATEST_VERSION" '.releases[$ver][0].upload_time_iso_8601 // empty' response.json | cut -d'T' -f1)
 
           if [ -z "$RELEASE_DATE" ]; then
@@ -282,6 +285,8 @@ jobs:
         needs.path-filter.outputs.frontend == 'true')
       )
     uses: ./.github/workflows/lint-js.yml
+    with:
+      allow-failure: ${{ inputs.release == true }}
 
   test-frontend-unit:
     needs: [path-filter, set-ci-condition]

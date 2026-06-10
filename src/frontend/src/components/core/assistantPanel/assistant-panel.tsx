@@ -19,6 +19,7 @@ import { useAssistantChat, useEnabledModels, useSessionHistory } from "./hooks";
 let draftMessageCache = "";
 
 const PANEL_SIZE_KEY = "langflow-assistant-panel-size";
+const MENTION_PANEL_HEIGHT = "26rem";
 const DEFAULT_SIZE = { width: 620, height: 600 };
 const MIN_SIZE = { width: 456, height: 400 };
 const MAX_SIZE = { width: 900, height: 800 };
@@ -222,6 +223,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
   const hasMessages = messages.length > 0;
   const [hasExpandedOnce, setHasExpandedOnce] = useState(false);
   const [hasUserResized, setHasUserResized] = useState(false);
+  const [isMentionOpen, setIsMentionOpen] = useState(false);
 
   // Track if panel has ever shown messages (to keep expanded size after new session)
   useEffect(() => {
@@ -379,7 +381,11 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
     : {
         width: panelSize.width,
         minWidth: "28.5rem",
-        minHeight: pendingMinHeight,
+        // Definite height (not just min-height) so the inner ``h-full`` column
+        // can bottom-anchor the input, leaving room for the upward popover.
+        ...(isMentionOpen
+          ? { height: MENTION_PANEL_HEIGHT }
+          : { minHeight: pendingMinHeight }),
       };
 
   return (
@@ -445,7 +451,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
           </StickToBottom>
         ) : (
           <>
-            {useExpandedSize && <div className="flex-1" />}
+            {(useExpandedSize || isMentionOpen) && <div className="flex-1" />}
             <AssistantInput
               onSend={handleSend}
               onStop={handleStopGeneration}
@@ -459,6 +465,7 @@ export function AssistantPanel({ isOpen, onClose }: AssistantPanelProps) {
                 draftMessageCache = draft;
               }}
               isRefiningPlan={isRefiningPlan}
+              onMentionOpenChange={setIsMentionOpen}
             />
           </>
         )}

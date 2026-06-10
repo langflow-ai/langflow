@@ -22,6 +22,197 @@ def get_step_input_dict(step) -> dict:
     return msgspec.to_builtins(step.input)
 
 
+def find_step(workflow, step_id):
+    """Return the step with the given id, or None."""
+    return next((s for s in workflow.steps if s.id == step_id), None)
+
+
+def ref_step_id(value) -> str | None:
+    """Return the step id a serialized step reference points to, or None.
+
+    A Stepflow step reference serializes to ``{"$step": <step_id>, "path": ...}``.
+    """
+    if isinstance(value, dict):
+        return value.get("$step")
+    return None
+
+
+def flow_output(workflow) -> Any:
+    """Return the workflow's output as a plain (msgspec-decoded) value."""
+    if workflow.output is None:
+        return None
+    import msgspec
+
+    return msgspec.to_builtins(workflow.output)
+
+
+# A known core component (hash/module taken from known_components.KNOWN_COMPONENTS).
+# Conversion only checks the hash/module tables, so any matching pair routes the
+# node through the core executor without importing the module.
+_KNOWN_CODE_HASH = "bb5f8714781b"  # pragma: allowlist secret
+_KNOWN_MODULE = "lfx.components.models.language_model.LanguageModelComponent"
+
+
+# Minimal custom-component code; only its truthiness matters to the translator,
+# which routes any component carrying code to the custom_code executor.
+_COMPONENT_CODE = """
+from langflow.custom.custom_component.component import Component
+from langflow.io import Output
+
+class TrivialComponent(Component):
+    outputs = [Output(display_name="Output", name="output", method="build")]
+
+    def build(self) -> str:
+        return "trivial result"
+"""
+
+
+def _custom_node(node_id: str, component_type: str, outputs: list[dict[str, str]]) -> dict[str, Any]:
+    """Build a custom-code Langflow node with the given outputs."""
+    return {
+        "id": node_id,
+        "type": "genericNode",
+        "data": {
+            "type": component_type,
+            "node": {
+                "template": {"code": {"value": _COMPONENT_CODE}},
+                "outputs": outputs,
+            },
+        },
+    }
+
+
+def _edge(source: str, target: str, source_output: str, target_field: str) -> dict[str, Any]:
+    """Build a Langflow edge carrying explicit source-output and target-field handles."""
+    return {
+        "source": source,
+        "target": target,
+        "data": {
+            "sourceHandle": {"name": source_output},
+            "targetHandle": {"fieldName": target_field},
+        },
+    }
+
+
+def _multi_output_fanout_workflow() -> dict[str, Any]:
+    """A single source whose two distinct outputs each feed a different consumer."""
+    return {
+        "data": {
+            "nodes": [
+                _custom_node(
+                    "splitter",
+                    "Splitter",
+                    [
+                        {"name": "output_a", "method": "build_a"},
+                        {"name": "output_b", "method": "build_b"},
+                    ],
+                ),
+                _custom_node("consumer-a", "ConsumerA", [{"name": "output", "method": "build"}]),
+                _custom_node("consumer-b", "ConsumerB", [{"name": "output", "method": "build"}]),
+            ],
+            "edges": [
+                _edge("splitter", "consumer-a", "output_a", "input_0"),
+                _edge("splitter", "consumer-b", "output_b", "input_0"),
+            ],
+        }
+    }
+
+
+def _single_output_fanout_workflow() -> dict[str, Any]:
+    """A single source whose one output feeds two different consumers."""
+    return {
+        "data": {
+            "nodes": [
+                _custom_node("source", "Source", [{"name": "output", "method": "build"}]),
+                _custom_node("consumer-a", "ConsumerA", [{"name": "output", "method": "build"}]),
+                _custom_node("consumer-b", "ConsumerB", [{"name": "output", "method": "build"}]),
+            ],
+            "edges": [
+                _edge("source", "consumer-a", "output", "input_0"),
+                _edge("source", "consumer-b", "output", "input_0"),
+            ],
+        }
+    }
+
+
+def _known_core_node(node_id: str, component_type: str, outputs: list[dict[str, str]]) -> dict[str, Any]:
+    """Build a Langflow node that routes through the core executor (no blob)."""
+    return {
+        "id": node_id,
+        "type": "genericNode",
+        "data": {
+            "type": component_type,
+            "node": {
+                "template": {"param": {"type": "str", "value": "x"}},
+                "outputs": outputs,
+                "metadata": {"code_hash": _KNOWN_CODE_HASH, "module": _KNOWN_MODULE},
+            },
+        },
+    }
+
+
+def _multi_output_fanout_core_workflow() -> dict[str, Any]:
+    """Multi-output fan-out where the source routes through the core executor."""
+    return {
+        "data": {
+            "nodes": [
+                _known_core_node(
+                    "splitter-core",
+                    "Splitter",
+                    [
+                        {"name": "output_a", "method": "build_a"},
+                        {"name": "output_b", "method": "build_b"},
+                    ],
+                ),
+                _known_core_node("consumer-a", "ConsumerA", [{"name": "output", "method": "build"}]),
+                _known_core_node("consumer-b", "ConsumerB", [{"name": "output", "method": "build"}]),
+            ],
+            "edges": [
+                _edge("splitter-core", "consumer-a", "output_a", "input_0"),
+                _edge("splitter-core", "consumer-b", "output_b", "input_0"),
+            ],
+        }
+    }
+
+
+def _fanout_to_chat_output_workflow() -> dict[str, Any]:
+    """A source whose *non-primary* output feeds ChatOutput (the workflow output).
+
+    The first edge (to a plain consumer) makes ``output_a`` primary, so ChatOutput,
+    wired to ``output_b``, must resolve to the secondary step.
+    """
+    return {
+        "data": {
+            "nodes": [
+                _custom_node(
+                    "splitter",
+                    "Splitter",
+                    [
+                        {"name": "output_a", "method": "build_a"},
+                        {"name": "output_b", "method": "build_b"},
+                    ],
+                ),
+                _custom_node("consumer", "Consumer", [{"name": "output", "method": "build"}]),
+                {
+                    "id": "ChatOutput-1",
+                    "type": "genericNode",
+                    "data": {
+                        "type": "ChatOutput",
+                        "node": {
+                            "template": {},
+                            "outputs": [{"name": "message", "method": "message_response"}],
+                        },
+                    },
+                },
+            ],
+            "edges": [
+                _edge("splitter", "consumer", "output_a", "input_0"),
+                _edge("splitter", "ChatOutput-1", "output_b", "input_value"),
+            ],
+        }
+    }
+
+
 class TestLangflowConverter:
     """Test LangflowConverter functionality."""
 
@@ -409,3 +600,121 @@ class CustomComponent(Component):
         # Should raise ConversionError for components without custom code
         with pytest.raises(ConversionError, match="has no custom code"):
             converter.convert(workflow_data)
+
+    def test_build_output_mapping_is_edge_scoped(self, converter: LangflowConverter):
+        """Output mapping is keyed per (source, target), not collapsed per source.
+
+        Regression guard for issue #12308: a node fanning out different outputs
+        must retain a distinct output per outgoing connection.
+        """
+        edges = [
+            {"source": "x", "target": "t1", "data": {"sourceHandle": {"name": "out_a"}}},
+            {"source": "x", "target": "t2", "data": {"sourceHandle": {"name": "out_b"}}},
+        ]
+
+        mapping = converter._build_output_mapping_from_edges(edges)
+
+        assert mapping == {("x", "t1"): "out_a", ("x", "t2"): "out_b"}
+
+    def test_build_source_outputs_collects_distinct_outputs(self, converter: LangflowConverter):
+        """Distinct outputs per source are collected in first-seen edge order."""
+        mapping = {
+            ("x", "t1"): "out_a",
+            ("x", "t2"): "out_b",
+            ("x", "t3"): "out_a",  # repeat of out_a to a third target
+            ("y", "t4"): "only",
+        }
+
+        source_outputs = converter._build_source_outputs(mapping)
+
+        assert source_outputs == {"x": ["out_a", "out_b"], "y": ["only"]}
+
+    def test_multi_output_fanout_routes_each_branch_to_its_own_output(self, converter: LangflowConverter):
+        """Multi-output fan-out wires each consumer to the correct output (issue #12308).
+
+        Before the fix, a single source step was created with a "first-edge-wins"
+        selected output, so every consumer received the same (wrong) output.
+        """
+        workflow = converter.convert(_multi_output_fanout_workflow())
+        step_ids = {step.id for step in workflow.steps}
+
+        # The source materializes one executor step per distinct fanned-out output.
+        assert "langflow_splitter" in step_ids
+        assert "langflow_splitter__output_b" in step_ids
+
+        # Each materialized source step selects the output its branch needs.
+        primary_blob = get_step_input_dict(find_step(workflow, "langflow_splitter_blob"))
+        secondary_blob = get_step_input_dict(find_step(workflow, "langflow_splitter__output_b_blob"))
+        assert primary_blob["data"]["selected_output"] == "output_a"
+        assert secondary_blob["data"]["selected_output"] == "output_b"
+
+        # The crux: each consumer references the step matching its edge's output,
+        # and the two consumers reference *different* steps.
+        consumer_a_inputs = get_step_input_dict(find_step(workflow, "langflow_consumer-a"))["input"]
+        consumer_b_inputs = get_step_input_dict(find_step(workflow, "langflow_consumer-b"))["input"]
+        a_ref = ref_step_id(consumer_a_inputs["input_0"])
+        b_ref = ref_step_id(consumer_b_inputs["input_0"])
+
+        assert a_ref == "langflow_splitter"
+        assert b_ref == "langflow_splitter__output_b"
+        assert a_ref != b_ref
+
+    def test_single_output_fanout_reuses_one_source_step(self, converter: LangflowConverter):
+        """A node fanning out the *same* output to many targets stays a single step.
+
+        Guards against over-materialization: per-output steps are only created when
+        the outputs actually differ.
+        """
+        workflow = converter.convert(_single_output_fanout_workflow())
+        step_ids = [step.id for step in workflow.steps]
+
+        # Only one executor step for the source (no per-output duplication).
+        source_executor_steps = [
+            sid for sid in step_ids if sid == "langflow_source" or sid.startswith("langflow_source__")
+        ]
+        assert source_executor_steps == ["langflow_source"]
+
+        # Both consumers reference that single source step.
+        for consumer in ("langflow_consumer-a", "langflow_consumer-b"):
+            consumer_inputs = get_step_input_dict(find_step(workflow, consumer))["input"]
+            assert ref_step_id(consumer_inputs["input_0"]) == "langflow_source"
+
+    def test_multi_output_fanout_core_executor_path(self, converter: LangflowConverter):
+        """Fan-out routing also works for the core-executor path (no blob steps).
+
+        The core path embeds ``selected_output`` directly in the step input rather
+        than in a blob, so it needs its own coverage.
+        """
+        workflow = converter.convert(_multi_output_fanout_core_workflow())
+        step_ids = {step.id for step in workflow.steps}
+
+        assert "langflow_splitter-core" in step_ids
+        assert "langflow_splitter-core__output_b" in step_ids
+
+        # Each core step carries the correct selected_output inline.
+        primary = get_step_input_dict(find_step(workflow, "langflow_splitter-core"))
+        secondary = get_step_input_dict(find_step(workflow, "langflow_splitter-core__output_b"))
+        assert primary["selected_output"] == "output_a"
+        assert secondary["selected_output"] == "output_b"
+
+        # Each consumer is wired to the step matching its edge's output.
+        a_ref = ref_step_id(get_step_input_dict(find_step(workflow, "langflow_consumer-a"))["input"]["input_0"])
+        b_ref = ref_step_id(get_step_input_dict(find_step(workflow, "langflow_consumer-b"))["input"]["input_0"])
+        assert a_ref == "langflow_splitter-core"
+        assert b_ref == "langflow_splitter-core__output_b"
+
+    def test_chat_output_resolves_non_primary_fanout_output(self, converter: LangflowConverter):
+        """ChatOutput wired to a source's non-primary output gets that output.
+
+        Regression guard: the ChatOutput / workflow-output paths previously used the
+        source's primary ref, so connecting ChatOutput to a secondary output silently
+        returned the wrong result.
+        """
+        workflow = converter.convert(_fanout_to_chat_output_workflow())
+
+        # The plain consumer takes the primary output (output_a)...
+        consumer_inputs = get_step_input_dict(find_step(workflow, "langflow_consumer"))["input"]
+        assert ref_step_id(consumer_inputs["input_0"]) == "langflow_splitter"
+
+        # ...and the workflow output (driven by ChatOutput) takes output_b.
+        assert ref_step_id(flow_output(workflow)) == "langflow_splitter__output_b"
