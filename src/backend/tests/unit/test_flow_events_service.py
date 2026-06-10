@@ -225,7 +225,13 @@ def test_multi_process_visibility(tmp_path):
         args=(str(shared_dir), "flow-mp", "component_added", "from-other-process"),
     )
     proc.start()
-    proc.join(timeout=10)
+    # Generous bound: a spawned child cold-imports the full langflow package
+    # (plus coverage's multiprocessing hooks in CI), which can take >10s on a
+    # loaded CI runner sharing 4 vCPUs with another xdist worker.
+    proc.join(timeout=60)
+    if proc.is_alive():
+        proc.kill()
+        proc.join(timeout=5)
     assert proc.exitcode == 0, "Child process failed to append event"
 
     reader = FlowEventsService(cache_dir=shared_dir)
