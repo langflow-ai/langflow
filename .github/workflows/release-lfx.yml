@@ -276,7 +276,7 @@ jobs:
 
   create-release:
     name: Create GitHub Release
-    needs: [release-lfx, build-docker]
+    needs: [validate-version, release-lfx, build-docker]
     if: always() && github.event.inputs.create_github_release == 'true' && needs.release-lfx.result == 'success'
     runs-on: ubuntu-latest
     steps:
