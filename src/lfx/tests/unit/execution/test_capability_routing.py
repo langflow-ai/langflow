@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from types import SimpleNamespace
 from typing import TYPE_CHECKING, Any
 
@@ -29,6 +30,21 @@ class _RecordingExecutor(Executor):
     async def execute(self, unit: Unit) -> AsyncIterator[StepResult | RunComplete]:
         self.units.append(unit)
         yield RunComplete(outputs=[self.output])
+
+
+class _NeverEndingExecutor(Executor):
+    kind = "sandbox"
+
+    def __init__(self) -> None:
+        self.closed = False
+
+    async def execute(self, unit: Unit) -> AsyncIterator[StepResult | RunComplete]:  # noqa: ARG002
+        try:
+            while True:
+                yield StepResult(payload="tick")
+                await asyncio.sleep(0)
+        finally:
+            self.closed = True
 
 
 @pytest.mark.asyncio
@@ -118,3 +134,33 @@ async def test_coordinator_skips_capability_service_when_passthrough() -> None:
     assert outputs == ["default-output"]
     assert default.units[0].executor_kind is None
     assert default.units[0].runtime_options == {}
+
+
+@pytest.mark.asyncio
+async def test_stream_close_finalizes_capability_selected_executor() -> None:
+    sandbox = _NeverEndingExecutor()
+    registry = ExecutorRegistry()
+    registry.register(_RecordingExecutor("in-process", "in-process-output"))
+    registry.register(sandbox)
+
+    class _Classifier:
+        def trust_of_flow(self, _context: CapabilityContext) -> Trust:
+            return Trust.UNTRUSTED
+
+        def is_untrusted_node(self, _node: dict[str, Any], _context: CapabilityContext | None = None) -> bool:
+            return True
+
+    capability_service = CapabilityService(settings_service=_StubSettings())
+    capability_service.install(classifier=_Classifier(), untrusted_executor_kind="sandbox")
+    coordinator = Coordinator(
+        registry=registry,
+        executor_kind="in-process",
+        capability_service=capability_service,
+    )
+
+    stream = coordinator.stream(SimpleNamespace(), inputs=[{}])
+    assert await anext(stream) == "tick"
+    await stream.aclose()
+    await asyncio.sleep(0)
+
+    assert sandbox.closed is True
