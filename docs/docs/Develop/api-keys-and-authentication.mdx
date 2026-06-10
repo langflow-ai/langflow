@@ -297,6 +297,18 @@ LANGFLOW_NEW_USER_IS_ACTIVE=False
 Only superusers can manage user accounts for a Langflow server, but user management only matters if your server has authentication enabled.
 For more information, see [Start a Langflow server with authentication enabled](#start-a-langflow-server-with-authentication-enabled).
 
+### LANGFLOW_ENABLE_PUBLIC_SIGNUP {#langflow-enable-public-signup}
+
+When `LANGFLOW_ENABLE_PUBLIC_SIGNUP=True` (default), unauthenticated callers can create user accounts through the public users endpoint.
+Account activation is still controlled by [`LANGFLOW_NEW_USER_IS_ACTIVE`](#langflow-new-user-is-active).
+
+When `LANGFLOW_ENABLE_PUBLIC_SIGNUP=False`, only authenticated superusers can create user accounts.
+Use this setting to prevent anonymous callers from filling the database with inactive signup records.
+
+```text
+LANGFLOW_ENABLE_PUBLIC_SIGNUP=False
+```
+
 ### LANGFLOW_API_KEY_SOURCE {#langflow-api-key-source}
 
 This variable controls how Langflow validates API keys.
@@ -505,6 +517,7 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     LANGFLOW_SECRET_KEY=
     LANGFLOW_NEW_USER_IS_ACTIVE=False
     LANGFLOW_ENABLE_SUPERUSER_CLI=False
+    LANGFLOW_ENABLE_PUBLIC_SIGNUP=False
     ```
 
     Your `.env` file can have other environment variables.
@@ -530,6 +543,7 @@ Additionally, you must sign in as a superuser to manage users and [create a Lang
     LANGFLOW_SECRET_KEY=dBuu...2kM2_fb
     LANGFLOW_NEW_USER_IS_ACTIVE=False
     LANGFLOW_ENABLE_SUPERUSER_CLI=False
+    LANGFLOW_ENABLE_PUBLIC_SIGNUP=False
     ```
 
 5. Start Langflow with the configuration from your `.env` file:

@@ -94,6 +94,13 @@ class AuthSettings(BaseSettings):
     """If True, allows creation of superusers via the CLI 'langflow superuser' command."""
 
     NEW_USER_IS_ACTIVE: bool = False
+    ENABLE_PUBLIC_SIGNUP: bool = Field(
+        default=True,
+        description=(
+            "Allow unauthenticated user registration through the public users endpoint. "
+            "Set to False to require an authenticated superuser for creating users."
+        ),
+    )
     SUPERUSER: str = DEFAULT_SUPERUSER
     # Store password as SecretStr to prevent accidental plaintext exposure
     SUPERUSER_PASSWORD: SecretStr = Field(default=DEFAULT_SUPERUSER_PASSWORD)

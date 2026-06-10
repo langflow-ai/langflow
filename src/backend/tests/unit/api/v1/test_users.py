@@ -1,5 +1,11 @@
+from datetime import timedelta
+from uuid import uuid4
+
 from fastapi import status
 from httpx import AsyncClient
+from langflow.services.database.models.api_key.model import ApiKey
+from langflow.services.database.models.user.model import User
+from langflow.services.deps import get_auth_service, get_settings_service, session_scope
 
 
 async def test_add_user_public_signup(client: AsyncClient):
@@ -20,6 +26,195 @@ async def test_add_user_public_signup(client: AsyncClient):
     assert "username" in result, "The result must have an 'username' key"
     assert result["username"] == "newuser", "The username must match"
     assert result["is_superuser"] is False, "New users should not be superusers"
+
+
+async def test_add_user_public_signup_disabled_blocks_anonymous(client: AsyncClient, monkeypatch):
+    """When public signup is disabled, anonymous callers cannot create users."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "blocked_public_signup", "password": "newpassword123"},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Public user registration is disabled."
+
+
+async def test_add_user_public_signup_disabled_ignores_auto_login_fallback(client: AsyncClient, monkeypatch):
+    """AUTO_LOGIN fallback without request credentials must not bypass disabled public signup."""
+    auth_settings = get_settings_service().auth_settings
+    monkeypatch.setattr(auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+    monkeypatch.setattr(auth_settings, "AUTO_LOGIN", True)
+    monkeypatch.setattr(auth_settings, "skip_auth_auto_login", True)
+
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "blocked_auto_login_fallback", "password": "newpassword123"},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Public user registration is disabled."
+
+
+async def test_add_user_public_signup_disabled_blocks_invalid_credentials(client: AsyncClient, monkeypatch):
+    """Invalid credentials must not count as authorization to create users."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "blocked_invalid_token", "password": "newpassword123"},
+        headers={"Authorization": "Bearer not-a-real-token"},
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Public user registration is disabled."
+
+
+async def test_add_user_public_signup_disabled_blocks_normal_user(client: AsyncClient, logged_in_headers, monkeypatch):
+    """Disabling public signup should not let a non-superuser create more users."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "blocked_by_normal_user", "password": "newpassword123"},
+        headers=logged_in_headers,
+    )
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Public user registration is disabled."
+
+
+async def test_add_user_public_signup_disabled_blocks_inactive_superuser(client: AsyncClient, monkeypatch):
+    """An inactive superuser token must not authorize user creation."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+    user_id = uuid4()
+    inactive_superuser = User(
+        id=user_id,
+        username=f"inactive_superuser_{user_id}",
+        password=get_auth_service().get_password_hash("testpassword"),
+        is_active=False,
+        is_superuser=True,
+    )
+
+    async with session_scope() as session:
+        session.add(inactive_superuser)
+        await session.flush()
+        await session.refresh(inactive_superuser)
+
+    token = get_auth_service().create_token(
+        data={"sub": str(user_id), "type": "access"},
+        expires_delta=timedelta(hours=1),
+    )
+    try:
+        response = await client.post(
+            "api/v1/users/",
+            json={"username": "blocked_inactive_superuser", "password": "newpassword123"},
+            headers={"Authorization": f"Bearer {token}"},
+        )
+    finally:
+        async with session_scope() as session:
+            if db_user := await session.get(User, user_id):
+                await session.delete(db_user)
+
+    assert response.status_code == status.HTTP_403_FORBIDDEN
+    assert response.json()["detail"] == "Public user registration is disabled."
+
+
+async def test_add_user_public_signup_disabled_allows_superuser(
+    client: AsyncClient, logged_in_headers_super_user, monkeypatch
+):
+    """Superusers can still provision accounts when anonymous signup is disabled."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "created_by_superuser", "password": "newpassword123"},
+        headers=logged_in_headers_super_user,
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert result["username"] == "created_by_superuser"
+    assert result["is_superuser"] is False
+
+
+async def test_add_user_public_signup_disabled_allows_superuser_cookie(
+    client: AsyncClient, logged_in_headers_super_user, monkeypatch
+):
+    """Cookie-authenticated superusers can still provision accounts when public signup is disabled."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+    token = logged_in_headers_super_user["Authorization"].removeprefix("Bearer ")
+
+    response = await client.post(
+        "api/v1/users/",
+        json={"username": "created_by_superuser_cookie", "password": "newpassword123"},
+        cookies={"access_token_lf": token},
+    )
+    result = response.json()
+
+    assert response.status_code == status.HTTP_201_CREATED
+    assert result["username"] == "created_by_superuser_cookie"
+    assert result["is_superuser"] is False
+
+
+async def test_add_user_public_signup_disabled_allows_superuser_api_key_header_and_query(
+    client: AsyncClient, active_super_user, monkeypatch
+):
+    """API-key-authenticated superusers can still provision accounts when public signup is disabled."""
+    monkeypatch.setattr(get_settings_service().auth_settings, "ENABLE_PUBLIC_SIGNUP", False)
+    raw_key = f"superuser-key-{active_super_user.id}"
+    api_key = ApiKey(
+        name="superuser_signup_key",
+        user_id=active_super_user.id,
+        api_key=raw_key,
+        hashed_api_key=get_auth_service().get_password_hash(raw_key),
+    )
+
+    async with session_scope() as session:
+        session.add(api_key)
+        await session.flush()
+        await session.refresh(api_key)
+
+    try:
+        header_response = await client.post(
+            "api/v1/users/",
+            json={"username": "created_by_superuser_api_key_header", "password": "newpassword123"},
+            headers={"x-api-key": raw_key},
+        )
+        query_response = await client.post(
+            "api/v1/users/",
+            json={"username": "created_by_superuser_api_key_query", "password": "newpassword123"},
+            params={"x-api-key": raw_key},
+        )
+    finally:
+        async with session_scope() as session:
+            if db_key := await session.get(ApiKey, api_key.id):
+                await session.delete(db_key)
+
+    header_result = header_response.json()
+    query_result = query_response.json()
+
+    assert header_response.status_code == status.HTTP_201_CREATED
+    assert header_result["username"] == "created_by_superuser_api_key_header"
+    assert header_result["is_superuser"] is False
+    assert query_response.status_code == status.HTTP_201_CREATED
+    assert query_result["username"] == "created_by_superuser_api_key_query"
+    assert query_result["is_superuser"] is False
+
+
+async def test_add_user_openapi_schema_stays_public(client: AsyncClient):
+    """The signup route advertises optional auth while public signup remains supported."""
+    response = await client.get("/openapi.json")
+    assert response.status_code == status.HTTP_200_OK
+
+    users_post_schema = response.json()["paths"]["/api/v1/users/"]["post"]
+    assert users_post_schema["security"] == [
+        {},
+        {"OAuth2PasswordBearerCookie": []},
+        {"API key query": []},
+        {"API key header": []},
+    ]
 
 
 async def test_add_user_duplicate_username(client: AsyncClient):

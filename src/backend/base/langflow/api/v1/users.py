@@ -1,7 +1,7 @@
 from typing import Annotated
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
@@ -10,7 +10,7 @@ from sqlmodel.sql.expression import SelectOfScalar
 from langflow.api.utils import CurrentActiveUser, DbSession
 from langflow.api.v1.schemas import UsersResponse
 from langflow.initial_setup.setup import get_or_create_default_folder
-from langflow.services.auth.utils import get_current_active_superuser
+from langflow.services.auth.utils import get_current_active_superuser, get_current_user_optional
 from langflow.services.database.models.user.crud import get_user_by_id, update_user
 from langflow.services.database.models.user.model import User, UserCreate, UserRead, UserUpdate
 from langflow.services.deps import get_auth_service, get_settings_service
@@ -18,18 +18,49 @@ from langflow.services.deps import get_auth_service, get_settings_service
 router = APIRouter(tags=["Users"], prefix="/users")
 
 
-@router.post("/", response_model=UserRead, status_code=201)
+def _request_has_credentials(request: Request) -> bool:
+    authorization = request.headers.get("Authorization", "")
+    return bool(
+        authorization.lower().startswith("bearer ")
+        or request.cookies.get("access_token_lf")
+        or request.headers.get("x-api-key")
+        or request.query_params.get("x-api-key")
+    )
+
+
+def _can_create_user(current_user: User | None, request: Request) -> bool:
+    settings_service = get_settings_service()
+    if settings_service.auth_settings.ENABLE_PUBLIC_SIGNUP:
+        return True
+    return bool(
+        _request_has_credentials(request) and current_user and current_user.is_active and current_user.is_superuser
+    )
+
+
+@router.post(
+    "/",
+    response_model=UserRead,
+    status_code=201,
+    openapi_extra={"security": [{}, {"OAuth2PasswordBearerCookie": []}, {"API key query": []}, {"API key header": []}]},
+)
 async def add_user(
     user: UserCreate,
+    request: Request,
     session: DbSession,
+    current_user: Annotated[User | None, Depends(get_current_user_optional)],
 ) -> User:
     """Add a new user to the database.
 
     This endpoint allows public user registration (sign up).
     User activation is controlled by the NEW_USER_IS_ACTIVE setting.
     """
-    settings_service = get_settings_service()
+    if not _can_create_user(current_user, request):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Public user registration is disabled.",
+        )
 
+    settings_service = get_settings_service()
     new_user = User.model_validate(user, from_attributes=True)
     try:
         new_user.password = get_auth_service().get_password_hash(user.password)
