@@ -29,10 +29,10 @@ from lfx.log.logger import (
     buffer_writer,
     configure,
     log_buffer,
-    remove_exception_in_production,
     setup_gunicorn_logger,
     setup_uvicorn_logger,
 )
+from loguru import logger as loguru_logger
 
 
 class TestConfigure:
@@ -103,6 +103,29 @@ class TestConfigure:
             for handler in logging.root.handlers[:]:
                 if isinstance(handler, logging.handlers.RotatingFileHandler):
                     logging.root.removeHandler(handler)
+
+    def test_configure_routes_loguru_messages_to_log_file(self):
+        """Test configure() routes Loguru messages through Langflow logging."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+
+            for handler in logging.root.handlers[:]:
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    logging.root.removeHandler(handler)
+
+            try:
+                configure(log_level="INFO", log_file=log_file_path, cache=False)
+                loguru_logger.info("Custom component log message")
+
+                for handler in logging.root.handlers:
+                    if hasattr(handler, "flush"):
+                        handler.flush()
+
+                assert "Custom component log message" in log_file_path.read_text()
+            finally:
+                for handler in logging.root.handlers[:]:
+                    if isinstance(handler, logging.handlers.RotatingFileHandler):
+                        logging.root.removeHandler(handler)
 
     def test_configure_with_invalid_log_file_path(self):
         """Test configure() with invalid log file path falls back to cache dir."""
@@ -499,37 +522,27 @@ class TestLogProcessors:
         assert serialized_data["level"] == "INFO"
         assert serialized_data["module"] == "test_module"
 
-    def test_remove_exception_in_production(self):
-        """Test remove_exception_in_production() removes exception info in prod."""
-        event_dict = {"event": "Test message", "exception": "Some exception", "exc_info": "Some exc info"}
+    def test_container_json_includes_structured_traceback(self, capsys):
+        """JSON renderer must serialize exc_info as a structured traceback for Grafana."""
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("traceback-test")
+        try:
+            msg = "boom"
+            raise ValueError(msg)
+        except ValueError as exc:
+            log.error("connection failed", exc_info=exc)  # noqa: TRY400 - exc_info kwarg path under test
 
-        # Import the actual module to access DEV
-        import sys
-
-        logger_module = sys.modules["lfx.log.logger"]
-        with patch.object(logger_module, "DEV", False):  # noqa: FBT003
-            result = remove_exception_in_production(None, "error", event_dict)
-
-        # Should remove exception info in production
-        assert "exception" not in result
-        assert "exc_info" not in result
-        assert result["event"] == "Test message"
-
-    def test_remove_exception_in_development(self):
-        """Test remove_exception_in_production() keeps exception info in dev."""
-        event_dict = {"event": "Test message", "exception": "Some exception", "exc_info": "Some exc info"}
-
-        # Import the actual module to access DEV
-        import sys
-
-        logger_module = sys.modules["lfx.log.logger"]
-        with patch.object(logger_module, "DEV", True):  # noqa: FBT003
-            result = remove_exception_in_production(None, "error", event_dict)
-
-        # Should keep exception info in development
-        assert result["exception"] == "Some exception"
-        assert result["exc_info"] == "Some exc info"
-        assert result["event"] == "Test message"
+        out = capsys.readouterr().out.strip().splitlines()[-1]
+        record = json.loads(out)
+        assert record["event"] == "connection failed"
+        assert record["level"] == "error"
+        # dict_tracebacks emits an "exception" list with at least one frame.
+        assert isinstance(record.get("exception"), list)
+        assert record["exception"]
+        first = record["exception"][0]
+        assert first["exc_type"] == "ValueError"
+        assert first["exc_value"] == "boom"
+        assert first.get("frames")
 
     def test_buffer_writer_with_buffer_disabled(self):
         """Test buffer_writer() when log buffer is disabled."""
@@ -596,6 +609,271 @@ class TestConstants:
         """Test all LOG_LEVEL_MAP values are integers."""
         for level_name, level_value in LOG_LEVEL_MAP.items():
             assert isinstance(level_value, int), f"Level {level_name} value {level_value} is not an integer"
+
+
+class TestProductionObservability:
+    """Best-practice production logging: redaction, logger name, stdlib intercept, per-logger levels."""
+
+    def setup_method(self):
+        # Fully reset structlog so a previous test's cached factory (which may
+        # hold a now-closed capsys pipe) cannot bleed into this test.
+        structlog.reset_defaults()
+
+    def teardown_method(self):
+        structlog.reset_defaults()
+        # Drop any InterceptHandler we installed so other tests aren't affected.
+        logging.root.handlers = [h for h in logging.root.handlers if not isinstance(h, InterceptHandler)]
+
+    def _emit_and_parse(self, capsys, fn):
+        fn()
+        out = capsys.readouterr().out.strip().splitlines()
+        return [json.loads(line) for line in out if line.startswith("{")]
+
+    def test_pii_redaction_top_level_and_nested(self, capsys):
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("redact.test")
+        records = self._emit_and_parse(
+            capsys,
+            lambda: log.info(
+                "login",
+                user="alice",
+                password="hunter2",  # noqa: S106 - test fixture for redaction  # pragma: allowlist secret
+                api_key="sk-leak",  # pragma: allowlist secret
+                nested={"authorization": "Bearer xyz", "safe": "ok"},  # pragma: allowlist secret
+            ),
+        )
+        rec = records[-1]
+        assert rec["password"] == "***"  # noqa: S105
+        assert rec["api_key"] == "***"
+        assert rec["nested"]["authorization"] == "***"
+        assert rec["nested"]["safe"] == "ok"
+        assert rec["user"] == "alice"
+
+    def test_logger_name_in_json_output(self, capsys):
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("my.service.module")
+        records = self._emit_and_parse(capsys, lambda: log.info("hello"))
+        assert records[-1]["logger"] == "my.service.module"
+
+    def test_stdlib_intercept_forwards_exception(self, capsys):
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        stdlib = logging.getLogger("third_party_lib")
+
+        def emit():
+            try:
+                msg = "upstream"
+                raise ConnectionError(msg)
+            except ConnectionError:
+                stdlib.error("call failed", exc_info=True)
+
+        records = self._emit_and_parse(capsys, emit)
+        rec = records[-1]
+        assert rec["event"] == "call failed"
+        assert rec["logger"] == "third_party_lib"
+        assert isinstance(rec.get("exception"), list)
+        assert rec["exception"][0]["exc_type"] == "ConnectionError"
+
+    def test_per_logger_level_overrides_via_env(self, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_LOG_LEVELS", "noisy.lib=WARNING,other=ERROR")
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        assert logging.getLogger("noisy.lib").level == logging.WARNING
+        assert logging.getLogger("other").level == logging.ERROR
+
+    def test_extra_redact_keys_via_env(self, capsys, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_LOG_REDACT_KEYS", "session_id,internal_key")
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("redact.extra")
+        records = self._emit_and_parse(
+            capsys,
+            lambda: log.info("hi", session_id="abc", internal_key="xyz", safe="ok"),
+        )
+        rec = records[-1]
+        assert rec["session_id"] == "***"
+        assert rec["internal_key"] == "***"
+        assert rec["safe"] == "ok"
+
+    def test_traceback_locals_disabled_by_default(self, capsys):
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("locals.test")
+        secret_var = "sk-do-not-leak"  # pragma: allowlist secret # noqa: F841, S105
+
+        def emit():
+            try:
+                msg = "boom"
+                raise RuntimeError(msg)
+            except RuntimeError as e:
+                log.error("trace", exc_info=e)  # noqa: TRY400 - exc_info kwarg path under test
+
+        records = self._emit_and_parse(capsys, emit)
+        # The secret string must not appear anywhere in the rendered JSON.
+        # That is the real security property; field renames in
+        # ExceptionDictTransformer must not cause this test to pass by accident.
+        rendered = json.dumps(records[-1])
+        assert "sk-do-not-leak" not in rendered  # pragma: allowlist secret
+
+    def test_traceback_locals_enabled_via_opt_in(self, capsys, monkeypatch):
+        # LANGFLOW_LOG_TRACE_LOCALS=true is the explicit opt-in for local
+        # debugging. Verifies the opt-in actually flips the safe default.
+        monkeypatch.setenv("LANGFLOW_LOG_TRACE_LOCALS", "true")
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("locals.optin")
+
+        def emit():
+            traceable_marker = "marker-locals-on"  # noqa: F841 - must appear in frame locals
+            try:
+                msg = "boom"
+                raise RuntimeError(msg)
+            except RuntimeError as e:
+                log.error("trace", exc_info=e)  # noqa: TRY400 - exc_info kwarg path under test
+
+        records = self._emit_and_parse(capsys, emit)
+        rendered = json.dumps(records[-1])
+        assert "marker-locals-on" in rendered
+
+    def test_intercept_handler_is_idempotent(self):
+        # Two configure() calls must leave exactly one InterceptHandler
+        # attached, with the second call's level winning. A regression here
+        # multiplies log volume in production.
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        configure(log_env="container", log_level="WARNING", cache=False)
+        handlers = [h for h in logging.root.handlers if isinstance(h, InterceptHandler)]
+        assert len(handlers) == 1
+        assert handlers[0].level == logging.WARNING
+
+    def test_intercept_handler_not_installed_in_pretty_mode(self, monkeypatch):
+        # Pretty/console mode must NOT route stdlib through structlog,
+        # otherwise dev terminals get duplicated lines.
+        monkeypatch.setenv("LANGFLOW_PRETTY_LOGS", "true")
+        configure(log_env="", log_level="DEBUG", cache=False)
+        handlers = [h for h in logging.root.handlers if isinstance(h, InterceptHandler)]
+        assert handlers == []
+
+    def test_intercept_handler_forwards_stack_info(self, capsys):
+        # stack_info is the new behavior added to InterceptHandler.emit -
+        # locks in that stdlib `logger.error("...", stack_info=True)` survives.
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        stdlib = logging.getLogger("third_party.stack")
+        records = self._emit_and_parse(
+            capsys,
+            lambda: stdlib.error("with stack", stack_info=True),
+        )
+        rec = records[-1]
+        assert rec["event"] == "with stack"
+        # structlog renders stack_info under the `stack` key.
+        assert "stack" in rec
+        assert "Stack (most recent call last)" in rec["stack"]
+
+    def test_intercept_handler_swallows_broken_format_args(self):
+        # A buggy library calling `logger.info("user %s", a, b)` must not
+        # raise into the caller from our handler. Exercise emit() directly
+        # to avoid pytest's caplog also handling the same record (which
+        # would re-raise the formatting error from its own handler).
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        handler = InterceptHandler()
+        record = logging.LogRecord(
+            name="broken.lib",
+            level=logging.ERROR,
+            pathname=__file__,
+            lineno=1,
+            msg="user %s",
+            args=("alice", "extra-arg-not-allowed"),
+            exc_info=None,
+        )
+        # Must not raise; stdlib contract is to route through handleError.
+        with Path(os.devnull).open("w") as devnull, contextlib.redirect_stderr(devnull):
+            handler.emit(record)
+
+    def test_service_info_defaults_to_langflow(self, capsys):
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("svc.default")
+        records = self._emit_and_parse(capsys, lambda: log.info("hi"))
+        rec = records[-1]
+        assert rec["service"] == "langflow"
+        # version/environment are omitted when unset.
+        assert "version" not in rec
+        assert "environment" not in rec
+
+    def test_service_info_from_env_appears_in_records(self, capsys, monkeypatch):
+        monkeypatch.setenv("LANGFLOW_SERVICE_NAME", "lfx-runner")
+        monkeypatch.setenv("LANGFLOW_VERSION", "1.2.3")
+        monkeypatch.setenv("LANGFLOW_ENVIRONMENT", "staging")
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("svc.env")
+        records = self._emit_and_parse(capsys, lambda: log.info("hi"))
+        rec = records[-1]
+        assert rec["service"] == "lfx-runner"
+        assert rec["version"] == "1.2.3"
+        assert rec["environment"] == "staging"
+
+    def test_malformed_log_levels_emits_warning(self, monkeypatch):
+        # Typos like `WARN` instead of `WARNING` must surface, not silently
+        # drop. Operators need feedback that their config didn't apply.
+        monkeypatch.setenv(
+            "LANGFLOW_LOG_LEVELS",
+            "sqlalchemy.engine=WARN,good=INFO,broken,=NOLEVEL,empty=,a=NOTALEVEL",
+        )
+        with pytest.warns(UserWarning, match="LANGFLOW_LOG_LEVELS"):
+            configure(log_env="container", log_level="DEBUG", cache=False)
+        # Valid entry still applied past the bad ones.
+        assert logging.getLogger("good").level == logging.INFO
+
+    def test_container_csv_preserves_exception_text(self, capsys):
+        # Before the fix, container_csv silently dropped exceptions. Lock in
+        # that the traceback is rendered into the CSV-style row.
+        configure(log_env="container_csv", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("csv.test")
+        try:
+            msg = "boom-csv"
+            raise ValueError(msg)
+        except ValueError as e:
+            log.error("oh no", exc_info=e)  # noqa: TRY400 - exc_info kwarg path under test
+        out = capsys.readouterr().out
+        assert "ValueError" in out
+        assert "boom-csv" in out
+
+    def test_redaction_walks_lists_and_tuples(self, capsys):
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("redact.collections")
+        records = self._emit_and_parse(
+            capsys,
+            lambda: log.info(
+                "audit",
+                # pragma: allowlist secret
+                users_list=[{"password": "x", "name": "alice"}],
+                # pragma: allowlist secret
+                users_tuple=({"token": "y", "name": "bob"},),
+            ),
+        )
+        rec = records[-1]
+        assert rec["users_list"][0]["password"] == "***"  # noqa: S105
+        assert rec["users_list"][0]["name"] == "alice"
+        assert rec["users_tuple"][0]["token"] == "***"  # noqa: S105
+        assert rec["users_tuple"][0]["name"] == "bob"
+
+    def test_redaction_depth_limit_documents_contract(self, capsys):
+        # The 4-level walk is a deliberate trade-off; this test pins it down
+        # so a future change to the depth constant has to be intentional.
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("redact.depth")
+        marker = "leak-at-5"  # pragma: allowlist secret
+        deep = {"l1": {"l2": {"l3": {"l4": {"password": marker}}}}}
+        records = self._emit_and_parse(capsys, lambda: log.info("deep", payload=deep))
+        rec = records[-1]
+        # At depth 5 (beyond the limit) the password value is passed through.
+        assert rec["payload"]["l1"]["l2"]["l3"]["l4"]["password"] == marker
+
+    def test_otel_processor_no_op_when_no_span(self, capsys):
+        # OTel SDK may be installed but no span is active. Processor must
+        # produce records without trace_id/span_id rather than failing.
+        configure(log_env="container", log_level="DEBUG", cache=False)
+        log = structlog.get_logger("otel.nospan")
+        records = self._emit_and_parse(capsys, lambda: log.info("hi"))
+        rec = records[-1]
+        # Either keys are absent or both are present (if a real span is
+        # somehow active in this process); they must never half-render.
+        if "trace_id" in rec or "span_id" in rec:
+            assert "trace_id" in rec
+            assert "span_id" in rec
 
 
 class TestEdgeCasesAndErrorConditions:
@@ -1303,3 +1581,324 @@ class TestBufferWriterBytesSerializationFix:
         finally:
             # Restore buffer state
             log_buffer.max = original_max
+
+
+class TestFileModeStdlibUnification:
+    """JSON file mode must route third-party stdlib logs through structlog too.
+
+    Regression coverage for the bug where ``LANGFLOW_LOG_ENV=container`` plus
+    ``LANGFLOW_LOG_FILE`` skipped the stdlib path entirely: uvicorn, sqlalchemy,
+    httpx, asyncio wrote plain text straight to the file, bypassing both JSON
+    rendering and PII redaction.
+    """
+
+    def teardown_method(self):
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.handlers.RotatingFileHandler):
+                logging.root.removeHandler(handler)
+                handler.close()
+        structlog.reset_defaults()
+        structlog.configure()
+
+    @staticmethod
+    def _read_records(log_file_path):
+        for handler in logging.root.handlers:
+            if hasattr(handler, "flush"):
+                handler.flush()
+        lines = [ln for ln in log_file_path.read_text().splitlines() if ln.strip()]
+        # Every line must be valid JSON. Plain-text stdlib output raises here.
+        return [json.loads(ln) for ln in lines]
+
+    def test_container_file_mode_stdlib_logs_are_json_with_logger_name(self):
+        """A third-party stdlib log lands in the file as JSON carrying its logger name."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            logging.getLogger("sqlalchemy.engine").warning("connecting to pool")
+
+            records = self._read_records(log_file_path)
+            assert records, "expected at least one JSON log line"
+            sa = [r for r in records if r.get("logger") == "sqlalchemy.engine"]
+            assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert sa[0]["event"] == "connecting to pool"
+            assert sa[0]["level"] == "warning"
+            # Service metadata is attached to stdlib records too.
+            assert sa[0]["service"] == "langflow"
+
+    def test_container_file_mode_redacts_stdlib_extra(self):
+        """PII redaction applies to structured fields on stdlib records in file mode."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            logging.getLogger("httpx").warning(
+                "request sent",
+                extra={"authorization": "Bearer xyz"},  # pragma: allowlist secret
+            )
+
+            records = self._read_records(log_file_path)
+            hx = [r for r in records if r.get("logger") == "httpx"]
+            assert hx, f"httpx record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert hx[0].get("authorization") == "***"
+
+    def test_container_file_mode_app_logs_still_json_and_redacted(self):
+        """Application logs keep their JSON + redaction in file mode (structlog path)."""
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            structlog.get_logger("langflow.api").info(
+                "incoming",
+                api_key="sk-do-not-leak",  # pragma: allowlist secret
+            )
+
+            records = self._read_records(log_file_path)
+            app = [r for r in records if r.get("logger") == "langflow.api"]
+            assert app, f"app record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert app[0]["event"] == "incoming"
+            assert app[0].get("api_key") == "***"
+
+
+class TestConfigureEarlyReturnFingerprint:
+    """configure()'s early-return must key off every effective input, not just the level.
+
+    Regression coverage for the footgun where a second configure() call at the
+    same log level but a different log_env / log_file / output_file silently
+    no-opped: the file handler was never installed and the renderer never
+    switched. That also made file-mode tests flaky -- a prior same-level
+    configure() could make a later file-mode configure() do nothing, surfacing
+    as FileNotFoundError when the test read a log file that was never written.
+    The fix fingerprints all effective inputs while preserving the early-return
+    optimization for genuinely identical calls (the Graph.__init__ hot path).
+    """
+
+    def setup_method(self):
+        # Start from a clean slate so a leaked handler or a fingerprint left on
+        # the wrapper_class by another test cannot mask the behavior under test.
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.handlers.RotatingFileHandler | InterceptHandler):
+                logging.root.removeHandler(handler)
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    handler.close()
+        structlog.reset_defaults()
+
+    def teardown_method(self):
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.handlers.RotatingFileHandler | InterceptHandler):
+                logging.root.removeHandler(handler)
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    handler.close()
+        structlog.reset_defaults()
+        structlog.configure()
+
+    @staticmethod
+    def _read_records(log_file_path):
+        for handler in logging.root.handlers:
+            if hasattr(handler, "flush"):
+                handler.flush()
+        return [json.loads(ln) for ln in log_file_path.read_text().splitlines() if ln.strip()]
+
+    def test_same_level_new_env_and_file_takes_effect(self):
+        """Second call: same level, but now container JSON + a log file. Must NOT no-op.
+
+        This is the exact reported bug. Before the fix the level-only early-return
+        skipped the whole rebuild: no RotatingFileHandler was installed and the
+        file stayed empty.
+        """
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+
+            # First call: console mode at INFO, no file handler.
+            configure(log_level="INFO", log_env="", cache=False)
+            assert not any(isinstance(h, logging.handlers.RotatingFileHandler) for h in logging.root.handlers), (
+                "precondition failed: console-mode configure should not install a file handler"
+            )
+
+            # Second call at the SAME level, but container JSON written to a file.
+            configure(log_level="INFO", log_env="container", log_file=log_file_path, cache=False)
+
+            # The file handler is installed...
+            assert any(isinstance(h, logging.handlers.RotatingFileHandler) for h in logging.root.handlers), (
+                "second configure() at the same level silently no-opped: no file handler installed"
+            )
+
+            # ...and JSON is actually written to the file.
+            structlog.get_logger("fingerprint.test").info("after reconfigure")
+            records = self._read_records(log_file_path)
+            assert records, "log file is empty -- the second configure() did not take effect"
+            assert any(r.get("event") == "after reconfigure" for r in records)
+            assert all("event" in r for r in records), "file is not JSON -- renderer did not switch"
+
+    def test_identical_call_early_returns_optimization_preserved(self):
+        """Two byte-for-byte identical calls must still early-return (no rebuild).
+
+        Locks in the optimization the fingerprint exists to preserve: a second
+        identical call must NOT tear down and rebuild the pipeline (the per-Graph
+        hot path). configure() rebuilds the processors list from scratch on every
+        real reconfigure and hands the new list to structlog.configure(); an
+        early-return never touches structlog, so the stored list object is
+        reused. (wrapper_class identity can't be used here -- structlog caches
+        the filtering bound logger class per level, so it's shared across calls.)
+        """
+        configure(log_level="INFO", log_env="container", cache=False)
+        first = structlog.get_config()["processors"]
+        configure(log_level="INFO", log_env="container", cache=False)
+        second = structlog.get_config()["processors"]
+        assert first is second, "identical configure() rebuilt the pipeline; early-return regressed"
+
+    def test_same_level_new_output_file_takes_effect(self):
+        """Same level, new output_file must reconfigure (the lfx.run.base path).
+
+        lfx.run.base calls configure(log_level=..., output_file=sys.stderr) at
+        fixed levels; a level-only early-return would pin logs to the first
+        call's stream. output_file is part of the fingerprint, so the second
+        call rebuilds (fresh processors list) and logs reach the new stream.
+        """
+        import io
+
+        stream_a = io.StringIO()
+        stream_b = io.StringIO()
+
+        configure(log_level="INFO", log_env="", output_file=stream_a, cache=False)
+        first = structlog.get_config()["processors"]
+        configure(log_level="INFO", log_env="", output_file=stream_b, cache=False)
+        second = structlog.get_config()["processors"]
+        assert first is not second, "output_file change at the same level was ignored (early-returned)"
+
+        # The real side effect: logs now reach stream_b, not the first stream.
+        structlog.get_logger("stream.test").info("routed to b")
+        assert "routed to b" in stream_b.getvalue()
+        assert "routed to b" not in stream_a.getvalue()
+
+
+class TestStdlibLevelNameMutationRobustness:
+    r"""Third-party ``logging.addLevelName`` calls must not corrupt the ``level`` field.
+
+    Libraries such as ``ibm_watsonx_orchestrate_core`` globally rewrite stdlib
+    level names (wrapping them in ANSI color codes) via ``logging.addLevelName``.
+    That mutation persists process-wide. structlog's ProcessorFormatter derives a
+    foreign record's level from ``record.levelname.lower()``, so without care the
+    colored string (e.g. ``\x1b[0;33m[warning]\x1b[0;0m``) lands in the JSON
+    ``level`` field and breaks level filtering in Grafana/Loki. The logger must
+    derive levels from the immutable ``levelno`` on both the file and stdout paths.
+    """
+
+    # The ANSI-wrapped names ibm_watsonx_orchestrate_core.setup_logging installs.
+    _MANGLED = {
+        logging.DEBUG: "\x1b[0;35m[DEBUG]\x1b[0;0m",
+        logging.INFO: "\x1b[0;36m[INFO]\x1b[0;0m",
+        logging.WARNING: "\x1b[0;33m[WARNING]\x1b[0;0m",
+        logging.ERROR: "\x1b[0;31m[ERROR]\x1b[0;0m",
+    }
+    _ORIGINAL = {
+        logging.DEBUG: "DEBUG",
+        logging.INFO: "INFO",
+        logging.WARNING: "WARNING",
+        logging.ERROR: "ERROR",
+        logging.CRITICAL: "CRITICAL",
+    }
+
+    def setup_method(self):
+        # Reset structlog so configure() cannot early-return on a matching level
+        # left over from a prior test, then apply the global name mutation.
+        structlog.reset_defaults()
+        for levelno, name in self._MANGLED.items():
+            logging.addLevelName(levelno, name)
+
+    def teardown_method(self):
+        # Restore the standard names so this test cannot pollute the rest of the
+        # run -- which is exactly the failure mode under test.
+        for levelno, name in self._ORIGINAL.items():
+            logging.addLevelName(levelno, name)
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, logging.handlers.RotatingFileHandler | InterceptHandler):
+                logging.root.removeHandler(handler)
+                if isinstance(handler, logging.handlers.RotatingFileHandler):
+                    handler.close()
+        structlog.reset_defaults()
+        structlog.configure()
+
+    def test_file_mode_level_is_clean_despite_addlevelname(self):
+        """File-mode JSON keeps a plain ``level`` even when stdlib names are mangled."""
+        # Guard: the global mutation is actually in effect for this process.
+        assert logging.getLevelName(logging.WARNING) != "WARNING"
+
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            log_file_path = Path(tmp_dir) / "langflow.log"
+            configure(log_env="container", log_level="INFO", log_file=log_file_path, cache=False)
+
+            logging.getLogger("sqlalchemy.engine").warning("connecting to pool")
+
+            for handler in logging.root.handlers:
+                if hasattr(handler, "flush"):
+                    handler.flush()
+            records = [json.loads(ln) for ln in log_file_path.read_text().splitlines() if ln.strip()]
+            sa = [r for r in records if r.get("logger") == "sqlalchemy.engine"]
+            assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
+            assert sa[0]["event"] == "connecting to pool"
+            assert sa[0]["level"] == "warning"
+            assert "\x1b" not in sa[0]["level"]
+
+    def test_stdout_mode_level_is_clean_despite_addlevelname(self, capsys):
+        """Stdout-mode intercept keeps a plain ``level`` even when stdlib names are mangled."""
+        assert logging.getLevelName(logging.ERROR) != "ERROR"
+        configure(log_env="container", log_level="INFO", cache=False)
+
+        logging.getLogger("httpx").error("boom")
+
+        lines = [ln for ln in capsys.readouterr().out.strip().splitlines() if ln.strip().startswith("{")]
+        records = [json.loads(ln) for ln in lines]
+        hx = [r for r in records if r.get("logger") == "httpx"]
+        assert hx, f"httpx record missing; loggers seen: {[r.get('logger') for r in records]}"
+        assert hx[0]["event"] == "boom"
+        assert hx[0]["level"] == "error"
+        assert "\x1b" not in hx[0]["level"]
+
+
+class TestInterceptExtraForwarding:
+    """The stdout InterceptHandler forwards stdlib `extra` fields and redacts them."""
+
+    def teardown_method(self):
+        for handler in logging.root.handlers[:]:
+            if isinstance(handler, InterceptHandler):
+                logging.root.removeHandler(handler)
+        structlog.reset_defaults()
+        structlog.configure()
+
+    def test_intercept_forwards_and_redacts_stdlib_extra(self, capsys):
+        """A stdlib `extra` lands as a structured field; sensitive keys are redacted, others kept."""
+        configure(log_env="container", log_level="INFO", cache=False)
+
+        logging.getLogger("sqlalchemy.engine").warning(
+            "checking out connection",
+            extra={"password": "hunter2", "pool_size": 5},  # pragma: allowlist secret
+        )
+
+        lines = [ln for ln in capsys.readouterr().out.strip().splitlines() if ln.strip().startswith("{")]
+        records = [json.loads(ln) for ln in lines]
+        sa = [r for r in records if r.get("logger") == "sqlalchemy.engine"]
+        assert sa, f"sqlalchemy.engine record missing; loggers seen: {[r.get('logger') for r in records]}"
+        assert sa[0]["password"] == "***"  # noqa: S105 - sensitive extra redacted
+        assert sa[0]["pool_size"] == 5  # non-sensitive extra preserved
+
+
+class TestRetrievalBufferMessage:
+    """The /logs retrieval buffer must capture the actual message text, not an empty string."""
+
+    def teardown_method(self):
+        log_buffer.max = 0
+        structlog.reset_defaults()
+        structlog.configure()
+
+    def test_buffer_captures_message_text(self):
+        """add_serialized writes the message under `message`; the buffer must read it back."""
+        log_buffer.max = 100
+        try:
+            configure(log_env="container", log_level="INFO", cache=False)
+            structlog.get_logger("demo").info("hello buffer world")
+            values = list(log_buffer.get_last_n(5).values())
+            assert values, "expected a buffered entry"
+            assert "hello buffer world" in values
+        finally:
+            log_buffer.max = 0

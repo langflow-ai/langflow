@@ -5,6 +5,7 @@ const path = require("path");
 const lightCodeTheme = require("prism-react-renderer/themes/github");
 const darkCodeTheme = require("prism-react-renderer/themes/dracula");
 const { remarkCodeHike } = require("@code-hike/mdx");
+const rehypeWbrUnderscore = require("./src/plugins/rehypeWbrUnderscore");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -111,15 +112,19 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.9.0",
+          lastVersion: "1.10.0",
           versions: {
             current: {
-              label: "1.10.x (Next)",
+              label: "1.11.x (Next)",
               path: "next",
+            },
+            "1.10.0": {
+              label: "1.10.x",
+              path: "",
             },
             "1.9.0": {
               label: "1.9.x",
-              path: "",
+              path: "1.9.0",
             },
             "1.8.0": {
               label: "1.8.x",
@@ -136,6 +141,7 @@ const config = {
               },
             ],
           ],
+          rehypePlugins: [rehypeWbrUnderscore],
         },
         sitemap: {
           // https://docusaurus.io/docs/api/plugins/@docusaurus/plugin-sitemap
@@ -410,7 +416,14 @@ const config = {
               "/integrations-nvidia-g-assist",
               "/integrations-nvidia-system-assist",
             ]
-          }
+          },
+          {
+            to: "/legacy-core-components",
+            from: [
+              "/directory",
+              "/text-input-and-output",
+            ]
+          },
           // add more redirects like this
           // {
           //   to: '/docs/anotherpage',
@@ -432,6 +445,7 @@ const config = {
       };
     },
   ],
+  clientModules: [require.resolve("./src/clientModules/tocProgress.js")],
   themeConfig:
     /** @type {import('@docusaurus/preset-classic').ThemeConfig} */
     ({

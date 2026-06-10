@@ -7,35 +7,35 @@ from lfx.components._importing import import_mod
 if TYPE_CHECKING:
     from .astradb_chatmemory import AstraDBChatMemory
     from .astradb_cql import AstraDBCQLToolComponent
+    from .astradb_data_api import AstraDBDataAPIComponent
     from .astradb_graph import AstraDBGraphVectorStoreComponent
     from .astradb_tool import AstraDBToolComponent
     from .astradb_vectorize import AstraVectorizeComponent
     from .astradb_vectorstore import AstraDBVectorStoreComponent
     from .dotenv import Dotenv
-    from .getenvvar import GetEnvVar
     from .graph_rag import GraphRAGComponent
 
 _dynamic_imports = {
     "AstraDBCQLToolComponent": "astradb_cql",
     "AstraDBChatMemory": "astradb_chatmemory",
+    "AstraDBDataAPIComponent": "astradb_data_api",
     "AstraDBGraphVectorStoreComponent": "astradb_graph",
     "AstraDBToolComponent": "astradb_tool",
     "AstraDBVectorStoreComponent": "astradb_vectorstore",
     "AstraVectorizeComponent": "astradb_vectorize",
     "Dotenv": "dotenv",
-    "GetEnvVar": "getenvvar",
     "GraphRAGComponent": "graph_rag",
 }
 
 __all__ = [
     "AstraDBCQLToolComponent",
     "AstraDBChatMemory",
+    "AstraDBDataAPIComponent",
     "AstraDBGraphVectorStoreComponent",
     "AstraDBToolComponent",
     "AstraDBVectorStoreComponent",
     "AstraVectorizeComponent",
     "Dotenv",
-    "GetEnvVar",
     "GraphRAGComponent",
 ]
 

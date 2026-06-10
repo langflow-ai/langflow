@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user can open component dropdown menu by right-clicking on nodes",
   { tag: ["@release", "@components", "@dropdown", "@right-click"] },
@@ -10,18 +12,28 @@ test(
     // Start with a basic template that has multiple components
     if (await page.getByTestId("components-btn").isVisible()) {
       await page.getByTestId("side_nav_options_all-templates").click();
-      await page.getByRole("heading", { name: "Basic Prompting" }).click();
+      await page
+        .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+        .click();
     }
 
     await page.getByTestId("template-get-started-card-basic-prompting").click();
 
-    // Wait for the flow to load
+    // Wait for the flow to load. 3s was not enough on slower runners
+    // (Windows CI): the sidebar input briefly resolves as visible but the
+    // canvas template is still mounting, and waitForSelector observes the
+    // input being re-mounted and times out. Wait for the canvas controls
+    // to settle (the same gate other tests use after opening a template),
+    // then verify the sidebar input.
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 60000,
+    });
     await page.waitForSelector('[data-testid="sidebar-search-input"]', {
-      timeout: 3000,
+      timeout: 30000,
     });
 
     // Test 1: Right-click on Chat Input component should open dropdown immediately (single click)
-    const chatInputComponent = page.getByText("Chat Input").first();
+    const chatInputComponent = page.getByText(TEXTS.componentChatInput).first();
 
     // First, click somewhere else to ensure no component is selected
     await page.click("body", { position: { x: 100, y: 100 } });

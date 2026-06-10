@@ -1,4 +1,5 @@
 import { Fragment, useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -19,7 +20,11 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/utils/utils";
-import { type Deployment, type DeploymentType } from "../types";
+import {
+  type Deployment,
+  type DeploymentType,
+  getDeploymentDisplayName,
+} from "../types";
 import DeploymentExpandedRow from "./deployment-expanded-row";
 
 interface DeploymentsTableProps {
@@ -32,15 +37,7 @@ interface DeploymentsTableProps {
   onDeleteDeployment?: (deployment: Deployment) => void;
 }
 
-const COLUMNS = [
-  "Name",
-  "Type",
-  "Attached",
-  "Provider",
-  "Last Modified",
-  "Test",
-  "Actions",
-] as const;
+const COLUMN_COUNT = 7;
 
 const TYPE_CONFIG: Record<DeploymentType, { icon: string; className: string }> =
   {
@@ -49,6 +46,7 @@ const TYPE_CONFIG: Record<DeploymentType, { icon: string; className: string }> =
   };
 
 function TypeBadge({ type }: { type: DeploymentType }) {
+  const { t } = useTranslation();
   const config = TYPE_CONFIG[type] ?? TYPE_CONFIG["agent"];
   return (
     <Badge variant="secondaryStatic" size="tag" className="gap-1">
@@ -56,7 +54,9 @@ function TypeBadge({ type }: { type: DeploymentType }) {
         name={config.icon}
         className={cn("h-3 w-3", config.className)}
       />
-      {type === "agent" ? "Agent" : "MCP"}
+      {type === "agent"
+        ? t("deployments.agentTypeLabel")
+        : t("deployments.mcpTypeLabel")}
     </Badge>
   );
 }
@@ -78,6 +78,7 @@ export default function DeploymentsTable({
   onUpdateDeployment,
   onDeleteDeployment,
 }: DeploymentsTableProps) {
+  const { t } = useTranslation();
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
   const toggleExpanded = (id: string) => {
@@ -96,12 +97,12 @@ export default function DeploymentsTable({
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead>Name</TableHead>
-          <TableHead>Type</TableHead>
-          <TableHead>Attached</TableHead>
-          <TableHead>Provider</TableHead>
-          <TableHead>Last Modified</TableHead>
-          <TableHead>Test</TableHead>
+          <TableHead>{t("deployments.columnName")}</TableHead>
+          <TableHead>{t("deployments.columnType")}</TableHead>
+          <TableHead>{t("deployments.columnAttached")}</TableHead>
+          <TableHead>{t("deployments.columnEnvironment")}</TableHead>
+          <TableHead>{t("deployments.columnLastModified")}</TableHead>
+          <TableHead>{t("deployments.columnTest")}</TableHead>
           <TableHead className="w-10" />
         </TableRow>
       </TableHeader>
@@ -110,6 +111,8 @@ export default function DeploymentsTable({
           const isDeleting = deletingId === deployment.id;
           const isExpanded = expandedIds.has(deployment.id);
           const hasAttachments = deployment.attached_count > 0;
+          const displayName = getDeploymentDisplayName(deployment);
+          const resolvedDisplayName = displayName || "—";
           return (
             <Fragment key={deployment.id}>
               <TableRow
@@ -121,7 +124,7 @@ export default function DeploymentsTable({
               >
                 <TableCell>
                   <div className="flex flex-col">
-                    <span className="font-medium">{deployment.name}</span>
+                    <span className="font-medium">{resolvedDisplayName}</span>
                     {deployment.description && (
                       <span className="text-xs text-muted-foreground">
                         {deployment.description}
@@ -153,17 +156,21 @@ export default function DeploymentsTable({
                       />
                     )}
                     {deployment.attached_count}{" "}
-                    {deployment.attached_count === 1 ? "flow" : "flows"}
+                    {deployment.attached_count === 1
+                      ? t("deployments.flow")
+                      : t("deployments.flows")}
                   </button>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {providerMap[deployment.provider_id ?? ""] ?? "—"}
+                    {providerMap[deployment.provider_id] ?? "—"}
                   </span>
                 </TableCell>
                 <TableCell>
                   <span className="text-sm">
-                    {formatDate(deployment.updated_at)}
+                    {deployment.updated_at
+                      ? formatDate(deployment.updated_at)
+                      : "—"}
                   </span>
                 </TableCell>
                 <TableCell>
@@ -172,7 +179,9 @@ export default function DeploymentsTable({
                     size="icon"
                     className="h-8 w-8"
                     data-testid={`test-deployment-${deployment.id}`}
-                    aria-label={`Test ${deployment.name}`}
+                    aria-label={t("deployments.testDeploymentAriaLabel", {
+                      name: resolvedDisplayName,
+                    })}
                     onClick={() => onTestDeployment(deployment)}
                   >
                     <ForwardedIconComponent name="Play" className="h-4 w-4" />
@@ -191,7 +200,9 @@ export default function DeploymentsTable({
                           size="icon"
                           className="h-8 w-8"
                           data-testid={`actions-deployment-${deployment.id}`}
-                          aria-label={`Actions for ${deployment.name}`}
+                          aria-label={t("deployments.actionsForDeployment", {
+                            name: resolvedDisplayName,
+                          })}
                         >
                           <ForwardedIconComponent
                             name="EllipsisVertical"
@@ -207,7 +218,7 @@ export default function DeploymentsTable({
                             name="Info"
                             className="mr-2 h-4 w-4"
                           />
-                          Details
+                          {t("deployments.details")}
                         </DropdownMenuItem>
                         <DropdownMenuItem
                           onClick={() => onUpdateDeployment?.(deployment)}
@@ -216,7 +227,7 @@ export default function DeploymentsTable({
                             name="Pencil"
                             className="mr-2 h-4 w-4"
                           />
-                          Update
+                          {t("deployments.updateAction")}
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
@@ -228,7 +239,7 @@ export default function DeploymentsTable({
                             name="Trash2"
                             className="mr-2 h-4 w-4"
                           />
-                          Delete
+                          {t("deployments.delete")}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -238,7 +249,7 @@ export default function DeploymentsTable({
               {isExpanded && (
                 <DeploymentExpandedRow
                   deploymentId={deployment.id}
-                  colSpan={COLUMNS.length}
+                  colSpan={COLUMN_COUNT}
                 />
               )}
             </Fragment>

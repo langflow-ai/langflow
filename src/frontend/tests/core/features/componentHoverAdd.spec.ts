@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "user can add components by hovering and clicking the plus icon",
   { tag: ["@release", "@components", "@workspace"] },
@@ -17,7 +19,7 @@ test(
 
     // Search for a component
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("chat input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchChatInput);
 
     await page.waitForSelector('[data-testid="input_outputChat Input"]', {
       timeout: 2000,

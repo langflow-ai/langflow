@@ -92,7 +92,7 @@ async def _create_deployments(*, user_id, folder_id, provider_account_id):
             project_id=folder_id,
             deployment_provider_account_id=provider_account_id,
             resource_key="agent-1",
-            name=f"dep-1-{uuid4()}",
+            display_name=f"dep-1-{uuid4()}",
             deployment_type=DeploymentType.AGENT,
         )
         dep2 = await create_deployment(
@@ -101,7 +101,7 @@ async def _create_deployments(*, user_id, folder_id, provider_account_id):
             project_id=folder_id,
             deployment_provider_account_id=provider_account_id,
             resource_key="agent-2",
-            name=f"dep-2-{uuid4()}",
+            display_name=f"dep-2-{uuid4()}",
             deployment_type=DeploymentType.AGENT,
         )
         return dep1.id, dep2.id
@@ -245,7 +245,7 @@ async def test_delete_unbound_attachments_drops_deployments_outside_provider_sco
             project_id=folder_id,
             deployment_provider_account_id=provider_account_id_a,
             resource_key="shared-resource",
-            name=f"dep-a-{uuid4()}",
+            display_name=f"dep-a-{uuid4()}",
             deployment_type=DeploymentType.AGENT,
         )
         dep_b = await create_deployment(
@@ -254,7 +254,7 @@ async def test_delete_unbound_attachments_drops_deployments_outside_provider_sco
             project_id=folder_id,
             deployment_provider_account_id=provider_account_id_b,
             resource_key="shared-resource",
-            name=f"dep-b-{uuid4()}",
+            display_name=f"dep-b-{uuid4()}",
             deployment_type=DeploymentType.AGENT,
         )
         scoped_attachment = await create_deployment_attachment(
@@ -350,7 +350,7 @@ async def test_delete_unbound_attachments_in_memory_sqlite_coverage(async_sessio
         project_id=folder.id,
         deployment_provider_account_id=provider_account_a.id,
         resource_key="shared-resource",
-        name=f"dep-a-{uuid4()}",
+        display_name=f"dep-a-{uuid4()}",
         deployment_type=DeploymentType.AGENT,
     )
     deployment_b = Deployment(
@@ -358,7 +358,7 @@ async def test_delete_unbound_attachments_in_memory_sqlite_coverage(async_sessio
         project_id=folder.id,
         deployment_provider_account_id=provider_account_b.id,
         resource_key="shared-resource",
-        name=f"dep-b-{uuid4()}",
+        display_name=f"dep-b-{uuid4()}",
         deployment_type=DeploymentType.AGENT,
     )
     async_session.add(deployment_a)

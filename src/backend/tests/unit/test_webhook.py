@@ -837,31 +837,142 @@ class TestSimpleRunFlowTask:
 
 
 class TestWebhookEventsStreamAuth:
-    """Unit tests for webhook_events_stream authentication."""
+    """Tests for webhook_events_stream authentication."""
 
-    async def test_raises_403_when_user_does_not_own_flow(self):
-        """Should raise 403 when authenticated user doesn't own the flow."""
-        from unittest.mock import Mock
+    async def test_raises_404_when_user_does_not_own_flow(self):
+        """Should raise 404 when authenticated user doesn't own the flow."""
+        from unittest.mock import Mock, patch
 
         from fastapi import HTTPException
-        from langflow.api.v1.endpoints import webhook_events_stream
-
-        flow = Mock()
-        flow.id = "test-flow-id"
-        flow.user_id = "owner-user-id"
+        from langflow.api.v1.endpoints import get_flow_for_sse_user
 
         mock_user = Mock()
-        mock_user.id = "different-user-id"  # Different from flow owner
+        mock_user.id = "different-user-id"
 
-        request = Mock()
+        # Mock get_flow_by_id_or_endpoint_name to raise 404 as it would if user doesn't own it
+        with patch("langflow.api.v1.endpoints.get_flow_by_id_or_endpoint_name") as mock_get_flow:
+            mock_get_flow.side_effect = HTTPException(status_code=404, detail="Flow identifier test-flow-id not found")
 
-        with pytest.raises(HTTPException) as exc_info:
-            await webhook_events_stream(
-                flow_id_or_name="test-flow-id",
-                flow=flow,
-                user=mock_user,
-                request=request,
-            )
+            with pytest.raises(HTTPException) as exc_info:
+                await get_flow_for_sse_user(
+                    flow_id_or_name="test-flow-id",
+                    user=mock_user,
+                )
+
+        assert exc_info.value.status_code == 404
+        assert "Flow identifier test-flow-id not found" in exc_info.value.detail
+
+    async def test_webhook_events_stream_cross_user_access_returns_404(
+        self, client, added_webhook_test, user_two_api_key
+    ):
+        """Regression test: cross-user access to /webhook-events/{id} returns 404, not 403.
+
+        This ensures no existence oracle is exposed.
+        """
+        flow_id = added_webhook_test["id"]
+        endpoint = f"api/v1/webhook-events/{flow_id}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.get(endpoint, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
+
+    async def test_webhook_events_stream_cross_user_endpoint_name_returns_404(
+        self, client, added_webhook_test, user_two_api_key
+    ):
+        """Regression test: cross-user access to SSE via endpoint_name returns 404."""
+        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint = f"api/v1/webhook-events/{endpoint_name}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.get(endpoint, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]
+
+    async def test_sse_route_calls_ensure_flow_permission_for_shared_flow(self):
+        """Regression: webhook_events_stream must enforce flow:read before subscribing.
+
+        The SSE dependency widens to share-aware lookup when an authz plugin is
+        active, so a non-owner *could* resolve another user's flow.  The route
+        guards against this by calling ``ensure_flow_permission`` before any
+        event-bus subscription happens — without that, a non-owner with
+        cross-user fetch enabled could exfiltrate webhook event payloads for
+        another user's flow.
+        """
+        from types import SimpleNamespace
+        from unittest.mock import AsyncMock
+        from uuid import uuid4
+
+        from fastapi import HTTPException
+        from langflow.api.v1 import endpoints as endpoints_module
+
+        owner = SimpleNamespace(id=uuid4(), is_superuser=False)
+        attacker = SimpleNamespace(id=uuid4(), is_superuser=False)
+        flow = SimpleNamespace(
+            id=uuid4(),
+            name="shared-flow",
+            user_id=owner.id,
+            workspace_id=None,
+            folder_id=None,
+        )
+        auth = endpoints_module.SseAuth(user=attacker, flow=flow)
+
+        async def _deny(*_args, **_kwargs):
+            raise HTTPException(status_code=403, detail="Permission denied")
+
+        # Subscribe must NOT be reached when permission is denied — if the
+        # route accidentally falls through to event_generator() and calls
+        # subscribe(), this AsyncMock will fail the test.
+        subscribe_mock = AsyncMock(side_effect=AssertionError("subscribe() must not be called when authz denies"))
+
+        with (
+            patch.object(endpoints_module, "ensure_flow_permission", side_effect=_deny),
+            patch.object(endpoints_module.webhook_event_manager, "subscribe", subscribe_mock),
+        ):
+            request_stub = SimpleNamespace()
+            with pytest.raises(HTTPException) as exc_info:
+                await endpoints_module.webhook_events_stream(auth=auth, request=request_stub)
 
         assert exc_info.value.status_code == 403
-        assert "Access denied" in exc_info.value.detail
+        subscribe_mock.assert_not_awaited()
+
+    async def test_webhook_run_cross_user_uuid_returns_404(self, client, added_webhook_test, user_two_api_key):
+        """Regression test: cross-user access to run webhook via UUID returns 404."""
+        flow_id = added_webhook_test["id"]
+        endpoint = f"api/v1/webhook/{flow_id}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.post(endpoint, json={"test": "data"}, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        # If it returns 403, it's an existence oracle
+        assert response.status_code == 404
+        assert f"Flow identifier {flow_id} not found" in response.json()["detail"]
+
+    async def test_webhook_run_cross_user_endpoint_name_returns_404(self, client, added_webhook_test, user_two_api_key):
+        """Regression test: cross-user access to run webhook via endpoint_name returns 404."""
+        endpoint_name = added_webhook_test["endpoint_name"]
+        endpoint = f"api/v1/webhook/{endpoint_name}"
+
+        # Clear cookies to ensure we don't use the identity from added_webhook_test/logged_in_headers
+        client.cookies.clear()
+
+        # Access with User 2's API key
+        response = await client.post(endpoint, json={"test": "data"}, params={"x-api-key": user_two_api_key})
+
+        # Should return 404 because the flow doesn't belong to User 2
+        assert response.status_code == 404
+        assert f"Flow identifier {endpoint_name} not found" in response.json()["detail"]

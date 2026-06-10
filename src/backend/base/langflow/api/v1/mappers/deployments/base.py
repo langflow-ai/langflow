@@ -31,17 +31,18 @@ from typing import TYPE_CHECKING, Any, ClassVar
 from uuid import UUID
 
 from fastapi import HTTPException, status
+from lfx.log.logger import logger
 from lfx.services.adapters.deployment.payloads import DeploymentPayloadFields
 from lfx.services.adapters.deployment.schema import (
-    BaseDeploymentData,
-    BaseDeploymentDataUpdate,
     BaseFlowArtifact,
     ConfigListParams,
     ConfigListResult,
     DeploymentCreateResult,
     DeploymentGetResult,
     DeploymentListLlmsResult,
+    DeploymentListParams,
     DeploymentListResult,
+    DeploymentType,
     DeploymentUpdateResult,
     ExecutionCreate,
     ExecutionCreateResult,
@@ -56,7 +57,13 @@ from lfx.services.adapters.deployment.schema import (
 from lfx.services.adapters.deployment.schema import (
     DeploymentUpdate as AdapterDeploymentUpdate,
 )
-from lfx.services.adapters.payload import AdapterPayload, PayloadSlot
+from lfx.services.adapters.payload import (
+    AdapterPayload,
+    AdapterPayloadMissingError,
+    AdapterPayloadValidationError,
+    PayloadSlot,
+)
+from pydantic import BaseModel
 
 from langflow.api.v1.schemas.deployments import (
     DeploymentConfigListResponse,
@@ -80,7 +87,6 @@ from langflow.api.v1.schemas.deployments import (
 
 from .contracts import (
     CreatedSnapshotIds,
-    CreateFlowArtifactProviderData,
     CreateSnapshotBindings,
     FlowVersionPatch,
     ProviderSnapshotBinding,
@@ -115,6 +121,23 @@ class DeploymentApiPayloads(DeploymentPayloadFields):
     provider_account_response: PayloadSlot | None = None
 
 
+class OuterRequestValidationError(ValueError):
+    """Raised when provider_data is invalid in the context of its containing request."""
+
+    def __init__(self, *, model_name: str, detail: str) -> None:
+        self.model_name = model_name
+        self.detail = detail
+        super().__init__(f"Invalid content for request payload '{model_name}'.")
+
+
+class OuterRequestValidationNotConfiguredError(RuntimeError):
+    """Raised when outer-request validation is requested for a model without the hook."""
+
+    def __init__(self, *, model_name: str) -> None:
+        self.model_name = model_name
+        super().__init__(f"Payload model '{model_name}' does not support outer request validation.")
+
+
 class BaseDeploymentMapper:
     """Per-provider mapper for deployment API payloads.
 
@@ -140,6 +163,13 @@ class BaseDeploymentMapper:
     """
 
     api_payloads: ClassVar[DeploymentApiPayloads] = DeploymentApiPayloads()
+    PROVIDER_LABEL: ClassVar[str | None] = None
+
+    def get_provider_label(self) -> str:
+        if self.PROVIDER_LABEL is None:
+            msg = f"{self.__class__.__name__} must override PROVIDER_LABEL to be a string."
+            raise NotImplementedError(msg)
+        return self.PROVIDER_LABEL
 
     async def resolve_deployment_spec(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.deployment_spec, raw)
@@ -155,39 +185,9 @@ class BaseDeploymentMapper:
         db: AsyncSession,
         payload: DeploymentCreateRequest,
     ) -> AdapterDeploymentCreate:
-        _ = (user_id, project_id)
-        provider_data = self._validate_slot(self.api_payloads.deployment_create, payload.provider_data)
-        return AdapterDeploymentCreate(
-            spec=BaseDeploymentData(
-                name=payload.name,
-                description=payload.description,
-                type=payload.type,
-            ),
-            provider_data=provider_data,
-        )
-
-    async def resolve_deployment_update_for_existing_create(
-        self,
-        *,
-        user_id: UUID,
-        project_id: UUID,
-        db: AsyncSession,
-        payload: DeploymentCreateRequest,
-    ) -> AdapterDeploymentUpdate:
-        """Build adapter update payload for existing-resource create onboarding."""
-        create_payload = await self.resolve_deployment_create(
-            user_id=user_id,
-            project_id=project_id,
-            db=db,
-            payload=payload,
-        )
-        return AdapterDeploymentUpdate(
-            spec=BaseDeploymentDataUpdate(
-                name=payload.name,
-                description=payload.description,
-            ),
-            provider_data=create_payload.provider_data,
-        )
+        _ = (user_id, project_id, db, payload)
+        msg = "This deployment provider is not configured for creating deployments."
+        raise NotImplementedError(msg)
 
     async def resolve_deployment_update(
         self,
@@ -197,20 +197,9 @@ class BaseDeploymentMapper:
         db: AsyncSession,
         payload: DeploymentUpdateRequest,
     ) -> AdapterDeploymentUpdate:
-        _ = (user_id, deployment_db_id)
-        adapter_spec = (
-            BaseDeploymentDataUpdate(
-                name=payload.name,
-                description=payload.description,
-            )
-            if payload.name is not None or payload.description is not None
-            else None
-        )
-        provider_data = self._validate_slot(self.api_payloads.deployment_update, payload.provider_data)
-        return AdapterDeploymentUpdate(
-            spec=adapter_spec,
-            provider_data=provider_data,
-        )
+        _ = (user_id, deployment_db_id, db, payload)
+        msg = "This deployment provider is not configured for updating deployments."
+        raise NotImplementedError(msg)
 
     async def resolve_execution_input(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
         return self._validate_slot(self.api_payloads.execution_input, raw)
@@ -227,23 +216,12 @@ class BaseDeploymentMapper:
             provider_data=await self.resolve_execution_input(payload.provider_data, db),
         )
 
-    async def resolve_deployment_list_params(
-        self, raw: dict[str, Any] | None, db: AsyncSession
-    ) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.deployment_list_params, raw)
-
     def resolve_load_from_provider_deployment_list_params(self) -> dict[str, Any] | None:
         """Return provider_params for provider-backed deployment listing.
 
         Default behavior applies no provider-specific filters.
         """
         return None
-
-    async def resolve_config_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.config_list_params, raw)
-
-    async def resolve_snapshot_list_params(self, raw: dict[str, Any] | None, db: AsyncSession) -> dict[str, Any] | None:
-        return self._validate_slot(self.api_payloads.snapshot_list_params, raw)
 
     def resolve_snapshot_update_artifact(
         self,
@@ -288,32 +266,39 @@ class BaseDeploymentMapper:
                 ),
             ) from exc
 
+    async def resolve_deployment_list_adapter_params(
+        self,
+        *,
+        deployment_type: DeploymentType | None,
+        provider_params: dict[str, Any] | None,
+    ) -> DeploymentListParams | None:
+        if deployment_type is None and provider_params is None:
+            return None
+        return DeploymentListParams(
+            deployment_types=[deployment_type] if deployment_type is not None else None,
+            provider_params=provider_params,
+        )
+
     async def resolve_config_list_adapter_params(
         self,
         *,
         deployment_resource_key: str | None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> ConfigListParams:
-        resolved_provider_params = await self.resolve_config_list_params(provider_params, db)
         return ConfigListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     async def resolve_snapshot_list_adapter_params(
         self,
         *,
         deployment_resource_key: str | None,
-        snapshot_names: list[str] | None = None,
         provider_params: dict[str, Any] | None,
-        db: AsyncSession,
     ) -> SnapshotListParams:
-        resolved_provider_params = await self.resolve_snapshot_list_params(provider_params, db)
         return SnapshotListParams(
             deployment_ids=[deployment_resource_key] if deployment_resource_key is not None else None,
-            snapshot_names=snapshot_names or None,
-            provider_params=resolved_provider_params,
+            provider_params=provider_params,
         )
 
     def shape_deployment_list_items(
@@ -322,7 +307,9 @@ class BaseDeploymentMapper:
         rows_with_counts: list[tuple[Deployment, int, list[tuple[UUID, str | None]]]],
         has_flow_filter: bool = False,
         provider_key: str,
+        provider_data_by_resource_key: dict[str, dict[str, Any]] | None = None,
     ) -> list[DeploymentListItem]:
+        _ = provider_data_by_resource_key
         return [
             DeploymentListItem(
                 id=row.id,
@@ -330,7 +317,6 @@ class BaseDeploymentMapper:
                 provider_key=provider_key,
                 resource_key=row.resource_key,
                 type=row.deployment_type,
-                name=row.name,
                 description=row.description,
                 attached_count=attached_count,
                 created_at=row.created_at,
@@ -381,7 +367,6 @@ class BaseDeploymentMapper:
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -402,7 +387,6 @@ class BaseDeploymentMapper:
             id=deployment_row.id,
             provider_id=deployment_row.deployment_provider_account_id,
             provider_key=provider_key,
-            name=deployment_row.name,
             description=deployment_row.description,
             type=deployment_row.deployment_type,
             created_at=deployment_row.created_at,
@@ -422,6 +406,48 @@ class BaseDeploymentMapper:
         """
         _ = provider_data
         raise NotImplementedError
+
+    def resolve_deployment_model_for_create(
+        self,
+        *,
+        result: DeploymentCreateResult,
+        user_id: UUID,
+        project_id: UUID,
+        deployment_provider_account_id: UUID,
+    ) -> Deployment:
+        """Assemble the DB model for a deployment create.
+
+        Provider mappers own request-specific deployment metadata extraction.
+        The base mapper has no provider-agnostic source for required DB fields
+        such as the display label.
+        """
+        _ = (result, user_id, project_id, deployment_provider_account_id)
+        msg = "This deployment provider is not configured for creating local deployment records."
+        raise NotImplementedError(msg)
+
+    def resolve_deployment_model_from_existing_resource_for_create(
+        self,
+        *,
+        payload: DeploymentCreateRequest,
+        existing_provider_resource: DeploymentGetResult,
+        user_id: UUID,
+        project_id: UUID,
+        deployment_provider_account_id: UUID,
+    ) -> Deployment:
+        """Assemble the DB model for onboarding an existing provider resource."""
+        _ = (payload, existing_provider_resource, user_id, project_id, deployment_provider_account_id)
+        msg = "This deployment provider is not configured for onboarding existing deployment resources."
+        raise NotImplementedError(msg)
+
+    def resolve_kwargs_for_metadata_update(self, result: DeploymentUpdateResult) -> dict[str, Any]:
+        """Assemble Deployment metadata update kwargs from a provider update result.
+
+        Provider mappers own provider-result metadata extraction. The base
+        mapper has no provider-agnostic source for mutable DB cache fields.
+        """
+        _ = result
+        msg = "This deployment provider is not configured for updating local deployment metadata."
+        raise NotImplementedError(msg)
 
     def format_conflict_detail(
         self,
@@ -522,7 +548,7 @@ class BaseDeploymentMapper:
         _ = existing_account
         if "provider_data" not in payload.model_fields_set:
             return None
-        msg = "Credential verification for provider account updates is not implemented for this provider."
+        msg = "This deployment provider is not configured for verifying provider account updates."
         raise NotImplementedError(msg)
 
     def resolve_provider_account_response(
@@ -545,19 +571,6 @@ class BaseDeploymentMapper:
         """Return non-sensitive provider metadata for provider-account responses."""
         return {"url": provider_account.provider_url}
 
-    def util_create_flow_artifact_provider_data(
-        self,
-        *,
-        project_id: UUID,
-        flow_version_id: UUID,
-    ) -> CreateFlowArtifactProviderData:
-        """Build provider_data for create-time flow artifacts.
-
-        Contract schema: ``CreateFlowArtifactProviderData``.
-        """
-        _ = project_id
-        return CreateFlowArtifactProviderData(source_ref=str(flow_version_id))
-
     def util_create_flow_version_ids(self, payload: DeploymentCreateRequest) -> list[UUID]:
         """Resolve flow-version ids referenced by create payload."""
         _ = payload
@@ -571,35 +584,15 @@ class BaseDeploymentMapper:
         _ = payload
         raise NotImplementedError
 
-    def util_should_mutate_provider_for_existing_deployment_create(
-        self,
-        payload: DeploymentCreateRequest,
-    ) -> bool:
-        """Return whether existing-resource create should call provider update."""
-        _ = payload
-        raise NotImplementedError
-
-    def util_create_result_from_existing_update(
-        self,
-        *,
-        existing_resource_key: str,
-        result: DeploymentUpdateResult,
-    ) -> DeploymentCreateResult:
-        """Build create-result contract from existing-resource update result.
-
-        Routes use this when create-time onboarding reuses an existing provider
-        resource and mutates it through ``adapter.update``.
-        """
-        _ = (existing_resource_key, result)
-        raise NotImplementedError
-
     def util_create_result_from_existing_resource(
         self,
         *,
-        existing_resource_key: str,
+        existing_resource: DeploymentGetResult,
     ) -> DeploymentCreateResult:
         """Build create-result contract for DB-only existing-resource onboarding."""
-        return DeploymentCreateResult(id=existing_resource_key)
+        _ = existing_resource
+        msg = "This deployment provider is not configured for onboarding existing deployment resources."
+        raise NotImplementedError(msg)
 
     def util_create_snapshot_bindings(
         self,
@@ -659,11 +652,53 @@ class BaseDeploymentMapper:
         the authoritative binding state on the provider. Deployments absent
         from the response (e.g. deleted) produce no entries.
 
-        Base returns empty — providers that don't track per-deployment
-        snapshot bindings get a no-op attachment sync.
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        these deployments." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for any provider that inherits the base implementation.
+        Raising ``NotImplementedError`` prevents that destructive
+        interpretation entirely: call sites either guard with
+        ``except NotImplementedError`` (skipping the destructive sync) or
+        surface a loud failure pointing at the unimplemented method.
         """
         _ = provider_view
-        return []
+        msg = "This deployment provider is not configured for syncing snapshots for multiple deployments."
+        raise NotImplementedError(msg)
+
+    def extract_list_item_provider_data(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Extract per-deployment list-item provider_data from an already-fetched provider list response.
+
+        Returns a {resource_key -> provider_data} dict. Base returns an empty
+        dict so providers without per-item list metadata omit provider_data.
+        """
+        _ = provider_view
+        return {}
+
+    def extract_metadata_for_list(
+        self,
+        provider_view: DeploymentListResult,
+    ) -> dict[str, dict[str, Any]]:
+        """Resolve resource_key -> CRUD kwargs for local metadata sync."""
+        _ = provider_view
+        msg = "This deployment provider is not configured for syncing metadata for multiple deployments."
+        raise NotImplementedError(msg)
+
+    def extract_metadata_for_get(
+        self,
+        get_result: DeploymentGetResult,
+    ) -> dict[str, Any]:
+        """Resolve CRUD kwargs for local metadata sync from a provider GET result."""
+        _ = get_result
+        msg = "This deployment provider is not configured for syncing metadata for a deployment."
+        raise NotImplementedError(msg)
 
     def extract_snapshot_bindings_for_get(
         self,
@@ -673,16 +708,23 @@ class BaseDeploymentMapper:
     ) -> list[ProviderSnapshotBinding]:
         """Extract bindings from a single-deployment provider GET payload.
 
-        Provider mappers that support binding-aware sync for ``get_deployment``
-        must override this method. The base implementation raises intentionally
-        so callers never interpret an implicit empty-list fallback as
-        "delete all attachments for this deployment."
+        Subclasses MUST override this method.
+
+        Why this raises instead of returning ``[]``:
+        the downstream consumer ``delete_unbound_attachments`` treats an
+        empty ``bindings`` list together with a non-empty ``deployment_ids``
+        set as the explicit instruction "delete every local attachment for
+        this deployment." A silent ``return []`` from this method would
+        therefore trigger a **destructive mass-delete of user attachment
+        data** for the GETted deployment for any provider that inherits
+        the base implementation. Raising ``NotImplementedError`` prevents
+        that destructive interpretation entirely: the GET call site
+        guards with ``except NotImplementedError`` and skips the
+        destructive sync (returning unverified attachment counts) rather
+        than wiping local state.
         """
         _ = get_result, resource_key
-        msg = (
-            "BaseDeploymentMapper does not implement extract_snapshot_bindings_for_get; "
-            "Must be implemented by subclasses. (e.g. watsonx_orchestrate)"
-        )
+        msg = "This deployment provider is not configured for syncing snapshots for a deployment."
         raise NotImplementedError(msg)
 
     async def resolve_rollback_update(
@@ -847,18 +889,20 @@ class BaseDeploymentMapper:
     def shape_deployment_item_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
         return provider_data
 
-    def shape_deployment_get_data(self, provider_data: AdapterPayload | None) -> dict[str, Any] | None:
+    def shape_deployment_get_data(
+        self,
+        provider_data: AdapterPayload | None,
+        *,
+        name: str | None = None,
+    ) -> dict[str, Any] | None:
         """Shape provider_data for single-deployment GET responses."""
-        _ = provider_data
+        _ = provider_data, name
         msg = (
             "BaseDeploymentMapper does not implement shape_deployment_get_data; "
             "must be implemented by subclasses (e.g. watsonx_orchestrate). "
             "GET provider_data shaping is unavailable for this provider."
         )
         raise NotImplementedError(msg)
-
-    def shape_deployment_status_data(self, provider_data: dict[str, Any] | None) -> dict[str, Any] | None:
-        return provider_data
 
     @staticmethod
     def _validate_slot(
@@ -869,3 +913,104 @@ class BaseDeploymentMapper:
         if raw is None or slot is None:
             return raw
         return slot.apply(raw)
+
+    def parse_adapter_slot(
+        self,
+        *,
+        slot: PayloadSlot[Any] | None,
+        slot_name: str,
+        raw: Any,
+        operation: str = "this operation",
+    ) -> Any:
+        """Parse a non-user-supplied adapter-boundary payload, raising 500 on failure.
+
+        Use for adapter/provider results and mapper-built payloads headed to the adapter.
+        Failures are internal errors — the user cannot fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
+        See ``parse_api_request_slot`` for user-supplied input.
+        """
+        provider_label = self.get_provider_label()
+        if slot is None:
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, provider_label)
+            msg = f"The {provider_label} integration is not configured for {operation}."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            return slot.parse(raw)
+        except AdapterPayloadMissingError as exc:
+            logger.error("Empty adapter payload for slot '%s' (%s)", slot_name, provider_label)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Empty result while {operation} ({provider_label}).",
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            logger.error("Invalid adapter payload for slot '%s' (%s): %s", slot_name, provider_label, detail)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Unexpected result while {operation} ({provider_label}): {detail}",
+            ) from exc
+
+    def parse_api_request_slot(
+        self,
+        *,
+        slot: PayloadSlot[Any] | None,
+        slot_name: str,
+        raw: Any,
+        outer_payload: Any | None = None,
+    ) -> Any:
+        """Parse a user-supplied API payload, raising 422 on failure.
+
+        Use for data sent **by** the user in the API request (inbound).
+        Failures are input errors — the user can fix them.
+        ``slot_name`` is logged for debugging but not exposed to the user.
+        See ``parse_adapter_slot`` for adapter-boundary payloads.
+        """
+        provider_label = self.get_provider_label()
+        if slot is None:
+            logger.error("Payload slot '%s' is not configured for %s", slot_name, provider_label)
+            msg = f"The {provider_label} integration is not configured for this operation."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg)
+        try:
+            parsed = slot.parse(raw)
+        except AdapterPayloadMissingError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Missing provider_data for {provider_label}.",
+            ) from exc
+        except AdapterPayloadValidationError as exc:
+            detail = exc.format_first_error()
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid provider_data for {provider_label}: {detail}",
+            ) from exc
+        if outer_payload is None:
+            return parsed
+        try:
+            self.validate_with_outer_request(parsed, outer_payload)
+        except OuterRequestValidationError as exc:
+            raise HTTPException(
+                status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                detail=f"Invalid provider_data for {provider_label}: {exc.detail}",
+            ) from exc
+        except OuterRequestValidationNotConfiguredError as exc:
+            logger.error(
+                "Payload slot '%s' does not support outer request validation for %s: %s",
+                slot_name,
+                provider_label,
+                exc,
+            )
+            msg = f"The {provider_label} integration is not configured for this operation."
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=msg) from exc
+        return parsed
+
+    @staticmethod
+    def validate_with_outer_request(parsed: BaseModel, outer_payload: BaseModel) -> None:
+        validate_with_outer_fields = getattr(parsed, "validate_with_outer_fields", None)
+        model_name = parsed.__class__.__name__
+        if not callable(validate_with_outer_fields):
+            raise OuterRequestValidationNotConfiguredError(model_name=model_name)
+        try:
+            validate_with_outer_fields(outer_payload)
+        except ValueError as exc:
+            detail = str(exc) or "Invalid content for request payload."
+            raise OuterRequestValidationError(model_name=model_name, detail=detail) from exc

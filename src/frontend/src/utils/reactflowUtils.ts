@@ -27,7 +27,6 @@ import {
   getLeftHandleId,
   getRightHandleId,
 } from "@/CustomNodes/utils/get-handle-id";
-import i18n from "../i18n";
 import { customDownloadNodeJson } from "@/customization/utils/custom-download-json";
 import { customDownloadFlow } from "@/customization/utils/custom-reactFlowUtils";
 import useFlowStore from "@/stores/flowStore";
@@ -40,6 +39,7 @@ import {
   specialCharsRegex,
 } from "../constants/constants";
 import { DESCRIPTIONS } from "../flow_constants";
+import i18n from "../i18n";
 import type {
   APIClassType,
   APIKindType,
@@ -70,14 +70,6 @@ import { getLayoutedNodes } from "./layoutUtils";
 import { createRandomKey, toTitleCase } from "./utils";
 
 const uid = new ShortUniqueId();
-
-export function checkChatInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "ChatInput");
-}
-
-export function checkWebhookInput(nodes: Node[]) {
-  return nodes.some((node) => node.data.type === "Webhook");
-}
 
 export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
   const brokenEdges: {
@@ -257,7 +249,13 @@ export function cleanEdges(nodes: AllNodeType[], edges: EdgeType[]) {
               )?.length ?? 0) <= 1) &&
             output.name === name,
         );
-        const output = outputBySelectedOutput ?? outputByFallback;
+        // Prefer the stored edge name (outputByFallback) over selected_output:
+        // mode-based components (e.g. Knowledge) keep both outputs in the class
+        // list, so trusting selected_output here silently rewrites edges to the
+        // wrong handle. selected_output is still the canonical pick for
+        // single-output dropdown components — fall back to it only when the
+        // stored handle name no longer matches any visible output.
+        const output = outputByFallback ?? outputBySelectedOutput;
 
         if (output) {
           const outputTypes =
@@ -1698,6 +1696,11 @@ export function mergeNodeTemplates({
     const nodeTemplate = cloneDeep(node.data.node!.template);
     Object.keys(nodeTemplate)
       .filter((field_name) => field_name.charAt(0) !== "_")
+      .filter(
+        (field_name) =>
+          typeof nodeTemplate[field_name] === "object" &&
+          nodeTemplate[field_name] !== null,
+      )
       .forEach((key) => {
         if (
           node.type === "genericNode" &&
@@ -2367,7 +2370,7 @@ export function getRandomElement<T>(array: T[]): T {
 }
 
 export function getRandomDescription(): string {
-  return getRandomElement(DESCRIPTIONS);
+  return i18n.t(getRandomElement(DESCRIPTIONS));
 }
 
 export const createNewFlow = (
@@ -2377,7 +2380,7 @@ export const createNewFlow = (
 ) => {
   return {
     description: flow?.description ?? getRandomDescription(),
-    name: flow?.name ? flow.name : "New Flow",
+    name: flow?.name ? flow.name : i18n.t("flow.defaultName"),
     data: flowData,
     id: "",
     icon: flow?.icon ?? undefined,

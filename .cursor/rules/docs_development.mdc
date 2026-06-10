@@ -1,0 +1,250 @@
+---
+description: "Guidelines for developing and maintaining Langflow documentation using Docusaurus, including content structure, style, and deployment processes."
+globs:
+  - "docs/**/*.{md,mdx}"
+  - "docs/**/*.{js,jsx,ts,tsx}"
+  - "docs/package*.json"
+  - "docs/docusaurus.config.js"
+  - "docs/sidebars.js"
+  - "docs/static/**/*"
+alwaysApply: false
+---
+
+# Documentation Development Guidelines
+
+## Purpose
+Guidelines for developing and maintaining Langflow documentation using Docusaurus, including content structure, style, and deployment processes.
+
+---
+
+## 1. Documentation Environment Setup
+
+### Prerequisites
+- **Node.js:** v22.12 LTS for runtime
+- **Package Manager:** npm for dependency management
+- **Documentation Framework:** Docusaurus v3
+
+### Documentation Service
+```bash
+cd docs
+npm install       # Install dependencies
+npm run start     # Start dev server
+```
+- Auto-reloads on documentation changes
+- Access at: http://localhost:3000/
+- Documentation source: `docs/`
+
+---
+
+## 2. Documentation Structure
+
+### Directory Layout
+```
+docs/
+├── docs/                    # Main documentation content
+│   ├── agents/              # Agent and MCP guides
+│   ├── get-started/         # Getting started guides
+│   ├── tutorials/           # Langflow tutorials
+│   ├── components/          # Component documentation
+│   ├── flows/               # Guides to build, run, and test flows
+│   ├── deployment/          # Guides for deploying and hosting a Langflow server
+│   ├── develop/             # Guides for developing apps with Langflow
+│   ├── support/             # Help and release notes
+│   ├── contributing/        # Contribution guidelines
+│   ├── api-reference/       # API documentation
+│   └── _partial-*.mdx       # Shared content partials (imported by other pages)
+├── src/                     # Custom React components
+├── static/                  # Static assets (images, etc.)
+├── sidebars.js              # Sidebar configuration
+├── docusaurus.config.js     # Main configuration
+└── package.json             # Dependencies
+```
+
+---
+
+## 3. Writing Documentation
+
+### Frontmatter
+Every `.mdx` file uses only `title` and `slug`. No `description` or `sidebar_position`.
+
+```
+---
+title: Page Title
+slug: /page-slug
+---
+```
+
+The `title` value is used as the page heading — do not add a duplicate `# h1` after the frontmatter.
+
+### MDX Imports
+Most pages import one or more of these at the top, after frontmatter:
+
+```
+import Icon from "@site/src/components/icon";
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import SomePartial from '@site/docs/_partial-some-content.mdx';
+```
+
+- Use `<Icon name="IconName" aria-hidden="true" />` to reference Lucide icons inline. Always include `aria-hidden="true"` and bold the button name next to it for accessibility: `<Icon name="Play" aria-hidden="true" /> **Run**`.
+- Use `<SomePartial />` to embed shared content partials.
+
+### Admonitions
+```
+:::tip
+Use for helpful tips.
+:::
+
+:::warning
+Use for potential issues.
+:::
+
+:::danger
+Use for critical warnings.
+:::
+```
+
+### Images and Assets
+```
+![Descriptive alt text](/img/some-image.png)
+```
+
+Images go in `static/img/`. Use descriptive alt text.
+
+---
+
+## 4. Component Documentation
+
+### Component Page Template
+```
+---
+title: Component Name
+slug: /component-name
+---
+
+import Icon from "@site/src/components/icon";
+
+One-sentence description of what the component does.
+
+## Use the Component Name component in a flow
+
+Step-by-step instructions for using the component.
+
+## Component Name parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| `input_name` | MessageTextInput | Description of the input. |
+| `output_name` | Message | Description of the output. |
+```
+
+### API Documentation
+```
+---
+title: API Endpoint Name
+slug: /api-endpoint-name
+---
+
+## Endpoint
+
+`POST /api/v1/endpoint`
+
+## Request body
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `param` | string | Description. |
+
+## Example
+
+```bash
+curl -X POST http://localhost:7860/api/v1/endpoint \
+  -H "Authorization: Bearer your-token" \
+  -H "Content-Type: application/json" \
+  -d '{"param": "value"}'
+```
+```
+
+---
+
+## 5. Documentation Testing
+
+### Build and serve
+```bash
+cd docs
+npm run build     # Build static site
+npm run serve     # Serve built site locally
+```
+
+### API examples
+```bash
+make api_examples_local          # Run API sample files against a local Langflow server
+make api_examples_local_syntax   # Syntax-check API sample files without executing them
+```
+
+### Content Review
+- **Accuracy:** Verify all code examples work
+- **Completeness:** Ensure all features are documented
+- **Clarity:** Review for clear, concise language
+- **Navigation:** Test sidebar and cross-references
+
+### Screenshots
+- Keep screenshots up-to-date with current UI
+- Use consistent browser/OS for screenshots
+- Highlight relevant UI elements
+- Use descriptive file names
+
+---
+
+## 6. Style Guide
+
+### Writing Style
+- **Tone:** Professional but approachable
+- **Voice:** Second person ("you") for instructions
+- **Tense:** Present tense for current features
+- **Length:** Keep paragraphs short and scannable
+
+### Formatting
+- **Headers:** Use sentence case
+- **Code:** Inline code with `backticks`
+- **Emphasis:** Use **bold** for UI elements, *italic* for emphasis
+- **Lists:** Use parallel structure
+
+### Terminology
+- **Langflow:** Always capitalize
+- **Component:** Capitalize when referring to Langflow components
+- **Flow:** Capitalize when referring to Langflow flows
+- **API:** Always uppercase
+- **JSON:** Always uppercase
+
+---
+
+## 7. Deployment
+
+### Local Testing
+```bash
+cd docs
+npm run build     # Build static site
+npm run serve     # Serve built site locally
+```
+
+### Production Deployment
+- Documentation changes are submitted as pull requests to the **release branch**, not directly to `main`.
+- The release branch is merged to `main` as part of the release process.
+- Build artifacts go to the `build/` directory.
+- The static site is served via CDN.
+
+---
+
+## Documentation Development Checklist
+- [ ] Documentation service running with `npm run start`
+- [ ] Content follows markdown conventions
+- [ ] Code examples are tested and working
+- [ ] Images have descriptive alt text
+- [ ] Internal links are functional
+- [ ] Sidebar navigation is updated
+- [ ] Content follows style guide
+- [ ] Screenshots are current and properly formatted
+- [ ] Cross-references between related topics
+- [ ] Build succeeds with `npm run build`
+- [ ] Changes target the release branch (not `main`)

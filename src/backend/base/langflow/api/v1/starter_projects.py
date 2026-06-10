@@ -1,6 +1,6 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 from pydantic import BaseModel
 
 from langflow.services.auth.utils import get_current_active_user
@@ -42,9 +42,12 @@ class GraphDumpResponse(BaseModel):
 
 
 @router.get("/", dependencies=[Depends(get_current_active_user)], status_code=200)
-async def get_starter_projects() -> list[GraphDumpResponse]:
+async def get_starter_projects(request: Request) -> list[GraphDumpResponse]:
     """Get a list of starter projects."""
     from langflow.initial_setup.load import get_starter_projects_dump
+    from langflow.utils.i18n import translate_flow_notes
+
+    locale = getattr(request.state, "locale", "en")
 
     try:
         # Get the raw data from lfx GraphDump
@@ -53,9 +56,12 @@ async def get_starter_projects() -> list[GraphDumpResponse]:
         # Convert TypedDict GraphDump to Pydantic GraphDumpResponse
         results = []
         for item in raw_data:
+            nodes = item.get("data", {}).get("nodes", [])
+            translated_nodes = translate_flow_notes(nodes, locale)
+
             # Create GraphData
             graph_data = GraphData(
-                nodes=item.get("data", {}).get("nodes", []),
+                nodes=translated_nodes,
                 edges=item.get("data", {}).get("edges", []),
                 viewport=item.get("data", {}).get("viewport"),
             )

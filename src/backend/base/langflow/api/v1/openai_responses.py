@@ -5,7 +5,7 @@ import uuid
 from collections.abc import AsyncGenerator
 from typing import Annotated, Any
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request, status
 from fastapi.responses import StreamingResponse
 from lfx.log.logger import logger
 from lfx.schema.openai_responses_schemas import create_openai_error, create_openai_error_chunk
@@ -24,6 +24,7 @@ from langflow.schema import (
 )
 from langflow.schema.content_types import ToolContent
 from langflow.services.auth.utils import api_key_security
+from langflow.services.authorization import FlowAction, ensure_flow_permission
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.user.model import UserRead
 from langflow.services.deps import get_telemetry_service
@@ -630,9 +631,16 @@ async def create_response(
         )
         return OpenAIErrorResponse(error=error_response["error"])
 
-    # Get flow using the model field (which contains flow_id)
+    # Get flow using the model field (which contains flow_id). The lookup
+    # becomes share-aware when an authorization plugin is registered, so we
+    # also enforce ``flow:execute`` explicitly — otherwise an API key with
+    # cross-user fetch enabled would skip policy here.
     try:
-        flow = await get_flow_by_id_or_endpoint_name(request.model, str(api_key_user.id))
+        flow = await get_flow_by_id_or_endpoint_name(
+            request.model,
+            str(api_key_user.id),
+            widen_for_shares=True,
+        )
     except HTTPException:
         flow = None
 
@@ -643,6 +651,25 @@ async def create_response(
             code="flow_not_found",
         )
         return OpenAIErrorResponse(error=error_response["error"])
+
+    try:
+        await ensure_flow_permission(
+            api_key_user,
+            FlowAction.EXECUTE,
+            flow_id=flow.id,
+            flow_user_id=flow.user_id,
+            workspace_id=getattr(flow, "workspace_id", None),
+            folder_id=getattr(flow, "folder_id", None),
+        )
+    except HTTPException as exc:
+        if exc.status_code == status.HTTP_403_FORBIDDEN:
+            error_response = create_openai_error(
+                message=f"Insufficient permissions to execute flow '{request.model}'",
+                type_="invalid_request_error",
+                code="flow_execute_forbidden",
+            )
+            return OpenAIErrorResponse(error=error_response["error"])
+        raise
 
     try:
         # Process the request

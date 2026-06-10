@@ -2,6 +2,7 @@ import type { ColDef } from "ag-grid-community";
 import type { AgGridReact } from "ag-grid-react";
 import { cloneDeep } from "lodash";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import type { handleOnNewValueType } from "@/CustomNodes/hooks/use-handle-new-value";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
@@ -29,18 +30,24 @@ export default function ToolsTable({
   open,
   handleOnNewValue,
 }: {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   rows: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   data: any[];
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   setData: (data: any[]) => void;
   open: boolean;
   handleOnNewValue: handleOnNewValueType;
   isAction: boolean;
   placeholder: string;
 }) {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedRows, setSelectedRows] = useState<any[] | null>(null);
   const agGrid = useRef<AgGridReact>(null);
 
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [focusedRow, setFocusedRow] = useState<any | null>(null);
   const [sidebarName, setSidebarName] = useState<string>("");
   const [sidebarDescription, setSidebarDescription] = useState<string>("");
@@ -54,6 +61,7 @@ export default function ToolsTable({
   const { setOpen: setSidebarOpen } = useSidebar();
 
   const getRowId = useMemo(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     return (params: any) =>
       params.data._uniqueId ||
       `${params.data.name}_${params.data.display_name}`;
@@ -183,7 +191,9 @@ export default function ToolsTable({
   const columnDefs: ColDef[] = [
     {
       field: isAction ? "display_name" : "name",
-      headerName: isAction ? "Flow Name" : "Name",
+      headerName: isAction
+        ? t("toolsModal.columnFlowName")
+        : t("toolsModal.columnName"),
       flex: 1,
       valueGetter: (params) =>
         !isAction
@@ -197,13 +207,15 @@ export default function ToolsTable({
     },
     {
       field: "description",
-      headerName: "Description",
+      headerName: t("toolsModal.columnDescription"),
       flex: 2,
       cellClass: "text-muted-foreground",
     },
     {
       field: "name",
-      headerName: isAction ? "Tool" : "Slug",
+      headerName: isAction
+        ? t("toolsModal.columnTool")
+        : t("toolsModal.columnSlug"),
       flex: 1,
       resizable: false,
       valueGetter: (params) =>
@@ -214,7 +226,12 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+            ? (() => {
+                const raw = sanitizeMcpName(params.data.display_name, 46);
+                return (
+                  raw === "unnamed" ? t("common.unnamed") : raw
+                ).toUpperCase();
+              })()
             : parseString(params.data.tags.join(", "), [
                 "snake_case",
                 "uppercase",
@@ -228,6 +245,7 @@ export default function ToolsTable({
       hide: true,
     },
   ];
+
   const handleSelectionChanged = (event) => {
     if (!open || applyingSelection.current) return;
 
@@ -277,6 +295,7 @@ export default function ToolsTable({
 
   const actionArgs = useMemo(() => {
     return Object.entries(focusedRow?.args ?? {}).map(
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
       ([key, value]: [string, any]) => ({
         display_name: value.title,
         name: key,
@@ -329,7 +348,7 @@ export default function ToolsTable({
         <div className="flex-none px-4">
           <Input
             icon="Search"
-            placeholder="Search tools..."
+            placeholder={t("toolsModal.searchPlaceholder")}
             inputClassName="h-8"
             value={searchQuery}
             onChange={handleSearchChange}
@@ -369,7 +388,9 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-name-input"
                   >
-                    {isAction ? "Tool name" : "Slug"}
+                    {isAction
+                      ? t("toolsModal.labelToolName")
+                      : t("toolsModal.labelSlug")}
                   </label>
 
                   <Input
@@ -377,13 +398,13 @@ export default function ToolsTable({
                     value={sidebarName}
                     onChange={handleNameChange}
                     maxLength={46}
-                    placeholder="Edit name..."
+                    placeholder={t("toolsModal.editNamePlaceholder")}
                     data-testid="input_update_name"
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "Used as the function name when this flow is exposed to clients."
-                      : "Used as the function name when this tool is exposed to the agent."}
+                      ? t("toolsModal.actionSlugHint")
+                      : t("toolsModal.slugHint")}
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
@@ -391,21 +412,23 @@ export default function ToolsTable({
                     className="text-mmd font-medium"
                     htmlFor="sidebar-desc-input"
                   >
-                    {isAction ? "Tool description" : "Description"}
+                    {isAction
+                      ? t("toolsModal.labelToolDescription")
+                      : t("toolsModal.labelDescription")}
                   </label>
 
                   <Textarea
                     id="sidebar-desc-input"
                     value={sidebarDescription}
                     onChange={handleDescriptionChange}
-                    placeholder="Edit description..."
+                    placeholder={t("toolsModal.editDescriptionPlaceholder")}
                     className="h-24"
                     data-testid="input_update_description"
                   />
                   <div className="text-xs text-muted-foreground">
                     {isAction
-                      ? "This is the description for the tool exposed to a client."
-                      : "This is the description for the tool exposed to the agents."}
+                      ? t("toolsModal.actionDescriptionHint")
+                      : t("toolsModal.descriptionHint")}
                   </div>
                 </div>
               </div>
@@ -436,9 +459,11 @@ export default function ToolsTable({
                   <div className="flex h-full flex-col gap-4">
                     {actionArgs.length > 0 && (
                       <div className="flex flex-col gap-1.5">
-                        <h3 className="text-base font-medium">Parameters</h3>
+                        <h3 className="text-base font-medium">
+                          {t("toolsModal.parametersTitle")}
+                        </h3>
                         <p className="text-mmd text-muted-foreground">
-                          Manage inputs for this tool
+                          {t("toolsModal.parametersSubtitle")}
                         </p>
                       </div>
                     )}
@@ -461,7 +486,7 @@ export default function ToolsTable({
                         <Input
                           id="sidebar-desc-input"
                           disabled
-                          placeholder="Input controlled by the agent"
+                          placeholder={t("toolsModal.inputControlledByAgent")}
                           onChange={(e) => {}}
                         />
                       </div>
@@ -480,7 +505,7 @@ export default function ToolsTable({
               onClick={handleClose}
               data-testid="btn_close_tools_modal"
             >
-              Close
+              {t("toolsModal.close")}
             </Button>
           </div>
         </SidebarFooter>

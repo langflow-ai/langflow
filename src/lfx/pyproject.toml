@@ -1,6 +1,6 @@
 [project]
 name = "lfx"
-version = "0.4.4"
+version = "1.10.0"
 description = "Langflow Executor - A lightweight CLI tool for executing and serving Langflow AI flows"
 readme = "README.md"
 authors = [
@@ -50,6 +50,7 @@ dependencies = [
     "setuptools>=80.0.0,<81.0.0",
     "wheel>=0.46.2,<1.0.0",
     "mcp>=1.17.0,<2.0.0",
+    "OpenDsStar==1.0.26; python_version >= '3.11' and python_version < '3.14' and (sys_platform != 'darwin' or platform_machine != 'x86_64')",
 ]
 
 [project.scripts]

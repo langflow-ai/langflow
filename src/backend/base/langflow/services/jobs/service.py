@@ -10,15 +10,16 @@ if TYPE_CHECKING:
 from datetime import datetime, timezone
 from uuid import UUID
 
+from sqlmodel import col, func, select
+
 from langflow.services.base import Service
 from langflow.services.database.models.jobs.crud import (
-    get_job_by_job_id,
-    get_jobs_by_flow_id,
     get_latest_jobs_by_asset_ids,
     update_job_status,
 )
 from langflow.services.database.models.jobs.model import Job, JobStatus, JobType
 from langflow.services.deps import session_scope
+from langflow.services.jobs.exceptions import DuplicateJobError
 
 
 class JobService(Service):
@@ -30,11 +31,14 @@ class JobService(Service):
         """Initialize the job service."""
         self.set_ready()
 
-    async def get_jobs_by_flow_id(self, flow_id: UUID | str, page: int = 1, page_size: int = 10) -> list[Job]:
-        """Get jobs for a specific flow with pagination.
+    async def get_jobs_by_flow_id(
+        self, flow_id: UUID | str, user_id: UUID, page: int = 1, page_size: int = 10
+    ) -> list[Job]:
+        """Get jobs for a specific flow with pagination, filtered by user.
 
         Args:
             flow_id: The flow ID to filter jobs by
+            user_id: The user ID to enforce ownership
             page: Page number (1-indexed)
             page_size: Number of jobs per page
 
@@ -45,7 +49,16 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
-            return await get_jobs_by_flow_id(session, flow_id, page=page, size=page_size)
+            stmt = (
+                select(Job)
+                .where(Job.flow_id == flow_id)
+                .where((Job.user_id == user_id) | (Job.user_id.is_(None)))
+                .order_by(col(Job.created_at).desc())
+                .offset((page - 1) * page_size)
+                .limit(page_size)
+            )
+            result = await session.exec(stmt)
+            return list(result.all())
 
     async def get_job_by_job_id(self, job_id: UUID | str, user_id: UUID | None = None) -> Job | None:
         """Get job for a specific job ID.
@@ -62,7 +75,11 @@ class JobService(Service):
             job_id = UUID(job_id)
 
         async with session_scope() as session:
-            return await get_job_by_job_id(session, job_id, user_id=user_id)
+            stmt = select(Job).where(Job.job_id == job_id)
+            if user_id:
+                stmt = stmt.where((Job.user_id == user_id) | (Job.user_id.is_(None)))
+            result = await session.exec(stmt)
+            return result.first()
 
     async def create_job(
         self,
@@ -72,16 +89,19 @@ class JobService(Service):
         asset_id: UUID | None = None,
         asset_type: str | None = None,
         user_id: UUID | None = None,
+        dedupe_key: str | None = None,
     ) -> Job:
         """Create a new job record with QUEUED status.
 
         Args:
             job_id: The job ID
             flow_id: The flow ID
+            user_id: The user ID
             job_type: The job type
             asset_id: The asset ID
             asset_type: The asset type
             user_id: The user ID who owns this job
+            dedupe_key: Optional idempotency key to prevent duplicate jobs for the same batch
 
         Returns:
             Created Job object
@@ -93,6 +113,18 @@ class JobService(Service):
             flow_id = UUID(flow_id)
 
         async with session_scope() as session:
+            if dedupe_key is not None:
+                stmt = (
+                    select(func.count())
+                    .select_from(Job)
+                    .where(Job.dedupe_key == dedupe_key)
+                    .where(col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS, JobStatus.COMPLETED]))
+                )
+                result = await session.exec(stmt)
+                if result.one() > 0:
+                    msg = f"A non-retryable job with dedupe_key={dedupe_key!r} already exists"
+                    raise DuplicateJobError(msg)
+
             job = Job(
                 job_id=job_id,
                 flow_id=flow_id,
@@ -101,6 +133,7 @@ class JobService(Service):
                 asset_id=asset_id,
                 asset_type=asset_type,
                 user_id=user_id,
+                dedupe_key=dedupe_key,
             )
             session.add(job)
             await session.flush()
@@ -120,11 +153,52 @@ class JobService(Service):
             Updated Job object or None if not found
         """
         async with session_scope() as session:
-            job = await update_job_status(session, job_id, status)
-            if job and finished_timestamp:
-                job.finished_timestamp = datetime.now(timezone.utc)
-                session.add(job)
-                await session.flush()
+            finished_at = datetime.now(timezone.utc) if finished_timestamp else None
+            return await update_job_status(session, job_id, status, finished_timestamp=finished_at)
+
+    async def update_job_metadata(
+        self,
+        job_id: UUID,
+        patch: dict,
+        *,
+        replace: bool = False,
+    ) -> Job | None:
+        """Merge ``patch`` into ``job.job_metadata`` (or replace it).
+
+        Domain-owned per-job context lives here — KB ingestion writes
+        counters and per-item outcomes, workflow runs can record their
+        own keys, etc. The wrapped coroutine inside
+        ``execute_with_status`` calls this as it makes progress so the
+        UI can read partial state without waiting for the job to
+        finish.
+
+        Args:
+            job_id: The job ID to update.
+            patch: Top-level keys to merge into the existing dict. Keys
+                in ``patch`` overwrite same-named keys on the existing
+                row; nested dicts are NOT deep-merged — callers that
+                want deep-merge semantics should read, merge, and pass
+                the full result.
+            replace: When ``True``, replace ``job_metadata`` outright
+                instead of merging. Use when the caller is the sole
+                writer and wants a known-shape blob (e.g. KB ingestion
+                finalize).
+
+        Returns:
+            The updated Job, or ``None`` if the row does not exist.
+        """
+        async with session_scope() as session:
+            job = await session.get(Job, job_id)
+            if job is None:
+                return None
+            if replace or job.job_metadata is None:
+                job.job_metadata = dict(patch)
+            else:
+                # Shallow merge — callers wanting deep-merge own the
+                # composition. This keeps the helper predictable.
+                job.job_metadata = {**job.job_metadata, **patch}
+            session.add(job)
+            await session.flush()
             return job
 
     async def get_latest_jobs_by_asset_ids(self, asset_ids: Sequence[UUID | str]) -> dict[UUID, Job]:
@@ -141,6 +215,45 @@ class JobService(Service):
 
         async with session_scope() as session:
             return await get_latest_jobs_by_asset_ids(session, uuid_asset_ids)
+
+    async def cancel_in_flight_jobs_by_asset(
+        self,
+        asset_id: UUID | str,
+        asset_type: str,
+        *,
+        user_id: UUID | None = None,
+    ) -> list[UUID]:
+        """Mark every queued / in-progress job for ``asset_id`` CANCELLED.
+
+        Used by the asset-delete flows (KB, Memory Base, …) so an
+        in-flight ingestion stops writing to (and thereby recreating)
+        the asset's storage. The ingestion's own ``is_job_cancelled``
+        poll picks up the new status and bails out via the cancelled
+        handler.
+
+        Returns the ids of the jobs transitioned. Empty list when
+        nothing is in flight.
+        """
+        normalized_id = UUID(asset_id) if isinstance(asset_id, str) else asset_id
+        async with session_scope() as session:
+            stmt = select(Job).where(
+                Job.asset_id == normalized_id,
+                Job.asset_type == asset_type,
+                col(Job.status).in_([JobStatus.QUEUED, JobStatus.IN_PROGRESS]),
+            )
+            if user_id is not None:
+                stmt = stmt.where((Job.user_id == user_id) | (col(Job.user_id).is_(None)))
+            result = await session.exec(stmt)
+            jobs = list(result.all())
+            if not jobs:
+                return []
+            now = datetime.now(timezone.utc)
+            for job in jobs:
+                job.status = JobStatus.CANCELLED
+                job.finished_timestamp = now
+                session.add(job)
+            await session.flush()
+            return [job.job_id for job in jobs]
 
     async def execute_with_status(self, job_id: UUID, run_coro_func, *args, **kwargs):
         """Wrapper that manages job status lifecycle around a coroutine.
@@ -196,7 +309,7 @@ class JobService(Service):
                 await self.update_job_status(job_id, JobStatus.CANCELLED, finished_timestamp=True)
             else:
                 # System-initiated cancellation - update status to FAILED
-                await logger.aerror(f"Job {job_id} was cancelled by system")
+                await logger.awarning(f"Job {job_id} was cancelled by system")
                 await self.update_job_status(job_id, JobStatus.FAILED, finished_timestamp=True)
             raise
 
@@ -210,3 +323,18 @@ class JobService(Service):
             await logger.ainfo(f"Job {job_id} completed successfully")
             await self.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
             return result
+
+    async def _validate_ownership(self, job_id: UUID, user_id: UUID) -> Job:
+        """Verify that a job exists and belongs to the specified user.
+
+        Raises:
+            ValueError: If the job is not found or is NOT owned by the user.
+        """
+        job = await self.get_job_by_job_id(job_id)
+        if job is None:
+            msg = f"Job {job_id} not found"
+            raise ValueError(msg)
+        if job.user_id is not None and job.user_id != user_id:
+            msg = f"Access denied for job {job_id}"
+            raise ValueError(msg)
+        return job

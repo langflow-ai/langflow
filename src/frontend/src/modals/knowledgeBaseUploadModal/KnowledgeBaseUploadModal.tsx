@@ -1,9 +1,16 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { StepperModal, StepperModalFooter } from "../stepperModal/StepperModal";
 import { FilesPanel } from "./components/FilesPanel";
 import { StepConfiguration } from "./components/StepConfiguration";
 import { StepReview } from "./components/StepReview";
-import { STEP_DESCRIPTIONS, STEP_TITLES } from "./constants";
+import {
+  getStepDescriptions,
+  getStepTitles,
+  MODAL_HEIGHT_DEFAULT,
+  MODAL_HEIGHT_WITH_ADVANCED,
+  VALIDATION_ERROR_LINE_HEIGHT,
+} from "./constants";
 import { useKnowledgeBaseForm } from "./hooks/useKnowledgeBaseForm";
 import type { KnowledgeBaseUploadModalProps } from "./types";
 
@@ -20,6 +27,7 @@ export default function KnowledgeBaseUploadModal({
   hideAdvanced,
   existingKnowledgeBaseNames,
 }: KnowledgeBaseUploadModalProps) {
+  const { t } = useTranslation();
   const [internalOpen, setInternalOpen] = useState(false);
   const open = controlledOpen ?? internalOpen;
   const setOpen = controlledSetOpen ?? setInternalOpen;
@@ -39,6 +47,7 @@ export default function KnowledgeBaseUploadModal({
         return (
           <StepConfiguration
             isAddSourcesMode={form.isAddSourcesMode}
+            kbName={existingKnowledgeBase?.name}
             sourceName={form.sourceName}
             onSourceNameChange={form.setSourceName}
             selectedEmbeddingModel={form.selectedEmbeddingModel}
@@ -53,13 +62,18 @@ export default function KnowledgeBaseUploadModal({
             separator={form.separator}
             onSeparatorChange={form.setSeparator}
             showAdvanced={form.showAdvanced}
-            toggleAdvanced={form.toggleAdvanced}
+            hasFiles={form.files.length > 0}
             onFileSelect={form.handleFileSelect}
             onFolderSelect={form.handleFolderSelect}
             validationErrors={form.validationErrors}
             onFieldChange={form.clearValidationErrors}
             columnConfig={form.columnConfig}
             onColumnConfigChange={form.setColumnConfig}
+            backendType={form.backendType}
+            onBackendChange={form.handleBackendProviderChange}
+            globalVariables={form.globalVariables}
+            metadataPairs={form.metadataPairs}
+            onMetadataPairsChange={form.setMetadataPairs}
           />
         );
 
@@ -79,10 +93,21 @@ export default function KnowledgeBaseUploadModal({
             chunkOverlap={form.chunkOverlap}
             separator={form.separator}
             selectedEmbeddingModel={form.selectedEmbeddingModel}
+            backendType={form.backendType}
+            metadataPairs={form.metadataPairs}
+            perFileMetadata={form.perFileMetadata}
           />
         );
     }
   };
+
+  const errorCount = Object.keys(form.validationErrors).length;
+  const modalBase = hideAdvanced
+    ? MODAL_HEIGHT_DEFAULT
+    : MODAL_HEIGHT_WITH_ADVANCED;
+  const _modalHeight = `${modalBase + errorCount * VALIDATION_ERROR_LINE_HEIGHT}`;
+
+  const showHelpButton = !hideAdvanced && form.currentStep === 1;
 
   return (
     <StepperModal
@@ -96,29 +121,38 @@ export default function KnowledgeBaseUploadModal({
       currentStep={form.currentStep}
       totalSteps={2}
       title={
-        form.isAddSourcesMode ? "Add Sources" : STEP_TITLES[form.currentStep]
+        form.isAddSourcesMode
+          ? t("knowledge.addSourcesTitle")
+          : getStepTitles()[form.currentStep]
       }
       description={
         form.isAddSourcesMode && form.currentStep === 1
-          ? "Upload files and configure chunking settings"
-          : STEP_DESCRIPTIONS[form.currentStep]
+          ? t("knowledge.addSourcesDescription")
+          : getStepDescriptions()[form.currentStep]
       }
       icon="Database"
-      height={(() => {
-        const errorCount = Object.keys(form.validationErrors).length;
-        const base = !hideAdvanced && form.showAdvanced ? 690 : 347;
-        return `${base + errorCount * 16}`;
-      })()}
+      height={
+        form.currentStep === 2
+          ? "h-[690px]"
+          : !hideAdvanced && form.showAdvanced
+            ? "min-h-[690px]"
+            : "min-h-[347px]"
+      }
       width="w-[700px]"
       showProgress={false}
       sidePanel={
-        <FilesPanel files={form.files} onRemoveFile={form.handleRemoveFile} />
+        <FilesPanel
+          files={form.files}
+          onRemoveFile={form.handleRemoveFile}
+          perFileMetadata={form.perFileMetadata}
+          onPerFileMetadataChange={form.setPerFileMetadata}
+        />
       }
       sidePanelOpen={form.files.length > 0}
       footer={
         <StepperModalFooter
           currentStep={form.currentStep}
-          totalSteps={!hideAdvanced && form.showAdvanced ? 2 : 1}
+          totalSteps={hideAdvanced ? 1 : 2}
           onBack={form.handleBack}
           onNext={form.handleNext}
           onSubmit={form.handleSubmit}
@@ -129,19 +163,19 @@ export default function KnowledgeBaseUploadModal({
           }
           isSubmitting={form.isSubmitting}
           submitTestId="kb-create-button"
-          submitLabel={form.isAddSourcesMode ? "Add Sources" : "Create"}
+          submitLabel={
+            form.isAddSourcesMode
+              ? t("knowledge.submitAddSources")
+              : t("knowledge.submitCreate")
+          }
           helpLabel={
-            !hideAdvanced && form.currentStep === 1
+            showHelpButton
               ? form.showAdvanced
-                ? "Hide Configuration"
-                : "Configure Sources"
+                ? t("knowledge.helpHideConfiguration")
+                : t("knowledge.helpConfigureSources")
               : undefined
           }
-          onHelp={
-            !hideAdvanced && form.currentStep === 1
-              ? form.toggleAdvanced
-              : undefined
-          }
+          onHelp={showHelpButton ? form.toggleAdvanced : undefined}
         />
       }
     >

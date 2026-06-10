@@ -1,10 +1,17 @@
 from datetime import datetime, timezone
 from enum import Enum
+from typing import Any
 from uuid import UUID
 
-from sqlalchemy import Column, DateTime
+from sqlalchemy import JSON, Column, DateTime
 from sqlalchemy import Enum as SQLEnum
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
+
+# JSONB on Postgres for binary storage + GIN-indexable paths, JSON
+# elsewhere (SQLite). Matches the variant used for other JSON columns
+# on the ``ingestion_run`` and ``knowledge_base`` tables.
+JsonVariant = JSON().with_variant(JSONB(), "postgresql")
 
 
 class JobStatus(str, Enum):
@@ -63,6 +70,20 @@ class JobBase(SQLModel):
     asset_type: str | None = Field(
         index=False, nullable=True
     )  # Polymorphic: records if job is related to an entity like a KB, workflow, etc.
+    dedupe_key: str | None = Field(
+        index=True, nullable=True
+    )  # Optional idempotency key to prevent duplicate jobs for the same asset and operation.
+
+    # Free-form per-domain progress / outcome data. Populated by the
+    # wrapped coroutine inside ``execute_with_status`` (e.g. KB
+    # ingestion writes counters and per-item outcomes here as it runs).
+    # Shape is intentionally untyped at this layer; each ``JobType``
+    # owns the keys it writes. Nullable so existing rows stay readable
+    # without a backfill — code reads with ``.get(...)``.
+    job_metadata: dict[str, Any] | None = Field(
+        default=None,
+        sa_column=Column(JsonVariant, nullable=True),
+    )
 
 
 class Job(JobBase, table=True):  # type: ignore[call-arg]

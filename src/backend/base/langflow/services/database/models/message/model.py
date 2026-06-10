@@ -4,13 +4,16 @@ from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Annotated
 from uuid import UUID, uuid4
 
+import numpy as np
+import pandas as pd
+from fastapi.encoders import jsonable_encoder
 from pydantic import ConfigDict, field_serializer, field_validator
 from sqlalchemy import Index, Text, text
 from sqlmodel import JSON, Column, Field, SQLModel
 
 from langflow.schema.content_block import ContentBlock
 from langflow.schema.properties import Properties
-from langflow.schema.validators import str_to_timestamp_validator
+from langflow.schema.validators import TF_WITH_TZ_AND_MICROSECONDS, str_to_timestamp, str_to_timestamp_validator
 
 if TYPE_CHECKING:
     from langflow.schema.message import Message
@@ -32,17 +35,18 @@ class MessageBase(SQLModel):
     properties: Properties = Field(default_factory=Properties)
     category: str = Field(default="message")
     content_blocks: list[ContentBlock] = Field(default_factory=list)
+    session_metadata: dict | None = Field(default=None)
 
     @field_serializer("timestamp")
     def serialize_timestamp(self, value):
         if isinstance(value, datetime):
             if value.tzinfo is None:
                 value = value.replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            return value.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
         if isinstance(value, str):
-            value = datetime.fromisoformat(value).replace(tzinfo=timezone.utc)
-            return value.strftime("%Y-%m-%d %H:%M:%S %Z")
+            dt = str_to_timestamp(value)  # unified, UTC-normalized
+            return dt.strftime(TF_WITH_TZ_AND_MICROSECONDS)
 
         return value
 
@@ -59,7 +63,7 @@ class MessageBase(SQLModel):
         return value
 
     @classmethod
-    def from_message(cls, message: "Message", flow_id: str | UUID | None = None):
+    def from_message(cls, message: "Message", flow_id: str | UUID | None = None, run_id: str | UUID | None = None):
         if message.text is None or not message.sender or not message.sender_name:
             msg = "The message does not have the required fields (text, sender, sender_name)."
             raise ValueError(msg)
@@ -84,15 +88,22 @@ class MessageBase(SQLModel):
                 message.files = image_paths
 
         if isinstance(message.timestamp, str):
+            # Convert timestamp string in format "YYYY-MM-DD HH:MM:SS.ffffff UTC" to datetime
             try:
-                timestamp = datetime.strptime(message.timestamp, "%Y-%m-%d %H:%M:%S %Z").replace(tzinfo=timezone.utc)
+                timestamp = datetime.strptime(message.timestamp, TF_WITH_TZ_AND_MICROSECONDS).replace(
+                    tzinfo=timezone.utc
+                )
             except ValueError:
-                timestamp = datetime.fromisoformat(message.timestamp).replace(tzinfo=timezone.utc)
+                # Fallback for ISO format if the above fails; astimezone preserves offset if present
+                parsed = datetime.fromisoformat(message.timestamp)
+                timestamp = parsed.astimezone(timezone.utc) if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
         else:
             timestamp = message.timestamp
 
         if not flow_id and message.flow_id:
             flow_id = message.flow_id
+        if not run_id and getattr(message, "run_id", None):
+            run_id = message.run_id
 
         message_text = "" if not isinstance(message.text, str) else message.text
 
@@ -114,6 +125,13 @@ class MessageBase(SQLModel):
                 msg = f"Flow ID {flow_id} is not a valid UUID"
                 raise ValueError(msg) from exc
 
+        if isinstance(run_id, str):
+            try:
+                run_id = UUID(run_id)
+            except ValueError as exc:
+                msg = f"Run ID {run_id} is not a valid UUID"
+                raise ValueError(msg) from exc
+
         return cls(
             sender=message.sender,
             sender_name=message.sender_name,
@@ -123,6 +141,7 @@ class MessageBase(SQLModel):
             files=message.files or [],
             timestamp=timestamp,
             flow_id=flow_id,
+            run_id=run_id,
             properties=properties,
             category=message.category,
             content_blocks=content_blocks,
@@ -149,6 +168,8 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     id: UUID = Field(default_factory=uuid4, primary_key=True)
     flow_id: UUID | None = Field(default=None)
+    run_id: UUID | None = Field(default=None, index=True)
+    is_output: bool = Field(default=False)
 
     files: list[str] = Field(sa_column=Column(JSON))
     properties: dict | Properties = Field(  # type: ignore[assignment]
@@ -179,7 +200,27 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @staticmethod
     def _sanitize_json(value):
-        """Replace float NaN/Infinity with None to avoid PostgreSQL jsonb rejection."""
+        """Coerce values into a JSON-safe shape before they reach the SQL UPDATE.
+
+        Replaces float NaN/Infinity with None to avoid PostgreSQL jsonb rejection,
+        and resolves non-serializable Python objects (notably pandas DataFrame /
+        lfx Table instances and numpy scalars) that can leak into ContentBlock
+        fields when an upstream component output — e.g. the Memory Base
+        ``retrieve_data`` Table — is captured by message tracking before the
+        consumer (Parser) has converted it to text.
+        """
+        # numpy scalars (np.float64, np.int64, np.bool_, ...) survive
+        # ``jsonable_encoder`` when nested inside a DataFrame-derived dict
+        # and would later be rejected by the jsonb encoder. Coerce them to
+        # their Python-native counterparts so persistence succeeds. This must
+        # come before the ``float`` / ``int`` / ``bool`` checks because numpy
+        # scalars inherit from those Python types.
+        if isinstance(value, np.generic):
+            return MessageTable._sanitize_json(value.item())
+
+        if isinstance(value, bool):
+            return value
+
         if isinstance(value, float):
             if not math.isfinite(value):
                 return None
@@ -191,7 +232,21 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
         if isinstance(value, list):
             return [MessageTable._sanitize_json(v) for v in value]
 
-        return value
+        if isinstance(value, pd.DataFrame):
+            return [MessageTable._sanitize_json(record) for record in value.to_dict(orient="records")]
+
+        if value is None or isinstance(value, str | int):
+            return value
+
+        # Unknown type — coerce to a JSON-safe representation rather than
+        # letting it propagate to the SQL UPDATE and fail persistence.
+        try:
+            encoded = jsonable_encoder(value)
+        except (TypeError, ValueError):
+            return str(value)
+        if encoded is value:
+            return str(value)
+        return MessageTable._sanitize_json(encoded)
 
     @field_validator("properties", "content_blocks", "session_metadata", mode="before")
     @classmethod
@@ -207,11 +262,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
     @field_serializer("properties", "content_blocks", "session_metadata")
     @classmethod
-    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict] | None:
+    def serialize_properties_or_content_blocks(cls, value) -> dict | list[dict]:
         # Redundant sanitization here acts as a defensive measure for rows
         # already in the database that might contain NaN/Infinity values.
-        if value is None:
-            return None
         if isinstance(value, list):
             value = [cls.serialize_properties_or_content_blocks(item) for item in value]
         elif hasattr(value, "model_dump"):
@@ -224,8 +277,9 @@ class MessageTable(MessageBase, table=True):  # type: ignore[call-arg]
 
 class MessageRead(MessageBase):
     id: UUID
-    flow_id: UUID | None = Field()
+    flow_id: UUID | None = None
     session_metadata: dict | None = None
+    run_id: UUID | None = None
 
 
 class MessageCreate(MessageBase):
@@ -243,3 +297,5 @@ class MessageUpdate(SQLModel):
     error: bool | None = None
     properties: Properties | None = None
     session_metadata: dict | None = None
+    category: str | None = None
+    content_blocks: list[ContentBlock] | None = None

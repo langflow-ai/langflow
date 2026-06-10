@@ -335,7 +335,6 @@
           "type": "ChatInput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatInput-b6UCc",
         "measured": {
           "height": 234,
@@ -498,7 +497,6 @@
           "type": "Prompt"
         },
         "dragging": false,
-        "height": 260,
         "id": "Prompt-t2oaK",
         "measured": {
           "height": 260,
@@ -522,6 +520,7 @@
             "description": "# 📖 README\nThis template demonstrates a standard chat flow with additional instructions provided by a prompt. Prompts provide instructions and inputs for a Large Language Model (LLM) beyond the standard user-provided chat input. In this example, the prompt describes the LLM's role and persona.\n\n## Quick start\n1. Configure your **Model Provider** with your API credentials.\n2. Open the **Playground** to start the chat and run the flow.\n\n## Next steps\nChange the prompt template, model, or model settings, such as **Temperature**, and then see how the responses change with these different inputs.\n💡 Some component settings are hidden by default; to view all settings click **Controls** in each component's header menu.\n💡 You can use curly braces to create variables in your template, such as `{variable}`. These can be populated from other components, with Langflow global variables, or at runtime.",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.basic_prompting.bd8ff52b",
             "template": {
               "backgroundColor": "neutral"
             }
@@ -558,6 +557,7 @@
             "description": "### Configure your Model Provider",
             "display_name": "",
             "documentation": "",
+            "i18n_key": "template_notes.basic_prompting.cd87cff6",
             "template": {
               "backgroundColor": "transparent"
             }
@@ -850,7 +850,6 @@
           "type": "ChatOutput"
         },
         "dragging": false,
-        "height": 234,
         "id": "ChatOutput-yK0AU",
         "measured": {
           "height": 234,
@@ -865,8 +864,7 @@
           "y": 872.7273956769025
         },
         "selected": false,
-        "type": "genericNode",
-        "width": 320
+        "type": "genericNode"
       },
       {
         "data": {

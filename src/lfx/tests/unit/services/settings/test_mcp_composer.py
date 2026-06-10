@@ -3,10 +3,15 @@
 import asyncio
 import contextlib
 import socket
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-from lfx.services.mcp_composer.service import MCPComposerPortError, MCPComposerService
+from lfx.services.mcp_composer.service import (
+    COMPOSER_BACKEND_AUTH_HEADER,
+    MCPComposerPortError,
+    MCPComposerService,
+)
 
 
 @pytest.fixture
@@ -36,6 +41,75 @@ class TestPortAvailability:
             assert mcp_service._is_port_available(test_port) is False
         finally:
             sock.close()
+
+
+class TestBackendAuthToken:
+    """Test internal Composer-to-Langflow backend authentication config."""
+
+    def test_backend_auth_member_config_adds_internal_header(self, mcp_service):
+        project_id = "backend-auth-test"
+
+        config = mcp_service._build_backend_auth_member_config(
+            project_id,
+            "http://localhost:7860/api/v1/mcp/project/test/streamable",
+            legacy_sse_url="http://localhost:7860/api/v1/mcp/project/test/sse",
+        )
+
+        token = mcp_service.get_or_create_backend_auth_token(project_id)
+        assert mcp_service.validate_backend_auth_token(project_id, token)
+        assert [entry["type"] for entry in config] == ["http", "sse"]
+        assert config[0]["headers"] == {COMPOSER_BACKEND_AUTH_HEADER: token}
+        assert config[1]["headers"] == {COMPOSER_BACKEND_AUTH_HEADER: token}
+
+    @pytest.mark.asyncio
+    async def test_oauth_startup_uses_config_path_for_backend_auth(self, mcp_service):
+        project_id = "backend-auth-process-test"
+        auth_config = {
+            "auth_type": "oauth",
+            "oauth_host": "localhost",
+            "oauth_port": "9000",
+            "oauth_server_url": "http://localhost:9000",
+            "oauth_client_id": "cid",
+            "oauth_client_secret": "csecret",  # pragma: allowlist secret
+            "oauth_auth_url": "http://auth",
+            "oauth_token_url": "http://token",
+        }
+
+        mock_settings = MagicMock()
+        mock_settings.settings.mcp_composer_version = "==0.1.0.8.10"
+        mock_process = MagicMock(pid=2222, poll=MagicMock(return_value=None))
+
+        with (
+            patch("lfx.services.mcp_composer.service.get_settings_service", return_value=mock_settings),
+            patch.object(
+                mcp_service,
+                "_write_backend_auth_member_config",
+                return_value=Path("/tmp/mcp-composer-test-config.json"),
+            ) as mock_write_config,
+            patch("subprocess.Popen", return_value=mock_process) as mock_popen,
+            patch.object(mcp_service, "_is_port_available", return_value=False),
+        ):
+            await mcp_service._start_project_composer_process(
+                project_id=project_id,
+                host="localhost",
+                port=9000,
+                streamable_http_url="http://test/mcp",
+                auth_config=auth_config,
+                max_startup_checks=1,
+                startup_delay=0.01,
+                legacy_sse_url="http://test/sse",
+            )
+
+        cmd = mock_popen.call_args[0][0]
+        assert "--config_path" in cmd
+        assert "--endpoint" not in cmd
+        assert "--sse-url" not in cmd
+        assert COMPOSER_BACKEND_AUTH_HEADER not in cmd
+        mock_write_config.assert_called_once_with(
+            project_id,
+            "http://test/mcp",
+            legacy_sse_url="http://test/sse",
+        )
 
 
 class TestKillProcessOnPort:

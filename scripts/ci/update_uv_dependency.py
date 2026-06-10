@@ -32,7 +32,8 @@ def update_uv_dep(base_version: str) -> None:
 
     # Extract extras if present (e.g., "[complete]")
     extras = match.group(3) if match.group(3) else ""
-    replacement = rf'\1"langflow-base-nightly{extras}=={base_version}"'
+    # Keep the canonical `langflow-base` name with an exact `==<dev>` pin.
+    replacement = rf'\1"langflow-base{extras}=={base_version}"'
 
     # Replace the matched pattern with the new one
     content = pattern.sub(replacement, content)

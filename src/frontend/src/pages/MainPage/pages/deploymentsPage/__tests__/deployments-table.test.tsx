@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react";
+import { render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { Deployment } from "../types";
 
@@ -26,15 +26,13 @@ import DeploymentsTable from "../components/deployments-table";
 const makeDeployment = (overrides: Partial<Deployment> = {}): Deployment => ({
   id: "dep-1",
   provider_id: "prov-1",
-  name: "My Agent",
+  provider_data: { display_name: "My Agent", name: "my_agent" },
   description: null,
   type: "agent",
   created_at: "2025-06-01T00:00:00Z",
   updated_at: "2025-06-10T12:00:00Z",
-  provider_data: null,
   resource_key: "rk-1",
   attached_count: 2,
-  matched_attachments: null,
   ...overrides,
 });
 
@@ -78,14 +76,19 @@ describe("Row rendering", () => {
     expect(screen.getByText("watsonx Prod")).toBeInTheDocument();
   });
 
-  it("renders description when present", () => {
-    renderTable([makeDeployment({ description: "Handles sales queries" })]);
-    expect(screen.getByText("Handles sales queries")).toBeInTheDocument();
+  it("renders em dash when display_name is missing", () => {
+    renderTable([
+      makeDeployment({ provider_data: null, resource_key: "dep-rk" }),
+    ]);
+
+    const row = screen.getByTestId("deployment-row-dep-1");
+    expect(within(row).getByText("—")).toBeInTheDocument();
+    expect(screen.queryByText("dep-rk")).not.toBeInTheDocument();
   });
 
-  it("does not render description when null", () => {
-    renderTable([makeDeployment({ description: null })]);
-    expect(screen.queryByText("Handles sales queries")).not.toBeInTheDocument();
+  it("renders description under the deployment name", () => {
+    renderTable([makeDeployment({ description: "Handles sales queries" })]);
+    expect(screen.getByText("Handles sales queries")).toBeInTheDocument();
   });
 
   it("shows MCP badge for mcp type", () => {
@@ -100,8 +103,14 @@ describe("Row rendering", () => {
 
   it("renders multiple rows", () => {
     renderTable([
-      makeDeployment({ id: "dep-1", name: "Agent A" }),
-      makeDeployment({ id: "dep-2", name: "Agent B" }),
+      makeDeployment({
+        id: "dep-1",
+        provider_data: { display_name: "Agent A", name: "agent_a" },
+      }),
+      makeDeployment({
+        id: "dep-2",
+        provider_data: { display_name: "Agent B", name: "agent_b" },
+      }),
     ]);
     expect(screen.getByTestId("deployment-row-dep-1")).toBeInTheDocument();
     expect(screen.getByTestId("deployment-row-dep-2")).toBeInTheDocument();
@@ -253,7 +262,10 @@ describe("Deleting state", () => {
     renderTable(
       [
         makeDeployment({ id: "dep-1" }),
-        makeDeployment({ id: "dep-2", name: "Other" }),
+        makeDeployment({
+          id: "dep-2",
+          provider_data: { display_name: "Other", name: "other" },
+        }),
       ],
       { deletingId: "dep-1" },
     );
@@ -273,7 +285,7 @@ describe("Column headers", () => {
       "Name",
       "Type",
       "Attached",
-      "Provider",
+      "Environment",
       "Last Modified",
       "Test",
     ]) {

@@ -1,7 +1,9 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { expect } from "../../fixtures";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
+import { buildFlowAndWait } from "../../utils/flow/build-flow-and-wait";
+import { openStarterProject } from "../../utils/flow/open-starter-project";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { uploadFile } from "../../utils/upload-file";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -10,19 +12,9 @@ withEventDeliveryModes(
   "Document Q&A",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
-    await awaitBootstrapTest(page);
-
-    await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Document Q&A" }).click();
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
+    await openStarterProject(page, "Document Q&A");
     await initialGPTsetup(page);
 
     await uploadFile(page, "test_file.txt");
@@ -30,13 +22,13 @@ withEventDeliveryModes(
     await page.waitForSelector('[data-testid="button_run_chat output"]', {
       timeout: 3000,
     });
+    await buildFlowAndWait(page);
 
-    await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", { timeout: 120000 });
-
-    await page.getByRole("button", { name: "Playground", exact: true }).click();
     await page
-      .getByText("No input message provided.", { exact: true })
+      .getByRole("button", { name: TEXTS.playground, exact: true })
+      .click();
+    await page
+      .getByText(TEXTS.labelNoInputMessage, { exact: true })
       .last()
       .isVisible();
 
@@ -56,7 +48,7 @@ withEventDeliveryModes(
       timeout: 10000,
     });
 
-    await page.getByText("this is a test file").last().isVisible();
-    expect(await page.getByTestId("div-chat-message).last().count()).toBe(1)"));
+    await expect(page.getByText("this is a test file").last()).toBeVisible();
+    expect(await page.getByTestId("div-chat-message").last().count()).toBe(1);
   },
 );

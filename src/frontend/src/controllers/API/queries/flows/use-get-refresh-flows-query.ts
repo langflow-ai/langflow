@@ -1,5 +1,6 @@
 import type { UseQueryOptions } from "@tanstack/react-query";
 import { AxiosError } from "axios";
+import { useTranslation } from "react-i18next";
 import buildQueryStringUrl from "@/controllers/utils/create-query-param-string";
 import useAlertStore from "@/stores/alertStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
@@ -32,6 +33,7 @@ export const useGetRefreshFlowsQuery: useQueryFunctionType<
   GetFlowsParams,
   FlowType[] | PaginatedFlowsType
 > = (params, options) => {
+  const { t } = useTranslation();
   const { query } = UseRequestProcessor();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
@@ -77,7 +79,7 @@ export const useGetRefreshFlowsQuery: useQueryFunctionType<
     } catch (e) {
       if (e instanceof AxiosError && e.status !== 403) {
         setErrorData({
-          title: "Could not load flows from database",
+          title: t("errors.couldNotLoadFlows"),
         });
       }
       throw e;

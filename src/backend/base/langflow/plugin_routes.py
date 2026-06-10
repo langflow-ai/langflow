@@ -7,6 +7,7 @@ a wrapper so they cannot overwrite or shadow existing Langflow routes.
 from importlib.metadata import entry_points
 
 from fastapi import FastAPI
+from lfx.extension import filter_component_entry_points
 from lfx.log.logger import logger
 
 
@@ -98,7 +99,7 @@ class _PluginAppWrapper:
 
 
 def load_plugin_routes(app: FastAPI) -> None:
-    """Discover and register additional routers from enterprise plugins.
+    """Discover and register additional routers from authorization plugins.
 
     Plugins register themselves via the ``langflow.plugins`` entry-point group.
     Each entry point must expose a callable with the signature::
@@ -109,8 +110,19 @@ def load_plugin_routes(app: FastAPI) -> None:
     reserved = _get_route_keys(app)
     wrapper = _PluginAppWrapper(app, reserved)
 
-    eps = entry_points(group="langflow.plugins")
-    for ep in sorted(eps, key=lambda e: e.name):
+    raw_eps = list(entry_points(group="langflow.plugins"))
+    # Manifest-first precedence: if a distribution ships an
+    # extension manifest, its COMPONENT-typed entry-points are skipped here;
+    # the Extension System loader registers those components via the
+    # manifest. Non-component entry-points (route registrars like the ones
+    # this loader expects) on the same distribution still load normally.
+    kept_eps, skipped_eps = filter_component_entry_points(raw_eps)
+    for skipped in skipped_eps:
+        logger.info(
+            "Skipping component entry-point '%s' (manifest-first precedence; loaded via extension instead)",
+            skipped.name,
+        )
+    for ep in sorted(kept_eps, key=lambda e: e.name):
         try:
             plugin_register = ep.load()
         except Exception:  # noqa: BLE001

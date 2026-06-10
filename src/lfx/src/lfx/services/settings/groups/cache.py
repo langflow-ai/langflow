@@ -25,12 +25,17 @@ class CacheSettings(BaseModel):
     @field_validator("cache_dir", mode="before")
     @classmethod
     def validate_cache_dir(cls, value):
-        """Validate and normalize cache_dir path."""
+        """Validate and normalize cache_dir path.
+
+        If not set, returns None and the factory will fall back to config_dir.
+        If set, resolves to an absolute path and creates the directory if needed.
+        """
         if not value:
             return None
 
         if isinstance(value, str):
             value = Path(value)
+        # Resolve to absolute path to handle relative paths correctly
         value = value.resolve()
         if not value.exists():
             value.mkdir(parents=True, exist_ok=True)

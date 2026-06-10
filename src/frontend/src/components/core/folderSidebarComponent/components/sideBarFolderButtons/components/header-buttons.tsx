@@ -25,6 +25,9 @@ export const HeaderButtons = ({
   const hideGettingStartedProgress = useUtilityStore(
     (state) => state.hideGettingStartedProgress,
   );
+  const hideNewProjectButton = useUtilityStore(
+    (state) => state.hideNewProjectButton,
+  );
 
   const [isDismissedDialog, setIsDismissedDialog] = useState(
     userData?.optins?.dialog_dismissed,
@@ -89,11 +92,13 @@ export const HeaderButtons = ({
             onClick={handleUploadFlowsToFolder}
             disabled={isUpdatingFolder}
           />
-          <AddFolderButton
-            onClick={addNewFolder}
-            disabled={isUpdatingFolder}
-            loading={isPending}
-          />
+          {!hideNewProjectButton && (
+            <AddFolderButton
+              onClick={addNewFolder}
+              disabled={isUpdatingFolder}
+              loading={isPending}
+            />
+          )}
         </div>
       </div>
     </>

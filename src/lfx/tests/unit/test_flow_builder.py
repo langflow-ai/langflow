@@ -74,6 +74,17 @@ REGISTRY = {
             },
         },
     ),
+    "WithMeta": _make_template(
+        "With Meta",
+        template_fields={
+            "_type": "CustomComponent",  # non-dict reserved template entry
+            "input_value": {
+                "display_name": "Input",
+                "type": "str",
+                "value": "",
+            },
+        },
+    ),
     "OpenAIModel": _make_template(
         "OpenAI",
         outputs=[
@@ -201,6 +212,18 @@ class TestComponent:
         r = add_component(flow, "ChatInput", REGISTRY)
         with pytest.raises(ValueError, match="Unknown parameter"):
             configure_component(flow, r["id"], {"nonexistent_field": "val"})
+
+    def test_should_reject_when_param_targets_non_dict_template_entry(self):
+        # Bug I7: configure_component silently wrapped a non-dict reserved
+        # template entry (e.g. "_type") into {"value": ...}, corrupting the
+        # node. It must reject the key instead.
+        flow = _fresh_flow()
+        r = add_component(flow, "WithMeta", REGISTRY)
+        with pytest.raises(ValueError, match="not a configurable field"):
+            configure_component(flow, r["id"], {"_type": "Hijacked"})
+        node = flow["data"]["nodes"][0]
+        # The reserved entry must remain the original string, untouched.
+        assert node["data"]["node"]["template"]["_type"] == "CustomComponent"
 
     def test_get_component(self):
         flow = _fresh_flow()
@@ -337,8 +360,8 @@ class TestConnect:
     def test_add_connection_is_idempotent(self):
         """Repeating add_connection for the same pair must not duplicate the edge.
 
-        Regression for LE-866: connecting components via batch (or after the
-        edge was already created in the UI) appended a second edge with the
+        Regression: connecting components via batch (or after the edge
+        was already created in the UI) appended a second edge with the
         same connection, double-wiring the flow at runtime.
         """
         flow = _fresh_flow()
@@ -352,10 +375,11 @@ class TestConnect:
     def test_add_connection_dedupes_against_ui_saved_edges(self):
         """Re-adding connections to a real UI-saved flow must not grow the edge list.
 
-        Regression for LE-866 against an actual UI-exported fixture. UI-saved
-        edges from older Langflow versions use the `xy-edge__` id prefix
-        instead of `reactflow__edge-`, so dedup must be structural (source,
-        target, handle name, handle fieldName) rather than by edge id.
+        Regression against an actual UI-exported fixture. UI-saved edges
+        from older Langflow versions use the `xy-edge__` id prefix
+        instead of `reactflow__edge-`, so dedup must be structural
+        (source, target, handle name, handle fieldName) rather than by
+        edge id.
         """
         fixture = Path(__file__).parent.parent / "data" / "MemoryChatbotNoLLM.json"
         flow = json.loads(fixture.read_text())
@@ -414,6 +438,221 @@ class TestConnect:
         assert conns[0]["target_id"] == r2["id"]
         assert conns[0]["source_output"] == "message"
         assert conns[0]["target_input"] == "input_value"
+
+
+# Registries dedicated to tool-mode behavior tests. They use the same
+# pattern as real Langflow components: tool_mode=True on an INPUT, plain
+# data/message outputs. The shapes mirror what the API returns from /all
+# for components like FirecrawlScrapeApi, WebSearchTool, etc.
+
+TOOL_REGISTRY = {
+    # Mirrors FirecrawlScrapeApi: tool_mode=True on the url input, single
+    # plain output that has no tool_mode flag of its own.
+    "FirecrawlScrapeApi": _make_template(
+        "Firecrawl Scrape API",
+        outputs=[{"name": "data", "types": ["Data"]}],
+        template_fields={
+            "api_key": {"type": "SecretStr", "required": True, "show": True},
+            "url": {
+                "type": "str",
+                "tool_mode": True,
+                "required": True,
+                "show": True,
+                "input_types": ["Message"],
+            },
+        },
+    ),
+    # Generic tool-capable component using the MessageTextInput pattern.
+    "WebSearchTool": _make_template(
+        "Web Search Tool",
+        outputs=[{"name": "result", "types": ["Message"]}],
+        template_fields={
+            "query": {
+                "type": "str",
+                "tool_mode": True,
+                "show": True,
+                "input_types": ["Message"],
+            },
+        },
+    ),
+    # Component without any tool_mode input — should NOT auto-flip.
+    "PlainOutput": _make_template(
+        "Plain Output",
+        outputs=[{"name": "data", "types": ["Data"]}],
+        template_fields={
+            "value": {"type": "str", "show": True, "input_types": ["Message"]},
+        },
+    ),
+    # Agent target with a `tools` input that accepts Tool type.
+    "Agent": _make_template(
+        "Agent",
+        outputs=[{"name": "response", "types": ["Message"]}],
+        template_fields={
+            "tools": {
+                "display_name": "Tools",
+                "type": "other",
+                "value": "",
+                "input_types": ["Tool"],
+            },
+            "input_value": {
+                "display_name": "Input",
+                "type": "str",
+                "value": "",
+                "input_types": ["Message"],
+            },
+        },
+    ),
+}
+
+
+class TestConnectComponentAsTool:
+    """add_connection must auto-flip tool_mode when wiring `component_as_tool`.
+
+    A component declares tool support via ``tool_mode=True`` on one or more
+    INPUT fields. The static template's outputs do NOT contain
+    ``component_as_tool`` until tool mode is enabled at runtime (see
+    ``Component._handle_tool_mode``). For the flow builder to honor a
+    ``Foo.component_as_tool -> Agent.tools`` edge produced by the LLM, it
+    must:
+
+    1. Recognize that the source has at least one tool-mode-capable input
+    2. Flip ``tool_mode=True`` on the source node's template
+    3. Replace the source's outputs with the synthesized tool output
+    4. Then add the edge
+
+    Without step 2, ``_resolve_output_types`` cannot find the output and
+    raises ``ValueError("Output 'component_as_tool' not found...")``, which
+    is exactly the failure the LLM reported back to the user.
+    """
+
+    def test_should_auto_enable_tool_mode_when_connecting_via_component_as_tool(self):
+        flow = _fresh_flow()
+        source = add_component(flow, "FirecrawlScrapeApi", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        # The source node's template must reflect tool_mode=True
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"]["tool_mode"] is True
+
+    def test_should_replace_source_outputs_with_tool_output(self):
+        flow = _fresh_flow()
+        source = add_component(flow, "FirecrawlScrapeApi", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        outputs = src_node["data"]["node"]["outputs"]
+        names = [o["name"] for o in outputs]
+        assert "component_as_tool" in names
+        tool_output = next(o for o in outputs if o["name"] == "component_as_tool")
+        assert "Tool" in tool_output["types"]
+
+    def test_should_add_edge_with_tool_output_after_auto_flip(self):
+        flow = _fresh_flow()
+        source = add_component(flow, "FirecrawlScrapeApi", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        assert len(flow["data"]["edges"]) == 1
+        edge = flow["data"]["edges"][0]
+        assert edge["source"] == source
+        assert edge["target"] == target
+        assert edge["data"]["sourceHandle"]["name"] == "component_as_tool"
+
+    @pytest.mark.parametrize("component_type", ["FirecrawlScrapeApi", "WebSearchTool"])
+    def test_should_auto_flip_for_any_component_with_tool_mode_input(self, component_type):
+        """Generic across components — works for any tool_mode=True input."""
+        flow = _fresh_flow()
+        source = add_component(flow, component_type, TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"]["tool_mode"] is True
+        assert any(o["name"] == "component_as_tool" for o in src_node["data"]["node"]["outputs"])
+
+    def test_should_reject_component_as_tool_when_source_has_no_tool_mode_input(self):
+        """If the source genuinely doesn't support tool mode, fail with a clear error.
+
+        PlainOutput has no tool_mode=True input — connecting via
+        component_as_tool is meaningless and must surface as a domain error,
+        not be silently auto-enabled.
+        """
+        flow = _fresh_flow()
+        source = add_component(flow, "PlainOutput", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        with pytest.raises(ValueError, match=r"component_as_tool|tool_mode"):
+            add_connection(flow, source, "component_as_tool", target, "tools")
+
+    def test_should_not_touch_source_when_connecting_via_normal_output(self):
+        """Non-tool edges must not flip tool_mode (regression guard)."""
+        flow = _fresh_flow()
+        source = add_component(flow, "WebSearchTool", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "result", target, "input_value")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        assert src_node["data"]["node"].get("tool_mode", False) is False
+        # The original outputs are preserved
+        assert {o["name"] for o in src_node["data"]["node"]["outputs"]} == {"result"}
+
+    def test_synthesized_tool_output_matches_canonical_langflow_shape(self):
+        """The auto-flipped output must contain every field a real saved tool output has.
+
+        Sample taken from starter_projects/Travel Planning Agents.json — when
+        any field is missing the backend's /custom_component/update endpoint
+        crashes on the canvas with "string indices must be integers, not 'str'"
+        because downstream serializers expect the full Output schema.
+        """
+        flow = _fresh_flow()
+        source = add_component(flow, "FirecrawlScrapeApi", TOOL_REGISTRY)["id"]
+        target = add_component(flow, "Agent", TOOL_REGISTRY)["id"]
+
+        add_connection(flow, source, "component_as_tool", target, "tools")
+
+        src_node = next(n for n in flow["data"]["nodes"] if n["data"]["id"] == source)
+        tool_output = next(o for o in src_node["data"]["node"]["outputs"] if o["name"] == "component_as_tool")
+
+        # Required keys present in every real Langflow tool output entry.
+        required_keys = {
+            "allows_loop",
+            "cache",
+            "display_name",
+            "group_outputs",
+            "hidden",
+            "method",
+            "name",
+            "options",
+            "required_inputs",
+            "selected",
+            "tool_mode",
+            "types",
+            "value",
+        }
+        missing = required_keys - set(tool_output.keys())
+        assert not missing, f"Synthesized tool output is missing keys: {missing}"
+
+        # Canonical values that downstream code asserts on.
+        assert tool_output["name"] == "component_as_tool"
+        assert tool_output["display_name"] == "Toolset"
+        assert tool_output["method"] == "to_toolkit"
+        assert tool_output["types"] == ["Tool"]
+        assert tool_output["selected"] == "Tool"
+        assert tool_output["tool_mode"] is True
+        assert tool_output["cache"] is True
+        assert tool_output["allows_loop"] is False
+        assert tool_output["group_outputs"] is False
+        assert tool_output["hidden"] is False
+        assert tool_output["options"] is None
+        assert tool_output["required_inputs"] is None
+        assert tool_output["value"] == "__UNDEFINED__"
 
 
 # ---------------------------------------------------------------------------
@@ -935,6 +1174,38 @@ config:
         result = parse_flow_spec(spec)
         assert "You are a helpful assistant." in result["config"]["A"]["system_prompt"]
         assert "Be concise." in result["config"]["A"]["system_prompt"]
+
+    def test_multiline_block_does_not_swallow_the_next_config_key(self):
+        # Production bug: a `Node.field:` key with NO inline value (e.g.
+        # `C.model:` whose value is on following lines) was not matched by
+        # _CONFIG_KEY_RE (it required a colon-SPACE-value), so while a
+        # `|` block was open the next key got appended into the block.
+        # Result: system_prompt polluted + the model config lost (Agent
+        # built with no model).
+        spec = """\
+name: Bug
+
+nodes:
+  C: Agent
+
+config:
+  C.system_prompt: |
+    You are an assistant.
+    Be concise.
+  C.model:
+    - provider: OpenAI
+      name: gpt-4o
+"""
+        result = parse_flow_spec(spec)
+
+        cfg = result["config"]["C"]
+        # The block scalar must STOP at the next key — not absorb it.
+        assert "C.model" not in cfg["system_prompt"]
+        assert "provider" not in cfg["system_prompt"]
+        assert "gpt-4o" not in cfg["system_prompt"]
+        assert cfg["system_prompt"].strip().endswith("Be concise.")
+        # `C.model` must be parsed as its own config entry.
+        assert "model" in cfg
 
     def test_config_multiple_nodes(self):
         spec = """\

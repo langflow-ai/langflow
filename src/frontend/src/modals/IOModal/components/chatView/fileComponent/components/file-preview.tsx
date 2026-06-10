@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import IconComponent, {
   ForwardedIconComponent,
 } from "../../../../../../components/common/genericIconComponent";
@@ -17,6 +18,7 @@ export default function FilePreview({
   error: boolean;
   onDelete: () => void;
 }) {
+  const { t } = useTranslation();
   const fileType = file.type.toLowerCase();
   const isImage = supImgFiles.some((type) => fileType.includes(type));
 
@@ -76,7 +78,7 @@ export default function FilePreview({
               <ForwardedIconComponent name="File" className="h-8 w-8" />
               <div className="flex flex-col">
                 <span className="font-bold">{formatFileName(file.name)}</span>
-                <span>File</span>
+                <span>{t("chat.file")}</span>
               </div>
             </div>
           )}
