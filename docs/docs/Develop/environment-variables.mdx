@@ -395,7 +395,7 @@ See [Use Langflow as an MCP server](/mcp-server).
 
 ### Multi-worker deployments
 
-For multi-worker tuning—including the Redis job queue and Gunicorn worker settings—see [Deploy Langflow with multiple workers](./deployment-multi-worker).
+For multi-worker tuning—including the Redis job queue and Gunicorn worker settings—see [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker.mdx).
 
 ### Monitoring and metrics
 
@@ -413,10 +413,10 @@ The following environment variables set base Langflow server configuration, such
 | `LANGFLOW_DEV` | Boolean | `False` | Whether to run Langflow in development mode (may contain bugs). |
 | `LANGFLOW_OPEN_BROWSER` | Boolean | `False` | Open the system web browser on startup. |
 | `LANGFLOW_HEALTH_CHECK_MAX_RETRIES` | Integer | `5` | Set the maximum number of retries for Langflow's server status health checks. |
-| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
-| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
-| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | Enables Gunicorn `preload_app`. Non-Windows only. See [Deploy Langflow with multiple workers](./deployment-multi-worker#recommended-gunicorn-settings). |
-| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` for multi-worker deployments. See [Deploy Langflow with multiple workers](./deployment-multi-worker#configuration-reference). |
+| `LANGFLOW_WORKERS` | Integer | `1` | Number of worker processes. See [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker.mdx#recommended-gunicorn-settings). |
+| `LANGFLOW_WORKER_TIMEOUT` | Integer | `300` | Worker timeout in seconds. See [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker.mdx#recommended-gunicorn-settings). |
+| `LANGFLOW_GUNICORN_PRELOAD` | Boolean | `False` | Enables Gunicorn `preload_app`. Non-Windows only. See [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker.mdx#recommended-gunicorn-settings). |
+| `LANGFLOW_JOB_QUEUE_TYPE` | String | `asyncio` | Job queue backend. Use `redis` for multi-worker deployments. See [Deploy Langflow with multiple workers](../Deployment/deployment-multi-worker.mdx#configuration-reference). |
 | `LANGFLOW_SSL_CERT_FILE` | String | Not set | Path to the SSL certificate file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_SSL_KEY_FILE` | String | Not set | Path to the SSL key file for enabling HTTPS on the Langflow web server. This is separate from [database SSL connections](/configuration-custom-database#connect-langflow-to-a-local-postgresql-database). |
 | `LANGFLOW_DEACTIVATE_TRACING` | Boolean | `False` | Deactivate tracing functionality. |
