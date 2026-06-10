@@ -112,8 +112,13 @@ def test_root_registers_each_provider_at_official(tmp_path: Path) -> None:
             assert comp.namespaced_id == f"ext:{bundle}:{comp.class_name}@official"
 
 
-def test_invalid_provider_name_emits_malformed_warning_and_skips(tmp_path: Path) -> None:
-    """A provider folder that is not lowercase snake_case is surfaced, not silently dropped."""
+def test_invalid_provider_name_emits_typed_warning_and_skips(tmp_path: Path) -> None:
+    """A provider folder that is not lowercase snake_case is surfaced, not silently dropped.
+
+    Dedicated code (not ``bundle-discovery-malformed``): the fix is renaming
+    the directory, not editing the entry-point declaration, and the rendered
+    template/hint must say so.
+    """
     root = _make_bundles_root(tmp_path, "good")
     _make_provider(root, "BadName")  # capitals fail BUNDLE_NAME_RE
 
@@ -121,9 +126,9 @@ def test_invalid_provider_name_emits_malformed_warning_and_skips(tmp_path: Path)
 
     loaded = {r.bundle for r in results if r.bundle and r.components}
     assert loaded == {"good"}  # the invalid one did not load
-    malformed = [e for r in results for e in r.warnings if e.code == "bundle-discovery-malformed"]
-    assert any(e.content == "BadName" for e in malformed)
-    # The malformed entry produced no components.
+    invalid = [e for r in results for e in r.warnings if e.code == "bundles-provider-name-invalid"]
+    assert any(e.content == "BadName" for e in invalid)
+    # The invalid entry produced no components.
     assert all(not r.components for r in results if any(w.content == "BadName" for w in r.warnings))
 
 
@@ -178,7 +183,9 @@ def test_duplicate_provider_across_roots_first_wins(tmp_path: Path) -> None:
 
     dup_results = [r for r in results if r.bundle == "dup"]
     with_components = [r for r in dup_results if r.components]
-    shadowed = [r for r in dup_results if any(e.code == "bundle-shadowed" for e in r.warnings)]
+    # Same-tier duplicate carries its own code -- ``bundle-shadowed`` means
+    # cross-source precedence and would render a misleading template here.
+    shadowed = [r for r in dup_results if any(e.code == "duplicate-lfx-bundles-provider" for e in r.warnings)]
     assert len(with_components) == 1  # exactly one winner
     assert len(shadowed) == 1  # exactly one shadowed loser
     assert not shadowed[0].components
@@ -204,9 +211,10 @@ def test_claimed_bundle_name_is_not_imported(tmp_path: Path) -> None:
     assert set(by_bundle) == {"claimedprov", "freeprov"}
     claimed = by_bundle["claimedprov"]
     assert not claimed.components
-    assert claimed.ok  # warning-only: never aborts startup
-    assert [w.code for w in claimed.warnings] == ["bundle-shadowed"]
-    assert "installed" in claimed.warnings[0].message
+    # Same code AND same severity (errors) as _resolve_bundle_shadowing emits
+    # for every other cross-source shadow pair.
+    assert [e.code for e in claimed.errors] == ["bundle-shadowed"]
+    assert "installed" in claimed.errors[0].message
     # The decisive property: nothing was imported for the claimed name, so
     # the winner's live modules cannot have been overwritten.
     assert not [k for k in sys.modules if k.startswith("_lfx_ext.official.claimedprov")]
@@ -271,6 +279,82 @@ def test_empty_entry_point_value_is_malformed() -> None:
     roots, sentinels = _resolve_bundle_roots([_FakeBundlesEntryPoint("")])
     assert roots == []
     assert [e.code for s in sentinels for e in s.warnings] == ["bundle-discovery-malformed"]
+
+
+def test_raising_parent_package_degrades_to_malformed(tmp_path: Path, monkeypatch) -> None:
+    """A dotted declaration whose parent package raises on import never escapes.
+
+    ``find_spec("pkg.sub")`` imports ``pkg`` -- arbitrary third-party
+    ``__init__`` code that can raise anything, not just ImportError.  An
+    escape here would reach the palette cache's catch-all and wipe EVERY
+    source's components for the boot; instead it degrades to one malformed
+    sentinel and the rest of discovery proceeds.
+    """
+    pkg = tmp_path / "rottenpkg_fixture"
+    pkg.mkdir()
+    (pkg / "__init__.py").write_text("raise RuntimeError('boom')\n", encoding="utf-8")
+    (pkg / "bundles").mkdir()
+    (pkg / "bundles" / "__init__.py").write_text("", encoding="utf-8")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    try:
+        roots, sentinels = _resolve_bundle_roots([_FakeBundlesEntryPoint("rottenpkg_fixture.bundles")])
+        assert roots == []
+        assert [e.code for s in sentinels for e in s.warnings] == ["bundle-discovery-malformed"]
+        assert "RuntimeError" in sentinels[0].warnings[0].message
+        assert all(s.ok for s in sentinels)
+    finally:
+        sys.modules.pop("rottenpkg_fixture", None)
+        importlib.invalidate_caches()
+
+
+def test_namespace_package_portions_are_all_walked(tmp_path: Path, monkeypatch) -> None:
+    """Every portion of a namespace package contributes providers.
+
+    A namespace package split across two sys.path entries has one
+    ``submodule_search_locations`` entry per portion; walking only the first
+    would silently drop the other portion's providers (with the winner
+    decided by sys.path order).
+    """
+    pkg = "ns_bundles_fixture"
+    for portion, provider in (("a", "portiona_prov"), ("b", "portionb_prov")):
+        root = tmp_path / portion / pkg
+        root.mkdir(parents=True)  # deliberately no __init__.py: namespace portions
+        _make_provider(root, provider)
+        monkeypatch.syspath_prepend(str(tmp_path / portion))
+    importlib.invalidate_caches()
+    try:
+        results = load_lfx_bundles_extensions(entry_points=[_FakeBundlesEntryPoint(pkg)])
+        loaded = {r.bundle for r in results if r.bundle and r.components}
+        assert loaded == {"portiona_prov", "portionb_prov"}
+        assert not [e for r in results for e in (*r.warnings, *r.errors)]
+    finally:
+        importlib.invalidate_caches()
+
+
+def test_duplicate_entry_points_walk_the_root_once(tmp_path: Path, monkeypatch) -> None:
+    """Two declarations naming the same package do not walk its directory twice.
+
+    Without path-level dedupe the second walk would make every provider in
+    the root shadow-warn against itself.
+    """
+    pkg = "dup_ep_bundles_fixture"
+    _make_bundles_root(tmp_path, "dupepprov", pkg=pkg)
+    monkeypatch.syspath_prepend(str(tmp_path))
+    importlib.invalidate_caches()
+    try:
+        results = load_lfx_bundles_extensions(
+            entry_points=[
+                _FakeBundlesEntryPoint(pkg, name="first"),
+                _FakeBundlesEntryPoint(pkg, name="second"),
+            ]
+        )
+        dup = [r for r in results if r.bundle == "dupepprov"]
+        assert len(dup) == 1
+        assert dup[0].components
+        assert not [e for r in results for e in (*r.warnings, *r.errors)]
+    finally:
+        importlib.invalidate_caches()
 
 
 def test_plain_module_entry_point_is_malformed_not_scanned(tmp_path: Path, monkeypatch) -> None:

@@ -426,10 +426,18 @@ the deserialize half is covered by
   imported** -- all `@official` sources share the
   `_lfx_ext.official.<bundle>.*` sys.modules namespace, so importing the
   losing copy would overwrite the winner's live modules; the skipped copy
-  still surfaces the `bundle-shadowed` warning.  New warning-only code
-  `bundle-discovery-malformed` added to `ERROR_CODES` (additive) for
-  unresolvable declarations and invalid provider directory names; it never
-  aborts startup.  Manifest-less bundles bypass the
+  carries the same typed `bundle-shadowed` diagnostic (on `errors`, matching
+  the resolver) so filtering by code never mixes severities.  Namespace
+  packages are walked across **all portions**, and resolved roots are
+  deduplicated by path so duplicate declarations never self-shadow.  New
+  warning-only codes added to `ERROR_CODES` (additive), one per discovery
+  failure mode and none of which abort startup: `bundle-discovery-malformed`
+  (declaration does not resolve to an importable package directory --
+  including a parent package whose `__init__` raises during `find_spec`),
+  `bundles-provider-name-invalid` (provider folder is not a valid bundle
+  name), `bundles-root-unreadable` (root cannot be enumerated), and
+  `duplicate-lfx-bundles-provider` (same provider name in more than one
+  root; first wins).  Manifest-less bundles bypass the
   `version-constraint-unsatisfied` API-version gate by construction (no
   manifest to carry `lfx.compat`); install-time compatibility rides on the
   metapackage's PEP 508 `lfx>=X,<Y` pin instead.  Manifest-less records
