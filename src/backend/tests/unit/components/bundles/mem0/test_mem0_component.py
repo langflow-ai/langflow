@@ -24,11 +24,24 @@ class TestMem0CloudValidation:
 
     @patch("lfx.components.mem0.mem0_chat_memory.Memory")
     def test_build_mem0_works_when_not_in_cloud(self, mock_memory):
-        """Test that build_mem0 works when ASTRA_CLOUD_DISABLE_COMPONENT is false."""
+        """build_mem0 works when not in cloud, passing the OpenAI key through mem0 config.
+
+        The key must NOT be written to os.environ: that is process-global and persists
+        across requests, so in a shared serving process (lfx serve) one caller's key
+        would leak into other concurrent requests.
+        """
         with patch.dict(os.environ, {"ASTRA_CLOUD_DISABLE_COMPONENT": "false"}):
+            os.environ.pop("OPENAI_API_KEY", None)
             component = Mem0MemoryComponent(openai_api_key="test-key")
             component.build_mem0()
-            mock_memory.assert_called_once()
+
+            # Key flows through config, not the environment.
+            mock_memory.from_config.assert_called_once()
+            config = mock_memory.from_config.call_args.kwargs["config_dict"]
+            assert config["llm"]["config"]["api_key"] == "test-key"
+            assert config["embedder"]["config"]["api_key"] == "test-key"
+            # Regression guard for the credential-bleed bug: never pollute os.environ.
+            assert "OPENAI_API_KEY" not in os.environ
 
     def test_build_search_results_uses_mem0_2_filters_for_search(self):
         """Test that search uses filters for Mem0 2.x entity scoping."""

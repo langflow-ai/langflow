@@ -135,14 +135,13 @@ test(
       timeout: 30000,
     });
 
-    try {
-      await page.getByTestId("new_project_btn_empty_page").click();
-      await page.waitForSelector('[data-testid="modal-title"]', {
-        timeout: 30000,
-      });
-    } catch (_error) {
-      await openTemplatesModal(page, { modalTimeout: 30000 });
-    }
+    // The empty-page CTA now routes through the welcome overlay before the
+    // templates modal opens; openTemplatesModal handles both the overlay and
+    // direct-modal paths.
+    await openTemplatesModal(page, {
+      fromEmptyPage: true,
+      modalTimeout: 30000,
+    });
 
     // Use blank-flow instead of the Basic Prompting template. The template
     // path provisions multiple components on the backend and, on Windows CI

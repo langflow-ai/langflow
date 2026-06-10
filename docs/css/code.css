@@ -1,3 +1,9 @@
+/* Geist Mono (and other ligature-enabled fonts) merge ~= into one glyph in inline code */
+code,
+pre code {
+  font-variant-ligatures: none;
+}
+
 .docusaurus-highlight-code-line {
   background-color: rgba(0, 0, 0, 0.1);
   display: block;

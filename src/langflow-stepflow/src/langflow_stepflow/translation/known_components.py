@@ -20,7 +20,7 @@ class KnownComponent:
     """A known core component mapping."""
 
     code_hash: str
-    module: str  # Full module path, e.g., "lfx.components.docling.DoclingInlineComponent"
+    module: str  # Full module path, e.g., "lfx_docling.components.docling.DoclingInlineComponent"
     description: str = ""
     # Alternative module paths that are functionally equivalent
     # (e.g., custom_components variants)
@@ -52,37 +52,41 @@ KNOWN_COMPONENTS: dict[str, KnownComponent] = {
     # because the module doesn't exist in the lfx package - it must be compiled
     # from custom code.
     #
-    # Docling components (lfx)
+    # Docling components (lfx-docling bundle)
     # Note: Some workflows use custom_components.docling_serve which requires
-    # custom_code compilation. The lfx.components.docling.docling_remote module
-    # provides the standard DoclingRemoteComponent for connecting to docling-serve.
+    # custom_code compilation. The lfx_docling DoclingRemoteComponent provides
+    # the standard component for connecting to docling-serve.
     "d76b3853ceb4": KnownComponent(  # pragma: allowlist secret
         code_hash="d76b3853ceb4",  # pragma: allowlist secret
-        module="lfx.components.docling.docling_inline.DoclingInlineComponent",
+        module="lfx_docling.components.docling.docling_inline.DoclingInlineComponent",
         description="Docling inline document processing (local/sidecar)",
+        aliases=("lfx.components.docling.docling_inline.DoclingInlineComponent",),
     ),
     "26eeb513dded": KnownComponent(
         code_hash="26eeb513dded",
-        module="lfx.components.docling.docling_remote.DoclingRemoteComponent",
+        module="lfx_docling.components.docling.docling_remote.DoclingRemoteComponent",
         description="Docling remote processing via docling-serve API",
+        aliases=("lfx.components.docling.docling_remote.DoclingRemoteComponent",),
     ),
     # Custom "Docling Serve" variant used in production workflows
     # Same class as DoclingRemoteComponent but with workflow-specific customizations
     "5723576d00e5": KnownComponent(
         code_hash="5723576d00e5",
-        module="lfx.components.docling.docling_remote.DoclingRemoteComponent",
+        module="lfx_docling.components.docling.docling_remote.DoclingRemoteComponent",
         description="Docling Serve (custom variant of DoclingRemoteComponent)",
-        aliases=("custom_components.docling_serve",),
+        aliases=("lfx.components.docling.docling_remote.DoclingRemoteComponent", "custom_components.docling_serve"),
     ),
     "397fa38f89d7": KnownComponent(
         code_hash="397fa38f89d7",
-        module="lfx.components.docling.chunk_docling_document.ChunkDoclingDocumentComponent",
+        module="lfx_docling.components.docling.chunk_docling_document.ChunkDoclingDocumentComponent",
         description="Chunk DoclingDocument for RAG pipelines",
+        aliases=("lfx.components.docling.chunk_docling_document.ChunkDoclingDocumentComponent",),
     ),
     "4de16ddd37ac": KnownComponent(
         code_hash="4de16ddd37ac",
-        module="lfx.components.docling.export_docling_document.ExportDoclingDocumentComponent",
+        module="lfx_docling.components.docling.export_docling_document.ExportDoclingDocumentComponent",
         description="Export DoclingDocument to markdown, html or other formats",
+        aliases=("lfx.components.docling.export_docling_document.ExportDoclingDocumentComponent",),
     ),
     # EmbeddingModel component (lfx)
     "0e2d6fe67a26": KnownComponent(
@@ -129,8 +133,8 @@ def lookup_known_component(code_hash: str, module: str | None = None) -> KnownCo
 def module_to_path(module: str) -> str:
     """Convert module path to URL path segment.
 
-    Example: "lfx.components.docling.DoclingInlineComponent"
-          -> "lfx/components/docling/DoclingInlineComponent"
+    Example: "lfx_docling.components.docling.DoclingInlineComponent"
+          -> "lfx_docling/components/docling/DoclingInlineComponent"
 
     Args:
         module: Full module path with dots

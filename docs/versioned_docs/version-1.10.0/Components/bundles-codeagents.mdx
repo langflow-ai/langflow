@@ -1,0 +1,90 @@
+---
+title: Code Agents
+slug: /bundles-codeagents
+---
+
+import Icon from "@site/src/components/icon";
+
+<Icon name="Blocks" aria-hidden="true" /> [**Bundles**](/components-bundle-components) contain custom components that support specific third-party integrations with Langflow.
+
+Langflow integrates with [OpenDsStar](https://github.com/IBM/OpenDsStar) through a bundle of code-writing agent components that can iteratively plan, write, and execute Python code to solve complex tasks.
+
+:::info
+Code Agents components are in **beta** and can change in future releases.
+:::
+
+## Prerequisites
+
+* **OpenDsStar package**: Code Agents components require the `OpenDsStar` package and Python 3.11 or later.
+
+    Install the dependency with:
+
+    ```bash
+    uv pip install OpenDsStar
+    ```
+
+    For more information, see [Install custom dependencies](/install-custom-dependencies).
+
+## Use Code Agents components in a flow
+
+For an example of using this component, see the **Structured Data Agent** starter template.
+
+## Code Agents components
+
+The following sections describe the purpose and configuration options for each component in the **Code Agents** bundle.
+
+### CodeAct Agent (Smolagents)
+
+The **CodeAct Agent (Smolagents)** component is a code-writing agent that uses the [smolagents](https://huggingface.co/docs/smolagents) `CodeAgent` to solve tasks by iteratively generating and executing Python code.
+
+At each step the agent writes code, executes it in a sandboxed interpreter, and uses the output to determine the next action until it reaches a final answer.
+
+The component outputs a [`Message`](/data-types#message) containing the final answer.
+
+#### CodeAct Agent (Smolagents) parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| input_value | String | Input parameter. The message or query to send to the agent. |
+| llm | LanguageModel | Input parameter. The language model to use for code generation. Required. |
+| tools | Tool | Input parameter. Optional tools the agent can call in addition to executing code. |
+| max_iterations | Integer | Input parameter. Maximum number of agent iterations. Default: `5`. Range: 1–50. |
+| system_prompt | String | Input parameter. A system message to customize agent behavior. |
+| code_timeout | Integer | Input parameter. Maximum time in seconds for each code execution step. Default: `30`. Range: 5–300. |
+| show_code_steps | String | Input parameter. How to display coding steps in the **Playground**: `All Steps`, `Final Code Only`, or `None`. Default: `All Steps`. |
+| handle_parsing_errors | Boolean | Input parameter. Whether the agent should attempt to recover from input parsing errors. Default: `true`. |
+| verbose | Boolean | Input parameter. Enable verbose logging. Default: `true`. |
+| chat_history | Data | Input parameter. Chat history for multi-turn conversations. |
+| agent_description | String | Input parameter. Description of the agent shown when used in Tool Mode. |
+
+### OpenDsStar Agent
+
+The **OpenDsStar Agent** component is a structured data analysis agent that uses [OpenDsStar](https://github.com/IBM/OpenDsStar) and LangGraph to answer complex questions over structured data files.
+
+The agent executes a multi-step LangGraph workflow: planning → code generation → code execution → verification → routing → finalization.
+Each step is streamed to the **Playground** as it runs.
+Charts and images returned by the agent are rendered inline.
+
+The component outputs a [`Message`](/data-types#message) containing the final answer.
+
+#### OpenDsStar Agent parameters
+
+| Name | Type | Description |
+|------|------|-------------|
+| input_value | String | Input parameter. The message or query to send to the agent. |
+| llm | LanguageModel | Input parameter. The language model to use for the agent. Required. |
+| tools | Tool | Input parameter. Optional tools the agent can use, such as **File Content Retriever** or vector store search. |
+| max_iterations | Integer | Input parameter. Maximum number of agent steps. Default: `10`. Range: 1–100. |
+| code_execution_mode | String | Input parameter. Code execution mode. `stepwise` executes each step separately; `full` executes all steps together. Default: `stepwise`. |
+| system_prompt | String | Input parameter. A system message to customize agent behavior. |
+| handle_parsing_errors | Boolean | Input parameter. Whether the agent should attempt to recover from input parsing errors. Default: `true`. |
+| code_timeout | Integer | Input parameter. Maximum execution time in seconds for each code step. Default: `60`. Range: 10–300. |
+| verbose | Boolean | Input parameter. Enable verbose logging. Default: `true`. |
+| chat_history | Data | Input parameter. Chat history for multi-turn conversations. |
+| agent_description | String | Input parameter. Description of the agent shown when used in Tool Mode. |
+
+## See also
+
+* [File Processing bundle](./bundles-files-ingestion) — file ingestion and retrieval components designed to work with Code Agents
+* [OpenDsStar GitHub repository](https://github.com/IBM/OpenDsStar)
+* [smolagents documentation](https://huggingface.co/docs/smolagents)

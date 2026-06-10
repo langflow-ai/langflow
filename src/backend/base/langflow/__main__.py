@@ -196,6 +196,7 @@ def build_direct_uvicorn_kwargs(
     ssl_cert_file_path: str | None,
     ssl_key_file_path: str | None,
     system: str | None = None,
+    trust_proxy: bool = False,
 ) -> dict:
     """Build the kwargs dict for ``uvicorn.run(app, **kwargs)`` on Win/macOS.
 
@@ -203,6 +204,11 @@ def build_direct_uvicorn_kwargs(
     the launch site stays a single call and so tests can assert that things
     like TLS cert/key pass through. Mirrors the option set used on the
     Gunicorn (Linux) path so platform parity does not drift again.
+
+    ``trust_proxy=False`` (default) passes ``forwarded_allow_ips=""`` so
+    uvicorn's ProxyHeadersMiddleware trusts no source for X-Forwarded-For,
+    preventing IP-spoofing attacks against the login rate limit.
+    ``trust_proxy=True`` passes ``"*"`` for deployments behind a trusted proxy.
     """
     return {
         "host": host,
@@ -213,6 +219,7 @@ def build_direct_uvicorn_kwargs(
         "loop": loop,
         "ssl_certfile": ssl_cert_file_path,
         "ssl_keyfile": ssl_key_file_path,
+        "forwarded_allow_ips": "*" if trust_proxy else "",
     }
 
 
@@ -551,6 +558,7 @@ def run(
                 loop=loop_type,
                 ssl_cert_file_path=ssl_cert_file_path,
                 ssl_key_file_path=ssl_key_file_path,
+                trust_proxy=get_settings_service().settings.rate_limit_trust_proxy,
             ),
         )
     else:
