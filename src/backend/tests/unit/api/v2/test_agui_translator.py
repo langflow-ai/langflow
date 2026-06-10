@@ -263,6 +263,120 @@ def test_end_drains_buffered_messages_before_run_finished():
     assert ends == ["m1", "m2"]
 
 
+def test_error_drains_buffered_messages_before_run_error():
+    """A run erroring while messages are still buffered must flush them all."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    sequence = [
+        ("token", {"chunk": "open", "id": "m1"}),
+        ("token", {"chunk": "first waiting", "id": "m2"}),
+        ("token", {"chunk": "second waiting", "id": "m3"}),
+        ("error", {"error": "boom"}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    assert isinstance(out[-1], RunErrorEvent)
+    ends = [e.message_id for e in out if isinstance(e, TextMessageEndEvent)]
+    assert ends == ["m1", "m2", "m3"]
+    deltas = {e.message_id: e.delta for e in out if isinstance(e, TextMessageContentEvent)}
+    assert deltas["m2"] == "first waiting"
+    assert deltas["m3"] == "second waiting"
+
+
+def test_partial_add_message_does_not_finalize_open_message():
+    """A partial ``add_message`` re-fire must not close the streaming message.
+
+    The agent path re-fires ``add_message`` with ``properties.state ==
+    "partial"`` mid-run (tool start/end updates) for the message it is still
+    streaming. Treating that as the finalizer closed and tombstoned the id,
+    so the post-tool answer tokens were dropped.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "pre-tool ", "id": "m1"})
+    partial = t.translate("add_message", {"id": "m1", "text": "pre-tool ", "properties": {"state": "partial"}})
+    assert all(not isinstance(e, TextMessageEndEvent) for e in partial), (
+        f"partial add_message closed the open message: {partial}"
+    )
+
+    post_tool = t.translate("token", {"chunk": "answer", "id": "m1"})
+    assert len(post_tool) == 1
+    assert isinstance(post_tool[0], TextMessageContentEvent)
+    assert post_tool[0].delta == "answer"
+
+    out = t.translate("add_message", {"id": "m1", "text": "pre-tool answer", "properties": {"state": "complete"}})
+    assert any(isinstance(e, TextMessageEndEvent) and e.message_id == "m1" for e in out)
+
+
+def test_partial_add_message_does_not_finalize_buffered_message():
+    """A partial re-fire for a buffered parallel message must not complete it.
+
+    A parallel tool-using agent streams pre-tool text (buffered while another
+    message holds the wire), then re-fires a partial ``add_message`` at the
+    tool boundary. Finalizing the buffer there froze it: the post-tool tokens
+    were ignored and the promoted message lost everything after the tool call.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "wire-holder", "id": "m1"})
+    t.translate("token", {"chunk": "pre-tool ", "id": "m2"})
+    t.translate("add_message", {"id": "m2", "text": "pre-tool ", "properties": {"state": "partial"}})
+    t.translate("token", {"chunk": "post-tool", "id": "m2"})
+    t.translate("add_message", {"id": "m1", "text": "wire-holder", "properties": {"state": "complete"}})
+    t.translate("add_message", {"id": "m2", "text": "pre-tool post-tool", "properties": {"state": "complete"}})
+    out = t.translate("end", {})
+
+    events: list = []
+    t2 = AGUITranslator(run_id="r2", thread_id="t2")
+    # Re-run the same sequence through _run_sequence for a full-stream check.
+    events = _run_sequence(
+        t2,
+        [
+            ("token", {"chunk": "wire-holder", "id": "m1"}),
+            ("token", {"chunk": "pre-tool ", "id": "m2"}),
+            ("add_message", {"id": "m2", "text": "pre-tool ", "properties": {"state": "partial"}}),
+            ("token", {"chunk": "post-tool", "id": "m2"}),
+            ("add_message", {"id": "m1", "text": "wire-holder", "properties": {"state": "complete"}}),
+            ("add_message", {"id": "m2", "text": "pre-tool post-tool", "properties": {"state": "complete"}}),
+            ("end", {}),
+        ],
+    )
+    _assert_well_formed(events)
+    m2_text = "".join(e.delta for e in events if isinstance(e, TextMessageContentEvent) and e.message_id == "m2")
+    assert m2_text == "pre-tool post-tool"
+    assert isinstance(out[-1], RunFinishedEvent)
+
+
+def test_remove_message_purges_buffered_message():
+    """A removed message must not flush its buffered text later.
+
+    The agent error path fires ``remove_message`` for its partial message.
+    If that message was buffered (a parallel component held the wire), the
+    buffer must be discarded — flushing it later would deliver text the
+    backend explicitly retracted.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "wire-holder", "id": "m1"})
+    t.translate("token", {"chunk": "doomed text", "id": "m2"})
+    removed = t.translate("remove_message", {"id": "m2"})
+    assert any(isinstance(e, CustomEvent) and e.name == "langflow.message.removed" for e in removed)
+
+    out = t.translate("add_message", {"id": "m1", "text": "wire-holder"})
+    out.extend(t.translate("end", {}))
+
+    m2_events = [
+        e
+        for e in out
+        if isinstance(e, (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)) and e.message_id == "m2"
+    ]
+    assert m2_events == [], f"removed message's buffered text leaked: {m2_events}"
+
+
 def test_vertices_sorted_emits_state_snapshot_of_all_nodes():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
