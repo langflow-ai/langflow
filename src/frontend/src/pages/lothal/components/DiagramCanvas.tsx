@@ -28,6 +28,7 @@ import { SystemNode } from "./SystemNode";
 // on every render.
 const nodeTypes = { actorNode: ActorNode, systemNode: SystemNode };
 
+/** Presentational sequence-diagram canvas over the contract's nodes/edges. */
 export function DiagramCanvas({
   nodes,
   edges,

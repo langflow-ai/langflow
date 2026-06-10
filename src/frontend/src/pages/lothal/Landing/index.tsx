@@ -108,6 +108,7 @@ const LARDER_EDGES: DiagramEdge[] = [
 
 // --- Hero product preview -------------------------------------------------------
 
+/** The hero preview's left pane: the larder project mid-clarification. */
 function SceneChat() {
   return (
     <div
@@ -266,6 +267,7 @@ function SceneChat() {
   );
 }
 
+/** The hero's windowed product preview: chat beside a live diagram canvas. */
 function HeroScene() {
   return (
     <div
@@ -368,6 +370,7 @@ function HeroScene() {
 
 // --- Section head helper ---------------------------------------------------------
 
+/** Eyebrow + serif title + optional sub, centered or left-aligned. */
 function SectionHead({
   eyebrow,
   title,
@@ -473,6 +476,7 @@ const LANDING_CSS = `
   }
 `;
 
+/** The landing content; assumes a surrounding LothalSurface for theme tokens. */
 function LandingView() {
   const navigate = useNavigate();
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
@@ -1157,6 +1161,7 @@ function LandingView() {
   );
 }
 
+/** Public landing page at "/" — marketing surface on the dockyard theme. */
 export default function Landing() {
   return (
     <LothalSurface>
