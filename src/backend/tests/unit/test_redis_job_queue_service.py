@@ -2429,12 +2429,9 @@ async def test_redis_public_job_cross_worker_fallback():
 
     try:
         job_id = str(uuid.uuid4())
-        svc_a.register_public_job(job_id)
-
-        # Drain Worker A background tasks so the Redis key is written
-        for task in list(svc_a._background_tasks):
-            with contextlib.suppress(Exception):
-                await task
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc_a.register_public_job(job_id)
 
         # Worker B must have no in-memory entry (no shared memory between workers)
         assert not svc_b.is_public_job(job_id), "Worker B must have no in-memory entry"
@@ -2459,12 +2456,9 @@ async def test_redis_cleanup_removes_public_job_key():
 
     try:
         job_id = str(uuid.uuid4())
-        svc.register_public_job(job_id)
-
-        # Drain background tasks so the Redis key is written before we assert
-        for task in list(svc._background_tasks):
-            with contextlib.suppress(Exception):
-                await task
+        # register_public_job awaits the Redis write directly (no background task
+        # to drain) — see Why comment on RedisJobQueueService.register_public_job.
+        await svc.register_public_job(job_id)
 
         # Confirm the key exists in Redis before cleanup
         pub_key = svc._public_job_key(job_id)

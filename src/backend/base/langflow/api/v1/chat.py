@@ -864,7 +864,7 @@ async def build_public_tmp(
         # Gate the public events/cancel endpoints to jobs that were actually
         # started through this public build path, preventing unauthenticated
         # callers from reading or cancelling private-flow builds by job_id.
-        queue_service.register_public_job(job_id)
+        await queue_service.register_public_job(job_id)
     except CustomComponentValidationError as exc:
         await logger.awarning(f"Public flow validation failed: {exc}")
         raise HTTPException(status_code=400, detail="This flow cannot be executed.") from exc

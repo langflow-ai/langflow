@@ -316,11 +316,16 @@ class JobQueueService(Service):
         """Return the user ID that owns a job, or None if not tracked."""
         return self._job_owners.get(job_id)
 
-    def register_public_job(self, job_id: str) -> None:
+    async def register_public_job(self, job_id: str) -> None:
         """Mark a job as started through the public (unauthenticated) build endpoint.
 
         Only jobs registered here may be accessed via the public events/cancel endpoints.
         This prevents unauthenticated callers from reading or cancelling private-flow jobs.
+
+        Async (even though the base implementation is a synchronous set add):
+        RedisJobQueueService overrides this to also persist the marker to Redis
+        *before returning*, so a request landing on a different worker immediately
+        after registration sees the marker via is_public_job_async.
         """
         self._public_jobs.add(job_id)
 
@@ -1001,6 +1006,16 @@ class RedisJobQueueService(JobQueueService):
                             published = True
                         if needs_ttl_refresh:
                             await self._client.expire(stream_key, self._ttl)
+                            # Why: register_public_job sets the public_job marker with
+                            # ex=self._ttl once at job start. Long-running builds that
+                            # outlive that TTL would have the marker expire while the
+                            # stream itself is kept alive, causing is_public_job_async
+                            # to 404 a still-active public job on other workers. Refresh
+                            # it on the same cadence as the stream TTL. is_public_job is
+                            # the in-memory (sync) check — true on the worker that owns
+                            # this bridge, which is the same worker that registered it.
+                            if self.is_public_job(job_id):
+                                await self._client.expire(self._public_job_key(job_id), self._ttl)
                             last_ttl_refresh = time.monotonic()
                         in_flight_item = None
                         _retry_delay = 0.1
@@ -1624,19 +1639,19 @@ class RedisJobQueueService(JobQueueService):
                 return _UUID(value.decode())
         return None
 
-    def register_public_job(self, job_id: str) -> None:
+    async def register_public_job(self, job_id: str) -> None:
         """Mark a job as public in both local memory and Redis for cross-worker access.
 
-        Why fire-and-forget for the Redis write: the Redis key only needs to exist
-        by the time the client receives the job_id response and sends a follow-up
-        events/cancel request. The network RTT between those two requests gives the
-        background task ample time to complete. A missed write degrades to a benign
-        404 on the follow-up — not a security bypass — because a missing key is
-        treated as non-public, which is the safe default.
+        Why synchronous (not fire-and-forget): a request for the public events/cancel
+        endpoint can land on a different worker than the one that registered the job.
+        If the Redis write were backgrounded, that worker could run is_public_job_async
+        before the marker exists and incorrectly 404 a legitimate public job. Awaiting
+        the write here guarantees the marker is visible to every worker by the time
+        build_public_tmp's response (containing job_id) reaches the client.
         """
-        super().register_public_job(job_id)
+        await super().register_public_job(job_id)
         if self._client:
-            self._spawn_background(self._set_public_job_key(job_id))
+            await self._set_public_job_key(job_id)
 
     async def _set_public_job_key(self, job_id: str) -> None:
         try:

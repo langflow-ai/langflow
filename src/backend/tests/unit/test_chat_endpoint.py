@@ -1326,7 +1326,7 @@ def test_scope_session_to_namespace_helper():
 # by guessing or leaking a job_id from the authenticated build endpoint.
 
 
-def test_job_queue_service_register_and_check_public_job():
+async def test_job_queue_service_register_and_check_public_job():
     """register_public_job marks a job as public; is_public_job reflects that."""
     svc = JobQueueService()
     job_id = str(uuid.uuid4())
@@ -1334,7 +1334,7 @@ def test_job_queue_service_register_and_check_public_job():
     # Why: job not registered yet — must return False before registration
     assert svc.is_public_job(job_id) is False
 
-    svc.register_public_job(job_id)
+    await svc.register_public_job(job_id)
 
     # Why: job registered — must return True after registration
     assert svc.is_public_job(job_id) is True
@@ -1353,7 +1353,7 @@ async def test_job_queue_service_is_public_job_async_base():
 
     # Why: async variant must mirror sync variant — False before, True after
     assert await svc.is_public_job_async(job_id) is False
-    svc.register_public_job(job_id)
+    await svc.register_public_job(job_id)
     assert await svc.is_public_job_async(job_id) is True
 
 
@@ -1365,7 +1365,7 @@ async def test_job_queue_service_cleanup_removes_public_registration():
     """
     svc = JobQueueService()
     job_id = str(uuid.uuid4())
-    svc.register_public_job(job_id)
+    await svc.register_public_job(job_id)
     assert svc.is_public_job(job_id) is True
 
     # Call the real cleanup path — not svc._public_jobs.discard directly.
@@ -1403,6 +1403,11 @@ async def test_private_job_id_blocked_on_public_events_endpoint(client, json_mem
     assert private_start.status_code == codes.OK
     private_job_id = private_start.json()["job_id"]
 
+    # Why: the shared AsyncClient persists access-token cookies from logged_in_headers.
+    # Without clearing them, get_current_user_optional could resolve a user on this
+    # "public" request, which would not exercise the unauthenticated attack path.
+    client.cookies.clear()
+
     # Attempt to read the private job's events via the unauthenticated public endpoint
     # Why: this is the exact attack vector — attacker has job_id, tries public endpoint
     events_response = await client.get(
@@ -1434,6 +1439,11 @@ async def test_private_job_id_blocked_on_public_cancel_endpoint(client, json_mem
     )
     assert private_start.status_code == codes.OK
     private_job_id = private_start.json()["job_id"]
+
+    # Why: the shared AsyncClient persists access-token cookies from logged_in_headers.
+    # Without clearing them, get_current_user_optional could resolve a user on this
+    # "public" request, which would not exercise the unauthenticated attack path.
+    client.cookies.clear()
 
     # Attempt to cancel the private job via the unauthenticated public endpoint
     cancel_response = await client.post(
