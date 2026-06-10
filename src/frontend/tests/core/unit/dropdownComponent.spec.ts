@@ -139,7 +139,7 @@ test(
     await page.getByTestId("code-button-modal").last().click();
 
     await page.locator("textarea").press("Control+a");
-    const emptyOptionsCode = `from langchain_community.chat_models.bedrock import BedrockChat
+    const emptyOptionsCode = `from langchain_aws import ChatBedrock as BedrockChat
 
 from langflow.base.constants import STREAM_INFO_TEXT
 from langflow.base.models.model import LCModelComponent

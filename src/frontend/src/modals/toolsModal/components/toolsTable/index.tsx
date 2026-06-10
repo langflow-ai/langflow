@@ -226,7 +226,12 @@ export default function ToolsTable({
               "uppercase",
             ])
           : isAction
-            ? sanitizeMcpName(params.data.display_name, 46).toUpperCase()
+            ? (() => {
+                const raw = sanitizeMcpName(params.data.display_name, 46);
+                return (
+                  raw === "unnamed" ? t("common.unnamed") : raw
+                ).toUpperCase();
+              })()
             : parseString(params.data.tags.join(", "), [
                 "snake_case",
                 "uppercase",
