@@ -139,22 +139,26 @@ To use S3 as your file storage backend, add the following configuration to your 
 ```text
 # S3 Storage Configuration
 LANGFLOW_STORAGE_TYPE=s3
-LANGFLOW_OBJECT_STORAGE_BUCKET_NAME=S3_BUCKET_NAME
-LANGFLOW_OBJECT_STORAGE_PREFIX=S3_BUCKET_DIRECTORY
+LANGFLOW_OBJECT_STORAGE_BUCKET_NAME=your-bucket-name
+LANGFLOW_OBJECT_STORAGE_PREFIX=your-folder-prefix
 
-# AWS Credentials (required for S3)
-AWS_ACCESS_KEY_ID=S3_ACCESS_KEY
-AWS_SECRET_ACCESS_KEY=S3_ACCESS_SECRET_KEY
-AWS_DEFAULT_REGION=S3_REGION
+# AWS credentials and region
+AWS_ACCESS_KEY_ID=your-access-key-id
+AWS_SECRET_ACCESS_KEY=your-secret-access-key
+AWS_DEFAULT_REGION=us-east-2
+
+# Optional custom endpoint for S3-compatible storage
+AWS_ENDPOINT_URL_S3=https://your-s3-compatible-endpoint
 ```
 
-Replace the following placeholders with the actual values for your S3 instance:
+Replace the example values with the actual values for your S3 instance:
 
-* `S3_BUCKET_NAME`: The name of your S3 bucket.
-* `S3_BUCKET_DIRECTORY`: An optional folder path within the bucket where files are stored, such as `s3://S3_BUCKET_NAME/S3_BUCKET_DIRECTORY`.
-* `S3_ACCESS_KEY`: Your AWS Access Key ID.
-* `S3_ACCESS_SECRET_KEY`: Your AWS Secret Access Key.
-* `S3_REGION`: The AWS region where your bucket is located, such as `us-east-2`.
+* `your-bucket-name`: The name of your S3 bucket.
+* `your-folder-prefix`: An optional folder path within the bucket where files are stored, such as `s3://your-bucket-name/your-folder-prefix`.
+* `your-access-key-id`: Your AWS Access Key ID.
+* `your-secret-access-key`: Your AWS Secret Access Key.
+* `us-east-2`: The AWS region where your bucket is located.
+* `https://your-s3-compatible-endpoint`: Optional endpoint URL for S3-compatible storage services.
 
 Your AWS credentials must have the necessary permissions to perform the required S3 operations for your use case, such as reading, writing, and deleting files in S3.
 This example policy allows basic CRUD operations on S3 objects.
@@ -201,6 +205,10 @@ The following environment variables configure file storage backends for Langflow
 | `LANGFLOW_OBJECT_STORAGE_BUCKET_NAME` | String | Not set | The name of the S3 bucket to use for file storage. Required when `LANGFLOW_STORAGE_TYPE=s3`. |
 | `LANGFLOW_OBJECT_STORAGE_PREFIX` | String | Not set | Optional prefix/folder path within the S3 bucket where files will be stored. If not set, files are stored at the bucket root. |
 | `LANGFLOW_OBJECT_STORAGE_TAGS` | JSON object | Not set | Optional S3 object tags applied to stored files when `LANGFLOW_STORAGE_TYPE=s3`. Ignored for local storage. Provided as a JSON map of string keys to string values, such as `{"env": "prod", "owner": "data-team"}`. |
+| `AWS_ACCESS_KEY_ID` | String | Not set | The AWS access key ID used by boto3 for S3 authentication. Required when your AWS credential provider chain does not supply credentials another way. |
+| `AWS_SECRET_ACCESS_KEY` | String | Not set | The AWS secret access key used by boto3 for S3 authentication. Required when your AWS credential provider chain does not supply credentials another way. |
+| `AWS_DEFAULT_REGION` | String | Not set | The AWS region where your S3 bucket is located, such as `us-east-2`. |
+| `AWS_ENDPOINT_URL_S3` | URL | Not set | Optional custom endpoint URL for S3-compatible storage services. Leave unset when using AWS S3's standard regional endpoints. |
 
 ## See also
 

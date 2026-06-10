@@ -1,4 +1,4 @@
-"""Unit tests for S3StorageService input validation.
+"""Unit tests for S3StorageService input validation and client setup.
 
 These tests run offline. They assert that malformed flow_id / file_name values
 are rejected at the storage layer BEFORE any AWS call is attempted, so the
@@ -122,3 +122,49 @@ class TestS3StorageServicePathValidation:
         """
         with pytest.raises(ValueError, match="Invalid"):
             await s3_service_offline.get_file("/etc", "hosts")
+
+
+class FakeS3Session:
+    """Fake aioboto3 session that records S3 client calls."""
+
+    def __init__(self) -> None:
+        self.client_calls: list[tuple[tuple[object, ...], dict[str, object]]] = []
+
+    def client(self, *args, **kwargs):
+        self.client_calls.append((args, kwargs))
+        return Mock()
+
+
+def test_get_client_uses_default_s3_client_when_endpoint_url_is_unset(
+    monkeypatch, mock_session_service, mock_settings_service
+):
+    """Verify S3StorageService keeps the default S3 client behavior without AWS_ENDPOINT_URL_S3."""
+    monkeypatch.delenv("AWS_ENDPOINT_URL_S3", raising=False)
+    service = S3StorageService(mock_session_service, mock_settings_service)
+    fake_session = FakeS3Session()
+    service.session = fake_session
+
+    service._get_client()
+
+    assert fake_session.client_calls == [(("s3",), {})]
+
+
+def test_get_client_passes_service_endpoint_from_environment(monkeypatch, mock_session_service, mock_settings_service):
+    """Verify S3StorageService passes AWS_ENDPOINT_URL_S3 to the S3 client."""
+    monkeypatch.setenv("AWS_ENDPOINT_URL_S3", "http://127.0.0.1:9000")
+    service = S3StorageService(mock_session_service, mock_settings_service)
+    fake_session = FakeS3Session()
+    service.session = fake_session
+
+    service._get_client()
+
+    assert fake_session.client_calls == [(("s3",), {"endpoint_url": "http://127.0.0.1:9000"})]
+
+
+def test_initialization_preserves_bucket_prefix_and_tags(mock_session_service, mock_settings_service):
+    """Verify S3StorageService keeps existing storage configuration behavior."""
+    service = S3StorageService(mock_session_service, mock_settings_service)
+
+    assert service.bucket_name == "langflow-unit-test-bucket"
+    assert service.prefix == "test-prefix/"
+    assert service.tags == {}
