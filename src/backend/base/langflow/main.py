@@ -479,7 +479,14 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                     await asyncio.sleep(refresh_interval_seconds)
 
-            models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+            # LANGFLOW_MODELS_DEV_REFRESH=false disables the live models.dev
+            # fetch. Tests set this: the startup fetch otherwise fires from a
+            # background task during whatever test is running, hitting the
+            # network and tripping event-loop-block detectors (pyleak).
+            if os.getenv("LANGFLOW_MODELS_DEV_REFRESH", "true").lower() not in ("false", "0", "no"):
+                models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+            else:
+                await logger.adebug("models.dev refresh disabled via LANGFLOW_MODELS_DEV_REFRESH")
 
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager

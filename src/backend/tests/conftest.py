@@ -50,6 +50,21 @@ def disable_rate_limiting():
     os.environ.pop("LANGFLOW_RATE_LIMIT_ENABLED", None)
 
 
+@pytest.fixture(scope="session", autouse=True)
+def disable_models_dev_refresh():
+    """Keep the models.dev background refresh out of tests.
+
+    Every app boot otherwise launches a lifespan task that fetches
+    https://models.dev/api.json mid-test, which both hits the network and
+    trips event-loop-block detectors (pyleak) in whatever test happens to be
+    running when the request lands. The bundled static model lists are used
+    instead, which is also deterministic.
+    """
+    os.environ["LANGFLOW_MODELS_DEV_REFRESH"] = "false"
+    yield
+    os.environ.pop("LANGFLOW_MODELS_DEV_REFRESH", None)
+
+
 # TODO: Revert this to True once bb.functions[func].can_block_in("http/client.py", "_safe_read") is fixed
 @pytest.fixture(autouse=False)
 def blockbuster(request):
