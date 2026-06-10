@@ -90,13 +90,31 @@ def test_token_sequence_emits_start_contents_then_end_on_boundary():
     assert isinstance(ended[1], RunFinishedEvent)
 
 
-def test_new_message_id_closes_previous_message_and_opens_new():
+def test_token_for_second_message_is_buffered_until_first_closes():
+    """A token for a different message id must not close the streaming one.
+
+    Parallel components stream tokens for different message ids interleaved.
+    Closing the open message on the first foreign token burned its id, so all
+    its later tokens were dropped. Instead the foreign message buffers until
+    the open one genuinely ends (its ``add_message`` finalizer), then flushes.
+    """
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
 
     t.translate("token", {"chunk": "a", "id": "m1"})
-    out = t.translate("token", {"chunk": "b", "id": "m2"})
+    buffered = t.translate("token", {"chunk": "b", "id": "m2"})
 
+    # m2 buffers silently; m1 stays open.
+    assert buffered == []
+
+    # m1 keeps streaming: its tokens still flow.
+    more = t.translate("token", {"chunk": "a2", "id": "m1"})
+    assert len(more) == 1
+    assert isinstance(more[0], TextMessageContentEvent)
+    assert more[0].message_id == "m1"
+
+    # m1's finalizer closes it and promotes m2 with its buffered content.
+    out = t.translate("add_message", {"id": "m1", "text": "aa2"})
     assert isinstance(out[0], TextMessageEndEvent)
     assert out[0].message_id == "m1"
     assert isinstance(out[1], TextMessageStartEvent)
@@ -166,32 +184,83 @@ def test_token_for_already_ended_message_id_is_dropped():
     )
 
 
-def test_token_after_boundary_close_is_dropped():
-    """An interleaved token sequence ``A, B, A`` must not re-open id A.
+def test_parallel_interleaved_tokens_preserve_all_content():
+    """Two components streaming in parallel must not lose either stream.
 
-    Switching from id A to id B closes A through ``_close_open_message``. A
-    later token for A used to slip past the dedup guard because
-    ``_close_open_message`` was the only finalizer that did not record the
-    closed id in ``_emitted_text_message_ids``. The translator must treat a
-    token-boundary close the same way it treats an ``add_message`` close.
+    Reproduces the reported parallel-components drop: with a single-slot
+    tracker, START(m2), CONTENT(m2), START(m3) burned m2, so CONTENT(m2)
+    was dropped and m2's remaining text never reached the client. With
+    buffering, m2 holds the wire until it genuinely ends; m3's tokens
+    buffer and flush afterwards. Nothing is dropped, and the wire carries
+    at most one open text message at a time.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    sequence = [
+        ("token", {"chunk": "Result ", "id": "m2"}),
+        ("token", {"chunk": "Side ", "id": "m3"}),
+        ("token", {"chunk": "for X", "id": "m2"}),
+        ("token", {"chunk": "for Y", "id": "m3"}),
+        ("add_message", {"id": "m2", "text": "Result for X"}),
+        ("add_message", {"id": "m3", "text": "Side for Y"}),
+        ("end", {}),
+    ]
+
+    out = _run_sequence(t, sequence)
+
+    _assert_well_formed(out)
+    text_by_message: dict[str, str] = {}
+    for event in out:
+        if isinstance(event, TextMessageContentEvent):
+            text_by_message[event.message_id] = text_by_message.get(event.message_id, "") + event.delta
+    assert text_by_message["m2"] == "Result for X"
+    assert text_by_message["m3"] == "Side for Y"
+
+
+def test_add_message_for_other_message_while_streaming_is_buffered():
+    """A complete message landing mid-stream must not interleave its trio.
+
+    A parallel non-streaming component can finish (add_message with full
+    text) while another component holds the wire with an open streamed
+    message. Emitting START/CONTENT/END for the finished one immediately
+    would open a second text message mid-stream; instead it buffers and
+    flushes when the open message closes.
     """
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
 
-    a1 = t.translate("token", {"chunk": "hi", "id": "m1"})
-    assert any(isinstance(e, TextMessageStartEvent) and e.message_id == "m1" for e in a1)
+    t.translate("token", {"chunk": "streaming...", "id": "m1"})
+    parallel_done = t.translate("add_message", {"id": "m9", "text": "finished early"})
+    assert all(
+        not isinstance(e, (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)) for e in parallel_done
+    ), f"buffered message leaked text events mid-stream: {parallel_done}"
 
-    # Switching to a new id closes m1 via _close_open_message.
-    b = t.translate("token", {"chunk": "yo", "id": "m2"})
-    assert any(isinstance(e, TextMessageEndEvent) and e.message_id == "m1" for e in b)
-    assert any(isinstance(e, TextMessageStartEvent) and e.message_id == "m2" for e in b)
+    out = t.translate("add_message", {"id": "m1", "text": "streaming..."})
+    assert [type(e) for e in out] == [
+        TextMessageEndEvent,
+        TextMessageStartEvent,
+        TextMessageContentEvent,
+        TextMessageEndEvent,
+    ]
+    assert out[0].message_id == "m1"
+    assert out[1].message_id == "m9"
+    assert out[2].delta == "finished early"
 
-    # A late token for m1 must be dropped, not re-open the ended message.
-    late = t.translate("token", {"chunk": "again", "id": "m1"})
-    assert all(not isinstance(e, TextMessageStartEvent) for e in late), (
-        f"Token boundary did not mark m1 as ended; emitted: {late}"
-    )
-    assert late == [], f"Expected no events for late token after boundary close; got {late}"
+
+def test_end_drains_buffered_messages_before_run_finished():
+    """A run ending while messages are still buffered must flush them all."""
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    t.translate("token", {"chunk": "open", "id": "m1"})
+    t.translate("token", {"chunk": "waiting", "id": "m2"})
+    out = t.translate("end", {})
+
+    assert isinstance(out[-1], RunFinishedEvent)
+    m2_content = [e for e in out if isinstance(e, TextMessageContentEvent) and e.message_id == "m2"]
+    assert len(m2_content) == 1
+    assert m2_content[0].delta == "waiting"
+    ends = [e.message_id for e in out if isinstance(e, TextMessageEndEvent)]
+    assert ends == ["m1", "m2"]
 
 
 def test_vertices_sorted_emits_state_snapshot_of_all_nodes():
@@ -610,20 +679,22 @@ def _assert_well_formed(events: list) -> None:
     assert isinstance(events[0], RunStartedEvent)
     assert isinstance(events[-1], (RunFinishedEvent, RunErrorEvent))
 
-    open_messages: set[str] = set()
+    open_message: str | None = None
     seen_messages: set[str] = set()
     for event in events:
         if isinstance(event, TextMessageStartEvent):
-            assert event.message_id not in open_messages, "text message started while already open"
+            # AG-UI's reference verifier allows at most one open text message;
+            # interleaved STARTs are rejected by conforming clients.
+            assert open_message is None, f"text message {event.message_id} started while {open_message} is open"
             assert event.message_id not in seen_messages, "text message id reused after it ended"
-            open_messages.add(event.message_id)
+            open_message = event.message_id
             seen_messages.add(event.message_id)
         elif isinstance(event, TextMessageContentEvent):
-            assert event.message_id in open_messages, "text content for a message that is not open"
+            assert event.message_id == open_message, "text content for a message that is not open"
         elif isinstance(event, TextMessageEndEvent):
-            assert event.message_id in open_messages, "text message ended without being open"
-            open_messages.discard(event.message_id)
-    assert not open_messages, "text messages left unclosed"
+            assert event.message_id == open_message, "text message ended without being open"
+            open_message = None
+    assert open_message is None, "text message left unclosed"
 
     started_tools: set[str] = set()
     ended_tools: set[str] = set()
