@@ -57,18 +57,6 @@ def validate_code(code):
                 except ModuleNotFoundError as e:
                     errors["imports"]["errors"].append(str(e))
 
-    # Evaluate the function definition with langflow context
-    for node in tree.body:
-        if isinstance(node, ast.FunctionDef):
-            code_obj = compile(ast.Module(body=[node], type_ignores=[]), "<string>", "exec")
-            try:
-                # Create execution context with common langflow imports
-                exec_globals = _create_langflow_execution_context()
-                exec(code_obj, exec_globals)
-            except Exception as e:  # noqa: BLE001
-                logger.debug("Error executing function code", exc_info=True)
-                errors["function"]["errors"].append(str(e))
-
     # Return the errors dictionary
     return errors
 
