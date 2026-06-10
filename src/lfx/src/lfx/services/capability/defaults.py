@@ -40,9 +40,7 @@ class AllTrustedClassifier:
     def trust_of_flow(self, context: CapabilityContext) -> Trust:  # noqa: ARG002
         return Trust.TRUSTED
 
-    def is_untrusted_node(
-        self, _node: dict[str, object], _context: CapabilityContext | None = None
-    ) -> bool:
+    def is_untrusted_node(self, _node: dict[str, object], _context: CapabilityContext | None = None) -> bool:
         return False
 
 
