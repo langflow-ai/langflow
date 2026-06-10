@@ -114,6 +114,76 @@ def test_shim_source_contract(shim_dir: Path) -> None:
     assert src.rstrip().endswith("raise"), f"{provider}: must re-raise non-bundle import errors untouched"
 
 
+# ---------------------------------------------------------------------------
+# lfx.base shims (shared-base trees moved with their bundle, e.g. datastax)
+# ---------------------------------------------------------------------------
+
+BASE_PKG_DIR = COMPONENTS_DIR.parent / "base"
+
+
+def _base_shim_dirs() -> list[Path]:
+    """Every dir under lfx/base whose __init__ carries the shim marker."""
+    found = []
+    for child in sorted(BASE_PKG_DIR.iterdir()):
+        init_py = child / "__init__.py"
+        if child.is_dir() and init_py.is_file():
+            try:
+                head = init_py.read_text(encoding="utf-8").lstrip()
+            except OSError:
+                continue
+            if head.startswith(SHIM_MARKER):
+                found.append(child)
+    return found
+
+
+BASE_SHIM_DIRS = _base_shim_dirs()
+
+
+def test_base_shims_exist() -> None:
+    """The datastax graduation moved lfx.base.datastax; its shim must exist.
+
+    Stored flow code fields (starter projects, saved user flows) embed
+    ``from lfx.base.datastax... import ...`` and are re-executed verbatim
+    at build time, so moved base trees need shims exactly like moved
+    component trees do.
+    """
+    assert BASE_SHIM_DIRS, f"no marker shims found under {BASE_PKG_DIR}"
+
+
+@pytest.mark.parametrize("shim_dir", BASE_SHIM_DIRS, ids=lambda p: p.name)
+def test_base_shim_is_one_file_stub(shim_dir: Path) -> None:
+    py_files = list(shim_dir.rglob("*.py"))
+    assert py_files == [shim_dir / "__init__.py"], (
+        f"{shim_dir.name}: base shim dir must contain exactly __init__.py, found {py_files}"
+    )
+
+
+@pytest.mark.parametrize("shim_dir", BASE_SHIM_DIRS, ids=lambda p: p.name)
+def test_base_shim_source_contract(shim_dir: Path) -> None:
+    """Base shims alias to the bundle's base subpackage with the same guards."""
+    provider = shim_dir.name
+    src = (shim_dir / "__init__.py").read_text(encoding="utf-8")
+
+    assert src.startswith(SHIM_MARKER), f"{provider}: first line must be the {SHIM_MARKER!r} marker"
+    assert "sys.modules[__name__] = importlib.import_module(" in src, f"{provider}: must module-alias"
+
+    meta_target = f'importlib.import_module("lfx_bundles.{provider}.base")'
+    partner_target = f'importlib.import_module("lfx_{provider}.base")'
+    is_meta = meta_target in src
+    is_partner = partner_target in src
+    assert is_meta or is_partner, f"{provider}: alias target is neither metapackage nor partner base shape"
+
+    if is_meta:
+        assert 'exc.name == "lfx_bundles"' in src, f"{provider}: name-check must guard lfx_bundles"
+        assert _METAPACKAGE_MSG in src, f"{provider}: locked install message missing ({_METAPACKAGE_MSG!r})"
+    else:
+        assert f'exc.name == "lfx_{provider}"' in src, f"{provider}: name-check must guard lfx_{provider}"
+        assert f"{_PARTNER_MSG_PREFIX}{provider}" in src, (
+            f"{provider}: locked install message missing ('pip install lfx-{provider}')"
+        )
+    assert src.rstrip().endswith("raise"), f"{provider}: must re-raise non-bundle import errors untouched"
+
+
 def test_walk_skip_detects_every_shim() -> None:
     """The in-tree walk's shim detector and the marker sweep agree exactly."""
     from lfx.interface.components import _discover_shimmed_component_dirs

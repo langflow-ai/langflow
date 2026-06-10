@@ -19,7 +19,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "openai"]
 # scripts/ci/sync_bundle_lfx_pin.py.  Fine-grained BUNDLE_API compatibility
 # is enforced via extension.json's lfx.compat list against BUNDLE_API_VERSION.
 dependencies = [
-    "lfx>=1.11.0,<2.0.0",
+    "lfx>=1.11.0.dev0,<2.0.0",
     "langchain-openai>=1.1.6",
     "openai>=1.68.2,<3.0.0",
 ]
