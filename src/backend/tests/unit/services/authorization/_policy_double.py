@@ -202,10 +202,13 @@ def _assignment_covers(assignment: AuthzRoleAssignment, request_domain: str) -> 
 
     The scoped form is intentionally exact (``{domain_type}:{domain_id}`` ==
     request domain) so a regression that changes the domain the route resolves
-    flips the decision and trips the test.
+    flips the decision and trips the test. A scoped assignment missing its
+    ``domain_id`` is malformed and never widened to global coverage.
     """
-    if assignment.domain_type == "global" or assignment.domain_id is None:
+    if assignment.domain_type == "global":
         return True
+    if assignment.domain_id is None:
+        return False
     return f"{assignment.domain_type}:{assignment.domain_id}" == request_domain
 
 
@@ -224,7 +227,11 @@ def _share_targets_user(share: AuthzShare, user_id: UUID) -> bool:
 
 
 async def seed_system_roles(session: AsyncSession) -> dict[str, UUID]:
-    """Get-or-create viewer/developer/admin roles; return ``{name: role_id}``."""
+    """Get-or-create viewer/developer/admin roles; return ``{name: role_id}``.
+
+    Preexisting rows (migration seed or another fixture) are overwritten so the
+    policy matrix asserted by these tests is exactly ``SYSTEM_ROLE_PERMISSIONS``.
+    """
     ids: dict[str, UUID] = {}
     for name, permissions in SYSTEM_ROLE_PERMISSIONS.items():
         existing = (await session.exec(select(AuthzRole).where(AuthzRole.name == name))).first()
@@ -234,6 +241,9 @@ async def seed_system_roles(session: AsyncSession) -> dict[str, UUID]:
             )
             session.add(existing)
             await session.flush()
+        else:
+            existing.permissions = list(permissions)
+            existing.is_system = True
         ids[name] = existing.id
     await session.commit()
     return ids
@@ -247,7 +257,15 @@ async def assign_role(
     domain_type: str = "global",
     domain_id: UUID | None = None,
 ) -> None:
-    """Bind ``user_id`` to ``role_id`` within an optional domain."""
+    """Bind ``user_id`` to ``role_id`` within an optional domain.
+
+    Non-global assignments must name their domain — a scoped grant without a
+    ``domain_id`` would silently behave like (or be rejected as) something else
+    and hide domain-resolution regressions.
+    """
+    if domain_type != "global" and domain_id is None:
+        msg = f"domain_id is required for non-global assignments (domain_type={domain_type!r})"
+        raise ValueError(msg)
     session.add(AuthzRoleAssignment(user_id=user_id, role_id=role_id, domain_type=domain_type, domain_id=domain_id))
     await session.commit()
 

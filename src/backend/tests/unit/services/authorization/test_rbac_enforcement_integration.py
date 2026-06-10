@@ -203,8 +203,8 @@ async def test_share_grants_cross_user_access_and_absence_is_404(client):
         assert build.status_code == 200, build.text
 
 
-async def test_read_only_share_allows_get_but_denies_write(client):
-    """A read-level share grants GET but not PATCH — permission_level is enforced, not mere presence."""
+async def test_read_only_share_allows_get_but_denies_write_and_execute(client):
+    """A read-level share grants GET but neither PATCH nor build — permission_level is enforced, not mere presence."""
     settings = get_settings_service()
     alice_id = await _make_user(f"alice_{uuid4().hex}")
     bob_username = f"bob_{uuid4().hex}"
@@ -227,6 +227,10 @@ async def test_read_only_share_allows_get_but_denies_write(client):
         # write is not granted by a read-level share -> deny -> 404
         patch = await client.patch(f"api/v1/flows/{flow_id}", headers=bob_headers, json={"name": "nope"})
         assert patch.status_code == 404
+        # execute is modeled independently from write — a read-level share must
+        # not grant build either -> deny -> 404
+        build = await client.post(f"api/v1/build/{flow_id}/flow", headers=bob_headers, json={})
+        assert build.status_code == 404
 
 
 # --------------------------------------------------------------------------- #
