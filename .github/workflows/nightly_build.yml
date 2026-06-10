@@ -172,13 +172,9 @@ jobs:
           cd src/lfx && uv lock && cd ../..
 
           git add pyproject.toml src/backend/base/pyproject.toml src/lfx/pyproject.toml src/sdk/pyproject.toml uv.lock
-          # update_lfx_version.py re-pins each bundle's `lfx` dep to
-          # lfx-nightly==<dev>, so any modified bundle pyprojects need to
-          # ride the same commit/tag as the rest of the version bumps.
-          if compgen -G "src/bundles/*/pyproject.toml" > /dev/null; then
-            git add src/bundles/*/pyproject.toml
-          fi
-          git commit -m "Update version and project name"
+          # The nightly keeps canonical package names and the stable `lfx-*` bundles
+          # are not modified (see src/bundles/NIGHTLY.md), so no bundle pyprojects ride this commit.
+          git commit -m "Update version for nightly"
 
           echo "Tagging main with $RELEASE_TAG"
           if ! git tag -a $RELEASE_TAG -m "Langflow nightly $RELEASE_TAG"; then
@@ -283,11 +279,19 @@ jobs:
   #     python-versions: '["3.10", "3.11", "3.12", "3.13"]'
   #     ref: ${{ needs.create-nightly-tag.outputs.tag }}
 
+  stress-tests:
+    if: github.repository == 'langflow-ai/langflow' && !inputs.skip_backend_tests
+    name: Run Stress Tests
+    needs: [resolve-release-branch, create-nightly-tag]
+    uses: ./.github/workflows/stress-tests.yml
+    with:
+      ref: ${{ needs.resolve-release-branch.outputs.branch }}
+
   release-nightly-build:
     if: github.repository == 'langflow-ai/langflow' && always() && needs.create-nightly-tag.result == 'success' && needs.frontend-tests-linux.result != 'failure' && needs.backend-unit-tests.result != 'failure'
     name: Run Nightly Langflow Build
     needs:
-      [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests]
+      [validate-inputs, create-nightly-tag, frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests]
     uses: ./.github/workflows/release_nightly.yml
     with:
       build_docker_base: true
@@ -316,12 +320,12 @@ jobs:
 
   slack-notification:
     name: Send Slack Notification
-    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, release-nightly-build, db-migration-validation]
-    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' || needs.release-nightly-build.result == 'success') }}
+    needs: [frontend-tests-linux, frontend-tests-windows, backend-unit-tests, stress-tests, release-nightly-build, db-migration-validation]
+    if: ${{ github.repository == 'langflow-ai/langflow' && !inputs.skip_slack && always() && (needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.stress-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' || needs.release-nightly-build.result == 'success') }}
     runs-on: ubuntu-latest
     steps:
       - name: Send failure notification to Slack
-        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' }}
+        if: ${{ needs.release-nightly-build.result == 'failure' || needs.frontend-tests-linux.result == 'failure' || needs.frontend-tests-windows.result == 'failure' || needs.backend-unit-tests.result == 'failure' || needs.stress-tests.result == 'failure' || needs.db-migration-validation.result == 'failure' }}
         run: |
           # Determine which job failed
           FAILED_JOB="unknown"
@@ -333,6 +337,8 @@ jobs:
             FAILED_JOB="frontend-tests-windows (non-blocking)"
           elif [ "${{ needs.backend-unit-tests.result }}" == "failure" ]; then
             FAILED_JOB="backend-unit-tests"
+          elif [ "${{ needs.stress-tests.result }}" == "failure" ]; then
+            FAILED_JOB="stress-tests (non-blocking)"
           elif [ "${{ needs.db-migration-validation.result }}" == "failure" ]; then
             FAILED_JOB="db-migration-validation"
           fi
