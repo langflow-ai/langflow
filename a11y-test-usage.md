@@ -147,7 +147,10 @@ RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test <file> --retries=0
 
 ## Component-level a11y unit tests (jest-axe)
 
-Second tier next to the IBM page scans. Runs on every PR via the normal Jest suite.
+Second tier next to the IBM page scans. Runs on every PR in its own workflow
+(`.github/workflows/a11y-unit-tests.yml`, `make test_frontend_a11y_ci`) so the
+known-gap failures don't block regular CI — the main Jest workflow excludes
+`*.a11y.test.*` files.
 
 - Matcher: `toHaveNoViolations` is registered globally in [src/frontend/src/setupTests.ts](/Users/viktoravelino/projects/langflow/src/frontend/src/setupTests.ts)
 - Shared axe instance: [src/frontend/src/utils/a11y-test.ts](/Users/viktoravelino/projects/langflow/src/frontend/src/utils/a11y-test.ts) (`color-contrast` disabled — jsdom has no layout; contrast stays with the IBM checker)
