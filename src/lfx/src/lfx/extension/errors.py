@@ -97,6 +97,10 @@ ERROR_CODES: frozenset[str] = frozenset(
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
         "reload-source-missing",
+        # Manifest-less lfx.bundles providers carry no manifest for the
+        # reload pipeline's load_extension stage; hot reload refuses them
+        # with this typed code instead of a misleading manifest-not-found.
+        "reload-manifestless-unsupported",
         # Post-swap hook failures: the registry swap committed but a
         # downstream side-effect (e.g. component cache rebuild) raised.
         # Surfaced on ReloadResult.warnings so the API caller knows the
@@ -306,6 +310,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "reload-source-missing": (
         "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
+    ),
+    "reload-manifestless-unsupported": (
+        "Bundle {content!r} comes from a manifest-less lfx.bundles metapackage and cannot be "
+        "hot-reloaded; upgrade the metapackage distribution and restart the process instead."
     ),
     "reload-post-swap-hook-failed": (
         "Post-swap hook failed for bundle {content!r}; the bundle swap committed but a "
