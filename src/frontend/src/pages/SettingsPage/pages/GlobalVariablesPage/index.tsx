@@ -132,7 +132,9 @@ export default function GlobalVariablesPage() {
     if (invalidProviderVars.length > 0) {
       const errorMessages = invalidProviderVars.map(
         (variable) =>
-          `${variable.name}: ${variable.validation_error || "Invalid API key"}`,
+          `${variable.name}: ${
+            variable.validation_error || t("globalVars.invalidApiKey")
+          }`,
       );
       setErrorData({
         title: t("globalVars.invalidCredentialsTitle"),
@@ -144,7 +146,7 @@ export default function GlobalVariablesPage() {
         ],
       });
     }
-  }, [globalVariables, providerVariableNames, setErrorData]);
+  }, [globalVariables, providerVariableNames, setErrorData, t]);
 
   async function removeVariables() {
     selectedRows.map(async (row) => {

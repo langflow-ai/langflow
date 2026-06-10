@@ -37,6 +37,7 @@ export function SpanDetail({ span }: SpanDetailProps) {
   const hasOutputs = Object.keys(span?.outputs || {}).length > 0;
   const hasTokenUsage = span?.tokenUsage && span.tokenUsage.totalTokens > 0;
   const isLlmSpan = span?.type === "llm";
+  const spanTypeLabel = getSpanTypeLabel(span.type);
 
   const { colorClass, iconName, shouldSpin } = getStatusIconProps(span.status);
 
@@ -67,7 +68,13 @@ export function SpanDetail({ span }: SpanDetailProps) {
           </Badge>
         </div>
         <div className="mt-1 flex items-center gap-4 text-sm text-muted-foreground">
-          <span>{getSpanTypeLabel(span.type)}</span>
+          <span>
+            {spanTypeLabel
+              ? t(`trace.spanType.${span.type}`, {
+                  defaultValue: spanTypeLabel,
+                })
+              : spanTypeLabel}
+          </span>
           {span.modelName && (
             <>
               <span className="text-border">|</span>

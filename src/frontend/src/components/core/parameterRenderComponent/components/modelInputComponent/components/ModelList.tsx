@@ -7,7 +7,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { cn } from "@/utils/utils";
-import { ModelOption, SelectedModel } from "../types";
+import type { ModelOption, SelectedModel } from "../types";
 
 interface ModelListProps {
   groupedOptions: Record<string, ModelOption[]>;

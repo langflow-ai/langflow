@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "@/components/common/genericIconComponent";
 import {
   AccordionContent,
@@ -35,6 +36,7 @@ export function TraceAccordionItem({
   isExpanded,
   onTraceClick,
 }: TraceAccordionItemProps) {
+  const { t } = useTranslation();
   const [selectedSpan, setSelectedSpan] = useState<Span | null>(null);
 
   // Only fetch full trace details (with spans) when expanded
@@ -53,6 +55,23 @@ export function TraceAccordionItem({
   const handleSelectSpan = useCallback((span: Span) => {
     setSelectedSpan(span);
   }, []);
+
+  const formatTranslatedPreview = useCallback(
+    (value: Record<string, unknown> | string | null) => {
+      const preview = formatIOPreview(value);
+      switch (preview) {
+        case "N/A":
+          return t("trace.notAvailable");
+        case "Empty":
+          return t("trace.empty");
+        case "[Complex Object]":
+          return t("trace.complexObject");
+        default:
+          return preview;
+      }
+    },
+    [t],
+  );
 
   return (
     <AccordionItem
@@ -114,7 +133,10 @@ export function TraceAccordionItem({
             {totalTokens > 0 && (
               <span className="flex items-center gap-1">
                 <IconComponent name="Coins" className="h-3 w-3" />
-                {totalTokens.toLocaleString()} tokens
+                {t("trace.tokensCount", {
+                  count: totalTokens,
+                  value: totalTokens.toLocaleString(),
+                })}
               </span>
             )}
             {totalCost > 0 && (
@@ -131,20 +153,20 @@ export function TraceAccordionItem({
             {input && (
               <div className="flex flex-col gap-1">
                 <span className="font-medium text-muted-foreground">
-                  Input:
+                  {t("trace.input")}:
                 </span>
                 <span className="truncate text-foreground/80">
-                  {formatIOPreview(input)}
+                  {formatTranslatedPreview(input)}
                 </span>
               </div>
             )}
             {output && (
               <div className="flex flex-col gap-1">
                 <span className="font-medium text-muted-foreground">
-                  Output:
+                  {t("trace.output")}:
                 </span>
                 <span className="truncate text-foreground/80">
-                  {formatIOPreview(output)}
+                  {formatTranslatedPreview(output)}
                 </span>
               </div>
             )}
@@ -174,7 +196,7 @@ export function TraceAccordionItem({
           </div>
         ) : (
           <div className="flex h-[500px] items-center justify-center text-sm text-muted-foreground">
-            Failed to load trace details
+            {t("trace.failedLoadDetails")}
           </div>
         )}
       </AccordionContent>

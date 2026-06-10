@@ -8,6 +8,7 @@ import { cn } from "@/utils/utils";
 
 export default function NodeDescription({
   description,
+  displayDescription,
   selected,
   nodeId,
   emptyPlaceholder = "",
@@ -22,6 +23,7 @@ export default function NodeDescription({
   setHasChangedNodeDescription,
 }: {
   description?: string;
+  displayDescription?: string;
   selected?: boolean;
   nodeId: string;
   emptyPlaceholder?: string;
@@ -71,7 +73,9 @@ export default function NodeDescription({
   const MemoizedMarkdown = memo(Markdown);
 
   const renderedDescription = useMemo(() => {
-    if (description === "" || !description) {
+    const renderedText = displayDescription ?? description;
+
+    if (renderedText === "" || !renderedText) {
       return emptyPlaceholder;
     }
     return (
@@ -91,10 +95,10 @@ export default function NodeDescription({
           ),
         }}
       >
-        {String(description)}
+        {String(renderedText)}
       </MemoizedMarkdown>
     );
-  }, [description, emptyPlaceholder, mdClassName]);
+  }, [description, displayDescription, emptyPlaceholder, mdClassName]);
 
   const handleBlurFn = () => {
     setNodeDescription(nodeDescription);
@@ -196,7 +200,10 @@ export default function NodeDescription({
           ref={overflowRef}
           className={cn(
             "nodoubleclick generic-node-desc-text h-full cursor-grab text-muted-foreground word-break-break-word",
-            description === "" || !description ? "font-light italic" : "",
+            (displayDescription ?? description) === "" ||
+              !(displayDescription ?? description)
+              ? "font-light italic"
+              : "",
             stickyNote && "text-base font-medium overflow-auto max-h-full",
             placeholderClassName,
           )}

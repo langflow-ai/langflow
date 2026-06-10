@@ -67,7 +67,7 @@ export default function QueryModal({
       </BaseModal.Content>
       <BaseModal.Footer
         submit={{
-          label: "Apply",
+          label: t("misc.apply"),
           dataTestId: "genericModalBtnSave",
           onClick: () => {
             setValue(inputValue);

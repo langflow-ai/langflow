@@ -182,9 +182,9 @@ export const useMcpServer = ({
           onError: (e) => {
             const message = (e as { message?: string })?.message ?? String(e);
             setErrorData({
-              title: `Failed to install MCP Server on ${
-                clientTitle ?? clientName
-              }`,
+              title: i18n.t("mcp.installServerFailedOnClient", {
+                client: clientTitle ?? clientName,
+              }),
               list: [message],
             });
             setS((p) => ({

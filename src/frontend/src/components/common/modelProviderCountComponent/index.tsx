@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useGetEnabledModels } from "@/controllers/API/queries/models/use-get-enabled-models";
@@ -7,6 +8,7 @@ import { cn } from "@/utils/utils";
 import ForwardedIconComponent from "../genericIconComponent";
 
 export const ModelProviderCount = () => {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const { data: enabledModelsData } = useGetEnabledModels();
 
@@ -29,7 +31,7 @@ export const ModelProviderCount = () => {
         data-testid="model-provider-count-button"
       >
         <ForwardedIconComponent name="BrainCog" className="w-5 h-5" />
-        <div className="text-sm">Models</div>
+        <div className="text-sm">{t("common.models")}</div>
         <Badge
           variant="secondaryStatic"
           size="sq"

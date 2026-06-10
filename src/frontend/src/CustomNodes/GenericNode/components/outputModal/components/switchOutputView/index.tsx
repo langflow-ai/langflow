@@ -203,9 +203,7 @@ const SwitchOutputView: React.FC<SwitchOutputViewProps> = ({
             />
             <AlertTitle>{t("output.streamingNotSupported")}</AlertTitle>
             <AlertDescription>
-              {
-                "Use the playground to interact with components that stream data"
-              }
+              {t("output.streamingUsePlayground")}
             </AlertDescription>
           </Alert>
         </div>

@@ -1,5 +1,7 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { getNodeOutputColors } from "../../../helpers/get-node-output-colors";
 import { getNodeOutputColorsName } from "../../../helpers/get-node-output-colors-name";
 import NodeOutputField from "../NodeOutputfield";
@@ -18,6 +20,7 @@ export const OutputParameter = ({
   hidden,
   handleSelectOutput,
 }) => {
+  const { t } = useTranslation();
   // ID for the right handle (normal output) - only the actual output type
   const id = useMemo(() => {
     const selectedType = output.selected ?? output.types[0];
@@ -74,7 +77,11 @@ export const OutputParameter = ({
       data={data}
       colors={colors}
       outputProxy={output.proxy}
-      title={output.display_name ?? output.name}
+      title={translateComponentMetadata(
+        t,
+        "output",
+        output.display_name ?? output.name,
+      )}
       tooltipTitle={
         output.allows_loop && output.loop_types
           ? `${output.selected ?? output.types[0]}\n${output.loop_types.join("\n")}`

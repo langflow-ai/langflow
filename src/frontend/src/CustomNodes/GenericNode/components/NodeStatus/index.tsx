@@ -461,7 +461,7 @@ export default function NodeStatus({
           )}
 
           {nodeAuth && showNode && (
-            <ShadTooltip content={nodeAuth.auth_tooltip || "Connect"}>
+            <ShadTooltip content={nodeAuth.auth_tooltip || t("node.connect")}>
               <div>
                 <Button
                   unstyled

@@ -89,7 +89,10 @@ const BundleHeaderActionsInner = ({
                 defaultValue:
                   "Reloaded {{bundle}} (+{{added}} / -{{removed}} / ~{{changed}} components)",
               });
-        const list = renderTypedErrorList(data.warnings);
+        const list = renderTypedErrorList(
+          data.warnings,
+          t("extensions.reloadDiagnostics"),
+        );
         setSuccessData({
           title: summary,
           ...(list ? { list: list.list } : {}),
@@ -109,7 +112,10 @@ const BundleHeaderActionsInner = ({
         }
         return;
       }
-      const list = renderTypedErrorList(data.errors);
+      const list = renderTypedErrorList(
+        data.errors,
+        t("extensions.reloadDiagnostics"),
+      );
       setErrorData({
         title: t("sidebar.bundles.reload.failure.structural", {
           bundle: displayName,

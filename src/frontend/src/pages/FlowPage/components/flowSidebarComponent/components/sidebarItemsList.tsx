@@ -1,6 +1,8 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { getPresentComponentTypes } from "@/utils/componentConstraints";
 import { removeCountFromString } from "@/utils/utils";
 import { disableItem } from "../helpers/disable-item";
@@ -14,6 +16,7 @@ const SidebarItemsList = ({
   onDragStart,
   sensitiveSort,
 }) => {
+  const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-1 py-1">
       {Object.keys(dataFilter[item.name])
@@ -55,7 +58,11 @@ const SidebarItemsList = ({
           }
           return (
             <ShadTooltip
-              content={currentItem.display_name}
+              content={translateComponentMetadata(
+                t,
+                "component",
+                currentItem.display_name,
+              )}
               side="right"
               key={SBItemName}
             >
@@ -95,6 +102,7 @@ const UniqueInputsDraggableComponent = ({
   onDragStart,
   nodeColors,
 }) => {
+  const { t } = useTranslation();
   const nodes = useFlowStore((state) => state.nodes);
   const presentComponentTypes = useMemo(
     () => getPresentComponentTypes(nodes),
@@ -103,7 +111,11 @@ const UniqueInputsDraggableComponent = ({
 
   return (
     <ShadTooltip
-      content={currentItem.display_name}
+      content={translateComponentMetadata(
+        t,
+        "component",
+        currentItem.display_name,
+      )}
       side="right"
       key={SBItemName}
     >

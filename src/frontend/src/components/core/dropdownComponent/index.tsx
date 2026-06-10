@@ -9,6 +9,7 @@ import { BUILD_PANEL_COLLISION_PADDING_PX } from "@/constants/constants";
 import { usePostTemplateValue } from "@/controllers/API/queries/nodes/use-post-template-value";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import {
   convertStringToHTML,
   getStatusColor,
@@ -570,7 +571,7 @@ export default function Dropdown({
             disabled
             className="w-full text-center text-sm text-muted-foreground px-2.5 py-1.5"
           >
-            No options found
+            {t("input.noOptionsFound")}
           </CommandItem>
         )}
       </CommandGroup>
@@ -591,7 +592,11 @@ export default function Dropdown({
           >
             <div className="flex items-center gap-2 pl-1 text-[13px] font-semibold">
               <ForwardedIconComponent name="Plus" className="h-3 w-3 " />
-              {sourceOptions?.fields?.data?.node?.display_name}
+              {translateComponentMetadata(
+                t,
+                "component",
+                sourceOptions?.fields?.data?.node?.display_name,
+              )}
             </div>
             {sourceOptions?.fields?.data?.node?.icon && (
               <div className="ml-auto">

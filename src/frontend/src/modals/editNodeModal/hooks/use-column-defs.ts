@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { useTranslation } from "react-i18next";
 import TableAdvancedToggleCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableAdvancedToggleCellRender";
 import TableNodeCellRender from "@/components/core/parameterRenderComponent/components/tableComponent/components/tableNodeCellRender";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 
 const useColumnDefs = (
   nodeId: string,
@@ -18,10 +19,12 @@ const useColumnDefs = (
         field: "display_name",
         valueGetter: (params) => {
           const templateParam = params.data;
-          return (
+          return translateComponentMetadata(
+            t,
+            "field",
             (templateParam.display_name
               ? templateParam.display_name
-              : templateParam.name) ?? params.data.key
+              : templateParam.name) ?? params.data.key,
           );
         },
         wrapText: true,
@@ -34,6 +37,10 @@ const useColumnDefs = (
         headerName: t("editNode.description"),
         field: "info",
         tooltipField: "info",
+        valueGetter: (params) =>
+          translateComponentMetadata(t, "info", params.data.info),
+        tooltipValueGetter: (params) =>
+          translateComponentMetadata(t, "info", params.data.info),
         wrapText: true,
         autoHeight: true,
         flex: 2,

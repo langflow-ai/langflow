@@ -8,6 +8,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import TableModal from "@/modals/tableModal";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { isMarkdownTable } from "@/utils/markdownUtils";
 import { FormatColumns, generateBackendColumnsFromValue } from "@/utils/utils";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
@@ -89,6 +90,16 @@ export default function TableNodeComponent({
     ? columns
     : generateBackendColumnsFromValue(tempValue ?? [], table_options);
   let AgColumns = FormatColumns(componentColumns);
+  AgColumns = AgColumns.map((col) => ({
+    ...col,
+    headerName: translateComponentMetadata(t, "field", col.headerName),
+    context: col.context?.info
+      ? {
+          ...col.context,
+          info: translateComponentMetadata(t, "info", col.context.info),
+        }
+      : col.context,
+  }));
   // add info to each column
   AgColumns = AgColumns.map((col) => {
     if (col.context?.info) {

@@ -4,7 +4,10 @@ import { useUtilityStore } from "@/stores/utilityStore";
 import "ag-grid-community/styles/ag-grid.css"; // Mandatory CSS required by the grid
 import "ag-grid-community/styles/ag-theme-balham.css"; // Optional Theme applied to the grid
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { extractColumnsFromRows } from "../../../utils/utils";
+
+type DataOutputRow = Record<string, unknown>;
 
 function DataOutputComponent({
   pagination,
@@ -12,31 +15,40 @@ function DataOutputComponent({
   columnMode = "union",
 }: {
   pagination: boolean;
-  rows: any[];
+  rows: unknown[];
   columnMode?: "intersection" | "union";
 }) {
   const maxItemsLength = useUtilityStore(
     (state) => state.serializationMaxItemsLength,
   );
-  const [rowsInternal, setRowsInternal] = useState(
-    rows.slice(0, maxItemsLength),
+  const { t } = useTranslation();
+  const [rowsInternal, setRowsInternal] = useState<DataOutputRow[]>(
+    rows
+      .slice(0, maxItemsLength)
+      .map((row) =>
+        row !== null && typeof row === "object"
+          ? (row as DataOutputRow)
+          : { data: row },
+      ),
   );
 
   useEffect(() => {
     const rowsSliced = rows.slice(0, maxItemsLength);
-    if (rowsSliced.some((row) => typeof row !== "object")) {
-      setRowsInternal(rowsSliced.map((row) => ({ data: row })));
-    } else {
-      setRowsInternal(rowsSliced);
-    }
-  }, [rows]);
+    setRowsInternal(
+      rowsSliced.map((row) =>
+        row !== null && typeof row === "object"
+          ? (row as DataOutputRow)
+          : { data: row },
+      ),
+    );
+  }, [rows, maxItemsLength]);
 
   const columns = extractColumnsFromRows(rowsInternal, columnMode);
 
   const columnDefs = columns.map((col, idx) => ({
     ...col,
     resizable: true,
-  })) as (ColDef<any> | ColGroupDef<any>)[];
+  })) as (ColDef<DataOutputRow> | ColGroupDef<DataOutputRow>)[];
 
   return (
     <TableComponent
@@ -45,7 +57,7 @@ function DataOutputComponent({
         defaultMinWidth: maxItemsLength,
       }}
       key={"dataOutputComponent"}
-      overlayNoRowsTemplate="No data available"
+      overlayNoRowsTemplate={t("settings.noDataAvailable")}
       paginationInfo={
         rows.length > maxItemsLength ? rows[maxItemsLength] : undefined
       }

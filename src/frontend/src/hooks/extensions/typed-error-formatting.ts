@@ -25,6 +25,7 @@ export type TypedErrorAlertList = { title: string; list: string[] } | undefined;
  */
 export function renderTypedErrorList(
   payloads: readonly ExtensionErrorPayload[],
+  title: string,
 ): TypedErrorAlertList {
   if (payloads.length === 0) {
     return undefined;
@@ -36,7 +37,7 @@ export function renderTypedErrorList(
     }
     return lines;
   });
-  return { title: "Reload diagnostics", list };
+  return { title, list };
 }
 
 /**

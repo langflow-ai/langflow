@@ -112,7 +112,7 @@ const IngestionRunDetailModal = ({
 
               <div>
                 <div className="mb-2 text-xs font-medium text-muted-foreground">
-                  Files ({data.items.length})
+                  {t("knowledge.filesCount", { count: data.items.length })}
                 </div>
                 <div className="flex flex-col divide-y divide-border rounded-md border border-border">
                   {data.items.map((item) => {
@@ -136,7 +136,9 @@ const IngestionRunDetailModal = ({
                             </span>
                           </span>
                           <span className="shrink-0 text-muted-foreground">
-                            {item.chunks_created} chunks
+                            {t("knowledge.chunksCreated", {
+                              count: item.chunks_created,
+                            })}
                           </span>
                         </div>
                         {item.error_message && (

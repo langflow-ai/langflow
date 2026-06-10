@@ -18,6 +18,7 @@ import { useAddComponent } from "@/hooks/use-add-component";
 import { useDarkStore } from "@/stores/darkStore";
 import useFlowsManagerStore from "@/stores/flowsManagerStore";
 import type { APIClassType } from "@/types/api";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import {
   createFlowComponent,
   downloadNode,
@@ -61,6 +62,11 @@ export const SidebarDraggableComponent = forwardRef(
     ref,
   ) => {
     const { t } = useTranslation();
+    const translatedDisplayName = translateComponentMetadata(
+      t,
+      "component",
+      display_name,
+    );
     const [open, setOpen] = useState(false);
     const { deleteFlow } = useDeleteFlow();
     const flows = useFlowsManagerStore((state) => state.flows);
@@ -171,12 +177,15 @@ export const SidebarDraggableComponent = forwardRef(
                 className="h-[18px] w-[18px] shrink-0"
               />
               <div className="flex flex-1 items-center overflow-hidden">
-                <ShadTooltip content={display_name} styleClasses="z-50">
+                <ShadTooltip
+                  content={translatedDisplayName}
+                  styleClasses="z-50"
+                >
                   <span
                     data-testid="display-name"
                     className="truncate text-sm font-normal"
                   >
-                    {display_name}
+                    {translatedDisplayName}
                   </span>
                 </ShadTooltip>
                 {beta && (
@@ -185,7 +194,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    Beta
+                    {t("sidebar.betaLabel")}
                   </Badge>
                 )}
                 {legacy && (
@@ -194,7 +203,7 @@ export const SidebarDraggableComponent = forwardRef(
                     size="xq"
                     className="ml-1.5 shrink-0"
                   >
-                    Legacy
+                    {t("sidebar.legacyLabel")}
                   </Badge>
                 )}
               </div>

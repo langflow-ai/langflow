@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { useMutationFunctionType } from "@/types/api";
 import type { MCPServerType } from "@/types/mcp";
 import { api } from "../../api";
@@ -16,6 +17,7 @@ export const usePatchMCPServer: useMutationFunctionType<
   MCPServerType,
   PatchMCPServerResponse
 > = (options?) => {
+  const { t } = useTranslation();
   const { mutate, queryClient } = UseRequestProcessor();
 
   async function patchMCPServer(
@@ -57,13 +59,13 @@ export const usePatchMCPServer: useMutationFunctionType<
       );
 
       return {
-        message: res.data?.message || "MCP Server patched successfully",
+        message: res.data?.message || t("mcp.servers.updatedSuccess"),
       };
     } catch (error: unknown) {
       throw new Error(
         extractApiErrorMessage(
           error as Parameters<typeof extractApiErrorMessage>[0],
-          "Failed to patch MCP Server",
+          t("mcp.servers.errorUpdating"),
         ),
       );
     }

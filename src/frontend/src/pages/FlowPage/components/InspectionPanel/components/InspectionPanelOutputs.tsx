@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import SwitchOutputView from "@/CustomNodes/GenericNode/components/outputModal/components/switchOutputView";
 import useFlowStore from "@/stores/flowStore";
 import type { NodeDataType } from "@/types/flow";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { getGroupOutputNodeId } from "@/utils/reactflowUtils";
 
 interface InspectionPanelOutputsProps {
@@ -46,12 +47,16 @@ export default function InspectionPanelOutputs({
         return {
           nodeId: flowPoolId,
           outputName: internalOutputName,
-          displayName: output.display_name || output.name,
+          displayName: translateComponentMetadata(
+            t,
+            "output",
+            output.display_name || output.name,
+          ),
         };
       }
     }
     return null;
-  }, [outputs, data.id, data.node?.flow, flowPool]);
+  }, [outputs, data.id, data.node?.flow, flowPool, t]);
 
   if (!firstOutputWithData) {
     return (

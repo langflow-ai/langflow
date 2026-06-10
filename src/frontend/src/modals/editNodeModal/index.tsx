@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type { APIClassType } from "@/types/api";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { customStringify } from "@/utils/reactflowUtils";
 import { Badge } from "../../components/ui/badge";
 import { Button } from "../../components/ui/button";
@@ -37,9 +38,19 @@ const EditNodeModal = ({
       <BaseModal.Trigger>
         <></>
       </BaseModal.Trigger>
-      <BaseModal.Header description={data.node?.description!}>
+      <BaseModal.Header
+        description={translateComponentMetadata(
+          t,
+          "description",
+          data.node?.description,
+        )}
+      >
         <span data-testid="node-modal-title" className="pr-2">
-          {data.node?.display_name ?? data.type}
+          {translateComponentMetadata(
+            t,
+            "component",
+            data.node?.display_name ?? data.type,
+          )}
         </span>
         <div>
           <Badge size="sm" variant={isDark ? "gray" : "secondary"}>

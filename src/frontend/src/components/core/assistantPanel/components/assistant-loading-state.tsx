@@ -52,6 +52,7 @@ const KEYFRAME_FILLED_PERCENT = 65;
 const KEYFRAME_HOLD_END_PERCENT = 85;
 
 function LangflowDrawingIcon({ size = 24 }: { size?: number }) {
+  const { t } = useTranslation();
   const pathRef = useRef<SVGPathElement>(null);
   const [length, setLength] = useState(FALLBACK_PATH_LENGTH);
 
@@ -74,7 +75,7 @@ function LangflowDrawingIcon({ size = 24 }: { size?: number }) {
       className="inline-flex shrink-0 items-center"
       data-testid="assistant-flow-loading-icon"
       role="status"
-      aria-label="Generating flow"
+      aria-label={t("assistant.generatingFlow")}
     >
       <svg
         width={size}
@@ -158,7 +159,7 @@ function AssistantLoadingStateComponent({
         className="flex items-center gap-2 text-sm font-medium text-foreground"
       >
         <LangflowDrawingIcon size={24} />
-        <span>{progress.message || "Working..."}</span>
+        <span>{progress.message || t("assistant.working")}</span>
       </div>
     );
   }

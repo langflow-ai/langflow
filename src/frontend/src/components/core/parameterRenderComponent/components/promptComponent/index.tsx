@@ -1,3 +1,4 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import SanitizedHTMLWrapper from "@/components/common/sanitizedHTMLWrapper";
 import { regexHighlight } from "@/constants/constants";
@@ -26,6 +27,7 @@ export default function PromptAreaComponent({
   readonly = false,
   showParameter = true,
 }: InputProps<string, PromptAreaComponentType>): JSX.Element | null {
+  const { t } = useTranslation();
   const coloredContent = (typeof value === "string" ? value : "")
     // escape HTML first
     .replace(/</g, "&lt;")
@@ -74,7 +76,7 @@ export default function PromptAreaComponent({
         />
       ) : (
         <span className="text-sm text-muted-foreground">
-          {getPlaceholder(disabled, "Type your prompt here...")}
+          {getPlaceholder(disabled, t("prompt.typePromptHere"))}
         </span>
       )}
     </span>

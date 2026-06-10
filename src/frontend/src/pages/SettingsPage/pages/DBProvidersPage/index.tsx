@@ -42,9 +42,8 @@ type ApiError = {
   };
 };
 
-const getErrorDetail = (error: unknown) =>
-  (error as ApiError)?.response?.data?.detail ||
-  "An unexpected error occurred. Please try again.";
+const getErrorDetail = (error: unknown, fallback: string) =>
+  (error as ApiError)?.response?.data?.detail || fallback;
 
 export default function DBProvidersPage() {
   const { t } = useTranslation();
@@ -276,7 +275,7 @@ export default function DBProvidersPage() {
     } catch (error: unknown) {
       setErrorData({
         title: t("settings.dbProviders.errorSaving"),
-        list: [getErrorDetail(error)],
+        list: [getErrorDetail(error, t("errors.unexpectedTryAgain"))],
       });
       return false;
     }
@@ -362,7 +361,7 @@ export default function DBProvidersPage() {
     } catch (error: unknown) {
       setErrorData({
         title: t("settings.dbProviders.errorTesting"),
-        list: [getErrorDetail(error)],
+        list: [getErrorDetail(error, t("errors.unexpectedTryAgain"))],
       });
     }
   };
@@ -377,7 +376,7 @@ export default function DBProvidersPage() {
     } catch (error: unknown) {
       setErrorData({
         title: t("settings.dbProviders.errorSelectingChroma"),
-        list: [getErrorDetail(error)],
+        list: [getErrorDetail(error, t("errors.unexpectedTryAgain"))],
       });
     }
   };
@@ -806,7 +805,12 @@ function TextFieldRow({
         {field.required && <span className="ml-1 text-destructive">*</span>}
       </span>
       <Input
-        placeholder={field.placeholder}
+        placeholder={t(
+          `settings.dbProviders.fields.${field.variableKey}.placeholder`,
+          {
+            defaultValue: field.placeholder,
+          },
+        )}
         value={inputValue}
         type={field.isSecret ? "password" : "text"}
         disabled={disabled}
@@ -834,14 +838,16 @@ function BooleanFieldRow({
   onChange: (checked: boolean) => void;
 }) {
   const { t } = useTranslation();
+  const fieldLabel = t(
+    `settings.dbProviders.fields.${field.variableKey}.label`,
+    {
+      defaultValue: field.label,
+    },
+  );
   return (
     <div className="flex items-start justify-between gap-4 rounded-md border border-border bg-muted/20 px-3 py-2">
       <div className="flex min-w-0 flex-col">
-        <span className="text-[12px] font-medium">
-          {t(`settings.dbProviders.fields.${field.variableKey}.label`, {
-            defaultValue: field.label,
-          })}
-        </span>
+        <span className="text-[12px] font-medium">{fieldLabel}</span>
         {field.helperText && (
           <span className="pt-0.5 text-[11px] text-muted-foreground">
             {t(`settings.dbProviders.fields.${field.variableKey}.helperText`, {
@@ -858,7 +864,7 @@ function BooleanFieldRow({
         checked={value}
         onCheckedChange={onChange}
         disabled={disabled}
-        aria-label={field.label}
+        aria-label={fieldLabel}
         data-testid={`db-provider-toggle-${field.variableKey}`}
       />
     </div>

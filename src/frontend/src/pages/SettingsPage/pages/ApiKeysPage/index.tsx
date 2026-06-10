@@ -27,7 +27,10 @@ export default function ApiKeysPage() {
     if (data !== undefined) {
       const updatedKeysList = data["api_keys"].map((apikey) => ({
         ...apikey,
-        name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
+        name:
+          apikey.name && apikey.name !== ""
+            ? apikey.name
+            : t("apiKey.untitled"),
       }));
       setKeysList(updatedKeysList);
       setUserId(data["user_id"]);
@@ -38,7 +41,7 @@ export default function ApiKeysPage() {
     if (userData) {
       getApiKeysQuery();
     }
-  }, [userData]);
+  }, [userData, t]);
 
   function resetFilter() {
     getApiKeysQuery();

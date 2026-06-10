@@ -17,6 +17,7 @@ import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { APIClassType, APIDataType } from "@/types/api";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
 import type { NodeColors, SidebarBundle } from "../types";
 import BundleHeaderActions from "./bundleHeaderActions";
@@ -45,6 +46,9 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
   sensitiveSort,
 }: CategoryDisclosureProps) {
   const { t } = useTranslation();
+  const translatedDisplayName = item.display_name.startsWith("sidebar.")
+    ? t(item.display_name, { defaultValue: item.display_name })
+    : translateComponentMetadata(t, "category", item.display_name);
   const handleKeyDownInput = useCallback(
     (e: React.KeyboardEvent<HTMLDivElement>) => {
       if (e.key === "Enter" || e.key === " ") {
@@ -114,14 +118,9 @@ export const CategoryDisclosure = memo(function CategoryDisclosure({
                 name={item.icon}
                 className="h-4 w-4 group-aria-expanded/collapsible:text-accent-pink-foreground"
               />
-              <ShadTooltip
-                content={t(item.display_name, {
-                  defaultValue: item.display_name,
-                })}
-                styleClasses="z-50"
-              >
+              <ShadTooltip content={translatedDisplayName} styleClasses="z-50">
                 <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">
-                  {t(item.display_name, { defaultValue: item.display_name })}
+                  {translatedDisplayName}
                 </span>
               </ShadTooltip>
               {showActions && (

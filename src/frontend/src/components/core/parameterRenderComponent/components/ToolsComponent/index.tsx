@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { ICON_STROKE_WIDTH } from "@/constants/constants";
 import { ENABLE_MCP_COMPOSER } from "@/customization/feature-flags";
 import ToolsModal from "@/modals/toolsModal";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { cn, testIdCase } from "@/utils/utils";
 import { ForwardedIconComponent } from "../../../../common/genericIconComponent";
 import { Badge } from "../../../../ui/badge";
@@ -30,6 +31,9 @@ export default function ToolsComponent({
   // biome-ignore lint/suspicious/noExplicitAny: legacy
 }: InputProps<any[] | undefined, ToolsComponentType>): JSX.Element | null {
   const { t } = useTranslation();
+  const translatedButtonDescription = button_description
+    ? translateComponentMetadata(t, "action", button_description)
+    : undefined;
   const [internalOpen, setInternalOpen] = useState(false);
   const isModalOpen = open ?? internalOpen;
   const setIsModalOpen = setOpen ?? setInternalOpen;
@@ -79,7 +83,9 @@ export default function ToolsComponent({
         {!hideButton && (visibleActions.length > 0 || isAction) && (
           <Button
             variant={
-              ENABLE_MCP_COMPOSER && button_description ? "outline" : "ghost"
+              ENABLE_MCP_COMPOSER && translatedButtonDescription
+                ? "outline"
+                : "ghost"
             }
             disabled={!value || disabled}
             size="sm"
@@ -87,19 +93,19 @@ export default function ToolsComponent({
             onClick={() => setIsModalOpen(true)}
             className={cn(
               "absolute -top-8 right-0 !text-mmd font-normal group-hover:text-primary",
-              !button_description ? "text-muted-foreground" : "",
+              !translatedButtonDescription ? "text-muted-foreground" : "",
             )}
           >
             <ForwardedIconComponent
               name={
-                ENABLE_MCP_COMPOSER && button_description
+                ENABLE_MCP_COMPOSER && translatedButtonDescription
                   ? "wrench"
                   : "Settings2"
               }
               className="icon-size"
               strokeWidth={ICON_STROKE_WIDTH}
             />
-            {button_description}
+            {translatedButtonDescription}
           </Button>
         )}
 

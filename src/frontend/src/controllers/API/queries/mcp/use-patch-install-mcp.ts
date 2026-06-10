@@ -1,4 +1,5 @@
 import type { UseMutationResult } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import type { useMutationFunctionType } from "@/types/api";
 import { api } from "../../api";
 import { getURL } from "../../helpers/constants";
@@ -25,6 +26,7 @@ export const usePatchInstallMCP: useMutationFunctionType<
   PatchInstallMCPBody,
   PatchInstallMCPResponse
 > = (params, options?) => {
+  const { t } = useTranslation();
   const { mutate, queryClient } = UseRequestProcessor();
 
   async function patchInstallMCP(
@@ -36,12 +38,12 @@ export const usePatchInstallMCP: useMutationFunctionType<
         body,
       );
 
-      return { message: res.data?.message || "MCP installed successfully" };
+      return { message: res.data?.message || t("mcp.installed") };
     } catch (error: unknown) {
       throw new Error(
         extractApiErrorMessage(
           error as Parameters<typeof extractApiErrorMessage>[0],
-          "Failed to install MCP",
+          t("mcp.installFailed"),
         ),
       );
     }
@@ -49,7 +51,7 @@ export const usePatchInstallMCP: useMutationFunctionType<
 
   const mutation: UseMutationResult<
     PatchInstallMCPResponse,
-    any,
+    unknown,
     PatchInstallMCPBody
   > = mutate(["usePatchInstallMCP", params.project_id], patchInstallMCP, {
     ...options,

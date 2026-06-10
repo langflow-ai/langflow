@@ -12,6 +12,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
+import { DEFAULT_FOLDER } from "@/constants/constants";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useGetFoldersQuery } from "@/controllers/API/queries/folders/use-get-folders";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
@@ -71,6 +72,14 @@ export const MenuBar = memo((): JSX.Element => {
     () => folders?.find((f) => f.id === currentFlowFolderId),
     [folders, currentFlowFolderId],
   );
+  const currentFolderDisplayName =
+    currentFolder?.name === DEFAULT_FOLDER
+      ? t("project.starterName")
+      : currentFolder?.name;
+  const currentFlowDisplayName =
+    currentFlowName === "New Flow"
+      ? t("flow.defaultName")
+      : currentFlowName || t("flow.untitledFlow");
 
   const handleSave = () => {
     if (!onFlowPage) return;
@@ -100,7 +109,7 @@ export const MenuBar = memo((): JSX.Element => {
             data-testid="menu_flow_bar"
             id="menu_flow_bar_navigation"
           >
-            {currentFolder?.name && (
+            {currentFolderDisplayName && (
               <div className="hidden truncate md:flex">
                 <div
                   className="cursor-pointer truncate text-sm text-muted-foreground hover:text-primary"
@@ -112,7 +121,7 @@ export const MenuBar = memo((): JSX.Element => {
                     );
                   }}
                 >
-                  {currentFolder?.name}
+                  {currentFolderDisplayName}
                 </div>
               </div>
             )}
@@ -140,7 +149,7 @@ export const MenuBar = memo((): JSX.Element => {
                 aria-hidden="true"
                 data-testid="flow_name"
               >
-                {currentFlowName || t("flow.untitledFlow")}
+                {currentFlowDisplayName}
               </span>
               <IconComponent
                 name="pencil"

@@ -14,14 +14,15 @@ import DeleteConfirmationModal from "@/modals/deleteConfirmationModal";
 import useAlertStore from "@/stores/alertStore";
 import type { APIClassType } from "@/types/api";
 import { removeCountFromString } from "@/utils/utils";
+import type { NodeColors } from "../types";
 import { SearchConfigTrigger } from "./searchConfigTrigger";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 type McpSidebarGroupProps = {
-  mcpComponents?: any[];
-  nodeColors: any;
+  mcpComponents?: APIClassType[];
+  nodeColors: NodeColors;
   onDragStart: (
-    event: React.DragEvent<any>,
+    event: React.DragEvent<HTMLDivElement>,
     data: { type: string; node?: APIClassType },
   ) => void;
   openCategories: string[];
@@ -176,7 +177,7 @@ const McpSidebarGroup = ({
               setDeleteModalOpen(false);
               setServerToDelete(null);
             }}
-            description={"MCP Server"}
+            description={t("misc.mcpServer")}
           />
         </SidebarMenu>
       </SidebarGroupContent>

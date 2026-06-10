@@ -27,13 +27,13 @@ const GENERATING_STEPS: AgenticStepType[] = [
 
 // Intent-specific placeholder per generating step (no random rotation while
 // the LLM produces a component or flow).
-const GENERATING_PLACEHOLDER: Partial<Record<AgenticStepType, string>> = {
-  generating: "Generating response...",
-  generating_component: "Generating component...",
-  generating_plan: "Generating plan...",
-  generating_flow: "Generating flow...",
-  orchestrating: "Orchestrating...",
-  generating_document: "Generating document...",
+const GENERATING_PLACEHOLDER_KEYS: Partial<Record<AgenticStepType, string>> = {
+  generating: "assistant.generatingResponse",
+  generating_component: "assistant.generatingComponent",
+  generating_plan: "assistant.generatingPlan",
+  generating_flow: "assistant.generatingFlow",
+  orchestrating: "assistant.orchestrating",
+  generating_document: "assistant.generatingDocument",
 };
 
 // Hook for rotating placeholder messages during post-generation processing
@@ -88,8 +88,6 @@ interface AssistantInputProps {
    * room for the upward-opening list in the compact (no-messages) layout. */
   onMentionOpenChange?: (open: boolean) => void;
 }
-
-const REFINING_PLAN_PLACEHOLDER = "Tell me what to change…";
 
 export function AssistantInput({
   onSend,
@@ -262,10 +260,12 @@ export function AssistantInput({
               isProcessing
                 ? isPostGenerationStep
                   ? ""
-                  : (currentStep && GENERATING_PLACEHOLDER[currentStep]) ||
+                  : (currentStep &&
+                      GENERATING_PLACEHOLDER_KEYS[currentStep] &&
+                      t(GENERATING_PLACEHOLDER_KEYS[currentStep])) ||
                     t("assistant.workingOnIt")
                 : isRefiningPlan
-                  ? REFINING_PLAN_PLACEHOLDER
+                  ? t("assistant.refiningPlanPlaceholder")
                   : (placeholder ?? idlePlaceholder)
             }
             disabled={disabled || isProcessing}

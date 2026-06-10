@@ -44,10 +44,10 @@ export function AssistantHeader({
           <span
             data-testid="assistant-skip-all-badge"
             className="flex h-5 items-center gap-1 rounded-full border border-muted-foreground/30 bg-muted-foreground/10 px-2 text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
-            title="Skip-all mode is on. Plans, flow proposals, and validated components auto-approve. Type /skip-all to toggle off."
+            title={t("assistant.skipAllTooltip")}
           >
             <ForwardedIconComponent name="Zap" className="h-2.5 w-2.5" />
-            Skip-all
+            {t("assistant.skipAll")}
           </span>
         )}
       </div>

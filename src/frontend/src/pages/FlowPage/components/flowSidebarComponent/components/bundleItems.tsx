@@ -1,5 +1,7 @@
 import { memo, useCallback, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
+import ShadTooltip from "@/components/common/shadTooltipComponent";
 import {
   Disclosure,
   DisclosureContent,
@@ -8,6 +10,7 @@ import {
 import { SidebarMenuButton, SidebarMenuItem } from "@/components/ui/sidebar";
 import { ENABLE_EXTENSION_RELOAD } from "@/customization/feature-flags";
 import { useUtilityStore } from "@/stores/utilityStore";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import { deriveBundleExtensionId } from "../helpers/derive-bundle-extension-id";
 import type { BundleItemProps } from "../types";
 import BundleHeaderActions from "./bundleHeaderActions";
@@ -24,7 +27,13 @@ export const BundleItem = memo(
     sensitiveSort,
     handleKeyDownInput,
   }: BundleItemProps) => {
+    const { t } = useTranslation();
     const isOpen = openCategories.includes(item.name);
+    const translatedDisplayName = translateComponentMetadata(
+      t,
+      "category",
+      item.display_name,
+    );
 
     const handleOpenChange = useCallback(
       (isOpen: boolean) => {
@@ -95,9 +104,14 @@ export const BundleItem = memo(
                   name={item.icon}
                   className="h-4 w-4 text-muted-foreground group-aria-expanded/collapsible:text-primary"
                 />
-                <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">
-                  {item.display_name}
-                </span>
+                <ShadTooltip
+                  content={translatedDisplayName}
+                  styleClasses="z-50"
+                >
+                  <span className="flex-1 min-w-0 truncate group-aria-expanded/collapsible:font-semibold">
+                    {translatedDisplayName}
+                  </span>
+                </ShadTooltip>
                 {showActions && (
                   <BundleHeaderActions
                     bundleName={item.name}

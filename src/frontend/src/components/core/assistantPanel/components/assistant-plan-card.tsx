@@ -1,4 +1,5 @@
 import { ArrowRight, ClipboardList, RotateCcw, X } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import Markdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/utils/utils";
@@ -35,6 +36,7 @@ export function AssistantPlanCard({
   onDismiss,
   onReset,
 }: AssistantPlanCardProps) {
+  const { t } = useTranslation();
   const isRefining = status === "refining";
   return (
     <div
@@ -56,11 +58,13 @@ export function AssistantPlanCard({
             isRefining ? "text-muted-foreground" : "text-foreground",
           )}
         >
-          {isRefining ? "Refining plan" : "Proposed plan"}
+          {isRefining
+            ? t("assistant.refiningPlan")
+            : t("assistant.proposedPlan")}
         </span>
         {isRefining && (
           <span className="text-xs text-muted-foreground/70">
-            Send your changes…
+            {t("assistant.sendYourChanges")}
           </span>
         )}
       </div>
@@ -100,7 +104,7 @@ export function AssistantPlanCard({
             className={GHOST_PRIMARY_BUTTON}
             onClick={() => onApprove?.()}
           >
-            <span>Continue</span>
+            <span>{t("assistant.continue")}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
           <button
@@ -110,7 +114,7 @@ export function AssistantPlanCard({
             onClick={() => onReset?.()}
           >
             <RotateCcw className="h-3.5 w-3.5" />
-            <span>Reset</span>
+            <span>{t("common.reset")}</span>
           </button>
         </>
       );
@@ -124,7 +128,7 @@ export function AssistantPlanCard({
             className={GHOST_PRIMARY_BUTTON}
             onClick={() => onApprove?.()}
           >
-            <span>Continue</span>
+            <span>{t("assistant.continue")}</span>
             <ArrowRight className="h-3.5 w-3.5" />
           </button>
           <button
@@ -134,7 +138,7 @@ export function AssistantPlanCard({
             onClick={() => onDismiss?.()}
           >
             <X className="h-3.5 w-3.5" />
-            <span>Dismiss</span>
+            <span>{t("node.dismiss")}</span>
           </button>
         </>
       );
@@ -143,13 +147,13 @@ export function AssistantPlanCard({
       return (
         <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-accent-emerald-foreground">
           <ArrowRight className="h-3.5 w-3.5" />
-          <span>Plan approved</span>
+          <span>{t("assistant.planApproved")}</span>
         </div>
       );
     }
     return (
       <div className="flex h-7 items-center gap-1.5 px-2 text-sm font-medium text-muted-foreground line-through">
-        <span>Dismissed</span>
+        <span>{t("assistant.dismissed")}</span>
       </div>
     );
   }

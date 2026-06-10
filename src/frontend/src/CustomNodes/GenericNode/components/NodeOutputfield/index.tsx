@@ -470,7 +470,7 @@ function NodeOutputField({
               </OutputModal>
               {looping && (
                 <Badge variant="pinkStatic" size="xq" className="px-1">
-                  Looping
+                  {t("node.looping")}
                 </Badge>
               )}
             </div>

@@ -211,7 +211,7 @@ export function MemoryDetailsHeader({
             variant="ghost"
             size="icon"
             disabled={deleteMutation.isPending}
-            aria-label="Delete memory"
+            aria-label={t("memory.deleteMemory")}
           >
             <IconComponent name="Trash2" className="h-4 w-4 text-destructive" />
           </Button>

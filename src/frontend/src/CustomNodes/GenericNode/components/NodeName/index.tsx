@@ -9,6 +9,7 @@ import { cn } from "@/utils/utils";
 
 export default function NodeName({
   display_name,
+  translatedDisplayName,
   selected,
   nodeId,
   showNode,
@@ -19,6 +20,7 @@ export default function NodeName({
   setHasChangedNodeDescription,
 }: {
   display_name?: string;
+  translatedDisplayName?: string;
   selected?: boolean;
   nodeId: string;
   showNode: boolean;
@@ -103,12 +105,12 @@ export default function NodeName({
             className={cn("cursor-grab truncate text-base")}
             data-testid="node-name"
           >
-            {display_name}
+            {translatedDisplayName ?? display_name}
           </span>
           {legacy && (
             <div className="shrink-0">
               <div className="flex items-center text-xxs justify-center rounded-sm border border-accent-amber text-accent-amber-foreground px-1">
-                Legacy
+                {t("node.legacy")}
               </div>
             </div>
           )}

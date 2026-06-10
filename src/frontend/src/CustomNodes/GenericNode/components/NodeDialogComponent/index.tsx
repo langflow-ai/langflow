@@ -18,6 +18,7 @@ import { track } from "@/customization/utils/analytics";
 import useAlertStore from "@/stores/alertStore";
 import useFlowStore from "@/stores/flowStore";
 import type { APIClassType, InputFieldType } from "@/types/api";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 
 type DialogFieldValue = unknown;
 
@@ -237,9 +238,12 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
             fieldValue as Partial<InputFieldType>,
           ),
       )
-      .map(
-        ([fieldKey, fieldValue]) =>
+      .map(([fieldKey, fieldValue]) =>
+        translateComponentMetadata(
+          t,
+          "field",
           (fieldValue as { display_name: string })?.display_name || fieldKey,
+        ),
       );
 
     if (missingRequiredFields.length > 0) {
@@ -272,12 +276,22 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
         <DialogHeader className="px-5 pb-3">
           <DialogTitle>
             <div className="flex items-center">
-              <span className="pb-2">{dialogNodeData?.display_name}</span>
+              <span className="pb-2">
+                {translateComponentMetadata(
+                  t,
+                  "component",
+                  dialogNodeData?.display_name,
+                )}
+              </span>
             </div>
           </DialogTitle>
           <DialogDescription>
             <div className="flex items-center gap-2">
-              {dialogNodeData?.description}
+              {translateComponentMetadata(
+                t,
+                "description",
+                dialogNodeData?.description,
+              )}
             </div>
           </DialogDescription>
         </DialogHeader>
@@ -287,9 +301,12 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
             <div key={fieldKey}>
               <div className="flex items-center gap-2">
                 {getCustomParameterTitle({
-                  title:
+                  title: translateComponentMetadata(
+                    t,
+                    "field",
                     (fieldValue as { display_name: string })?.display_name ??
-                    "",
+                      "",
+                  ),
                   nodeId,
                   isFlexView: false,
                   required:
@@ -310,9 +327,11 @@ export const NodeDialog: React.FC<NodeDialogProps> = ({
                 disabled={
                   (fieldValue as { disabled: boolean })?.disabled ?? false
                 }
-                placeholder={
-                  (fieldValue as { placeholder: string })?.placeholder ?? ""
-                }
+                placeholder={translateComponentMetadata(
+                  t,
+                  "placeholder",
+                  (fieldValue as { placeholder: string })?.placeholder ?? "",
+                )}
                 isToolMode={false}
               />
             </div>

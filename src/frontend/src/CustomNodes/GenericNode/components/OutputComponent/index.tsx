@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { useTranslation } from "react-i18next";
 import { ForwardedIconComponent } from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +14,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import useFlowStore from "@/stores/flowStore";
+import { translateComponentMetadata } from "@/utils/component-metadata-i18n";
 import ShadTooltip from "../../../../components/common/shadTooltipComponent";
 import type { outputComponentType } from "../../../../types/components";
 import { cn } from "../../../../utils/utils";
@@ -30,6 +32,7 @@ export default function OutputComponent({
   handleSelectOutput,
   outputName,
 }: outputComponentType) {
+  const { t } = useTranslation();
   const nodeType = useFlowStore(
     (state) => state.nodes.find((node) => node.id === nodeId)?.data?.type,
   );
@@ -107,7 +110,11 @@ export default function OutputComponent({
                       value={output.name}
                     >
                       <span className="truncate text-[13px]">
-                        {output.display_name ?? output.name}
+                        {translateComponentMetadata(
+                          t,
+                          "output",
+                          output.display_name ?? output.name,
+                        )}
                       </span>
                       <span className="ml-4 text-[13px] text-muted-foreground">
                         {output.types.join(", ")}
