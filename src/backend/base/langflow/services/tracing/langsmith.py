@@ -88,6 +88,7 @@ class LangSmithTracer(BaseTracer):
         os.environ["LANGCHAIN_TRACING_V2"] = "true"
         return True
 
+    @override
     def add_trace(
         self,
         trace_id: str,
@@ -95,7 +96,8 @@ class LangSmithTracer(BaseTracer):
         trace_type: str,
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
-        vertex: Vertex | None = None,  # noqa: ARG002
+        vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         if not self._ready or not self._run_tree:
             return
@@ -105,10 +107,14 @@ class LangSmithTracer(BaseTracer):
 
         from langsmith.run_helpers import trace
 
+        parent = self._run_tree
+        if parent_id and parent_id in self._children:
+            parent = self._children[parent_id]
+
         child_trace = trace(
             name=trace_name,
             run_type=self.get_run_type(trace_type),
-            parent=self._run_tree,
+            parent=parent,
             inputs=processed_inputs,
             metadata=self._convert_to_langchain_types(metadata) if metadata else None,
         )
@@ -144,10 +150,11 @@ class LangSmithTracer(BaseTracer):
             value = str(value)
         return value
 
+    @override
     def end_trace(
         self,
         trace_id: str,
-        trace_name: str,  # noqa: ARG002
+        trace_name: str,
         outputs: dict[str, Any] | None = None,
         error: Exception | None = None,
         logs: Sequence[Log | dict] = (),
@@ -179,6 +186,7 @@ class LangSmithTracer(BaseTracer):
             error_message = f"{error.__class__.__name__}: {error}\n\n{string_stacktrace}"
         return error_message
 
+    @override
     def end(
         self,
         inputs: dict[str, Any],

@@ -367,6 +367,33 @@ class TestLangfuseTracerFunctionality:
             assert "parent_span_id" in trace_context
             assert trace_context["parent_span_id"] == "child-span-id"
 
+    def test_add_trace_with_parent_id_uses_parent_span(self, mock_langfuse):
+        """Test that add_trace with parent_id uses that span as parent instead of root."""
+        from langflow.serialization.serialization import serialize
+        from langflow.services.tracing.langfuse import LangFuseTracer
+
+        tracer = LangFuseTracer(
+            trace_name="test-flow - flow-123",
+            trace_type="chain",
+            project_name="test-project",
+            trace_id=uuid.uuid4(),
+        )
+
+        tracer.add_trace("comp-1", "ParentComponent", "chain", {})
+        tracer.add_trace("comp-2", "ChildComponent", "llm", {}, parent_id="comp-1")
+
+        # comp-1 should be child of root_span
+        mock_langfuse["root_span"].start_span.assert_any_call(
+            name="ParentComponent",
+            input=serialize({}),
+            metadata=serialize({"from_langflow_component": True, "component_id": "comp-1", "trace_type": "chain"}),
+        )
+
+        # comp-2 should be child of comp-1 (which is mock_child_span in our fixture)
+        mock_langfuse["child_span"].start_span.assert_called_once()
+        call_args = mock_langfuse["child_span"].start_span.call_args
+        assert call_args[1]["name"] == "ChildComponent"
+
 
 class TestLangfuseClientSingleton:
     """Verify the Langfuse client is constructed once and reused across flow runs.

@@ -105,6 +105,7 @@ class TraceContext:
         self.traces_queue: asyncio.Queue = asyncio.Queue()
         self.running = False
         self.worker_task: asyncio.Task | None = None
+        self.ref_count: int = 1
 
 
 class ComponentTraceContext:
@@ -116,6 +117,7 @@ class ComponentTraceContext:
         vertex: Vertex | None,
         inputs: dict[str, dict],
         metadata: dict[str, dict] | None = None,
+        parent: ComponentTraceContext | None = None,
     ):
         self.trace_id: str = trace_id
         self.trace_name: str = trace_name
@@ -126,6 +128,7 @@ class ComponentTraceContext:
         self.outputs: dict[str, dict] = defaultdict(dict)
         self.outputs_metadata: dict[str, dict] = defaultdict(dict)
         self.logs: dict[str, list[Log | dict[Any, Any]]] = defaultdict(list)
+        self.parent: ComponentTraceContext | None = parent
 
 
 class TracingService(Service):
@@ -298,6 +301,11 @@ class TracingService(Service):
         if self.deactivated:
             return
         try:
+            existing_context = trace_context_var.get()
+            if existing_context is not None and existing_context.running:
+                existing_context.ref_count += 1
+                return
+
             project_name = project_name or os.getenv("LANGCHAIN_PROJECT", "Langflow")
             trace_context = TraceContext(
                 run_id,
@@ -360,6 +368,11 @@ class TracingService(Service):
         trace_context = trace_context_var.get()
         if trace_context is None:
             return
+
+        trace_context.ref_count -= 1
+        if trace_context.ref_count > 0:
+            return
+
         await self._stop(trace_context)
         self._end_all_tracers(trace_context, outputs, error)
 
@@ -396,18 +409,34 @@ class TracingService(Service):
         inputs = self._cleanup_inputs(component_trace_context.inputs)
         component_trace_context.inputs = inputs
         component_trace_context.inputs_metadata = component_trace_context.inputs_metadata or {}
+        parent_id = component_trace_context.parent.trace_id if component_trace_context.parent else None
         for tracer in trace_context.tracers.values():
             if not tracer.ready:
                 continue
             try:
-                tracer.add_trace(
-                    component_trace_context.trace_id,
-                    component_trace_context.trace_name,
-                    component_trace_context.trace_type,
-                    inputs,
-                    component_trace_context.inputs_metadata,
-                    component_trace_context.vertex,
-                )
+                try:
+                    tracer.add_trace(
+                        component_trace_context.trace_id,
+                        component_trace_context.trace_name,
+                        component_trace_context.trace_type,
+                        inputs,
+                        component_trace_context.inputs_metadata,
+                        component_trace_context.vertex,
+                        parent_id,
+                    )
+                except TypeError as e:
+                    # Backward compatibility for tracers that don't support parent_id
+                    if "parent_id" in str(e):
+                        tracer.add_trace(
+                            component_trace_context.trace_id,
+                            component_trace_context.trace_name,
+                            component_trace_context.trace_type,
+                            inputs,
+                            component_trace_context.inputs_metadata,
+                            component_trace_context.vertex,
+                        )
+                    else:
+                        raise
             except Exception:  # noqa: BLE001
                 logger.exception(f"Error starting trace {component_trace_context.trace_name}")
 
@@ -454,8 +483,11 @@ class TracingService(Service):
             trace_id = vertex.id
         trace_type = component.trace_type
         inputs = self._cleanup_inputs(inputs)
-        component_trace_context = ComponentTraceContext(trace_id, trace_name, trace_type, vertex, inputs, metadata)
-        component_context_var.set(component_trace_context)
+        parent = component_context_var.get()
+        component_trace_context = ComponentTraceContext(
+            trace_id, trace_name, trace_type, vertex, inputs, metadata, parent=parent
+        )
+        token = component_context_var.set(component_trace_context)
         trace_context = trace_context_var.get()
         if trace_context is None:
             msg = "called trace_component but no trace context found"
@@ -475,6 +507,8 @@ class TracingService(Service):
             await trace_context.traces_queue.put(
                 (self._end_component_traces, (component_trace_context, trace_context, None))
             )
+        finally:
+            component_context_var.reset(token)
 
     @property
     def project_name(self):

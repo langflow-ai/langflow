@@ -285,6 +285,7 @@ class LangFuseTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         if not self._ready:
             return
@@ -295,8 +296,13 @@ class LangFuseTracer(BaseTracer):
 
         name = trace_name.removesuffix(f" ({trace_id})")
 
-        # Create child span under the root span
-        span = self._root_span.start_span(
+        # Determine parent span
+        parent = self._root_span
+        if parent_id and parent_id in self.spans:
+            parent = self.spans[parent_id]
+
+        # Create child span under the parent span
+        span = parent.start_span(
             name=name,
             input=serialize(inputs),
             metadata=serialize(metadata_),

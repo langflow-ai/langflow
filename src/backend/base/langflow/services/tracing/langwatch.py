@@ -143,6 +143,7 @@ class LangWatchTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         if not self._ready:
             return
@@ -159,12 +160,19 @@ class LangWatchTracer(BaseTracer):
             else []
         )
 
+        # Determine parent
+        parent = self.trace.root_span
+        if parent_id and parent_id in self.spans:
+            parent = self.spans[parent_id]
+        elif len(previous_nodes) > 0:
+            parent = previous_nodes[-1]
+
         span = self.trace.span(
             # Add a nanoid to make the span_id globally unique, which is required for LangWatch for now
             span_id=f"{trace_id}-{nanoid.generate(size=6)}",
             name=name_without_id,
             type="component",
-            parent=(previous_nodes[-1] if len(previous_nodes) > 0 else self.trace.root_span),
+            parent=parent,
             input=self._convert_to_langwatch_types(inputs),
         )
         self.trace.set_current_span(span)

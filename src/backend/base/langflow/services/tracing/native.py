@@ -128,6 +128,7 @@ class NativeTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         """Add a component-level trace span.
 
@@ -138,6 +139,7 @@ class NativeTracer(BaseTracer):
             inputs: Input data
             metadata: Optional metadata
             vertex: Optional vertex reference
+            parent_id: Optional parent span ID
         """
         if not self._ready:
             return
@@ -153,6 +155,7 @@ class NativeTracer(BaseTracer):
             "inputs": serialize(inputs),
             "metadata": metadata or {},
             "start_time": start_time,
+            "parent_span_id": parent_id,
         }
 
         # Stored so get_langchain_callback() can attach LangChain child spans to this component.
@@ -220,6 +223,7 @@ class NativeTracer(BaseTracer):
                 error=str(error) if error else None,
                 attributes=attributes,
                 span_source="component",
+                parent_span_id=span_info.get("parent_span_id"),
             )
         )
 

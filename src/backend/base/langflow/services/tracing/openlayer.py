@@ -159,6 +159,7 @@ class OpenlayerTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         """Create SDK Step object for component."""
         if not self._ready:

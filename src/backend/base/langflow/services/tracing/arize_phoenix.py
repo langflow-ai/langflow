@@ -17,7 +17,7 @@ from lfx.schema.data import Data
 from openinference.semconv.trace import OpenInferenceMimeTypeValues, SpanAttributes
 from opentelemetry.sdk.trace.export import SpanProcessor
 from opentelemetry.semconv.trace import SpanAttributes as OTELSpanAttributes
-from opentelemetry.trace import Span, Status, StatusCode, use_span
+from opentelemetry.trace import Span, Status, StatusCode, set_span_in_context, use_span
 from opentelemetry.trace.propagation.tracecontext import TraceContextTextMapPropagator
 from typing_extensions import override
 
@@ -232,12 +232,16 @@ class ArizePhoenixTracer(BaseTracer):
         inputs: dict[str, Any],
         metadata: dict[str, Any] | None = None,
         vertex: Vertex | None = None,
+        parent_id: str | None = None,
     ) -> None:
         """Adds a trace span, attaching inputs and metadata as attributes."""
         if not self._ready:
             return
 
         span_context = self.propagator.extract(carrier=self.carrier)
+        if parent_id and parent_id in self.child_spans:
+            span_context = set_span_in_context(self.child_spans[parent_id], context=span_context)
+
         child_span = self.tracer.start_span(
             name=trace_name,
             context=span_context,
