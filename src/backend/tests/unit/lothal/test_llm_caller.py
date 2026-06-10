@@ -128,6 +128,32 @@ def test_unknown_provider_raises_config_error():
         get_provider("does-not-exist")
 
 
+def test_provider_name_is_case_insensitive():
+    # Registration normalizes names, so a mixed-case/padded lookup still resolves.
+    assert isinstance(get_provider("  Claude "), ClaudeAgentProvider)
+
+
+def test_duplicate_provider_name_is_rejected():
+    snapshot = dict(llm_registry._REGISTRY)
+
+    class DupProvider(LLMProvider):
+        name = "Claude"  # same as the built-in once normalized
+
+        @classmethod
+        def from_env(cls):
+            return cls()
+
+        async def complete(self, _messages, **_kwargs):
+            return "nope"
+
+    try:
+        with pytest.raises(LLMConfigError):
+            llm_registry.register_provider(DupProvider)
+    finally:
+        llm_registry._REGISTRY.clear()
+        llm_registry._REGISTRY.update(snapshot)
+
+
 def test_model_name_read_from_env(monkeypatch):
     monkeypatch.setenv("LOTHAL_MODEL_NAME", "claude-sonnet-4-6")
     assert get_provider("claude").model == "claude-sonnet-4-6"

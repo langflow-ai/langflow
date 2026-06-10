@@ -21,10 +21,19 @@ _REGISTRY: dict[str, type[LLMProvider]] = {}
 
 
 def register_provider(cls: type[LLMProvider]) -> type[LLMProvider]:
-    """Class decorator: register `cls` under its `name` for `get_provider`."""
-    name = getattr(cls, "name", None)
-    if not name:
-        msg = f"{cls.__name__} must define a non-empty `name` to be registered."
+    """Class decorator: register `cls` under its normalized `name`.
+
+    Names are normalized (stripped + lowercased) so registration and
+    `get_provider` lookup always agree; a duplicate name is rejected rather than
+    silently overwriting an existing provider.
+    """
+    raw_name = getattr(cls, "name", None)
+    if not isinstance(raw_name, str) or not raw_name.strip():
+        msg = f"{cls.__name__} must define a non-empty string `name` to be registered."
+        raise LLMConfigError(msg)
+    name = raw_name.strip().lower()
+    if name in _REGISTRY:
+        msg = f"LLM provider name {name!r} is already registered to {_REGISTRY[name].__name__}."
         raise LLMConfigError(msg)
     _REGISTRY[name] = cls
     return cls
@@ -41,7 +50,7 @@ def get_provider(name: str | None = None) -> LLMProvider:
     Precedence: explicit `name` arg → `$LOTHAL_LLM_PROVIDER` → `DEFAULT_PROVIDER`.
     An unknown name raises `LLMConfigError` listing what is available.
     """
-    resolved = (name or os.getenv("LOTHAL_LLM_PROVIDER") or DEFAULT_PROVIDER).lower()
+    resolved = (name or os.getenv("LOTHAL_LLM_PROVIDER") or DEFAULT_PROVIDER).strip().lower()
     try:
         cls = _REGISTRY[resolved]
     except KeyError as exc:
