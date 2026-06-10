@@ -1904,6 +1904,60 @@ class TestBufferBackgroundRunUnknownProtocolGuard:
             _REGISTRY.update(snapshot)
 
 
+class TestExecuteWorkflowBackgroundQueueOwnership:
+    async def test_background_jobs_do_not_register_polling_owner(self, monkeypatch: pytest.MonkeyPatch):
+        """Background jobs must not opt into Redis' polling-owner watchdog.
+
+        ``register_job_owner`` is the Redis queue service's signal that a job
+        has an active polling/streaming client expected to refresh
+        ``touch_activity``. v2 background jobs run unattended and are stopped
+        via the queue cancel side-channel plus the persisted workflow Job row,
+        so registering them would let the polling watchdog reclaim long runs.
+        """
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.converters import ParsedWorkflowRun
+
+        job_id = uuid4()
+        current_user_id = uuid4()
+        flow_id = uuid4()
+        created_jobs: list[object] = []
+        registered_owners: list[tuple[str, object]] = []
+        started_jobs: list[str] = []
+
+        class FakeJobService:
+            async def create_job(self, **kwargs):
+                created_jobs.append(kwargs["job_id"])
+
+        class FakeQueueService:
+            def create_queue(self, _seen_job_id):
+                return SimpleNamespace(), SimpleNamespace()
+
+            async def register_job_owner(self, seen_job_id, user_id):
+                registered_owners.append((seen_job_id, user_id))
+
+            def start_job(self, seen_job_id, task_coro):
+                started_jobs.append(seen_job_id)
+                task_coro.close()
+
+        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
+        monkeypatch.setattr(workflow_module, "get_queue_service", lambda: FakeQueueService())
+        monkeypatch.setattr(workflow_module, "_BACKGROUND_RUNS", {})
+
+        response = await workflow_module.execute_workflow_background(
+            parsed=ParsedWorkflowRun(flow_id=str(flow_id), mode="background"),
+            flow=SimpleNamespace(id=flow_id, name="Background Flow"),
+            job_id=job_id,
+            current_user=SimpleNamespace(id=current_user_id),
+            http_request=SimpleNamespace(),
+            stream_protocol="agui",
+        )
+
+        assert str(response.job_id) == str(job_id)
+        assert created_jobs == [job_id]
+        assert started_jobs == [str(job_id)]
+        assert registered_owners == []
+
+
 class TestStopWorkflowEndToEnd:
     """The full ``POST /workflows/stop`` HTTP flow clears the in-memory buffer too.
 

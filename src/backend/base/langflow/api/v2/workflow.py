@@ -1123,7 +1123,6 @@ async def execute_workflow_background(
         try:
             queue_service = get_queue_service()
             queue_service.create_queue(job_id_str)
-            await queue_service.register_job_owner(job_id_str, current_user.id)
             queue_service.start_job(
                 job_id_str,
                 _buffer_background_run(
