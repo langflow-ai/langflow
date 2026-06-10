@@ -9,13 +9,12 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { FlowBuilderWelcome } from "../flow-builder-welcome";
-import {
-  WELCOME_BROWSE_MORE_LABEL,
-  WELCOME_SIMPLE_AGENT_LABEL,
-  WELCOME_TEXTAREA_PLACEHOLDER,
-  WELCOME_TITLE,
-  WELCOME_VECTOR_STORE_RAG_LABEL,
-} from "../flow-builder-welcome.constants";
+
+const WELCOME_TITLE = "What do you want to build?";
+const WELCOME_TEXTAREA_PLACEHOLDER = "Describe your flow...";
+const WELCOME_SIMPLE_AGENT_LABEL = "Simple Agent";
+const WELCOME_VECTOR_STORE_RAG_LABEL = "Vector Store RAG";
+const WELCOME_BROWSE_MORE_LABEL = "Browse more...";
 
 // Mock the icon component to keep these tests free from SVG / asset noise.
 jest.mock("@/components/common/genericIconComponent", () => {

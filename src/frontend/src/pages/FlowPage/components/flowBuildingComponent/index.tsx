@@ -11,6 +11,7 @@ import { TextShimmer } from "@/components/ui/TextShimmer";
 import { BuildStatus } from "@/constants/enums";
 import useFlowStore from "@/stores/flowStore";
 import { cn } from "@/utils/utils";
+import { getRunningNodeLabel } from "./helpers/get-running-node-label";
 import {
   CONTAINER_VARIANTS,
   DISMISS_BUTTON_VARIANTS,
@@ -86,7 +87,9 @@ export default function FlowBuildingComponent() {
     return (
       <TextShimmer duration={1}>
         {statusBuilding.length > 0
-          ? t("flowBuild.runningNode", { id: statusBuilding[0]?.id })
+          ? t("flowBuild.runningNode", {
+              id: getRunningNodeLabel(statusBuilding[0]?.id),
+            })
           : t("flowBuild.runningFlow")}
       </TextShimmer>
     );

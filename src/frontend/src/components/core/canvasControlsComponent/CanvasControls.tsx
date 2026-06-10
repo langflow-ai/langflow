@@ -170,7 +170,7 @@ const CanvasControls = ({
                     name="Sparkles"
                     className="h-2.5 w-2.5"
                   />
-                  New
+                  {t("assistant.newPill")}
                 </span>
               )}
               <Button
@@ -220,7 +220,11 @@ const CanvasControls = ({
               onOpenAutoFocus={(e) => e.preventDefault()}
               onCloseAutoFocus={(e) => e.preventDefault()}
               data-testid="assistant-onboarding-tooltip"
-              className="z-[60] flex items-center gap-2 whitespace-nowrap rounded-md bg-muted px-2.5 py-1.5 text-sm font-medium text-foreground shadow-md"
+              // Canvas-level stacking: kept BELOW the z-50 modal/dialog/dropdown
+              // layer so the onboarding tooltip never floats in front of an open
+              // modal (e.g. "My Files"). The Portal still lifts it clear of the
+              // ReactFlow Panel's overflow/clipping; only the z-index is capped.
+              className="z-40 flex items-center gap-2 whitespace-nowrap rounded-md bg-muted px-2.5 py-1.5 text-sm font-medium text-foreground shadow-md"
             >
               <button
                 type="button"
@@ -231,7 +235,7 @@ const CanvasControls = ({
               >
                 <X className="h-3.5 w-3.5" />
               </button>
-              <span>Try the new Langflow Assistant!</span>
+              <span>{t("assistant.tryAssistant")}</span>
               <button
                 type="button"
                 data-testid="assistant-onboarding-open"

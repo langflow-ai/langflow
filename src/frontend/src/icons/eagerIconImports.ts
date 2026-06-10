@@ -39,11 +39,7 @@ import { GleanIcon } from "@/icons/Glean";
 import { GoogleIcon } from "@/icons/Google";
 import { GoogleDriveIcon } from "@/icons/GoogleDrive";
 import { GoogleGenerativeAIIcon } from "@/icons/GoogleGenerativeAI";
-import {
-  GradientInfinity,
-  GradientSave,
-  GradientUngroup,
-} from "@/icons/GradientSparkles";
+import { GradientInfinity, GradientUngroup } from "@/icons/GradientSparkles";
 import { GridHorizontalIcon } from "@/icons/GridHorizontal";
 import { GroqIcon } from "@/icons/Groq";
 import { GlobeOkIcon } from "@/icons/globe-ok";
@@ -167,7 +163,6 @@ export const eagerIconsMapping = {
   GoogleGenerativeAI: GoogleGenerativeAIIcon,
   Gmail: GmailIcon,
   GradientInfinity: GradientInfinity,
-  GradientSave: GradientSave,
   GradientUngroup: GradientUngroup,
   GridHorizontal: GridHorizontalIcon,
   Groq: GroqIcon,

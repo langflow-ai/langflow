@@ -9,12 +9,13 @@ import { getAssistantPlaceholder } from "../assistant-panel.constants";
 import type { AssistantModel } from "../assistant-panel.types";
 import { getRandomPlaceholderMessage } from "../helpers/messages";
 import { useAssistantSelectedModel } from "../hooks/use-assistant-selected-model";
+import { useComponentMentions } from "../hooks/use-component-mentions";
 import { useInputHistory } from "../hooks/use-input-history";
+import { AssistantMentionPopover } from "./assistant-mention-popover";
 import { ModelSelector } from "./model-selector";
 
-// Steps where the "thinking" animation is showing in the message area.
-// During these the input renders a static placeholder (no rotating
-// animated text) so the user sees a stable, intent-specific label.
+// During these steps the message area shows the thinking animation, so the
+// input keeps a static intent-specific placeholder instead of rotating text.
 const GENERATING_STEPS: AgenticStepType[] = [
   "generating",
   "generating_component",
@@ -24,9 +25,8 @@ const GENERATING_STEPS: AgenticStepType[] = [
   "generating_document",
 ];
 
-// Static placeholder shown in the textarea during generating steps. The
-// label mirrors the user's intent so we do NOT cycle random "thinking"
-// messages while the LLM is producing a component or flow.
+// Intent-specific placeholder per generating step (no random rotation while
+// the LLM produces a component or flow).
 const GENERATING_PLACEHOLDER: Partial<Record<AgenticStepType, string>> = {
   generating: "Generating response...",
   generating_component: "Generating component...",
@@ -84,6 +84,9 @@ interface AssistantInputProps {
    * intent-specific generating placeholder takes precedence.
    */
   isRefiningPlan?: boolean;
+  /** Notifies the panel when the @-mention popover opens/closes so it can make
+   * room for the upward-opening list in the compact (no-messages) layout. */
+  onMentionOpenChange?: (open: boolean) => void;
 }
 
 const REFINING_PLAN_PLACEHOLDER = "Tell me what to change…";
@@ -100,6 +103,7 @@ export function AssistantInput({
   draftMessage = "",
   onDraftChange,
   isRefiningPlan = false,
+  onMentionOpenChange,
 }: AssistantInputProps) {
   const { t } = useTranslation();
   const [message, setMessage] = useState(draftMessage);
@@ -126,6 +130,16 @@ export function AssistantInput({
     setMessage(value);
     onDraftChange?.(value);
   };
+
+  const mentions = useComponentMentions({
+    value: message,
+    setValue: updateMessage,
+    textareaRef,
+  });
+
+  useEffect(() => {
+    onMentionOpenChange?.(mentions.isOpen);
+  }, [mentions.isOpen, onMentionOpenChange]);
 
   const handleSend = () => {
     const trimmedMessage = message.trim();
@@ -169,6 +183,7 @@ export function AssistantInput({
   }
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (mentions.handleKeyDown(e)) return;
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSend();
@@ -196,11 +211,8 @@ export function AssistantInput({
     }
   };
 
-  // Also gate on selectedModel so the send button stays disabled during the
-  // window between the model selector mounting and its auto-select effect
-  // propagating a model up. Without this, a fast click can fire while
-  // selectedModel is still null, and use-assistant-chat early-returns
-  // without ever adding the user message to the chat.
+  // Gate on selectedModel too: a fast click during the model selector's
+  // auto-select window would fire with a null model and drop the message.
   const canSend =
     message.trim().length > 0 && !disabled && selectedModel !== null;
   const charsRemaining = MAX_MESSAGE_LENGTH - message.length;
@@ -224,12 +236,26 @@ export function AssistantInput({
         )}
         onClick={() => textareaRef.current?.focus()}
       >
+        {mentions.isOpen && (
+          <AssistantMentionPopover
+            items={mentions.items}
+            activeIndex={mentions.activeIndex}
+            onHover={mentions.setActiveIndex}
+            onSelect={mentions.confirm}
+          />
+        )}
         <div className="relative">
           <Textarea
             ref={textareaRef}
             value={message}
             maxLength={MAX_MESSAGE_LENGTH}
-            onChange={(e) => updateMessage(e.target.value)}
+            onChange={(e) => {
+              updateMessage(e.target.value);
+              mentions.handleValueChange(
+                e.target.value,
+                e.target.selectionStart ?? e.target.value.length,
+              );
+            }}
             data-testid="assistant-input-textarea"
             onKeyDown={handleKeyDown}
             placeholder={

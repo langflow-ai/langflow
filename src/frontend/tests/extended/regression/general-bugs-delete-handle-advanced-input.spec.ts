@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 import { TEXTS } from "../../utils/constants/texts";
@@ -16,6 +17,8 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("blank-flow").click();
+
+    await addLegacyComponents(page);
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,

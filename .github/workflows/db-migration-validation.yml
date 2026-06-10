@@ -161,12 +161,12 @@ jobs:
           NIGHTLY_TAG="${{ inputs.nightly_tag || 'langflowai/langflow-nightly:latest' }}"
           echo "Upgrading to nightly version: $NIGHTLY_TAG"
 
-          # Remove stable distributions before installing nightly.
-          # langflow and langflow-nightly share langflow-base which writes to the
-          # same site-packages/langflow/ namespace. If stable stays installed,
-          # python -m langflow still boots the stable version and no real
-          # nightly migration is exercised (false-positive test).
-          echo "Removing stable langflow to avoid namespace collision with nightly..."
+          # Remove the stable install first. The nightly now publishes as a `.devN` pre-release of
+          # the canonical `langflow` (same distribution as stable, different version), so a clean
+          # uninstall avoids stale files and guarantees the dev version is what boots — otherwise
+          # `python -m langflow` could keep running the stable version and no real nightly migration
+          # is exercised (false-positive test).
+          echo "Removing stable langflow to force a clean install of the nightly dev version..."
           uv pip uninstall -y langflow langflow-base || true
 
           # Extract version from Docker tag (format: langflowai/langflow-nightly:v1.10.0.dev20260522)
@@ -179,20 +179,23 @@ jobs:
             echo "Version for PyPI: $VERSION"
 
             if [[ "$VERSION" == "latest" ]]; then
-              # Install latest nightly from PyPI
-              uv pip install --upgrade 'langflow-nightly[postgresql]'
+              # Install latest nightly (canonical pre-release) from PyPI
+              uv pip install --upgrade --prerelease=allow 'langflow[postgresql]'
             else
-              # Install specific version
-              uv pip install --upgrade "langflow-nightly[postgresql]==$VERSION"
+              # Install specific version. --prerelease=allow is required even for an
+              # exact ==X.Y.Z.devN pin: uv only implicitly allows the pre-release for
+              # the directly requested package, while langflow's metadata pins
+              # langflow-base==X.Y.Z.devN transitively, which uv rejects without it.
+              uv pip install --upgrade --prerelease=allow "langflow[postgresql]==$VERSION"
             fi
           else
             # Direct version string (strip 'v' prefix if present)
             VERSION="${NIGHTLY_TAG#v}"
-            uv pip install --upgrade "langflow-nightly[postgresql]==$VERSION"
+            uv pip install --upgrade --prerelease=allow "langflow[postgresql]==$VERSION"
           fi
 
           # Verify upgrade
-          python -c 'from importlib.metadata import version; print("Upgraded to Langflow Nightly version:", version("langflow-nightly"))'
+          python -c 'from importlib.metadata import version; print("Upgraded to Langflow Nightly version:", version("langflow"))'
 
       - name: Run migration and verify startup
         working-directory: migration-test

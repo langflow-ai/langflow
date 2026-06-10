@@ -69,7 +69,7 @@ class CoreExecutor(BaseExecutor):
 
         Args:
             component_path: The component path suffix after /langflow/core/
-                           (e.g., "lfx/components/docling/DoclingInlineComponent")
+                           (e.g., "lfx_docling/components/docling/DoclingInlineComponent")
             input_data: Component input containing template, outputs, runtime inputs
             context: Stepflow context (may be needed for some operations)
 
