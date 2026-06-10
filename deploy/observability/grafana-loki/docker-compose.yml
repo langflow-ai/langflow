@@ -1,0 +1,41 @@
+services:
+  loki:
+    image: grafana/loki:3.2.0
+    container_name: lf-loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3100/ready"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  promtail:
+    image: grafana/promtail:3.2.0
+    container_name: lf-promtail
+    volumes:
+      - ./promtail/config.yml:/etc/promtail/config.yml
+      # Mount the directory that holds your langflow JSON log file.
+      # Override LANGFLOW_LOG_DIR to point at your real log location.
+      - ${LANGFLOW_LOG_DIR:-./logs}:/var/log/langflow:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      loki:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    container_name: lf-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GF_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GF_ADMIN_PASSWORD:-admin}
+      - GF_USERS_DEFAULT_THEME=dark
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/dashboards:/var/lib/grafana/dashboards
+    depends_on:
+      loki:
+        condition: service_healthy

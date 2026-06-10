@@ -1,0 +1,225 @@
+---
+title: Users endpoints
+slug: /api-users
+---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/add-user.sh';
+import resultApiUsersResultAddUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-add-user.json';
+import exampleApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/get-current-user.sh';
+import resultApiUsersResultGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-get-current-user.json';
+import exampleApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/list-all-users.sh';
+import resultApiUsersResultListAllUsers from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-list-all-users.json';
+import exampleApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/update-user.sh';
+import resultApiUsersResultUpdateUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-update-user.json';
+import exampleApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/reset-password.sh';
+import resultApiUsersResultResetPassword from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-reset-password.json';
+import exampleApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/delete-user.sh';
+import resultApiUsersResultDeleteUser from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-users/result-delete-user.json';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import examplePythonApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/add-user.py';
+import exampleJavascriptApiUsersAddUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/add-user.js';
+import examplePythonApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/get-current-user.py';
+import exampleJavascriptApiUsersGetCurrentUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/get-current-user.js';
+import examplePythonApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/list-all-users.py';
+import exampleJavascriptApiUsersListAllUsers from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/list-all-users.js';
+import examplePythonApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/update-user.py';
+import exampleJavascriptApiUsersUpdateUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/update-user.js';
+import examplePythonApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/reset-password.py';
+import exampleJavascriptApiUsersResetPassword from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/reset-password.js';
+import examplePythonApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/python-examples/api-users/delete-user.py';
+import exampleJavascriptApiUsersDeleteUser from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-users/delete-user.js';
+
+
+
+Use the `/users` endpoint to manage user accounts in Langflow.
+
+## Add user
+
+Create a new user account with a given username and password.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersAddUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersAddUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersAddUser} language="bash" />
+
+</TabItem>
+</Tabs>
+
+The request returns an object describing the new user.
+The user's UUID is stored in `user_id` in the Langflow database, and returned as `id` in the `/users` API response.
+This `user_id` key is specifically for Langflow user management.
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiUsersResultAddUser} language="json" />
+
+</details>
+
+## Get current user
+
+Retrieve information about the authenticated user.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersGetCurrentUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersGetCurrentUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersGetCurrentUser} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiUsersResultGetCurrentUser} language="json" />
+
+</details>
+
+## List all users
+
+Get a paginated list of all users in the system.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersListAllUsers} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersListAllUsers} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersListAllUsers} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiUsersResultListAllUsers} language="json" />
+
+</details>
+
+## Update user
+
+Modify an existing user's information with a PATCH request.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+This example activates the specified user's account and makes them a superuser:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersUpdateUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersUpdateUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersUpdateUser} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiUsersResultUpdateUser} language="json" />
+
+</details>
+
+## Reset password
+
+Change the specified user's password to a new secure value.
+
+Requires authentication as the target user.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersResetPassword} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersResetPassword} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersResetPassword} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiUsersResultResetPassword} language="json" />
+
+</details>
+
+## Delete user
+
+Remove a user account from the system.
+
+Requires authentication as a superuser if the Langflow server has authentication enabled.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiUsersDeleteUser} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiUsersDeleteUser} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiUsersDeleteUser} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiUsersResultDeleteUser} language="json" />
+
+</details>
