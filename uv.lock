@@ -34,6 +34,7 @@ members = [
     "lfx-docling",
     "lfx-duckduckgo",
     "lfx-ibm",
+    "lfx-oracle",
 ]
 overrides = [
     { name = "dynaconf", specifier = ">=3.2.13" },
@@ -7425,6 +7426,7 @@ dependencies = [
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
     { name = "lfx-ibm" },
+    { name = "lfx-oracle" },
 ]
 
 [package.optional-dependencies]
@@ -7518,6 +7520,7 @@ requires-dist = [
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
+    { name = "lfx-oracle", editable = "src/bundles/oracle" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "sentence-transformers", marker = "extra == 'local'", specifier = ">=2.3.1" },
@@ -7746,7 +7749,6 @@ all = [
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
-    { name = "langchain-oracledb" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-qdrant" },
     { name = "langchain-sambanova" },
@@ -7772,7 +7774,6 @@ all = [
     { name = "openlayer" },
     { name = "opensearch-py" },
     { name = "opik" },
-    { name = "oracledb" },
     { name = "pgvector" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -7919,7 +7920,6 @@ complete = [
     { name = "langchain-nvidia-ai-endpoints" },
     { name = "langchain-ollama" },
     { name = "langchain-openai" },
-    { name = "langchain-oracledb" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14'" },
     { name = "langchain-qdrant" },
     { name = "langchain-sambanova" },
@@ -7945,7 +7945,6 @@ complete = [
     { name = "openlayer" },
     { name = "opensearch-py" },
     { name = "opik" },
-    { name = "oracledb" },
     { name = "pgvector" },
     { name = "pyarrow" },
     { name = "pydantic" },
@@ -8170,10 +8169,6 @@ opensearch = [
 ]
 opik = [
     { name = "opik" },
-]
-oracledb = [
-    { name = "langchain-oracledb" },
-    { name = "oracledb" },
 ]
 pgvector = [
     { name = "pgvector" },
@@ -8407,7 +8402,6 @@ requires-dist = [
     { name = "langchain-nvidia-ai-endpoints", marker = "extra == 'nvidia'", specifier = "~=1.0.0" },
     { name = "langchain-ollama", marker = "extra == 'ollama'", specifier = "~=0.3.10" },
     { name = "langchain-openai", marker = "extra == 'openai'", specifier = ">=1.1.6" },
-    { name = "langchain-oracledb", marker = "extra == 'oracledb'", specifier = ">=1.0.1,<2.0.0" },
     { name = "langchain-perplexity", specifier = ">=1.0.0,<2.0.0" },
     { name = "langchain-pinecone", marker = "python_full_version < '3.14' and extra == 'pinecone'", specifier = "~=0.2.13" },
     { name = "langchain-qdrant", specifier = ">=1.0.0,<2.0.0" },
@@ -8489,7 +8483,6 @@ requires-dist = [
     { name = "langflow-base", extras = ["openlayer"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["opensearch"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["opik"], marker = "extra == 'complete'", editable = "src/backend/base" },
-    { name = "langflow-base", extras = ["oracledb"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pgvector"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pinecone"], marker = "extra == 'complete'", editable = "src/backend/base" },
     { name = "langflow-base", extras = ["pyarrow"], marker = "extra == 'complete'", editable = "src/backend/base" },
@@ -8557,7 +8550,6 @@ requires-dist = [
     { name = "opentelemetry-instrumentation-urllib3", specifier = ">=0.50b0,<1.0.0" },
     { name = "opentelemetry-sdk", specifier = ">=1.30.0,<2.0.0" },
     { name = "opik", marker = "extra == 'opik'", specifier = ">=2.0.0,<3.0.0" },
-    { name = "oracledb", marker = "extra == 'oracledb'", specifier = ">=2.2.0,<4.0.0" },
     { name = "orjson", specifier = ">=3.11.6,<4.0.0" },
     { name = "pandas", specifier = ">=2.2.3" },
     { name = "passlib", specifier = ">=1.7.4,<2.0.0" },
@@ -8623,7 +8615,7 @@ requires-dist = [
     { name = "youtube-transcript-api", marker = "extra == 'youtube'", specifier = ">=1.0.0,<2.0.0" },
     { name = "zep-python", marker = "extra == 'zep'", specifier = "==2.0.2" },
 ]
-provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "oracledb", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
+provides-extras = ["audio", "postgresql", "local", "couchbase", "cassandra", "clickhouse", "mongodb", "supabase", "redis", "elasticsearch", "faiss", "qdrant", "qdrant-vectors", "weaviate", "chroma", "upstash", "pinecone", "milvus", "mongodb-vectors", "astradb", "openai", "anthropic", "cohere", "google", "ollama", "nvidia", "mistral", "sambanova", "groq", "sentence-transformers", "ctransformers", "langfuse", "langwatch", "langsmith", "arize", "pypdf", "docx", "pytube", "smolagents", "beautifulsoup", "serpapi", "google-api", "wikipedia", "fake-useragent", "duckduckgo", "yfinance", "wolframalpha", "pyarrow", "fastavro", "gitpython", "nltk", "lark", "huggingface", "metaphor", "metal", "markup", "aws", "numexpr", "qianfan", "pgvector", "litellm", "zep", "youtube", "markdown", "kubernetes", "json-repair", "composio", "ragstack", "opensearch", "atlassian", "mem0", "needle", "sseclient", "openinference", "mcp", "ag2", "scrapegraph", "apify", "spider", "altk", "toolguard", "langchain-huggingface", "langchain-unstructured", "graph-retriever", "langchain-mcp-adapters", "opik", "traceloop", "openlayer", "docling", "docling-chunking", "docling-image-description", "easyocr", "cleanlab", "twelvelabs", "jigsawstack", "assemblyai", "datasets", "fastparquet", "vlmrun", "cuga", "mlx", "fastmcp", "aioboto3", "astrapy", "gassist", "ibm-watsonx-clients", "complete", "all"]
 
 [package.metadata.requires-dev]
 dev = [
@@ -9187,6 +9179,25 @@ requires-dist = [
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
     { name = "langchain-ibm", specifier = "~=1.1.0" },
     { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-oracle"
+version = "0.1.0"
+source = { editable = "src/bundles/oracle" }
+dependencies = [
+    { name = "langchain-community" },
+    { name = "langchain-oracledb" },
+    { name = "lfx" },
+    { name = "oracledb" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "langchain-oracledb", specifier = ">=1.0.1,<2.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+    { name = "oracledb", specifier = ">=2.2.0,<4.0.0" },
 ]
 
 [[package]]

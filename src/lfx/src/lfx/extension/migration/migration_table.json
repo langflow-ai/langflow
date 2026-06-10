@@ -180,6 +180,86 @@
       "legacy_slot": "ext:docling:ExportDoclingDocumentComponent@official-pre-a",
       "target": "ext:docling:ExportDoclingDocumentComponent@official",
       "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "OracleEmbeddingsComponent",
+      "target": "ext:oracle:OracleEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.oracledb_embeddings.OracleEmbeddingsComponent",
+      "target": "ext:oracle:OracleEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.OracleEmbeddingsComponent",
+      "target": "ext:oracle:OracleEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:oracle:OracleEmbeddingsComponent@official-pre-a",
+      "target": "ext:oracle:OracleEmbeddingsComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OracleDocLoaderComponent",
+      "target": "ext:oracle:OracleDocLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.oracledb_loaders.OracleDocLoaderComponent",
+      "target": "ext:oracle:OracleDocLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.OracleDocLoaderComponent",
+      "target": "ext:oracle:OracleDocLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:oracle:OracleDocLoaderComponent@official-pre-a",
+      "target": "ext:oracle:OracleDocLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OracleAutonomousDatabaseLoaderComponent",
+      "target": "ext:oracle:OracleAutonomousDatabaseLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.oracledb_loaders.OracleAutonomousDatabaseLoaderComponent",
+      "target": "ext:oracle:OracleAutonomousDatabaseLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.OracleAutonomousDatabaseLoaderComponent",
+      "target": "ext:oracle:OracleAutonomousDatabaseLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:oracle:OracleAutonomousDatabaseLoaderComponent@official-pre-a",
+      "target": "ext:oracle:OracleAutonomousDatabaseLoaderComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "bare_class_name": "OracleVectorStoreComponent",
+      "target": "ext:oracle:OracleVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.oraclevs.OracleVectorStoreComponent",
+      "target": "ext:oracle:OracleVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "import_path": "lfx.components.oracledb.OracleVectorStoreComponent",
+      "target": "ext:oracle:OracleVectorStoreComponent@official",
+      "added_in": "1.11.0"
+    },
+    {
+      "legacy_slot": "ext:oracle:OracleVectorStoreComponent@official-pre-a",
+      "target": "ext:oracle:OracleVectorStoreComponent@official",
+      "added_in": "1.11.0"
     }
   ],
   "ambiguous_bare_names": [

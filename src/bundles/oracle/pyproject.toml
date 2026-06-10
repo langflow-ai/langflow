@@ -1,0 +1,63 @@
+[project]
+name = "lfx-oracle"
+version = "0.1.0"
+description = "Oracle Database components (Doc Loader, Autonomous Database Loader, Embeddings, Vector Store) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "oracle", "oracledb", "vector-store"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus the Oracle packages used
+# by the bundled components.
+#
+# lfx is floored at the current major.minor line and capped below the next
+# lfx major; the floor is read from src/lfx/pyproject.toml at port time and
+# re-synced on ``make patch`` via scripts/ci/sync_bundle_lfx_pin.py.
+# Fine-grained BUNDLE_API compatibility is enforced via extension.json's
+# lfx.compat list against BUNDLE_API_VERSION.
+#
+# * ``oracledb`` is the Oracle Database driver used for connections.
+# * ``langchain-oracledb`` provides OracleVS, OracleEmbeddings, and the
+#   Oracle document loaders the components wrap.  Pins match the former
+#   ``langflow-base[oracledb]`` extra this bundle replaces.
+# * ``langchain-community`` provides DistanceStrategy for the vector store.
+dependencies = [
+    "lfx>=1.11.0,<2.0.0",
+    "oracledb>=2.2.0,<4.0.0",
+    "langchain-oracledb>=1.0.1,<2.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  Editable installs whose
+# ``dist.files`` only surfaces dist-info entries fall back to this
+# entry-point to find the manifest.
+[project.entry-points."langflow.extensions"]
+lfx-oracle = "lfx_oracle"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_oracle package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_oracle"]
+include = ["src/lfx_oracle/extension.json", "src/lfx_oracle/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_oracle",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]
