@@ -33,6 +33,7 @@ members = [
     "lfx-arxiv",
     "lfx-docling",
     "lfx-duckduckgo",
+    "lfx-firecrawl",
     "lfx-ibm",
 ]
 overrides = [
@@ -7409,6 +7410,7 @@ dependencies = [
     { name = "lfx-arxiv" },
     { name = "lfx-docling" },
     { name = "lfx-duckduckgo" },
+    { name = "lfx-firecrawl" },
     { name = "lfx-ibm" },
 ]
 
@@ -7502,6 +7504,7 @@ requires-dist = [
     { name = "lfx-docling", extras = ["image-description"], marker = "extra == 'docling-image-description'", editable = "src/bundles/docling" },
     { name = "lfx-docling", extras = ["local"], marker = "extra == 'docling'", editable = "src/bundles/docling" },
     { name = "lfx-duckduckgo", editable = "src/bundles/duckduckgo" },
+    { name = "lfx-firecrawl", editable = "src/bundles/firecrawl" },
     { name = "lfx-ibm", editable = "src/bundles/ibm" },
     { name = "nv-ingest-api", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
     { name = "nv-ingest-client", marker = "python_full_version >= '3.12' and extra == 'nv-ingest'", specifier = ">=26.1.0,<27.0.0" },
@@ -7582,7 +7585,6 @@ dependencies = [
     { name = "fastapi" },
     { name = "fastapi-pagination" },
     { name = "filelock" },
-    { name = "firecrawl-py" },
     { name = "grandalf" },
     { name = "greenlet" },
     { name = "gunicorn" },
@@ -8333,7 +8335,6 @@ requires-dist = [
     { name = "fastmcp", marker = "extra == 'fastmcp'", specifier = ">=3.2.0" },
     { name = "fastparquet", marker = "extra == 'fastparquet'", specifier = ">=2024.11.0,<2025.0.0" },
     { name = "filelock", specifier = ">=3.20.1,<4.0.0" },
-    { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
     { name = "gassist", marker = "sys_platform == 'win32' and extra == 'gassist'", specifier = ">=0.0.1" },
     { name = "gitpython", marker = "extra == 'gitpython'", specifier = ">=3.1.50" },
     { name = "google-api-python-client", marker = "extra == 'google'", specifier = "~=2.161" },
@@ -9138,6 +9139,21 @@ dependencies = [
 requires-dist = [
     { name = "ddgs", specifier = ">=9.0.0" },
     { name = "langchain-community", specifier = ">=0.4.1,<1.0.0" },
+    { name = "lfx", editable = "src/lfx" },
+]
+
+[[package]]
+name = "lfx-firecrawl"
+version = "0.1.0"
+source = { editable = "src/bundles/firecrawl" }
+dependencies = [
+    { name = "firecrawl-py" },
+    { name = "lfx" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "firecrawl-py", specifier = ">=4.0.0,<5.0.0" },
     { name = "lfx", editable = "src/lfx" },
 ]
 
