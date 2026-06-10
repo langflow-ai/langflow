@@ -25,6 +25,7 @@ from fastapi.responses import JSONResponse
 from sqlmodel import select
 
 from langflow.api.utils import CurrentActiveUser, DbSession
+from langflow.lothal.llm import LLMConfigError, LLMConnectionError, call_llm
 from langflow.lothal.schemas import (
     ChatRequest,
     CodeResponse,
@@ -281,9 +282,24 @@ async def download_project(project: OwnedProject) -> JSONResponse:
 
 @router.post(
     "/debug/llm",
-    response_model=DebugLLMResponse,
-    responses=_NOT_IMPLEMENTED,
     summary="Test LLM connectivity (dev only)",
 )
-async def debug_llm(body: DebugLLMRequest) -> JSONResponse:
-    return stub("The LLM debug endpoint is not implemented yet.")
+async def debug_llm(body: DebugLLMRequest) -> DebugLLMResponse:
+    """Round-trip one message through the configured LLM (Story 0.4).
+
+    The typed bridge errors map to distinct statuses so a curl can tell a
+    misconfigured environment (503 — e.g. SDK missing or not logged in) apart
+    from a failed model call (502).
+    """
+    message = body.message.strip()
+    if not message:
+        raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail="Message cannot be empty.")
+    try:
+        reply = await call_llm([{"role": "user", "content": message}])
+    except LLMConfigError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=f"LLM is not configured: {exc}"
+        ) from exc
+    except LLMConnectionError as exc:
+        raise HTTPException(status_code=status.HTTP_502_BAD_GATEWAY, detail=f"LLM call failed: {exc}") from exc
+    return DebugLLMResponse(response=reply)

@@ -292,10 +292,11 @@ async def test_call_llm_real_subscription():
     """Story 0.1 acceptance: a real call returns a non-empty string.
 
     Excluded from the default suite (`api_key_required`); run with a live Claude
-    Code subscription via `-m api_key_required`.
+    Code subscription via `-m api_key_required`. Pinned to Haiku — all real-LLM
+    tests use `claude-haiku-4-5`.
     """
     if find_spec("claude_agent_sdk") is None:
         pytest.skip("claude-agent-sdk not installed")
-    reply = await call_llm([{"role": "user", "content": "say hi"}])
+    reply = await call_llm([{"role": "user", "content": "say hi"}], model="claude-haiku-4-5")
     assert isinstance(reply, str)
     assert reply.strip()

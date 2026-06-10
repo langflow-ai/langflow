@@ -2,17 +2,21 @@
 
 Story A.1 declared the full `/api/v1/lothal/` surface as typed `501` stubs.
 Story B.2 lights up the project CRUD (`POST`/`GET`/`GET {id}`/`DELETE` on
-`/projects`), so those four routes now have behaviour tests; every other
-endpoint is still a stub and is asserted to return the structured `501`.
+`/projects`) and Story 0.4 lights up `POST /debug/llm`, so those routes now
+have behaviour tests; every other endpoint is still a stub and is asserted to
+return the structured `501`.
 
 Common to both: every endpoint requires auth and appears in the OpenAPI schema.
 """
 
+from importlib.util import find_spec
 from uuid import UUID, uuid4
 
 import pytest
 from fastapi import status
 from httpx import AsyncClient
+from langflow.api.v1 import lothal as lothal_api
+from langflow.lothal.llm import LLMConfigError, LLMConnectionError
 from langflow.services.database.models.lothal_project.model import CodeFile, Message, Project
 from langflow.services.deps import session_scope
 from sqlalchemy import inspect as sa_inspect
@@ -35,24 +39,25 @@ STUB_TEMPLATES = [
     ("POST", "api/v1/lothal/projects/{project_id}/diagram/approve", None),
     ("GET", "api/v1/lothal/projects/{project_id}/code", None),
     ("GET", "api/v1/lothal/projects/{project_id}/download", None),
-    ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
-# Project-scoped stubs resolve ownership before stubbing; `debug/llm` is global.
+# Every remaining stub is project-scoped, so each resolves ownership before
+# stubbing.
 PROJECT_SCOPED_STUB_TEMPLATES = [t for t in STUB_TEMPLATES if "{project_id}" in t[1]]
 
 STUBBED_ENDPOINTS = [(m, p.format(project_id=PROJECT_ID), b) for m, p, b in STUB_TEMPLATES]
 
-# The project CRUD routes that went live in B.2. Still require auth, but no
-# longer return `501`.
-LIVE_PROJECT_ENDPOINTS = [
+# The routes that have gone live: project CRUD (B.2) and the LLM debug
+# round-trip (0.4). Still require auth, but no longer return `501`.
+LIVE_ENDPOINTS = [
     ("POST", "api/v1/lothal/projects/", {"name": "My App"}),
     ("GET", "api/v1/lothal/projects/", None),
     ("GET", f"api/v1/lothal/projects/{PROJECT_ID}", None),
     ("DELETE", f"api/v1/lothal/projects/{PROJECT_ID}", None),
+    ("POST", "api/v1/lothal/debug/llm", {"message": "ping"}),
 ]
 
-ALL_ENDPOINTS = LIVE_PROJECT_ENDPOINTS + STUBBED_ENDPOINTS
+ALL_ENDPOINTS = LIVE_ENDPOINTS + STUBBED_ENDPOINTS
 
 
 @pytest.mark.parametrize(("method", "path_template", "json_body"), STUB_TEMPLATES)
@@ -139,8 +144,10 @@ async def test_openapi_lists_full_lothal_surface(client: AsyncClient):
     }
     assert expected <= set(paths)
 
-    # A still-stubbed route documents the structured 501 in its responses.
-    assert "501" in paths["/api/v1/lothal/debug/llm"]["post"]["responses"]
+    # A still-stubbed route documents the structured 501 in its responses; the
+    # live debug endpoint no longer advertises it.
+    assert "501" in paths["/api/v1/lothal/projects/{project_id}/chat"]["post"]["responses"]
+    assert "501" not in paths["/api/v1/lothal/debug/llm"]["post"]["responses"]
 
 
 # --- Project CRUD (Story B.2) -------------------------------------------------
@@ -323,3 +330,92 @@ async def test_malformed_diagram_layout_reads_as_null(client: AsyncClient, logge
         assert response.status_code == status.HTTP_200_OK
         listed = next(p for p in response.json() if p["id"] == str(project_pk))
         assert listed["diagram_layout"] == expected
+
+
+# --- LLM debug (Story 0.4) ------------------------------------------------------
+
+# `debug_llm` calls `call_llm` through its own module namespace, so the fakes
+# below patch `langflow.api.v1.lothal.call_llm` — the bridge itself stays
+# untouched and is covered by `tests/unit/lothal/test_llm_caller.py`.
+
+
+async def test_debug_llm_returns_model_reply(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    captured = {}
+
+    async def fake_call_llm(messages, **_kwargs):
+        captured["messages"] = messages
+        return "pong"
+
+    monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"response": "pong"}
+    assert captured["messages"] == [{"role": "user", "content": "ping"}]
+
+
+async def test_debug_llm_strips_whitespace_and_rejects_blank_message(
+    client: AsyncClient, logged_in_headers: dict, monkeypatch
+):
+    async def fake_call_llm(messages, **_kwargs):
+        return f"echo:{messages[0]['content']}"
+
+    monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "  hi  "}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_200_OK
+    assert response.json() == {"response": "echo:hi"}
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "   "}, headers=logged_in_headers)
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_debug_llm_maps_config_error_to_503(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    async def fake_call_llm(*_args, **_kwargs):
+        msg = "the `claude-agent-sdk` package is required"
+        raise LLMConfigError(msg)
+
+    monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_503_SERVICE_UNAVAILABLE
+    detail = response.json()["detail"]
+    assert "LLM is not configured" in detail
+    assert "claude-agent-sdk" in detail
+
+
+async def test_debug_llm_maps_connection_error_to_502(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    async def fake_call_llm(*_args, **_kwargs):
+        msg = "Claude returned an empty response."
+        raise LLMConnectionError(msg)
+
+    monkeypatch.setattr(lothal_api, "call_llm", fake_call_llm)
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "ping"}, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+    detail = response.json()["detail"]
+    assert "LLM call failed" in detail
+    assert "empty response" in detail
+
+
+@pytest.mark.api_key_required
+async def test_debug_llm_real_subscription(client: AsyncClient, logged_in_headers: dict, monkeypatch):
+    """Story 0.4 acceptance: a real model reply comes back through the endpoint.
+
+    Excluded from the default suite (`api_key_required`); run with a live
+    Claude Code subscription via `-m api_key_required`. Pinned to Haiku — all
+    real-LLM tests use `claude-haiku-4-5`.
+    """
+    if find_spec("claude_agent_sdk") is None:
+        pytest.skip("claude-agent-sdk not installed")
+    monkeypatch.setenv("LOTHAL_MODEL_NAME", "claude-haiku-4-5")
+
+    response = await client.post("api/v1/lothal/debug/llm", json={"message": "say hi"}, headers=logged_in_headers)
+
+    assert response.status_code == status.HTTP_200_OK
+    reply = response.json()["response"]
+    assert isinstance(reply, str)
+    assert reply.strip()
