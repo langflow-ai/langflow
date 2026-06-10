@@ -17,6 +17,7 @@ model). Covers:
 from __future__ import annotations
 
 import importlib
+import sys
 from pathlib import Path
 
 from lfx.extension import SLOT_OFFICIAL, LoadedComponent, LoadResult, load_lfx_bundles_extensions
@@ -26,7 +27,7 @@ from lfx.extension.loader._bundles_root import (
     _load_bundle_roots,
     _resolve_bundle_roots,
 )
-from lfx.interface.components import _resolve_bundle_shadowing
+from lfx.interface.components import _claimed_official_bundles, _resolve_bundle_shadowing
 
 from .conftest import component_source
 
@@ -181,6 +182,71 @@ def test_duplicate_provider_across_roots_first_wins(tmp_path: Path) -> None:
     assert len(with_components) == 1  # exactly one winner
     assert len(shadowed) == 1  # exactly one shadowed loser
     assert not shadowed[0].components
+
+
+def test_claimed_bundle_name_is_not_imported(tmp_path: Path) -> None:
+    """A name won by an installed/seed source is skipped *without importing*.
+
+    All @official sources share the ``_lfx_ext.official.<bundle>.*``
+    sys.modules namespace; importing the metapackage's losing copy would
+    overwrite the winner's live modules even though shadow resolution drops
+    the loser's components afterwards.  This is the expected post-graduation
+    state (standalone ``lfx-<provider>`` next to an older metapackage).
+    """
+    root = _make_bundles_root(tmp_path, "claimedprov", "freeprov")
+
+    results = _load_bundle_roots(
+        [_BundleRoot(root, "lfx-bundles", "1.0.0")],
+        claimed_bundles={"claimedprov": ("installed", "/site-packages/lfx_claimedprov")},
+    )
+    by_bundle = {r.bundle: r for r in results if r.bundle}
+
+    assert set(by_bundle) == {"claimedprov", "freeprov"}
+    claimed = by_bundle["claimedprov"]
+    assert not claimed.components
+    assert claimed.ok  # warning-only: never aborts startup
+    assert [w.code for w in claimed.warnings] == ["bundle-shadowed"]
+    assert "installed" in claimed.warnings[0].message
+    # The decisive property: nothing was imported for the claimed name, so
+    # the winner's live modules cannot have been overwritten.
+    assert not [k for k in sys.modules if k.startswith("_lfx_ext.official.claimedprov")]
+    # The unclaimed sibling in the same root still loads normally.
+    assert by_bundle["freeprov"].components
+
+
+def test_provider_results_are_marked_manifestless(tmp_path: Path) -> None:
+    """Provider results carry the provenance flag the reload pipeline keys on."""
+    root = _make_bundles_root(tmp_path, "flagged")
+
+    results = _load_bundle_roots([_BundleRoot(root, "lfx-bundles", "1.0.0")])
+
+    assert results
+    assert all(r.manifestless for r in results if r.bundle)
+
+
+def test_claimed_official_bundles_first_wins_and_requires_components(tmp_path: Path) -> None:
+    """The claim map mirrors the resolver's winner rule.
+
+    Only results that produced components claim a name, and the
+    highest-precedence claimant (installed before seed) wins.
+    """
+    installed_alpha = LoadResult(
+        slot=SLOT_OFFICIAL,
+        bundle="alpha",
+        source_path=tmp_path / "inst" / "alpha",
+        components=[_component("alpha")],
+    )
+    seed_alpha = LoadResult(
+        slot=SLOT_OFFICIAL,
+        bundle="alpha",
+        source_path=tmp_path / "seed" / "alpha",
+        components=[_component("alpha")],
+    )
+    seed_empty = LoadResult(slot=SLOT_OFFICIAL, bundle="empty", source_path=tmp_path / "seed" / "empty")
+
+    claimed = _claimed_official_bundles([installed_alpha], [seed_alpha, seed_empty])
+
+    assert claimed == {"alpha": ("installed", str(tmp_path / "inst" / "alpha"))}
 
 
 # ---------------------------------------------------------------------------
