@@ -52,7 +52,7 @@ from lfx.extension.loader._types import SLOT_OFFICIAL, LoadResult
 from lfx.extension.manifest import BUNDLE_NAME_RE
 
 if TYPE_CHECKING:
-    from collections.abc import Iterable
+    from collections.abc import Iterable, Mapping
     from importlib import metadata as importlib_metadata
 
 LFX_BUNDLES_ENTRY_POINT_GROUP = "lfx.bundles"
@@ -86,6 +86,7 @@ class _BundleRoot(NamedTuple):
 def load_lfx_bundles_extensions(
     *,
     entry_points: Iterable[importlib_metadata.EntryPoint] | None = None,
+    claimed_bundles: Mapping[str, tuple[str, str]] | None = None,
 ) -> list[LoadResult]:
     """Discover manifest-less ``lfx.bundles`` roots and load them at @official.
 
@@ -96,6 +97,18 @@ def load_lfx_bundles_extensions(
     subdirectories -- each valid subdirectory is one manifest-less bundle at
     the @official slot.
 
+    ``claimed_bundles`` maps bundle names already won by a higher-precedence
+    @official source (installed > seed) to ``(source_kind, source_path)``.
+    A provider directory whose name is claimed is **never imported** -- its
+    result carries a typed ``bundle-shadowed`` warning instead.  Skipping the
+    import (rather than letting :func:`_resolve_bundle_shadowing` drop the
+    components afterwards) matters because all @official sources share the
+    ``_lfx_ext.official.<bundle>.*`` sys.modules namespace: importing the
+    losing copy would overwrite the winner's live modules.  This is the
+    normal graduation state -- a manifest-shipping ``lfx-<provider>``
+    installed alongside an older metapackage that still contains the same
+    provider -- not an operator error.
+
     Returns one :class:`LoadResult` per discovered bundle, plus one sentinel
     :class:`LoadResult` carrying a ``bundle-discovery-malformed`` warning per
     declaration that could not be resolved.  Order is deterministic: entry
@@ -104,7 +117,7 @@ def load_lfx_bundles_extensions(
     even when no valid bundle followed.
     """
     roots, sentinels = _resolve_bundle_roots(entry_points)
-    return [*sentinels, *_load_bundle_roots(roots)]
+    return [*sentinels, *_load_bundle_roots(roots, claimed_bundles=claimed_bundles)]
 
 
 def _resolve_bundle_roots(
@@ -156,16 +169,23 @@ def _resolve_bundle_roots(
     return roots, sentinels
 
 
-def _load_bundle_roots(roots: Iterable[_BundleRoot]) -> list[LoadResult]:
+def _load_bundle_roots(
+    roots: Iterable[_BundleRoot],
+    *,
+    claimed_bundles: Mapping[str, tuple[str, str]] | None = None,
+) -> list[LoadResult]:
     """Folder-walk each resolved root, loading every valid subdirectory at @official.
 
     First-wins on duplicate bundle names across roots (the loser emits a typed
-    ``bundle-shadowed`` warning); subdirectories whose name is not a valid
-    bundle name emit ``bundle-discovery-malformed`` and are skipped.
-    Internal directories (dot-prefixed, underscore-prefixed, or in
-    :data:`SKIP_DIR_NAMES`) are skipped silently -- they are package
-    machinery, not providers.
+    ``bundle-shadowed`` warning); names in ``claimed_bundles`` (already won by
+    a higher-precedence installed/seed source) are skipped *without importing*
+    so the winner's ``_lfx_ext.official.<bundle>.*`` sys.modules entries are
+    never overwritten.  Subdirectories whose name is not a valid bundle name
+    emit ``bundle-discovery-malformed`` and are skipped.  Internal directories
+    (dot-prefixed, underscore-prefixed, or in :data:`SKIP_DIR_NAMES`) are
+    skipped silently -- they are package machinery, not providers.
     """
+    claimed = claimed_bundles or {}
     results: list[LoadResult] = []
     seen_names: dict[str, Path] = {}
     for root in roots:
@@ -189,7 +209,7 @@ def _load_bundle_roots(roots: Iterable[_BundleRoot]) -> list[LoadResult]:
             if name.startswith((".", "_")) or name in SKIP_DIR_NAMES:
                 continue
 
-            result = LoadResult(slot=SLOT_OFFICIAL, source_path=child)
+            result = LoadResult(slot=SLOT_OFFICIAL, source_path=child, manifestless=True)
 
             if not BUNDLE_NAME_RE.match(name):
                 result.warnings.append(
@@ -198,6 +218,30 @@ def _load_bundle_roots(roots: Iterable[_BundleRoot]) -> list[LoadResult]:
                         f"provider directory {name!r} (under {root.path}) is not a valid bundle "
                         "name; lowercase snake_case (a-z, 0-9, _), 2-64 characters.",
                         location=str(child),
+                    )
+                )
+                results.append(result)
+                continue
+
+            if name in claimed:
+                winner_kind, winner_path = claimed[name]
+                result.bundle = name
+                result.warnings.append(
+                    ExtensionError(
+                        code="bundle-shadowed",
+                        message=(
+                            f"Manifest-less bundle {name!r} at {child} is shadowed by a "
+                            f"higher-precedence source at {winner_path} (source: {winner_kind}); "
+                            "the metapackage copy is not imported."
+                        ),
+                        location=str(child),
+                        content=name,
+                        hint=(
+                            "Discovery precedence is installed > seed > lfx_bundles > dev > inline. "
+                            "This is expected after a provider graduates to a standalone "
+                            "lfx-<provider> package; upgrade the metapackage to a version without "
+                            "this provider to silence the warning."
+                        ),
                     )
                 )
                 results.append(result)
