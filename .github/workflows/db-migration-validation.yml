@@ -178,20 +178,26 @@ jobs:
             VERSION="${VERSION#v}"
             echo "Version for PyPI: $VERSION"
 
+            # Scope pre-release resolution to the langflow stack only. uv accepts a
+            # pre-release for a package when its own requirement carries a pre-release
+            # marker, but NOT via transitive pins (langflow -> langflow-base -> lfx ->
+            # langflow-sdk are exact ==devN pins on nightlies), so each lockstep package
+            # must be requested directly. A global --prerelease=allow is NOT safe here:
+            # it lets unrelated dependencies resolve to alphas (pydantic 2.14.0a1 broke
+            # langchain-core imports on the first canonical-prerelease nightly).
+            # langflow-sdk has its own version line, so an explicit .dev0 floor marks it
+            # pre-release-eligible while the lfx pin selects the exact version.
             if [[ "$VERSION" == "latest" ]]; then
               # Install latest nightly (canonical pre-release) from PyPI
-              uv pip install --upgrade --prerelease=allow 'langflow[postgresql]'
+              uv pip install --upgrade 'langflow[postgresql]>=0.0.0.dev0' 'langflow-base>=0.0.0.dev0' 'lfx>=0.0.0.dev0' 'langflow-sdk>=0.0.0.dev0'
             else
-              # Install specific version. --prerelease=allow is required even for an
-              # exact ==X.Y.Z.devN pin: uv only implicitly allows the pre-release for
-              # the directly requested package, while langflow's metadata pins
-              # langflow-base==X.Y.Z.devN transitively, which uv rejects without it.
-              uv pip install --upgrade --prerelease=allow "langflow[postgresql]==$VERSION"
+              # Install specific version
+              uv pip install --upgrade "langflow[postgresql]==$VERSION" "langflow-base==$VERSION" "lfx==$VERSION" 'langflow-sdk>=0.0.0.dev0'
             fi
           else
             # Direct version string (strip 'v' prefix if present)
             VERSION="${NIGHTLY_TAG#v}"
-            uv pip install --upgrade --prerelease=allow "langflow[postgresql]==$VERSION"
+            uv pip install --upgrade "langflow[postgresql]==$VERSION" "langflow-base==$VERSION" "lfx==$VERSION" 'langflow-sdk>=0.0.0.dev0'
           fi
 
           # Verify upgrade
