@@ -11,10 +11,16 @@ Execution mode (``mode`` field):
     - ``stream``: SSE in the chosen ``stream_protocol``.
 """
 
+import asyncio
+import contextlib
 import json
+import time
+from types import SimpleNamespace
+from unittest.mock import AsyncMock
 from uuid import uuid4
 
 import pytest
+from fastapi import HTTPException
 from httpx import AsyncClient
 from langflow.services.database.models.flow.model import Flow
 from lfx.services.deps import session_scope
@@ -222,8 +228,142 @@ class TestAGUIModeDispatch:
         assert result["status"] == "completed"
 
 
+class TestV2WorkflowAdmission:
+    """Route-level admission checks before workflow execution dispatch."""
+
+    async def test_non_owner_data_override_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
+        """Execute-only sharees must not inject alternate graph data into shared flows."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        flow_id = uuid4()
+        owner_id = uuid4()
+        caller_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=owner_id,
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="shared",
+        )
+        current_user = SimpleNamespace(id=caller_id)
+
+        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.execute_workflow(
+                WorkflowRunRequest(
+                    flow_id=str(flow_id),
+                    input_value="hi",
+                    mode="stream",
+                    data={"nodes": [], "edges": []},
+                ),
+                background_tasks=SimpleNamespace(),
+                http_request=SimpleNamespace(),
+                current_user=current_user,
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+    async def test_execute_permission_denial_is_hidden_as_404(self, monkeypatch: pytest.MonkeyPatch):
+        """A denied share-aware fetch must not leak flow existence as a raw 403."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+
+        flow_id = uuid4()
+        caller_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="private",
+        )
+
+        async def _deny(*_args, **_kwargs):
+            raise HTTPException(status_code=403, detail="denied")
+
+        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", _deny)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.execute_workflow(
+                WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"),
+                background_tasks=SimpleNamespace(),
+                http_request=SimpleNamespace(),
+                current_user=SimpleNamespace(id=caller_id),
+            )
+
+        assert exc_info.value.status_code == 404
+        assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
+
+
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
+
+    async def test_stream_event_queue_ignores_late_sentinel_after_overflow(self):
+        """A normal completion sentinel must not race ahead of the overflow error."""
+        from langflow.api.v2 import workflow as workflow_module
+
+        queue = workflow_module._WorkflowEventQueue(maxsize=1)
+        try:
+            payload = json.dumps({"event": "token", "data": {"chunk": "0"}}).encode()
+            queue.put_nowait(("token-0", payload, time.time()))
+            queue.put_nowait(("token-1", payload, time.time()))
+
+            await asyncio.wait_for(queue.put((None, None, time.time())), timeout=0.1)
+        finally:
+            await queue.aclose()
+
+    async def test_stream_event_handoff_overflow_emits_error(self, monkeypatch: pytest.MonkeyPatch):
+        """EventManager put_nowait must not silently drop frames when the stream buffer fills."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.adapters import StreamEvent
+        from langflow.api.v2.converters import ParsedWorkflowRun
+
+        seen_maxsize: list[int] = []
+
+        async def fake_generate_flow_events(**kwargs):
+            event_queue = kwargs["event_manager"].queue
+            seen_maxsize.append(event_queue.maxsize)
+            for index in range(event_queue.maxsize + 1):
+                payload = json.dumps({"event": "token", "data": {"chunk": str(index)}}).encode()
+                event_queue.put_nowait((f"token-{index}", payload, time.time()))
+            await event_queue.put((None, None, time.time()))
+
+        class FakeAdapter:
+            name = "langflow"
+
+            def initial_events(self):
+                return []
+
+            def final_events(self):
+                return []
+
+            def translate(self, event_type, _event_data):
+                return [StreamEvent(type=event_type, data_json="{}")]
+
+        monkeypatch.setattr(workflow_module, "_EVENT_QUEUE_MAX_SIZE", 2)
+        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+
+        event_types = [
+            event_type
+            async for _frame, event_type in workflow_module._stream_event_frames(
+                adapter=FakeAdapter(),
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+        ]
+
+        assert seen_maxsize == [2]
+        assert event_types == ["token", "token", "error"]
 
     async def test_stream_emits_run_lifecycle_events(
         self,
@@ -498,6 +638,32 @@ class TestAGUICancellation:
 class TestAGUIBackgroundReattach:
     """A background run buffers its AG-UI events so a client can re-attach."""
 
+    async def test_reattach_owned_job_without_local_buffer_returns_409(self, monkeypatch: pytest.MonkeyPatch):
+        """If the job exists but this worker has no replay buffer, return an explicit conflict."""
+        from langflow.api.v2 import workflow as workflow_module
+
+        job_id = uuid4()
+        expected_user_id = uuid4()
+        workflow_module._BACKGROUND_RUNS.pop(str(job_id), None)
+
+        class FakeJobService:
+            async def get_job_by_job_id(self, seen_job_id, user_id=None):
+                assert seen_job_id == job_id
+                assert user_id == expected_user_id
+                return SimpleNamespace(type=workflow_module.JobType.WORKFLOW)
+
+        monkeypatch.setattr(workflow_module, "get_job_service", lambda: FakeJobService())
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.reattach_workflow_events(
+                str(job_id),
+                http_request=SimpleNamespace(headers={}),
+                current_user=SimpleNamespace(id=expected_user_id),
+            )
+
+        assert exc_info.value.status_code == 409
+        assert exc_info.value.detail["code"] == "BACKGROUND_EVENTS_UNAVAILABLE"
+
     async def test_background_run_events_can_be_reattached(
         self,
         client: AsyncClient,
@@ -593,6 +759,38 @@ class TestAGUIBackgroundJobStatus:
     A substring scan over serialized SSE frames would false-positive on any
     payload that happened to contain the literal byte sequence ``"RUN_ERROR"``.
     """
+
+    async def test_background_buffer_binds_build_rows_to_returned_job_id(self, monkeypatch: pytest.MonkeyPatch):
+        """Status reconstruction needs vertex_build rows logged under the public background job id."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.converters import ParsedWorkflowRun
+
+        job_id = uuid4()
+        captured: dict = {}
+
+        class FakeAdapter:
+            terminal_error_type = "RUN_ERROR"
+
+        async def fake_stream_event_frames(**kwargs):
+            captured.update(kwargs)
+            yield b"data: {}\n\n", "RUN_FINISHED"
+
+        monkeypatch.setattr(workflow_module, "get_stream_adapter", lambda *_args, **_kwargs: FakeAdapter())
+        monkeypatch.setattr(workflow_module, "_stream_event_frames", fake_stream_event_frames)
+        monkeypatch.setattr(workflow_module, "_finalize_job_status", AsyncMock())
+
+        bg_run = workflow_module._BackgroundRun(user_id=str(uuid4()))
+        await workflow_module._buffer_background_run(
+            bg_run=bg_run,
+            flow=SimpleNamespace(id=uuid4(), name="flow"),
+            parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="hi", mode="background"),
+            job_id=str(job_id),
+            current_user=SimpleNamespace(id=uuid4()),
+            stream_protocol="agui",
+        )
+
+        assert captured["run_id"] == str(job_id)
+        assert captured["track_job_status"] is False
 
     async def test_message_text_containing_run_error_literal_does_not_fail_job(
         self,
@@ -988,11 +1186,10 @@ class TestMemoryBaseHookBackgroundMode:
     """The memory-base ``on_flow_output`` hook must fire after a background run.
 
     Sync mode wires the hook directly inside ``execute_workflow_sync`` and the
-    v1 build pipeline wires it after ``end_all_traces`` in ``api/build.py``.
-    The v2 background mode buffers frames in ``_buffer_background_run`` and
-    must dispatch the same hook in its ``finally`` block on successful
-    completion. Without it, MemoryBase auto-capture silently misses every
-    background run.
+    v1 build pipeline wires it after ``end_all_traces`` in ``api/build.py``. The
+    v2 background mode routes through that same build pipeline with the returned
+    background job id, so the hook must fire exactly once for successful
+    background runs.
     """
 
     async def test_background_run_fires_memory_base_hook_on_success(
@@ -1006,7 +1203,7 @@ class TestMemoryBaseHookBackgroundMode:
 
         ``flow_id``, ``session_id``, and ``job_id`` must reach the hook.
         """
-        from langflow.api.v2 import workflow as _workflow_module
+        from langflow.api import build as _build_module
 
         captured: list[dict] = []
 
@@ -1015,7 +1212,7 @@ class TestMemoryBaseHookBackgroundMode:
                 captured.append(kwargs)
 
         monkeypatch.setattr(
-            _workflow_module,
+            _build_module,
             "get_memory_base_service",
             lambda: _RecordingMemoryBaseService(),
         )
@@ -1643,3 +1840,64 @@ class TestStopWorkflowEndToEnd:
             row = await session.get(Job, _UUID(job_id))
         assert row is not None
         assert row.status == JobStatus.CANCELLED
+
+    async def test_stop_cancels_queue_owned_background_task_when_task_service_noops(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        chatbot_flow,
+        monkeypatch,
+    ):
+        """The v2 background runner is owned by the queue service, not TaskService."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.services.deps import get_queue_service
+        from langflow.services.job_queue.service import JobQueueNotFoundError
+
+        started = asyncio.Event()
+        cancelled = asyncio.Event()
+        job_id: str | None = None
+
+        async def _never_finishes(**_kwargs):
+            started.set()
+            try:
+                await asyncio.Event().wait()
+            except asyncio.CancelledError:
+                cancelled.set()
+                raise
+
+        class NoopTaskService:
+            async def revoke_task(self, _task_id):
+                return True
+
+        monkeypatch.setattr(workflow_module, "_buffer_background_run", _never_finishes)
+        monkeypatch.setattr(workflow_module, "get_task_service", lambda: NoopTaskService())
+
+        headers = {"x-api-key": created_api_key.api_key}
+        try:
+            start = await client.post(
+                "api/v2/workflows",
+                json=_agui_body(chatbot_flow, mode="background"),
+                headers=headers,
+            )
+            assert start.status_code == 200
+            job_id = start.json()["job_id"]
+            await asyncio.wait_for(started.wait(), timeout=2)
+
+            stop = await client.post(
+                "api/v2/workflows/stop",
+                json={"job_id": job_id},
+                headers=headers,
+            )
+
+            assert stop.status_code == 200
+            assert cancelled.is_set()
+            try:
+                _, _, task, _ = get_queue_service().get_queue_data(job_id)
+            except JobQueueNotFoundError:
+                task = None
+            assert task is None or task.done()
+        finally:
+            if job_id is not None:
+                with contextlib.suppress(BaseException):
+                    await get_queue_service().cleanup_job(job_id)
+                await workflow_module._clear_background_run(job_id)

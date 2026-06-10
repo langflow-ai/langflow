@@ -364,6 +364,7 @@ async def generate_flow_events(
     flow_name: str | None = None,
     source_flow_id: uuid.UUID | None = None,
     run_id: str | None = None,
+    track_job_status: bool = True,
 ) -> None:
     """Generate events for flow building process.
 
@@ -688,7 +689,7 @@ async def generate_flow_events(
     _build_run_id: uuid.UUID | None = None
     try:
         _build_run_id = uuid.UUID(graph.run_id) if graph.run_id else None
-        if _build_run_id is not None:
+        if track_job_status and _build_run_id is not None:
             _build_job_svc = get_job_service()
             await _build_job_svc.create_job(
                 job_id=_build_run_id,

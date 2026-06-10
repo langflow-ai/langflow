@@ -49,10 +49,10 @@ from lfx.schema.workflow import (
     WorkflowStopResponse,
 )
 from lfx.services.deps import injectable_session_scope_readonly
+from lfx.utils.flow_validation import CustomComponentValidationError, validate_flow_for_current_settings
 from pydantic_core import ValidationError as PydanticValidationError
 from sqlalchemy.exc import OperationalError
 
-from langflow.api.build import generate_flow_events
 from langflow.api.utils import extract_global_variables_from_headers
 from langflow.api.v1.schemas import FlowDataRequest, RunResponse
 from langflow.api.v2.adapters import (
@@ -82,6 +82,7 @@ from langflow.helpers.flow import get_flow_by_id_or_endpoint_name
 from langflow.processing.process import process_tweaks, run_graph_internal
 from langflow.services.auth.utils import get_current_user_for_workflow
 from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.database.models.flow.model import FlowRead
 from langflow.services.database.models.jobs.model import JobType
 from langflow.services.database.models.user.model import UserRead
@@ -92,6 +93,13 @@ EXECUTION_TIMEOUT = 300  # 5 minutes default timeout for sync execution
 
 
 router = APIRouter(prefix="/workflows", tags=["Workflow"])
+
+
+async def generate_flow_events(*args, **kwargs) -> None:
+    """Lazily call the v1 build stream to avoid import cycles during router setup."""
+    from langflow.api.build import generate_flow_events as _generate_flow_events
+
+    await _generate_flow_events(*args, **kwargs)
 
 
 def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPException:
@@ -111,6 +119,66 @@ def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPExc
             "available": exc.available,
         },
     )
+
+
+def _flow_not_found_privacy_exception(exc: HTTPException, flow_id: str) -> HTTPException:
+    return deny_to_404(exc, detail=f"Flow with id {flow_id} not found")
+
+
+def _reject_unsupported_sync_fields(parsed: ParsedWorkflowRun) -> None:
+    """Reject request fields the inline sync path does not execute."""
+    if parsed.mode != "sync":
+        return
+
+    unsupported_fields: list[str] = []
+    if parsed.data is not None:
+        unsupported_fields.append("data")
+    if parsed.files:
+        unsupported_fields.append("files")
+    if parsed.start_component_id is not None:
+        unsupported_fields.append("start_component_id")
+    if parsed.stop_component_id is not None:
+        unsupported_fields.append("stop_component_id")
+
+    if unsupported_fields:
+        fields = ", ".join(unsupported_fields)
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail={
+                "error": "Unsupported sync request fields",
+                "code": "SYNC_MODE_UNSUPPORTED_FIELDS",
+                "message": f"mode='sync' does not support request fields: {fields}. Use mode='stream' or "
+                "mode='background' for live-canvas overrides, files, or partial-run boundaries.",
+                "fields": unsupported_fields,
+            },
+        )
+
+
+def _enforce_flow_data_override_owner(parsed: ParsedWorkflowRun, flow: FlowRead, current_user: UserRead) -> None:
+    """Only the flow owner may execute caller-supplied graph data."""
+    if parsed.data is None or flow.user_id == current_user.id:
+        return
+
+    raise _flow_not_found_privacy_exception(
+        HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the flow owner can override flow data during execution",
+        ),
+        parsed.flow_id,
+    )
+
+
+def _validate_flow_data_for_execution(parsed: ParsedWorkflowRun, flow: FlowRead) -> None:
+    """Apply the same server-side component policy gate used by v1/public runs."""
+    try:
+        if parsed.data is not None:
+            validate_flow_for_current_settings(parsed.data)
+        elif flow.data:
+            validate_flow_for_current_settings(flow.data)
+    except CustomComponentValidationError as exc:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(exc)) from exc
+    except RuntimeError as exc:
+        raise HTTPException(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, detail=str(exc)) from exc
 
 
 def _validate_output_ids(output_ids: list[str] | None, terminal_node_ids: list[str]) -> None:
@@ -221,14 +289,21 @@ async def execute_workflow(
             current_user.id,
             widen_for_shares=True,
         )
-        await ensure_flow_permission(
-            current_user,
-            FlowAction.EXECUTE,
-            flow_id=flow.id,
-            flow_user_id=flow.user_id,
-            workspace_id=getattr(flow, "workspace_id", None),
-            folder_id=getattr(flow, "folder_id", None),
-        )
+        try:
+            await ensure_flow_permission(
+                current_user,
+                FlowAction.EXECUTE,
+                flow_id=flow.id,
+                flow_user_id=flow.user_id,
+                workspace_id=getattr(flow, "workspace_id", None),
+                folder_id=getattr(flow, "folder_id", None),
+            )
+        except HTTPException as exc:
+            raise _flow_not_found_privacy_exception(exc, parsed.flow_id) from exc
+
+        _reject_unsupported_sync_fields(parsed)
+        _enforce_flow_data_override_owner(parsed, flow, current_user)
+        _validate_flow_data_for_execution(parsed, flow)
 
         if parsed.mode == "sync":
             return await execute_sync_workflow_with_timeout(
@@ -555,6 +630,56 @@ def _single_input_value_request(parsed: ParsedWorkflowRun) -> InputValueRequest 
     )
 
 
+_QueueItem = tuple[str | None, bytes | None, float]
+
+
+class _WorkflowEventQueue:
+    """Bounded EventManager handoff that fails explicitly instead of dropping events."""
+
+    def __init__(self, maxsize: int) -> None:
+        self._queue: asyncio.Queue[_QueueItem] = asyncio.Queue(maxsize=maxsize)
+        self._overflowed = False
+        self._loop = asyncio.get_running_loop()
+        self._overflow_task: asyncio.Task[None] | None = None
+
+    @property
+    def maxsize(self) -> int:
+        return self._queue.maxsize
+
+    async def get(self) -> _QueueItem:
+        return await self._queue.get()
+
+    async def put(self, item: _QueueItem) -> None:
+        if self._overflowed:
+            return
+        await self._queue.put(item)
+
+    def put_nowait(self, item: _QueueItem) -> None:
+        if self._overflowed:
+            return
+        try:
+            self._queue.put_nowait(item)
+        except asyncio.QueueFull:
+            self._overflowed = True
+            self._overflow_task = self._loop.create_task(self._emit_overflow_error())
+
+    async def _emit_overflow_error(self) -> None:
+        payload = {
+            "event": "error",
+            "data": {
+                "error": "Workflow event stream exceeded buffering capacity; client is consuming events too slowly."
+            },
+        }
+        await self._queue.put((f"error-{uuid4()}", json.dumps(payload).encode("utf-8"), time.time()))
+        await self._queue.put((None, None, time.time()))
+
+    async def aclose(self) -> None:
+        if self._overflow_task is not None and not self._overflow_task.done():
+            self._overflow_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await self._overflow_task
+
+
 async def _stream_event_frames(
     *,
     adapter: StreamAdapter,
@@ -565,6 +690,7 @@ async def _stream_event_frames(
     current_user: UserRead,
     source_flow_id: UUID | None = None,
     run_id: str | None = None,
+    track_job_status: bool = True,
 ) -> AsyncIterator[tuple[bytes, str]]:
     """Run a flow via the v1 build-vertex loop, dispatch its events through ``adapter``.
 
@@ -583,10 +709,10 @@ async def _stream_event_frames(
     playground's chat-view. A follow-up retires this once chat-view
     consumes the AG-UI ``TEXT_MESSAGE_*`` lifecycle directly.
     """
-    # Bounded so a slow consumer can apply backpressure on the build loop
-    # instead of growing without bound. The build loop awaits ``queue.put``
-    # which yields control back to the consumer between frames.
-    queue: asyncio.Queue = asyncio.Queue(maxsize=_EVENT_QUEUE_MAX_SIZE)
+    # EventManager uses put_nowait(), so a plain bounded asyncio.Queue would
+    # silently drop frames via QueueFull. This adapter keeps memory bounded and
+    # converts overflow into an explicit stream error + sentinel.
+    queue = _WorkflowEventQueue(maxsize=_EVENT_QUEUE_MAX_SIZE)
     event_manager = create_default_event_manager(queue)
     input_request = _single_input_value_request(parsed)
     flow_data = FlowDataRequest(**parsed.data) if parsed.data else None
@@ -629,6 +755,7 @@ async def _stream_event_frames(
                 flow_name=flow_name,
                 source_flow_id=source_flow_id,
                 run_id=run_id,
+                track_job_status=track_job_status,
             )
         except asyncio.CancelledError:
             raise
@@ -650,7 +777,7 @@ async def _stream_event_frames(
     # side-channel ``CustomEvent``; emitted only when the wire protocol is
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
     emit_side_channel = adapter.name == "agui"
-    side_channel_events = frozenset({"add_message", "token", "remove_message", "error"})
+    side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
 
     seq = 0
     run_task = asyncio.create_task(drive())
@@ -698,6 +825,7 @@ async def _stream_event_frames(
             run_task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await run_task
+        await queue.aclose()
 
 
 def _execute_streaming_workflow(
@@ -930,6 +1058,7 @@ async def _buffer_background_run(
             # Build under the job id so the run's vertex builds are persisted
             # keyed by job_id and GET-status reconstruction can find them.
             run_id=job_id,
+            track_job_status=False,
         ):
             if terminal_error_type is not None and event_type == terminal_error_type:
                 errored = True
@@ -948,20 +1077,6 @@ async def _buffer_background_run(
         # passing the raw string would silently miss every row.
         job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
         await _finalize_job_status(job_uuid, JobStatus.FAILED if errored else JobStatus.COMPLETED)
-        # Fire memory-base auto-capture hook on successful runs only. Matches
-        # the sync mode wiring above and the v1 build-pipeline wiring in
-        # ``api/build.py``. ``fire_and_forget_task`` because we are already a
-        # background coroutine and the hook must not block job finalization.
-        if not errored:
-            try:
-                await get_task_service().fire_and_forget_task(
-                    get_memory_base_service().on_flow_output,
-                    flow_id=flow.id,
-                    session_id=parsed.session_id or str(flow.id),
-                    job_id=job_uuid,
-                )
-            except (RuntimeError, ValueError, OSError):
-                await logger.awarning("Memory base hook scheduling failed for flow %s", flow.id, exc_info=True)
 
 
 async def execute_workflow_background(
@@ -997,6 +1112,7 @@ async def execute_workflow_background(
         try:
             queue_service = get_queue_service()
             queue_service.create_queue(job_id_str)
+            await queue_service.register_job_owner(job_id_str, current_user.id)
             queue_service.start_job(
                 job_id_str,
                 _buffer_background_run(
@@ -1215,7 +1331,6 @@ async def stop_workflow(
     """
     job_id = request.job_id
     job_service = get_job_service()
-    task_service = get_task_service()
 
     try:
         # 1. Fetch Job
@@ -1257,27 +1372,29 @@ async def stop_workflow(
         return WorkflowStopResponse(job_id=str(job_id), message=f"Job {job_id} is already cancelled.")
 
     try:
-        revoked = await task_service.revoke_task(job_id)
+        try:
+            await get_queue_service().cancel_job(str(job_id))
+        except asyncio.CancelledError as exc:
+            message_code = exc.args[0] if exc.args else "UNKNOWN"
+            if message_code != "LANGFLOW_USER_CANCELLED":
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail={
+                        "error": "Task cancellation error",
+                        "code": message_code,
+                        "message": f"Job {job_id} was cancelled unexpectedly by the system",
+                        "job_id": str(job_id),
+                    },
+                ) from exc
         await job_service.update_job_status(job_id, JobStatus.CANCELLED)
         # Release the in-memory buffer and wake any re-attach waiters so they
         # see a clean stream-end instead of hanging on ``_cond.wait()``.
         await _clear_background_run(str(job_id))
 
-        message = f"Job {job_id} cancelled successfully." if revoked else f"Job {job_id} is already cancelled."
+        message = f"Job {job_id} cancelled successfully."
         return WorkflowStopResponse(job_id=str(job_id), message=message)
-    except asyncio.CancelledError as exc:
-        # Handle system-initiated cancellations that were re-raised
-        # The job status has already been updated to FAILED in jobs/service.py
-        message_code = exc.args[0] if exc.args else "UNKNOWN"
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail={
-                "error": "Task cancellation error",
-                "code": message_code,
-                "message": f"Job {job_id} was cancelled unexpectedly by the system",
-                "job_id": str(job_id),
-            },
-        ) from exc
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -1308,13 +1425,49 @@ async def reattach_workflow_events(
     leaking the existence of other users' runs.
     """
     bg_run = _BACKGROUND_RUNS.get(job_id)
-    if bg_run is None or bg_run.user_id != str(current_user.id):
+    if bg_run is not None and bg_run.user_id != str(current_user.id):
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail={
                 "error": "Background run not found",
                 "code": "JOB_NOT_FOUND",
                 "message": f"No buffered events for job {job_id}.",
+                "job_id": job_id,
+            },
+        )
+
+    if bg_run is None:
+        try:
+            job_uuid = UUID(job_id)
+        except ValueError:
+            job_uuid = None
+
+        job = None
+        if job_uuid is not None:
+            with contextlib.suppress(Exception):
+                job = await get_job_service().get_job_by_job_id(job_uuid, user_id=current_user.id)
+
+        if job is None or job.type != JobType.WORKFLOW:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail={
+                    "error": "Background run not found",
+                    "code": "JOB_NOT_FOUND",
+                    "message": f"No buffered events for job {job_id}.",
+                    "job_id": job_id,
+                },
+            )
+
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "error": "Background event buffer unavailable",
+                "code": "BACKGROUND_EVENTS_UNAVAILABLE",
+                "message": (
+                    f"Buffered events for job {job_id} are not available on this worker. "
+                    "Use the workflow status endpoint for this job, or route event re-attach "
+                    "requests to the worker that accepted the background run."
+                ),
                 "job_id": job_id,
             },
         )
