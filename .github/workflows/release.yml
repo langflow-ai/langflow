@@ -1212,6 +1212,16 @@ jobs:
       needs.publish-main.result == 'success' &&
       needs.validate-tag-format.result == 'success'
     steps:
+      # Checkout must come first: resolve the commit the dispatched tag points
+      # at so the release can never attach to an auto-created tag on the
+      # default branch (see validate-tag-format for the duplicate-tag history).
+      - name: Checkout release tag
+        uses: actions/checkout@v6
+        with:
+          ref: ${{ inputs.release_tag }}
+      - name: Resolve release commit
+        id: release_commit
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
       - uses: actions/download-artifact@v4
         with:
           name: dist-main
@@ -1224,6 +1234,8 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.determine-main-version.outputs.version }}
+          tag: ${{ inputs.release_tag }}
+          commit: ${{ steps.release_commit.outputs.sha }}
+          name: ${{ needs.determine-main-version.outputs.version }}
           allowUpdates: true
           updateOnlyUnreleased: false

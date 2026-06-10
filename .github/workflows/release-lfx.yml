@@ -337,6 +337,10 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: lfx-v${{ github.event.inputs.version }}
+          # The lfx-v* tag does not pre-exist, so the action creates it. Pin it
+          # to the dispatched commit; otherwise GitHub tags the default-branch
+          # HEAD, which is the wrong commit when releasing from a release branch.
+          target_commitish: ${{ github.sha }}
           name: LFX ${{ github.event.inputs.version }}
           body_path: release_notes.md
           draft: false
