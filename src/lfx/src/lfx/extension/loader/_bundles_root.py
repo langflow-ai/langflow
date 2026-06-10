@@ -10,8 +10,10 @@ The third @official-slot production source, after installed-manifest bundles
 The value is the importable package whose *immediate subdirectories* are each
 a manifest-less bundle, registered at the @official slot and named after the
 subdirectory.  This is the langchain-community model: no ``extension.json``,
-no per-provider manifest, exempt from ``lfx extension validate`` -- a new
-provider is just a new folder.
+no per-provider manifest -- a new provider is just a new folder.  These
+directories are not inputs to ``lfx extension validate``: the validator
+requires a manifest (``extension.json`` or ``[tool.langflow.extension]`` in
+``pyproject.toml``) and reports ``manifest-not-found`` without one.
 
 Discovery mirrors :func:`lfx.extension.loader._orchestrator.discover_inline_bundles`
 (the @extra manifest-less folder walk for ``LANGFLOW_COMPONENTS_PATH``) but
@@ -244,19 +246,19 @@ def _load_bundle_roots(roots: Iterable[_BundleRoot]) -> list[LoadResult]:
 
 
 def _spec_package_dir(spec: importlib.machinery.ModuleSpec | None) -> Path | None:
-    """Return the on-disk directory a module spec points at, or ``None``.
+    """Return the package directory a module spec points at, or ``None``.
 
-    Prefers ``submodule_search_locations`` (set for both regular and namespace
-    packages, and equal to the package directory) and falls back to
-    ``origin``'s parent for a plain module.
+    Only package specs qualify (``submodule_search_locations`` is set for both
+    regular and namespace packages, and equals the package directory).  A
+    plain-module spec returns ``None`` -- a single-file module has no provider
+    subdirectories, and falling back to the module file's parent would
+    folder-walk unrelated sibling directories as bundles.
     """
     if spec is None:
         return None
     locations = list(spec.submodule_search_locations or [])
     if locations:
         return Path(locations[0])
-    if spec.origin and spec.origin != "namespace":
-        return Path(spec.origin).parent
     return None
 
 
