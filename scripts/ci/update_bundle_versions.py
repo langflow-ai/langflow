@@ -65,6 +65,7 @@ def rename_bundle_pyproject(pyproject_path: Path, lfx_version: str, dev_n: str) 
     - ``[project] version``      → ``<base_version>.dev<N>``
     - entry-point key            → ``<base_name>-nightly``
     - ``"lfx>=...,<..."`` dep    → ``"lfx-nightly==<lfx_version>"``
+    - ``"<base_name>[extras]"`` self-refs → ``"<base_name>-nightly[extras]"``
 
     Returns ``(base_name, nightly_name, nightly_version)`` so the caller can
     update the root pyproject. Returns ``None`` if the file has no
@@ -96,6 +97,15 @@ def rename_bundle_pyproject(pyproject_path: Path, lfx_version: str, dev_n: str) 
     # Rewrite the lfx dep regardless of which form it's in.
     content = _LFX_DEP_PATTERN.sub(f'"lfx-nightly=={lfx_version}"', content)
 
+    # Self-referencing extras must follow the distribution rename (e.g. the
+    # lfx-bundles metapackage's generated `all` extra lists
+    # "lfx-bundles[<provider>]" members). Left unrenamed, the nightly package
+    # would resolve the stable distribution from PyPI -- which ships the same
+    # import package and collides at install time -- or fail to resolve
+    # entirely while the stable name is unpublished. Idempotent on re-runs.
+    self_ref_pattern = re.compile(rf'"{re.escape(base_name)}(?:-nightly)?(\[[^\]]*\])')
+    content = self_ref_pattern.sub(rf'"{nightly_name}\g<1>', content)
+
     pyproject_path.write_text(content, encoding="utf-8")
     return base_name, nightly_name, nightly_version
 
@@ -108,22 +118,26 @@ def update_root_pyproject_for_bundle(
 ) -> None:
     """Update root ``pyproject.toml`` to reference the nightly bundle.
 
-    - dependency line  ``"<base_name>[..]"`` → ``"<nightly_name>==<version>"``
+    - dependency line  ``"<base_name>[extras]<spec>"`` → ``"<nightly_name>[extras]==<version>"``
+      (extras carried over verbatim, e.g. ``lfx-bundles[all]`` / ``lfx-docling[local]``)
     - uv.sources entry ``<base_name> = { workspace = true }`` → ``<nightly_name> = ...``
 
     Idempotent: also matches the already-nightly form.
     """
     content = root_pyproject.read_text(encoding="utf-8")
 
-    # Dependency in [project.dependencies] (any PEP 440 specifier or range form).
+    # Dependency in [project.dependencies] or [project.optional-dependencies]
+    # (any PEP 440 specifier or range form, with an optional [extras] group
+    # between the name and the specifier).
     dep_pattern = re.compile(
         rf'"{re.escape(base_name)}(?:-nightly)?'
+        r"(\[[^\]]*\])?"
         r"(?:"
         r"(?:~=|==|>=)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*"
         r"(?:,\s*<[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*)?"
         r')"'
     )
-    content = dep_pattern.sub(f'"{nightly_name}=={nightly_version}"', content)
+    content = dep_pattern.sub(rf'"{nightly_name}\g<1>=={nightly_version}"', content)
 
     # uv.sources entry — only the workspace = true form is used by bundles today.
     source_pattern = re.compile(
