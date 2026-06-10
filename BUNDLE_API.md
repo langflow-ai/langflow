@@ -402,3 +402,20 @@ the deserialize half is covered by
   added to ``ERROR_CODES`` (additive; codes-as-contract semantics
   preserved).  In-tree polling clients that never sent the parameter
   are unaffected.
+- **Manifest-less `lfx.bundles` discovery (metapackage split, 1.11).**  A
+  distribution may declare `[project.entry-points."lfx.bundles"]` whose
+  value is an importable package; each immediate subdirectory is loaded as
+  one bundle at the `@official` slot with **no `extension.json`** (the
+  langchain-community model; exempt from `lfx extension validate`).
+  `load_lfx_bundles_extensions` is exported from `lfx.extension` (additive).
+  Discovery precedence for cross-source bundle-name collisions becomes
+  `installed > seed > lfx_bundles > dev > inline` -- **manifest always
+  wins**, so a manifest-shipping `lfx-<provider>` shadows the same-named
+  provider in a metapackage with the existing `bundle-shadowed` warning
+  (graduation requires no lockstep release).  New warning-only code
+  `bundle-discovery-malformed` added to `ERROR_CODES` (additive) for
+  unresolvable declarations and invalid provider directory names; it never
+  aborts startup.  Manifest-less bundles bypass the
+  `version-constraint-unsatisfied` API-version gate by construction (no
+  manifest to carry `lfx.compat`); install-time compatibility rides on the
+  metapackage's PEP 508 `lfx>=X,<Y` pin instead.
