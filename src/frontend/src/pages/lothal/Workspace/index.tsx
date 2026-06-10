@@ -346,6 +346,15 @@ function WorkspaceView() {
   const username = useAuthStore((s) => s.userData?.username);
   const initial = username ? username.charAt(0).toUpperCase() : "";
 
+  // Tab title carries the open project ("Tide Tracker — Lothal"); restored on
+  // the way out.
+  useEffect(() => {
+    if (project?.name) document.title = `${project.name} — Lothal`;
+    return () => {
+      document.title = "Lothal";
+    };
+  }, [project?.name]);
+
   if (isLoading) {
     return (
       <div

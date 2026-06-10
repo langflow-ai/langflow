@@ -48,6 +48,7 @@ const DeleteAccountPage = lazy(() => import("./pages/DeleteAccountPage"));
 
 const PlaygroundPage = lazy(() => import("./pages/Playground"));
 
+const LothalLanding = lazy(() => import("./pages/lothal/Landing"));
 const LothalDashboard = lazy(() => import("./pages/lothal/Dashboard"));
 const LothalWorkspace = lazy(() => import("./pages/lothal/Workspace"));
 const LothalDesignSystem = lazy(() => import("./pages/lothal/DesignSystem"));
@@ -78,6 +79,10 @@ const router = createBrowserRouter(
     >
       <Route path="" element={<AppInitPage />}>
         <Route path="" element={<AppWrapperPage />}>
+          {/* Public front door — the Lothal landing page. Lives outside
+              ProtectedRoute so anonymous visitors see it instead of being
+              bounced to /login; its CTA is auth-aware. */}
+          <Route index element={<LothalLanding />} />
           <Route
             path=""
             element={
@@ -89,10 +94,8 @@ const router = createBrowserRouter(
             <Route path="" element={<AppAuthenticatedPage />}>
               <Route path="" element={<CustomDashboardWrapperPage />}>
                 <Route path="" element={<CollectionPage />}>
-                  <Route
-                    index
-                    element={<CustomNavigate replace to={"flows"} />}
-                  />
+                  {/* No index route here: exact "/" belongs to the public
+                      landing page above. The flows app home is /flows. */}
                   {ENABLE_FILE_MANAGEMENT && (
                     <Route path="assets">
                       <Route

@@ -13,7 +13,7 @@ export const ProtectedAdminRoute = ({ children }) => {
   if (!isAuthenticated) {
     return <LoadingPage />;
   } else if ((userData && !isAdmin) || autoLogin) {
-    return <CustomNavigate to="/" replace />;
+    return <CustomNavigate to="/flows" replace />;
   } else {
     return children;
   }

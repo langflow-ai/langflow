@@ -61,7 +61,7 @@ export default function AppHeader(): JSX.Element {
       >
         <Button
           unstyled
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/flows")}
           className="mr-1 flex h-8 w-8 items-center"
           data-testid="icon-ChevronLeft"
         >

@@ -13,7 +13,9 @@ export const ProtectedLoginRoute = ({ children }) => {
     if (redirectPath) {
       return <CustomNavigate to={redirectPath} replace />;
     }
-    return <CustomNavigate to="/home" replace />;
+    // "/flows" explicitly: "/" is the public landing page now, so letting
+    // "/home" fall through the catch-all would strand a fresh login there.
+    return <CustomNavigate to="/flows" replace />;
   }
 
   return children;

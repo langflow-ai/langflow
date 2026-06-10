@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" fill="none">
+  <!-- Lothal mark — the paper boat from LothalMark.tsx, in the dark-theme accent. -->
+  <path d="M16 5 L23 17 L9 17 Z" fill="#E95420"/>
+  <path d="M3 17 L29 17 L24 25 L8 25 Z" fill="#E95420"/>
+  <path d="M2 26 Q5 25 7 26" stroke="#E95420" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+  <path d="M25 26 Q28 25 30 26" stroke="#E95420" stroke-width="1.4" stroke-linecap="round" opacity="0.55"/>
+</svg>
