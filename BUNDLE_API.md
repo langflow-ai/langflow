@@ -415,13 +415,24 @@ the deserialize half is covered by
   `installed > seed > lfx_bundles > dev > inline` -- **manifest always
   wins**, so a manifest-shipping `lfx-<provider>` shadows the same-named
   provider in a metapackage with the existing `bundle-shadowed` warning
-  (graduation requires no lockstep release).  New warning-only code
+  (graduation requires no lockstep release).  A metapackage provider whose
+  name is already claimed by an installed or seed source is **never
+  imported** -- all `@official` sources share the
+  `_lfx_ext.official.<bundle>.*` sys.modules namespace, so importing the
+  losing copy would overwrite the winner's live modules; the skipped copy
+  still surfaces the `bundle-shadowed` warning.  New warning-only code
   `bundle-discovery-malformed` added to `ERROR_CODES` (additive) for
   unresolvable declarations and invalid provider directory names; it never
   aborts startup.  Manifest-less bundles bypass the
   `version-constraint-unsatisfied` API-version gate by construction (no
   manifest to carry `lfx.compat`); install-time compatibility rides on the
-  metapackage's PEP 508 `lfx>=X,<Y` pin instead.
+  metapackage's PEP 508 `lfx>=X,<Y` pin instead.  Manifest-less records
+  register with `manifestless=True` (additive field on `LoadResult` /
+  `BundleRecord`) and are **not hot-reloadable**: the reload pipeline
+  refuses them with the new typed code `reload-manifestless-unsupported`
+  (additive in `ERROR_CODES`) instead of failing `manifest-not-found`;
+  pick up metapackage changes by upgrading the distribution and
+  restarting the process.
 - **Validator accepts inherited entry-points.**  `validate_extension` no
   longer emits `build-method-missing` for a Component subclass whose base
   is a *derived* Component base (name ends with `Component`, e.g.
