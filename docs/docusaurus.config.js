@@ -112,15 +112,19 @@ const config = {
           sidebarPath: require.resolve("./sidebars.js"), // Use sidebars.js file
           sidebarCollapsed: true,
           // Versioning configuration
-          lastVersion: "1.9.0",
+          lastVersion: "1.10.0",
           versions: {
             current: {
-              label: "1.10.x (Next)",
+              label: "1.11.x (Next)",
               path: "next",
+            },
+            "1.10.0": {
+              label: "1.10.x",
+              path: "",
             },
             "1.9.0": {
               label: "1.9.x",
-              path: "",
+              path: "1.9.0",
             },
             "1.8.0": {
               label: "1.8.x",

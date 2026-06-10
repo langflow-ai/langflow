@@ -1,0 +1,330 @@
+---
+title: Flow management endpoints
+slug: /api-flows
+---
+import CodeSnippet from '@site/src/components/CodeSnippet';
+import exampleApiFlowsCreateFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/create-flow.sh';
+import resultApiFlowsResultCreateFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/result-create-flow.json';
+import exampleApiFlowsCreateFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/create-flows.sh';
+import exampleApiFlowsReadFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/read-flow.sh';
+import resultApiFlowsResultReadFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/result-read-flow.json';
+import exampleApiFlowsReadFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/read-flows.sh';
+import exampleApiFlowsReadFlows2 from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/read-flows-2.sh';
+import exampleApiFlowsReadSampleFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/read-sample-flows.sh';
+import exampleApiFlowsUpdateFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/update-flow.sh';
+import resultApiFlowsResultUpdateFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/result-update-flow.json';
+import exampleApiFlowsDeleteFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/delete-flow.sh';
+import resultApiFlowsResultDeleteFlow from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/result-delete-flow.json';
+import exampleApiFlowsExportFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/export-flows.sh';
+import resultApiFlowsResultExportFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/result-export-flows.txt';
+import exampleApiFlowsImportFlows from '!!raw-loader!@site/docs/API-Reference/curl-examples/api-flows/import-flows.sh';
+import Tabs from '@theme/Tabs';
+import TabItem from '@theme/TabItem';
+import examplePythonApiFlowsCreateFlow from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/create-flow.py';
+import exampleJavascriptApiFlowsCreateFlow from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/create-flow.js';
+import examplePythonApiFlowsCreateFlows from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/create-flows.py';
+import exampleJavascriptApiFlowsCreateFlows from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/create-flows.js';
+import examplePythonApiFlowsReadFlow from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/read-flow.py';
+import exampleJavascriptApiFlowsReadFlow from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/read-flow.js';
+import examplePythonApiFlowsReadFlows from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/read-flows.py';
+import exampleJavascriptApiFlowsReadFlows from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/read-flows.js';
+import examplePythonApiFlowsReadFlows2 from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/read-flows-2.py';
+import exampleJavascriptApiFlowsReadFlows2 from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/read-flows-2.js';
+import examplePythonApiFlowsReadSampleFlows from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/read-sample-flows.py';
+import exampleJavascriptApiFlowsReadSampleFlows from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/read-sample-flows.js';
+import examplePythonApiFlowsUpdateFlow from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/update-flow.py';
+import exampleJavascriptApiFlowsUpdateFlow from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/update-flow.js';
+import examplePythonApiFlowsDeleteFlow from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/delete-flow.py';
+import exampleJavascriptApiFlowsDeleteFlow from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/delete-flow.js';
+import examplePythonApiFlowsExportFlows from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/export-flows.py';
+import exampleJavascriptApiFlowsExportFlows from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/export-flows.js';
+import examplePythonApiFlowsImportFlows from '!!raw-loader!@site/docs/API-Reference/python-examples/api-flows/import-flows.py';
+import exampleJavascriptApiFlowsImportFlows from '!!raw-loader!@site/docs/API-Reference/javascript-examples/api-flows/import-flows.js';
+
+
+
+Use the `/flows` endpoint to create, read, update, and delete flows.
+
+If you want to use the Langflow API to run a flow, see [Flow trigger endpoints](/api-flows-run).
+
+## Create flow
+
+Creates a new flow.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsCreateFlow} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsCreateFlow} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsCreateFlow} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiFlowsResultCreateFlow} language="json" />
+
+</details>
+
+## Create flows
+
+Creates multiple new flows, returning an array of flow objects.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsCreateFlows} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsCreateFlows} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsCreateFlows} language="bash" />
+
+</TabItem>
+</Tabs>
+
+## Read flow
+
+Retrieves a specific flow by its ID.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsReadFlow} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsReadFlow} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsReadFlow} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiFlowsResultReadFlow} language="json" />
+
+</details>
+
+## Read flows
+
+Returns a JSON object containing a list of flows.
+
+Retrieve all flows with pagination:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsReadFlows} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsReadFlows} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsReadFlows} language="bash" />
+
+</TabItem>
+</Tabs>
+
+To retrieve flows from a specific project, use the `project_id` query parameter:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsReadFlows2} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsReadFlows2} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsReadFlows2} language="bash" />
+
+</TabItem>
+</Tabs>
+
+## Read sample flows
+
+Retrieves a list of sample flows:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsReadSampleFlows} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsReadSampleFlows} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsReadSampleFlows} language="bash" />
+
+</TabItem>
+</Tabs>
+
+## Update flow
+
+Updates an existing flow by its ID.
+
+This example changes the value for `endpoint_name` from a random UUID to `my_new_endpoint_name`.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsUpdateFlow} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsUpdateFlow} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsUpdateFlow} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiFlowsResultUpdateFlow} language="json" />
+
+</details>
+
+## Delete flow
+
+Deletes a specific flow by its ID.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsDeleteFlow} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsDeleteFlow} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsDeleteFlow} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiFlowsResultDeleteFlow} language="json" />
+
+</details>
+
+## Export flows
+
+Exports specified flows to a ZIP file.
+
+This endpoint downloads a ZIP file containing [Langflow JSON files](/concepts-flows-import#langflow-json-file-contents) for each flow ID listed in the request body.
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsExportFlows} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsExportFlows} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsExportFlows} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+<CodeSnippet source={resultApiFlowsResultExportFlows} language="text" />
+
+</details>
+
+## Import flows
+
+Imports flows by uploading a [Langflow-compatible JSON file](/concepts-flows-import#langflow-json-file-contents).
+
+To specify a target project for the flow, include the query parameter `folder_id`.
+The target `folder_id` must already exist before uploading a flow. Call the [/api/v1/projects/](/api-projects#read-projects) endpoint for a list of available folders and projects.
+
+This example uploads a local file named `agent-with-astra-db-tool.json` to a folder specified by a `FOLDER_ID` variable:
+
+<Tabs>
+<TabItem value="Python" label="Python" default>
+
+<CodeSnippet source={examplePythonApiFlowsImportFlows} language="python" />
+
+</TabItem>
+<TabItem value="JavaScript" label="JavaScript">
+
+<CodeSnippet source={exampleJavascriptApiFlowsImportFlows} language="javascript" />
+
+</TabItem>
+<TabItem value="curl" label="curl">
+
+<CodeSnippet source={exampleApiFlowsImportFlows} language="bash" />
+
+</TabItem>
+</Tabs>
+
+<details>
+<summary>Result</summary>
+
+```json
+[
+  {
+    "name": "agent-with-astra-db-tool",
+    "description": "",
+    "icon": null,
+    "icon_bg_color": null,
+    "gradient": null,
+    "data": {}
+  ...
+  }
+]
+```
+</details>

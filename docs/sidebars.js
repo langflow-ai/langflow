@@ -300,6 +300,11 @@ module.exports = {
         },
         {
           type: "doc",
+          id: "Deployment/deployment-lfx-compatibility",
+          label: "LFX and Langflow version compatibility",
+        },
+        {
+          type: "doc",
           id: "Deployment/deployment-block-custom-components",
           label: "Block custom components",
         },
