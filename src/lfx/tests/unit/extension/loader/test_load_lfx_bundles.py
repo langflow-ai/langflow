@@ -165,8 +165,8 @@ def test_symlinked_provider_escaping_root_is_skipped(tmp_path: Path) -> None:
 
     loaded = {r.bundle for r in results if r.bundle and r.components}
     assert loaded == {"good"}  # the symlinked-out provider did not load
-    malformed = [e for r in results for e in r.warnings if e.code == "bundle-discovery-malformed"]
-    assert any(e.content == "escapee" and "outside the bundle root" in e.message for e in malformed)
+    escapes = [e for r in results for e in r.warnings if e.code == "path-escape"]
+    assert any(e.content == "escapee" and "outside the bundle root" in e.message for e in escapes)
 
 
 def test_duplicate_provider_across_roots_first_wins(tmp_path: Path) -> None:

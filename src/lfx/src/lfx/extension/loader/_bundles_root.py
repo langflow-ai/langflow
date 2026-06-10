@@ -43,6 +43,8 @@ message and hint fit the actual mistake:
   check permissions.
 - ``duplicate-lfx-bundles-provider`` -- the same provider name appears in
   more than one root; the first discovered root wins.
+- ``path-escape`` -- a provider directory (e.g. a symlink) resolves outside
+  the bundle root; the trust boundary is the installed package tree.
 """
 
 from __future__ import annotations
@@ -250,10 +252,15 @@ def _load_bundle_roots(
             if not is_within(child, root.path):
                 result = LoadResult(slot=None, source_path=child)
                 result.warnings.append(
-                    _malformed_error(
-                        name,
-                        f"provider directory {name!r} resolves outside the bundle root {root.path}; skipped.",
+                    ExtensionError(
+                        code="path-escape",
+                        message=(f"provider directory {name!r} resolves outside the bundle root {root.path}; skipped."),
                         location=str(child),
+                        content=name,
+                        hint=(
+                            "Replace the symlink with a real directory inside the bundle root; "
+                            "the trust boundary is the installed package tree."
+                        ),
                     )
                 )
                 results.append(result)
