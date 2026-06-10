@@ -13,29 +13,40 @@ from unittest.mock import MagicMock, patch
 
 from langchain_core.documents import Document
 from langchain_core.embeddings import Embeddings
+from qdrant_client.models import Distance
+
 from lfx.components.qdrant import QdrantVectorStoreComponent
 from lfx.schema.data import Data
 
 
 def _make_component(documents: list[Document]) -> QdrantVectorStoreComponent:
+    embedding = MagicMock(spec=Embeddings)
+    embedding.embed_query.return_value = [0.1, 0.2, 0.3]
     return QdrantVectorStoreComponent().set(
         collection_name="test_collection",
-        embedding=MagicMock(spec=Embeddings),
+        embedding=embedding,
         ingest_data=[Data(text=doc.page_content, data=doc.metadata) for doc in documents],
     )
 
 
 def _captured_ids(documents: list[Document]) -> list[str]:
-    """Run build_vector_store with QdrantVectorStore.from_documents patched and return the ids passed in."""
+    """Run build_vector_store and return the ids passed to add_documents."""
     component = _make_component(documents)
 
     captured: dict[str, list[str]] = {}
+    client = MagicMock()
+    client.collection_exists.return_value = True
+    qdrant = MagicMock()
 
-    def fake_from_documents(_docs, *, embedding, ids, **_kwargs):  # noqa: ARG001
+    def fake_add_documents(*, documents, ids):  # noqa: ARG001
         captured["ids"] = ids
-        return MagicMock()
 
-    with patch("lfx.components.qdrant.qdrant.QdrantVectorStore.from_documents", side_effect=fake_from_documents):
+    qdrant.add_documents.side_effect = fake_add_documents
+
+    with (
+        patch("lfx.components.qdrant.qdrant.QdrantClient", return_value=client),
+        patch("lfx.components.qdrant.qdrant.QdrantVectorStore", return_value=qdrant),
+    ):
         component.build_vector_store()
 
     return captured["ids"]
@@ -85,3 +96,23 @@ def test_qdrant_ids_handle_non_primitive_metadata() -> None:
 
     assert first == second
     uuid.UUID(first[0])  # raises if not a valid UUID
+
+
+def test_qdrant_creates_missing_collection_from_embedding_dimension() -> None:
+    component = _make_component([]).set(distance_func="Dot Product")
+    client = MagicMock()
+    client.collection_exists.return_value = False
+    qdrant = MagicMock()
+
+    with (
+        patch("lfx.components.qdrant.qdrant.QdrantClient", return_value=client),
+        patch("lfx.components.qdrant.qdrant.QdrantVectorStore", return_value=qdrant),
+    ):
+        vector_store = component.build_vector_store()
+
+    assert vector_store is qdrant
+    client.create_collection.assert_called_once()
+    create_kwargs = client.create_collection.call_args.kwargs
+    assert create_kwargs["collection_name"] == "test_collection"
+    assert create_kwargs["vectors_config"].size == 3
+    assert create_kwargs["vectors_config"].distance == Distance.DOT
