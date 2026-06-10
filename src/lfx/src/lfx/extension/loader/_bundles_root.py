@@ -30,13 +30,19 @@ no lockstep release.
 
 Failure policy
 --------------
-A declaration that cannot be resolved to a real package directory yields a
-sentinel :class:`LoadResult` carrying a ``bundle-discovery-malformed``
-*warning* (not an error), so a broken third-party declaration degrades to
-"that bundle root is skipped" rather than aborting server startup.  The same
-warning is emitted for a top-level entry whose name is not a valid bundle
-name (e.g. a provider folder that was not lowercased), so the mistake is
-visible instead of silently dropping the provider.
+Every discovery failure degrades to a typed *warning* (never an error that
+aborts server startup), with one code per failure mode so the rendered
+message and hint fit the actual mistake:
+
+- ``bundle-discovery-malformed`` -- the entry-point declaration does not
+  resolve to an importable package directory (including a parent package
+  whose ``__init__`` raises during ``find_spec``); fix the declaration.
+- ``bundles-provider-name-invalid`` -- a provider folder is not a valid
+  bundle name (e.g. not lowercased); rename the directory.
+- ``bundles-root-unreadable`` -- a resolved root cannot be enumerated;
+  check permissions.
+- ``duplicate-lfx-bundles-provider`` -- the same provider name appears in
+  more than one root; the first discovered root wins.
 """
 
 from __future__ import annotations
@@ -100,7 +106,8 @@ def load_lfx_bundles_extensions(
     ``claimed_bundles`` maps bundle names already won by a higher-precedence
     @official source (installed > seed) to ``(source_kind, source_path)``.
     A provider directory whose name is claimed is **never imported** -- its
-    result carries a typed ``bundle-shadowed`` warning instead.  Skipping the
+    result carries the same typed ``bundle-shadowed`` error the cross-source
+    resolver emits for every other shadow pair.  Skipping the
     import (rather than letting :func:`_resolve_bundle_shadowing` drop the
     components afterwards) matters because all @official sources share the
     ``_lfx_ext.official.<bundle>.*`` sys.modules namespace: importing the
@@ -128,6 +135,12 @@ def _resolve_bundle_roots(
     Returns ``(roots, sentinels)`` where ``roots`` are the resolvable bundle
     roots (sorted, deterministic) and ``sentinels`` are warning-only
     :class:`LoadResult` objects for declarations that failed to resolve.
+
+    A namespace package split across several sys.path entries yields one root
+    per portion -- every portion may carry providers.  Resolved roots are
+    deduplicated by resolved path so two declarations naming the same package
+    (or overlapping portions) never walk a directory twice, which would make
+    every provider in it self-shadow.
     """
     if entry_points is None:
         from importlib import metadata as importlib_metadata
@@ -136,6 +149,7 @@ def _resolve_bundle_roots(
 
     roots: list[_BundleRoot] = []
     sentinels: list[LoadResult] = []
+    seen_root_paths: set[Path] = set()
     ordered = sorted(
         entry_points,
         key=lambda ep: (getattr(ep, "name", "") or "", getattr(ep, "value", "") or ""),
@@ -148,24 +162,34 @@ def _resolve_bundle_roots(
                 _malformed_sentinel(label, "entry-point value is empty; expected an importable package name.")
             )
             continue
-        # ``find_spec`` locates the package without importing it, so a
-        # discovery pass at startup does not trigger arbitrary ``__init__``
-        # side-effects -- the same discipline as ``_manifest_via_entry_point``.
+        # ``find_spec`` does not import the target module itself, but for a
+        # dotted declaration like ``pkg.bundles`` it DOES import the parent
+        # ``pkg`` -- arbitrary third-party ``__init__`` code that can raise
+        # anything, not just ImportError.  Catch broadly and degrade to the
+        # malformed sentinel: an escape here would propagate to the palette
+        # cache's catch-all, which replaces the WHOLE extension_components
+        # mapping with {} -- one rotten declaration must not wipe every
+        # installed/seed/dev/inline bundle for the boot.
         try:
             spec = importlib.util.find_spec(module_name)
-        except (ImportError, ValueError, ModuleNotFoundError, AttributeError) as exc:
+        except Exception as exc:  # noqa: BLE001 -- third-party __init__ can raise anything
             sentinels.append(
                 _malformed_sentinel(label, f"find_spec({module_name!r}) failed: {type(exc).__name__}: {exc}")
             )
             continue
-        package_dir = _spec_package_dir(spec)
-        if package_dir is None or not package_dir.is_dir():
+        package_dirs = [d for d in _spec_package_dirs(spec) if d.is_dir()]
+        if not package_dirs:
             sentinels.append(
                 _malformed_sentinel(label, f"module {module_name!r} does not resolve to a package directory.")
             )
             continue
         extension_id, extension_version = _distribution_identity(ep, fallback_id=module_name)
-        roots.append(_BundleRoot(path=package_dir, extension_id=extension_id, extension_version=extension_version))
+        for package_dir in package_dirs:
+            resolved = package_dir.resolve()
+            if resolved in seen_root_paths:
+                continue
+            seen_root_paths.add(resolved)
+            roots.append(_BundleRoot(path=package_dir, extension_id=extension_id, extension_version=extension_version))
     return roots, sentinels
 
 
@@ -177,13 +201,16 @@ def _load_bundle_roots(
     """Folder-walk each resolved root, loading every valid subdirectory at @official.
 
     First-wins on duplicate bundle names across roots (the loser emits a typed
-    ``bundle-shadowed`` warning); names in ``claimed_bundles`` (already won by
-    a higher-precedence installed/seed source) are skipped *without importing*
-    so the winner's ``_lfx_ext.official.<bundle>.*`` sys.modules entries are
-    never overwritten.  Subdirectories whose name is not a valid bundle name
-    emit ``bundle-discovery-malformed`` and are skipped.  Internal directories
-    (dot-prefixed, underscore-prefixed, or in :data:`SKIP_DIR_NAMES`) are
-    skipped silently -- they are package machinery, not providers.
+    ``duplicate-lfx-bundles-provider`` warning); names in ``claimed_bundles``
+    (already won by a higher-precedence installed/seed source) are skipped
+    *without importing* -- carrying the same ``bundle-shadowed`` error the
+    cross-source resolver emits -- so the winner's
+    ``_lfx_ext.official.<bundle>.*`` sys.modules entries are never
+    overwritten.  Subdirectories whose name is not a valid bundle name emit
+    ``bundles-provider-name-invalid``; a root that cannot be enumerated emits
+    ``bundles-root-unreadable``.  Internal directories (dot-prefixed,
+    underscore-prefixed, or in :data:`SKIP_DIR_NAMES`) are skipped silently --
+    they are package machinery, not providers.
     """
     claimed = claimed_bundles or {}
     results: list[LoadResult] = []
@@ -197,7 +224,13 @@ def _load_bundle_roots(
             # rather than aborting the whole discovery pass.
             sentinel = LoadResult(slot=None, source_path=root.path)
             sentinel.warnings.append(
-                _malformed_error(str(root.path), f"could not enumerate bundle root: {type(exc).__name__}: {exc}")
+                ExtensionError(
+                    code="bundles-root-unreadable",
+                    message=f"{type(exc).__name__}: {exc}",
+                    location=str(root.path),
+                    content=str(root.path),
+                    hint="Check the directory's permissions; this root is skipped for this boot.",
+                )
             )
             results.append(sentinel)
             continue
@@ -213,20 +246,27 @@ def _load_bundle_roots(
 
             if not BUNDLE_NAME_RE.match(name):
                 result.warnings.append(
-                    _malformed_error(
-                        name,
-                        f"provider directory {name!r} (under {root.path}) is not a valid bundle "
-                        "name; lowercase snake_case (a-z, 0-9, _), 2-64 characters.",
+                    ExtensionError(
+                        code="bundles-provider-name-invalid",
+                        message=(
+                            f"provider directory {name!r} (under {root.path}) is not a valid bundle "
+                            "name; lowercase snake_case (a-z, 0-9, _), 2-64 characters."
+                        ),
                         location=str(child),
+                        content=name,
+                        hint="Rename the provider directory to a valid bundle name.",
                     )
                 )
                 results.append(result)
                 continue
 
             if name in claimed:
+                # Cross-source shadow: same code AND same severity (errors)
+                # as _resolve_bundle_shadowing emits for every other shadow
+                # pair, so filtering by code never mixes semantics.
                 winner_kind, winner_path = claimed[name]
                 result.bundle = name
-                result.warnings.append(
+                result.errors.append(
                     ExtensionError(
                         code="bundle-shadowed",
                         message=(
@@ -248,15 +288,20 @@ def _load_bundle_roots(
                 continue
 
             if name in seen_names:
+                # Same-tier duplicate (two lfx.bundles roots ship the same
+                # provider): a dedicated code, NOT ``bundle-shadowed`` --
+                # that one means cross-source precedence and its rendered
+                # template would mislead here.  Mirrors the inline tier's
+                # ``duplicate-inline-bundle``.
                 result.bundle = name
                 result.warnings.append(
                     ExtensionError(
-                        code="bundle-shadowed",
+                        code="duplicate-lfx-bundles-provider",
                         message=(
                             f"Manifest-less bundle {name!r} already discovered from {seen_names[name]}; "
                             f"skipping the copy at {child}."
                         ),
-                        location=f"{seen_names[name]} -> {child}",
+                        location=str(child),
                         content=name,
                         hint=(
                             "A provider name must come from exactly one lfx.bundles root; rename or "
@@ -289,21 +334,20 @@ def _load_bundle_roots(
     return results
 
 
-def _spec_package_dir(spec: importlib.machinery.ModuleSpec | None) -> Path | None:
-    """Return the package directory a module spec points at, or ``None``.
+def _spec_package_dirs(spec: importlib.machinery.ModuleSpec | None) -> list[Path]:
+    """Return every on-disk directory a package spec points at.
 
     Only package specs qualify (``submodule_search_locations`` is set for both
-    regular and namespace packages, and equals the package directory).  A
-    plain-module spec returns ``None`` -- a single-file module has no provider
-    subdirectories, and falling back to the module file's parent would
-    folder-walk unrelated sibling directories as bundles.
+    regular and namespace packages).  A namespace package split across several
+    sys.path entries carries one location per portion, and every portion may
+    hold providers, so all of them are returned.  A plain-module spec returns
+    ``[]`` -- a single-file module has no provider subdirectories, and falling
+    back to the module file's parent would folder-walk unrelated sibling
+    directories (in a real install: all of site-packages) as bundles.
     """
     if spec is None:
-        return None
-    locations = list(spec.submodule_search_locations or [])
-    if locations:
-        return Path(locations[0])
-    return None
+        return []
+    return [Path(location) for location in (spec.submodule_search_locations or [])]
 
 
 def _distribution_identity(
@@ -331,12 +375,18 @@ def _distribution_identity(
     return name or fallback_id, version or _DEFAULT_BUNDLE_VERSION
 
 
-def _malformed_error(content: str, message: str, *, location: str | None = None) -> ExtensionError:
-    """Build a ``bundle-discovery-malformed`` error payload."""
+def _malformed_error(content: str, message: str) -> ExtensionError:
+    """Build a ``bundle-discovery-malformed`` error payload.
+
+    Reserved for *declaration*-level failures (an entry point that does not
+    resolve to an importable package directory) -- its hint tells the operator
+    to fix the entry-point declaration.  Provider-name and root-enumeration
+    failures carry their own codes (``bundles-provider-name-invalid``,
+    ``bundles-root-unreadable``) whose hints fit those mistakes.
+    """
     return ExtensionError(
         code="bundle-discovery-malformed",
         message=message,
-        location=location,
         content=content,
         hint=_MALFORMED_HINT,
     )

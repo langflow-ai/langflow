@@ -98,6 +98,9 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "seed-bundle-shadowed": "error[seed-bundle-shadowed]: Seed-directory bundle 'content' at loc is shadowed by an installed Extension of the same name; the seed copy is being skipped.",  # noqa: E501
     "bundle-shadowed": "error[bundle-shadowed]: Bundle 'content' is registered from multiple discovery sources; the lower-precedence copy at loc is being skipped in favor of the higher-precedence one.",  # noqa: E501
     "bundle-discovery-malformed": "error[bundle-discovery-malformed]: lfx.bundles entry point 'content' could not be resolved to a package directory: msg",  # noqa: E501
+    "bundles-provider-name-invalid": "error[bundles-provider-name-invalid]: lfx.bundles provider directory 'content' (at loc) is not a valid bundle name; bundle names are lowercase snake_case (a-z, 0-9, _), 2-64 characters.",  # noqa: E501
+    "bundles-root-unreadable": "error[bundles-root-unreadable]: lfx.bundles root loc could not be enumerated: msg",
+    "duplicate-lfx-bundles-provider": "error[duplicate-lfx-bundles-provider]: Provider 'content' appears in more than one lfx.bundles root; the copy at loc is skipped (the first discovered root wins).",  # noqa: E501
     "duplicate-extension-id": "error[duplicate-extension-id]: Extension id 'content' is registered more than once (already at loc).",  # noqa: E501
     "reload-in-progress": "error[reload-in-progress]: Reload already in progress for bundle 'content'; refuse to start a second concurrent reload.",  # noqa: E501
     "reload-bundle-not-installed": "error[reload-bundle-not-installed]: Cannot reload bundle 'content': it is not registered. Install the extension first or pass an explicit source path.",  # noqa: E501
