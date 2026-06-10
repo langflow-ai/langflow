@@ -20,7 +20,7 @@ env:
   PYTHON_VERSION: "3.13"
   POSTGRES_DB: langflow_test
   POSTGRES_USER: langflow
-  POSTGRES_PASSWORD: langflow_test_pass  # pragma: allowlist secret
+  POSTGRES_PASSWORD: langflow_test_pass # pragma: allowlist secret
 
 jobs:
   migration-pip-venv:
@@ -73,7 +73,7 @@ jobs:
       - name: Initialize database with stable version
         working-directory: migration-test
         env:
-          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
+          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }} # pragma: allowlist secret
         run: |
           source .venv/bin/activate
 
@@ -206,7 +206,7 @@ jobs:
       - name: Run migration and verify startup
         working-directory: migration-test
         env:
-          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }}  # pragma: allowlist secret
+          LANGFLOW_DATABASE_URL: postgresql://${{ env.POSTGRES_USER }}:${{ env.POSTGRES_PASSWORD }}@localhost:5432/${{ env.POSTGRES_DB }} # pragma: allowlist secret
         run: |
           source .venv/bin/activate
 
@@ -311,7 +311,7 @@ jobs:
 
       - name: Create Docker Compose file for stable
         working-directory: docker-migration-test
-        run: |  # pragma: allowlist secret
+        run: | # pragma: allowlist secret
           cat > docker-compose.yml <<'EOF'
           services:
             langflow:
