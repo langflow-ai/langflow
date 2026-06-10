@@ -29,10 +29,11 @@ def _capture_warnings(monkeypatch: pytest.MonkeyPatch) -> list[str]:
     """Capture warnings the settings validator emits.
 
     Settings uses ``lfx.log.logger.logger`` (a structlog BoundLogger that may
-    be filtered at the configured log level).  Replace the module-level
-    ``logger`` symbol in ``lfx.services.settings.base`` with a tiny stand-in
-    that records ``warning`` calls so the test inspects exactly the messages
-    the validator emits, regardless of structlog's filter level.
+    be filtered at the configured log level).  ``set_event_delivery`` lives in
+    the ``RuntimeSettings`` mixin, so replace the module-level ``logger`` symbol
+    in ``lfx.services.settings.groups.runtime`` with a tiny stand-in that records
+    ``warning`` calls so the test inspects exactly the messages the validator
+    emits, regardless of structlog's filter level.
     """
     captured: list[str] = []
 
@@ -43,9 +44,9 @@ def _capture_warnings(monkeypatch: pytest.MonkeyPatch) -> list[str]:
         def __getattr__(self, _name: str):  # pragma: no cover - swallow other levels
             return lambda *_a, **_k: None
 
-    import lfx.services.settings.base as settings_base
+    import lfx.services.settings.groups.runtime as settings_runtime
 
-    monkeypatch.setattr(settings_base, "logger", _Recorder())
+    monkeypatch.setattr(settings_runtime, "logger", _Recorder())
     return captured
 
 
