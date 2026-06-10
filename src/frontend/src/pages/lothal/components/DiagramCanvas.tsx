@@ -12,6 +12,7 @@ import {
   MiniMap,
   Panel,
   ReactFlow,
+  ReactFlowProvider,
 } from "@xyflow/react";
 import { useMemo } from "react";
 import type {
@@ -30,49 +31,70 @@ const nodeTypes = { actorNode: ActorNode, systemNode: SystemNode };
 export function DiagramCanvas({
   nodes,
   edges,
+  id,
+  chrome = true,
+  zoomOnScroll = true,
 }: {
   nodes: DiagramNode[];
   edges: DiagramEdge[];
+  /** Required to be unique when several canvases share a page (xyflow keys
+   *  its internal store by flow id — colliding ids merge the flows). */
+  id?: string;
+  /** Hide controls/minimap/legend for embedded previews (e.g. the landing hero). */
+  chrome?: boolean;
+  /** Disable so an embedded canvas doesn't hijack page scrolling. */
+  zoomOnScroll?: boolean;
 }) {
   const flowNodes = useMemo(() => toFlowNodes(nodes), [nodes]);
   const flowEdges = useMemo(() => toFlowEdges(edges), [edges]);
 
+  // Own provider: Langflow's ContextWrapper has an app-wide ReactFlowProvider,
+  // and any flows sharing a store merge into one another (the landing renders
+  // two canvases on one page). The nearest provider wins, isolating each.
   return (
-    <div style={{ height: "100%", width: "100%" }}>
-      <ReactFlow
-        nodes={flowNodes}
-        edges={flowEdges}
-        nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.25 }}
-        minZoom={0.2}
-        nodesConnectable={false}
-        deleteKeyCode={null}
-        proOptions={{ hideAttribution: true }}
-      >
-        <Background
-          variant={BackgroundVariant.Dots}
-          gap={20}
-          size={1}
-          color="var(--border-strong)"
-        />
-        <Controls showInteractive={false} />
-        <MiniMap
-          pannable
-          zoomable
-          nodeColor="var(--accent)"
-          nodeStrokeColor="var(--border-strong)"
-          maskColor="var(--minimap-mask)"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius)",
-          }}
-        />
-        <Panel position="top-right">
-          <CanvasLegend />
-        </Panel>
-      </ReactFlow>
-    </div>
+    <ReactFlowProvider>
+      <div style={{ height: "100%", width: "100%" }}>
+        <ReactFlow
+          id={id}
+          nodes={flowNodes}
+          edges={flowEdges}
+          nodeTypes={nodeTypes}
+          fitView
+          fitViewOptions={{ padding: 0.25 }}
+          minZoom={0.2}
+          zoomOnScroll={zoomOnScroll}
+          nodesConnectable={false}
+          deleteKeyCode={null}
+          proOptions={{ hideAttribution: true }}
+        >
+          <Background
+            variant={BackgroundVariant.Dots}
+            gap={20}
+            size={1}
+            color="var(--border-strong)"
+          />
+          {chrome && <Controls showInteractive={false} />}
+          {chrome && (
+            <MiniMap
+              pannable
+              zoomable
+              nodeColor="var(--accent)"
+              nodeStrokeColor="var(--border-strong)"
+              maskColor="var(--minimap-mask)"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+                borderRadius: "var(--radius)",
+              }}
+            />
+          )}
+          {chrome && (
+            <Panel position="top-right">
+              <CanvasLegend />
+            </Panel>
+          )}
+        </ReactFlow>
+      </div>
+    </ReactFlowProvider>
   );
 }
