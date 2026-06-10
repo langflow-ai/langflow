@@ -103,6 +103,7 @@ _FIRST_LINE_EXPECTATIONS: dict[str, str] = {
     "reload-bundle-not-installed": "error[reload-bundle-not-installed]: Cannot reload bundle 'content': it is not registered. Install the extension first or pass an explicit source path.",  # noqa: E501
     "reload-bundle-name-mismatch": "error[reload-bundle-name-mismatch]: Reload source at loc declares bundle name 'content', which does not match the registered bundle being reloaded.",  # noqa: E501
     "reload-source-missing": "error[reload-source-missing]: Reload source path 'content' for bundle 'loc' does not exist or is not a directory.",  # noqa: E501
+    "reload-manifestless-unsupported": "error[reload-manifestless-unsupported]: Bundle 'content' comes from a manifest-less lfx.bundles metapackage and cannot be hot-reloaded; upgrade the metapackage distribution and restart the process instead.",  # noqa: E501
     "reload-post-swap-hook-failed": "error[reload-post-swap-hook-failed]: Post-swap hook failed for bundle 'content'; the bundle swap committed but a downstream side-effect (e.g. component cache rebuild) raised.",  # noqa: E501
     "reload-class-retag-failed": "error[reload-class-retag-failed]: Could not retag content.__module__ after reload at loc: msg",  # noqa: E501
     "reload-transport-error": "error[reload-transport-error]: Could not reach the reload endpoint at loc: msg",
