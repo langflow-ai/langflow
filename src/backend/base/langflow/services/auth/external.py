@@ -31,6 +31,7 @@ if TYPE_CHECKING:
 
 
 JWKS_CACHE_TTL_SECONDS = 300
+JWKS_MIN_REFRESH_INTERVAL_SECONDS = 30
 _jwks_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 T = TypeVar("T")
 
@@ -131,11 +132,15 @@ def _validate_trusted_time_claims(claims: Mapping[str, Any]) -> None:
         raise AuthInvalidTokenError(msg)
 
 
-async def _fetch_jwks(jwks_url: str) -> dict[str, Any]:
+async def _fetch_jwks(jwks_url: str, *, force_refresh: bool = False) -> dict[str, Any]:
     cached = _jwks_cache.get(jwks_url)
     now = time.monotonic()
     if cached and cached[0] > now:
-        return cached[1]
+        # force_refresh is rate-limited so attacker-supplied kids cannot turn
+        # every rejected token into a fetch against the IdP's JWKS endpoint.
+        fetched_at = cached[0] - JWKS_CACHE_TTL_SECONDS
+        if not force_refresh or now - fetched_at < JWKS_MIN_REFRESH_INTERVAL_SECONDS:
+            return cached[1]
 
     async with httpx.AsyncClient(timeout=10.0) as client:
         response = await client.get(jwks_url)
@@ -201,7 +206,17 @@ async def decode_external_jwt(token: str, auth_settings: AuthSettings) -> dict[s
             raise AuthInvalidTokenError(msg)
 
         jwks = await _fetch_jwks(auth_settings.EXTERNAL_AUTH_JWKS_URL)
-        jwk = _select_jwk(jwks, token)
+        try:
+            jwk = _select_jwk(jwks, token)
+        except AuthInvalidTokenError:
+            # The token's kid may belong to a key published after the cached
+            # JWKS was fetched (IdP key rotation). Refetch once; when the
+            # rate limit suppresses the refetch we get the same cached object
+            # back and re-raise the original error.
+            refreshed = await _fetch_jwks(auth_settings.EXTERNAL_AUTH_JWKS_URL, force_refresh=True)
+            if refreshed is jwks:
+                raise
+            jwk = _select_jwk(refreshed, token)
         signing_key = jwt.PyJWK.from_dict(jwk).key
         audience = _split_csv(auth_settings.EXTERNAL_AUTH_AUDIENCE)
         issuer = auth_settings.EXTERNAL_AUTH_ISSUER or None

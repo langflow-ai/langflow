@@ -2,10 +2,13 @@
 
 from __future__ import annotations
 
+import base64
+import time
 from datetime import datetime, timedelta, timezone
 
 import jwt
 import pytest
+from langflow.services.auth import external
 from langflow.services.auth.exceptions import InvalidTokenError
 from langflow.services.auth.external import (
     decode_external_jwt,
@@ -130,6 +133,114 @@ async def test_decode_external_jwt_requires_jwks_when_not_trusted(tmp_path):
     )
     with pytest.raises(InvalidTokenError, match="EXTERNAL_AUTH_JWKS_URL"):
         await decode_external_jwt("anything", settings)
+
+
+# ---------------------------------------------------------------------------
+# decode_external_jwt (JWKS path)
+# ---------------------------------------------------------------------------
+
+_JWKS_URL = "https://idp.example.com/.well-known/jwks.json"
+
+
+def _jwks_settings(tmp_path) -> AuthSettings:
+    return _auth_settings(
+        tmp_path,
+        EXTERNAL_AUTH_TRUSTED_JWT_DECODE=False,
+        EXTERNAL_AUTH_JWKS_URL=_JWKS_URL,
+        EXTERNAL_AUTH_ALGORITHMS="HS256",
+    )
+
+
+def _symmetric_jwk(secret: str, kid: str) -> dict:
+    return {
+        "kty": "oct",
+        "alg": "HS256",
+        "kid": kid,
+        "k": base64.urlsafe_b64encode(secret.encode()).rstrip(b"=").decode(),
+    }
+
+
+def _install_fake_jwks_endpoint(monkeypatch, payloads: list[dict]) -> list[str]:
+    """Serve payloads[i] for the i-th JWKS fetch (last payload repeats); returns the call log."""
+    calls: list[str] = []
+
+    class _FakeResponse:
+        def __init__(self, payload):
+            self._payload = payload
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return self._payload
+
+    class _FakeAsyncClient:
+        def __init__(self, **_kwargs):
+            pass
+
+        async def __aenter__(self):
+            return self
+
+        async def __aexit__(self, *_args):
+            return False
+
+        async def get(self, url):
+            calls.append(url)
+            return _FakeResponse(payloads[min(len(calls) - 1, len(payloads) - 1)])
+
+    monkeypatch.setattr(external.httpx, "AsyncClient", _FakeAsyncClient)
+    return calls
+
+
+@pytest.mark.anyio
+async def test_jwks_decode_verifies_signature(tmp_path, monkeypatch):
+    settings = _jwks_settings(tmp_path)
+    monkeypatch.setattr(external, "_jwks_cache", {})
+    _install_fake_jwks_endpoint(monkeypatch, [{"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}])
+
+    token = jwt.encode({"sub": "subject-1"}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "key-1"})
+    claims = await decode_external_jwt(token, settings)
+    assert claims["sub"] == "subject-1"
+
+    wrong_secret = "another-secret-that-did-not-sign-the-jwks-key"  # noqa: S105 # pragma: allowlist secret
+    tampered = jwt.encode({"sub": "subject-1"}, wrong_secret, algorithm="HS256", headers={"kid": "key-1"})
+    with pytest.raises(InvalidTokenError, match="validation failed"):
+        await decode_external_jwt(tampered, settings)
+
+
+@pytest.mark.anyio
+async def test_jwks_refetches_when_kid_is_newer_than_cache(tmp_path, monkeypatch):
+    """IdP key rotation: an unknown kid forces one cache-busting JWKS refetch."""
+    settings = _jwks_settings(tmp_path)
+    old_jwks = {"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="old-key")]}
+    new_jwks = {"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="new-key")]}
+    # Cached entry is still valid but old enough to be past the refresh rate limit.
+    fetched_at = time.monotonic() - external.JWKS_MIN_REFRESH_INTERVAL_SECONDS - 1
+    monkeypatch.setattr(external, "_jwks_cache", {_JWKS_URL: (fetched_at + external.JWKS_CACHE_TTL_SECONDS, old_jwks)})
+    calls = _install_fake_jwks_endpoint(monkeypatch, [new_jwks])
+
+    token = jwt.encode({"sub": "rotated"}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "new-key"})
+    claims = await decode_external_jwt(token, settings)
+
+    assert claims["sub"] == "rotated"
+    assert calls == [_JWKS_URL]
+
+
+@pytest.mark.anyio
+async def test_jwks_refresh_is_rate_limited_for_unknown_kid(tmp_path, monkeypatch):
+    """A freshly fetched JWKS is not refetched for an unknown kid (anti-hammering)."""
+    settings = _jwks_settings(tmp_path)
+    jwks = {"keys": [_symmetric_jwk(_TEST_JWT_SECRET, kid="key-1")]}
+    monkeypatch.setattr(
+        external, "_jwks_cache", {_JWKS_URL: (time.monotonic() + external.JWKS_CACHE_TTL_SECONDS, jwks)}
+    )
+    calls = _install_fake_jwks_endpoint(monkeypatch, [jwks])
+
+    token = jwt.encode({"sub": "nope"}, _TEST_JWT_SECRET, algorithm="HS256", headers={"kid": "unknown-key"})
+    with pytest.raises(InvalidTokenError, match="not found in JWKS"):
+        await decode_external_jwt(token, settings)
+
+    assert calls == []
 
 
 # ---------------------------------------------------------------------------
