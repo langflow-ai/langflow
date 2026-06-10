@@ -1865,6 +1865,8 @@
   "playground.defaultSession": "Default Session",
   "playground.cancelButton": "Cancel",
   "playground.sendButton": "Send",
+  "playground.runFlow": "Run Flow",
+  "playground.noInputHint": "Add a <1>Chat Input</1> component to your flow to send messages.",
   "deployments.failedToLoadDetails": "Failed to load deployment details",
   "deployments.failedToUpdate": "Failed to update deployment",
   "deployments.confirmToolName": "Confirm",
