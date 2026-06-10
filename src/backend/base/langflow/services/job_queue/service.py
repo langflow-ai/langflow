@@ -29,6 +29,10 @@ _CANCEL_CHANNEL_PREFIX = "langflow:cancel:"
 # Activity heartbeat key written by polling and streaming responses. The
 # polling watchdog scans these to detect abandoned builds (client gave up).
 _ACTIVITY_PREFIX = "langflow:activity:"
+# Presence key for jobs started through the public (unauthenticated) build
+# endpoint. Allows the public events/cancel endpoints to reject job_ids that
+# belong to private-flow builds. Uses the same TTL as the stream/owner keys.
+_PUBLIC_JOB_PREFIX = "langflow:public_job:"
 
 
 class JobQueueNotFoundError(Exception):
@@ -92,6 +96,7 @@ class JobQueueService(Service):
         """
         self._queues: dict[str, tuple[asyncio.Queue, EventManager, asyncio.Task | None, float | None]] = {}
         self._job_owners: dict[str, UUID] = {}
+        self._public_jobs: set[str] = set()
         self._cleanup_task: asyncio.Task | None = None
         self._closed = False
         self.ready = False
@@ -311,6 +316,27 @@ class JobQueueService(Service):
         """Return the user ID that owns a job, or None if not tracked."""
         return self._job_owners.get(job_id)
 
+    def register_public_job(self, job_id: str) -> None:
+        """Mark a job as started through the public (unauthenticated) build endpoint.
+
+        Only jobs registered here may be accessed via the public events/cancel endpoints.
+        This prevents unauthenticated callers from reading or cancelling private-flow jobs.
+        """
+        self._public_jobs.add(job_id)
+
+    def is_public_job(self, job_id: str) -> bool:
+        """Return True if the job was started through the public build endpoint."""
+        return job_id in self._public_jobs
+
+    async def is_public_job_async(self, job_id: str) -> bool:
+        """Return True if the job was started through the public build endpoint.
+
+        Base implementation is synchronous (in-memory set lookup).
+        RedisJobQueueService overrides this to also check Redis for cross-worker
+        correctness in multi-worker deployments.
+        """
+        return self.is_public_job(job_id)
+
     async def cleanup_job(self, job_id: str) -> None:
         """Clean up and release resources for a specific job.
 
@@ -366,6 +392,7 @@ class JobQueueService(Service):
         # Remove the job entry from the registry
         self._queues.pop(job_id, None)
         self._job_owners.pop(job_id, None)
+        self._public_jobs.discard(job_id)
         await logger.adebug(f"Cleanup successful for job_id {job_id}: resources have been released.")
 
     async def cancel_job(self, job_id: str) -> None:
@@ -735,6 +762,7 @@ class RedisJobQueueService(JobQueueService):
     OWNER_PREFIX = _OWNER_PREFIX
     CANCEL_CHANNEL_PREFIX = _CANCEL_CHANNEL_PREFIX
     ACTIVITY_PREFIX = _ACTIVITY_PREFIX
+    PUBLIC_JOB_PREFIX = _PUBLIC_JOB_PREFIX
 
     def __init__(
         self,
@@ -811,6 +839,9 @@ class RedisJobQueueService(JobQueueService):
 
     def _owner_key(self, job_id: str) -> str:
         return f"{self.OWNER_PREFIX}{job_id}"
+
+    def _public_job_key(self, job_id: str) -> str:
+        return f"{self.PUBLIC_JOB_PREFIX}{job_id}"
 
     def _cancel_channel(self, job_id: str) -> str:
         return f"{self.CANCEL_CHANNEL_PREFIX}{job_id}"
@@ -1555,6 +1586,7 @@ class RedisJobQueueService(JobQueueService):
                         self._stream_key(job_id),
                         self._owner_key(job_id),
                         self._activity_key(job_id),
+                        self._public_job_key(job_id),
                     )
                 except asyncio.CancelledError:
                     raise
@@ -1591,3 +1623,39 @@ class RedisJobQueueService(JobQueueService):
                 await self._client.expire(owner_key, self._ttl)
                 return _UUID(value.decode())
         return None
+
+    def register_public_job(self, job_id: str) -> None:
+        """Mark a job as public in both local memory and Redis for cross-worker access.
+
+        Why fire-and-forget for the Redis write: the Redis key only needs to exist
+        by the time the client receives the job_id response and sends a follow-up
+        events/cancel request. The network RTT between those two requests gives the
+        background task ample time to complete. A missed write degrades to a benign
+        404 on the follow-up — not a security bypass — because a missing key is
+        treated as non-public, which is the safe default.
+        """
+        super().register_public_job(job_id)
+        if self._client:
+            self._spawn_background(self._set_public_job_key(job_id))
+
+    async def _set_public_job_key(self, job_id: str) -> None:
+        try:
+            await self._client.set(self._public_job_key(job_id), b"1", ex=self._ttl)
+        except Exception as exc:  # noqa: BLE001
+            await logger.awarning(f"Failed to set public_job Redis key for {job_id}: {exc!r}")
+
+    async def is_public_job_async(self, job_id: str) -> bool:
+        """Return True if the job was started through the public build endpoint.
+
+        Checks local memory first (fast path), then falls back to Redis so that
+        a request hitting a different worker than the one that started the build
+        still works correctly.
+        """
+        if super().is_public_job(job_id):
+            return True
+        if self._client:
+            try:
+                return bool(await self._client.exists(self._public_job_key(job_id)))
+            except Exception as exc:  # noqa: BLE001
+                await logger.awarning(f"Redis public_job check failed for {job_id}: {exc!r}")
+        return False

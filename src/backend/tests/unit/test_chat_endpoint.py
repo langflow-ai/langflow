@@ -1319,3 +1319,128 @@ def test_scope_session_to_namespace_helper():
     assert scope_session_to_namespace("victim-session", "namespace-B") == "namespace-B:victim-session"
     # A foreign-namespace prefix is treated as out-of-namespace and gets re-wrapped.
     assert scope_session_to_namespace("namespace-B:victim", "namespace-A") == "namespace-A:namespace-B:victim"
+
+
+# ── Public job registry unit tests ───────────────────────────────────────────
+# CVE fix: unauthenticated callers must not access private-flow job streams
+# by guessing or leaking a job_id from the authenticated build endpoint.
+
+
+def test_job_queue_service_register_and_check_public_job():
+    """register_public_job marks a job as public; is_public_job reflects that."""
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+
+    # Why: job not registered yet — must return False before registration
+    assert svc.is_public_job(job_id) is False
+
+    svc.register_public_job(job_id)
+
+    # Why: job registered — must return True after registration
+    assert svc.is_public_job(job_id) is True
+
+
+def test_job_queue_service_unregistered_job_not_public():
+    """A job_id that was never registered is not considered public."""
+    svc = JobQueueService()
+    assert svc.is_public_job(str(uuid.uuid4())) is False
+
+
+async def test_job_queue_service_is_public_job_async_base():
+    """is_public_job_async on base class delegates to in-memory is_public_job."""
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+
+    # Why: async variant must mirror sync variant — False before, True after
+    assert await svc.is_public_job_async(job_id) is False
+    svc.register_public_job(job_id)
+    assert await svc.is_public_job_async(job_id) is True
+
+
+async def test_job_queue_service_cleanup_removes_public_registration():
+    """cleanup_job discards the public registration so the job_id cannot be reused.
+
+    Why: tests the actual cleanup_job contract — not the internal set.
+    If cleanup_job stops calling discard, this test must catch it.
+    """
+    svc = JobQueueService()
+    job_id = str(uuid.uuid4())
+    svc.register_public_job(job_id)
+    assert svc.is_public_job(job_id) is True
+
+    # Call the real cleanup path — not svc._public_jobs.discard directly.
+    # cleanup_job early-returns when job_id is not in _queues, but the
+    # _public_jobs.discard call is unconditional (after the early-return guard),
+    # so we need to reach it. Seed a minimal queue entry first.
+    svc._queues[job_id] = (asyncio.Queue(), None, None, None)  # type: ignore[arg-type]
+    await svc.cleanup_job(job_id)
+
+    # Why: if cleanup_job ever drops the discard call, is_public_job still returns True here
+    assert svc.is_public_job(job_id) is False
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_private_job_id_blocked_on_public_events_endpoint(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """A job_id started via the authenticated build endpoint must be rejected by the public events endpoint.
+
+    Security proof: before the fix, any caller who knew or guessed a private job_id
+    could read the live event stream (LLM output, API keys, tracebacks) without auth.
+    After the fix, _assert_public_job returns HTTP 404 because the job was never
+    registered via register_public_job.
+
+    Why 404 not 403: returning 403 would confirm the job exists under a different
+    access tier, leaking information about private builds.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start a PRIVATE (authenticated) build — job_id never passed through build_public_tmp
+    private_start = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert private_start.status_code == codes.OK
+    private_job_id = private_start.json()["job_id"]
+
+    # Attempt to read the private job's events via the unauthenticated public endpoint
+    # Why: this is the exact attack vector — attacker has job_id, tries public endpoint
+    events_response = await client.get(
+        f"api/v1/build_public_tmp/{private_job_id}/events?event_delivery=polling",
+        headers={"Accept": "application/x-ndjson"},
+    )
+
+    # Must be 404 — gate blocks private job from public endpoint
+    assert events_response.status_code == codes.NOT_FOUND
+    assert events_response.json()["detail"] == "Job not found"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_private_job_id_blocked_on_public_cancel_endpoint(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """A job_id started via the authenticated build endpoint must be rejected by the public cancel endpoint.
+
+    Security proof: before the fix, an unauthenticated attacker could cancel any
+    in-flight private build as a denial-of-service by supplying a known job_id.
+    After the fix, _assert_public_job returns HTTP 404.
+    """
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+
+    # Start a PRIVATE (authenticated) build
+    private_start = await client.post(
+        f"api/v1/build/{flow_id}/flow",
+        json={},
+        headers={**logged_in_headers, "Content-Type": "application/json"},
+    )
+    assert private_start.status_code == codes.OK
+    private_job_id = private_start.json()["job_id"]
+
+    # Attempt to cancel the private job via the unauthenticated public endpoint
+    cancel_response = await client.post(
+        f"api/v1/build_public_tmp/{private_job_id}/cancel",
+        headers={"Content-Type": "application/json"},
+    )
+
+    # Must be 404 — gate blocks private job from public cancel endpoint
+    assert cancel_response.status_code == codes.NOT_FOUND
+    assert cancel_response.json()["detail"] == "Job not found"
