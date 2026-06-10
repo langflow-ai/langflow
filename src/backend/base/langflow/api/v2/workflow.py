@@ -102,6 +102,13 @@ async def generate_flow_events(*args, **kwargs) -> None:
     await _generate_flow_events(*args, **kwargs)
 
 
+async def _cancel_workflow_queue_job(job_id: str) -> bool:
+    """Lazily call the shared build cancellation path to avoid import cycles."""
+    from langflow.api.build import cancel_flow_build
+
+    return await cancel_flow_build(job_id=job_id, queue_service=get_queue_service())
+
+
 def _unknown_protocol_http_exception(exc: UnknownStreamProtocolError) -> HTTPException:
     """Build the 422 response shared by ``stream`` and ``background`` paths.
 
@@ -1373,7 +1380,7 @@ async def stop_workflow(
 
     try:
         try:
-            await get_queue_service().cancel_job(str(job_id))
+            cancelled = await _cancel_workflow_queue_job(str(job_id))
         except asyncio.CancelledError as exc:
             message_code = exc.args[0] if exc.args else "UNKNOWN"
             if message_code != "LANGFLOW_USER_CANCELLED":
@@ -1386,6 +1393,17 @@ async def stop_workflow(
                         "job_id": str(job_id),
                     },
                 ) from exc
+            cancelled = True
+        if not cancelled:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail={
+                    "error": "Cancellation unavailable",
+                    "code": "WORKFLOW_CANCEL_UNAVAILABLE",
+                    "message": f"Unable to confirm cancellation for job {job_id}",
+                    "job_id": str(job_id),
+                },
+            )
         await job_service.update_job_status(job_id, JobStatus.CANCELLED)
         # Release the in-memory buffer and wake any re-attach waiters so they
         # see a clean stream-end instead of hanging on ``_cond.wait()``.

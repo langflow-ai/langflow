@@ -281,16 +281,14 @@ class TestWorkflowStop:
 
         with (
             patch("langflow.api.v2.workflow.get_job_service") as mock_get_job_service,
-            patch("langflow.api.v2.workflow.get_task_service") as mock_get_task_service,
+            patch("langflow.api.v2.workflow._cancel_workflow_queue_job") as mock_cancel_workflow_queue_job,
         ):
             mock_job_service = MagicMock()
             mock_job_service.get_job_by_job_id = AsyncMock(return_value=mock_job)
             mock_job_service.update_job_status = AsyncMock()
             mock_get_job_service.return_value = mock_job_service
 
-            mock_task_service = MagicMock()
-            mock_task_service.revoke_task = AsyncMock(return_value=True)
-            mock_get_task_service.return_value = mock_task_service
+            mock_cancel_workflow_queue_job.return_value = True
 
             headers = {"x-api-key": created_api_key.api_key}
             response = await client.post("api/v2/workflows/stop", json={"job_id": job_id}, headers=headers)
@@ -299,7 +297,7 @@ class TestWorkflowStop:
             result = response.json()
             assert result["job_id"] == job_id
             assert "cancelled successfully" in result["message"]
-            mock_task_service.revoke_task.assert_called_once()
+            mock_cancel_workflow_queue_job.assert_awaited_once_with(job_id)
             mock_job_service.update_job_status.assert_called_once_with(UUID(job_id), JobStatus.CANCELLED)
 
     async def test_stop_workflow_not_found(
@@ -574,15 +572,18 @@ class TestWorkflowIDORProtection:
 
         try:
             headers = {"x-api-key": created_api_key.api_key}
-            response = await client.post(
-                "api/v2/workflows/stop",
-                json={"job_id": str(job_id)},
-                headers=headers,
-            )
+            with patch("langflow.api.v2.workflow._cancel_workflow_queue_job") as mock_cancel_workflow_queue_job:
+                mock_cancel_workflow_queue_job.return_value = True
+                response = await client.post(
+                    "api/v2/workflows/stop",
+                    json={"job_id": str(job_id)},
+                    headers=headers,
+                )
 
             assert response.status_code == 200, (
                 "Legacy jobs with user_id=None must not be blocked by the ownership check"
             )
+            mock_cancel_workflow_queue_job.assert_awaited_once_with(str(job_id))
         finally:
             async with session_scope() as session:
                 db_job = await session.get(Job, job_id)

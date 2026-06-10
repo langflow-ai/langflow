@@ -227,6 +227,34 @@ class TestAGUIModeDispatch:
         result = response.json()
         assert result["status"] == "completed"
 
+    async def test_sync_mode_rejects_live_canvas_only_fields(
+        self,
+        client: AsyncClient,
+        created_api_key,
+        empty_flow,
+    ):
+        """Sync runs must reject fields that only stream/background executes."""
+        body = _agui_body(empty_flow, mode="sync")
+        body.update(
+            {
+                "data": {"nodes": [], "edges": []},
+                "files": ["tmp/upload.txt"],
+                "start_component_id": "input-1",
+                "stop_component_id": "output-1",
+            }
+        )
+
+        response = await client.post(
+            "api/v2/workflows",
+            json=body,
+            headers={"x-api-key": created_api_key.api_key},
+        )
+
+        assert response.status_code == 422
+        detail = response.json()["detail"]
+        assert detail["code"] == "SYNC_MODE_UNSUPPORTED_FIELDS"
+        assert detail["fields"] == ["data", "files", "start_component_id", "stop_component_id"]
+
 
 class TestV2WorkflowAdmission:
     """Route-level admission checks before workflow execution dispatch."""
@@ -301,6 +329,41 @@ class TestV2WorkflowAdmission:
         assert exc_info.value.status_code == 404
         assert exc_info.value.detail["code"] == "FLOW_NOT_FOUND"
 
+    async def test_private_route_applies_component_policy_gate(self, monkeypatch: pytest.MonkeyPatch):
+        """The authenticated v2 route must run server-side component policy validation."""
+        from langflow.api.v2 import workflow as workflow_module
+        from lfx.schema.workflow import WorkflowRunRequest
+        from lfx.utils.flow_validation import CustomComponentValidationError
+
+        flow_id = uuid4()
+        flow = SimpleNamespace(
+            id=flow_id,
+            user_id=uuid4(),
+            workspace_id=None,
+            folder_id=None,
+            data={"nodes": [], "edges": []},
+            name="private",
+        )
+
+        def _reject(_flow_data):
+            message = "custom components are disabled"
+            raise CustomComponentValidationError(message)
+
+        monkeypatch.setattr(workflow_module, "get_flow_by_id_or_endpoint_name", AsyncMock(return_value=flow))
+        monkeypatch.setattr(workflow_module, "ensure_flow_permission", AsyncMock(return_value=None))
+        monkeypatch.setattr(workflow_module, "validate_flow_for_current_settings", _reject)
+
+        with pytest.raises(HTTPException) as exc_info:
+            await workflow_module.execute_workflow(
+                WorkflowRunRequest(flow_id=str(flow_id), input_value="hi", mode="stream"),
+                background_tasks=SimpleNamespace(),
+                http_request=SimpleNamespace(),
+                current_user=SimpleNamespace(id=flow.user_id),
+            )
+
+        assert exc_info.value.status_code == 400
+        assert exc_info.value.detail == "custom components are disabled"
+
 
 class TestAGUIStreaming:
     """mode=stream returns an AG-UI server-sent event stream."""
@@ -364,6 +427,57 @@ class TestAGUIStreaming:
 
         assert seen_maxsize == [2]
         assert event_types == ["token", "token", "error"]
+
+    async def test_agui_stream_emits_end_side_channel_for_build_duration(self, monkeypatch: pytest.MonkeyPatch):
+        """The AG-UI stream must preserve v1 end payloads for chat build-duration persistence."""
+        from langflow.api.v2 import workflow as workflow_module
+        from langflow.api.v2.converters import ParsedWorkflowRun
+
+        async def fake_generate_flow_events(**kwargs):
+            event_queue = kwargs["event_manager"].queue
+            payload = json.dumps({"event": "end", "data": {"build_duration": 1.25}}).encode()
+            event_queue.put_nowait(("end-1", payload, time.time()))
+            await event_queue.put((None, None, time.time()))
+
+        class FakeAdapter:
+            name = "agui"
+
+            def initial_events(self):
+                return []
+
+            def final_events(self):
+                return []
+
+            def translate(self, _event_type, _event_data):
+                return []
+
+        monkeypatch.setattr(workflow_module, "generate_flow_events", fake_generate_flow_events)
+
+        frames = [
+            frame
+            async for frame, _event_type in workflow_module._stream_event_frames(
+                adapter=FakeAdapter(),
+                flow_id=uuid4(),
+                flow_name="flow",
+                background_tasks=SimpleNamespace(add_task=lambda *_args, **_kwargs: None),
+                parsed=ParsedWorkflowRun(flow_id=str(uuid4()), input_value="", mode="stream"),
+                current_user=SimpleNamespace(id=uuid4()),
+            )
+        ]
+
+        custom_events = [
+            json.loads(line.removeprefix("data:").strip())
+            for frame in frames
+            for line in frame.decode("utf-8").splitlines()
+            if line.startswith("data:")
+        ]
+        assert custom_events == [
+            {
+                "type": "CUSTOM",
+                "name": "langflow.event",
+                "value": {"event_type": "end", "data": {"build_duration": 1.25}},
+            }
+        ]
 
     async def test_stream_emits_run_lifecycle_events(
         self,
@@ -1901,3 +2015,61 @@ class TestStopWorkflowEndToEnd:
                 with contextlib.suppress(BaseException):
                     await get_queue_service().cleanup_job(job_id)
                 await workflow_module._clear_background_run(job_id)
+
+    async def test_stop_signals_cross_worker_queue_owner_before_marking_cancelled(
+        self,
+        monkeypatch: pytest.MonkeyPatch,
+    ):
+        """Redis-backed jobs owned by another worker must be cancelled by pub/sub signal."""
+        from langflow.api.v2 import workflow as workflow_module
+
+        job_id = uuid4()
+        current_user_id = uuid4()
+
+        class FakeJobService:
+            def __init__(self) -> None:
+                self.updates: list[tuple[object, object]] = []
+
+            async def get_job_by_job_id(self, seen_job_id, user_id=None):
+                assert seen_job_id == job_id
+                assert user_id == current_user_id
+                return SimpleNamespace(
+                    type=workflow_module.JobType.WORKFLOW,
+                    status=workflow_module.JobStatus.IN_PROGRESS,
+                )
+
+            async def update_job_status(self, seen_job_id, status):
+                self.updates.append((seen_job_id, status))
+
+        class CrossWorkerQueueService:
+            cross_worker_cancel_enabled = True
+
+            def __init__(self) -> None:
+                self.local_cancels: list[str] = []
+                self.signals: list[str] = []
+
+            def get_queue_data(self, seen_job_id):
+                assert seen_job_id == str(job_id)
+                return SimpleNamespace(), SimpleNamespace(), None, None
+
+            async def cancel_job(self, seen_job_id):
+                self.local_cancels.append(seen_job_id)
+
+            async def signal_cancel(self, seen_job_id):
+                self.signals.append(seen_job_id)
+                return 0
+
+        job_service = FakeJobService()
+        queue_service = CrossWorkerQueueService()
+        monkeypatch.setattr(workflow_module, "get_job_service", lambda: job_service)
+        monkeypatch.setattr(workflow_module, "get_queue_service", lambda: queue_service)
+
+        response = await workflow_module.stop_workflow(
+            workflow_module.WorkflowStopRequest(job_id=job_id),
+            current_user=SimpleNamespace(id=current_user_id),
+        )
+
+        assert str(response.job_id) == str(job_id)
+        assert queue_service.local_cancels == []
+        assert queue_service.signals == [str(job_id)]
+        assert job_service.updates == [(job_id, workflow_module.JobStatus.CANCELLED)]
