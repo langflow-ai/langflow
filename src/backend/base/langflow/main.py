@@ -199,6 +199,23 @@ def get_lifespan(*, fix_migration=False, version=None):
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
 
+            # Start the telemetry writer (no-op when telemetry_writer_enabled is False).
+            try:
+                from langflow.services.deps import get_telemetry_writer_service
+
+                telemetry_writer = get_telemetry_writer_service()
+                if telemetry_writer is not None and telemetry_writer.is_enabled():
+                    await telemetry_writer.start()
+            except Exception as exc:  # noqa: BLE001
+                # If the user explicitly opted in (telemetry_writer_enabled=True)
+                # but startup failed, this is an error not a warning — every
+                # subsequent write will silently fall back to the legacy direct-
+                # write path that this feature was built to replace.
+                await logger.aerror(
+                    f"Failed to start telemetry writer; transactions and vertex_build "
+                    f"writes will use the legacy direct-write path: {exc}"
+                )
+
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
             setup_llm_caching()
@@ -480,7 +497,14 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                     await asyncio.sleep(refresh_interval_seconds)
 
-            models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+            # LANGFLOW_MODELS_DEV_REFRESH=false disables the live models.dev
+            # fetch. Tests set this: the startup fetch otherwise fires from a
+            # background task during whatever test is running, hitting the
+            # network and tripping event-loop-block detectors (pyleak).
+            if os.getenv("LANGFLOW_MODELS_DEV_REFRESH", "true").lower() not in ("false", "0", "no"):
+                models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+            else:
+                await logger.adebug("models.dev refresh disabled via LANGFLOW_MODELS_DEV_REFRESH")
 
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager
@@ -780,6 +804,36 @@ def create_app():
             content={"detail": exc.detail},
         )
 
+    # Add rate limit exception handler
+    from slowapi.errors import RateLimitExceeded
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_exception_handler(request: Request, _exc: RateLimitExceeded):
+        """Handle rate limit exceeded errors with structured logging."""
+        from langflow.services.rate_limit.service import get_limiter_key
+
+        # Default to 60 seconds for "/minute" window
+        retry_after_seconds = "60"
+
+        client_ip = get_limiter_key(request)
+        logger.warning(
+            "Rate limit exceeded",
+            auth_event="rate_limit_exceeded",
+            client_ip=client_ip,
+            path=request.url.path,
+            method=request.method,
+        )
+        return JSONResponse(
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
+            content={
+                "detail": "Too many requests. Please try again later.",
+                "retry_after": retry_after_seconds,
+            },
+            headers={
+                "Retry-After": retry_after_seconds,
+            },
+        )
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
@@ -800,6 +854,12 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
+    # Add SlowAPI state to app for rate limiting
+    from langflow.services.rate_limit import get_rate_limiter
+
+    limiter = get_rate_limiter()
+    app.state.limiter = limiter
 
     return app
 

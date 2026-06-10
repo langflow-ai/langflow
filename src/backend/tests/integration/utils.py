@@ -198,5 +198,10 @@ def pyleak_marker(**extra_args):
     default_args = {
         "enable_task_creation_tracking": True,  # log task creation stacks
         "thread_name_filter": r"^(?!asyncio_\d+$).*",  # exclude `asyncio_{num}` threads
+        # Exclude the telemetry writer's background ticks (`telemetry-writer*`,
+        # `telemetry-sweeper*`). They are long-lived daemons that legitimately
+        # cycle wait_for wrappers across test boundaries; the writer's own
+        # unit tests cover its lifecycle.
+        "task_name_filter": r"^(?!telemetry-).*",
     }
     return pytest.mark.no_leaks(**default_args, **extra_args)

@@ -72,9 +72,8 @@ def _to_python_scalar(value: Any) -> Any:
 class MemoryBaseComponent(Component):
     display_name = "Memory Base"
     description = (
-        "Retrieve chat memory from a Memory Base attached to this flow. "
-        "Defaults to scoping by the current session; disable 'Filter by Session' "
-        "to retrieve across every session ingested into this Memory Base."
+        "Retrieve long-term memory from a Memory Base attached to this workflow. "
+        "When 'Filter by Session' is off, queries run across all sessions."
     )
     icon = "brain"
     name = "MemoryBase"

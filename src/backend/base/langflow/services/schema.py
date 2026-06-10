@@ -25,3 +25,4 @@ class ServiceType(str, Enum):
     FLOW_EVENTS_SERVICE = "flow_events_service"
     MEMORY_BASE_SERVICE = "memory_base_service"
     BACKGROUND_EXECUTION_SERVICE = "background_execution_service"
+    TELEMETRY_WRITER_SERVICE = "telemetry_writer_service"

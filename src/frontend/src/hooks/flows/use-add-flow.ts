@@ -12,8 +12,8 @@ import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
 import { extractApiErrorMessages } from "@/utils/apiError";
+import { getFolderScopedDuplicateName } from "@/utils/flow-naming";
 import {
-  addVersionToDuplicates,
   createNewFlow,
   extractFieldsFromComponenents,
   processDataFromFlow,
@@ -100,11 +100,12 @@ const useAddFlow = () => {
       }
     }
 
-    const flowsToCheckNames = flows?.filter(
-      (f) => f.folder_id === myCollectionId,
-    );
     const newFlow = createNewFlow(flowData!, folder_id, flow);
-    const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
+    const newName = getFolderScopedDuplicateName(
+      newFlow,
+      flows ?? [],
+      myCollectionId,
+    );
     newFlow.name = newName;
     newFlow.folder_id = folder_id;
 

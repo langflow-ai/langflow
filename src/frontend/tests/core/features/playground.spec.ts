@@ -1,4 +1,5 @@
 import { expect, test } from "../../fixtures";
+import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TID } from "../../utils/constants/testIds";
 import { TEXTS } from "../../utils/constants/texts";
@@ -17,6 +18,8 @@ test(
     loadDotenvIfLocal(__dirname);
 
     await openBlankFlow(page);
+
+    await addLegacyComponents(page);
 
     await disableInspectPanel(page);
 
