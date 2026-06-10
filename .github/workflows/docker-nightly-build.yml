@@ -72,7 +72,11 @@ jobs:
         id: version
         run: |
           echo "Extracting base version from pyproject.toml"
-          version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+          # Anchor to the langflow-base workspace-root line (same pattern as the
+          # langflow extraction below): the unanchored grep used to match a
+          # dependency line whose version sat in field 3, but uv tree now lists
+          # the langflow-base root line first, which has no third field.
+          version=$(uv tree 2>/dev/null | grep -E '^langflow-base[[:space:]]' | cut -d' ' -f2 | sed 's/^v//' | head -n 1)
 
 
           # Verify nightly tag format
@@ -351,7 +355,7 @@ jobs:
         id: version
         run: |
           if [[ "${{ inputs.release_type }}" == "nightly-base" ]]; then
-            version=$(uv tree 2>/dev/null | grep 'langflow-base' | awk '{print $3}' | sed 's/^v//' | head -n 1)
+            version=$(uv tree 2>/dev/null | grep -E '^langflow-base[[:space:]]' | cut -d' ' -f2 | sed 's/^v//' | head -n 1)
           else
             version=$(uv tree 2>/dev/null | grep -E '^langflow(-nightly)?[[:space:]]' | cut -d' ' -f2 | sed 's/^v//')
           fi
