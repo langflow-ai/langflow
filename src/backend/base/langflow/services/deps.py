@@ -292,6 +292,7 @@ def get_background_execution_service():
 
     return get_service(ServiceType.BACKGROUND_EXECUTION_SERVICE, BackgroundExecutionServiceFactory())
 
+
 def get_telemetry_writer_service():
     """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
     from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
