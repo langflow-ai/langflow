@@ -5,9 +5,9 @@ import {
   useGetAuthSession,
   useGetAutoLogin,
 } from "@/controllers/API/queries/auth";
+import { LoadingPage } from "@/pages/LoadingPage";
 import useAuthStore from "@/stores/authStore";
 import type { Users } from "@/types/api";
-import { LoadingPage } from "@/pages/LoadingPage";
 
 export function PlaygroundAuthGate({
   children,

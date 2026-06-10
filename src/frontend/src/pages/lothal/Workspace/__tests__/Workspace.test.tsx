@@ -289,4 +289,19 @@ describe("Lothal Workspace", () => {
     render(<Workspace />);
     expect(screen.getByText("Generating the code…")).toBeInTheDocument();
   });
+
+  it("titles the tab 'project — Lothal' and restores the default on unmount", () => {
+    mockUseProject.mockReturnValue({ data: project, isLoading: false });
+    const { unmount } = render(<Workspace />);
+    expect(document.title).toBe("Tide Tracker — Lothal");
+    unmount();
+    expect(document.title).toBe("Lothal");
+  });
+
+  it("leaves the tab title alone while the project is still loading", () => {
+    document.title = "Lothal";
+    mockUseProject.mockReturnValue({ data: undefined, isLoading: true });
+    render(<Workspace />);
+    expect(document.title).toBe("Lothal");
+  });
 });
