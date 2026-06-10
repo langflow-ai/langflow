@@ -126,11 +126,13 @@ def _current_lfx_floor() -> str:
     """Return the ``lfx`` dependency floor for a freshly-ported bundle.
 
     Reads the workspace lfx version from ``src/lfx/pyproject.toml`` and pins
-    ``lfx>=X.Y.0,<(X+1).0.0`` -- floored at the current major.minor line,
-    capped below the next lfx major.  Mirrors ``lfx_floor_spec`` in
-    ``scripts/ci/sync_bundle_lfx_pin.py`` (each script is kept standalone, so
-    keep the two in step); that script re-syncs every existing bundle on
-    ``make patch``.
+    ``lfx>=X.Y.0.dev0,<(X+1).0.0`` -- floored at the current major.minor
+    line's first pre-release (the branch's own canonical ``X.Y.0.devN``
+    nightlies sort below a plain ``X.Y.0`` under PEP 440, so they must be
+    admitted by the floor), capped below the next lfx major.  Mirrors
+    ``lfx_floor_spec`` in ``scripts/ci/sync_bundle_lfx_pin.py`` (each script
+    is kept standalone, so keep the two in step); that script re-syncs every
+    existing bundle on ``make patch``.
     """
     lfx_pyproject = (REPO_ROOT / "src" / "lfx" / "pyproject.toml").read_text(encoding="utf-8")
     match = re.search(r'^version = "(\d+)\.(\d+)\.\d+', lfx_pyproject, re.MULTILINE)
@@ -138,7 +140,7 @@ def _current_lfx_floor() -> str:
         msg = "Could not read lfx version from src/lfx/pyproject.toml"
         raise ValueError(msg)
     major, minor = int(match.group(1)), int(match.group(2))
-    return f"lfx>={major}.{minor}.0,<{major + 1}.0.0"
+    return f"lfx>={major}.{minor}.0.dev0,<{major + 1}.0.0"
 
 
 # ---------------------------------------------------------------------------

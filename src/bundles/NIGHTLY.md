@@ -81,6 +81,16 @@ Why (2) is not optional: a bundle pins `lfx>=1.10.0,<2.0.0`, and PEP 440 sorts `
 daily from **main's** workflow definition, so merging this before the gate would break the live
 nightly on the next run.
 
+> **Post-activation fix (2026-06):** condition (2) as stated was still fragile — the `release-1.11.0`
+> fork's `make patch v=1.11.0` re-synced every bundle floor to `lfx>=1.11.0`
+> (`scripts/ci/sync_bundle_lfx_pin.py`), which sorts **above** that same branch's `1.11.0.devN`
+> nightlies and reintroduced exactly this conflict on the very first `1.11.0.dev0` nightly (the
+> workspace-built bundle's metadata shadows the satisfiable PyPI `0.1.1` in the
+> `uv pip install dist/*.whl` test step). The synced floor format is now
+> `lfx>=X.Y.0.dev0,<(X+1).0.0` — `X.Y.0.dev0` is the lowest version PEP 440 admits in the minor
+> line, so every `devN` / `rcN` / final satisfies it while older lines stay excluded, and the gate
+> can no longer regress on future minor forks.
+
 ## A1 vs A2 + remaining follow-ups (decide before activating)
 
 This PR implements the **A1** publish behavior: the separate `langflow-nightly` / `langflow-base-nightly`
