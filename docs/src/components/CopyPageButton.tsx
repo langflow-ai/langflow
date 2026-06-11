@@ -1,4 +1,4 @@
-import React, { useCallback, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Copy as CopyIcon, Check as CheckIcon } from "lucide-react";
 import styles from "./CopyPageButton.module.css";
 
@@ -136,10 +136,18 @@ async function copyCurrentPageAsMarkdown(): Promise<boolean> {
   return true;
 }
 
+function isEditableElement(el: Element | null): boolean {
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  if (tag === "input" || tag === "textarea" || tag === "select") return true;
+  return (el as HTMLElement).isContentEditable;
+}
+
 export function CopyPageButton(): JSX.Element | null {
   const [copied, setCopied] = useState(false);
+  const [isMac, setIsMac] = useState(true);
 
-  const handleClick = useCallback(async () => {
+  const handleCopy = useCallback(async () => {
     const ok = await copyCurrentPageAsMarkdown();
     if (ok) {
       setCopied(true);
@@ -147,9 +155,42 @@ export function CopyPageButton(): JSX.Element | null {
     }
   }, []);
 
+  useEffect(() => {
+    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.platform));
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      // Cmd/Ctrl+C with no text selected copies the whole page as Markdown.
+      const isCopyShortcut =
+        (event.metaKey || event.ctrlKey) &&
+        !event.shiftKey &&
+        !event.altKey &&
+        event.key.toLowerCase() === "c";
+      if (!isCopyShortcut) return;
+
+      // Let the native copy behavior win when the user selected text or is
+      // typing in a form field.
+      if (isEditableElement(document.activeElement)) return;
+      const selection = window.getSelection();
+      if (selection && selection.toString().length > 0) return;
+
+      event.preventDefault();
+      void handleCopy();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [handleCopy]);
+
+  const shortcutLabel = isMac ? "⌘C" : "Ctrl+C";
+
   return (
     <div className={styles.root}>
-      <button type="button" onClick={handleClick} className={styles.button}>
+      <button
+        type="button"
+        onClick={handleCopy}
+        className={styles.button}
+        title={`Copy page as Markdown (${shortcutLabel})`}
+      >
         <span aria-hidden="true" className={styles.icon}>
           {copied ? (
             <CheckIcon size={12} strokeWidth={2} />
@@ -158,6 +199,9 @@ export function CopyPageButton(): JSX.Element | null {
           )}
         </span>
         <span className={styles.label}>{copied ? "Copied!" : "Copy page"}</span>
+        <kbd aria-hidden="true" className={styles.kbd}>
+          {shortcutLabel}
+        </kbd>
       </button>
     </div>
   );
