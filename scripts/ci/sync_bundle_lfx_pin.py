@@ -26,11 +26,11 @@ Idempotent: re-running with the same version is a no-op (so it is safe to call
 unconditionally from ``make patch``, including patch releases within a minor
 line where the floor does not move).  Only the bundle's ``"lfx<op>..."``
 runtime dependency is rewritten -- self-references such as
-``"lfx-docling[local]"`` and the nightly ``"lfx-nightly=="`` form are left
+``"lfx-docling[local]"`` and the legacy ``"lfx-nightly=="`` form are left
 untouched (neither has a bare version operator immediately after ``lfx``).
 
 Stdlib only, so it runs in any CI checkout (same constraint as the sibling
-``scripts/ci/update_bundle_versions.py`` and ``scripts/migrate/port_bundle.py``).
+``scripts/migrate/port_bundle.py``).
 
 Usage:
     python scripts/ci/sync_bundle_lfx_pin.py 1.10.0
@@ -47,7 +47,8 @@ BASE_DIR = Path(__file__).resolve().parents[2]
 # Matches a bundle's ``"lfx<op>VERSION[,<UPPER]"`` runtime dependency. The
 # version operator immediately after ``lfx`` is what distinguishes the runtime
 # dep from self-refs like ``"lfx-docling[local]"`` (a ``-`` follows ``lfx``)
-# and the nightly ``"lfx-nightly=="`` rename produced by update_bundle_versions.
+# and the legacy ``"lfx-nightly=="`` form from the retired nightly bundle
+# rename track (see src/bundles/NIGHTLY.md).
 _LFX_DEP_PATTERN = re.compile(
     r'"lfx(?:>=|~=|==)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*'
     r'(?:,\s*<[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*)?"'
