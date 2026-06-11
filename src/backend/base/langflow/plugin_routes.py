@@ -99,7 +99,7 @@ class _PluginAppWrapper:
 
 
 def load_plugin_routes(app: FastAPI) -> None:
-    """Discover and register additional routers from enterprise plugins.
+    """Discover and register additional routers from authorization plugins.
 
     Plugins register themselves via the ``langflow.plugins`` entry-point group.
     Each entry point must expose a callable with the signature::
@@ -111,7 +111,7 @@ def load_plugin_routes(app: FastAPI) -> None:
     wrapper = _PluginAppWrapper(app, reserved)
 
     raw_eps = list(entry_points(group="langflow.plugins"))
-    # Manifest-first precedence (LE-1015): if a distribution ships an
+    # Manifest-first precedence: if a distribution ships an
     # extension manifest, its COMPONENT-typed entry-points are skipped here;
     # the Extension System loader registers those components via the
     # manifest. Non-component entry-points (route registrars like the ones

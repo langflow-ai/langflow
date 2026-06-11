@@ -2,6 +2,7 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { zoomOut } from "../../utils/zoom-out";
 
 test(
@@ -19,7 +20,7 @@ test(
     await addLegacyComponents(page);
 
     await page.getByTestId("sidebar-search-input").click();
-    await page.getByTestId("sidebar-search-input").fill("text input");
+    await page.getByTestId("sidebar-search-input").fill(TEXTS.searchTextInput);
     await page.waitForSelector('[data-testid="input_outputText Input"]', {
       timeout: 3000,
     });
@@ -262,7 +263,9 @@ test(
 
     await page.getByTestId("button_run_text output").last().click();
 
-    await page.waitForSelector("text=built successfully", { timeout: 30000 });
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
+      timeout: 30000,
+    });
 
     expect(
       await page
@@ -274,9 +277,10 @@ test(
       .first()
       .click();
 
-    await page.getByText("Component Output").isVisible();
-
-    const text = await page.getByPlaceholder("Empty").textContent();
+    await expect(page.getByText(TEXTS.componentOutput)).toBeVisible();
+    const text = await page
+      .getByPlaceholder(TEXTS.placeholderEmpty)
+      .textContent();
 
     const permutations = [
       `${randomName}-${secondRandomName}-${thirdRandomName}`,

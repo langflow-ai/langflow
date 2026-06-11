@@ -5,14 +5,16 @@ from uuid import uuid4
 
 import pytest
 from langflow.services.database.models.deployment.crud import (
+    DeploymentMetadataUpdate,
     create_deployment,
     delete_deployment_by_id,
     delete_deployment_by_resource_key,
     delete_deployments_by_ids,
-    deployment_name_exists,
     get_deployment,
     list_deployments_page,
     update_deployment,
+    update_deployment_metadata,
+    update_deployment_metadata_batch,
 )
 from langflow.services.database.models.deployment.model import Deployment
 from langflow.services.database.models.deployment_provider_account.model import (
@@ -137,22 +139,22 @@ async def test_create_deployment_empty_resource_key_raises():
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             resource_key="   ",
-            name="my-deploy",
+            display_name="my-deploy",
             deployment_type=DeploymentType.AGENT,
         )
 
 
 @pytest.mark.asyncio
-async def test_create_deployment_empty_name_raises():
+async def test_create_deployment_empty_display_name_raises():
     db = _make_db()
-    with pytest.raises(ValueError, match="name must not be empty"):
+    with pytest.raises(ValueError, match="display_name must not be empty"):
         await create_deployment(
             db,
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
             resource_key="rk-1",
-            name="",
+            display_name="",
             deployment_type=DeploymentType.AGENT,
         )
 
@@ -221,11 +223,11 @@ async def test_list_deployments_page_attachment_count_only_counts_live_flow_vers
 
 
 @pytest.mark.asyncio
-async def test_update_deployment_empty_name_raises():
+async def test_update_deployment_empty_display_name_raises():
     db = _make_db()
     deploy = MagicMock()
-    with pytest.raises(ValueError, match="name must not be empty"):
-        await update_deployment(db, deployment=deploy, name="   ")
+    with pytest.raises(ValueError, match="display_name must not be empty"):
+        await update_deployment(db, deployment=deploy, display_name="   ")
 
 
 # ---------------------------------------------------------------------------
@@ -365,7 +367,7 @@ async def test_delete_by_id_prunes_attachments_when_fk_disabled():
             project_id=folder.id,
             deployment_provider_account_id=provider_account.id,
             resource_key="rk-fk-off",
-            name="deployment-fk-off",
+            display_name="deployment-fk-off",
             deployment_type=DeploymentType.AGENT,
         )
         db.add(deployment)
@@ -424,7 +426,7 @@ async def test_delete_by_id_prunes_attachments_when_fk_disabled():
 
 
 @pytest.mark.asyncio
-async def test_create_deployment_strips_whitespace(
+async def test_create_deployment_preserves_display_name_whitespace_and_strips_resource_key(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
     assert folder.id is not None
@@ -434,7 +436,7 @@ async def test_create_deployment_strips_whitespace(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="  rk-1  ",
-        name="  my-deploy  ",
+        display_name="  my-deploy  ",
         deployment_type=DeploymentType.AGENT,
     )
     await db.commit()
@@ -442,11 +444,11 @@ async def test_create_deployment_strips_whitespace(
     fetched = await get_deployment(db, user_id=user.id, deployment_id=row.id)
     assert fetched is not None
     assert fetched.resource_key == "rk-1"
-    assert fetched.name == "my-deploy"
+    assert fetched.display_name == "  my-deploy  "
 
 
 @pytest.mark.asyncio
-async def test_update_deployment_strips_whitespace(
+async def test_update_deployment_preserves_display_name_whitespace(
     db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
 ):
     assert folder.id is not None
@@ -456,17 +458,215 @@ async def test_update_deployment_strips_whitespace(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="original",
+        display_name="original",
         deployment_type=DeploymentType.AGENT,
     )
     await db.commit()
 
-    updated = await update_deployment(db, deployment=row, name="  new-name  ")
+    updated = await update_deployment(db, deployment=row, display_name="  new-name  ")
     await db.commit()
 
     fetched = await get_deployment(db, user_id=user.id, deployment_id=updated.id)
     assert fetched is not None
-    assert fetched.name == "new-name"
+    assert fetched.display_name == "  new-name  "
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_preserves_updated_at(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-sync",
+        display_name="original",
+        description="old desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+    await db.refresh(row)
+    original_updated_at = row.updated_at
+
+    updated = await update_deployment_metadata(
+        db,
+        user_id=user.id,
+        deployment=row,
+        display_name="provider name",
+        description="provider desc",
+    )
+    assert updated is row
+    assert row.display_name == "provider name"
+    assert row.description == "provider desc"
+    await db.commit()
+
+    fetched = await get_deployment(db, user_id=user.id, deployment_id=row.id)
+    assert fetched is not None
+    assert fetched.display_name == "provider name"
+    assert fetched.description == "provider desc"
+    assert fetched.updated_at == original_updated_at
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_skips_when_provider_description_is_unchanged(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    description = "x" * 501
+    row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-noop",
+        display_name="original",
+        description=description,
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+    await db.refresh(row)
+
+    with patch.object(db, "exec", wraps=db.exec) as mock_exec:
+        updated = await update_deployment_metadata(
+            db,
+            user_id=user.id,
+            deployment=row,
+            display_name="original",
+            description=description,
+        )
+
+    assert updated is row
+    mock_exec.assert_not_called()
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_batch_writes_changed_rows_only(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    changed_row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-batch-changed",
+        display_name="changed",
+        description="old desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    unchanged_row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-batch-unchanged",
+        display_name="unchanged",
+        description="same desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+    await db.refresh(changed_row)
+    await db.refresh(unchanged_row)
+
+    await update_deployment_metadata_batch(
+        db,
+        deployment_updates=[
+            DeploymentMetadataUpdate(
+                langflow_db_row=changed_row,
+                display_name="provider changed",
+                description="new desc",
+            ),
+            DeploymentMetadataUpdate(
+                langflow_db_row=unchanged_row,
+                display_name="unchanged",
+                description="same desc",
+            ),
+        ],
+    )
+    await db.refresh(changed_row)
+    await db.refresh(unchanged_row)
+    assert changed_row.display_name == "provider changed"
+    assert changed_row.description == "new desc"
+    assert unchanged_row.display_name == "unchanged"
+    assert unchanged_row.description == "same desc"
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_rejects_actor_user_id(
+    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
+):
+    row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-owner",
+        display_name="original",
+        description="old desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    await db.commit()
+
+    with pytest.raises(ValueError, match="deployment owner"):
+        await update_deployment_metadata(
+            db,
+            user_id=uuid4(),
+            deployment=row,
+            display_name="provider name",
+            description="provider desc",
+        )
+
+
+@pytest.mark.asyncio
+async def test_update_deployment_metadata_batch_matches_owner_per_row(
+    db: AsyncSession,
+    user: User,
+    folder: Folder,
+    provider_account: DeploymentProviderAccount,
+):
+    other_user_id = uuid4()
+    owner_row = await create_deployment(
+        db,
+        user_id=user.id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-owner-row",
+        display_name="owner",
+        description="owner desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    other_row = Deployment(
+        user_id=other_user_id,
+        project_id=folder.id,
+        deployment_provider_account_id=provider_account.id,
+        resource_key="rk-metadata-other-row",
+        display_name="other",
+        description="other desc",
+        deployment_type=DeploymentType.AGENT,
+    )
+    db.add(other_row)
+    await db.commit()
+    await db.refresh(owner_row)
+    await db.refresh(other_row)
+
+    await update_deployment_metadata_batch(
+        db,
+        deployment_updates=[
+            DeploymentMetadataUpdate(
+                langflow_db_row=owner_row,
+                display_name="owner synced",
+                description="owner synced desc",
+            ),
+            DeploymentMetadataUpdate(
+                langflow_db_row=other_row,
+                display_name="other synced",
+                description="other synced desc",
+            ),
+        ],
+    )
+    await db.refresh(owner_row)
+    await db.refresh(other_row)
+    assert owner_row.display_name == "owner synced"
+    assert other_row.display_name == "other synced"
 
 
 @pytest.mark.asyncio
@@ -488,7 +688,7 @@ async def test_delete_by_id_removes_attached_rows_with_fk_on(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-id",
-        name="delete-id",
+        display_name="delete-id",
         deployment_type=DeploymentType.AGENT,
     )
     await db.flush()
@@ -546,7 +746,7 @@ async def test_delete_by_ids_removes_multiple_deployments_and_attached_rows(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-ids-1",
-        name="delete-ids-1",
+        display_name="delete-ids-1",
         deployment_type=DeploymentType.AGENT,
     )
     deployment_2 = await create_deployment(
@@ -555,7 +755,7 @@ async def test_delete_by_ids_removes_multiple_deployments_and_attached_rows(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-ids-2",
-        name="delete-ids-2",
+        display_name="delete-ids-2",
         deployment_type=DeploymentType.AGENT,
     )
     await db.flush()
@@ -618,7 +818,7 @@ async def test_delete_by_resource_key_removes_attached_rows_with_fk_on(
         project_id=folder.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-delete-rk",
-        name="delete-rk",
+        display_name="delete-rk",
         deployment_type=DeploymentType.AGENT,
     )
     await db.flush()
@@ -652,66 +852,3 @@ async def test_delete_by_resource_key_removes_attached_rows_with_fk_on(
     ).all()
     assert deployment_row is None
     assert attachment_rows == []
-
-
-@pytest.mark.asyncio
-async def test_deployment_name_exists_returns_true_when_found(
-    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
-):
-    assert folder.id is not None
-    await create_deployment(
-        db,
-        user_id=user.id,
-        project_id=folder.id,
-        deployment_provider_account_id=provider_account.id,
-        resource_key="rk-1",
-        name="existing-deploy",
-        deployment_type=DeploymentType.AGENT,
-    )
-    await db.commit()
-
-    result = await deployment_name_exists(
-        db,
-        user_id=user.id,
-        deployment_provider_account_id=provider_account.id,
-        name="existing-deploy",
-    )
-    assert result is True
-
-
-@pytest.mark.asyncio
-async def test_deployment_name_exists_returns_false_when_not_found(
-    db: AsyncSession, user: User, provider_account: DeploymentProviderAccount
-):
-    result = await deployment_name_exists(
-        db,
-        user_id=user.id,
-        deployment_provider_account_id=provider_account.id,
-        name="nonexistent",
-    )
-    assert result is False
-
-
-@pytest.mark.asyncio
-async def test_deployment_name_exists_strips_whitespace(
-    db: AsyncSession, user: User, folder: Folder, provider_account: DeploymentProviderAccount
-):
-    assert folder.id is not None
-    await create_deployment(
-        db,
-        user_id=user.id,
-        project_id=folder.id,
-        deployment_provider_account_id=provider_account.id,
-        resource_key="rk-1",
-        name="my-deploy",
-        deployment_type=DeploymentType.AGENT,
-    )
-    await db.commit()
-
-    result = await deployment_name_exists(
-        db,
-        user_id=user.id,
-        deployment_provider_account_id=provider_account.id,
-        name="  my-deploy  ",
-    )
-    assert result is True

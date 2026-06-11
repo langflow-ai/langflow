@@ -101,6 +101,15 @@ def validate_non_empty_string(v: str, info: object) -> str:
     return stripped
 
 
+def validate_non_empty_string_preserve_value(v: str, info: object) -> str:
+    """Validate a string field is non-empty without normalizing its value."""
+    if not v.strip():
+        field = getattr(info, "field_name", "Field")
+        msg = f"{field} must not be empty"
+        raise ValueError(msg)
+    return v
+
+
 def validate_non_empty_string_optional(v: str | None, info: object) -> str | None:
     """Like :func:`validate_non_empty_string` but allows ``None`` (skip)."""
     if v is None:

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { useGetIngestionRuns } from "@/controllers/API/queries/knowledge-bases/use-get-ingestion-runs";
 import { cn } from "@/utils/utils";
@@ -19,13 +20,13 @@ const STATUS_STYLES: Record<string, string> = {
 };
 
 const SOURCE_TYPE_LABELS: Record<string, string> = {
-  file_upload: "File Upload",
-  folder: "Folder",
-  template: "Flow Template",
-  google_drive: "Google Drive",
-  s3: "AWS S3",
-  onedrive: "OneDrive",
-  sharepoint: "SharePoint",
+  file_upload: "knowledge.ingestionSourceFileUpload",
+  folder: "knowledge.ingestionSourceFolder",
+  template: "knowledge.ingestionSourceTemplate",
+  google_drive: "knowledge.ingestionSourceGoogleDrive",
+  s3: "knowledge.ingestionSourceS3",
+  onedrive: "knowledge.ingestionSourceOneDrive",
+  sharepoint: "knowledge.ingestionSourceSharePoint",
 };
 
 const HISTORY_LIMIT = 10;
@@ -41,6 +42,7 @@ function formatRelativeTime(iso: string): string {
 }
 
 export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
+  const { t } = useTranslation();
   const [expanded, setExpanded] = useState(true);
   const { data, isLoading, isError } = useGetIngestionRuns(
     { kb_name: kbName, page: 1, limit: HISTORY_LIMIT },
@@ -66,7 +68,9 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
             name="History"
             className="h-4 w-4 text-muted-foreground"
           />
-          <span className="text-sm font-medium">Previously ingested</span>
+          <span className="text-sm font-medium">
+            {t("knowledge.previouslyIngested")}
+          </span>
           {total > 0 && (
             <span className="text-xs text-muted-foreground">({total})</span>
           )}
@@ -108,8 +112,9 @@ export function IngestionHistoryPanel({ kbName }: IngestionHistoryPanelProps) {
           {runs.map((run) => {
             const statusClass =
               STATUS_STYLES[run.status] ?? STATUS_STYLES.pending;
-            const typeLabel =
-              SOURCE_TYPE_LABELS[run.source_type] ?? run.source_type;
+            const typeLabel = SOURCE_TYPE_LABELS[run.source_type]
+              ? t(SOURCE_TYPE_LABELS[run.source_type])
+              : run.source_type;
             const trimmedName = run.source_name?.trim();
             const primaryLabel = trimmedName || typeLabel;
             const showTypeSubtitle = !!trimmedName;

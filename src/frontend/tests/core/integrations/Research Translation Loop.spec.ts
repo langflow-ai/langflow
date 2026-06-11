@@ -1,7 +1,8 @@
-import * as dotenv from "dotenv";
-import path from "path";
-import { expect, test } from "../../fixtures";
+import { expect } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import { selectGptModel } from "../../utils/select-gpt-model";
 import { withEventDeliveryModes } from "../../utils/withEventDeliveryModes";
@@ -10,15 +11,8 @@ withEventDeliveryModes(
   "Research Translation Loop.spec",
   { tag: ["@release", "@starter-projects"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
@@ -50,7 +44,7 @@ withEventDeliveryModes(
 
     await page.getByTestId("button-send").click();
 
-    const stopButton = page.getByRole("button", { name: "Stop" });
+    const stopButton = page.getByRole("button", { name: TEXTS.stop });
     await stopButton.waitFor({ state: "visible", timeout: 40000 });
 
     if (await stopButton.isVisible()) {

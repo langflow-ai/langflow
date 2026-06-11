@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Badge } from "@/components/ui/badge";
 import type { FlowType } from "@/types/flow";
@@ -22,10 +23,11 @@ export const FlowListPanel = memo(function FlowListPanel({
   removedFlowIds?: Set<string>;
   onSelectFlow: (flowId: string) => void;
 }) {
+  const { t } = useTranslation();
   return (
     <div className="flex w-[280px] flex-shrink-0 flex-col border-r border-border">
       <div className="border-b border-border p-4 text-sm text-muted-foreground">
-        Available
+        {t("deployments.available")}
       </div>
       <div className="flex-1 space-y-1 overflow-y-auto p-2">
         {flows.map((flow) => {
@@ -95,8 +97,10 @@ export const FlowListPanel = memo(function FlowListPanel({
                         className="bg-accent-blue-muted text-accent-blue-muted-foreground"
                       >
                         {activeEntries.length === 1
-                          ? "1 VERSION"
-                          : `${activeEntries.length} VERSIONS`}
+                          ? t("deployments.oneVersion")
+                          : t("deployments.manyVersions", {
+                              count: activeEntries.length,
+                            })}
                       </Badge>
                     )}
                     {isRemoved && (
@@ -105,7 +109,7 @@ export const FlowListPanel = memo(function FlowListPanel({
                         size="tag"
                         className="bg-destructive/10 text-destructive"
                       >
-                        REMOVED
+                        {t("deployments.removed")}
                       </Badge>
                     )}
                   </div>
@@ -116,7 +120,9 @@ export const FlowListPanel = memo(function FlowListPanel({
                   )}
                   {removedEntries.length > 0 && !isRemoved && (
                     <p className="truncate text-xs text-muted-foreground">
-                      {removedEntries.length} removed
+                      {t("deployments.removedCount", {
+                        count: removedEntries.length,
+                      })}
                     </p>
                   )}
                 </div>

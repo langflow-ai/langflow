@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import { useGetDeploymentConfigs } from "@/controllers/API/queries/deployments/use-get-deployment-configs";
 import { useGetFlowVersions } from "@/controllers/API/queries/flow-version/use-get-flow-versions";
@@ -32,7 +33,6 @@ export default function StepAttachFlows() {
     selectedVersionByFlow,
     handleSelectVersion: onSelectVersion,
     setToolNameByFlow,
-    defaultToolNameScopeId,
     attachedConnectionByFlow,
     setAttachedConnectionByFlow: onAttachConnection,
     removedFlowIds,
@@ -40,6 +40,7 @@ export default function StepAttachFlows() {
     handleUndoRemoveFlow,
   } = useDeploymentStepper();
 
+  const { t } = useTranslation();
   const { folderId } = useParams();
   const myCollectionId = useFolderStore((state) => state.myCollectionId);
   const currentFolderId = folderId ?? myCollectionId;
@@ -124,6 +125,15 @@ export default function StepAttachFlows() {
     versionTag: string;
   } | null>(null);
   const [rightPanel, setRightPanel] = useState<RightPanelView>("versions");
+  const preselectedAttachment = useMemo(
+    () =>
+      initialFlowId
+        ? Array.from(selectedVersionByFlow.values()).find(
+            (entry) => entry.flowId === initialFlowId,
+          )
+        : undefined,
+    [initialFlowId, selectedVersionByFlow],
+  );
 
   const commitPendingAttachment = useCallback(() => {
     if (pendingAttachment) {
@@ -140,22 +150,13 @@ export default function StepAttachFlows() {
         const next = new Map(prev);
         next.set(
           pendingAttachment.key,
-          getDefaultDeploymentToolName(
-            pendingAttachment.flowName,
-            pendingAttachment.versionId,
-            defaultToolNameScopeId,
-          ),
+          getDefaultDeploymentToolName(pendingAttachment.flowName),
         );
         return next;
       });
       setPendingAttachment(null);
     }
-  }, [
-    defaultToolNameScopeId,
-    pendingAttachment,
-    onSelectVersion,
-    setToolNameByFlow,
-  ]);
+  }, [pendingAttachment, onSelectVersion, setToolNameByFlow]);
 
   const resetPendingAttachment = useCallback(() => {
     setPendingAttachment(null);
@@ -185,7 +186,8 @@ export default function StepAttachFlows() {
   } = useConnectionPanelState({
     connections,
     setConnections,
-    effectiveAttachmentKey: pendingAttachment?.key ?? null,
+    effectiveAttachmentKey:
+      pendingAttachment?.key ?? preselectedAttachment?.key ?? null,
     attachedConnectionByFlow,
     onAttachConnection,
     commitPendingAttachment,
@@ -203,35 +205,41 @@ export default function StepAttachFlows() {
   // When a flow+version are pre-selected from outside (e.g., canvas deploy button),
   // auto-advance to the connections panel and detect env vars for the pre-selected version.
   useEffect(() => {
-    const preSelected = initialFlowId
-      ? Array.from(selectedVersionByFlow.values()).find(
-          (entry) => entry.flowId === initialFlowId,
-        )
-      : undefined;
-    if (!preSelected) return;
+    const preSelected = preselectedAttachment;
+    if (!preSelected) {
+      return;
+    }
+
+    const resolvedFlowName =
+      flows.find((flow) => flow.id === preSelected.flowId)?.name ??
+      preSelected.flowName;
+    if (resolvedFlowName) {
+      if (preSelected.flowName !== resolvedFlowName) {
+        onSelectVersion({
+          flowId: preSelected.flowId,
+          flowName: resolvedFlowName,
+          versionId: preSelected.versionId,
+          versionTag: preSelected.versionTag,
+        });
+      }
+      setToolNameByFlow((prev) => {
+        const defaultFlowToolName =
+          getDefaultDeploymentToolName(DEFAULT_FLOW_NAME);
+        const nextToolName = getDefaultDeploymentToolName(resolvedFlowName);
+        const currentToolName = prev.get(preSelected.key)?.trim();
+        if (currentToolName && currentToolName !== defaultFlowToolName) {
+          return prev;
+        }
+        const next = new Map(prev);
+        next.set(preSelected.key, nextToolName);
+        return next;
+      });
+    }
+
     if (handledPreselectedAttachmentRef.current === preSelected.key) return;
     handledPreselectedAttachmentRef.current = preSelected.key;
-
-    setToolNameByFlow((prev) => {
-      if (prev.has(preSelected.key)) {
-        return prev;
-      }
-      const flowName =
-        flows.find((flow) => flow.id === preSelected.flowId)?.name ??
-        DEFAULT_FLOW_NAME;
-      const next = new Map(prev);
-      next.set(
-        preSelected.key,
-        getDefaultDeploymentToolName(
-          flowName,
-          preSelected.versionId,
-          defaultToolNameScopeId,
-        ),
-      );
-      return next;
-    });
-
     setRightPanel("connections");
+    initConnectionsForFlow(preSelected.key);
 
     const detect = async () => {
       try {
@@ -241,18 +249,18 @@ export default function StepAttachFlows() {
         updateDetectedEnvVars(result.variables ?? []);
       } catch {
         setErrorData({
-          title: "Could not auto-detect environment variables",
-          list: ["Add them manually in the connection form."],
+          title: t("deployments.cannotAutoDetectEnvVars"),
+          list: [t("deployments.addManuallyInConnection")],
         });
       }
     };
     detect();
   }, [
     flows,
-    initialFlowId,
-    selectedVersionByFlow,
     detectEnvVars,
-    defaultToolNameScopeId,
+    initConnectionsForFlow,
+    onSelectVersion,
+    preselectedAttachment,
     setErrorData,
     setToolNameByFlow,
     updateDetectedEnvVars,
@@ -295,8 +303,8 @@ export default function StepAttachFlows() {
       } catch {
         updateDetectedEnvVars([]);
         setErrorData({
-          title: "Could not auto-detect environment variables",
-          list: ["Add them manually in the connection form."],
+          title: t("deployments.cannotAutoDetectEnvVars"),
+          list: [t("deployments.addManuallyInConnection")],
         });
       }
     },
@@ -337,7 +345,7 @@ export default function StepAttachFlows() {
       const detail = (err as { response?: { data?: { detail?: string } } })
         ?.response?.data?.detail;
       setErrorData({
-        title: "Failed to create version from draft",
+        title: t("deployments.createVersionFromDraftError"),
         ...(detail ? { list: [detail] } : {}),
       });
     }
@@ -368,7 +376,7 @@ export default function StepAttachFlows() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4 py-3">
-      <h2 className="text-lg font-semibold">Flows</h2>
+      <h2 className="text-lg font-semibold">{t("deployments.stepFlows")}</h2>
 
       <div className="flex min-h-0 flex-1 overflow-hidden rounded-xl border border-border">
         <FlowListPanel

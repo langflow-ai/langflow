@@ -1,11 +1,10 @@
 import { useMemo } from "react";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import useFlowStore from "@/stores/flowStore";
-import { checkChatInput, checkWebhookInput } from "@/utils/reactflowUtils";
+import { getPresentComponentTypes } from "@/utils/componentConstraints";
 import { removeCountFromString } from "@/utils/utils";
 import { disableItem } from "../helpers/disable-item";
 import { getDisabledTooltip } from "../helpers/get-disabled-tooltip";
-import type { UniqueInputsComponents } from "../types";
 import SidebarDraggableComponent from "./sidebarDraggableComponent";
 
 const SidebarItemsList = ({
@@ -97,14 +96,10 @@ const UniqueInputsDraggableComponent = ({
   nodeColors,
 }) => {
   const nodes = useFlowStore((state) => state.nodes);
-  const chatInputAdded = useMemo(() => checkChatInput(nodes), [nodes]);
-  const webhookInputAdded = useMemo(() => checkWebhookInput(nodes), [nodes]);
-  const uniqueInputsComponents: UniqueInputsComponents = useMemo(() => {
-    return {
-      chatInput: chatInputAdded,
-      webhookInput: webhookInputAdded,
-    };
-  }, [chatInputAdded, webhookInputAdded]);
+  const presentComponentTypes = useMemo(
+    () => getPresentComponentTypes(nodes),
+    [nodes],
+  );
 
   return (
     <ShadTooltip
@@ -129,8 +124,8 @@ const UniqueInputsDraggableComponent = ({
         official={currentItem.official !== false}
         beta={currentItem.beta ?? false}
         legacy={currentItem.legacy ?? false}
-        disabled={disableItem(SBItemName, uniqueInputsComponents)}
-        disabledTooltip={getDisabledTooltip(SBItemName, uniqueInputsComponents)}
+        disabled={disableItem(SBItemName, presentComponentTypes)}
+        disabledTooltip={getDisabledTooltip(SBItemName, presentComponentTypes)}
       />
     </ShadTooltip>
   );

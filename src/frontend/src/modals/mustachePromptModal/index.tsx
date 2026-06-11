@@ -207,7 +207,7 @@ export default function MustachePromptModal({
               aria-hidden="true"
             />
             <span className="pl-2" data-testid="modal-title">
-              Edit Prompt
+              {t("modal.prompt.title")}
             </span>
           </div>
         </div>
@@ -260,7 +260,7 @@ export default function MustachePromptModal({
                     className="flex h-4 w-4 text-primary"
                   />
                   <span className="text-md font-semibold text-primary">
-                    Prompt Variables:
+                    {t("modal.prompt.promptVariables")}
                   </span>
 
                   {Array.from(wordsHighlight).map((word, index) => (
@@ -288,8 +288,7 @@ export default function MustachePromptModal({
                 </div>
               </div>
               <span className="mt-2 text-xs text-muted-foreground">
-                Prompt variables can be created with any chosen name inside
-                double curly brackets, e.g. {"{{variable_name}}"}
+                {t("modal.prompt.variablesHint")}
               </span>
             </div>
           </div>
@@ -302,7 +301,7 @@ export default function MustachePromptModal({
             }}
             type="submit"
           >
-            Check & Save
+            {t("modal.prompt.checkAndSave")}
           </Button>
         </div>
       </BaseModal.Footer>

@@ -322,6 +322,21 @@ def test_schema_to_langflow_inputs_preserves_optional_defaults_and_nullable_obje
     assert inputs["proxy_country"].value == "us"
 
 
+def test_float_input_allows_range_spec_minimum_for_non_negative_values():
+    input_field = FloatInput.model_validate(
+        {
+            "name": "tool_execution_timeout",
+            "value": 0.0,
+            "range_spec": {"min": 0.0, "max": 3600.0, "step": 0.01},
+        }
+    )
+
+    assert input_field.range_spec is not None
+    assert input_field.range_spec.min == 0.0
+    assert input_field.range_spec.max == 3600.0
+    assert input_field.range_spec.step == 0.01
+
+
 def test_schema_to_langflow_inputs_invalid_type():
     # Define a schema with an unsupported type
     class CustomType:

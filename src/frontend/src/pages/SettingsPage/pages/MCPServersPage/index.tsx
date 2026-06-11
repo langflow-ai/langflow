@@ -26,6 +26,7 @@ export default function MCPServersPage() {
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [editInitialData, setEditInitialData] = useState<any>(null);
   const { mutateAsync: getServer } = useGetMCPServer();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -37,6 +38,7 @@ export default function MCPServersPage() {
       const data = await getServer({ name });
       setEditInitialData(data);
       setEditOpen(true);
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (e: any) {
       setErrorData({
         title: t("mcp.servers.errorFetching"),
@@ -50,6 +52,7 @@ export default function MCPServersPage() {
     deleteServer(
       { name: server.name },
       {
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         onError: (e: any) =>
           setErrorData({
             title: t("mcp.servers.errorDeleting"),

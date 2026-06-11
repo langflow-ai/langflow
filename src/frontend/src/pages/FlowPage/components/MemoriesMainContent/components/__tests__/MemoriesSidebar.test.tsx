@@ -7,6 +7,7 @@ jest.mock("@/components/common/genericIconComponent", () => ({
 }));
 
 describe("MemoriesSidebar", () => {
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const makeProps = (overrides: Partial<any> = {}) =>
     ({
       memories: [
@@ -22,6 +23,7 @@ describe("MemoriesSidebar", () => {
       onSelectMemory: jest.fn(),
       onCreateMemory: jest.fn(),
       ...overrides,
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     }) as any;
 
   beforeEach(() => {
