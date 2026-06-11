@@ -297,11 +297,16 @@ export async function runFlowAGUI(
   };
 
   const appendLogEvent = (data: unknown) => {
-    const { component_id, output, name, message, type: logType } =
-      (data ?? {}) as {
-        component_id?: string;
-        output?: string;
-      } & Partial<LogsLogType>;
+    const {
+      component_id,
+      output,
+      name,
+      message,
+      type: logType,
+    } = (data ?? {}) as {
+      component_id?: string;
+      output?: string;
+    } & Partial<LogsLogType>;
     if (!component_id || !output) {
       console.error(
         "[runFlowAGUI] Received malformed log event; missing component_id or output",
