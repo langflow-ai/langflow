@@ -26,6 +26,19 @@ __all__ = [
     "NestedDict",
     "Object",
     "Output",
+    "PipecatContext",
+    "PipecatContextAggregatorPair",
+    "PipecatFlowManager",
+    "PipecatFrameProcessor",
+    "PipecatLLMService",
+    "PipecatNodeConfig",
+    "PipecatPipelineTask",
+    "PipecatS2SService",
+    "PipecatSTTService",
+    "PipecatTool",
+    "PipecatTTSService",
+    "PipecatTransport",
+    "PipecatVADAnalyzer",
     "PromptTemplate",
     "RangeSpec",
     "Retriever",
@@ -66,6 +79,23 @@ _CONSTANTS_NAMES = {
     "VectorStore",
 }
 
+# Names that come from voice_types module
+_PIPECAT_NAMES = {
+    "PipecatContext",
+    "PipecatContextAggregatorPair",
+    "PipecatFlowManager",
+    "PipecatFrameProcessor",
+    "PipecatLLMService",
+    "PipecatNodeConfig",
+    "PipecatPipelineTask",
+    "PipecatS2SService",
+    "PipecatSTTService",
+    "PipecatTool",
+    "PipecatTTSService",
+    "PipecatTransport",
+    "PipecatVADAnalyzer",
+}
+
 
 def __getattr__(name: str) -> Any:
     """Lazy import for all field typing constants."""
@@ -85,6 +115,10 @@ def __getattr__(name: str) -> Any:
         from . import constants
 
         return getattr(constants, name)
+    if name in _PIPECAT_NAMES:
+        from .voice_types import PIPECAT_BASE_TYPES
+
+        return PIPECAT_BASE_TYPES[name]
 
     msg = f"module {__name__!r} has no attribute {name!r}"
     raise AttributeError(msg)

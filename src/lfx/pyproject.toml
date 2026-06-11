@@ -83,6 +83,12 @@ markers = [
     "lfx_timeout(seconds): timeout in seconds for this test's flow execution"
 ]
 
+[project.optional-dependencies]
+voice = [
+    "pipecat-ai>=0.0.70",
+    "pipecat-ai-flows>=1.0.0",
+]
+
 [dependency-groups]
 dev = [
     "asgi-lifespan>=2.1.0",
