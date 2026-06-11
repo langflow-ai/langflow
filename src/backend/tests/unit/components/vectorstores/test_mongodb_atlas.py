@@ -5,7 +5,7 @@ from unittest.mock import MagicMock
 
 import pytest
 from langchain_community.embeddings.fake import DeterministicFakeEmbedding
-from lfx.components.mongodb import MongoVectorStoreComponent
+from lfx.components.mongodb.mongodb_atlas import MongoVectorStoreComponent
 from lfx.schema.data import Data
 from pymongo.collection import Collection
 
