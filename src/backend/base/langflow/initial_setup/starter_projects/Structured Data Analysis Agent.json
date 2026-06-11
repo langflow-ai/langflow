@@ -2577,7 +2577,7 @@
                 ],
                 "total_dependencies": 5
               },
-              "module": "_lfx_ext.official.chroma.chroma"
+              "module": "lfx.components.chroma.chroma.ChromaVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -3038,7 +3038,7 @@
                 ],
                 "total_dependencies": 5
               },
-              "module": "_lfx_ext.official.chroma.chroma"
+              "module": "lfx.components.chroma.chroma.ChromaVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -4100,7 +4100,7 @@
                 "language model",
                 "large language model"
               ],
-              "module": "_lfx_ext.official.ollama.ollama"
+              "module": "lfx.components.ollama.ollama.ChatOllamaComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -4934,7 +4934,7 @@
                 "language model",
                 "large language model"
               ],
-              "module": "_lfx_ext.official.ollama.ollama_embeddings"
+              "module": "lfx.components.ollama.ollama_embeddings.OllamaEmbeddingsComponent"
             },
             "minimized": false,
             "output_types": [],

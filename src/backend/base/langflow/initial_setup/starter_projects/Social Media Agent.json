@@ -173,7 +173,7 @@
                 ],
                 "total_dependencies": 5
               },
-              "module": "_lfx_ext.official.apify.apify_actor"
+              "module": "lfx.components.apify.apify_actor.ApifyActorsComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -405,7 +405,7 @@
                 ],
                 "total_dependencies": 5
               },
-              "module": "_lfx_ext.official.apify.apify_actor"
+              "module": "lfx.components.apify.apify_actor.ApifyActorsComponent"
             },
             "minimized": false,
             "output_types": [],

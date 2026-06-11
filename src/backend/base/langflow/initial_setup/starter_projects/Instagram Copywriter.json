@@ -1500,7 +1500,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "_lfx_ext.official.tavily.tavily_search"
+              "module": "lfx.components.tavily.tavily_search.TavilySearchComponent"
             },
             "minimized": false,
             "output_types": [],

@@ -691,7 +691,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "_lfx_ext.official.needle.needle"
+              "module": "lfx.components.needle.needle.NeedleComponent"
             },
             "minimized": false,
             "output_types": [],

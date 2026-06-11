@@ -283,7 +283,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "_lfx_ext.official.youtube.comments"
+              "module": "lfx.components.youtube.comments.YouTubeCommentsComponent"
             },
             "minimized": false,
             "output_types": [],
@@ -1598,7 +1598,7 @@
                 ],
                 "total_dependencies": 3
               },
-              "module": "_lfx_ext.official.youtube.youtube_transcripts"
+              "module": "lfx.components.youtube.youtube_transcripts.YouTubeTranscriptsComponent"
             },
             "minimized": false,
             "output_types": [],

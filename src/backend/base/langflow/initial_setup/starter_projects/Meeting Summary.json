@@ -338,7 +338,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "_lfx_ext.official.assemblyai.assemblyai_poll_transcript"
+              "module": "lfx.components.assemblyai.assemblyai_poll_transcript.AssemblyAITranscriptionJobPoller"
             },
             "minimized": false,
             "output_types": [],
@@ -2497,7 +2497,7 @@
                 ],
                 "total_dependencies": 2
               },
-              "module": "_lfx_ext.official.assemblyai.assemblyai_start_transcript"
+              "module": "lfx.components.assemblyai.assemblyai_start_transcript.AssemblyAITranscriptionJobCreator"
             },
             "minimized": false,
             "output_types": [],

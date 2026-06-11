@@ -1539,7 +1539,7 @@
                 ],
                 "total_dependencies": 5
               },
-              "module": "_lfx_ext.official.datastax.astradb_vectorstore"
+              "module": "lfx.components.datastax.astradb_vectorstore.AstraDBVectorStoreComponent"
             },
             "minimized": false,
             "output_types": [],
