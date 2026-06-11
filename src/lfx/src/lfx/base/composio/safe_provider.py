@@ -159,6 +159,16 @@ def _patch_file_helper_once() -> None:
         return original_uploads(self, *args, **kwargs)
 
     def safe_downloads(self, *args, **kwargs):
+        # Extract params based on expected signature: (self, request, params, param=None)
+        params = kwargs.get("params") if "params" in kwargs else (args[1] if len(args) > 1 else None)
+
+        # Apply the targeted fix for missing 'type' keys in parameter schemas
+        if isinstance(params, dict):
+            for value in params.values():
+                if isinstance(value, dict) and "type" not in value:
+                    value["type"] = "object"
+
+        # Still run the original sanitize fallback just in case
         _sanitize_schema(_extract_schema_arg(args, kwargs, positional_index=1, keyword="schema"))
         return original_downloads(self, *args, **kwargs)
 
