@@ -40,6 +40,8 @@ def test_component_code_search_does_not_expose_column_to_model(component_code_se
 
 def test_component_code_search_fails_loudly_for_unknown_columns(component_code_search_template: dict):
     code = component_code_search_template["code"]["value"]
+    assert "BoolInput, IntInput, Output" in code
+    assert "IntInput(" in code
     assert "raise ValueError" in code
     assert "Unknown column" in code
     assert "Valid columns" in code
