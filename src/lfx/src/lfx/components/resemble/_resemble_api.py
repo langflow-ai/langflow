@@ -59,7 +59,8 @@ def item(data: Any) -> dict:
 
 
 def poll(api_key: str, base_url: str | None, path: str, max_wait: int = 120) -> Any:
-    deadline = time.monotonic() + max(1, int(max_wait or 120))
+    wait = max(1, int(max_wait or 120))
+    deadline = time.monotonic() + wait
     delay = 2
     last = request(api_key, base_url, "GET", path)
     while True:
@@ -67,9 +68,11 @@ def poll(api_key: str, base_url: str | None, path: str, max_wait: int = 120) -> 
         if not status or str(status).lower() in TERMINAL:
             return last
         if time.monotonic() >= deadline:
-            return last
+            msg = f"Timed out after {wait}s waiting for {path} to complete (last status: {status})."
+            raise ValueError(msg)
         time.sleep(delay)
         delay = min(10, delay + 1)
+        last = request(api_key, base_url, "GET", path)
 
 
 def sanitize(data: Any, n: int = 200) -> Any:

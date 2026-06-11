@@ -5,11 +5,9 @@ from lfx.io import BoolInput, DropdownInput, IntInput, MessageTextInput, Output,
 from lfx.schema.data import Data
 
 try:
-    from lfx.components.resemble._resemble_api import item, poll, request, sanitize
+    from lfx.components.resemble._resemble_api import TERMINAL, item, poll, request, sanitize
 except Exception:  # noqa: BLE001
-    from _resemble_api import item, poll, request, sanitize
-
-TERMINAL = {"completed", "failed", "error", "cancelled", "success"}
+    from _resemble_api import TERMINAL, item, poll, request, sanitize
 
 
 class ResembleIntelligenceComponent(Component):
