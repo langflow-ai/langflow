@@ -21,7 +21,7 @@ class TestLocalDBComponent(ComponentTestBaseWithoutClient):
     @pytest.fixture
     def default_kwargs(self, tmp_path: Path) -> dict[str, Any]:
         """Return the default kwargs for the component."""
-        from lfx.components.openai.openai import OpenAIEmbeddingsComponent
+        from lfx_openai.components.openai.openai import OpenAIEmbeddingsComponent
 
         from tests.api_keys import get_openai_api_key
 

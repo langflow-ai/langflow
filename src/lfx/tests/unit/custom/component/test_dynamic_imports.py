@@ -20,9 +20,11 @@ class TestImportUtils:
 
     def test_import_mod_with_module_name(self):
         """Test importing specific attribute from a module with missing dependencies."""
-        # Test importing a class that has missing dependencies - should raise ModuleNotFoundError
+        # composio: a still-in-tree category whose SDK is absent in the bare
+        # lfx test env (openai/anthropic/chroma graduated to bundle packages,
+        # so their lfx.components paths are shims now, not lazy categories).
         with pytest.raises(ModuleNotFoundError, match="No module named"):
-            import_mod("OpenAIModelComponent", "openai_chat_model", "lfx.components.openai")
+            import_mod("ComposioAPIComponent", "composio_api", "lfx.components.composio")
 
     def test_import_mod_without_module_name(self):
         """Test importing entire module when module_name is None."""
@@ -34,13 +36,13 @@ class TestImportUtils:
     def test_import_mod_module_not_found(self):
         """Test error handling when module doesn't exist."""
         with pytest.raises(ImportError, match="not found"):
-            import_mod("NonExistentComponent", "nonexistent_module", "lfx.components.openai")
+            import_mod("NonExistentComponent", "nonexistent_module", "lfx.components.composio")
 
     def test_import_mod_attribute_not_found(self):
         """Test error handling when module has missing dependencies."""
-        # The openai_chat_model module can't be imported due to missing dependencies
+        # The composio_api module can't be imported due to missing dependencies
         with pytest.raises(ModuleNotFoundError, match="No module named"):
-            import_mod("NonExistentComponent", "openai_chat_model", "lfx.components.openai")
+            import_mod("NonExistentComponent", "composio_api", "lfx.components.composio")
 
 
 class TestComponentDynamicImports:
@@ -87,48 +89,51 @@ class TestComponentDynamicImports:
             _ = components.nonexistent_category
 
     def test_category_module_dynamic_import(self):
-        """Test dynamic import behavior in category modules like openai."""
-        import lfx.components.openai as openai_components
+        """Test dynamic import behavior in category modules like composio."""
+        # composio: still-in-tree lazy category whose SDK is absent in the
+        # bare lfx test env (openai graduated to the lfx-openai package, so
+        # lfx.components.openai is a shim now, not a lazy category).
+        import lfx.components.composio as composio_components
 
         # Test that components are in __all__
-        assert "OpenAIModelComponent" in openai_components.__all__
-        assert "OpenAIEmbeddingsComponent" in openai_components.__all__
+        assert "ComposioAPIComponent" in composio_components.__all__
+        assert "ComposioGmailAPIComponent" in composio_components.__all__
 
-        # Access component - this should raise AttributeError due to missing langchain-openai
-        with pytest.raises(AttributeError, match="Could not import 'OpenAIModelComponent'"):
-            _ = openai_components.OpenAIModelComponent
+        # Access component - this should raise AttributeError due to missing composio SDK
+        with pytest.raises(AttributeError, match="Could not import 'ComposioAPIComponent'"):
+            _ = composio_components.ComposioAPIComponent
 
         # Test that the error is properly cached - second access should also fail
-        with pytest.raises(AttributeError, match="Could not import 'OpenAIModelComponent'"):
-            _ = openai_components.OpenAIModelComponent
+        with pytest.raises(AttributeError, match="Could not import 'ComposioAPIComponent'"):
+            _ = composio_components.ComposioAPIComponent
 
     def test_category_module_dir(self):
         """Test __dir__ functionality for category modules."""
-        import lfx.components.openai as openai_components
+        import lfx.components.composio as composio_components
 
-        dir_result = dir(openai_components)
-        assert "OpenAIModelComponent" in dir_result
-        assert "OpenAIEmbeddingsComponent" in dir_result
+        dir_result = dir(composio_components)
+        assert "ComposioAPIComponent" in dir_result
+        assert "ComposioGmailAPIComponent" in dir_result
 
     def test_category_module_missing_component(self):
         """Test error handling for non-existent component in category."""
-        import lfx.components.openai as openai_components
+        import lfx.components.composio as composio_components
 
         with pytest.raises(AttributeError, match="has no attribute 'NonExistentComponent'"):
-            _ = openai_components.NonExistentComponent
+            _ = composio_components.NonExistentComponent
 
     def test_multiple_category_modules(self):
         """Test dynamic imports work across multiple category modules."""
-        import lfx.components.anthropic as anthropic_components
         import lfx.components.data as data_components
+        import lfx.components.huggingface as huggingface_components
 
         # Test different categories work independently
-        # AnthropicModelComponent should work if anthropic library is available
+        # HuggingFaceEndpointsComponent should work if its deps are available
         try:
-            anthropic_component = anthropic_components.AnthropicModelComponent
+            hf_component = huggingface_components.HuggingFaceEndpointsComponent
             # If it succeeds, just check it's a valid component
-            assert anthropic_component is not None
-            assert hasattr(anthropic_component, "__name__")
+            assert hf_component is not None
+            assert hasattr(hf_component, "__name__")
         except AttributeError:
             # If it fails due to missing dependencies, that's also expected
             pass
@@ -139,7 +144,7 @@ class TestComponentDynamicImports:
         assert hasattr(api_component, "__name__")
 
         # Test that __all__ still works correctly despite import failures
-        assert "AnthropicModelComponent" in anthropic_components.__all__
+        assert "HuggingFaceEndpointsComponent" in huggingface_components.__all__
         assert "APIRequestComponent" in data_components.__all__
 
     def test_backward_compatibility(self):
@@ -195,15 +200,15 @@ class TestComponentDynamicImports:
 
     def test_consistency_check(self):
         """Test that __all__ and _dynamic_imports are consistent."""
-        import lfx.components.openai as openai_components
+        import lfx.components.composio as composio_components
 
         # All items in __all__ should have corresponding entries in _dynamic_imports
-        for component_name in openai_components.__all__:
-            assert component_name in openai_components._dynamic_imports
+        for component_name in composio_components.__all__:
+            assert component_name in composio_components._dynamic_imports
 
         # All keys in _dynamic_imports should be in __all__
-        for component_name in openai_components._dynamic_imports:
-            assert component_name in openai_components.__all__
+        for component_name in composio_components._dynamic_imports:
+            assert component_name in composio_components.__all__
 
     def test_type_checking_imports(self):
         """Test that TYPE_CHECKING imports work correctly with dynamic loading."""
@@ -235,11 +240,13 @@ class TestPerformanceCharacteristics:
 
     def test_lazy_loading_performance(self):
         """Test that components can be accessed and cached properly."""
-        from lfx.components import chroma as chromamodules
+        # composio: still-in-tree lazy category with its SDK absent in the
+        # bare lfx test env (chroma graduated to the lfx-bundles metapackage).
+        from lfx.components import composio as composio_modules
 
         # Test that we can access a component
-        with pytest.raises(AttributeError, match=r"Could not import.*ChromaVectorStoreComponent"):
-            chromamodules.ChromaVectorStoreComponent  # noqa: B018
+        with pytest.raises(AttributeError, match=r"Could not import.*ComposioAPIComponent"):
+            composio_modules.ComposioAPIComponent  # noqa: B018
 
     def test_memory_usage_multiple_accesses(self):
         """Test memory behavior with multiple component accesses."""
@@ -293,16 +300,16 @@ class TestSpecialCases:
         from lfx import components
 
         # Test that we can access nested components through the hierarchy
-        # OpenAI component requires langchain_openai which isn't installed
-        with pytest.raises(AttributeError, match=r"Could not import.*OpenAIModelComponent"):
-            _ = components.openai.OpenAIModelComponent
+        # Composio components require the composio SDK which isn't installed
+        with pytest.raises(AttributeError, match=r"Could not import.*ComposioAPIComponent"):
+            _ = components.composio.ComposioAPIComponent
 
         # APIRequestComponent should work now that validators is installed
         api_component = components.data.APIRequestComponent
         assert api_component is not None
 
         # Test that both main module and submodules are properly cached
-        assert "openai" in components.__dict__
+        assert "composio" in components.__dict__
         assert "data" in components.__dict__
 
 
