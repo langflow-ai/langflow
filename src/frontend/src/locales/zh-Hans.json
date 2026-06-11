@@ -1555,6 +1555,8 @@
   "paramRender.addOrEditData": "添加或编辑数据",
   "playground.cancelButton": "取消",
   "playground.defaultSession": "默认会话",
+  "playground.noInputHint": "在流程中添加一个 <1>Chat Input</1> 组件，用于发送消息。",
+  "playground.runFlow": "运行流程",
   "playground.sendButton": "发送",
   "playgroundComponent.chatSessions": "聊天记录",
   "playgroundComponent.clearChat": "清除交谈",

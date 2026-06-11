@@ -1555,6 +1555,8 @@
   "paramRender.addOrEditData": "データの追加または編集",
   "playground.cancelButton": "キャンセル",
   "playground.defaultSession": "デフォルトのセッション",
+  "playground.noInputHint": "フローに「 <1>Chat 」コンポーネント（ Input</1> ）を追加して、メッセージを送信します。",
+  "playground.runFlow": "実行フロー",
   "playground.sendButton": "送信",
   "playgroundComponent.chatSessions": "チャットセッション",
   "playgroundComponent.clearChat": "チャットをクリアする",

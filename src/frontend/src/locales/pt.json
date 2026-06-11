@@ -1555,6 +1555,8 @@
   "paramRender.addOrEditData": "Adicionar ou editar dados",
   "playground.cancelButton": "Cancelar",
   "playground.defaultSession": "Sessão padrão",
+  "playground.noInputHint": "Adicione um componente do <1>Chat Input</1> ao seu fluxo para enviar mensagens.",
+  "playground.runFlow": "Executar fluxo",
   "playground.sendButton": "Enviar",
   "playgroundComponent.chatSessions": "Sessões de chat",
   "playgroundComponent.clearChat": "Limpar o chat",
