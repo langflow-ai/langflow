@@ -69,7 +69,11 @@ def _cache_overlay_entry(cache_key: str, sig: tuple[int, int], entry: dict) -> d
     return entry
 
 
-def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
+def load_registry_with_user_overlay(
+    *,
+    user_id: str | None,
+    components_paths: list[str] | None = None,
+) -> dict[str, dict]:
     """Return the base registry merged with the user's overlay.
 
     Always returns the base registry. Adds entries for each
@@ -84,7 +88,7 @@ def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
         - A specific user file is unreadable, oversized, or empty.
     Collisions with base type names are dropped (base wins).
     """
-    base_registry = load_local_registry()
+    base_registry = load_local_registry(components_paths)
 
     if user_id is None:
         return base_registry
@@ -129,7 +133,7 @@ def load_registry_with_user_overlay(*, user_id: str | None) -> dict[str, dict]:
     return merged
 
 
-def load_registry_for_current_user() -> dict[str, dict]:
+def load_registry_for_current_user(components_paths: list[str] | None = None) -> dict[str, dict]:
     """Convenience wrapper that reads ``user_id`` from the ContextVar.
 
     Used by the MCP tools so they don't have to plumb ``user_id``
@@ -137,7 +141,7 @@ def load_registry_for_current_user() -> dict[str, dict]:
     with whatever overlay applies to the currently-bound user (or just
     the base registry if no user is bound).
     """
-    return load_registry_with_user_overlay(user_id=current_user_id())
+    return load_registry_with_user_overlay(user_id=current_user_id(), components_paths=components_paths)
 
 
 def _build_overlay_entry(py_file: Path, base_template: dict) -> dict | None:

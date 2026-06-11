@@ -10,6 +10,8 @@ import json
 from pathlib import Path
 from typing import Any
 
+from lfx.constants import BASE_COMPONENTS_PATH
+from lfx.custom.utils import build_custom_components
 from lfx.graph.flow_builder.component import add_component, configure_component
 from lfx.graph.flow_builder.connect import add_connection
 from lfx.graph.flow_builder.flow import empty_flow
@@ -19,31 +21,22 @@ from lfx.log.logger import logger
 
 _INDEX_PATH = Path(__file__).resolve().parent.parent.parent / "_assets" / "component_index.json"
 _registry_cache: dict[str, dict] | None = None
+_registry_with_components_path_cache: dict[tuple[str, ...], dict[str, dict]] = {}
 
 
-def load_local_registry() -> dict[str, dict]:
-    """Load the component registry from the bundled index file.
+def _normalize_components_paths(components_paths: list[str] | None) -> tuple[str, ...]:
+    if not components_paths:
+        return ()
+    paths: list[str] = []
+    for path in components_paths:
+        path_str = str(path)
+        if path_str == BASE_COMPONENTS_PATH or path_str in paths:
+            continue
+        paths.append(path_str)
+    return tuple(paths)
 
-    Returns a flat dict: {component_type: template_dict}.
-    Results are cached after the first call.
 
-    Raises:
-        RuntimeError: If the index file is missing, corrupt, or empty.
-    """
-    global _registry_cache  # noqa: PLW0603
-    if _registry_cache is not None:
-        return _registry_cache
-
-    try:
-        with _INDEX_PATH.open(encoding="utf-8") as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        msg = f"Component registry not found at {_INDEX_PATH}. The lfx package may be installed incorrectly."
-        raise RuntimeError(msg) from None
-    except (json.JSONDecodeError, OSError) as e:
-        msg = f"Failed to load component registry from {_INDEX_PATH}: {e}"
-        raise RuntimeError(msg) from e
-
+def _flatten_registry_entries(data: dict) -> dict[str, dict]:
     registry: dict[str, dict] = {}
     for cat in data.get("entries", []):
         if isinstance(cat, list) and len(cat) > 1 and isinstance(cat[1], dict):
@@ -51,14 +44,64 @@ def load_local_registry() -> dict[str, dict]:
             for name, comp_data in cat[1].items():
                 if isinstance(comp_data, dict) and "template" in comp_data:
                     registry[name] = {**comp_data, "category": category_name}
-
-    if not registry:
-        msg = f"Component registry at {_INDEX_PATH} contains no valid components."
-        raise RuntimeError(msg)
-
-    logger.debug("Loaded %d components from local registry", len(registry))
-    _registry_cache = registry
     return registry
+
+
+def _flatten_component_groups(components: dict) -> dict[str, dict]:
+    registry: dict[str, dict] = {}
+    for category_name, category_components in components.items():
+        if not isinstance(category_components, dict):
+            continue
+        for name, comp_data in category_components.items():
+            if isinstance(comp_data, dict) and "template" in comp_data:
+                registry[name] = {**comp_data, "category": category_name}
+    return registry
+
+
+def load_local_registry(components_paths: list[str] | None = None) -> dict[str, dict]:
+    """Load the component registry from the bundled index file and optional custom paths.
+
+    Returns a flat dict: {component_type: template_dict}.
+    Results are cached after the first call for each path set.
+
+    Raises:
+        RuntimeError: If the index file is missing, corrupt, or empty.
+    """
+    global _registry_cache  # noqa: PLW0603
+    cache_key = _normalize_components_paths(components_paths)
+    if cache_key and cache_key in _registry_with_components_path_cache:
+        return dict(_registry_with_components_path_cache[cache_key])
+
+    if _registry_cache is not None:
+        registry = _registry_cache
+    else:
+        try:
+            with _INDEX_PATH.open(encoding="utf-8") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            msg = f"Component registry not found at {_INDEX_PATH}. The lfx package may be installed incorrectly."
+            raise RuntimeError(msg) from None
+        except (json.JSONDecodeError, OSError) as e:
+            msg = f"Failed to load component registry from {_INDEX_PATH}: {e}"
+            raise RuntimeError(msg) from e
+
+        registry = _flatten_registry_entries(data)
+
+        if not registry:
+            msg = f"Component registry at {_INDEX_PATH} contains no valid components."
+            raise RuntimeError(msg)
+
+        logger.debug("Loaded %d components from local registry", len(registry))
+        _registry_cache = registry
+
+    if not cache_key:
+        return registry
+
+    custom_registry = _flatten_component_groups(build_custom_components(list(cache_key)))
+    merged = dict(registry)
+    merged.update(custom_registry)
+    _registry_with_components_path_cache[cache_key] = merged
+    return dict(merged)
 
 
 def build_flow_from_spec(

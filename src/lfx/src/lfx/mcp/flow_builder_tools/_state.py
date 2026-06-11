@@ -18,10 +18,18 @@ from typing import Any
 
 from lfx.graph.flow_builder.builder import load_local_registry
 from lfx.graph.flow_builder.flow import empty_flow
+from lfx.services.deps import get_settings_service
 
 # ---------------------------------------------------------------------------
 # Registry loader (user-overlay aware)
 # ---------------------------------------------------------------------------
+
+
+def _components_paths_from_settings() -> list[str] | None:
+    settings_service = get_settings_service()
+    if settings_service is None:
+        return None
+    return getattr(settings_service.settings, "components_path", None)
 
 
 def _load_registry_user_aware() -> dict[str, dict]:
@@ -43,8 +51,8 @@ def _load_registry_user_aware() -> dict[str, dict]:
             load_registry_for_current_user,
         )
     except ImportError:
-        return load_local_registry()
-    return load_registry_for_current_user()
+        return load_local_registry(_components_paths_from_settings())
+    return load_registry_for_current_user(components_paths=_components_paths_from_settings())
 
 
 # ---------------------------------------------------------------------------
