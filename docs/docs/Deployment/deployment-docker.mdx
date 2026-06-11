@@ -77,7 +77,7 @@ Configure a container's database credentials using a `.env` file.
     LANGFLOW_CONFIG_DIR=/app/langflow
     ```
 
-2. Modify the `docker-compose.yml` file to reference the `.env` file for both the `langflow` and `postgres` services:
+2. Edit `docker-compose.yml` to replace the hardcoded values with variable references for both the `langflow` and `postgres` services:
 
     ```yaml
     services:
@@ -91,6 +91,8 @@ Configure a container's database credentials using a `.env` file.
           - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
           - POSTGRES_DB=${POSTGRES_DB}
     ```
+
+    With variable references in place, Docker Compose reads the values from your `.env` file at startup.
 
 For a complete list of available environment variables, see [Langflow environment variables](/environment-variables).
 
@@ -251,6 +253,7 @@ The workspace members are defined in `[tool.uv.workspace]` in the root `pyprojec
     COPY ./src/lfx/pyproject.toml /app/src/lfx/pyproject.toml
     COPY ./src/sdk/README.md /app/src/sdk/README.md
     COPY ./src/sdk/pyproject.toml /app/src/sdk/pyproject.toml
+    COPY ./src/bundles /app/src/bundles
     ```
 
 2. To install dependencies and copy the source, include the following:
@@ -292,14 +295,9 @@ The following environment variables are set by default:
 | `LANGFLOW_SUPERUSER_PASSWORD` | `langflow` | Initial admin password |
 | `LANGFLOW_CONFIG_DIR` | `/var/lib/langflow` | Directory for Langflow config and data |
 
-To override these values, export variables in your shell before running `make dcdev_up`. Shell-exported variables take precedence over the values set in the `environment:` block of the Compose file:
+To override these values, edit `docker/dev.docker-compose.yml` directly.
 
-```shell
-export LANGFLOW_SUPERUSER=myadmin
-make dcdev_up
-```
-
-Alternatively, edit `docker/dev.docker-compose.yml` directly. A `.env` file in the repo root will not work  because Docker Compose v2 gives `environment:` block values higher precedence than `env_file:`, so the hardcoded defaults in the Compose file win.
+`docker/dev.docker-compose.yml` uses literal values in its `environment:` block, such as `- LANGFLOW_SUPERUSER=langflow`. Docker Compose v2 gives `environment:` block literal values higher precedence than shell-exported variables and `env_file:`, so neither `export LANGFLOW_SUPERUSER=myadmin` or a `.env` file will override them. Edit the file directly instead.
 
 ## Upgrade the Langflow Docker image {#upgrade-the-langflow-docker-image}
 
