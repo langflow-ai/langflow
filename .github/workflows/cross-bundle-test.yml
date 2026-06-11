@@ -38,6 +38,7 @@ jobs:
   discover:
     name: Discover bundles
     runs-on: ubuntu-latest
+    timeout-minutes: 5
     outputs:
       bundles: ${{ steps.find.outputs.bundles }}
     steps:
@@ -66,6 +67,7 @@ jobs:
     needs: discover
     if: needs.discover.outputs.bundles != '[]'
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:

@@ -413,8 +413,13 @@ def _discover_shimmed_component_dirs(search_paths: list[str]) -> set[str]:
             init_py = child / "__init__.py"
             if not (child.is_dir() and init_py.is_file()):
                 continue
+            # The shim contract puts the marker on line 1 (enforced by
+            # test_shim_source_contract), so only the first line is read --
+            # a non-shim file that merely mentions the marker further down
+            # can never be misclassified and silently skipped.
             try:
-                head = init_py.read_text(encoding="utf-8").lstrip()
+                with init_py.open(encoding="utf-8") as f:
+                    head = f.readline()
             except OSError:
                 continue
             if head.startswith(_LFX_BUNDLES_SHIM_MARKER):

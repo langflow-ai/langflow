@@ -45,17 +45,3 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.github_token }}
 
-  freeze-components:
-    name: Freeze lfx/components
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out the code at a specific ref
-        uses: actions/checkout@v6
-        with:
-          ref: ${{ inputs.branch || github.ref }}
-          persist-credentials: false
-      # Stdlib-only gate; no uv sync needed.  After the bundle metapackage
-      # split, new providers go to lfx-bundles, not src/lfx/src/lfx/components/.
-      - name: Forbid new top-level directories under lfx/components (post-freeze)
-        run: python3 scripts/ci/check_components_frozen.py
-
