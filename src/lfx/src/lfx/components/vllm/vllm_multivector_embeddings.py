@@ -3,35 +3,44 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from lfx.base.embeddings.model import LCEmbeddingsModel
-from lfx.components.vllm.colbert_embeddings_impl import VllmColBERTEmbeddings
+from lfx.components.vllm.vllm_multivector_impl import VllmMultivectorEmbeddings
+from lfx.io import FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 if TYPE_CHECKING:
     from lfx.field_typing import Embeddings
-from lfx.io import FloatInput, IntInput, MessageTextInput, SecretStrInput
 
 
-class VllmColBERTEmbeddingsComponent(LCEmbeddingsModel):
-    display_name = "vLLM ColBERT Embeddings"
+class VllmMultivectorEmbeddingsComponent(LCEmbeddingsModel):
+    display_name = "vLLM Multivector Embeddings"
     description = (
-        "Multi-vector (ColBERT-style) token embeddings via vLLM. "
-        "Returns one token matrix per document — compatible with NextPlaid."
+        "Multi-vector (ColBERT/ColPali-style) token embeddings via vLLM's /pooling endpoint. "
+        "Compatible with text-only ColBERT models and multi-modal ColPali models. "
+        "Required for use with the NextPlaid vector store."
     )
     icon = "vLLM"
-    name = "VllmColBERTEmbeddings"
+    name = "VllmMultivectorEmbeddings"
 
     inputs = [
         MessageTextInput(
             name="model_name",
             display_name="Model Name",
             advanced=False,
-            info="ColBERT-compatible model served by vLLM, e.g. 'answerdotai/answerai-colbert-small-v1'.",
+            info=(
+                "Multi-vector model served by vLLM. Examples:\n"
+                "Text (ColBERT): answerdotai/answerai-colbert-small-v1\n"
+                "Text + Images (ColPali): ModernVBERT/colmodernvbert"
+            ),
             value="answerdotai/answerai-colbert-small-v1",
         ),
         MessageTextInput(
             name="api_base",
             display_name="vLLM API Base",
             advanced=False,
-            info="Base URL of the vLLM server. Do NOT include /v1 — added automatically.",
+            info=(
+                "Base URL of the vLLM server (no /v1 suffix). "
+                "Start vLLM with: vllm serve <model> --runner pooling "
+                '--pooler-config \'{"task": "token_embed"}\''
+            ),
             value="http://localhost:8000",
         ),
         SecretStrInput(
@@ -47,7 +56,7 @@ class VllmColBERTEmbeddingsComponent(LCEmbeddingsModel):
             display_name="Request Timeout",
             advanced=True,
             value=60.0,
-            info="Timeout in seconds for requests to the vLLM API.",
+            info="Timeout in seconds for each request to the vLLM API.",
         ),
         IntInput(
             name="max_retries",
@@ -59,7 +68,7 @@ class VllmColBERTEmbeddingsComponent(LCEmbeddingsModel):
     ]
 
     def build_embeddings(self) -> Embeddings:
-        return VllmColBERTEmbeddings(
+        return VllmMultivectorEmbeddings(
             url=self.api_base or "http://localhost:8000",
             model=self.model_name,
             api_key=self.api_key or "",

@@ -6,19 +6,20 @@ from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
     from lfx.components.vllm.vllm import VllmComponent
-    from lfx.components.vllm.vllm_colbert_embeddings import VllmColBERTEmbeddingsComponent
     from lfx.components.vllm.vllm_embeddings import VllmEmbeddingsComponent
+    from lfx.components.vllm.vllm_multivector_embeddings import VllmMultivectorEmbeddingsComponent
+
 
 _dynamic_imports = {
     "VllmComponent": "vllm",
     "VllmEmbeddingsComponent": "vllm_embeddings",
-    "VllmColBERTEmbeddingsComponent": "vllm_colbert_embeddings",
+    "VllmMultivectorEmbeddingsComponent": "vllm_multivector_embeddings",
 }
 
 __all__ = [
-    "VllmColBERTEmbeddingsComponent",
     "VllmComponent",
     "VllmEmbeddingsComponent",
+    "VllmMultivectorEmbeddingsComponent",
 ]
 
 
