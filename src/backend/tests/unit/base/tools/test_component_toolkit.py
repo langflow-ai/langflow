@@ -6,9 +6,9 @@ from lfx.base.tools.component_tool import ComponentToolkit
 from lfx.components.data_source.sql_executor import SQLComponent
 from lfx.components.input_output.chat_output import ChatOutput
 from lfx.components.langchain_utilities import ToolCallingAgentComponent
-from lfx.components.openai.openai_chat_model import OpenAIModelComponent
 from lfx.components.tools.calculator import CalculatorToolComponent
 from lfx.graph.graph.base import Graph
+from lfx_openai.components.openai.openai_chat_model import OpenAIModelComponent
 from pydantic import BaseModel
 
 from tests.api_keys import get_openai_api_key

@@ -19,11 +19,24 @@ maintainers = [
 dependencies = [
     "langflow-base[complete]>=0.11.0",
     # langflow-extensions:bundle-deps-start
-    "lfx-duckduckgo>=0.1.0",
-    "lfx-arxiv>=0.1.0",
-    "lfx-ibm>=0.1.0",
-    "lfx-docling>=0.1.0",
+    # Release coordination: langflow declares BOUNDED ranges (>=A,<B) for every
+    # curated lfx-* package, never exact pins -- exact pins in reusable library
+    # metadata create resolver conflicts for downstreams that depend on a
+    # different version. Exact pins for reproducibility live in uv.lock and the
+    # release-build manifests. Bundles follow their own 0.1.x cadence (bound
+    # <1.0.0); lfx-bundles versions with the metapackage contract (bound <2.0).
+    # The cross-bundle CI matrix verifies these ranges resolve together across
+    # the supported lfx axis.
+    "lfx-duckduckgo>=0.1.0,<1.0.0",
+    "lfx-arxiv>=0.1.0,<1.0.0",
+    "lfx-ibm>=0.1.0,<1.0.0",
+    "lfx-docling>=0.1.0,<1.0.0",
     "lfx-bundles[all]>=1.0,<2.0",
+    "lfx-datastax>=0.1.0,<1.0.0",
+    "lfx-openai>=0.1.0,<1.0.0",
+    "lfx-anthropic>=0.1.0,<1.0.0",
+    "lfx-amazon>=0.1.0,<1.0.0",
+    "lfx-cohere>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -86,6 +99,11 @@ lfx-arxiv = { workspace = true }
 lfx-ibm = { workspace = true }
 lfx-docling = { workspace = true }
 lfx-bundles = { workspace = true }
+lfx-datastax = { workspace = true }
+lfx-openai = { workspace = true }
+lfx-anthropic = { workspace = true }
+lfx-amazon = { workspace = true }
+lfx-cohere = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -103,6 +121,11 @@ members = [
     "src/bundles/ibm",
     "src/bundles/docling",
     "src/bundles/lfx-bundles",
+    "src/bundles/datastax",
+    "src/bundles/openai",
+    "src/bundles/anthropic",
+    "src/bundles/amazon",
+    "src/bundles/cohere",
     # langflow-extensions:bundle-members-end
 ]
 
@@ -115,15 +138,15 @@ Documentation = "https://docs.langflow.org"
 
 [project.optional-dependencies]
 docling = [
-    "lfx-docling[local]>=0.1.0",
+    "lfx-docling[local]>=0.1.0,<1.0.0",
 ]
 
 docling-chunking = [
-    "lfx-docling[chunking]>=0.1.0",
+    "lfx-docling[chunking]>=0.1.0,<1.0.0",
 ]
 
 docling-image-description = [
-    "lfx-docling[image-description]>=0.1.0",
+    "lfx-docling[image-description]>=0.1.0,<1.0.0",
 ]
 
 audio = [
@@ -351,9 +374,6 @@ external = ["RUF027"]
 ]
 "src/lfx/src/lfx/components/data/save_file.py" = [
     "SLF001",  # Google API client private member access
-]
-"src/lfx/src/lfx/components/datastax/astradb_vectorstore.py" = [
-    "S110",  # Try-except-pass for optional metadata
 ]
 "src/lfx/src/lfx/components/google/google_generative_ai_embeddings.py" = [
     "SLF001",  # Google AI library private member access

@@ -342,7 +342,7 @@ class TestDynamicImportIntegration:
         assert not hasattr(lfx_datastax, "GetEnvVar"), "GetEnvVar should have been removed from lfx.components.datastax"
 
         with pytest.raises((ImportError, ModuleNotFoundError)):
-            importlib.import_module("lfx.components.datastax.getenvvar")
+            importlib.import_module("lfx_datastax.components.datastax.getenvvar")
 
     def test_python_code_structured_tool_removed(self):
         """Test that the removed PythonCodeStructuredTool component cannot be imported from lfx tools.
