@@ -1,6 +1,5 @@
 import type { CustomCellRendererProps } from "ag-grid-react";
 import { uniqueId } from "lodash";
-import { useEffect, useState } from "react";
 import NumberReader from "@/components/common/numberReader";
 import ObjectRender from "@/components/common/objectRender";
 import StringReader from "@/components/common/stringReaderComponent";
@@ -25,43 +24,30 @@ export default function TableAutoCellRender({
   ...props
 }: CustomCellRender) {
   const field = colDef?.field;
-  const rowData = props.data as Record<string, unknown> | undefined;
-  const [localValue, setLocalValue] = useState(value ?? "");
-
-  useEffect(() => {
-    setLocalValue(value ?? "");
-  }, [value]);
-
-  const rowLoadFromDbFields = rowData?.[TABLE_LOAD_FROM_DB_FIELDS];
   const loadFromDbFields =
-    rowLoadFromDbFields &&
-    typeof rowLoadFromDbFields === "object" &&
-    !Array.isArray(rowLoadFromDbFields)
-      ? (rowLoadFromDbFields as Record<string, boolean>)
+    props.data?.[TABLE_LOAD_FROM_DB_FIELDS] &&
+    typeof props.data[TABLE_LOAD_FROM_DB_FIELDS] === "object"
+      ? props.data[TABLE_LOAD_FROM_DB_FIELDS]
       : {};
   const cellLoadsFromDb = !!(field && loadFromDbFields[field]);
 
   function setCellLoadFromDb(loadFromDb: boolean) {
-    if (!field || !rowData) {
+    if (!field || !props.data) {
       return;
     }
 
     const nextLoadFromDbFields = { ...loadFromDbFields };
-    nextLoadFromDbFields[field] = loadFromDb;
-
-    rowData[TABLE_LOAD_FROM_DB_FIELDS] = nextLoadFromDbFields;
-  }
-
-  function updateGlobalVariableCell(nextValue: string, loadFromDb: boolean) {
-    setLocalValue(nextValue);
-    setCellLoadFromDb(loadFromDb);
-
-    if (loadFromDb || !field || !rowData) {
-      setValue?.(nextValue);
-      return;
+    if (loadFromDb) {
+      nextLoadFromDbFields[field] = true;
+    } else {
+      delete nextLoadFromDbFields[field];
     }
 
-    rowData[field] = nextValue;
+    if (Object.keys(nextLoadFromDbFields).length > 0) {
+      props.data[TABLE_LOAD_FROM_DB_FIELDS] = nextLoadFromDbFields;
+    } else {
+      delete props.data[TABLE_LOAD_FROM_DB_FIELDS];
+    }
   }
 
   function getCellType() {
@@ -108,13 +94,11 @@ export default function TableAutoCellRender({
           return (
             <InputGlobalComponent
               id="string-reader-global"
-              value={localValue}
+              value={value ?? ""}
               editNode={false}
               handleOnNewValue={(newValue) => {
-                updateGlobalVariableCell(
-                  newValue.value,
-                  !!newValue.load_from_db,
-                );
+                setCellLoadFromDb(!!newValue.load_from_db);
+                setValue?.(newValue.value);
               }}
               disabled={
                 !colDef?.onCellValueChanged &&
