@@ -1315,286 +1315,6 @@
       "ErrorDetail": {
         "description": "Error detail schema.",
         "properties": {
-          "allow_markdown": {
-            "default": true,
-            "title": "Allow Markdown",
-            "type": "boolean"
-          },
-          "contents": {
-            "items": {
-              "additionalProperties": true,
-              "type": "object"
-            },
-            "title": "Contents",
-            "type": "array"
-          },
-          "media_url": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Media Url"
-          },
-          "title": {
-            "title": "Title",
-            "type": "string"
-          }
-        },
-        "required": [
-          "title",
-          "contents"
-        ],
-        "title": "ContentBlock",
-        "type": "object"
-      },
-      "EffectivePermissionsRequest": {
-        "description": "Body for :func:`get_effective_permissions`.",
-        "properties": {
-          "actions": {
-            "anyOf": [
-              {
-                "items": {
-                  "type": "string"
-                },
-                "type": "array"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "description": "Actions to check. Each entry is lowercased and de-duplicated; the list is capped at 10. Defaults to read/write/execute/delete/create.",
-            "title": "Actions"
-          },
-          "domain": {
-            "default": "*",
-            "description": "Authorization domain — typically ``project:{folder_id}`` or ``*``.",
-            "title": "Domain",
-            "type": "string"
-          },
-          "resource_ids": {
-            "description": "Resource IDs to evaluate. Capped at 500 per request to keep batch_enforce bounded.",
-            "items": {
-              "format": "uuid",
-              "type": "string"
-            },
-            "title": "Resource Ids",
-            "type": "array"
-          },
-          "resource_type": {
-            "enum": [
-              "flow",
-              "deployment",
-              "project",
-              "knowledge_base",
-              "variable",
-              "file",
-              "component"
-            ],
-            "title": "Resource Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "resource_type",
-          "resource_ids"
-        ],
-        "title": "EffectivePermissionsRequest",
-        "type": "object"
-      },
-      "EventDeliveryType": {
-        "enum": [
-          "streaming",
-          "direct",
-          "polling"
-        ],
-        "title": "EventDeliveryType",
-        "type": "string"
-      },
-      "ExtensionEventResponse": {
-        "properties": {
-          "payload": {
-            "additionalProperties": true,
-            "title": "Payload",
-            "type": "object"
-          },
-          "timestamp": {
-            "title": "Timestamp",
-            "type": "number"
-          },
-          "type": {
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "type",
-          "timestamp",
-          "payload"
-        ],
-        "title": "ExtensionEventResponse",
-        "type": "object"
-      },
-      "ExtensionEventsResponse": {
-        "properties": {
-          "events": {
-            "items": {
-              "$ref": "#/components/schemas/ExtensionEventResponse"
-            },
-            "title": "Events",
-            "type": "array"
-          },
-          "settled": {
-            "title": "Settled",
-            "type": "boolean"
-          }
-        },
-        "required": [
-          "events",
-          "settled"
-        ],
-        "title": "ExtensionEventsResponse",
-        "type": "object"
-      },
-      "FeatureFlags": {
-        "additionalProperties": false,
-        "properties": {
-          "permissions": {
-            "additionalProperties": {
-              "items": {
-                "type": "string"
-              },
-              "type": "array"
-            },
-            "propertyNames": {
-              "format": "uuid"
-            },
-            "title": "Permissions",
-            "type": "object"
-          },
-          "resource_type": {
-            "enum": [
-              "flow",
-              "deployment",
-              "project",
-              "knowledge_base",
-              "variable",
-              "file",
-              "component"
-            ],
-            "title": "Resource Type",
-            "type": "string"
-          }
-        },
-        "required": [
-          "resource_type",
-          "permissions"
-        ],
-        "title": "EffectivePermissionsResponse",
-        "type": "object"
-      },
-      "ErrorContent-Input": {
-        "description": "Content type for error messages.",
-        "properties": {
-          "component": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Component"
-          },
-          "duration": {
-            "anyOf": [
-              {
-                "type": "integer"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Duration"
-          },
-          "field": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Field"
-          },
-          "header": {
-            "anyOf": [
-              {
-                "$ref": "#/components/schemas/HeaderDict"
-              },
-              {
-                "type": "null"
-              }
-            ]
-          },
-          "reason": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Reason"
-          },
-          "solution": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Solution"
-          },
-          "traceback": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Traceback"
-          },
-          "type": {
-            "const": "error",
-            "default": "error",
-            "title": "Type",
-            "type": "string"
-          }
-        },
-        "title": "ErrorContent",
-        "type": "object"
-      },
-      "ErrorContent-Output": {
-        "additionalProperties": true,
-        "type": "object"
-      },
-      "ErrorDetail": {
-        "description": "Error detail schema.",
-        "properties": {
           "code": {
             "anyOf": [
               {
@@ -4992,6 +4712,7 @@
           "endTime": {
             "anyOf": [
               {
+                "format": "date-time",
                 "type": "string"
               },
               {
@@ -5019,7 +4740,8 @@
           "inputs": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -5049,7 +4771,8 @@
           "outputs": {
             "anyOf": [
               {
-                "type": "string"
+                "additionalProperties": true,
+                "type": "object"
               },
               {
                 "type": "null"
@@ -5057,7 +4780,7 @@
             ],
             "title": "Outputs"
           },
-          "endTime": {
+          "startTime": {
             "anyOf": [
               {
                 "format": "date-time",
@@ -5426,8 +5149,6 @@
           "name": {
             "anyOf": [
               {
-                "maxLength": 255,
-                "minLength": 1,
                 "type": "string"
               },
               {
@@ -5715,23 +5436,9 @@
             ],
             "title": "Target Id"
           },
-          "output": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Output"
-          },
-          "sessionId": {
-            "title": "Sessionid",
+          "timestamp": {
+            "format": "date-time",
+            "title": "Timestamp",
             "type": "string"
           },
           "vertex_id": {
@@ -5803,9 +5510,6 @@
             "anyOf": [
               {
                 "type": "integer"
-              },
-              {
-                "type": "string"
               },
               {
                 "type": "null"
@@ -5921,7 +5625,6 @@
           "store_api_key": {
             "anyOf": [
               {
-                "format": "date-time",
                 "type": "string"
               },
               {
@@ -6085,33 +5788,6 @@
           "msg": {
             "title": "Message",
             "type": "string"
-          }
-        },
-        "required": [
-          "username",
-          "profile_image",
-          "store_api_key",
-          "is_active",
-          "is_superuser",
-          "create_at",
-          "updated_at",
-          "last_login_at"
-        ],
-        "title": "UserRead",
-        "type": "object"
-      },
-      "UserUpdate": {
-        "properties": {
-          "is_active": {
-            "anyOf": [
-              {
-                "type": "boolean"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Is Active"
           },
           "type": {
             "title": "Error Type",
@@ -9493,7 +9169,7 @@
     },
     "/api/v1/build/{flow_id}/flow": {
       "post": {
-        "description": "Build and process a flow, returning a job ID for event polling.\n\nThis endpoint requires authentication through the CurrentActiveUser dependency.\nFor public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.\n\nArgs:\n    flow_id: UUID of the flow to build\n    background_tasks: Background tasks manager\n    inputs: Optional input values for the flow\n    data: Optional flow data\n    files: Optional files to include\n    stop_component_id: Optional ID of component to stop at\n    start_component_id: Optional ID of component to start from\n    log_builds: Whether to log the build process\n    current_user: The authenticated user\n    queue_service: Queue service for job management\n    flow_name: Optional name for the flow\n    event_delivery: Optional event delivery type - default is streaming\n\nReturns:\n    Dict with job_id that can be used to poll for build status",
+        "description": "Build and process a flow, returning a job ID for event polling.<br><br>This endpoint requires authentication through the CurrentActiveUser dependency.<br>For public flows that don't require authentication, use the /build_public_tmp/flow_id/flow endpoint.<br><br>Args:<br>    flow_id: UUID of the flow to build<br>    background_tasks: Background tasks manager<br>    inputs: Optional input values for the flow<br>    data: Optional flow data<br>    files: Optional files to include<br>    stop_component_id: Optional ID of component to stop at<br>    start_component_id: Optional ID of component to start from<br>    log_builds: Whether to log the build process<br>    current_user: The authenticated user<br>    queue_service: Queue service for job management<br>    flow_name: Optional name for the flow<br>    event_delivery: Optional event delivery type - default is streaming<br><br>Returns:<br>    Dict with job_id that can be used to poll for build status",
         "operationId": "build_flow_api_v1_build__flow_id__flow_post",
         "parameters": [
           {
@@ -9622,7 +9298,7 @@
     },
     "/api/v1/build/{job_id}/cancel": {
       "post": {
-        "description": "Cancel a specific build job.\n\nRequires authentication and ownership verification to prevent a user from\naborting another user's running build (DoS via job cancellation).\nJobs with no registered owner (build_public_tmp) are accessible to any\nauthenticated user, consistent with get_build_events.",
+        "description": "Cancel a specific build job.<br><br>Requires authentication and ownership verification to prevent a user from<br>aborting another user's running build (DoS via job cancellation).<br>Jobs with no registered owner (build_public_tmp) are accessible to any<br>authenticated user, consistent with get_build_events.",
         "operationId": "cancel_build_api_v1_build__job_id__cancel_post",
         "parameters": [
           {
@@ -9676,7 +9352,7 @@
     },
     "/api/v1/build/{job_id}/events": {
       "get": {
-        "description": "Get events for a specific build job.\n\nRequires authentication and ownership verification. A job owner is registered\nwhen build_flow is called; if a registered owner does not match the requesting\nuser the endpoint returns 404 to avoid leaking job existence.\nJobs started via build_public_tmp have no registered owner and remain accessible\nto any authenticated user.",
+        "description": "Get events for a specific build job.<br><br>Requires authentication and ownership verification. A job owner is registered<br>when build_flow is called; if a registered owner does not match the requesting<br>user the endpoint returns 404 to avoid leaking job existence.<br>Jobs started via build_public_tmp have no registered owner and remain accessible<br>to any authenticated user.",
         "operationId": "get_build_events_api_v1_build__job_id__events_get",
         "parameters": [
           {
@@ -9852,129 +9528,6 @@
               }
             },
             "description": "Validation Error"
-          }
-        },
-        "summary": "Build Public Tmp",
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/v1/build_public_tmp/{job_id}/cancel": {
-      "post": {
-        "description": "Cancel a public flow build job.\n\nThis endpoint does not require authentication, matching the public build endpoint.\nIt is used by the shareable playground to cancel builds.",
-        "operationId": "cancel_build_public_api_v1_build_public_tmp__job_id__cancel_post",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "job_id",
-            "required": true,
-            "schema": {
-              "title": "Job Id",
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/CancelFlowResponse"
-                }
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Cancel Build Public",
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/v1/build_public_tmp/{job_id}/events": {
-      "get": {
-        "description": "Get events for a public flow build job.\n\nThis endpoint does not require authentication, matching the public build endpoint.\nIt is used by the shareable playground to consume build events.",
-        "operationId": "get_build_events_public_api_v1_build_public_tmp__job_id__events_get",
-        "parameters": [
-          {
-            "in": "path",
-            "name": "job_id",
-            "required": true,
-            "schema": {
-              "title": "Job Id",
-              "type": "string"
-            }
-          },
-          {
-            "in": "query",
-            "name": "event_delivery",
-            "required": false,
-            "schema": {
-              "$ref": "#/components/schemas/EventDeliveryType",
-              "default": "streaming"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            },
-            "description": "Successful Response"
-          },
-          "422": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            },
-            "description": "Validation Error"
-          }
-        },
-        "summary": "Get Build Events Public",
-        "tags": [
-          "Chat"
-        ]
-      }
-    },
-    "/api/v1/config": {
-      "get": {
-        "description": "Retrieve application configuration settings.\n\nReturns different configuration based on authentication status:\n- Authenticated users: Full ConfigResponse with all settings\n- Unauthenticated users: PublicConfigResponse with limited, safe-to-expose settings\n\nArgs:\n    user: The authenticated user, or None if unauthenticated.\n\nReturns:\n    ConfigResponse | PublicConfigResponse: Configuration settings appropriate for the user's auth status.\n\nRaises:\n    HTTPException: If an error occurs while retrieving the configuration.",
-        "operationId": "get_config_api_v1_config_get",
-        "responses": {
-          "200": {
-            "content": {
-              "application/json": {
-                "schema": {
-                  "anyOf": [
-                    {
-                      "$ref": "#/components/schemas/ConfigResponse"
-                    },
-                    {
-                      "$ref": "#/components/schemas/PublicConfigResponse"
-                    }
-                  ],
-                  "title": "Response Get Config Api V1 Config Get"
-                }
-              }
-            },
-            "description": "Successful Response"
           }
         },
         "summary": "Build Public Tmp",
@@ -10477,7 +10030,7 @@
     },
     "/api/v1/files/profile_pictures/list": {
       "get": {
-        "description": "List profile pictures from local filesystem.\n\nProfile pictures are first looked up in config_dir/profile_pictures/,\nthen fallback to the package's bundled profile_pictures directory.",
+        "description": "List profile pictures from local filesystem.<br><br>Profile pictures are first looked up in config_dir/profile_pictures/,<br>then fallback to the package's bundled profile_pictures directory.",
         "operationId": "list_profile_pictures_api_v1_files_profile_pictures_list_get",
         "responses": {
           "200": {
@@ -10497,7 +10050,7 @@
     },
     "/api/v1/files/profile_pictures/{folder_name}/{file_name}": {
       "get": {
-        "description": "Download profile picture from local filesystem.\n\nProfile pictures are first looked up in config_dir/profile_pictures/,\nthen fallback to the package's bundled profile_pictures directory.",
+        "description": "Download profile picture from local filesystem.<br><br>Profile pictures are first looked up in config_dir/profile_pictures/,<br>then fallback to the package's bundled profile_pictures directory.",
         "operationId": "download_profile_picture_api_v1_files_profile_pictures__folder_name___file_name__get",
         "parameters": [
           {
@@ -11282,7 +10835,7 @@
         ]
       },
       "put": {
-        "description": "Create or update a flow with a specific ID (upsert).\n\nReturns 201 for creation, 200 for update.  Returns 404 if owned by another user.",
+        "description": "Create or update a flow with a specific ID (upsert).<br><br>Returns 201 for creation, 200 for update.  Returns 404 if owned by another user.",
         "operationId": "upsert_flow_api_v1_flows__flow_id__put",
         "parameters": [
           {
@@ -11596,7 +11149,7 @@
         ]
       },
       "patch": {
-        "description": "Update the MCP settings of all flows in a project and project-level auth settings.\n\nOn MCP Composer failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
+        "description": "Update the MCP settings of all flows in a project and project-level auth settings.<br><br>On MCP Composer failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
         "operationId": "update_project_mcp_settings_api_v1_mcp_project__project_id__patch",
         "parameters": [
           {
@@ -11659,7 +11212,7 @@
     },
     "/api/v1/mcp/project/{project_id}/composer-url": {
       "get": {
-        "description": "Get the MCP Composer URL for a specific project.\n\nOn failure, this endpoint should return with a 200 status code and an error message in\nthe body of the response to display to the user.",
+        "description": "Get the MCP Composer URL for a specific project.<br><br>On failure, this endpoint should return with a 200 status code and an error message in<br>the body of the response to display to the user.",
         "operationId": "get_project_composer_url_api_v1_mcp_project__project_id__composer_url_get",
         "parameters": [
           {
@@ -12210,7 +11763,7 @@
     },
     "/api/v1/monitor/messages/session/{session_id}": {
       "delete": {
-        "description": "Delete messages for a single session.\n\nOnly deletes messages from sessions belonging to flows owned by the current user.",
+        "description": "Delete messages for a single session.<br><br>Only deletes messages from sessions belonging to flows owned by the current user.",
         "operationId": "delete_messages_session_api_v1_monitor_messages_session__session_id__delete",
         "parameters": [
           {
@@ -12257,7 +11810,7 @@
     },
     "/api/v1/monitor/messages/sessions": {
       "delete": {
-        "description": "Bulk delete messages for multiple sessions at once.\n\nOnly deletes messages from sessions belonging to flows owned by the current user.\n\nArgs:\n    session_ids: List of session IDs to delete (max 500)\n    session: Database session\n    current_user: Current authenticated user\n\nReturns:\n    Confirmation message with count of deleted sessions\n\nRaises:\n    HTTPException: 400 if session_ids list exceeds 500 items\n    HTTPException: 500 if database operation fails",
+        "description": "Bulk delete messages for multiple sessions at once.<br><br>Only deletes messages from sessions belonging to flows owned by the current user.<br><br>Args:<br>    session_ids: List of session IDs to delete (max 500)<br>    session: Database session<br>    current_user: Current authenticated user<br><br>Returns:<br>    Confirmation message with count of deleted sessions<br><br>Raises:<br>    HTTPException: 400 if session_ids list exceeds 500 items<br>    HTTPException: 500 if database operation fails",
         "operationId": "delete_messages_sessions_api_v1_monitor_messages_sessions_delete",
         "requestBody": {
           "content": {
@@ -12375,7 +11928,7 @@
     },
     "/api/v1/monitor/messages/shared": {
       "get": {
-        "description": "Get messages for a shared/public flow, scoped to the authenticated user.\n\nUses a deterministic virtual flow_id derived from the user's ID and the\noriginal flow ID. Only messages stored under this virtual flow_id are returned.",
+        "description": "Get messages for a shared/public flow, scoped to the authenticated user.<br><br>Uses a deterministic virtual flow_id derived from the user's ID and the<br>original flow ID. Only messages stored under this virtual flow_id are returned.",
         "operationId": "get_shared_messages_api_v1_monitor_messages_shared_get",
         "parameters": [
           {
@@ -12609,7 +12162,7 @@
     },
     "/api/v1/monitor/messages/shared/sessions": {
       "get": {
-        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.\n\nUses a deterministic virtual flow_id derived from the user's ID and the\noriginal flow ID. Only messages stored under this virtual flow_id are returned.",
+        "description": "Get session IDs for a shared/public flow, scoped to the authenticated user.<br><br>Uses a deterministic virtual flow_id derived from the user's ID and the<br>original flow ID. Only messages stored under this virtual flow_id are returned.",
         "operationId": "get_shared_message_sessions_api_v1_monitor_messages_shared_sessions_get",
         "parameters": [
           {
@@ -12811,7 +12364,7 @@
     },
     "/api/v1/monitor/traces": {
       "delete": {
-        "description": "Delete all traces for a flow.\n\nArgs:\n    flow_id: The ID of the flow whose traces should be deleted.\n    current_user: The authenticated user (required for authorization).",
+        "description": "Delete all traces for a flow.<br><br>Args:<br>    flow_id: The ID of the flow whose traces should be deleted.<br>    current_user: The authenticated user (required for authorization).",
         "operationId": "delete_traces_by_flow_api_v1_monitor_traces_delete",
         "parameters": [
           {
@@ -12857,7 +12410,7 @@
         ]
       },
       "get": {
-        "description": "Get list of traces for a flow.\n\nArgs:\n    current_user: Authenticated user (required for authorization)\n    flow_id: Filter by flow ID\n    session_id: Filter by session ID\n    status: Filter by trace status\n    query: Search query for trace name/id/session id\n    start_time: Filter traces starting on/after this time (ISO)\n    end_time: Filter traces starting on/before this time (ISO)\n    page: Page number (1-based)\n    size: Page size\n\nReturns:\n    List of traces",
+        "description": "Get list of traces for a flow.<br><br>Args:<br>    current_user: Authenticated user (required for authorization)<br>    flow_id: Filter by flow ID<br>    session_id: Filter by session ID<br>    status: Filter by trace status<br>    query: Search query for trace name/id/session id<br>    start_time: Filter traces starting on/after this time (ISO)<br>    end_time: Filter traces starting on/before this time (ISO)<br>    page: Page number (1-based)<br>    size: Page size<br><br>Returns:<br>    List of traces",
         "operationId": "get_traces_api_v1_monitor_traces_get",
         "parameters": [
           {
@@ -13024,7 +12577,7 @@
     },
     "/api/v1/monitor/traces/{trace_id}": {
       "delete": {
-        "description": "Delete a trace and all its spans.\n\nArgs:\n    trace_id: The ID of the trace to delete.\n    current_user: The authenticated user (required for authorization).",
+        "description": "Delete a trace and all its spans.<br><br>Args:<br>    trace_id: The ID of the trace to delete.<br>    current_user: The authenticated user (required for authorization).",
         "operationId": "delete_trace_api_v1_monitor_traces__trace_id__delete",
         "parameters": [
           {
@@ -13070,7 +12623,7 @@
         ]
       },
       "get": {
-        "description": "Get a single trace with its hierarchical span tree.\n\nArgs:\n    trace_id: The ID of the trace to retrieve.\n    current_user: The authenticated user (required for authorization).\n\nReturns:\n    TraceRead containing the trace and its hierarchical span tree.",
+        "description": "Get a single trace with its hierarchical span tree.<br><br>Args:<br>    trace_id: The ID of the trace to retrieve.<br>    current_user: The authenticated user (required for authorization).<br><br>Returns:<br>    TraceRead containing the trace and its hierarchical span tree.",
         "operationId": "get_trace_api_v1_monitor_traces__trace_id__get",
         "parameters": [
           {
@@ -13345,7 +12898,7 @@
     },
     "/api/v1/projects/upload/": {
       "post": {
-        "description": "Upload flows from a file.\n\nAccepts either a JSON file with project metadata (folder_name, folder_description, flows)\nor a ZIP file containing individual flow JSON files (as produced by the download endpoint).",
+        "description": "Upload flows from a file.<br><br>Accepts either a JSON file with project metadata (folder_name, folder_description, flows)<br>or a ZIP file containing individual flow JSON files (as produced by the download endpoint).",
         "operationId": "upload_file_api_v1_projects_upload__post",
         "requestBody": {
           "content": {
@@ -13632,7 +13185,7 @@
     },
     "/api/v1/responses": {
       "post": {
-        "description": "Create a response using OpenAI Responses API format.\n\nThis endpoint accepts a flow_id in the model parameter and processes\nthe input through the specified Langflow flow.\n\nArgs:\n    request: OpenAI Responses API request with model (flow_id) and input\n    background_tasks: FastAPI background task manager\n    api_key_user: Authenticated user from API key\n    http_request: The incoming HTTP request\n    telemetry_service: Telemetry service for logging\n\nReturns:\n    OpenAI-compatible response or streaming response\n\nRaises:\n    HTTPException: For validation errors or flow execution issues",
+        "description": "Create a response using OpenAI Responses API format.<br><br>This endpoint accepts a flow_id in the model parameter and processes<br>the input through the specified Langflow flow.<br><br>Args:<br>    request: OpenAI Responses API request with model (flow_id) and input<br>    background_tasks: FastAPI background task manager<br>    api_key_user: Authenticated user from API key<br>    http_request: The incoming HTTP request<br>    telemetry_service: Telemetry service for logging<br><br>Returns:<br>    OpenAI-compatible response or streaming response<br><br>Raises:<br>    HTTPException: For validation errors or flow execution issues",
         "operationId": "create_response_api_v1_responses_post",
         "requestBody": {
           "content": {
@@ -13680,7 +13233,7 @@
     },
     "/api/v1/run/advanced/{flow_id_or_name}": {
       "post": {
-        "description": "Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.\n\nThis endpoint supports running flows with caching to enhance performance and efficiency.\n\n### Parameters:\n- `flow` (Flow): The flow object to be executed, resolved via dependency injection.\n- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components\n  for the flow. Each input can target specific components and provide custom values.\n- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.\n  If not provided, all outputs are returned.\n- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.\n  The tweaks can be used to modify the flow's parameters and components.\n  Tweaks can be overridden by the input values.\n- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.\n- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow\n  execution.\n- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.\n\n### Returns:\nA `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow\nand the session ID.\nThe structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.\n\n### Raises:\nHTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during\nflow execution.\n\n### Example usage:\n```json\nPOST /run/flow_id\nx-api-key: YOUR_API_KEY\nPayload:\n{\n    \"inputs\": [\n        {\"components\": [\"component1\"], \"input_value\": \"value1\"},\n        {\"components\": [\"component3\"], \"input_value\": \"value2\"}\n    ],\n    \"outputs\": [\"Component Name\", \"component_id\"],\n    \"tweaks\": {\"parameter_name\": \"value\", \"Component Name\": {\"parameter_name\": \"value\"}, \"component_id\": {\"parameter_name\": \"value\"}}\n    \"stream\": false\n}\n```\n\nThis endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,\ncatering to diverse application requirements.",
+        "description": "Executes a specified flow by ID with optional input values, output selection, tweaks, and streaming capability.<br><br>This endpoint supports running flows with caching to enhance performance and efficiency.<br><br>### Parameters:<br>- `flow` (Flow): The flow object to be executed, resolved via dependency injection.<br>- `inputs` (List[InputValueRequest], optional): A list of inputs specifying the input values and components<br>  for the flow. Each input can target specific components and provide custom values.<br>- `outputs` (List[str], optional): A list of output names to retrieve from the executed flow.<br>  If not provided, all outputs are returned.<br>- `tweaks` (Optional[Tweaks], optional): A dictionary of tweaks to customize the flow execution.<br>  The tweaks can be used to modify the flow's parameters and components.<br>  Tweaks can be overridden by the input values.<br>- `stream` (bool, optional): Specifies whether the results should be streamed. Defaults to False.<br>- `session_id` (Union[None, str], optional): An optional session ID to utilize existing session data for the flow<br>  execution.<br>- `api_key_user` (User): The user associated with the current API key. Automatically resolved from the API key.<br><br>### Returns:<br>A `RunResponse` object containing the selected outputs (or all if not specified) of the executed flow<br>and the session ID.<br>The structure of the response accommodates multiple inputs, providing a nested list of outputs for each input.<br><br>### Raises:<br>HTTPException: Indicates issues with finding the specified flow, invalid input formats, or internal errors during<br>flow execution.<br><br>### Example usage:<br>```json<br>POST /run/flow_id<br>x-api-key: YOUR_API_KEY<br>Payload:<br>{<br>    \"inputs\": [<br>        {\"components\": [\"component1\"], \"input_value\": \"value1\"},<br>        {\"components\": [\"component3\"], \"input_value\": \"value2\"}<br>    ],<br>    \"outputs\": [\"Component Name\", \"component_id\"],<br>    \"tweaks\": {\"parameter_name\": \"value\", \"Component Name\": {\"parameter_name\": \"value\"}, \"component_id\": {\"parameter_name\": \"value\"}}<br>    \"stream\": false<br>}<br>```<br><br>This endpoint facilitates complex flow executions with customized inputs, outputs, and configurations,<br>catering to diverse application requirements.",
         "operationId": "experimental_run_flow_api_v1_run_advanced__flow_id_or_name__post",
         "parameters": [
           {
@@ -13740,7 +13293,7 @@
     },
     "/api/v1/run/{flow_id_or_name}": {
       "post": {
-        "description": "Executes a specified flow by ID with support for streaming and telemetry (API key auth).\n\nThis endpoint executes a flow identified by ID or name, with options for streaming the response\nand tracking execution metrics. It handles both streaming and non-streaming execution modes.\nThis endpoint uses API key authentication (Bearer token).\n\nArgs:\n    background_tasks (BackgroundTasks): FastAPI background task manager\n    flow (FlowRead | None): The flow to execute, loaded via dependency\n    input_request (SimplifiedAPIRequest | None): Input parameters for the flow\n    stream (bool): Whether to stream the response\n    api_key_user (UserRead): Authenticated user from API key\n    context (dict | None): Optional context to pass to the flow\n    http_request (Request): The incoming HTTP request for extracting global variables\n\nReturns:\n    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results\n    or a RunResponse with the complete execution results\n\nRaises:\n    HTTPException: For flow not found (404) or invalid input (400)\n    APIException: For internal execution errors (500)\n\nNotes:\n    - Supports both streaming and non-streaming execution modes\n    - Tracks execution time and success/failure via telemetry\n    - Handles graceful client disconnection in streaming mode\n    - Provides detailed error handling with appropriate HTTP status codes\n    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*\n    - Merges extracted variables with the context parameter as \"request_variables\"\n    - In streaming mode, uses EventManager to handle events:\n        - \"add_message\": New messages during execution\n        - \"token\": Individual tokens during streaming\n        - \"end\": Final execution result\n    - Authentication: Requires API key (Bearer token)",
+        "description": "Executes a specified flow by ID with support for streaming and telemetry (API key auth).<br><br>This endpoint executes a flow identified by ID or name, with options for streaming the response<br>and tracking execution metrics. It handles both streaming and non-streaming execution modes.<br>This endpoint uses API key authentication (Bearer token).<br><br>Args:<br>    background_tasks (BackgroundTasks): FastAPI background task manager<br>    flow (FlowRead | None): The flow to execute, loaded via dependency<br>    input_request (SimplifiedAPIRequest | None): Input parameters for the flow<br>    stream (bool): Whether to stream the response<br>    api_key_user (UserRead): Authenticated user from API key<br>    context (dict | None): Optional context to pass to the flow<br>    http_request (Request): The incoming HTTP request for extracting global variables<br><br>Returns:<br>    Union[StreamingResponse, RunResponse]: Either a streaming response for real-time results<br>    or a RunResponse with the complete execution results<br><br>Raises:<br>    HTTPException: For flow not found (404) or invalid input (400)<br>    APIException: For internal execution errors (500)<br><br>Notes:<br>    - Supports both streaming and non-streaming execution modes<br>    - Tracks execution time and success/failure via telemetry<br>    - Handles graceful client disconnection in streaming mode<br>    - Provides detailed error handling with appropriate HTTP status codes<br>    - Extracts global variables from HTTP headers with prefix X-LANGFLOW-GLOBAL-VAR-*<br>    - Merges extracted variables with the context parameter as \"request_variables\"<br>    - In streaming mode, uses EventManager to handle events:<br>        - \"add_message\": New messages during execution<br>        - \"token\": Individual tokens during streaming<br>        - \"end\": Final execution result<br>    - Authentication: Requires API key (Bearer token)",
         "operationId": "simplified_run_flow_api_v1_run__flow_id_or_name__post",
         "parameters": [
           {
@@ -13924,7 +13477,7 @@
         ]
       },
       "post": {
-        "description": "Add a new user to the database.\n\nThis endpoint allows public user registration (sign up).\nUser activation is controlled by the NEW_USER_IS_ACTIVE setting.",
+        "description": "Add a new user to the database.<br><br>This endpoint allows public user registration (sign up).<br>User activation is controlled by the NEW_USER_IS_ACTIVE setting.",
         "operationId": "add_user_api_v1_users__post",
         "requestBody": {
           "content": {
@@ -14687,7 +14240,7 @@
         ]
       },
       "get": {
-        "description": "Download a file by its ID or return its content as a string/bytes.\n\nArgs:\n    file_id: UUID of the file.\n    current_user: Authenticated user.\n    session: Database session.\n    storage_service: File storage service.\n    return_content: If True, return raw content (str) instead of StreamingResponse.\n\nReturns:\n    StreamingResponse for client downloads or str for internal use.",
+        "description": "Download a file by its ID or return its content as a string/bytes.<br><br>Args:<br>    file_id: UUID of the file.<br>    current_user: Authenticated user.<br>    session: Database session.<br>    storage_service: File storage service.<br>    return_content: If True, return raw content (str) instead of StreamingResponse.<br><br>Returns:<br>    StreamingResponse for client downloads or str for internal use.",
         "operationId": "download_file_api_v2_files__file_id__get",
         "parameters": [
           {
@@ -15585,7 +15138,7 @@
     },
     "/logs": {
       "get": {
-        "description": "Retrieve application logs with authentication required.\n\nSECURITY: Logs may contain sensitive information and require authentication.",
+        "description": "Retrieve application logs with authentication required.<br><br>SECURITY: Logs may contain sensitive information and require authentication.",
         "operationId": "logs_logs_get",
         "parameters": [
           {
@@ -15664,7 +15217,7 @@
     },
     "/logs-stream": {
       "get": {
-        "description": "HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.\n\nRequires authentication to prevent exposure of sensitive log data.\nIt establishes a long-lived connection to the server and receives log messages in real-time.\nThe client should use the header \"Accept: text/event-stream\".",
+        "description": "HTTP/2 Server-Sent-Event (SSE) endpoint for streaming logs.<br><br>Requires authentication to prevent exposure of sensitive log data.<br>It establishes a long-lived connection to the server and receives log messages in real-time.<br>The client should use the header \"Accept: text/event-stream\".",
         "operationId": "stream_logs_logs_stream_get",
         "responses": {
           "200": {
