@@ -86,10 +86,22 @@ _INTERNAL_IMPORT_NAMES: frozenset[str] = frozenset({"lfx", "langflow", "langflow
 _MODEL_FIELDS = {"model", "agent_llm", "embeddings_model", "embedding_model"}
 
 # Fallback provider → package mapping for providers whose component class may
-# not be importable in every environment (e.g. Azure OpenAI shares
-# langchain-openai with the regular OpenAI provider).
+# not be importable in every environment. Since the bundle split, provider
+# model components live in bundle distributions (lfx-openai, lfx-bundles, ...)
+# that an engine-only install does not carry, so MODEL_PROVIDERS_DICT registers
+# only in-tree providers there and the dynamic source-inspection path cannot
+# run. These static entries keep requirements inference working for flows
+# configured with those providers; a MODEL_PROVIDERS_DICT hit still wins.
 _PROVIDER_PACKAGE_FALLBACKS: dict[str, set[str]] = {
+    "Amazon Bedrock": {"langchain-aws"},
+    "Anthropic": {"langchain-anthropic"},
     "Azure OpenAI": {"langchain-openai"},
+    "Google Generative AI": {"langchain-google-genai"},
+    "Groq": {"langchain-groq"},
+    "IBM watsonx.ai": {"langchain-ibm"},
+    "Ollama": {"langchain-ollama"},
+    "OpenAI": {"langchain-openai"},
+    "SambaNova": {"langchain-sambanova"},
 }
 
 
