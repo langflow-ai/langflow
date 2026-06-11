@@ -85,8 +85,8 @@ markers = [
 
 [project.optional-dependencies]
 voice = [
-    "pipecat-ai>=0.0.70",
-    "pipecat-ai-flows>=1.0.0",
+    "pipecat-ai>=0.0.70; python_version >= '3.11'",
+    "pipecat-ai-flows>=1.0.0; python_version >= '3.11'",
 ]
 
 [dependency-groups]
