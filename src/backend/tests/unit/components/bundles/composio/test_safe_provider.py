@@ -145,7 +145,7 @@ class TestSafeLangchainProviderRegression:
 
     def test_file_helper_downloads_no_keyerror_on_untyped_property(self):
         """End-to-end guard against the original KeyError site for downloads.
-        
+
         Drives Composio's download walker with a params dict whose property has no
         ``type`` key. The wrapper should inject "type": "object" into the param.
         """
