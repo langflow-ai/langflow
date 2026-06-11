@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useHotkeys } from "react-hotkeys-hook";
+import { useTranslation } from "react-i18next";
 import { getSpecificClassFromBuildStatus } from "@/CustomNodes/helpers/get-class-from-build-status";
 import { mutateTemplate } from "@/CustomNodes/helpers/mutate-template";
 import useIconStatus from "@/CustomNodes/hooks/use-icons-status";
@@ -58,6 +59,7 @@ export default function NodeStatus({
   isBreakingChange: boolean;
   getValidationStatus: (data) => VertexBuildTypeAPI | null;
 }) {
+  const { t } = useTranslation();
   const nodeId_ = data.node?.flow?.data
     ? (findLastNode(data.node?.flow.data!)?.id ?? nodeId)
     : nodeId;
@@ -324,9 +326,9 @@ export default function NodeStatus({
 
   const getTooltipContent = () => {
     if (BuildStatus.BUILDING === buildStatus && isHovered) {
-      return "Stop build";
+      return t("node.stopBuild");
     }
-    return "Run component";
+    return t("node.runComponent");
   };
 
   const handleClickConnect = () => {
@@ -400,7 +402,7 @@ export default function NodeStatus({
               styleClasses={cn(
                 "border rounded-xl p-2",
                 conditionSuccess
-                  ? "bg-zinc-700"
+                  ? "bg-hard-zinc"
                   : "border-destructive bg-error-background",
               )}
               content={

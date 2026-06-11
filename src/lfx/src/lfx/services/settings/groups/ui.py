@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import AliasChoices, BaseModel, Field
 
 from lfx.serialization.constants import MAX_ITEMS_LENGTH, MAX_TEXT_LENGTH
 
@@ -20,6 +20,32 @@ class UiSettings(BaseModel):
 
     frontend_timeout: int = 0
     """Timeout for the frontend API calls in seconds."""
+
+    # Embedded mode flags
+    embedded_mode: bool = False
+    """Umbrella flag for iframe/embedded mode. When True, hides UI elements specific to
+    standalone installations (logout button, new project/flow buttons, starter projects, etc.).
+
+    This flag does not implicitly enable security controls such as
+    ``mcp_servers_locked`` or ``custom_component_admin_only``. Configure those
+    explicitly based on your deployment hardening requirements.
+    """
+    hide_getting_started_progress: bool = Field(
+        default=False,
+        validation_alias=AliasChoices(
+            "LANGFLOW_HIDE_GETTING_STARTED_PROGRESS",
+            "HIDE_GETTING_STARTED_PROGRESS",
+        ),
+    )
+    """If set to True, hides the getting-started onboarding progress UI."""
+    hide_logout_button: bool = False
+    """If set to True, hides the Logout button in the account menu."""
+    hide_new_project_button: bool = False
+    """If set to True, hides the ability to create new projects/folders."""
+    hide_new_flow_button: bool = False
+    """If set to True, hides the ability to create new flows."""
+    hide_starter_projects: bool = False
+    """If set to True, hides starter projects from the UI (does not affect database seeding)."""
 
     # Langflow Store (legacy)
     store: bool | None = True

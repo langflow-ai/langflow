@@ -8,8 +8,9 @@ from langchain_core._api.deprecation import LangChainDeprecationWarning
 from lfx.components._importing import import_mod
 
 if TYPE_CHECKING:
+    from lfx.components.files_and_knowledge.filesystem import FileSystemToolComponent
+
     from .calculator import CalculatorToolComponent
-    from .python_code_structured_tool import PythonCodeStructuredTool
     from .python_repl import PythonREPLToolComponent
     from .search_api import SearchAPIComponent
     from .searxng import SearXNGToolComponent
@@ -21,7 +22,9 @@ if TYPE_CHECKING:
 
 _dynamic_imports = {
     "CalculatorToolComponent": "calculator",
-    "PythonCodeStructuredTool": "python_code_structured_tool",
+    # FileSystemToolComponent was moved to files_and_knowledge; forward it here
+    # so existing flows / imports referencing lfx.components.tools keep working.
+    "FileSystemToolComponent": ("filesystem", "files_and_knowledge"),
     "PythonREPLToolComponent": "python_repl",
     "SearchAPIComponent": "search_api",
     "SearXNGToolComponent": "searxng",
@@ -34,7 +37,7 @@ _dynamic_imports = {
 
 __all__ = [
     "CalculatorToolComponent",
-    "PythonCodeStructuredTool",
+    "FileSystemToolComponent",
     "PythonREPLToolComponent",
     "SearXNGToolComponent",
     "SearchAPIComponent",
@@ -48,13 +51,28 @@ __all__ = [
 
 def __getattr__(attr_name: str) -> Any:
     """Lazily import tool components on attribute access."""
+    # Backwards-compat submodule access for the filesystem component, which
+    # moved to lfx.components.files_and_knowledge.
+    if attr_name in {"filesystem", "_filesystem_isolation", "_filesystem_namespace"}:
+        from importlib import import_module
+
+        result = import_module(f"lfx.components.files_and_knowledge.{attr_name}")
+        globals()[attr_name] = result
+        return result
+
     if attr_name not in _dynamic_imports:
         msg = f"module '{__name__}' has no attribute '{attr_name}'"
         raise AttributeError(msg)
+
+    mapping = _dynamic_imports[attr_name]
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", LangChainDeprecationWarning)
-            result = import_mod(attr_name, _dynamic_imports[attr_name], __spec__.parent)
+            if isinstance(mapping, tuple):
+                module_name, package = mapping
+                result = import_mod(attr_name, module_name, f"lfx.components.{package}")
+            else:
+                result = import_mod(attr_name, mapping, __spec__.parent)
     except (ModuleNotFoundError, ImportError, AttributeError) as e:
         msg = f"Could not import '{attr_name}' from '{__name__}': {e}"
         raise AttributeError(msg) from e

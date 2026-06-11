@@ -28,7 +28,6 @@ export default function ApiKeysPage() {
       const updatedKeysList = data["api_keys"].map((apikey) => ({
         ...apikey,
         name: apikey.name && apikey.name !== "" ? apikey.name : "Untitled",
-        last_used_at: apikey.last_used_at ?? "Never",
       }));
       setKeysList(updatedKeysList);
       setUserId(data["user_id"]);
@@ -75,7 +74,7 @@ export default function ApiKeysPage() {
     }
   }
 
-  const columnDefs = getColumnDefs();
+  const columnDefs = getColumnDefs(t);
 
   return (
     <div className="flex h-full w-full flex-col justify-between gap-6">

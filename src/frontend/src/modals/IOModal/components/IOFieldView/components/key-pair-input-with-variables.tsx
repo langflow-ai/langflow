@@ -1,5 +1,6 @@
 import { nanoid } from "nanoid";
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import IconComponent from "../../../../../components/common/genericIconComponent";
 import InputComponent from "../../../../../components/core/parameterRenderComponent/components/inputComponent";
 import { Input } from "../../../../../components/ui/input";
@@ -32,6 +33,7 @@ const IOKeyPairInputWithVariables = ({
   testId,
   enableGlobalVariables = false,
 }: IOKeyPairInputWithVariablesProps) => {
+  const { t } = useTranslation();
   const { data: globalVariables = [] } = useGetGlobalVariables();
   const [selectedGlobalVariables, setSelectedGlobalVariables] = useState<
     Record<string, string>
@@ -122,7 +124,7 @@ const IOKeyPairInputWithVariables = ({
               value={item.key.trim()}
               className={classNames(item.error ? "input-invalid" : "")}
               placeholder={
-                item.error ? "Duplicate or empty key" : "Type key..."
+                item.error ? t("input.duplicateOrEmptyKey") : t("input.typeKey")
               }
               onChange={(event) => handleKeyChange(item.id, event.target.value)}
               disabled={!isInputField}
@@ -134,13 +136,13 @@ const IOKeyPairInputWithVariables = ({
                 value={item.value}
                 onChange={(newValue) => handleValueChange(item.id, newValue)}
                 disabled={!isInputField}
-                placeholder="Type a value..."
+                placeholder={t("input.typeValue")}
                 selectedOption={selectedGlobalVariables[item.id] || ""}
                 setSelectedOption={(option) =>
                   handleGlobalVariableSelect(item.id, option)
                 }
                 options={globalVariableOptions}
-                optionsPlaceholder="Search global variables..."
+                optionsPlaceholder={t("input.searchGlobalVariables")}
                 optionsIcon="Globe"
                 nodeStyle
                 password={false}
@@ -151,7 +153,7 @@ const IOKeyPairInputWithVariables = ({
               <Input
                 type="text"
                 value={item.value}
-                placeholder="Type a value..."
+                placeholder={t("input.typeValue")}
                 onChange={(event) =>
                   handleValueChange(item.id, event.target.value)
                 }

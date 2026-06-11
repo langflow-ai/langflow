@@ -24,6 +24,7 @@ if TYPE_CHECKING:
 # to evaluate type annotations, and these types are used as return types for
 # dependency functions that FastAPI evaluates at module load time.
 from lfx.services.auth.base import BaseAuthService  # noqa: TC002
+from lfx.services.authorization.base import BaseAuthorizationService  # noqa: TC002
 from lfx.services.settings.service import SettingsService  # noqa: TC002
 
 from langflow.services.job_queue.service import JobQueueService  # noqa: TC001
@@ -254,6 +255,13 @@ def get_auth_service() -> BaseAuthService:
     return get_service(ServiceType.AUTH_SERVICE, AuthServiceFactory())
 
 
+def get_authorization_service() -> BaseAuthorizationService:
+    """Retrieve the authorization service."""
+    from langflow.services.authorization.factory import AuthorizationServiceFactory
+
+    return get_service(ServiceType.AUTHORIZATION_SERVICE, AuthorizationServiceFactory())
+
+
 def get_job_service():
     """Retrieves the JobService instance from the service manager.
 
@@ -269,3 +277,17 @@ def get_flow_events_service():
     from langflow.services.flow_events.factory import FlowEventsServiceFactory
 
     return get_service(ServiceType.FLOW_EVENTS_SERVICE, FlowEventsServiceFactory())
+
+
+def get_memory_base_service():
+    """Retrieves the MemoryBaseService instance from the service manager."""
+    from langflow.services.memory_base.factory import MemoryBaseServiceFactory
+
+    return get_service(ServiceType.MEMORY_BASE_SERVICE, MemoryBaseServiceFactory())
+
+
+def get_telemetry_writer_service():
+    """Return the TelemetryWriterService instance (always registered when langflow is installed)."""
+    from langflow.services.telemetry_writer.factory import TelemetryWriterServiceFactory
+
+    return get_service(ServiceType.TELEMETRY_WRITER_SERVICE, TelemetryWriterServiceFactory())

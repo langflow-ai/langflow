@@ -12,7 +12,7 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from langflow.services.database.service import SQLModel
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, inspect, text
 
 _WORKSPACE_ROOT = Path(__file__).resolve().parents[5]
 _SCRIPT_LOCATION = _WORKSPACE_ROOT / "src/backend/base/langflow/alembic"
@@ -379,6 +379,76 @@ def test_no_phantom_migrations(db_url):
         )
 
 
+def test_message_ingestion_message_fk_repaired(db_url):
+    """Repair the Postgres-only state left by concurrent startup migrations."""
+    if not db_url.startswith("postgresql"):
+        pytest.skip("PostgreSQL-only migration repair")
+
+    alembic_cfg = _make_alembic_cfg(db_url)
+    command.upgrade(alembic_cfg, "mb00a1b2c3d4")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.begin() as connection:
+            constraint_name = connection.execute(
+                text(
+                    """
+                    SELECT conname
+                    FROM pg_constraint
+                    WHERE contype = 'f'
+                      AND conrelid = 'message_ingestion_record'::regclass
+                      AND confrelid = 'message'::regclass
+                      AND conkey = ARRAY[
+                          (
+                              SELECT attnum
+                              FROM pg_attribute
+                              WHERE attrelid = 'message_ingestion_record'::regclass
+                                AND attname = 'message_id'
+                          )
+                      ]::smallint[]
+                    """
+                )
+            ).scalar_one()
+            connection.execute(text(f'ALTER TABLE message_ingestion_record DROP CONSTRAINT "{constraint_name}"'))
+    finally:
+        engine.dispose()
+
+    command.upgrade(alembic_cfg, "head")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            restored_fk = connection.execute(
+                text(
+                    """
+                    SELECT conname, confdeltype
+                    FROM pg_constraint
+                    WHERE contype = 'f'
+                      AND conrelid = 'message_ingestion_record'::regclass
+                      AND confrelid = 'message'::regclass
+                      AND conkey = ARRAY[
+                          (
+                              SELECT attnum
+                              FROM pg_attribute
+                              WHERE attrelid = 'message_ingestion_record'::regclass
+                                AND attname = 'message_id'
+                          )
+                      ]::smallint[]
+                    """
+                )
+            ).one_or_none()
+            assert restored_fk is not None
+            assert restored_fk.confdeltype == "c"
+
+            migration_context = MigrationContext.configure(connection)
+            diffs = compare_metadata(migration_context, SQLModel.metadata)
+    finally:
+        engine.dispose()
+
+    significant_diffs = _filter_diffs(diffs, db_url)
+    assert significant_diffs == []
+
+
 def test_upgrade_from_main_branch(db_url):
     """Verify that a DB at main's head can upgrade to current head and downgrade back.
 
@@ -447,3 +517,29 @@ def test_upgrade_from_main_branch(db_url):
             assert current_rev == main_head, f"After downgrade, expected revision {main_head} but got {current_rev}"
     finally:
         engine.dispose()
+
+
+def test_deployment_display_name_downgrade_restores_name_unique_constraint(db_url):
+    """Downgrading the deployment display_name rename must restore the old name constraint."""
+    alembic_cfg = _make_alembic_cfg(db_url)
+
+    command.upgrade(alembic_cfg, "mb01b2c3d4e5")
+    command.upgrade(alembic_cfg, "b7c4d8e9f012")  # pragma: allowlist secret
+    command.downgrade(alembic_cfg, "mb01b2c3d4e5")
+
+    engine = create_engine(_engine_url(db_url))
+    try:
+        with engine.connect() as connection:
+            inspector = inspect(connection)
+            column_names = {column["name"] for column in inspector.get_columns("deployment")}
+            unique_constraints = inspector.get_unique_constraints("deployment")
+    finally:
+        engine.dispose()
+
+    assert "name" in column_names
+    assert "display_name" not in column_names
+    assert any(
+        constraint.get("name") == "uq_deployment_name_in_provider"
+        and constraint.get("column_names") == ["deployment_provider_account_id", "name"]
+        for constraint in unique_constraints
+    )

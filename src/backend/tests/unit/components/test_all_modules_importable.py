@@ -19,6 +19,7 @@ import pkgutil
 
 import pytest
 from langflow import components
+from lfx.interface.components import _warm_circular_imports
 
 
 class TestAllModulesImportable:
@@ -49,10 +50,11 @@ class TestAllModulesImportable:
         # Components whose underlying packages are gated to python_version<'3.14'
         # in pyproject.toml because upstream pins exclude 3.14. These are expected
         # to fail import on 3.14 until the upstreams adapt.
+        # NOTE: ibm.* moved to the lfx-ibm bundle (src/bundles/ibm) and is no
+        # longer iterated through ``langflow.components``; the watsonx
+        # 3.14-gating moved with them.
         gated_on_py314 = {
             "altk.ALTKAgentComponent",
-            "ibm.WatsonxAIComponent",
-            "ibm.WatsonxEmbeddingsComponent",
         }
         on_py314 = sys.version_info >= (3, 14)
 
@@ -394,8 +396,6 @@ class TestDirectModuleImports:
                         "langchain_cohere",
                         "langchain_pinecone",
                         "langchain_chroma",
-                        "langchain_qdrant",
-                        "langchain_mongodb",
                         "qdrant_client",
                         "pymongo",
                         "cassandra",
@@ -418,6 +418,13 @@ class TestDirectModuleImports:
                 return ("failed", modname, f"{type(e).__name__}: {e}")
             else:
                 return ("success", modname, None)
+
+        # Pre-import third-party modules with internal circular imports single-threaded
+        # before the concurrent fan-out below. This reuses the exact warm-up the
+        # production loader (``_load_components_dynamically``) runs, so the test and
+        # production stay in lockstep -- see ``_warm_circular_imports`` for the full
+        # deadlock explanation.
+        _warm_circular_imports()
 
         # Import all modules in parallel
         results = await asyncio.gather(*[import_module_async(modname) for modname in module_names])
@@ -550,8 +557,6 @@ class TestDirectModuleImports:
                         "langchain_chroma",
                         "langchain_pinecone",
                         "qdrant_client",
-                        "langchain_qdrant",
-                        "langchain_mongodb",
                         "weaviate",
                         "chromadb",
                         "pinecone",

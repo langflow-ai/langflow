@@ -36,7 +36,7 @@ async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id
             project_id=project_id,
             deployment_provider_account_id=provider.id,
             resource_key=f"rk-{flow_id.hex[:8]}",
-            name=f"deployment-{flow_id.hex[:8]}",
+            display_name=f"deployment-{flow_id.hex[:8]}",
             deployment_type=DeploymentType.AGENT,
         )
         session.add(deployment)
@@ -646,6 +646,87 @@ async def test_create_flow_rejects_traversal_in_subpath(client: AsyncClient, log
     }
     response = await client.post("api/v1/flows/", json=basic_case, headers=logged_in_headers)
     assert response.status_code == status.HTTP_400_BAD_REQUEST
+
+
+async def test_upload_flow_rejects_list_payload(client: AsyncClient, logged_in_headers):
+    """Regression: uploading a JSON array (not an object) must return 422, not 500.
+
+    orjson.loads() on a list payload returns a Python list.  Before the isinstance
+    guard, 'flows' in <list> silently evaluates to False, routing to the else branch
+    where **normalize_code_for_import(list) raises TypeError — escaping as a 500.
+    """
+    import json
+
+    file_content = json.dumps([{"name": "flow1", "data": {}}])
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_upload_flow_rejects_scalar_payload(client: AsyncClient, logged_in_headers):
+    """Regression: uploading a JSON scalar (string/number) must return 422, not 500."""
+    import json
+
+    file_content = json.dumps("just a string")
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_upload_flow_rejects_endpoint_name_with_dots(client: AsyncClient, logged_in_headers):
+    """Regression: endpoint_name containing dots must return 422, not 500.
+
+    Previously a ValidationError from the Pydantic model escaped the handler
+    and hit the global exception_handler, producing a 500 and a Scarf telemetry
+    event.  The import path now wraps FlowCreate construction in a try/except
+    and re-raises as HTTPException(422).
+    """
+    import json
+
+    flow_data = {
+        "name": "neuro-vision",
+        "data": {},
+        "endpoint_name": "neuro-vision-planning.phase1.contract",
+    }
+    file_content = json.dumps({"folder_name": "proj", "flows": [flow_data]})
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_422_UNPROCESSABLE_ENTITY
+
+
+async def test_upload_flow_accepts_valid_endpoint_name(client: AsyncClient, logged_in_headers):
+    """Endpoint names with only letters, numbers, hyphens, and underscores are accepted."""
+    import json
+
+    flow_data = {
+        "name": "neuro-vision",
+        "data": {},
+        "endpoint_name": "neuro-vision-planning_phase1",
+    }
+    file_content = json.dumps({"folder_name": "proj", "flows": [flow_data]})
+
+    response = await client.post(
+        "api/v1/flows/upload/",
+        files={"file": ("flows.json", file_content, "application/json")},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == status.HTTP_201_CREATED
+    body = response.json()
+    assert isinstance(body, list)
+    assert len(body) == 1
+    assert body[0]["name"] == "neuro-vision"
 
 
 async def test_upload_flow_rejects_absolute_path(client: AsyncClient, logged_in_headers):

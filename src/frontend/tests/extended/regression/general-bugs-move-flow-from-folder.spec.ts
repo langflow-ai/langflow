@@ -1,5 +1,6 @@
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { renameFlow } from "../../utils/rename-flow";
 
 test("user must be able to move flow from folder", async ({ page }) => {
@@ -13,7 +14,9 @@ test("user must be able to move flow from folder", async ({ page }) => {
   await awaitBootstrapTest(page);
 
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
 
   await page.waitForTimeout(2000);
 
@@ -76,7 +79,9 @@ test("moved flow must appear when destination project was visited while still em
 
   // Create a flow and rename it so we can find it later by a unique name.
   await page.getByTestId("side_nav_options_all-templates").click();
-  await page.getByRole("heading", { name: "Basic Prompting" }).click();
+  await page
+    .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+    .click();
   await page.waitForTimeout(2000);
   await renameFlow(page, { flowName });
   await page.waitForTimeout(2000);

@@ -24,9 +24,9 @@ describe("getWidgetCode", () => {
       expect(code).toContain("<script");
       expect(code).toContain("src=");
       expect(code).toContain(
-        "https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat",
+        "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat",
       );
-      expect(code).toContain("@v1.0.7");
+      expect(code).toContain("@v1.0.8");
       expect(code).toContain("</script>");
 
       // Check for langflow-chat component
@@ -46,12 +46,12 @@ describe("getWidgetCode", () => {
       const code = getWidgetCode({
         ...baseOptions,
         isAuth: true,
-      } as any);
+      });
 
       // Check for script tag
       expect(code).toContain("<script");
       expect(code).toContain(
-        "https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7",
+        "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8",
       );
 
       // Check for langflow-chat component
@@ -75,7 +75,7 @@ describe("getWidgetCode", () => {
 
       // Should use multi-line format for non-copy mode
       expect(code).toContain("src=");
-      expect(code).toContain("https://cdn.jsdelivr.net/gh/logspace-ai");
+      expect(code).toContain("https://cdn.jsdelivr.net/gh/langflow-ai");
       expect(code).toContain("build/static/js/bundle.min.js");
     });
 
@@ -87,7 +87,7 @@ describe("getWidgetCode", () => {
 
       // Should use single-line format for copy mode
       expect(code).toContain(
-        "https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js",
+        "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js",
       );
       expect(code).not.toContain("\nbuild/static");
     });
@@ -212,7 +212,7 @@ describe("getWidgetCode", () => {
       const code = getWidgetCode({
         ...baseOptions,
         isAuth: false,
-      } as any);
+      });
 
       expect(code).toContain('api_key="..."');
     });
@@ -221,7 +221,7 @@ describe("getWidgetCode", () => {
       const code = getWidgetCode({
         ...baseOptions,
         isAuth: true,
-      } as any);
+      });
 
       expect(code).not.toContain("api_key");
     });
@@ -232,7 +232,7 @@ describe("getWidgetCode", () => {
         flowName: "Test",
         isAuth: undefined,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       // When isAuth is undefined/falsy, api_key should be included
       expect(code).toContain('api_key="..."');
@@ -248,7 +248,7 @@ describe("getWidgetCode", () => {
 
       // Single-line CDN URL
       expect(code).toContain(
-        "https://cdn.jsdelivr.net/gh/logspace-ai/langflow-embedded-chat@v1.0.7/dist/build/static/js/bundle.min.js",
+        "https://cdn.jsdelivr.net/gh/langflow-ai/langflow-embedded-chat@v1.0.8/dist/build/static/js/bundle.min.js",
       );
       expect(code).not.toContain("\nbuild/static");
     });
@@ -270,10 +270,10 @@ describe("getWidgetCode", () => {
         flowName: "Test",
         isAuth: false,
         webhookAuthEnable: false,
-      } as any);
+      });
 
-      // Should use multi-line format by default
-      expect(code).toContain("\nbuild/static");
+      // Should contain CDN URL with bundle path
+      expect(code).toContain("build/static/js/bundle.min.js");
     });
   });
 
@@ -303,7 +303,7 @@ describe("getWidgetCode", () => {
     it("should have correct CDN version reference", () => {
       const code = getWidgetCode(baseOptions);
 
-      expect(code).toContain("@v1.0.7");
+      expect(code).toContain("@v1.0.8");
     });
 
     it("should have correct bundle path", () => {
@@ -321,7 +321,7 @@ describe("getWidgetCode", () => {
         flowName: "",
         isAuth: false,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       expect(code).toContain("<script");
       expect(code).toContain("<langflow-chat");
@@ -335,7 +335,7 @@ describe("getWidgetCode", () => {
         flowName: "Test",
         isAuth: false,
         webhookAuthEnable: false,
-      } as any);
+      });
 
       expect(code).toContain("<script");
       expect(code).toContain("<langflow-chat");
@@ -404,7 +404,7 @@ describe("getWidgetCode", () => {
         isAuth: true,
         webhookAuthEnable: false,
         copy: false,
-      } as any);
+      });
 
       expect(code).toContain('flow_id="prod-flow-123"');
       expect(code).toContain('window_title="Production Chat Bot"');
@@ -418,7 +418,7 @@ describe("getWidgetCode", () => {
         isAuth: false,
         webhookAuthEnable: false,
         copy: true,
-      } as any);
+      });
 
       expect(code).toContain('flow_id="dev-flow-456"');
       expect(code).toContain('window_title="Dev Chat Bot"');

@@ -2,9 +2,31 @@
 import { test as base, expect, Page } from "@playwright/test";
 import "./playwrightCoverage";
 
+export type { LangflowPage } from "./utils/types";
+
+// Optional CPU throttling for reproducing race conditions seen on slower
+// runners (Windows CI). Enable with LF_CPU_THROTTLE=<rate>, e.g. 4.
+const CPU_THROTTLE_RATE = (() => {
+  const raw = process.env.LF_CPU_THROTTLE;
+  if (!raw) return 0;
+  const n = Number.parseFloat(raw);
+  return Number.isFinite(n) && n > 1 ? n : 0;
+})();
+
 // Extend test to log backend errors
 export const test = base.extend({
   page: async ({ page }, use) => {
+    if (CPU_THROTTLE_RATE > 0) {
+      try {
+        const client = await page.context().newCDPSession(page);
+        await client.send("Emulation.setCPUThrottlingRate", {
+          rate: CPU_THROTTLE_RATE,
+        });
+      } catch {
+        // Throttling is best-effort and only supported on Chromium.
+      }
+    }
+
     const errors: Array<{
       url: string;
       status: number;
@@ -16,7 +38,7 @@ export const test = base.extend({
     // Flag to allow flow errors (for tests that expect errors)
     let allowFlowErrors = false;
 
-    // Add helper method to page context
+    // Add helper method to page context — see LangflowPage type in utils/types.ts
     (page as Page & { allowFlowErrors?: () => void }).allowFlowErrors = () => {
       allowFlowErrors = true;
     };
@@ -37,14 +59,10 @@ export const test = base.extend({
           url.includes("/auto_login") ||
           url.includes("/logout");
         if (!isAuth) {
-          console.log(
-            `🚨 Backend Error: ${status} ${response.statusText()} - ${url}`,
-          );
           let responseBody: string | undefined;
           try {
             responseBody = await response.text();
-            console.log(`   Response: ${responseBody}`);
-          } catch (e) {
+          } catch (_e) {
             responseBody = "Could not read response";
           }
           errors.push({
@@ -77,9 +95,6 @@ export const test = base.extend({
             contentType.includes(hint),
           );
           if (isStreamLike) {
-            console.log(
-              `Skipping streaming response body parsing for ${url} (${contentType || "unknown content-type"})`,
-            );
             return;
           }
 
@@ -156,12 +171,12 @@ export const test = base.extend({
                     hasError = true;
                     break;
                   }
-                } catch (lineParseErr) {
+                } catch (_lineParseErr) {
                   // Skip lines that aren't valid JSON
                 }
               }
             }
-          } catch (parseErr) {
+          } catch (_parseErr) {
             // Fallback to string search if JSON parsing completely fails
           }
 
@@ -188,9 +203,6 @@ export const test = base.extend({
           }
 
           if (hasError && errorPreview) {
-            console.log(`🚨 Flow Error Detected in Event Stream - ${url}`);
-            console.log(`   Error: ${errorPreview}`);
-
             const error = {
               url,
               status: 200,
@@ -231,18 +243,6 @@ export const test = base.extend({
     // Check for errors and fail test if not allowed
     if (errors.length > 0) {
       const flowErrors = errors.filter((e) => e.type === "flow_error");
-      const httpErrors = errors.filter((e) => e.type === "http_error");
-
-      console.log(`\n📋 Found ${errors.length} backend error(s) during test`);
-
-      if (flowErrors.length > 0) {
-        console.log(
-          `   ⚠️  ${flowErrors.length} flow execution error(s) detected`,
-        );
-      }
-      if (httpErrors.length > 0) {
-        console.log(`   ⚠️  ${httpErrors.length} HTTP error(s) detected`);
-      }
 
       // Fail the test if flow errors occurred and weren't allowed
       if (flowErrors.length > 0 && !allowFlowErrors) {

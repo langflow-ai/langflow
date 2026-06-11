@@ -1,7 +1,9 @@
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ModelProvidersContent from "@/modals/modelProviderModal/components/ModelProvidersContent";
 
 export default function ModelProvidersPage() {
+  const { t } = useTranslation();
   return (
     <div className="flex w-full flex-col gap-6">
       <div className="flex w-full items-start justify-between gap-6">
@@ -10,14 +12,14 @@ export default function ModelProvidersPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            Model Providers
+            {t("modelProviders.pageTitle")}
             <ForwardedIconComponent
-              name="Brain"
+              name="BrainCircuit"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Configure AI model providers and manage their API keys.
+            {t("modelProviders.pageDescription")}
           </p>
         </div>
       </div>

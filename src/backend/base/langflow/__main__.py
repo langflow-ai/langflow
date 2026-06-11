@@ -1,3 +1,24 @@
+# macOS Objective-C fork-safety guard.
+#
+# Gunicorn forks workers; on Darwin, Objective-C runtime fork-safety checks
+# can SIGSEGV workers unless OBJC_DISABLE_INITIALIZE_FORK_SAFETY=YES is set
+# in the OS environment *before* Python starts (setting it in Python is too
+# late — see langflow_launcher.py for the same pattern).
+#
+# The `langflow` console script routes through langflow_launcher.py which
+# handles this. This guard catches the bypass paths (`python -m langflow`,
+# `uv run python -m langflow`, etc.) so they're not silent footguns. Only
+# fires for direct CLI invocation; ordinary `import langflow.__main__` is
+# unaffected.
+if __name__ == "__main__":
+    import os as _os
+    import platform as _platform
+    import sys as _sys
+
+    if _platform.system() == "Darwin" and not _os.environ.get("OBJC_DISABLE_INITIALIZE_FORK_SAFETY"):
+        _os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
+        _os.execv(_sys.executable, [_sys.executable, "-m", "langflow.__main__", *_sys.argv[1:]])  # noqa: S606
+
 import asyncio
 import inspect
 import os
@@ -8,6 +29,7 @@ import sys
 import time
 import warnings
 from contextlib import suppress
+from functools import partial
 from ipaddress import ip_address
 from pathlib import Path
 
@@ -132,6 +154,119 @@ def get_number_of_workers(workers=None):
     return workers
 
 
+# Platforms where `langflow run` bypasses Gunicorn and runs uvicorn directly
+# against a pre-built FastAPI app object. On Linux we use Gunicorn (multi-worker
+# via fork()); on Windows and macOS forking is unsafe (Windows lacks fork; macOS
+# fork-with-threads + libdispatch / asyncio kqueue state crashes workers).
+DIRECT_UVICORN_PLATFORMS: tuple[str, ...] = ("Windows", "Darwin")
+
+
+def use_direct_uvicorn(system: str | None = None) -> bool:
+    """Return True iff this platform launches with uvicorn directly (no Gunicorn)."""
+    return (system or platform.system()) in DIRECT_UVICORN_PLATFORMS
+
+
+def clamp_uvicorn_workers(requested: int, *, system: str | None = None) -> int:
+    """Clamp ``workers`` to 1 when running uvicorn against a pre-built app object.
+
+    uvicorn refuses to spawn multiple workers from an app *object* (it needs an
+    import string), so on the direct-uvicorn platforms we cap workers at 1 and
+    warn — preferable to uvicorn's own ``sys.exit(1)`` with a generic message.
+    On Linux this is a no-op since Gunicorn handles multi-worker.
+    """
+    if requested > 1 and use_direct_uvicorn(system):
+        logger.warning(
+            "Direct-uvicorn startup on %s does not support workers > 1 "
+            "(uvicorn requires an import string for multi-worker mode). "
+            "Falling back to a single worker; requested=%d.",
+            system or platform.system(),
+            requested,
+        )
+        return 1
+    return requested
+
+
+def build_direct_uvicorn_kwargs(
+    *,
+    host: str,
+    port: int,
+    log_level: str | None,
+    workers: int,
+    loop: str,
+    ssl_cert_file_path: str | None,
+    ssl_key_file_path: str | None,
+    system: str | None = None,
+    trust_proxy: bool = False,
+) -> dict:
+    """Build the kwargs dict for ``uvicorn.run(app, **kwargs)`` on Win/macOS.
+
+    Pins the option set (workers clamp, TLS certs, loop type) in one place so
+    the launch site stays a single call and so tests can assert that things
+    like TLS cert/key pass through. Mirrors the option set used on the
+    Gunicorn (Linux) path so platform parity does not drift again.
+
+    ``trust_proxy=False`` (default) passes ``forwarded_allow_ips=""`` so
+    uvicorn's ProxyHeadersMiddleware trusts no source for X-Forwarded-For,
+    preventing IP-spoofing attacks against the login rate limit.
+    ``trust_proxy=True`` passes ``"*"`` for deployments behind a trusted proxy.
+    """
+    return {
+        "host": host,
+        "port": port,
+        "log_level": log_level,
+        "reload": False,
+        "workers": clamp_uvicorn_workers(workers, system=system),
+        "loop": loop,
+        "ssl_certfile": ssl_cert_file_path,
+        "ssl_keyfile": ssl_key_file_path,
+        "forwarded_allow_ips": "*" if trust_proxy else "",
+    }
+
+
+def ensure_multi_worker_safe(num_workers: int) -> None:
+    """Refuse to start with multiple workers when the job queue is worker-local.
+
+    The default JobQueueService keeps build queues in process-local memory.
+    POLLING and STREAMING event delivery rely on a follow-up
+    ``GET /api/v1/build/<job_id>/events`` request after the initial
+    ``POST /api/v1/build/.../flow``; Gunicorn round-robins those two requests
+    across workers, so the polling worker finds no queue and returns
+    "Job queue not found for job_id" roughly 45-66% of the time under load.
+
+    ``event_delivery=direct`` is the exception: the POST endpoint streams events
+    back on the same request that started the build, so the build and event
+    consumption stay on a single worker and never cross worker boundaries.
+    Operators who only need direct delivery should run with ``--workers 1`` or
+    configure a shared queue anyway; this check refuses to start because the
+    process cannot know which delivery mode every future client will pick.
+
+    Skipped entirely when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` is configured —
+    Redis-backed queues share state across workers and support every delivery
+    mode, so the race the check guards against cannot occur.
+
+    Only called on the Gunicorn (Linux) path — the direct-uvicorn path on
+    Windows/macOS clamps workers to 1, so the race cannot occur there.
+    """
+    if num_workers <= 1:
+        return
+    if get_settings_service().settings.job_queue_type == "redis":
+        return
+    msg = (
+        f"Refusing to start with {num_workers} workers and the default in-memory "
+        "job queue. POLLING and STREAMING event delivery fail with 'Job not found' "
+        "roughly half the time because the build queue lives in one worker's "
+        "memory and the follow-up GET /api/v1/build/<job_id>/events request lands "
+        "on a different worker. Pick one of:\n"
+        "  * Configure a shared job queue: LANGFLOW_JOB_QUEUE_TYPE=redis. Works "
+        "for every event_delivery mode.\n"
+        "  * Run with --workers 1. Single worker, no cross-worker routing.\n"
+        "Note: event_delivery=direct works in multi-worker because the POST "
+        "endpoint streams events back inline, but every client must opt into "
+        "direct delivery; the server cannot enforce that at startup."
+    )
+    raise RuntimeError(msg)
+
+
 def display_results(results) -> None:
     """Display the results of the migration."""
     for table_results in results:
@@ -158,8 +293,6 @@ def set_var_for_macos_issue() -> None:
         import os
 
         os.environ["OBJC_DISABLE_INITIALIZE_FORK_SAFETY"] = "YES"
-        # https://stackoverflow.com/questions/75747888/uwsgi-segmentation-fault-with-flask-python-app-behind-nginx-after-running-for-2 # noqa: E501
-        os.environ["no_proxy"] = "*"  # to avoid error with gunicorn
 
 
 def wait_for_server_ready(host, port, protocol) -> None:
@@ -338,8 +471,14 @@ def run(
         static_files_dir: Path | None = Path(frontend_path) if frontend_path else None
 
     # Step 2: Starting Core Services
+    app = None
+    app_factory = None
     with progress.step(2):
-        app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        # See DIRECT_UVICORN_PLATFORMS for the rationale (no fork on Win/macOS).
+        if use_direct_uvicorn():
+            app = setup_app(static_files_dir=static_files_dir, backend_only=bool(backend_only))
+        else:
+            app_factory = partial(setup_app, static_files_dir=static_files_dir, backend_only=bool(backend_only))
 
     # Step 3: Connecting Database (this happens inside setup_app via dependencies)
     with progress.step(3):
@@ -371,9 +510,26 @@ def run(
             pass  # Starter projects are added during app startup
 
     # Step 6: Launching Langflow
-    if platform.system() == "Windows":
+    if use_direct_uvicorn():
+        # LANGFLOW_GUNICORN_PRELOAD is a Gunicorn-only knob: it triggers fork-safe
+        # master-process preload so workers inherit state via copy-on-write. On
+        # the direct-uvicorn path there is no master/worker split and no fork,
+        # so the env var is silently inert. Warn loudly so users diagnosing
+        # "preload isn't doing anything on my Mac" don't have to read source.
+        if os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true":
+            logger.warning(
+                "LANGFLOW_GUNICORN_PRELOAD=true is ignored on %s: this platform "
+                "uses single-process uvicorn (no fork), so master preload / "
+                "copy-on-write inheritance does not apply.",
+                platform.system(),
+            )
+
         with progress.step(6):
             import uvicorn
+
+            if app is None:
+                msg = "Direct-uvicorn startup (Windows/macOS) requires a pre-built FastAPI application."
+                raise RuntimeError(msg)
 
             # Print summary and banner before starting the server, since uvicorn is a blocking call.
             # We _may_ be able to subprocess, but with window's spawn behavior, we'd have to move all
@@ -394,28 +550,38 @@ def run(
 
         uvicorn.run(
             app,
-            host=host,
-            port=port,
-            log_level=log_level,
-            reload=False,
-            workers=get_number_of_workers(workers),
-            loop=loop_type,
+            **build_direct_uvicorn_kwargs(
+                host=host,
+                port=port,
+                log_level=log_level,
+                workers=get_number_of_workers(workers),
+                loop=loop_type,
+                ssl_cert_file_path=ssl_cert_file_path,
+                ssl_key_file_path=ssl_key_file_path,
+                trust_proxy=get_settings_service().settings.rate_limit_trust_proxy,
+            ),
         )
     else:
         with progress.step(6):
             # Use Gunicorn with LangflowUvicornWorker for non-Windows systems
             from langflow.server import LangflowApplication
 
+            if app_factory is None:
+                msg = "Gunicorn startup requires an application factory."
+                raise RuntimeError(msg)
+
+            num_workers = get_number_of_workers(workers)
+            ensure_multi_worker_safe(num_workers)
             options = {
                 "bind": f"{host}:{port}",
-                "workers": get_number_of_workers(workers),
+                "workers": num_workers,
                 "timeout": worker_timeout,
                 "certfile": ssl_cert_file_path,
                 "keyfile": ssl_key_file_path,
                 "log_level": log_level.lower() if log_level is not None else "info",
                 "preload_app": os.environ.get("LANGFLOW_GUNICORN_PRELOAD", "false").lower() == "true",
             }
-            server = LangflowApplication(app, options)
+            server = LangflowApplication(app_factory, options)
 
             # Start the webapp process
             process_manager.webapp_process = Process(target=server.run)
@@ -949,15 +1115,23 @@ def version_option(
 
 def api_key_banner(unmasked_api_key) -> None:
     is_mac = platform.system() == "Darwin"
-    import pyperclip
+    clipboard_msg = ""
+    try:
+        import pyperclip
 
-    pyperclip.copy(unmasked_api_key.api_key)
+        pyperclip.copy(unmasked_api_key.api_key)
+        clipboard_msg = (
+            f"\nThe API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it."
+        )
+    except Exception as exc:  # noqa: BLE001
+        # Clipboard access is best-effort: pyperclip raises in headless/Docker/SSH environments
+        # where no clipboard mechanism is available. Log and continue so the key is still displayed.
+        logger.debug(f"Could not copy API key to clipboard: {exc}")
     panel = Panel(
         f"[bold]API Key Created Successfully:[/bold]\n\n"
         f"[bold blue]{unmasked_api_key.api_key}[/bold blue]\n\n"
         "This is the only time the API key will be displayed. \n"
-        "Make sure to store it in a secure location. \n\n"
-        f"The API key has been copied to your clipboard. [bold]{['Ctrl', 'Cmd'][is_mac]} + V[/bold] to paste it.",
+        f"Make sure to store it in a secure location.{clipboard_msg}",
         box=box.ROUNDED,
         border_style="blue",
         expand=False,

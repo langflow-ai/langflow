@@ -159,7 +159,7 @@ async def deployment(
         project_id=source_project.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-1",
-        name="deployment-1",
+        display_name="deployment-1",
         deployment_type=DeploymentType.AGENT,
     )
     db.add(row)
@@ -468,7 +468,7 @@ async def test_attachment_project_match_blocks_cross_project_directly(
         project_id=target_project.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-direct-block",
-        name="deployment-direct-block",
+        display_name="deployment-direct-block",
         deployment_type=DeploymentType.AGENT,
     )
     db.add(deployment_in_other_project)
@@ -511,7 +511,7 @@ async def test_attachment_create_blocks_cross_project(
         project_id=target_project.id,
         deployment_provider_account_id=provider_account.id,
         resource_key="rk-other",
-        name="deployment-other",
+        display_name="deployment-other",
         deployment_type=DeploymentType.AGENT,
     )
     db.add(deployment_in_other_project)

@@ -227,6 +227,7 @@ class Vertex:
     def __getstate__(self):
         state = self.__dict__.copy()
         state["_lock"] = None  # Locks are not serializable
+        state["custom_component"] = None  # Component instances are rebuilt and may hold non-serializable runtime state
         state["built_object"] = None if isinstance(self.built_object, UnbuiltObject) else self.built_object
         state["built_result"] = None if isinstance(self.built_result, UnbuiltResult) else self.built_result
         return state
@@ -407,6 +408,7 @@ class Vertex:
             if hasattr(self.custom_component, "set_event_manager"):
                 self.custom_component.set_event_manager(event_manager)
             custom_params = initialize.loading.get_params(self.params)
+            custom_params.pop("code", None)
 
         await self._build_results(
             custom_component=custom_component,

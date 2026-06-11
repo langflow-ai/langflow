@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import ShadTooltip from "@/components/common/shadTooltipComponent";
 import { Button } from "@/components/ui/button";
@@ -19,11 +20,13 @@ import type { MCPServerInfoType } from "@/types/mcp";
 import { cn } from "@/utils/utils";
 
 export default function MCPServersPage() {
+  const { t } = useTranslation();
   const { data: servers } = useGetMCPServers({ withCounts: true });
   const { mutate: deleteServer } = useDeleteMCPServer();
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const [addOpen, setAddOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [editInitialData, setEditInitialData] = useState<any>(null);
   const { mutateAsync: getServer } = useGetMCPServer();
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -35,8 +38,12 @@ export default function MCPServersPage() {
       const data = await getServer({ name });
       setEditInitialData(data);
       setEditOpen(true);
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (e: any) {
-      setErrorData({ title: "Error fetching server", list: [e.message] });
+      setErrorData({
+        title: t("mcp.servers.errorFetching"),
+        list: [e.message],
+      });
     } finally {
     }
   };
@@ -45,8 +52,12 @@ export default function MCPServersPage() {
     deleteServer(
       { name: server.name },
       {
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
         onError: (e: any) =>
-          setErrorData({ title: "Error deleting server", list: [e.message] }),
+          setErrorData({
+            title: t("mcp.servers.errorDeleting"),
+            list: [e.message],
+          }),
       },
     );
   };
@@ -64,14 +75,14 @@ export default function MCPServersPage() {
             className="flex items-center text-lg font-semibold tracking-tight"
             data-testid="settings_menu_header"
           >
-            MCP Servers
+            {t("mcp.servers.title")}
             <ForwardedIconComponent
               name="Mcp"
               className="ml-2 h-5 w-5 text-primary"
             />
           </h2>
           <p className="text-sm text-muted-foreground">
-            Manage MCP Servers for use in your flows.
+            {t("mcp.servers.description")}
           </p>
         </div>
         <div className="flex flex-shrink-0 items-center gap-2">
@@ -81,7 +92,7 @@ export default function MCPServersPage() {
             data-testid="add-mcp-server-button-page"
           >
             <ForwardedIconComponent name="Plus" className="w-4" />
-            <span>Add MCP Server</span>
+            <span>{t("mcp.servers.addButton")}</span>
           </Button>
           <AddMcpServerModal open={addOpen} setOpen={setAddOpen} />
         </div>
@@ -91,11 +102,11 @@ export default function MCPServersPage() {
           <>
             {servers.length === 0 ? (
               <div className="w-full pt-8 text-center text-sm text-muted-foreground">
-                No MCP servers added
+                {t("mcp.servers.noServersAdded")}
               </div>
             ) : (
               <div className="text-sm font-medium text-muted-foreground">
-                Added MCP Servers
+                {t("mcp.servers.addedServers")}
               </div>
             )}
             <div className="flex flex-col gap-1">
@@ -121,14 +132,14 @@ export default function MCPServersPage() {
                         {server.toolsCount === null
                           ? server.error
                             ? server.error.startsWith("Timeout")
-                              ? "Timeout"
-                              : "Error"
-                            : "Loading..."
+                              ? t("mcp.servers.statusTimeout")
+                              : t("mcp.servers.statusError")
+                            : t("mcp.servers.statusLoading")
                           : !server.toolsCount
-                            ? "No tools found"
-                            : `${server.toolsCount} tool${
-                                server.toolsCount === 1 ? "" : "s"
-                              }`}
+                            ? t("mcp.servers.statusNoTools")
+                            : t("mcp.servers.toolsCount", {
+                                count: server.toolsCount,
+                              })}
                       </span>
                     </ShadTooltip>
                   </div>
@@ -152,7 +163,7 @@ export default function MCPServersPage() {
                           name="SquarePen"
                           className="mr-2 h-4 w-4"
                         />
-                        Edit
+                        {t("mcp.servers.editMenuItem")}
                       </DropdownMenuItem>
                       <DropdownMenuItem
                         onClick={() => openDeleteModal(server)}
@@ -162,7 +173,7 @@ export default function MCPServersPage() {
                           name="Trash2"
                           className="mr-2 h-4 w-4"
                         />
-                        Delete
+                        {t("mcp.servers.deleteMenuItem")}
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>

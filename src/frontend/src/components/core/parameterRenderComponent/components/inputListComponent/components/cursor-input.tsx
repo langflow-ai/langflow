@@ -1,7 +1,8 @@
-import { forwardRef, useEffect, useRef, useState } from "react";
+import { forwardRef, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { handleKeyDown } from "@/utils/reactflowUtils";
 import { cn } from "@/utils/utils";
+import { useIMEInputForOnChange } from "../../../hooks/use-ime-input";
 
 interface CursorInputProps {
   value: string;
@@ -30,30 +31,17 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
     },
     ref,
   ) => {
-    // Local state for input value to handle cursor position
-    const [localValue, setLocalValue] = useState<string>(value);
-    const [cursor, setCursor] = useState<number | null>(null);
     const inputRef = useRef<HTMLInputElement>(null);
 
-    // Update local value when prop changes
-    useEffect(() => {
-      setLocalValue(value);
-    }, [value]);
-
-    // Handle cursor position restoration
-    useEffect(() => {
-      if (inputRef.current && cursor !== null) {
-        inputRef.current.setSelectionRange(cursor, cursor);
-      }
-    }, [cursor]);
-
-    const handleChangeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-      setCursor(e.target.selectionStart);
-      setLocalValue(e.target.value);
-      onChange(e.target.value);
-    };
+    const { displayValue, inputProps, flushPendingComposition } =
+      useIMEInputForOnChange<HTMLInputElement>({
+        value,
+        onChange,
+        inputRef,
+      });
 
     const handleInputBlur = () => {
+      flushPendingComposition();
       onBlur?.();
     };
 
@@ -61,12 +49,21 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
       onFocus?.();
     };
 
+    const setRefs = (node: HTMLInputElement | null) => {
+      inputRef.current = node;
+      if (typeof ref === "function") {
+        ref(node);
+      } else if (ref) {
+        (ref as React.MutableRefObject<HTMLInputElement | null>).current = node;
+      }
+    };
+
     return (
       <Input
-        ref={ref || inputRef}
+        ref={setRefs}
         disabled={disabled}
         type="text"
-        value={localValue}
+        {...inputProps}
         className={cn(
           "w-full text-primary",
           editNode ? "input-edit-node" : "",
@@ -74,8 +71,7 @@ export const CursorInput = forwardRef<HTMLInputElement, CursorInputProps>(
           className,
         )}
         placeholder={placeholder}
-        onChange={handleChangeInput}
-        onKeyDown={(event) => handleKeyDown(event, localValue, "")}
+        onKeyDown={(event) => handleKeyDown(event, displayValue, "")}
         data-testid={dataTestId}
         onFocus={handleInputFocus}
         onBlur={handleInputBlur}

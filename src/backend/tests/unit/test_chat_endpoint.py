@@ -563,6 +563,73 @@ async def test_build_public_tmp_ignores_data_parameter(client, json_memory_chatb
 
 
 @pytest.mark.benchmark
+@pytest.mark.security
+@pytest.mark.parametrize(
+    "malicious_files",
+    [
+        ["/etc/hosts"],
+        ["/etc/passwd"],
+        ["../../etc/passwd"],
+        ["..\\..\\windows\\system32\\drivers\\etc\\hosts"],
+        ["s3://other-bucket/secret.txt"],
+        ["just_a_filename.txt"],
+        # foreign flow_id segment — looks well-formed but isn't this flow's namespace
+        ["00000000-0000-0000-0000-000000000000/file.png"],
+        # null byte smuggling
+        ["abc\x00/file.png"],
+    ],
+)
+async def test_build_public_tmp_rejects_malicious_files(
+    client, json_memory_chatbot_no_llm, logged_in_headers, malicious_files
+):
+    """Regression for GHSA-rcjh-r59h-gq37 — unauth public build must not accept arbitrary file paths."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-validation-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": malicious_files,
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert "file" in response.json()["detail"].lower()
+
+
+@pytest.mark.benchmark
+async def test_build_public_tmp_accepts_files_in_own_namespace(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Files namespaced under the public flow's own UUID must still be accepted."""
+    flow_id = await create_flow(client, json_memory_chatbot_no_llm, logged_in_headers)
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-files-allowed-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={
+            "inputs": {"session": "test_session"},
+            "files": [f"{flow_id}/example_attachment.png"],
+        },
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.OK
+
+
+@pytest.mark.benchmark
 async def test_build_public_tmp_checks_public_access_before_validation(
     client, json_memory_chatbot_no_llm, logged_in_headers, monkeypatch
 ):
@@ -587,6 +654,99 @@ async def test_build_public_tmp_checks_public_access_before_validation(
 
     assert response.status_code == codes.FORBIDDEN
     assert response.json()["detail"] == "Flow is not public"
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_code_execution_components(
+    client, json_memory_chatbot_no_llm, logged_in_headers
+):
+    """Report H1-3754930: unauthenticated public builds must reject code-execution components.
+
+    A public flow containing a Python interpreter/REPL (or the legacy Python Code
+    Structured tool) would otherwise let any anonymous visitor trigger
+    server-side code execution through /build_public_tmp.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "PythonREPLComponent-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "PythonREPLComponent-pub1",
+                "type": "PythonREPLComponent",
+                "display_name": "Python Interpreter",
+                "node": {"display_name": "Python Interpreter", "template": {}},
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-code-exec-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
+
+
+@pytest.mark.benchmark
+@pytest.mark.security
+async def test_build_public_tmp_rejects_flow_invoking_components(client, json_memory_chatbot_no_llm, logged_in_headers):
+    """Report H1-3754930 (transitive case): public builds must reject flow-invoking components.
+
+    A public wrapper flow with no directly-blocked nodes could otherwise embed a
+    Run Flow / Sub Flow / Flow as Tool node that loads and executes another saved
+    owner flow by id/name at runtime — a private flow which may itself contain a
+    code-execution component that is never re-validated on the run path. Blocking
+    the flow-invoking node type on the public path closes that indirection.
+    """
+    flow_dict = json.loads(json_memory_chatbot_no_llm)
+    flow_dict["data"]["nodes"].append(
+        {
+            "id": "RunFlow-pub1",
+            "type": "genericNode",
+            "position": {"x": 0, "y": 0},
+            "data": {
+                "id": "RunFlow-pub1",
+                "type": "RunFlow",
+                "display_name": "Run Flow",
+                "node": {
+                    "display_name": "Run Flow",
+                    "template": {"flow_id_selected": {"value": str(uuid.uuid4())}},
+                },
+            },
+        }
+    )
+    flow_id = await create_flow(client, json.dumps(flow_dict), logged_in_headers)
+
+    response = await client.patch(
+        f"api/v1/flows/{flow_id}",
+        json={"access_type": "PUBLIC"},
+        headers=logged_in_headers,
+    )
+    assert response.status_code == codes.OK
+
+    client.cookies.set("client_id", "test-flow-invoke-client")
+    response = await client.post(
+        f"api/v1/build_public_tmp/{flow_id}/flow",
+        json={"inputs": {"session": "test_session"}},
+        headers={"Content-Type": "application/json"},
+    )
+
+    assert response.status_code == codes.BAD_REQUEST
+    assert response.json()["detail"] == "This flow cannot be executed."
 
 
 @pytest.mark.benchmark
@@ -836,13 +996,13 @@ async def test_job_owner_cleaned_up_after_cleanup_job():
 
         service.start_job(job_id, _noop())
         await asyncio.sleep(0.05)
-        service.register_job_owner(job_id, user_id)
+        await service.register_job_owner(job_id, user_id)
 
-        assert service.get_job_owner(job_id) == user_id
+        assert await service.get_job_owner(job_id) == user_id
 
         await service.cleanup_job(job_id)
 
-        assert service.get_job_owner(job_id) is None
+        assert await service.get_job_owner(job_id) is None
     finally:
         service._closed = True
         if service._cleanup_task:

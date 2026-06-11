@@ -1,13 +1,31 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ModelSelector } from "../model-selector";
 import type { AssistantModel } from "../../assistant-panel.types";
+import { ModelSelector } from "../model-selector";
 
 // --- Mocks ---
 
 jest.mock("@/components/common/genericIconComponent", () => {
   return function MockIcon({ name }: { name: string }) {
     return <span data-testid={`icon-${name}`}>{name}</span>;
+  };
+});
+
+jest.mock("react-i18next", () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+  initReactI18next: { type: "3rdParty", init: jest.fn() },
+}));
+
+jest.mock("@/hooks/use-refresh-model-inputs", () => ({
+  useRefreshModelInputs: () => ({
+    refresh: jest.fn(),
+    refreshAllModelInputs: jest.fn(),
+  }),
+}));
+
+jest.mock("@/modals/modelProviderModal", () => {
+  return function MockModelProviderModal({ open }: { open: boolean }) {
+    return open ? <div data-testid="mock-model-provider-modal" /> : null;
   };
 });
 

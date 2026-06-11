@@ -155,11 +155,7 @@ jobs:
             arch: amd64
             runner: ubuntu-latest
             python-version: "3.12"
-          # macOS AMD64
-          - os: macos
-            arch: amd64
-            runner: macos-latest-large
-            python-version: "3.10"
+          # macOS AMD64 (Intel) - Python 3.12 only for cost optimization
           - os: macos
             arch: amd64
             runner: macos-latest-large

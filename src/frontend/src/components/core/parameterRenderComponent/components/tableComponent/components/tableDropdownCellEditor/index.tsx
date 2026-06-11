@@ -1,4 +1,5 @@
 import type { CustomCellEditorProps } from "ag-grid-react";
+import { useTranslation } from "react-i18next";
 import InputComponent from "../../../inputComponent";
 
 export default function TableDropdownCellEditor({
@@ -8,6 +9,7 @@ export default function TableDropdownCellEditor({
   colDef,
   eGridCell,
 }: CustomCellEditorProps & { values: string[] }) {
+  const { t } = useTranslation();
   return (
     <div
       style={{ width: eGridCell.clientWidth }}
@@ -18,7 +20,7 @@ export default function TableDropdownCellEditor({
         value={value}
         options={values}
         password={false}
-        placeholder={"Select an option"}
+        placeholder={t("component.selectOption")}
         id="apply-to-fields"
       />
     </div>

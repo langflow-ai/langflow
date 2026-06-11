@@ -1,0 +1,67 @@
+[project]
+name = "lfx-ibm"
+version = "0.1.1"
+description = "IBM components (Db2 Vector Store + watsonx.ai LLM and embeddings) as a standalone Langflow Extension Bundle."
+readme = "README.md"
+requires-python = ">=3.10,<3.15"
+license = { text = "MIT" }
+authors = [
+    { name = "Langflow", email = "contact@langflow.org" },
+]
+keywords = ["langflow", "lfx", "extension", "bundle", "ibm", "db2", "watsonx", "vector-store"]
+
+# Runtime deps: lfx (the BUNDLE_API surface) plus IBM SDK packages used by
+# the bundled components.
+#
+# * ``ibm-db`` powers the Db2 Vector Store.  Gated with the same platform
+#   marker we previously used in ``src/lfx/pyproject.toml`` -- the upstream
+#   wheel does not ship for linux/aarch64, so the dep would otherwise
+#   break ``pip install`` on that arch.
+# * ``ibm-watsonx-ai`` and ``langchain-ibm`` power ``WatsonxAIComponent``
+#   and ``WatsonxEmbeddingsComponent``.  Both upstreams added Python 3.14
+#   support (``ibm-watsonx-ai`` 1.5.13, ``langchain-ibm`` 1.1.0), so the
+#   former ``python_version < '3.14'`` markers are lifted.  ``ibm-watsonx-ai``
+#   raised its floor to ``>=3.11`` on the 3.14-capable build, so the universal
+#   resolver forks: a 3.14 build on the 3.14 Docker image, an older
+#   3.10-compatible build elsewhere.  Kept in lockstep with langflow-base.
+# * ``langchain-community`` provides the helpers DB2VS leans on.
+dependencies = [
+    "lfx>=1.10.0.dev0,<2.0.0",
+    "langchain-community>=0.4.1,<1.0.0",
+    "ibm-db>=3.2.9,<4.0.0; sys_platform != 'linux' or platform_machine != 'aarch64'",
+    "ibm-watsonx-ai>=1.3.1,<2.0.0",
+    "langchain-ibm~=1.1.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/langflow-ai/langflow"
+Documentation = "https://docs.langflow.org/extensions"
+Repository = "https://github.com/langflow-ai/langflow"
+
+# Manifest-shipping distributions are discovered via the
+# ``langflow.extensions`` entry-point.  The value is the dotted path to
+# the package containing ``extension.json`` -- the loader walks
+# ``importlib.metadata.files()`` from there to find the manifest, and
+# falls back to this entry-point for editable installs whose dist.files
+# only surfaces dist-info entries.
+[project.entry-points."langflow.extensions"]
+lfx-ibm = "lfx_ibm"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+# extension.json + components live inside the lfx_ibm package so
+# ``importlib.metadata.files(dist)`` finds them and the loader resolves
+# bundles[].path relative to the manifest's directory.
+packages = ["src/lfx_ibm"]
+include = ["src/lfx_ibm/extension.json", "src/lfx_ibm/components/**/*.py"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/lfx_ibm",
+    "extension.json",
+    "README.md",
+    "pyproject.toml",
+]

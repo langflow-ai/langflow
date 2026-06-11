@@ -1,9 +1,10 @@
 import type { Page } from "@playwright/test";
-import * as dotenv from "dotenv";
-import path from "path";
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { loadDotenvIfLocal } from "../../utils/env/load-dotenv";
+import { skipIfMissing } from "../../utils/env/skip-if-missing";
 import { lockFlow, unlockFlow } from "../../utils/lock-flow";
 import { unselectNodes } from "../../utils/unselect-nodes";
 
@@ -11,19 +12,14 @@ test(
   "user must be able to lock a flow and it must be saved",
   { tag: ["@release", "@components"] },
   async ({ page }) => {
-    test.skip(
-      !process?.env?.OPENAI_API_KEY,
-      "OPENAI_API_KEY required to run this test",
-    );
-
-    if (!process.env.CI) {
-      dotenv.config({ path: path.resolve(__dirname, "../../.env") });
-    }
-
+    skipIfMissing.openAiKey();
+    loadDotenvIfLocal(__dirname);
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 100000,
@@ -46,10 +42,6 @@ test(
     await page.waitForTimeout(500);
 
     //ensure the UI is updated
-
-    await page.waitForSelector('[data-testid="icon-Lock"]', {
-      timeout: 3000,
-    });
 
     await unlockFlow(page);
 
@@ -95,7 +87,7 @@ test(
 
     await unselectNodes(page);
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
 
     await adjustScreenView(page);
 

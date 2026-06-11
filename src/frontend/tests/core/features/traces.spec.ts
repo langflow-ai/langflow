@@ -3,6 +3,8 @@ import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
+import { TEXTS } from "../../utils/constants/texts";
+
 test(
   "should able to see and interact with Traces",
   { tag: ["@release", "@workspace", "@api"] },
@@ -20,9 +22,26 @@ test(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    // Tie the wait to the actual flow-creation network response. On Windows
+    // CI the click → canvas mount can outlast a 100s wait when the backend
+    // is under load, but if the POST /flows succeeds we know the page will
+    // navigate; we then wait for the canvas with a generous budget.
+    const flowCreatePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/v1\/flows\/?(?:\?|$)/.test(response.url()) &&
+        response.request().method() === "POST" &&
+        response.status() === 201,
+      { timeout: 120000 },
+    );
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
+    await flowCreatePromise;
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
     await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
-      timeout: 3000,
+      timeout: 30000,
     });
     let outdatedComponents = await page.getByTestId("update-button").count();
     const maxUpdateIterations = 20;
@@ -73,9 +92,26 @@ test.skip(
     await awaitBootstrapTest(page);
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    // Tie the wait to the actual flow-creation network response. On Windows
+    // CI the click → canvas mount can outlast a 100s wait when the backend
+    // is under load, but if the POST /flows succeeds we know the page will
+    // navigate; we then wait for the canvas with a generous budget.
+    const flowCreatePromise = page.waitForResponse(
+      (response) =>
+        /\/api\/v1\/flows\/?(?:\?|$)/.test(response.url()) &&
+        response.request().method() === "POST" &&
+        response.status() === 201,
+      { timeout: 120000 },
+    );
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
+    await flowCreatePromise;
+    await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
+      timeout: 100000,
+    });
     await expect(page.getByTestId(/.*rf__node.*/).first()).toBeVisible({
-      timeout: 3000,
+      timeout: 30000,
     });
     let outdatedComponents = await page.getByTestId("update-button").count();
     const maxUpdateIterations = 20;

@@ -6,10 +6,10 @@ Extracted from flows.py to keep the route-handler module concise.
 from __future__ import annotations
 
 import io
+import os
 import re
 import zipfile
 from datetime import datetime, timezone
-from pathlib import Path as StdlibPath
 from typing import TYPE_CHECKING, Any
 from uuid import UUID
 
@@ -21,7 +21,7 @@ from lfx.log import logger
 from sqlmodel import select
 from sqlmodel.ext.asyncio.session import AsyncSession
 
-from langflow.api.utils import normalize_flow_for_export, remove_api_keys
+from langflow.api.utils import build_content_disposition, normalize_flow_for_export, remove_api_keys
 from langflow.services.database.models.base import orjson_dumps
 from langflow.services.database.models.deployment.orm_guards import ensure_flow_move_allowed
 from langflow.services.database.models.flow.model import (
@@ -44,6 +44,11 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     """Get a safe filesystem path for flow storage, restricted to user's flows directory.
 
     Allows both absolute and relative paths, but ensures they're within the user's flows directory.
+
+    Uses ``os.path.realpath`` + ``startswith`` for containment — the sanitiser pattern
+    recognised by CodeQL's ``py/path-injection`` analysis. ``realpath`` canonicalises
+    the path and follows symlinks, so the returned path is safe to pass to filesystem
+    operations.
     """
     if not fs_path:
         raise HTTPException(status_code=400, detail="fs_path cannot be empty")
@@ -63,15 +68,10 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
             detail="Invalid fs_path: null bytes are not allowed",
         )
 
-    # Build the safe base directory path
+    # Build and canonicalise the safe base directory path.
     base_dir = storage_service.data_dir / "flows" / str(user_id)
-    base_dir_str = str(base_dir)
-
-    # Normalize base directory path (resolve to absolute, handle symlinks)
-    # resolve() doesn't require the path to exist, it just resolves symlinks
     try:
-        base_dir_stdlib = StdlibPath(base_dir_str).resolve()
-        base_dir_resolved = str(base_dir_stdlib)
+        base_dir_resolved = os.path.realpath(str(base_dir))
     except (OSError, ValueError) as e:
         raise HTTPException(status_code=400, detail=f"Invalid base directory: {e}") from e
 
@@ -79,49 +79,31 @@ def _get_safe_flow_path(fs_path: str, user_id: UUID, storage_service: StorageSer
     is_absolute = normalized_path.startswith("/") or (len(normalized_path) > 1 and normalized_path[1] == ":")
 
     if is_absolute:
-        # Absolute path - resolve and validate it's within base directory
-        try:
-            requested_path = StdlibPath(normalized_path).resolve()
-            requested_resolved = str(requested_path)
-            # Ensure resolved path stays within base (prevent symlink attacks)
-            if not requested_resolved.startswith(base_dir_resolved + "/") and requested_resolved != base_dir_resolved:
-                raise HTTPException(
-                    status_code=400,
-                    detail=f"Absolute path must be within your flows directory: {base_dir_resolved}",
-                )
-            # Reconstruct the path from the base directory + relative portion
-            # so the returned value is derived from the safe base, not user input.
-            rel = StdlibPath(requested_resolved).relative_to(base_dir_stdlib)
-            return Path(str(base_dir_stdlib / rel))
-        except HTTPException:
-            raise
-        except (OSError, ValueError) as e:
+        candidate = normalized_path
+    else:
+        relative_part = normalized_path.lstrip("/")
+        # os.path.join is deliberate here (PTH118) to match CodeQL's sanitiser model.
+        candidate = os.path.join(base_dir_resolved, relative_part) if relative_part else base_dir_resolved  # noqa: PTH118
+
+    try:
+        resolved_str = os.path.realpath(candidate)
+    except (OSError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
+
+    # SECURITY: containment check using os.path.realpath + startswith (CodeQL-recognised).
+    if resolved_str != base_dir_resolved and not resolved_str.startswith(base_dir_resolved + os.sep):
+        if is_absolute:
             raise HTTPException(
                 status_code=400,
-                detail=(
-                    f"Invalid file save path: {e}. "
-                    f"Verify that the path is within your flows directory: {base_dir_resolved}"
-                ),
-            ) from e
-    else:
-        # Relative path - validate that it's within the base directory
-        relative_part = normalized_path.lstrip("/")
-        safe_path_stdlib = base_dir_stdlib / relative_part if relative_part else base_dir_stdlib
-        try:
-            resolved_path = safe_path_stdlib.resolve()
-            resolved_str = str(resolved_path)
+                detail="Absolute path must be within your flows directory",
+            )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid path: resolves outside allowed directory",
+        )
 
-            # Ensure resolved path stays within base (prevent symlink attacks)
-            if not resolved_str.startswith(base_dir_resolved + "/") and resolved_str != base_dir_resolved:
-                raise HTTPException(
-                    status_code=400,
-                    detail="Invalid path: resolves outside allowed directory",
-                )
-        except (OSError, ValueError) as e:
-            raise HTTPException(status_code=400, detail=f"Invalid path: {e}") from e
-
-        # Return the resolved path to prevent TOCTOU symlink attacks
-        return Path(resolved_str)
+    # Return the canonicalised path — safe for subsequent filesystem operations.
+    return Path(resolved_str)
 
 
 # Fields that may be updated via setattr on a Flow ORM instance.
@@ -136,6 +118,13 @@ _UPDATABLE_FLOW_FIELDS: frozenset[str] = frozenset(
         "endpoint_name",
         "tags",
         "folder_id",
+        # ``workspace_id`` is part of the FlowUpdate / FlowCreate contract and
+        # the PATCH/PUT routes re-authorize WRITE at the destination scope when
+        # the payload changes it (see flows.py). Omitting it here would silently
+        # accept the payload, pass the authorization check, and then drop the
+        # write — leaving the flow in its old workspace despite the API saying
+        # the move succeeded.
+        "workspace_id",
         "icon",
         "icon_bg_color",
         "gradient",
@@ -354,10 +343,23 @@ async def _read_flow(
     flow_id: UUID,
     user_id: UUID,
 ):
-    """Read a flow."""
-    stmt = select(Flow).where(Flow.id == flow_id).where(Flow.user_id == user_id)
+    """Read a flow.
 
-    return (await session.exec(stmt)).first()
+    When the registered authorization service supports cross-user fetch
+    (authorization plugin), the row is loaded by id alone and the caller's
+    ``ensure_flow_permission`` decides access. Otherwise the query stays
+    owner-scoped so the OSS pass-through default cannot widen visibility.
+    """
+    from langflow.services.authorization.fetch import authorized_or_owner_scoped
+
+    return await authorized_or_owner_scoped(
+        session,
+        Flow,
+        id_column=Flow.id,
+        resource_id=flow_id,
+        owner_column=Flow.user_id,
+        owner_id=user_id,
+    )
 
 
 async def _update_existing_flow(
@@ -373,29 +375,64 @@ async def _update_existing_flow(
     Similar to update_flow but:
     - Fails on name/endpoint_name conflict with OTHER flows (409)
     - Keeps existing folder_id if not provided in request
+
+    ``current_user`` is the *actor* (the API caller). The flow's owner is
+    ``existing_flow.user_id``. When the actor is not the owner — a cross-user
+    shared edit allowed by a registered authorization plugin — ownership-
+    bound state (folder, fs_path, ownership) must stay rooted at the owner,
+    otherwise the write silently retargets folders/storage that belong to the
+    actor. This mirrors the cross-user semantics already enforced by
+    ``_patch_flow``.
     """
     settings_service = get_settings_service()
-    user_id = current_user.id
+    actor_user_id = current_user.id
+    owner_user_id: UUID = existing_flow.user_id
+    is_owner_edit = owner_user_id == actor_user_id
 
-    # Validate fs_path if provided (use `is not None` to catch empty strings)
+    # Non-owner edits cannot relocate the flow into folders or storage they
+    # own, nor transfer ownership. Reject early so the failure is explicit
+    # rather than corrupting scope downstream.
+    if not is_owner_edit:
+        if flow.folder_id is not None and flow.folder_id != existing_flow.folder_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change folder of a flow you do not own.",
+            )
+        if flow.fs_path is not None and flow.fs_path != existing_flow.fs_path:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change fs_path of a flow you do not own.",
+            )
+        if flow.user_id is not None and flow.user_id != owner_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot transfer ownership of a flow you do not own.",
+            )
+
+    # Validate fs_path if provided (use `is not None` to catch empty strings).
+    # Path safety is scoped to the *owner* — fs_path lives under the owner's
+    # storage namespace, so we must not authorize it against the actor's.
     if flow.fs_path is not None:
-        await _verify_fs_path(flow.fs_path, user_id, storage_service)
+        await _verify_fs_path(flow.fs_path, owner_user_id, storage_service)
 
-    # Validate folder_id if provided
+    # Validate folder_id if provided — scoped to the owner so a non-owner
+    # cannot land the flow in their own default folder via this code path.
     if flow.folder_id is not None:
         folder = (
-            await session.exec(select(Folder).where(Folder.id == flow.folder_id, Folder.user_id == user_id))
+            await session.exec(select(Folder).where(Folder.id == flow.folder_id, Folder.user_id == owner_user_id))
         ).first()
         if not folder:
             raise HTTPException(status_code=400, detail="Folder not found")
 
-    # Check name uniqueness (excluding current flow)
+    # Check name uniqueness against the *owner's* flows (the unique constraint
+    # is (user_id, name); checking against the actor's namespace would miss
+    # collisions when actor != owner).
     if flow.name and flow.name != existing_flow.name:
         name_conflict = (
             await session.exec(
                 select(Flow).where(
                     Flow.name == flow.name,
-                    Flow.user_id == user_id,
+                    Flow.user_id == owner_user_id,
                     Flow.id != existing_flow.id,
                 )
             )
@@ -403,13 +440,13 @@ async def _update_existing_flow(
         if name_conflict:
             raise HTTPException(status_code=409, detail="Name must be unique")
 
-    # Check endpoint_name uniqueness (excluding current flow)
+    # Check endpoint_name uniqueness — same owner-scope rationale.
     if flow.endpoint_name and flow.endpoint_name != existing_flow.endpoint_name:
         endpoint_conflict = (
             await session.exec(
                 select(Flow).where(
                     Flow.endpoint_name == flow.endpoint_name,
-                    Flow.user_id == user_id,
+                    Flow.user_id == owner_user_id,
                     Flow.id != existing_flow.id,
                 )
             )
@@ -451,7 +488,8 @@ async def _update_existing_flow(
     session.add(existing_flow)
     await session.flush()
     await session.refresh(existing_flow)
-    await _save_flow_to_fs(existing_flow, user_id, storage_service)
+    # Writes happen under the owner's storage namespace, not the actor's.
+    await _save_flow_to_fs(existing_flow, owner_user_id, storage_service)
 
     return FlowRead.model_validate(existing_flow, from_attributes=True)
 
@@ -464,8 +502,18 @@ async def _patch_flow(
     user_id: UUID,
     storage_service: StorageService,
 ) -> FlowRead:
-    """Apply a partial update (PATCH) to an existing flow and return a FlowRead."""
+    """Apply a partial update (PATCH) to an existing flow and return a FlowRead.
+
+    ``user_id`` is the *actor* — the caller making the patch. The flow's
+    owner is ``db_flow.user_id``. For shared edits (actor != owner) we keep
+    folder/fs operations rooted at the owner so a non-owner write does not
+    silently move the flow into the actor's folder or write into the actor's
+    fs namespace; the actor cannot change ownership-bound state at all.
+    """
     settings_service = get_settings_service()
+
+    owner_user_id: UUID = db_flow.user_id
+    is_owner_edit = owner_user_id == user_id
 
     # PATCH follows the same rule: None-valued fields are omitted unless
     # explicitly reintroduced below (for example endpoint_name clear).
@@ -474,6 +522,27 @@ async def _patch_flow(
     # Preserve the existing endpoint unless the request explicitly clears it.
     if _endpoint_name_was_explicitly_cleared(flow):
         update_data["endpoint_name"] = None
+
+    # A non-owner editing a shared flow must not be able to relocate the
+    # flow into folders or storage they own. Reject ownership-bound mutations
+    # explicitly so the failure surfaces in the response instead of silently
+    # corrupting scope inside ``_validate_and_assign_folder``.
+    if not is_owner_edit:
+        if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change folder of a flow you do not own.",
+            )
+        if "fs_path" in update_data and update_data["fs_path"] != db_flow.fs_path:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot change fs_path of a flow you do not own.",
+            )
+        if "user_id" in update_data and update_data["user_id"] != owner_user_id:
+            raise HTTPException(
+                status_code=403,
+                detail="Cannot transfer ownership of a flow you do not own.",
+            )
 
     if "folder_id" in update_data and update_data["folder_id"] != db_flow.folder_id:
         await ensure_flow_move_allowed(
@@ -488,20 +557,25 @@ async def _patch_flow(
 
     _apply_update_data(db_flow, update_data)
 
-    # Validate fs_path if it was changed (will raise HTTPException if invalid)
+    # Validate fs_path if it was changed (will raise HTTPException if invalid).
+    # fs_path lives under the owner's storage namespace, so the owner id
+    # gates the safe-path check.
     if "fs_path" in update_data:
-        await _verify_fs_path(db_flow.fs_path, user_id, storage_service)
+        await _verify_fs_path(db_flow.fs_path, owner_user_id, storage_service)
 
     webhook_component = get_webhook_component_in_flow(db_flow.data) if db_flow.data else None
     db_flow.webhook = webhook_component is not None
     db_flow.updated_at = datetime.now(timezone.utc)
 
-    await _validate_and_assign_folder(session, db_flow, user_id)
+    # Folder validation must be scoped to the owner — otherwise a non-owner
+    # edit would land in the actor's default folder (see ``_validate_and_assign_folder``).
+    await _validate_and_assign_folder(session, db_flow, owner_user_id)
 
     session.add(db_flow)
     await session.flush()
     await session.refresh(db_flow)
-    await _save_flow_to_fs(db_flow, user_id, storage_service)
+    # Writes happen under the owner's storage namespace, not the actor's.
+    await _save_flow_to_fs(db_flow, owner_user_id, storage_service)
 
     return FlowRead.model_validate(db_flow, from_attributes=True)
 
@@ -597,9 +671,10 @@ def _build_flows_download_response(
         current_time = datetime.now(tz=timezone.utc).astimezone().strftime("%Y%m%d_%H%M%S")
         filename = f"{current_time}_langflow_flows.zip"
 
+        cd = build_content_disposition(filename)
         return StreamingResponse(
             zip_stream,
             media_type="application/x-zip-compressed",
-            headers={"Content-Disposition": f"attachment; filename={filename}"},
+            headers={"Content-Disposition": cd},
         )
     return normalised_flows[0]

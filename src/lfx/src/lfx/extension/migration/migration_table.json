@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "entries": [
+    {
+      "bare_class_name": "DuckDuckGoSearchComponent",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.duckduckgo.duck_duck_go_search_run.DuckDuckGoSearchComponent",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.duckduckgo.DuckDuckGoSearchComponent",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:duckduckgo:DuckDuckGoSearchComponent@official-pre-a",
+      "target": "ext:duckduckgo:DuckDuckGoSearchComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ArXivComponent",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.arxiv.arxiv.ArXivComponent",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.arxiv.ArXivComponent",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:arxiv:ArXivComponent@official-pre-a",
+      "target": "ext:arxiv:ArXivComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.db2_vector.DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.DB2VectorStoreComponent",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:DB2VectorStoreComponent@official-pre-a",
+      "target": "ext:ibm:DB2VectorStoreComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.watsonx.WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.WatsonxAIComponent",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:WatsonxAIComponent@official-pre-a",
+      "target": "ext:ibm:WatsonxAIComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.watsonx_embeddings.WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.ibm.WatsonxEmbeddingsComponent",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:ibm:WatsonxEmbeddingsComponent@official-pre-a",
+      "target": "ext:ibm:WatsonxEmbeddingsComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ChunkDoclingDocumentComponent",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.chunk_docling_document.ChunkDoclingDocumentComponent",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.ChunkDoclingDocumentComponent",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:ChunkDoclingDocumentComponent@official-pre-a",
+      "target": "ext:docling:ChunkDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DoclingInlineComponent",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.docling_inline.DoclingInlineComponent",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.DoclingInlineComponent",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:DoclingInlineComponent@official-pre-a",
+      "target": "ext:docling:DoclingInlineComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "DoclingRemoteComponent",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.docling_remote.DoclingRemoteComponent",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.DoclingRemoteComponent",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:DoclingRemoteComponent@official-pre-a",
+      "target": "ext:docling:DoclingRemoteComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "bare_class_name": "ExportDoclingDocumentComponent",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.export_docling_document.ExportDoclingDocumentComponent",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "import_path": "lfx.components.docling.ExportDoclingDocumentComponent",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    },
+    {
+      "legacy_slot": "ext:docling:ExportDoclingDocumentComponent@official-pre-a",
+      "target": "ext:docling:ExportDoclingDocumentComponent@official",
+      "added_in": "1.10.0"
+    }
+  ],
+  "ambiguous_bare_names": [
+    {
+      "name": "MergeDataComponent",
+      "candidates": [
+        "ext:processing:MergeDataComponent@official",
+        "ext:deactivated:MergeDataComponent@official"
+      ],
+      "added_in": "1.10.0"
+    },
+    {
+      "name": "SplitTextComponent",
+      "candidates": [
+        "ext:processing:SplitTextComponent@official",
+        "ext:deactivated:SplitTextComponent@official"
+      ],
+      "added_in": "1.10.0"
+    },
+    {
+      "name": "SubFlowComponent",
+      "candidates": [
+        "ext:flow_controls:SubFlowComponent@official",
+        "ext:deactivated:SubFlowComponent@official"
+      ],
+      "added_in": "1.10.0"
+    }
+  ]
+}

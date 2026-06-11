@@ -235,7 +235,7 @@ class TestGetFlowByIdOrName:
 
 
 class TestGetFlowByIdOrEndpointName:
-    """Regression tests for the IDOR fix in get_flow_by_id_or_endpoint_name (LE-639).
+    """Regression tests for the IDOR fix in get_flow_by_id_or_endpoint_name.
 
     The UUID branch previously called ``session.get(Flow, flow_id)`` without
     applying any ownership check, so any authenticated caller could resolve
@@ -430,6 +430,78 @@ class TestGetFlowByIdOrEndpointName:
         try:
             with pytest.raises(HTTPException):
                 await get_flow_by_id_or_endpoint_name(str(uuid4()), owner_id)
+        finally:
+            patcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_widening_is_opt_in_even_when_authz_active(self):
+        """Cross-user UUID lookup stays 404 unless caller explicitly opts in.
+
+        Regression: the share-aware widening must never fire from the helper's
+        default arguments — agentic MCP tools call the helper without
+        ``widen_for_shares=True`` and then read ``flow.data`` directly, so an
+        always-on widen would leak another user's graph metadata before any
+        policy decision runs.
+        """
+        attacker_id = uuid4()
+        victim_id = uuid4()
+        flow_id = uuid4()
+        victim_flow = MagicMock(spec=Flow)
+        victim_flow.id = flow_id
+        victim_flow.user_id = victim_id
+
+        mock_session = MagicMock()
+        mock_session.get = AsyncMock(return_value=victim_flow)
+
+        # Stub authz so cross-user fetch + AUTHZ_ENABLED are both ON, which
+        # under the old contract would have widened the lookup. With the new
+        # opt-in flag default-false, widening must NOT happen.
+        stub_authz = MagicMock()
+        stub_authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+        stub_authz.is_enabled = AsyncMock(return_value=True)
+
+        patcher = self._patch_session(mock_session)
+        try:
+            with patch("langflow.services.deps.get_authorization_service", return_value=stub_authz):  # noqa: SIM117
+                with pytest.raises(HTTPException) as exc_info:
+                    await get_flow_by_id_or_endpoint_name(str(flow_id), str(attacker_id))
+            assert exc_info.value.status_code == 404
+        finally:
+            patcher.stop()
+
+    @pytest.mark.asyncio
+    async def test_widening_allows_cross_user_when_opt_in_and_authz_active(self):
+        """When the caller opts in AND authz is active, share-aware lookup widens.
+
+        This is the path used by API routes that immediately call
+        ``ensure_flow_permission`` afterward — widening is safe there because
+        a permission check follows the fetch.
+        """
+        attacker_id = uuid4()
+        victim_id = uuid4()
+        flow_id = uuid4()
+        victim_flow = MagicMock(spec=Flow)
+        victim_flow.id = flow_id
+        victim_flow.user_id = victim_id
+
+        mock_session = MagicMock()
+        mock_session.get = AsyncMock(return_value=victim_flow)
+
+        stub_authz = MagicMock()
+        stub_authz.supports_cross_user_fetch = AsyncMock(return_value=True)
+        stub_authz.is_enabled = AsyncMock(return_value=True)
+
+        patcher = self._patch_session(mock_session)
+        try:
+            with patch("langflow.services.deps.get_authorization_service", return_value=stub_authz):  # noqa: SIM117
+                with patch("langflow.helpers.flow.FlowRead") as mock_flow_read:
+                    mock_flow_read.model_validate = MagicMock(return_value="validated_flow")
+                    result = await get_flow_by_id_or_endpoint_name(
+                        str(flow_id),
+                        str(attacker_id),
+                        widen_for_shares=True,
+                    )
+                    assert result == "validated_flow"
         finally:
             patcher.stop()
 

@@ -1,21 +1,14 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
 
-import { zoomOut } from "../../utils/zoom-out";
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 
 // TODO: This test might not be needed anymore
 test(
   "should be able to select all with ctrl + A on advanced modal",
   { tag: ["@release"] },
   async ({ page }) => {
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 10000,
-    });
-
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
 
     await page.waitForSelector('[data-testid="canvas_controls_dropdown"]', {
       timeout: 3000,

@@ -258,9 +258,18 @@ const config = {
           muted: "hsl(var(--accent-blue-muted))",
           "muted-foreground": "hsl(var(--accent-blue-muted-foreground))",
         },
+        "deployment-callout": {
+          DEFAULT: "hsl(var(--deployment-callout))",
+          border: "hsl(var(--deployment-callout-border))",
+          foreground: "hsl(var(--deployment-callout-foreground))",
+        },
         "accent-pink": {
           DEFAULT: "hsl(var(--accent-pink))",
           foreground: "hsl(var(--accent-pink-foreground))",
+        },
+        "accent-assistant": {
+          brand: "hsl(var(--accent-assistant-brand))",
+          purple: "hsl(var(--accent-assistant-purple))",
         },
         popover: {
           DEFAULT: "hsl(var(--popover))",

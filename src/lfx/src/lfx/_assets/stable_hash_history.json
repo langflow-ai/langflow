@@ -809,12 +809,6 @@
       "0.3.1": "1f60da161fd3"
     }
   },
-  "GetEnvVar": {
-    "versions": {
-      "0.3.0": "083f0a94f380",
-      "0.3.1": "083f0a94f380"
-    }
-  },
   "GraphRAG": {
     "versions": {
       "0.3.0": "4d83709a5f5f",
@@ -1864,12 +1858,6 @@
       "0.3.1": "f51b15d26440"
     }
   },
-  "PythonCodeStructuredTool": {
-    "versions": {
-      "0.3.0": "3f913a303e47",
-      "0.3.1": "3f913a303e47"
-    }
-  },
   "PythonREPLTool": {
     "versions": {
       "0.3.0": "695ab612478d",
@@ -2162,11 +2150,6 @@
     "versions": {
       "0.3.0": "8b5ca1f38f6e",
       "0.3.1": "8b5ca1f38f6e"
-    }
-  },
-  "policies": {
-    "versions": {
-      "0.3.0": "fe3303671fea"
     }
   },
   "policies": {

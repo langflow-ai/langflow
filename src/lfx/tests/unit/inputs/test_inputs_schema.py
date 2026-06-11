@@ -228,6 +228,54 @@ def test_schema_to_langflow_inputs():
     assert isinstance(list_input, MessageTextInput)
 
 
+def test_schema_to_langflow_inputs_sets_input_types_for_connectable_handles():
+    """Non-string schema fields must carry input_types so the frontend renders connection handles.
+
+    Regression test for https://github.com/langflow-ai/langflow/issues/9424:
+    MCP Tool components did not expose input ports for number, bool, or dict/JSON fields
+    because schema_to_langflow_inputs left input_types unset, and the frontend's
+    computeDisplayHandle hides handles for LANGFLOW_SUPPORTED_TYPES with no input_types.
+    """
+
+    class ConnectableSchema(BaseModel):
+        lat: float = Field(description="Latitude")
+        count: int = Field(description="Count")
+        enabled: bool = Field(description="Enabled flag")
+        payload: dict = Field(description="JSON payload")
+
+    inputs = {inp.name: inp for inp in schema_to_langflow_inputs(ConnectableSchema)}
+
+    assert isinstance(inputs["lat"], FloatInput)
+    assert inputs["lat"].input_types == ["Message"]
+
+    assert isinstance(inputs["count"], IntInput)
+    assert inputs["count"].input_types == ["Message"]
+
+    assert isinstance(inputs["enabled"], BoolInput)
+    assert inputs["enabled"].input_types == ["Message"]
+
+    assert isinstance(inputs["payload"], DictInput)
+    assert inputs["payload"].input_types == ["JSON"]
+
+
+def test_schema_to_langflow_inputs_sets_data_input_types_for_nested_dict():
+    """Nullable object fields resolve to NestedDictInput and must also advertise a JSON handle."""
+    schema = {
+        "type": "object",
+        "properties": {
+            "config": {
+                "anyOf": [{"type": "object"}, {"type": "null"}],
+                "default": None,
+            },
+        },
+    }
+    model = create_input_schema_from_json_schema(schema)
+    inputs = {inp.name: inp for inp in schema_to_langflow_inputs(model)}
+
+    assert isinstance(inputs["config"], NestedDictInput)
+    assert inputs["config"].input_types == ["JSON"]
+
+
 def test_schema_to_langflow_inputs_preserves_optional_defaults_and_nullable_objects():
     schema = {
         "type": "object",
@@ -272,6 +320,21 @@ def test_schema_to_langflow_inputs_preserves_optional_defaults_and_nullable_obje
 
     assert isinstance(inputs["proxy_country"], MessageTextInput)
     assert inputs["proxy_country"].value == "us"
+
+
+def test_float_input_allows_range_spec_minimum_for_non_negative_values():
+    input_field = FloatInput.model_validate(
+        {
+            "name": "tool_execution_timeout",
+            "value": 0.0,
+            "range_spec": {"min": 0.0, "max": 3600.0, "step": 0.01},
+        }
+    )
+
+    assert input_field.range_spec is not None
+    assert input_field.range_spec.min == 0.0
+    assert input_field.range_spec.max == 3600.0
+    assert input_field.range_spec.step == 0.01
 
 
 def test_schema_to_langflow_inputs_invalid_type():

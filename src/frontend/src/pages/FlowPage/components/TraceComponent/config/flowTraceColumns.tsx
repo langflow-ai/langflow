@@ -1,5 +1,6 @@
 import type { ColDef } from "ag-grid-community";
 import IconComponent from "@/components/common/genericIconComponent";
+import i18n from "@/i18n";
 import { formatSmartTimestamp } from "@/utils/dateTime";
 import { formatTotalLatency, getStatusIconProps } from "../traceViewHelpers";
 import {
@@ -17,7 +18,7 @@ export function createFlowTracesColumns({
 } = {}): ColDef[] {
   return [
     {
-      headerName: "Run",
+      headerName: i18n.t("trace.run"),
       field: "run",
       flex: 1.0,
       minWidth: 240,
@@ -27,7 +28,7 @@ export function createFlowTracesColumns({
       valueGetter: () => formatRunValue(flowName, flowId),
     },
     {
-      headerName: "Trace ID",
+      headerName: i18n.t("trace.traceId"),
       field: "id",
       flex: 0.3,
       minWidth: 240,
@@ -37,7 +38,7 @@ export function createFlowTracesColumns({
     },
 
     {
-      headerName: "Timestamp (UTC)",
+      headerName: i18n.t("trace.timestamp"),
       field: "startTime",
       flex: 0.5,
       minWidth: 70,
@@ -47,7 +48,7 @@ export function createFlowTracesColumns({
       valueGetter: (params) => formatSmartTimestamp(params.data?.startTime),
     },
     {
-      headerName: "Input",
+      headerName: i18n.t("trace.input"),
       field: "input",
       flex: 1,
       minWidth: 150,
@@ -57,7 +58,7 @@ export function createFlowTracesColumns({
       valueGetter: (params) => formatObjectValue(params.data?.input),
     },
     {
-      headerName: "Output",
+      headerName: i18n.t("trace.output"),
       field: "output",
       flex: 1,
       minWidth: 150,
@@ -67,7 +68,7 @@ export function createFlowTracesColumns({
       valueGetter: (params) => formatObjectValue(params.data?.output),
     },
     {
-      headerName: "Token",
+      headerName: i18n.t("trace.token"),
       field: "totalTokens",
       flex: 0.5,
       minWidth: 50,
@@ -83,7 +84,7 @@ export function createFlowTracesColumns({
       },
     },
     {
-      headerName: "Latency",
+      headerName: i18n.t("trace.latency"),
       field: "totalLatencyMs",
       flex: 0.6,
       minWidth: 50,
@@ -99,7 +100,7 @@ export function createFlowTracesColumns({
       },
     },
     {
-      headerName: "Status",
+      headerName: i18n.t("trace.status"),
       field: "status",
       flex: 0.6,
       minWidth: 100,

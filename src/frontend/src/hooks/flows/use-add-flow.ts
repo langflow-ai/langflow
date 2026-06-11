@@ -11,8 +11,9 @@ import { useGlobalVariablesStore } from "@/stores/globalVariablesStore/globalVar
 import { useTypesStore } from "@/stores/typesStore";
 import { useUtilityStore } from "@/stores/utilityStore";
 import type { FlowType } from "@/types/flow";
+import { extractApiErrorMessages } from "@/utils/apiError";
+import { getFolderScopedDuplicateName } from "@/utils/flow-naming";
 import {
-  addVersionToDuplicates,
   createNewFlow,
   extractFieldsFromComponenents,
   processDataFromFlow,
@@ -43,7 +44,6 @@ const useAddFlow = () => {
   );
   const isOnboarding =
     !hideGettingStartedProgress && !userData?.optins?.dialog_dismissed;
-
   const unavailableFields = useGlobalVariablesStore(
     (state) => state.unavailableFields,
   );
@@ -100,11 +100,12 @@ const useAddFlow = () => {
       }
     }
 
-    const flowsToCheckNames = flows?.filter(
-      (f) => f.folder_id === myCollectionId,
-    );
     const newFlow = createNewFlow(flowData!, folder_id, flow);
-    const newName = addVersionToDuplicates(newFlow, flowsToCheckNames ?? []);
+    const newName = getFolderScopedDuplicateName(
+      newFlow,
+      flows ?? [],
+      myCollectionId,
+    );
     newFlow.name = newName;
     newFlow.folder_id = folder_id;
 
@@ -128,7 +129,8 @@ const useAddFlow = () => {
           resolve(createdFlow.id);
         },
         onError: (error) => {
-          if (error?.response?.data?.detail[0]?.type === UUID_PARSING_ERROR) {
+          const detail = error?.response?.data?.detail;
+          if (Array.isArray(detail) && detail[0]?.type === UUID_PARSING_ERROR) {
             setNoticeData({
               title: FOLDER_NOT_FOUND_ERROR,
             });
@@ -139,17 +141,10 @@ const useAddFlow = () => {
             return;
           }
 
-          if (error.response?.data?.detail) {
-            useAlertStore.getState().setErrorData({
-              title: FLOW_CREATION_ERROR,
-              list: [error.response?.data?.detail],
-            });
-          } else {
-            useAlertStore.getState().setErrorData({
-              title: FLOW_CREATION_ERROR,
-              list: [error.message ?? FLOW_CREATION_ERROR_MESSAGE],
-            });
-          }
+          useAlertStore.getState().setErrorData({
+            title: FLOW_CREATION_ERROR,
+            list: extractApiErrorMessages(error),
+          });
           reject(error); // Re-throw the error so the caller can handle it if needed},
         },
       });

@@ -4,6 +4,7 @@ import { expect, test } from "../../fixtures";
 import { addFlowToTestOnEmptyLangflow } from "../../utils/add-flow-to-test-on-empty-langflow";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 
 test(
@@ -31,7 +32,9 @@ test(
     }
 
     await page.getByTestId("side_nav_options_all-templates").click();
-    await page.getByRole("heading", { name: "Basic Prompting" }).click();
+    await page
+      .getByRole("heading", { name: TEXTS.templateBasicPrompting })
+      .click();
 
     await initialGPTsetup(page);
 
@@ -40,7 +43,7 @@ test(
     const randomSeed1 = Math.random().toString(36).substring(2, 10);
     const randomSeed2 = Math.random().toString(36).substring(2, 10);
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
 
     await page
       .getByTestId("textarea_str_input_value")
@@ -57,7 +60,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 60000,
     });
 
@@ -67,13 +70,13 @@ test(
       .click();
 
     const randomTextGeneratedByAI = await page
-      .getByPlaceholder("Empty")
+      .getByPlaceholder(TEXTS.placeholderEmpty)
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
-    await page.getByText("Chat Input", { exact: true }).click();
+    await page.getByText(TEXTS.componentChatInput, { exact: true }).click();
 
     // Use a completely different prompt to ensure different output
     await page
@@ -88,7 +91,7 @@ test(
     });
 
     await page.getByTestId("button_run_chat output").click();
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 60000,
     });
 
@@ -98,15 +101,15 @@ test(
       .click();
 
     const secondRandomTextGeneratedByAI = await page
-      .getByPlaceholder("Empty")
+      .getByPlaceholder(TEXTS.placeholderEmpty)
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     const languageModelNode = page
       .locator(".react-flow__node", {
-        has: page.getByText("Language Model", { exact: true }),
+        has: page.getByText(TEXTS.componentLanguageModel, { exact: true }),
       })
       .last();
 
@@ -133,7 +136,7 @@ test(
 
     await page.getByTestId("button_run_chat output").click();
 
-    await page.waitForSelector("text=built successfully", {
+    await page.waitForSelector(`text=${TEXTS.toastBuiltSuccessfully}`, {
       timeout: 60000,
     });
 
@@ -143,11 +146,11 @@ test(
       .click();
 
     const thirdRandomTextGeneratedByAI = await page
-      .getByPlaceholder("Empty")
+      .getByPlaceholder(TEXTS.placeholderEmpty)
       .first()
       .inputValue();
 
-    await page.getByText("Close").last().click();
+    await page.getByText(TEXTS.close).last().click();
 
     // The frozen path should return the cached (second) result, not generate new output
     expect(secondRandomTextGeneratedByAI).toEqual(thirdRandomTextGeneratedByAI);

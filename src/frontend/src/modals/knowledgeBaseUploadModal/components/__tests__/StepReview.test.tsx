@@ -1,6 +1,5 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import React from "react";
 import { StepReview } from "../StepReview";
 
 jest.mock("@/components/common/genericIconComponent", () => ({
@@ -33,6 +32,7 @@ const baseProps = {
   chunkOverlap: 50,
   separator: "\\n",
   selectedEmbeddingModel: [],
+  backendType: "chroma" as const,
 };
 
 beforeEach(() => jest.clearAllMocks());
@@ -147,6 +147,12 @@ describe("StepReview", () => {
     it('shows "Not selected" when no embedding model is selected', () => {
       render(<StepReview {...propsWithFile} selectedEmbeddingModel={[]} />);
       expect(screen.getByText("Not selected")).toBeInTheDocument();
+    });
+
+    it("shows the selected DB Provider", () => {
+      render(<StepReview {...propsWithFile} backendType="opensearch" />);
+      expect(screen.getByText("DB Provider")).toBeInTheDocument();
+      expect(screen.getByText("OpenSearch")).toBeInTheDocument();
     });
   });
 
