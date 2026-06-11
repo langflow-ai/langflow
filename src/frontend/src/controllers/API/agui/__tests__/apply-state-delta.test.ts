@@ -319,11 +319,7 @@ describe("applyStateDelta", () => {
 
       useFlowStore.setState({ clearAndSetEdgesRunning: original });
 
-      expect(calls).toEqual([
-        ["node-a"],
-        ["node-a", "node-b"],
-        ["node-b"],
-      ]);
+      expect(calls).toEqual([["node-a"], ["node-a", "node-b"], ["node-b"]]);
     });
   });
 });

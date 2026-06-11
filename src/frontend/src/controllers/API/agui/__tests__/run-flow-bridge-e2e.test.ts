@@ -612,9 +612,7 @@ describe("runFlowAGUI end-to-end", () => {
       expect(signals[0].aborted).toBe(true);
       const flow = useFlowStore.getState();
       expect(flow.isBuilding).toBe(false);
-      expect(flow.flowBuildStatus["node-a"]?.status).toBe(
-        BuildStatus.TO_BUILD,
-      );
+      expect(flow.flowBuildStatus["node-a"]?.status).toBe(BuildStatus.TO_BUILD);
       expect(flow.flowBuildStatus["node-b"]?.status).toBe(BuildStatus.BUILT);
       // ``buildInfo`` is recorded as a failure (so trackFlowBuild sees the
       // cancellation as an error) but without an ``error`` string: the
