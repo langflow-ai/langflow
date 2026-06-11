@@ -295,6 +295,13 @@ def append_migration_entries(plan: dict[str, list[tuple[str, str]]], *, apply: b
             new_entries.append(_entry("import_path", f"lfx.components.{provider}.{class_name}", target))
             new_entries.append(_entry("legacy_slot", f"ext:{provider}:{class_name}@official-pre-a", target))
 
+    # Idempotency guard: a partially-failed earlier run (provider dir moved
+    # but the table already written, or vice versa) must not duplicate rows on
+    # re-run.  Entries are deduped on their full content; the table itself
+    # stays append-only.
+    existing_keys = {json.dumps(e, sort_keys=True) for e in entries}
+    new_entries = [e for e in new_entries if json.dumps(e, sort_keys=True) not in existing_keys]
+
     print(f"  migration: +{len(new_entries)} entries (+{len(new_ambiguous)} ambiguous)")
     if not apply:
         return
