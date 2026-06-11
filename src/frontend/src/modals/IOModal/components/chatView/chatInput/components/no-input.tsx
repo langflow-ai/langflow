@@ -1,5 +1,9 @@
 import type React from "react";
-import { Trans as TransComponent, type TransProps, useTranslation } from "react-i18next";
+import {
+  Trans as TransComponent,
+  type TransProps,
+  useTranslation,
+} from "react-i18next";
 import { Button } from "@/components/ui/button";
 import Loading from "@/components/ui/loading";
 

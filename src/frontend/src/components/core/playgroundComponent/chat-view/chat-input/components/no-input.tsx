@@ -1,4 +1,8 @@
-import { Trans as TransComponent, type TransProps, useTranslation } from "react-i18next";
+import {
+  Trans as TransComponent,
+  type TransProps,
+  useTranslation,
+} from "react-i18next";
 
 const Trans = TransComponent as unknown as React.FC<TransProps<string>>;
 import { Button } from "@/components/ui/button";
