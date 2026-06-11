@@ -61,7 +61,7 @@ def _compile_handler_source(source: str) -> Any:
     handle = namespace.get("handle")
     if not callable(handle):
         msg = "VoiceTool handler_code defined `handle` but it is not callable."
-        raise ValueError(msg)
+        raise TypeError(msg)
     return handle
 
 

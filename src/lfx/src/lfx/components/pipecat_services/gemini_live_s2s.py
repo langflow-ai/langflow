@@ -7,8 +7,13 @@ when you want native-audio Gemini Live.
 
 from lfx.base.pipecat.service import PipecatServiceComponent
 from lfx.field_typing.voice_types import PipecatS2SService
-from lfx.io import DropdownInput, HandleInput, MultilineInput, Output, SecretStrInput
-
+from lfx.io import (
+    DropdownInput,
+    HandleInput,
+    MultilineInput,
+    Output,
+    SecretStrInput,
+)
 
 # Available Gemini Live model IDs (kept in one place so the dropdown stays current).
 GEMINI_LIVE_MODELS = [

@@ -7,14 +7,11 @@ Concrete subclasses live under ``lfx/components/pipecat_services/`` and implemen
 """
 
 from abc import abstractmethod
-from typing import TYPE_CHECKING, Any
+from typing import Any
 
 from lfx.custom.custom_component.component import Component
 from lfx.inputs.inputs import InputTypes
 from lfx.io import HandleInput, SecretStrInput
-
-if TYPE_CHECKING:
-    pass
 
 
 class PipecatServiceComponent(Component):

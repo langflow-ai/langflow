@@ -121,17 +121,13 @@ class HTTPAPIToolComponent(PipecatToolComponent):
                         json=body if body is not None else None,
                     )
                 content_type = response.headers.get("content-type", "")
-                payload: Any
-                if "application/json" in content_type:
-                    payload = response.json()
-                else:
-                    payload = response.text
+                payload: Any = response.json() if "application/json" in content_type else response.text
                 await params.result_callback({
                     "status": response.status_code,
                     "ok": response.is_success,
                     "data": payload,
                 })
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — all errors must be surfaced to the LLM via result_callback
                 await params.result_callback({"error": f"{type(exc).__name__}: {exc}"})
 
         return _handler

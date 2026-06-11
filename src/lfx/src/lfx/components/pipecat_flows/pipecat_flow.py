@@ -94,7 +94,7 @@ class PipecatFlowComponent(Component):
                 '  "functions": []\n'
                 "}\n"
             ),
-            info="A NodeConfig JSON used as the initial node. Multi-node graphs transition at runtime via tool handlers.",
+            info="A NodeConfig JSON used as the initial node. Multi-node graphs transition at runtime via tool handlers.",  # noqa: E501
         ),
         DropdownInput(
             name="context_strategy",
@@ -152,7 +152,7 @@ class PipecatFlowComponent(Component):
             raise ValueError(msg) from exc
         if not isinstance(config, dict):
             msg = "PipecatFlow flow_config must be a JSON object (NodeConfig)."
-            raise ValueError(msg)
+            raise TypeError(msg)
         if "task_messages" not in config:
             msg = "NodeConfig is missing required key 'task_messages'."
             raise ValueError(msg)

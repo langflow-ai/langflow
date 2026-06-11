@@ -28,10 +28,10 @@ try:
         from pipecat_flows import FlowManager
         from pipecat_flows.types import NodeConfig
     except ImportError:
-        class FlowManager:  # noqa: D401
+        class FlowManager:
             pass
 
-        class NodeConfig:  # noqa: D401
+        class NodeConfig:
             pass
 except (ImportError, OSError):
 

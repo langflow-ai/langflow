@@ -146,7 +146,7 @@ class KnowledgeBaseToolComponent(PipecatToolComponent):
                         "location": item.get("location"),
                     })
                 await params.result_callback({"results": results, "query": query})
-            except Exception as exc:
+            except Exception as exc:  # noqa: BLE001 — all errors must be surfaced to the LLM via result_callback
                 await params.result_callback({"error": f"{type(exc).__name__}: {exc}"})
 
         return _handler
