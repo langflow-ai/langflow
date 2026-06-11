@@ -863,6 +863,10 @@ class FileSystemToolComponent(Component):
         if not candidate.is_relative_to(root_resolved):
             msg = f"Path escapes workspace boundary: {path}"
             raise PermissionError(msg)
+        # Re-check the resolved name: a symlink with an innocuous basename can
+        # alias a denied target that `.resolve()` has already followed.
+        if deny_error := _check_deny_list(str(candidate.relative_to(root_resolved))):
+            raise PermissionError(deny_error)
         if hardlink_error := _check_hardlink(candidate):
             raise PermissionError(hardlink_error)
         return candidate

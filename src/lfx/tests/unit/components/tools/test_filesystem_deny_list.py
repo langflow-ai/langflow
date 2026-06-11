@@ -113,6 +113,34 @@ class TestDenyListEdit:
         assert SENTINEL_VALUE in (sandbox / ".env").read_text(encoding="utf-8")
 
 
+class TestDenyListSymlinkAlias:
+    """A symlink whose own name is innocuous must not alias a denied target.
+
+    The deny check runs on the input string; ``.resolve()`` follows the link
+    afterwards, so without a post-resolution check an ``alias -> .env`` symlink
+    (which a shared-root workspace can acquire out-of-band) reads ``.env``.
+    """
+
+    def test_should_deny_read_when_symlink_aliases_a_denied_file(
+        self, component: FileSystemToolComponent, sandbox: Path
+    ) -> None:
+        alias = sandbox / "alias"
+        alias.symlink_to(sandbox / ".env")
+
+        result = component._read_file("alias")
+
+        assert "error" in result, f"symlink alias bypassed the deny-list; result={result!r}"
+        assert SENTINEL_VALUE not in json.dumps(result)
+
+    def test_should_still_read_allowed_symlink_target(self, component: FileSystemToolComponent, sandbox: Path) -> None:
+        alias = sandbox / "notes_link"
+        alias.symlink_to(sandbox / "notes.txt")
+
+        result = component._read_file("notes_link")
+
+        assert result.get("status") == "ok", f"allowed symlink target was blocked: {result!r}"
+
+
 class TestDenyListGlob:
     def test_should_omit_denied_files_when_globbing_workspace(self, component: FileSystemToolComponent) -> None:
         result = component._glob_search("**/*")
