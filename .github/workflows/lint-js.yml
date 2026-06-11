@@ -2,6 +2,12 @@ name: Lint Frontend
 
 on:
   workflow_call:
+    inputs:
+      allow-failure:
+        description: "When true, Biome errors are reported but job exits 0 (non-blocking)."
+        required: false
+        type: boolean
+        default: false
   workflow_dispatch:
     inputs:
       branch:
@@ -84,6 +90,12 @@ jobs:
           RELATIVE_FILES=$(echo "$CHANGED_FILES" | sed 's|^src/frontend/||')
 
           cd src/frontend
-          echo "$RELATIVE_FILES" | xargs npx @biomejs/biome check \
-            --files-ignore-unknown=true \
-            --diagnostic-level=error
+          if ${{ inputs.allow-failure || 'false' }}; then
+            echo "$RELATIVE_FILES" | xargs npx @biomejs/biome check \
+              --files-ignore-unknown=true \
+              --diagnostic-level=error || echo "Biome found errors (non-blocking for this run)."
+          else
+            echo "$RELATIVE_FILES" | xargs npx @biomejs/biome check \
+              --files-ignore-unknown=true \
+              --diagnostic-level=error
+          fi
