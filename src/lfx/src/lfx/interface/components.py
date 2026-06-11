@@ -775,17 +775,29 @@ def _decorate_template_with_extension(
     bundle: str,
     extension_version: str,
     namespaced_id: str,
+    legacy_name: str | None = None,
 ) -> dict[str, Any]:
     """Stamp the AC-required identity fields onto a frontend-node template.
 
     The ``namespaced_id`` is also written to the template so a consumer that
     only looks at the value (not the dict key) still sees the canonical
     ``ext:<bundle>:<Class>@<slot>`` identifier.
+
+    ``legacy_name`` is the identity the component had in the in-tree palette
+    (the class's ``name`` attribute, falling back to the class name) -- the
+    string saved flows carry as their node ``type``.  In-tree palette entries
+    expose it as the dict key, but ext entries are keyed by ``namespaced_id``,
+    so it must be carried in the value or both alias maps (frontend
+    ``getTemplateAliases``, ``lfx.utils.component_aliases``) lose the only
+    bridge from a pre-move node type like ``AstraDB`` or ``Chroma`` to the
+    current template -- leaving such nodes permanently unresolvable.
     """
     template["extension"] = extension_id
     template["bundle"] = bundle
     template["extension_version"] = extension_version
     template["namespaced_id"] = namespaced_id
+    if legacy_name and not template.get("name"):
+        template["name"] = legacy_name
     return template
 
 
@@ -1125,6 +1137,7 @@ async def import_extension_components(
                 bundle=loaded.bundle,
                 extension_version=loaded.extension_version,
                 namespaced_id=loaded.namespaced_id,
+                legacy_name=getattr(instance, "name", None) or loaded.class_name,
             )
     return components_dict
 
@@ -1171,6 +1184,7 @@ def refresh_bundle_cache_from_record(record: "BundleRecord") -> None:
             bundle=loaded.bundle,
             extension_version=loaded.extension_version,
             namespaced_id=loaded.namespaced_id,
+            legacy_name=getattr(instance, "name", None) or loaded.class_name,
         )
 
     expected = len(record.components)
