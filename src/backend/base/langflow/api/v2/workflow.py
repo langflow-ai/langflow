@@ -24,7 +24,7 @@ import asyncio
 import contextlib
 import json
 import time
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable, Iterable
 from copy import deepcopy
 from typing import Annotated
 from uuid import UUID, uuid4
@@ -736,11 +736,10 @@ async def _stream_event_frames(
     #      RUN_ERROR for AG-UI, ``error`` for langflow) so the buffer's
     #      structural detector flips the job to FAILED.
     #   2. ``adapter.error_events(exc)`` is the dispatcher's guaranteed
-    #      fallback: emitted from the consumer side even when on_error itself
-    #      raises (its body and the sentinel-put are wrapped in suppress so
-    #      they cannot prevent shutdown but can fail silently). Without this
-    #      yield, an on_error failure would leave the stream with no terminal
-    #      error event at all and the buffer would mark the job COMPLETED.
+    #      fallback: emitted from the consumer side when ``generate_flow_events``
+    #      raises before any cooperative terminal error reaches the queue.
+    #      Without this yield, an early failure would leave the stream with no
+    #      terminal error event and the buffer would mark the job COMPLETED.
     #   3. The buffer task's ``terminal_error_type`` check fires on either
     #      RUN_ERROR source, so a single drive() failure cannot result in a
     #      job marked COMPLETED.
@@ -773,8 +772,6 @@ async def _stream_event_frames(
         except Exception as exc:  # noqa: BLE001
             drive_error = exc
             with contextlib.suppress(Exception):
-                event_manager.on_error(data={"error": str(exc)})
-            with contextlib.suppress(Exception):
                 await event_manager.queue.put((None, None, time.time()))
         # generate_flow_events emits on_end and the sentinel on success.
 
@@ -789,6 +786,8 @@ async def _stream_event_frames(
     # AG-UI. A follow-up retires this once chat-view consumes AG-UI primitives.
     emit_side_channel = adapter.name == "agui"
     side_channel_events = frozenset({"add_message", "token", "remove_message", "error", "end"})
+    terminal_error_type = getattr(adapter, "terminal_error_type", None)
+    terminal_error_seen = False
 
     seq = 0
     run_task = asyncio.create_task(drive())
@@ -816,19 +815,22 @@ async def _stream_event_frames(
                 )
                 seq += 1
             for event in adapter.translate(event_type, event_data):
+                if terminal_error_type is not None and event.type == terminal_error_type:
+                    terminal_error_seen = True
                 yield _frame(event, seq)
                 seq += 1
         for event in adapter.final_events():
+            if terminal_error_type is not None and event.type == terminal_error_type:
+                terminal_error_seen = True
             yield _frame(event, seq)
             seq += 1
         # Guaranteed-fallback layer (see drive_error block above). If drive()
-        # captured an exception, emit the adapter's terminal error event(s)
-        # here even if on_error already produced one: an extra RUN_ERROR is
-        # cheap and only a hard error path will hit this. The duplicate is
-        # the cost of guaranteeing the consumer sees a terminal error event
-        # even when the cooperative on_error layer failed.
-        if drive_error is not None:
+        # captured an exception and no cooperative terminal error reached the
+        # stream, emit the adapter's terminal error event(s) here.
+        if drive_error is not None and not terminal_error_seen:
             for event in adapter.error_events(drive_error):
+                if terminal_error_type is not None and event.type == terminal_error_type:
+                    terminal_error_seen = True
                 yield _frame(event, seq)
                 seq += 1
     finally:
@@ -872,6 +874,9 @@ def _execute_streaming_workflow(
     )
 
 
+_CancelEventsFactory = Callable[[str], Iterable[StreamEvent]]
+
+
 class _BackgroundRun:
     """In-memory buffer of a background run's protocol-native SSE frames for re-attach.
 
@@ -889,8 +894,10 @@ class _BackgroundRun:
     from the new buffer head (replay loss is preferred over OOM).
     """
 
-    def __init__(self, user_id: str) -> None:
+    def __init__(self, user_id: str, stream_protocol: str = "agui") -> None:
         self.user_id = user_id
+        self.stream_protocol = stream_protocol
+        self._cancel_events: _CancelEventsFactory | None = None
         self.frames: list[bytes] = []
         # Index of the first frame still in ``frames`` (monotonic across the
         # life of the buffer). Once eviction starts, ``frames[i]`` corresponds
@@ -899,17 +906,42 @@ class _BackgroundRun:
         self.done = False
         self._cond = asyncio.Condition()
 
+    def set_cancel_events(self, cancel_events: _CancelEventsFactory) -> None:
+        self._cancel_events = cancel_events
+
+    @property
+    def has_cancel_events(self) -> bool:
+        return self._cancel_events is not None
+
+    def _append_locked(self, frame: bytes) -> None:
+        self.frames.append(frame)
+        overflow = len(self.frames) - _MAX_FRAMES_PER_BACKGROUND_RUN
+        if overflow > 0:
+            del self.frames[:overflow]
+            self.base_index += overflow
+
     async def append(self, frame: bytes) -> None:
         async with self._cond:
-            self.frames.append(frame)
-            overflow = len(self.frames) - _MAX_FRAMES_PER_BACKGROUND_RUN
-            if overflow > 0:
-                del self.frames[:overflow]
-                self.base_index += overflow
+            self._append_locked(frame)
             self._cond.notify_all()
 
     async def finish(self) -> None:
         async with self._cond:
+            self.done = True
+            self._cond.notify_all()
+
+    async def finish_cancelled(self, reason: str) -> None:
+        """Append cancellation terminal events and finish replay exactly once."""
+        async with self._cond:
+            if self.done:
+                return
+            events: list[StreamEvent] = []
+            if self._cancel_events is not None:
+                with contextlib.suppress(Exception):
+                    events = list(self._cancel_events(reason))
+            for event in events:
+                seq = self.base_index + len(self.frames)
+                self._append_locked(format_sse_event(data_str=event.data_json, id=str(seq)))
             self.done = True
             self._cond.notify_all()
 
@@ -953,6 +985,7 @@ _MAX_FRAMES_PER_BACKGROUND_RUN = 10_000
 # letting frames accumulate without bound when the network is slow.
 _EVENT_QUEUE_MAX_SIZE = 256
 _BACKGROUND_RUNS: dict[str, _BackgroundRun] = {}
+_WORKFLOW_CANCELLED_MESSAGE = "Workflow run cancelled."
 
 
 async def _finalize_job_status(job_uuid: UUID, terminal_status: JobStatus) -> None:
@@ -982,15 +1015,29 @@ async def _finalize_job_status(job_uuid: UUID, terminal_status: JobStatus) -> No
 async def _clear_background_run(job_id: str) -> None:
     """Pop the background run registry entry and wake any re-attach waiters.
 
-    Called from ``stop_workflow`` after revoking the buffer task. Without
-    this, ``_cond.wait()`` inside ``_BackgroundRun.replay`` can hang
-    indefinitely (the buffer is never marked done because the task that
-    would have called ``finish()`` was cancelled mid-execution), and the
-    cancelled ``_BackgroundRun`` lingers in memory until LRU evicts it.
+    Used for true cleanup paths that should discard replay state, such as
+    failed scheduling or test teardown. Cancellation normally finishes through
+    the owning buffer task so it can append protocol-native terminal events
+    before replay is marked done.
     """
     bg_run = _BACKGROUND_RUNS.pop(job_id, None)
     if bg_run is not None:
         await bg_run.finish()
+
+
+async def _finish_cancelled_background_run(job_id: str) -> None:
+    """Finish a stopped local run when no owner task is available to do it."""
+    bg_run = _BACKGROUND_RUNS.get(job_id)
+    if bg_run is None or bg_run.done:
+        return
+    if not bg_run.has_cancel_events:
+        with contextlib.suppress(UnknownStreamProtocolError):
+            adapter = get_stream_adapter(
+                bg_run.stream_protocol,
+                StreamAdapterContext(run_id=job_id, thread_id=job_id),
+            )
+            bg_run.set_cancel_events(adapter.cancel_events)
+    await bg_run.finish_cancelled(_WORKFLOW_CANCELLED_MESSAGE)
 
 
 def _register_background_run(job_id: str, bg_run: _BackgroundRun) -> None:
@@ -1055,10 +1102,15 @@ async def _buffer_background_run(
         await _finalize_job_status(job_uuid, JobStatus.FAILED)
         return
 
+    bg_run.set_cancel_events(adapter.cancel_events)
     terminal_error_type = adapter.terminal_error_type
     fresh_background_tasks = BackgroundTasks()
     errored = False
+    cancelled = False
+    job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
     try:
+        with contextlib.suppress(Exception):
+            await get_job_service().update_job_status(job_uuid, JobStatus.IN_PROGRESS)
         async for frame, event_type in _stream_event_frames(
             adapter=adapter,
             flow_id=flow.id,
@@ -1074,8 +1126,13 @@ async def _buffer_background_run(
             if terminal_error_type is not None and event_type == terminal_error_type:
                 errored = True
             await bg_run.append(frame)
+    except asyncio.CancelledError:
+        cancelled = True
+        await bg_run.finish_cancelled(_WORKFLOW_CANCELLED_MESSAGE)
+        raise
     finally:
-        await bg_run.finish()
+        if not cancelled:
+            await bg_run.finish()
         # ``generate_flow_events`` queues telemetry, tracing teardown, and
         # other callbacks on this ``BackgroundTasks`` instance. In FastAPI's
         # request lifecycle those run after the response is sent; the
@@ -1084,10 +1141,10 @@ async def _buffer_background_run(
         # not derail job-status finalization.
         with contextlib.suppress(Exception):
             await fresh_background_tasks()
-        # ``update_job_status`` queries the Job table by its UUID primary key;
-        # passing the raw string would silently miss every row.
-        job_uuid = UUID(job_id) if isinstance(job_id, str) else job_id
-        await _finalize_job_status(job_uuid, JobStatus.FAILED if errored else JobStatus.COMPLETED)
+        if not cancelled:
+            # ``update_job_status`` queries the Job table by its UUID primary key;
+            # passing the raw string would silently miss every row.
+            await _finalize_job_status(job_uuid, JobStatus.FAILED if errored else JobStatus.COMPLETED)
 
 
 async def execute_workflow_background(
@@ -1117,7 +1174,7 @@ async def execute_workflow_background(
             user_id=current_user.id,
         )
 
-        bg_run = _BackgroundRun(user_id=str(current_user.id))
+        bg_run = _BackgroundRun(user_id=str(current_user.id), stream_protocol=stream_protocol)
         _register_background_run(job_id_str, bg_run)
 
         try:
@@ -1408,9 +1465,10 @@ async def stop_workflow(
                 },
             )
         await job_service.update_job_status(job_id, JobStatus.CANCELLED)
-        # Release the in-memory buffer and wake any re-attach waiters so they
-        # see a clean stream-end instead of hanging on ``_cond.wait()``.
-        await _clear_background_run(str(job_id))
+        # The owning buffer task appends the protocol-native cancellation
+        # terminal event before marking replay done. This is only a fallback
+        # for races where a local buffer exists but no owner task is running.
+        await _finish_cancelled_background_run(str(job_id))
 
         message = f"Job {job_id} cancelled successfully."
         return WorkflowStopResponse(job_id=str(job_id), message=message)

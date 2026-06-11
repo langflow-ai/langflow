@@ -90,20 +90,27 @@ def test_token_sequence_emits_start_contents_then_end_on_boundary():
     assert isinstance(ended[1], RunFinishedEvent)
 
 
-def test_new_message_id_closes_previous_message_and_opens_new():
+def test_interleaved_message_ids_remain_open_until_terminal_boundary():
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
 
-    t.translate("token", {"chunk": "a", "id": "m1"})
-    out = t.translate("token", {"chunk": "b", "id": "m2"})
+    first = t.translate("token", {"chunk": "a", "id": "m1"})
+    second = t.translate("token", {"chunk": "b", "id": "m2"})
+    resumed = t.translate("token", {"chunk": "c", "id": "m1"})
+    ended = t.translate("end", {})
 
-    assert isinstance(out[0], TextMessageEndEvent)
-    assert out[0].message_id == "m1"
-    assert isinstance(out[1], TextMessageStartEvent)
-    assert out[1].message_id == "m2"
-    assert isinstance(out[2], TextMessageContentEvent)
-    assert out[2].message_id == "m2"
-    assert out[2].delta == "b"
+    assert isinstance(first[0], TextMessageStartEvent)
+    assert first[0].message_id == "m1"
+    assert isinstance(second[0], TextMessageStartEvent)
+    assert second[0].message_id == "m2"
+    assert all(not isinstance(event, TextMessageEndEvent) for event in second)
+    assert len(resumed) == 1
+    assert isinstance(resumed[0], TextMessageContentEvent)
+    assert resumed[0].message_id == "m1"
+    assert resumed[0].delta == "c"
+    ended_message_ids = {event.message_id for event in ended if isinstance(event, TextMessageEndEvent)}
+    assert ended_message_ids == {"m1", "m2"}
+    assert isinstance(ended[-1], RunFinishedEvent)
 
 
 def test_error_boundary_closes_open_text_message():
@@ -166,32 +173,49 @@ def test_token_for_already_ended_message_id_is_dropped():
     )
 
 
-def test_token_after_boundary_close_is_dropped():
-    """An interleaved token sequence ``A, B, A`` must not re-open id A.
-
-    Switching from id A to id B closes A through ``_close_open_message``. A
-    later token for A used to slip past the dedup guard because
-    ``_close_open_message`` was the only finalizer that did not record the
-    closed id in ``_emitted_text_message_ids``. The translator must treat a
-    token-boundary close the same way it treats an ``add_message`` close.
-    """
+def test_token_after_interleaved_message_id_switch_is_preserved():
+    """An interleaved token sequence ``A, B, A`` must preserve both streams."""
     t = AGUITranslator(run_id="r1", thread_id="t1")
     t.start()
 
     a1 = t.translate("token", {"chunk": "hi", "id": "m1"})
     assert any(isinstance(e, TextMessageStartEvent) and e.message_id == "m1" for e in a1)
 
-    # Switching to a new id closes m1 via _close_open_message.
+    # Switching to a new id opens it without closing m1; consumers group by id.
     b = t.translate("token", {"chunk": "yo", "id": "m2"})
-    assert any(isinstance(e, TextMessageEndEvent) and e.message_id == "m1" for e in b)
+    assert all(not isinstance(e, TextMessageEndEvent) for e in b)
     assert any(isinstance(e, TextMessageStartEvent) and e.message_id == "m2" for e in b)
 
-    # A late token for m1 must be dropped, not re-open the ended message.
+    # A later token for m1 is still content for the already-open m1 lifecycle.
     late = t.translate("token", {"chunk": "again", "id": "m1"})
-    assert all(not isinstance(e, TextMessageStartEvent) for e in late), (
-        f"Token boundary did not mark m1 as ended; emitted: {late}"
-    )
-    assert late == [], f"Expected no events for late token after boundary close; got {late}"
+    assert len(late) == 1
+    assert isinstance(late[0], TextMessageContentEvent)
+    assert late[0].message_id == "m1"
+    assert late[0].delta == "again"
+
+
+def test_partial_add_message_does_not_burn_streamed_text_id():
+    """The first streaming chunk arrives as add_message before token events.
+
+    ``add_message`` snapshots with state=partial must not emit a complete
+    TextMessage lifecycle, or later token events for the same id are dropped.
+    """
+    t = AGUITranslator(run_id="r1", thread_id="t1")
+    t.start()
+
+    partial = t.translate("add_message", {"id": "m1", "text": "Hel", "properties": {"state": "partial"}})
+    first = t.translate("token", {"id": "m1", "chunk": "Hel"})
+    second = t.translate("token", {"id": "m1", "chunk": "lo"})
+    finalizer = t.translate("add_message", {"id": "m1", "text": "Hello", "properties": {"state": "complete"}})
+
+    text_lifecycle_types = (TextMessageStartEvent, TextMessageContentEvent, TextMessageEndEvent)
+    assert all(not isinstance(e, text_lifecycle_types) for e in partial)
+    assert [type(e) for e in first] == [TextMessageStartEvent, TextMessageContentEvent]
+    assert first[1].delta == "Hel"
+    assert len(second) == 1
+    assert isinstance(second[0], TextMessageContentEvent)
+    assert second[0].delta == "lo"
+    assert [type(e) for e in finalizer] == [TextMessageEndEvent]
 
 
 def test_vertices_sorted_emits_state_snapshot_of_all_nodes():
