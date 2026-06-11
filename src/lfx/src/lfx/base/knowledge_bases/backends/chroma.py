@@ -36,6 +36,7 @@ from lfx.base.knowledge_bases.backends.base import (
     IngestedDocument,
     TestConnectionResult,
 )
+from lfx.base.vectorstores.chroma_security import chroma_langchain_collection_kwargs
 from lfx.log.logger import logger
 
 if TYPE_CHECKING:
@@ -110,6 +111,7 @@ class ChromaLocalBackend(BaseVectorStoreBackend):
             client=self._client,
             collection_name=self.kb_name,
             embedding_function=self.embedding_function,
+            **chroma_langchain_collection_kwargs(),
         )
 
     # ---- overrides --------------------------------------------------------
@@ -304,6 +306,7 @@ class ChromaCloudBackend(BaseVectorStoreBackend):
             client=self._client,
             collection_name=self.kb_name,
             embedding_function=self.embedding_function,
+            **chroma_langchain_collection_kwargs(),
         )
 
     # ---- overrides --------------------------------------------------------

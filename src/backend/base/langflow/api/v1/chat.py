@@ -17,6 +17,7 @@ from lfx.services.cache.utils import CacheMiss
 from lfx.utils.flow_validation import (
     CustomComponentValidationError,
     validate_flow_for_current_settings,
+    validate_public_flow_no_code_execution,
 )
 from sqlmodel import select
 
@@ -45,6 +46,8 @@ from langflow.api.v1.schemas import (
 )
 from langflow.exceptions.component import ComponentBuildError
 from langflow.services.auth.utils import get_current_active_user, get_current_user_optional
+from langflow.services.authorization import FlowAction, ensure_flow_permission
+from langflow.services.authorization.fetch import deny_to_404
 from langflow.services.chat.service import ChatService
 from langflow.services.database.models.flow.model import AccessTypeEnum, Flow
 from langflow.services.database.models.user.model import User
@@ -83,7 +86,6 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
-    dependencies=[Depends(get_current_active_user)],
     include_in_schema=False,
 )
 async def retrieve_vertices_order(
@@ -94,6 +96,7 @@ async def retrieve_vertices_order(
     stop_component_id: str | None = None,
     start_component_id: str | None = None,
     session: DbSession,
+    current_user: CurrentActiveUser,
 ) -> VerticesOrderResponse:
     """Retrieve the vertices order for a given flow.
 
@@ -104,6 +107,9 @@ async def retrieve_vertices_order(
         stop_component_id (str, optional): The ID of the stop component. Defaults to None.
         start_component_id (str, optional): The ID of the start component. Defaults to None.
         session (AsyncSession, optional): The session dependency.
+        current_user: The authenticated user (required so the handler can
+            run the same authorization guard the supported /build/{flow_id}/flow
+            route uses).
 
     Returns:
         VerticesOrderResponse: The response containing the ordered vertex IDs and the run ID.
@@ -111,6 +117,29 @@ async def retrieve_vertices_order(
     Raises:
         HTTPException: If there is an error checking the build status.
     """
+    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
+    # pattern as build_flow below. ``build_graph_from_db`` reaches into the DB
+    # with a bare ``session.get(Flow, flow_id)`` that has no owner filter, so
+    # without this gate any authenticated user could build any other user's
+    # flow by guessing a UUID. Even though the route is deprecated and hidden
+    # from the schema, it remains routed and reachable.
+    stmt = (
+        select(Flow)
+        .where(Flow.id == flow_id)
+        .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+    )
+    flow = (await session.exec(stmt)).first()
+    if not flow:
+        raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     start_time = time.perf_counter()
@@ -199,17 +228,21 @@ async def build_flow(
     Returns:
         Dict with job_id that can be used to poll for build status
     """
-    # Verify the flow exists and belongs to the requesting user (or is public).
-    # Returns 404 for both "not found" and "not owned" to avoid UUID enumeration.
-    # Note: intentionally extends _read_flow (flows.py) to also allow PUBLIC flows,
-    # since build is a valid operation on shared flows.
+    # Share-aware load: when the authorization plugin signals cross-user fetch
+    # support, the row loads by id alone and the plugin decides. Otherwise we
+    # keep the historical owner-or-PUBLIC scoping so the OSS pass-through
+    # default cannot widen visibility. PUBLIC flows stay buildable by any
+    # authenticated user in both modes.
+    from langflow.api.v1.flows_helpers import _read_flow
+
     async with session_scope() as session:
-        stmt = (
-            select(Flow)
-            .where(Flow.id == flow_id)
-            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
-        )
-        flow = (await session.exec(stmt)).first()
+        flow = await _read_flow(session, flow_id, current_user.id)
+        if flow is None:
+            public_stmt = select(Flow).where(
+                Flow.id == flow_id,
+                Flow.access_type == AccessTypeEnum.PUBLIC,
+            )
+            flow = (await session.exec(public_stmt)).first()
         if not flow:
             await logger.awarning(
                 "Flow access denied for user %s: flow %s not found or not owned",
@@ -217,6 +250,33 @@ async def build_flow(
                 flow_id,
             )
             raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+
+    # Authorize the execute action — runs the authorization plugin if registered,
+    # no-op in OSS pass-through. Audited regardless. A plugin deny becomes 404
+    # so the response is identical to "flow does not exist" and the caller
+    # cannot enumerate UUIDs by probing for 403 vs 404.
+    try:
+        await ensure_flow_permission(
+            current_user,
+            FlowAction.EXECUTE,
+            flow_id=flow_id,
+            flow_user_id=flow.user_id,
+            workspace_id=flow.workspace_id,
+            folder_id=flow.folder_id,
+        )
+    except HTTPException as exc:
+        raise deny_to_404(exc, detail=f"Flow with id {flow_id} not found") from exc
+
+    # Execute-only shares must run the stored graph — non-owners cannot inject
+    # alternate flow data via the request body (would bypass the owner's definition).
+    if data is not None and flow.user_id != current_user.id:
+        raise deny_to_404(
+            HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Only the flow owner can override flow data during build",
+            ),
+            detail=f"Flow with id {flow_id} not found",
+        )
 
     try:
         if data:
@@ -346,6 +406,29 @@ async def build_vertex(
         HTTPException: If there is an error building the vertex.
 
     """
+    # Owner-or-public ownership check + ensure_flow_permission(EXECUTE) — same
+    # pattern as retrieve_vertices_order above. The route is deprecated and
+    # hidden from the schema but still routed, and ``build_graph_from_db``
+    # loads the flow with no owner filter, so without this gate any
+    # authenticated user could build a vertex on someone else's flow.
+    async with session_scope() as authz_session:
+        stmt = (
+            select(Flow)
+            .where(Flow.id == flow_id)
+            .where((Flow.user_id == current_user.id) | (Flow.access_type == AccessTypeEnum.PUBLIC))
+        )
+        flow = (await authz_session.exec(stmt)).first()
+    if not flow:
+        raise HTTPException(status_code=404, detail=f"Flow with id {flow_id} not found")
+    await ensure_flow_permission(
+        current_user,
+        FlowAction.EXECUTE,
+        flow_id=flow_id,
+        flow_user_id=flow.user_id,
+        workspace_id=flow.workspace_id,
+        folder_id=flow.folder_id,
+    )
+
     chat_service = get_chat_service()
     telemetry_service = get_telemetry_service()
     flow_id_str = str(flow_id)
@@ -755,6 +838,12 @@ async def build_public_tmp(
             flow = await session.get(Flow, flow_id)
             if flow and flow.data:
                 validate_flow_for_current_settings(flow.data)
+                # Block unauthenticated builds of flows that run arbitrary code
+                # (Python interpreter/REPL, legacy Python Code Structured tool,
+                # Smart Transform lambda). Without this, any public flow
+                # containing such a component is an unauthenticated server-side
+                # code-execution primitive (report H1-3754930).
+                validate_public_flow_no_code_execution(flow.data)
 
         # flow_id=new_flow_id for tracking/sessions/messages (virtual, per-user isolation).
         # source_flow_id=flow_id to load the actual flow data from the database.

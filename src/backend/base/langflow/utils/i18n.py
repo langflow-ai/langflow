@@ -38,6 +38,8 @@ import threading
 from pathlib import Path
 from typing import Any
 
+from lfx.base.tools.constants import TOOL_OUTPUT_NAME
+
 from langflow.utils.i18n_keys import (
     component_field_key,
     normalize_component_key,
@@ -140,26 +142,34 @@ def translate_flow_notes(nodes: list[dict], locale: str) -> list[dict]:
     return result
 
 
-def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, list[str]]]:
+def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dict[str, Any]]:
     """Build the set of all known translations for display_name and description per component.
+
+    Also includes all known translations for each input field's display_name.
 
     Iterates every loaded locale and looks up each component's display_name / description key
     directly in the locale dicts (one key lookup per locale, not a full translate_component_dict
     pass).  The English value is always included as the baseline.
 
     Returns a dict keyed by normalized component key (e.g. "textinput") where each value is:
-        {"display_name": [...all locale values...], "description": [...all locale values...]}
+        {
+            "display_name": [...all locale values...],
+            "description": [...all locale values...],
+            "fields": {
+                "field_name": {"display_name": [...all locale values...]}
+            }
+        }
     """
     if not _translations:
         _load_translations()
 
-    result: dict[str, dict[str, set[str]]] = {}
+    result: dict[str, dict[str, Any]] = {}
 
     for components in all_types_en.values():
         for name, data in components.items():
             norm = normalize_component_key(name)
             if norm not in result:
-                result[norm] = {"display_name": set(), "description": set()}
+                result[norm] = {"display_name": set(), "description": set(), "fields": {}}
 
             dn_en = data.get("display_name", "")
             desc_en = data.get("description", "")
@@ -180,9 +190,90 @@ def build_component_display_names(all_types_en: dict[str, Any]) -> dict[str, dic
                     if val:
                         result[norm]["description"].add(val)
 
+            # Collect all known translations for each input field's display_name
+            template = data.get("template", {})
+            for field_name, field_data in template.items():
+                if not isinstance(field_data, dict):
+                    continue
+                field_dn_en = field_data.get("display_name", "")
+                if not field_dn_en:
+                    continue
+                if field_name not in result[norm]["fields"]:
+                    result[norm]["fields"][field_name] = {"display_name": set()}
+                field_key = component_field_key(norm, f"inputs.{field_name}.display_name", field_dn_en)
+                result[norm]["fields"][field_name]["display_name"].add(field_dn_en)
+                for locale_dict in _translations.values():
+                    val = locale_dict.get(field_key)
+                    if val:
+                        result[norm]["fields"][field_name]["display_name"].add(val)
+
     return {
-        k: {"display_name": list(v["display_name"]), "description": list(v["description"])} for k, v in result.items()
+        k: {
+            "display_name": list(v["display_name"]),
+            "description": list(v["description"]),
+            "fields": {fn: {"display_name": list(fd["display_name"])} for fn, fd in v["fields"].items()},
+        }
+        for k, v in result.items()
     }
+
+
+def translate_component_node(comp_name: str, node: dict[str, Any], locale: str) -> dict[str, Any]:
+    """Translate display strings in a single component's frontend node dict.
+
+    Covers three tiers:
+      - component-level display_name and description
+      - template field display_name, info, placeholder
+      - output display_name and info
+
+    Translation is idempotent: if a field already holds a translated value its
+    hash won't match the English key, so translate() falls back to the value
+    unchanged.  Never mutates the input dict.
+    """
+    translated: dict[str, Any] = {**node}
+    norm = normalize_component_key(comp_name)
+
+    # Tier 1 — component-level strings
+    for field in ("display_name", "description"):
+        val = node.get(field, "")
+        if val:
+            translated[field] = translate(component_field_key(norm, field, val), locale, val)
+
+    # Tier 2 — template field display_name, info, placeholder
+    if "template" in node and isinstance(node["template"], dict):
+        translated["template"] = {**node["template"]}
+        for field_name, field in node["template"].items():
+            if isinstance(field, dict):
+                field_updates = {}
+                for sub in ("display_name", "info", "placeholder"):
+                    val = field.get(sub, "")
+                    if val:
+                        field_updates[sub] = translate(
+                            component_field_key(norm, f"inputs.{field_name}.{sub}", val), locale, val
+                        )
+                if field_updates:
+                    translated["template"][field_name] = {**field, **field_updates}
+
+    # Tier 3 — output display_name and info
+    if "outputs" in node and isinstance(node["outputs"], list):
+        translated["outputs"] = []
+        for out in node["outputs"]:
+            if not isinstance(out, dict):
+                translated["outputs"].append(out)
+                continue
+            out_name = out.get("name", "")
+            # The tool-mode output is injected dynamically (not a static class output), so
+            # it's stored under the sentinel norm "_toolmode" shared across all components.
+            out_norm = "_toolmode" if out_name == TOOL_OUTPUT_NAME else norm
+            out_updates = {}
+            for sub in ("display_name", "info"):
+                val = out.get(sub, "")
+                if val:
+                    out_updates[sub] = translate(
+                        component_field_key(out_norm, f"outputs.{out_name}.{sub}", val), locale, val
+                    )
+            translated["outputs"].append({**out, **out_updates} if out_updates else out)
+
+    return translated
 
 
 def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str, Any]:
@@ -208,76 +299,5 @@ def translate_component_dict(all_types: dict[str, Any], locale: str) -> dict[str
     for category, components in all_types.items():
         result[category] = {}
         for name, data in components.items():
-            translated: dict[str, Any] = {**data}
-            norm = normalize_component_key(name)
-
-            # Tier 1 — component-level strings
-            display_name_en = data.get("display_name", "")
-            description_en = data.get("description", "")
-            if display_name_en:
-                translated["display_name"] = translate(
-                    component_field_key(norm, "display_name", display_name_en),
-                    locale,
-                    display_name_en,
-                )
-            if description_en:
-                translated["description"] = translate(
-                    component_field_key(norm, "description", description_en),
-                    locale,
-                    description_en,
-                )
-
-            # Tier 2 — template field display_names, info, and placeholders
-            if "template" in data and isinstance(data["template"], dict):
-                translated["template"] = {**data["template"]}
-                for field_name, field in data["template"].items():
-                    if isinstance(field, dict):
-                        field_updates = {}
-                        field_display_en = field.get("display_name", "")
-                        field_info_en = field.get("info", "")
-                        field_placeholder_en = field.get("placeholder", "")
-                        if field_display_en:
-                            field_updates["display_name"] = translate(
-                                component_field_key(norm, f"inputs.{field_name}.display_name", field_display_en),
-                                locale,
-                                field_display_en,
-                            )
-                        if field_info_en:
-                            field_updates["info"] = translate(
-                                component_field_key(norm, f"inputs.{field_name}.info", field_info_en),
-                                locale,
-                                field_info_en,
-                            )
-                        if field_placeholder_en:
-                            field_updates["placeholder"] = translate(
-                                component_field_key(norm, f"inputs.{field_name}.placeholder", field_placeholder_en),
-                                locale,
-                                field_placeholder_en,
-                            )
-                        if field_updates:
-                            translated["template"][field_name] = {**field, **field_updates}
-
-            # Tier 2 — output display_names and info
-            if "outputs" in data and isinstance(data["outputs"], list):
-                translated["outputs"] = []
-                for out in data["outputs"]:
-                    out_name = out.get("name", "")
-                    out_display_en = out.get("display_name", "")
-                    out_info_en = out.get("info", "")
-                    out_updates = {}
-                    if out_display_en:
-                        out_updates["display_name"] = translate(
-                            component_field_key(norm, f"outputs.{out_name}.display_name", out_display_en),
-                            locale,
-                            out_display_en,
-                        )
-                    if out_info_en:
-                        out_updates["info"] = translate(
-                            component_field_key(norm, f"outputs.{out_name}.info", out_info_en),
-                            locale,
-                            out_info_en,
-                        )
-                    translated["outputs"].append({**out, **out_updates} if out_updates else out)
-
-            result[category][name] = translated
+            result[category][name] = translate_component_node(name, data, locale)
     return result

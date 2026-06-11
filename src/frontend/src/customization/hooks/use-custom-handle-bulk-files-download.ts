@@ -1,9 +1,12 @@
+import { useTranslation } from "react-i18next";
 import { useGetDownloadFilesV2 } from "@/controllers/API/queries/file-management/use-get-download-files";
 
 export const useCustomHandleBulkFilesDownload = () => {
+  const { t } = useTranslation();
   const { mutate: downloadFiles } = useGetDownloadFilesV2();
 
   const handleBulkDownload = async (
+    // biome-ignore lint/suspicious/noExplicitAny: legacy
     selectedFiles: any,
     setSuccessData: (data: { title: string }) => void,
     setErrorData: (data: { title: string; list: string[] }) => void,
@@ -21,10 +24,8 @@ export const useCustomHandleBulkFilesDownload = () => {
         },
         onError: (error) => {
           setErrorData({
-            title: "Error downloading files",
-            list: [
-              error.message || "An error occurred while downloading the files",
-            ],
+            title: t("errors.errorDownloadingFiles"),
+            list: [error.message || t("errors.downloadFilesDefault")],
           });
           setIsDownloading(false);
         },

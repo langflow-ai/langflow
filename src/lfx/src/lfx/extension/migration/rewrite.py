@@ -27,7 +27,10 @@ can emit one ``flow-migrated`` event per flow per session.
 from __future__ import annotations
 
 import difflib
+import sys
+from collections.abc import Collection, Mapping
 from dataclasses import dataclass, field
+from functools import lru_cache
 from typing import Any, Literal
 
 from lfx.extension.errors import ExtensionError
@@ -42,7 +45,7 @@ from lfx.extension.migration.schema import (
 # Report
 # ---------------------------------------------------------------------------
 
-RewriteOutcome = Literal["rewritten", "already_canonical", "unmapped", "ambiguous"]
+RewriteOutcome = Literal["rewritten", "already_canonical", "known_current_component", "unmapped", "ambiguous"]
 
 
 @dataclass(frozen=True)
@@ -152,6 +155,66 @@ def _closest_matches(value: str, known: list[str], *, n: int = 3) -> list[str]:
 
 
 # ---------------------------------------------------------------------------
+# Current component detection
+# ---------------------------------------------------------------------------
+
+
+def _component_type_aliases(components: Mapping[str, Any]) -> set[str]:
+    """Return component names plus locally-derived aliases for a category."""
+    from lfx.utils.component_aliases import get_component_type_aliases
+
+    known: set[str] = set()
+    for component_name, component_data in components.items():
+        if not isinstance(component_name, str) or not component_name:
+            continue
+        metadata = component_data if isinstance(component_data, Mapping) else None
+        known.update(get_component_type_aliases(component_name, metadata))
+    return known
+
+
+@lru_cache(maxsize=1)
+def _known_current_types_from_index() -> frozenset[str]:
+    """Return current component type names from the bundled component index.
+
+    This intentionally reads the local index without building component
+    templates or mutating the runtime component cache.
+    """
+    try:
+        from lfx.graph.flow_builder.builder import load_local_registry
+
+        registry = load_local_registry()
+    except Exception:  # noqa: BLE001
+        return frozenset()
+
+    return frozenset(_component_type_aliases(registry))
+
+
+def _known_current_types_from_cache() -> set[str]:
+    """Return aliases from the live component cache if it is already loaded."""
+    components_module = sys.modules.get("lfx.interface.components")
+    if components_module is None:
+        return set()
+
+    component_cache = getattr(components_module, "component_cache", None)
+    all_types_dict = getattr(component_cache, "all_types_dict", None)
+    if not isinstance(all_types_dict, Mapping):
+        return set()
+
+    known: set[str] = set()
+    components = all_types_dict.get("components")
+    categories = components if isinstance(components, Mapping) else all_types_dict
+    for category_components in categories.values():
+        if isinstance(category_components, Mapping):
+            known.update(_component_type_aliases(category_components))
+    return known
+
+
+def _known_current_types() -> frozenset[str]:
+    """Return component type names that are current, not migration misses."""
+    return frozenset(_known_current_types_from_index() | _known_current_types_from_cache())
+
+
+# ---------------------------------------------------------------------------
 # Node-level rewrite
 # ---------------------------------------------------------------------------
 
@@ -194,6 +257,7 @@ def _rewrite_one_node(
     *,
     table: MigrationTable,
     known_legacy: list[str],
+    known_current_types: Collection[str],
     node_index: int,
 ) -> NodeRewriteRecord | None:
     """Rewrite ``node["data"]["type"]`` if needed.
@@ -204,6 +268,10 @@ def _rewrite_one_node(
     """
     if not isinstance(node, dict):
         return None
+    react_flow_type = node.get("type")
+    if isinstance(react_flow_type, str) and react_flow_type != "genericNode":
+        return None
+
     legacy_value, container = _read_type(node)
     if legacy_value is None or container is None:
         return None
@@ -260,11 +328,11 @@ def _rewrite_one_node(
         # the ambiguous-bare-names list.  A bare class name that exists in
         # 2+ bundles cannot have a regular auto-rewrite entry (the CI guard
         # rejects it), so its only surface is the explicit ambiguity
-        # marker.  Surfacing ``component-name-ambiguous`` here -- with the
-        # candidate targets enumerated -- is the LE-1020 contract:
+        # marker.  Surfacing ``component-name-ambiguous`` here -- with
+        # the candidate targets enumerated -- is the migration contract:
         # we will not silently load an ambiguous name into the wrong
-        # bundle, and we tell the operator exactly which targets they have
-        # to choose between.
+        # bundle, and we tell the operator exactly which targets they
+        # have to choose between.
         ambig_marker = table.lookup_ambiguous_bare(legacy_value)
         if ambig_marker is not None:
             target_list = ", ".join(ambig_marker.candidates)
@@ -286,6 +354,15 @@ def _rewrite_one_node(
                 legacy_form_kind=None,
                 outcome="ambiguous",
                 error=err,
+            )
+
+        if legacy_value in known_current_types:
+            return NodeRewriteRecord(
+                node_id=node_id,
+                legacy_value=legacy_value,
+                new_value=legacy_value,
+                legacy_form_kind=None,
+                outcome="known_current_component",
             )
 
         suggestions = _closest_matches(legacy_value, known_legacy)
@@ -339,6 +416,7 @@ def migrate_flow_payload(
     payload: dict[str, Any],
     *,
     table: MigrationTable | None = None,
+    known_current_types: Collection[str] | None = None,
 ) -> MigrationReport:
     """Rewrite legacy component references in ``payload`` in place.
 
@@ -351,6 +429,10 @@ def migrate_flow_payload(
             fails, the deserializer falls back to an empty table so every
             legacy reference becomes unmapped (with hint) instead of the
             entire flow load crashing.
+        known_current_types: Current component type names and aliases that
+            should be left unchanged without emitting migration errors.
+            ``None`` means derive them from the bundled index and any already
+            populated component cache.
 
     Returns:
         A :class:`MigrationReport` summarizing every node that was visited
@@ -395,11 +477,13 @@ def migrate_flow_payload(
     # the suggestion list in the typed error's hint -- the user-facing
     # signal (the rewrite itself or the typed error) is unaffected.
     suggestion_pool: list[str] = table.all_known_legacy_values() if len(nodes) <= _SUGGESTION_NODE_THRESHOLD else []
+    current_types = known_current_types if known_current_types is not None else _known_current_types()
     for index, node in enumerate(nodes):
         record = _rewrite_one_node(
             node,
             table=table,
             known_legacy=suggestion_pool,
+            known_current_types=current_types,
             node_index=index,
         )
         if record is None:
@@ -408,14 +492,7 @@ def migrate_flow_payload(
         if record.error is not None:
             report.errors.append(record.error)
 
-    # TODO(LE-1017): when the events pipeline (ExtensionEventsService) lands,
-    # emit a single ``flow-migrated`` event per flow per session here when
-    # ``report.any_rewritten`` is True.  The event payload should be:
-    #   {
-    #       "flow_id": <caller-supplied>,
-    #       "rewritten_count": report.rewritten_count,
-    #       "records": [r as dict for r in report.records if r.outcome == "rewritten"],
-    #   }
-    # Best-effort: deserialization must not block on event service health,
-    # so the emit happens in a fire-and-forget try/except in the caller.
+    # flow_migrated and extension_error events are emitted by the caller
+    # (Graph.from_payload in base.py) which has the flow_id in scope.
+    # See LE-1017.
     return report

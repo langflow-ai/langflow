@@ -24,7 +24,6 @@ export default function MemoriesMainContent() {
   }, [currentFlowId]);
 
   const {
-    memories,
     filteredMemories,
     memoriesSearch,
     setMemoriesSearch,
@@ -63,7 +62,6 @@ export default function MemoriesMainContent() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-muted/30">
       <MemoriesSidebar
-        memories={memories}
         filteredMemories={filteredMemories}
         memoriesSearch={memoriesSearch}
         setMemoriesSearch={setMemoriesSearch}

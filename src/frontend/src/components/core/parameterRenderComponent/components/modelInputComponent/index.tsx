@@ -23,6 +23,7 @@ import {
 import type { BaseInputProps } from "../../types";
 import ModelList from "./components/ModelList";
 import ModelTrigger from "./components/ModelTrigger";
+import { recoverModelOption } from "./helpers/recover-model-option";
 import { useModelConnectionLogic } from "./hooks/useModelConnectionLogic";
 import type {
   ModelInputComponentType,
@@ -36,7 +37,7 @@ export default function ModelInputComponent({
   disabled,
   handleOnNewValue,
   options = [],
-  placeholder = "Setup Provider",
+  placeholder,
   nodeId,
   nodeClass,
   handleNodeClass,
@@ -45,9 +46,11 @@ export default function ModelInputComponent({
   editNode,
   inspectionPanel,
   showEmptyState = false,
+  modelType: modelTypeProp,
 }: BaseInputProps<ModelOption[] | undefined> &
   ModelInputComponentType): JSX.Element | null {
   const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? t("model.setupProvider");
   const { setErrorData } = useAlertStore();
   const refButton = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -60,17 +63,21 @@ export default function ModelInputComponent({
   const showingBuildPanel =
     isBuilding || !!buildInfo?.error || !!buildInfo?.success;
 
-  // Connection mode: local state for reactivity, persisted in node data for reload
-  const [isConnectionMode, setIsConnectionMode] = useState(() => {
+  // Connection mode is persisted in node data (for reload + external
+  // mutations like the agentic flow_builder). We subscribe to the live
+  // store value so updates from outside the component (e.g. when the
+  // assistant flips `_connectionMode` after wiring an external model)
+  // re-render the dropdown immediately. Falling back to local-only state
+  // would freeze the UI on the value captured at mount.
+  const isConnectionMode = useFlowStore((state) => {
     if (!nodeId) return false;
-    const node = useFlowStore.getState().nodes.find((n) => n.id === nodeId);
+    const node = state.nodes.find((n) => n.id === nodeId);
     const data = node?.data as { _connectionMode?: boolean } | undefined;
     return data?._connectionMode === true;
   });
 
   const setConnectionMode = useCallback(
     (enabled: boolean) => {
-      setIsConnectionMode(enabled);
       if (!nodeId) return;
       const store = useFlowStore.getState();
       store.setNode(
@@ -111,22 +118,75 @@ export default function ModelInputComponent({
   });
 
   const modelType =
-    nodeClass?.template?.model?.model_type === "language"
+    modelTypeProp ??
+    (nodeClass?.template?.model?.model_type === "language"
       ? "llm"
-      : "embeddings";
+      : "embeddings");
+
+  // Declarative metadata filters from the backend ModelInput (e.g. Agent
+  // declares ``filters={"tool_calling": True}``). The backend already
+  // applies this to ``options``, but the augment loop below adds models
+  // from ``useGetModelProviders`` (which is *not* filter-aware), so without
+  // this re-check the picker re-introduces tool-incompatible models
+  // alongside the backend-filtered list. Conservative: when a filter key
+  // is set but the candidate's metadata doesn't carry that key at all, the
+  // candidate fails the check — we'd rather drop an undeclared model than
+  // surface one that crashes at run time.
+  const modelFilters = useMemo(() => {
+    const raw = (
+      nodeClass?.template?.model as
+        | { filters?: Record<string, unknown> }
+        | undefined
+    )?.filters;
+    if (!raw || typeof raw !== "object") return undefined;
+    const entries = Object.entries(raw).filter(
+      ([, v]) => v !== null && v !== undefined,
+    );
+    if (entries.length === 0) return undefined;
+    return Object.fromEntries(entries) as Record<string, unknown>;
+  }, [nodeClass]);
+
+  const passesModelFilters = useCallback(
+    (metadata: Record<string, unknown> | undefined | null): boolean => {
+      if (!modelFilters) return true;
+      if (!metadata) return false;
+      for (const [key, expected] of Object.entries(modelFilters)) {
+        if (metadata[key] !== expected) return false;
+      }
+      return true;
+    },
+    [modelFilters],
+  );
 
   const {
     data: providersData = [],
     isLoading: isLoadingProviders,
     isFetching: isFetchingProviders,
+    error: providersError,
+    refetch: refetchProviders,
   } = useGetModelProviders({});
   const {
     data: enabledModelsData,
     isLoading: isLoadingEnabledModels,
     isFetching: isFetchingEnabledModels,
+    error: enabledModelsError,
+    refetch: refetchEnabledModels,
   } = useGetEnabledModels();
 
   const isLoading = isLoadingProviders || isLoadingEnabledModels;
+  const isFetching = isFetchingProviders || isFetchingEnabledModels;
+  // Only surface the retry UI when a query failed AND it has no usable data
+  // to fall back on. TanStack Query exposes ``data`` alongside ``error`` for
+  // refetch failures (the providers hook explicitly preserves stale data on
+  // error), so a transient background-refetch error should not replace a
+  // working dropdown with the "couldn't load models" affordance. We also
+  // wait until any in-flight refetch settles to avoid flicker.
+  const providersUnusable =
+    !!providersError && (!providersData || providersData.length === 0);
+  const enabledModelsUnusable =
+    !!enabledModelsError && enabledModelsData === undefined;
+  const hasInitialLoadError =
+    !isFetching && (providersUnusable || enabledModelsUnusable);
 
   const hasEnabledProviders = useMemo(() => {
     return providersData?.some(
@@ -177,6 +237,20 @@ export default function ModelInputComponent({
         }
       }
 
+      // Defensive filter pass. The backend's update_build_config already
+      // applies ``filters`` to ``options``, but stale saved flows (template
+      // persisted before the filter shipped) can deliver a build_config
+      // that hasn't been filter-corrected yet. Apply the same filter here
+      // so a tool-incompatible saved model can't surface even when
+      // ``options`` includes it.
+      if (
+        !passesModelFilters(
+          option.metadata as Record<string, unknown> | undefined,
+        )
+      ) {
+        continue;
+      }
+
       if (!grouped[provider]) {
         grouped[provider] = [];
       }
@@ -209,15 +283,23 @@ export default function ModelInputComponent({
           // Only include models whose declared type matches this component.
           // Older metadata without ``model_type`` is allowed through so we
           // don't regress providers that haven't adopted the tag yet.
-          const modelMetadataType = (
-            model.metadata as Record<string, unknown> | undefined
-          )?.model_type;
+          const modelMetadata = (model.metadata ?? {}) as Record<
+            string,
+            unknown
+          >;
+          const modelMetadataType = modelMetadata.model_type;
           if (
             typeof modelMetadataType === "string" &&
             modelMetadataType !== modelType
           ) {
             continue;
           }
+
+          // Apply the declarative filter (e.g. tool_calling=True for the
+          // Agent picker). Without this, every enabled model from
+          // ``useGetModelProviders`` re-enters the dropdown regardless of
+          // capability and re-introduces the bug the backend filter fixed.
+          if (!passesModelFilters(modelMetadata)) continue;
 
           const key = `${providerName}::${modelName}`;
           if (seen.has(key)) continue;
@@ -230,39 +312,55 @@ export default function ModelInputComponent({
             name: modelName,
             icon: providerInfo.icon || "Bot",
             provider: providerName,
-            metadata: (model.metadata ?? {}) as Record<string, unknown>,
+            metadata: modelMetadata,
           });
         }
       }
     }
 
-    // Zero-provider import fallback: if the user has no providers configured
-    // locally but an imported flow carries a saved model, inject that saved
-    // selection as the only dropdown entry so the trigger renders the model
-    // (with the Configure wrench) instead of the "Setup Provider" button.
-    // Without this, ``flatOptions`` would be empty and ``ModelTrigger`` would
-    // swap the dropdown for the setup CTA, visually losing the imported
-    // selection.
-    const hasAnyGrouped = Object.keys(grouped).length > 0;
+    // Source of truth is the providers list: re-inject a registry-valid saved
+    // model the filters excluded, so an Assistant-applied model isn't reset.
     const savedValue = value?.[0];
-    if (!hasAnyGrouped && savedValue?.name) {
+    const savedKey = savedValue?.name
+      ? `${savedValue.provider || "Unknown"}::${savedValue.name}`
+      : null;
+    const savedInRegistry =
+      !!savedValue?.name &&
+      (providersData?.some(
+        (p) =>
+          p.provider === savedValue.provider &&
+          (p.models ?? []).some((m) => m.model_name === savedValue.name),
+      ) ??
+        false);
+    const shouldInjectSaved =
+      !!savedValue?.name &&
+      !!savedKey &&
+      !seen.has(savedKey) &&
+      (Object.keys(grouped).length === 0 || savedInRegistry);
+    if (shouldInjectSaved && savedValue) {
       const providerName = savedValue.provider || "Unknown";
-      grouped[providerName] = [
-        {
-          ...(savedValue.id && { id: savedValue.id }),
-          name: savedValue.name,
-          icon: savedValue.icon || "Bot",
-          provider: providerName,
-          metadata: {
-            ...(savedValue.metadata ?? {}),
-            not_enabled_locally: true,
-          },
-        } as ModelOption,
-      ];
+      grouped[providerName] = grouped[providerName] ?? [];
+      grouped[providerName].push({
+        ...(savedValue.id && { id: savedValue.id }),
+        name: savedValue.name,
+        icon: savedValue.icon || "Bot",
+        provider: providerName,
+        metadata: {
+          ...(savedValue.metadata ?? {}),
+          not_enabled_locally: true,
+        },
+      } as ModelOption);
     }
 
     return grouped;
-  }, [options, enabledModelsData, providersData, modelType, value]);
+  }, [
+    options,
+    enabledModelsData,
+    providersData,
+    modelType,
+    value,
+    passesModelFilters,
+  ]);
 
   // Flattened array of all enabled options for efficient lookups by name
   const flatOptions = useMemo(
@@ -275,15 +373,20 @@ export default function ModelInputComponent({
     // If we're in connection mode, show the connection option as selected
     if (isConnectionMode) {
       return {
-        name:
-          externalOptions?.fields?.data?.node?.display_name ||
-          "Connect other models",
+        name: t("modelInput.connectOtherModels"),
         icon: externalOptions?.fields?.data?.node?.icon || "CornerDownLeft",
         provider: "",
       } as SelectedModel;
     }
 
-    const currentName = value?.[0]?.name;
+    // Bug 3 [P2] — defensive: sanitize the saved value before reading
+    // `name`. A doubly-encoded payload from the assistant's flow_update
+    // pipeline can leave the entire model list serialized into the
+    // ``name`` field (or wrap the whole structured value into the first
+    // element of the array). Without recovery, the trigger renders the
+    // literal JSON, e.g. ``[{"provider":"OpenAI","name":"gpt-4o",...]``.
+    const saved = recoverModelOption(value?.[0]);
+    const currentName = saved?.name;
     if (!currentName) {
       // Logic to auto-select the first model if none is selected
       // We only do this check if we have options available
@@ -308,7 +411,6 @@ export default function ModelInputComponent({
     // model has been actively deactivated (not missing-because-unconfigured).
     // Fall through to the first available option so the user isn't shown a
     // wrench for a provider that doesn't need configuring.
-    const saved = value?.[0];
     if (saved) {
       const savedProviderConfigured = providersData?.some(
         (p) => p.provider === saved.provider && p.is_configured,
@@ -437,7 +539,7 @@ export default function ModelInputComponent({
     setOpen(false);
     setRefreshOptions(true);
     try {
-      await refreshAllModelInputs({ silent: true });
+      await refreshAllModelInputs({ silent: false });
     } catch {
       // refreshAllModelInputs handles its own error notifications via alertStore
     } finally {
@@ -497,6 +599,30 @@ export default function ModelInputComponent({
       disabled
     >
       <LoadingTextComponent text={t("modelInput.loadingModels")} />
+    </Button>
+  );
+
+  const handleRetryLoad = useCallback(() => {
+    void refetchProviders();
+    void refetchEnabledModels();
+  }, [refetchProviders, refetchEnabledModels]);
+
+  const renderErrorButton = () => (
+    <Button
+      className="dropdown-component-false-outline w-full justify-between py-2 font-normal"
+      variant="primary"
+      size="xs"
+      data-testid="model-input-load-failed"
+      onClick={handleRetryLoad}
+    >
+      <span className="flex items-center gap-2 truncate text-left">
+        <ForwardedIconComponent
+          name="AlertTriangle"
+          className="h-3.5 w-3.5 shrink-0 text-status-yellow"
+        />
+        <span className="truncate">{t("modelInput.loadFailed")}</span>
+      </span>
+      <ForwardedIconComponent name="RotateCw" className="h-3.5 w-3.5" />
     </Button>
   );
 
@@ -564,8 +690,7 @@ export default function ModelInputComponent({
           {externalOptions?.fields?.data?.node && (
             <div className="border-t bg-background">
               {renderFooterButton(
-                externalOptions.fields.data.node.display_name ||
-                  t("modelInput.connectOtherModels"),
+                t("modelInput.connectOtherModels"),
                 externalOptions.fields.data.node.icon || "CornerDownLeft",
                 () => handleExternalOptions("connect_other_models"),
                 "connect-other-models",
@@ -579,6 +704,17 @@ export default function ModelInputComponent({
 
   if (!showParameter) {
     return null;
+  }
+
+  // Surface a retry affordance only when the queries failed AND we have no
+  // usable data to display. Without this the dropdown silently stays empty
+  // (or, before the api interceptor fix, looped on "Loading models…"
+  // indefinitely) when the auth/model endpoints reject the initial request.
+  // We deliberately ignore refetch errors that leave stale data intact so a
+  // transient background refresh failure doesn't replace a working dropdown
+  // with the error state.
+  if (hasInitialLoadError) {
+    return <div className="w-full">{renderErrorButton()}</div>;
   }
 
   // Show loading indicator only when actually loading data, not when options are genuinely empty
@@ -605,7 +741,7 @@ export default function ModelInputComponent({
               disabled={disabled}
               options={flatOptions}
               selectedModel={selectedModel}
-              placeholder={placeholder}
+              placeholder={resolvedPlaceholder}
               hasEnabledProviders={hasEnabledProviders ?? false}
               onOpenManageProviders={() => setOpenManageProvidersDialog(true)}
               id={id}
@@ -621,8 +757,8 @@ export default function ModelInputComponent({
                 setOpenManageProvidersDialog(true);
               }}
               data-testid={`${id}-configure`}
-              aria-label="Configure this model's provider"
-              title="This model isn't enabled for your user. Click to configure its provider."
+              aria-label={t("model.configureProvider")}
+              title={t("model.notEnabledTitle")}
               className="shrink-0 inline-flex h-6 w-6 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-primary"
             >
               <ForwardedIconComponent name="Wrench" className="h-3.5 w-3.5" />

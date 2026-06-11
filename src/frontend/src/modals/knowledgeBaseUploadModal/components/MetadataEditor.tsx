@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -50,6 +51,7 @@ export function MetadataEditor({
   disabled = false,
   testIdScope = "kb",
 }: MetadataEditorProps) {
+  const { t } = useTranslation();
   const validation = useMemo(() => validateMetadataPairs(pairs), [pairs]);
 
   const updatePair = (index: number, patch: Partial<MetadataPair>) => {
@@ -71,7 +73,7 @@ export function MetadataEditor({
   return (
     <div className="flex flex-col gap-2">
       <Label className="flex items-center gap-1 text-xs text-muted-foreground">
-        Custom Fields
+        {t("knowledge.metadataCustomFields")}
         <TooltipProvider>
           <Tooltip>
             <TooltipTrigger asChild>
@@ -83,9 +85,7 @@ export function MetadataEditor({
               </span>
             </TooltipTrigger>
             <TooltipContent className="max-w-[280px]">
-              Optional key/value tags applied to every chunk produced by this
-              ingestion. Use lowercase letters, digits, or underscores for keys
-              (max 32 characters). Values are stored as strings.
+              {t("knowledge.metadataTooltip")}
             </TooltipContent>
           </Tooltip>
         </TooltipProvider>
@@ -103,7 +103,7 @@ export function MetadataEditor({
             className="text-xs text-muted-foreground italic"
             data-testid={`${testIdScope}-metadata-empty`}
           >
-            No metadata fields added.
+            {t("knowledge.metadataNoFields")}
           </div>
         )}
 
@@ -113,7 +113,7 @@ export function MetadataEditor({
             <div key={index} className="flex flex-col gap-1">
               <div className="flex items-center gap-2">
                 <Input
-                  placeholder="key"
+                  placeholder={t("knowledge.metadataKeyPlaceholder")}
                   value={pair.key}
                   onChange={(e) => updatePair(index, { key: e.target.value })}
                   className={cn("h-8 flex-1", rowError && "border-destructive")}
@@ -121,7 +121,7 @@ export function MetadataEditor({
                   disabled={disabled}
                 />
                 <Input
-                  placeholder="value"
+                  placeholder={t("knowledge.metadataValuePlaceholder")}
                   value={pair.value}
                   onChange={(e) => updatePair(index, { value: e.target.value })}
                   maxLength={MAX_VALUE_LENGTH}
@@ -134,7 +134,9 @@ export function MetadataEditor({
                   variant="ghost"
                   size="iconSm"
                   onClick={() => removePair(index)}
-                  aria-label={`Remove metadata field ${index + 1}`}
+                  aria-label={t("knowledge.metadataRemoveField", {
+                    index: index + 1,
+                  })}
                   data-testid={`${testIdScope}-metadata-remove-${index}`}
                   disabled={disabled}
                 >
@@ -172,7 +174,7 @@ export function MetadataEditor({
           className="w-fit"
         >
           <ForwardedIconComponent name="Plus" className="mr-1 h-3.5 w-3.5" />
-          Add field
+          {t("knowledge.metadataAddField")}
         </Button>
       </div>
     </div>

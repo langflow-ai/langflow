@@ -41,7 +41,7 @@ async def _attach_deployment_to_flow(*, user_id: UUID, flow_id: UUID, project_id
             project_id=project_id,
             deployment_provider_account_id=provider.id,
             resource_key=f"integration-rk-{flow_id.hex[:8]}",
-            name=f"integration-deployment-{flow_id.hex[:8]}",
+            display_name=f"integration-deployment-{flow_id.hex[:8]}",
             deployment_type=DeploymentType.AGENT,
         )
         session.add(deployment)

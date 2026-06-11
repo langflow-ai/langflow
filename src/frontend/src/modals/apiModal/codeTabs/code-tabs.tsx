@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
   oneDark,
@@ -9,7 +10,6 @@ import IconComponent from "@/components/common/genericIconComponent";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs-button";
 import { customCodeTabsClass } from "@/customization/constants";
-import { useIsAutoLogin } from "@/hooks/use-is-auto-login";
 import useAuthStore from "@/stores/authStore";
 import useFlowStore from "@/stores/flowStore";
 import { useTweaksStore } from "@/stores/tweaksStore";
@@ -34,7 +34,13 @@ const operatingSystemTabs = [
   },
 ];
 
+const STEP_TITLE_KEYS: Record<string, string> = {
+  "Upload files to the server": "apiModal.uploadFilesStep",
+  "Execute the flow with uploaded files": "apiModal.executeFlowStep",
+};
+
 export default function APITabsComponent() {
+  const { t } = useTranslation();
   const [isCopied, setIsCopied] = useState<Boolean>(false);
   const [copiedStep, setCopiedStep] = useState<string | null>(null);
   const endpointName = useFlowStore(
@@ -62,6 +68,7 @@ export default function APITabsComponent() {
   );
 
   const includeTopLevelInputValue = formatPayloadTweaks(tweaks);
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const processedPayload: any = {
     output_type: hasChatOutput ? "chat" : "text",
     input_type: hasChatInput ? "chat" : "text",
@@ -225,7 +232,11 @@ export default function APITabsComponent() {
                           : ""
                       }
                     >
-                      <h4 className="mb-2 text-sm font-medium">{step.title}</h4>
+                      <h4 className="mb-2 text-sm font-medium">
+                        {STEP_TITLE_KEYS[step.title]
+                          ? t(STEP_TITLE_KEYS[step.title])
+                          : step.title}
+                      </h4>
                       <div
                         className={`relative flex ${
                           index === steps.length - 1 ? "h-full" : ""

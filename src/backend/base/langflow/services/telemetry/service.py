@@ -104,7 +104,7 @@ class TelemetryService(Service):
         except httpx.HTTPStatusError as err:
             await logger.aerror(f"HTTP error occurred: {err}.")
         except httpx.RequestError as err:
-            await logger.aerror(f"Request error occurred: {err}.")
+            await logger.aerror(f"Request error occurred: {type(err).__name__}: {err}")
         except Exception as err:  # noqa: BLE001
             await logger.aerror(f"Unexpected error occurred: {err}.")
 

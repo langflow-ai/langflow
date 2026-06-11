@@ -24,6 +24,7 @@ async function fetchDeployments(
 
 interface UseGetDeploymentsByProvidersResult {
   deployments: Deployment[];
+  deploymentTotalsByProvider: Record<string, number>;
   isLoading: boolean;
 }
 
@@ -47,11 +48,16 @@ export function useGetDeploymentsByProviders(
     })),
     combine: (results): UseGetDeploymentsByProvidersResult => {
       const merged: Deployment[] = [];
+      const deploymentTotalsByProvider: Record<string, number> = {};
       for (let i = 0; i < results.length; i++) {
         const result = results[i];
         const pid = providerIds[i];
         const data = result.data;
-        if (!data?.deployments || !pid) {
+        if (!pid) {
+          continue;
+        }
+        deploymentTotalsByProvider[String(pid)] = data?.total ?? 0;
+        if (!data?.deployments) {
           continue;
         }
         for (const d of data.deployments) {
@@ -66,6 +72,7 @@ export function useGetDeploymentsByProviders(
       }
       return {
         deployments: merged,
+        deploymentTotalsByProvider,
         isLoading: results.some((r) => r.isLoading),
       };
     },

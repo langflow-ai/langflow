@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { ModelSelector } from "../model-selector";
 import type { AssistantModel } from "../../assistant-panel.types";
+import { ModelSelector } from "../model-selector";
 
 // --- Mocks ---
 

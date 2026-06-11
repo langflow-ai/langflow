@@ -1,5 +1,6 @@
 import { Background, Panel } from "@xyflow/react";
 import { memo } from "react";
+import { useTranslation } from "react-i18next";
 import { useShallow } from "zustand/react/shallow";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
 import CanvasControlButton from "@/components/core/canvasControlsComponent/CanvasControlButton";
@@ -12,13 +13,10 @@ import { cn } from "@/utils/utils";
 import { NAV_ITEMS } from "../flowSidebarComponent/components/sidebarSegmentedNav";
 
 export const MemoizedBackground = memo(() => (
-  <Background size={2} gap={20} className="" />
+  <Background id="main-canvas-bg" size={2} gap={20} className="" />
 ));
 
 interface MemoizedCanvasControlsProps {
-  setIsAddingNote: (value: boolean) => void;
-  shadowBoxWidth: number;
-  shadowBoxHeight: number;
   selectedNode: AllNodeType | null;
   isAgentWorking?: boolean;
 }
@@ -39,6 +37,7 @@ export const MemoizedCanvasControls = memo(
 );
 
 export const MemoizedSidebarTrigger = memo(() => {
+  const { t } = useTranslation();
   const { open, toggleSidebar, setActiveSection } = useSidebar();
   if (ENABLE_NEW_SIDEBAR) {
     return (
@@ -79,7 +78,7 @@ export const MemoizedSidebarTrigger = memo(() => {
     >
       <SidebarTrigger className="h-fit w-fit px-3 py-1.5">
         <ForwardedIconComponent name="PanelRightClose" className="h-4 w-4" />
-        <span className="text-foreground">Components</span>
+        <span className="text-foreground">{t("store.storeComponents")}</span>
       </SidebarTrigger>
     </Panel>
   );

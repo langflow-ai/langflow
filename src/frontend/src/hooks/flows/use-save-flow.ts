@@ -1,4 +1,5 @@
 import type { ReactFlowJsonObject } from "@xyflow/react";
+import { useTranslation } from "react-i18next";
 import { useGetFlow } from "@/controllers/API/queries/flows/use-get-flow";
 import { usePatchUpdateFlow } from "@/controllers/API/queries/flows/use-patch-update-flow";
 import useAlertStore from "@/stores/alertStore";
@@ -8,6 +9,7 @@ import type { AllNodeType, EdgeType, FlowType } from "@/types/flow";
 import { customStringify } from "@/utils/reactflowUtils";
 
 const useSaveFlow = () => {
+  const { t } = useTranslation();
   const setFlows = useFlowsManagerStore((state) => state.setFlows);
   const setErrorData = useAlertStore((state) => state.setErrorData);
   const setSaveLoading = useFlowsManagerStore((state) => state.setSaveLoading);
@@ -104,17 +106,18 @@ const useSaveFlow = () => {
                   resolve();
                 } else {
                   setErrorData({
-                    title: "Failed to save flow",
-                    list: ["Flows variable undefined"],
+                    title: t("errors.failedToSaveFlow"),
+                    list: [t("errors.flowsVariableUndefined")],
                   });
                   reject(new Error("Flows variable undefined"));
                 }
               },
+              // biome-ignore lint/suspicious/noExplicitAny: legacy
               onError: (e: any) => {
                 const detail =
                   e.response?.data?.detail || e.message || "Unknown error";
                 setErrorData({
-                  title: "Failed to save flow",
+                  title: t("errors.failedToSaveFlow"),
                   list: [detail],
                 });
                 setSaveLoading(false);
@@ -124,8 +127,8 @@ const useSaveFlow = () => {
           );
         } else {
           setErrorData({
-            title: "Failed to save flow",
-            list: ["Flow not found"],
+            title: t("errors.failedToSaveFlow"),
+            list: [t("errors.flowNotFound")],
           });
           reject(new Error("Flow not found"));
         }

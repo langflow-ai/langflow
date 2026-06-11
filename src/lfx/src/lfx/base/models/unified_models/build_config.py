@@ -18,6 +18,112 @@ from .provider_queries import _get_all_provider_specific_field_names
 _MODEL_OPTIONS_CACHE_TTL_SECONDS = 30
 
 
+def _filters_from_component_inputs(
+    component: Any,
+    model_field_name: str,
+) -> dict[str, Any]:
+    """Read filters from the component's class-level ModelInput declaration.
+
+    This is the canonical source: saved flows persisted before the
+    ``filters`` field shipped don't carry it in their stored template, so
+    relying on the round-tripped ``build_config`` lets old flows silently
+    bypass the constraint. Class-level declarations always reflect the
+    current server build.
+    """
+    inputs = getattr(component, "inputs", None) or getattr(type(component), "inputs", None) or []
+    for inp in inputs:
+        if getattr(inp, "name", None) != model_field_name:
+            continue
+        raw = getattr(inp, "filters", None)
+        if isinstance(raw, dict):
+            return {k: v for k, v in raw.items() if v is not None}
+        return {}
+    return {}
+
+
+def _filters_from_build_config(
+    build_config: dict,
+    model_field_name: str,
+) -> dict[str, Any]:
+    """Read the declarative ``filters`` dict off the ModelInput's config.
+
+    Returns an empty dict when no filters are declared, so callers can use
+    ``if filters:`` to detect the constrained mode. Used as a fallback when
+    the calling helper doesn't have a component reference handy.
+    """
+    field_config = build_config.get(model_field_name)
+    if not isinstance(field_config, dict):
+        return {}
+    raw = field_config.get("filters")
+    if not isinstance(raw, dict):
+        return {}
+    # Drop empty / falsy filter entries so ``{"tool_calling": None}`` is a no-op.
+    return {k: v for k, v in raw.items() if v is not None}
+
+
+def _resolve_filters(component: Any, build_config: dict, model_field_name: str) -> dict[str, Any]:
+    """Resolve the active filters dict.
+
+    Prefer the class-level ModelInput declaration (canonical, always
+    reflects the current server build) and fall back to ``build_config``
+    when the component happens to have no inputs attribute. The build_config
+    is also patched in-place so the next round-trip carries the current
+    filters back to the frontend.
+    """
+    filters = _filters_from_component_inputs(component, model_field_name) or _filters_from_build_config(
+        build_config, model_field_name
+    )
+    field_config = build_config.get(model_field_name)
+    if isinstance(field_config, dict) and filters and field_config.get("filters") != filters:
+        field_config["filters"] = dict(filters)
+    return filters
+
+
+def _augmented_cache_key_prefix(prefix: str, filters: dict[str, Any]) -> str:
+    """Namespace the options-cache key by the active filters.
+
+    Without this, switching a single ModelInput's filters between two
+    different constraint sets would let stale cached options leak through.
+    """
+    if not filters:
+        return prefix
+    suffix = "_".join(f"{k}={filters[k]}" for k in sorted(filters))
+    return f"{prefix}__{suffix}"
+
+
+def _saved_model_passes_filters(
+    saved_name: str,
+    saved_provider: str,
+    filters: dict[str, Any],
+) -> bool:
+    """Check whether the saved model matches every active metadata filter.
+
+    Looks up the model in the *unfiltered* catalog (deprecated + unsupported
+    included) so we don't false-reject a model just because it's currently
+    deprecated. Returns ``True`` conservatively when the model isn't in the
+    catalog at all (e.g. a user-supplied custom model) — that preserves
+    today's "inject and let the user configure" behavior for cases this
+    check doesn't actually know how to evaluate.
+    """
+    if not filters:
+        return True
+    from .model_catalog import get_unified_models_detailed
+
+    providers = [saved_provider] if saved_provider else None
+    rows = get_unified_models_detailed(
+        providers=providers,
+        model_name=saved_name,
+        include_unsupported=True,
+        include_deprecated=True,
+    )
+    for prov_block in rows:
+        for m in prov_block.get("models", []):
+            if m.get("model_name") == saved_name:
+                metadata = m.get("metadata") or {}
+                return all(metadata.get(k) == v for k, v in filters.items())
+    return True
+
+
 def apply_provider_variable_config_to_build_config(
     build_config: dict,
     provider: str,
@@ -226,8 +332,28 @@ def update_model_options_in_build_config(
             opt.get("name") == saved_name and opt.get("provider", "") == saved_provider for opt in options_list
         )
         if not already_present:
-            injected = {**saved, "metadata": {**(saved.get("metadata") or {}), "not_enabled_locally": True}}
-            build_config[model_field_name]["options"] = [*options_list, injected]
+            # When the ModelInput declares filters (e.g. Agent passes
+            # ``filters={"tool_calling": True}``) and the saved selection
+            # exists in the catalog but doesn't satisfy them, the regular
+            # ``not_enabled_locally`` injection would put a model in the
+            # dropdown that crashes at run time. Clear the saved value so
+            # the downstream auto-default falls through to a compatible
+            # model instead. ``_resolve_filters`` reads the class-level
+            # declaration so saved flows that predate the filter shipping
+            # cannot bypass the constraint.
+            filters = _resolve_filters(component, build_config, model_field_name)
+            saved_passes_filters = _saved_model_passes_filters(saved_name, saved_provider, filters) if filters else True
+            if filters and not saved_passes_filters:
+                logger.debug(
+                    "Dropping saved model %s/%s that does not satisfy filters %s",
+                    saved_provider,
+                    saved_name,
+                    filters,
+                )
+                build_config[model_field_name]["value"] = None
+            else:
+                injected = {**saved, "metadata": {**(saved.get("metadata") or {}), "not_enabled_locally": True}}
+                build_config[model_field_name]["options"] = [*options_list, injected]
 
     # Set default value on initial load when the model field has no value.
     # We check the model field's own value (not field_value, which is the value
@@ -325,6 +451,18 @@ def _get_all_provider_mapped_fields() -> set[str]:
     return _get_all_provider_specific_field_names()
 
 
+def _is_model_name_only(value: Any) -> bool:
+    """True when ``value`` is a non-empty model name (or list of names).
+
+    ModelInput accepts a bare model name; the list-of-dicts shape is what
+    the rest of the lifecycle expects. An empty/falsy value is NOT a name
+    (it must keep its existing reset-to-default behavior).
+    """
+    if isinstance(value, str):
+        return bool(value.strip())
+    return isinstance(value, list) and bool(value) and all(isinstance(item, str) for item in value)
+
+
 def handle_model_input_update(
     component: Any,
     build_config: dict,
@@ -338,9 +476,35 @@ def handle_model_input_update(
     """Full update_build_config lifecycle for any component with a ModelInput."""
     from lfx.base.models import unified_models as unified_models_module
 
-    # If get_options_func is not provided, use the default based on cache_key_prefix
+    # If get_options_func is not provided, derive one from the declarative
+    # ``filters`` dict on the ModelInput (e.g. Agent declares
+    # ``filters={"tool_calling": True}``). The cache prefix is namespaced by
+    # the sorted filter key/value pairs so different filter configurations
+    # don't poison each other's caches. ``_resolve_filters`` reads the
+    # class-level declaration as the canonical source so saved flows that
+    # were persisted before the filter shipped (and therefore don't carry
+    # ``filters`` in their stored template) still get the constraint applied.
+    filters = _resolve_filters(component, build_config, model_field_name)
     if get_options_func is None:
-        get_options_func = unified_models_module.get_language_model_options
+        if filters:
+            cache_key_prefix = _augmented_cache_key_prefix(cache_key_prefix, filters)
+
+            def get_options_func(user_id=None, _filters=filters):
+                return unified_models_module.get_language_model_options(user_id=user_id, filters=_filters)
+        else:
+            get_options_func = unified_models_module.get_language_model_options
+
+    # ModelInput documents that a single model name / list of names is
+    # auto-converted to the list-of-dicts shape. Honor that contract here
+    # (e.g. the assistant's configure_component can persist a bare model
+    # name like "gpt-5.4") so the rest of the lifecycle never indexes a
+    # str as a dict — TypeError: string indices must be integers.
+    if _is_model_name_only(field_value):
+        from .model_catalog import normalize_model_names_to_dicts
+
+        field_value = normalize_model_names_to_dicts(field_value)
+        if field_name == model_field_name and isinstance(build_config.get(model_field_name), dict):
+            build_config[model_field_name]["value"] = field_value
 
     # Step 1: Refresh/cache model options, set defaults and input_types
     build_config = update_model_options_in_build_config(

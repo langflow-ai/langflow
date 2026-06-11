@@ -12,18 +12,15 @@ from datetime import datetime, timezone
 from types import SimpleNamespace
 from uuid import uuid4
 
-import pytest
 from langflow.api.v1.mappers.deployments.base import BaseDeploymentMapper
 from langflow.services.database.models.deployment.model import Deployment, DeploymentRead
 from lfx.services.adapters.deployment.schema import (
-    DEPLOYMENT_DESCRIPTION_MAX_LENGTH,
     BaseDeploymentData,
     BaseDeploymentDataUpdate,
     DeploymentCreateResult,
     DeploymentType,
     DeploymentUpdateResult,
 )
-from pydantic import ValidationError
 
 # ---------------------------------------------------------------------------
 # Model-level tests
@@ -37,7 +34,7 @@ class TestDeploymentModel:
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
-            name="test",
+            display_name="test",
             deployment_type=DeploymentType.AGENT,
         )
         assert row.deployment_type == DeploymentType.AGENT
@@ -49,7 +46,7 @@ class TestDeploymentModel:
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
-            name="test",
+            display_name="test",
             deployment_type=DeploymentType.AGENT,
             description="A test deployment",
         )
@@ -61,7 +58,7 @@ class TestDeploymentModel:
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
-            name="test",
+            display_name="test",
             deployment_type=DeploymentType.AGENT,
         )
         assert row.description is None
@@ -74,7 +71,7 @@ class TestDeploymentModel:
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
-            name="test",
+            display_name="test",
             description="read description",
             deployment_type=DeploymentType.AGENT,
             created_at=now,
@@ -91,7 +88,7 @@ class TestDeploymentModel:
             user_id=uuid4(),
             project_id=uuid4(),
             deployment_provider_account_id=uuid4(),
-            name="test",
+            display_name="test",
             deployment_type=DeploymentType.AGENT,
             created_at=now,
             updated_at=now,
@@ -101,17 +98,29 @@ class TestDeploymentModel:
 
 
 class TestAdapterDescriptionValidation:
-    def test_create_payload_rejects_description_over_max_length(self):
-        with pytest.raises(ValidationError, match="at most"):
-            BaseDeploymentData(
-                name="test",
-                description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1),
-                type=DeploymentType.AGENT,
-            )
+    def test_create_payload_accepts_long_description(self):
+        description = "x" * 501
 
-    def test_update_payload_rejects_description_over_max_length(self):
-        with pytest.raises(ValidationError, match="at most"):
-            BaseDeploymentDataUpdate(description="x" * (DEPLOYMENT_DESCRIPTION_MAX_LENGTH + 1))
+        payload = BaseDeploymentData(
+            name="test",
+            description=description,
+            type=DeploymentType.AGENT,
+        )
+
+        assert payload.description == description
+
+    def test_update_payload_accepts_long_description(self):
+        description = "x" * 501
+
+        payload = BaseDeploymentDataUpdate(description=description)
+
+        assert payload.description == description
+
+    def test_update_payload_accepts_explicit_null_description(self):
+        payload = BaseDeploymentDataUpdate(description=None)
+
+        assert payload.description is None
+        assert "description" in payload.model_fields_set
 
 
 # ---------------------------------------------------------------------------
@@ -128,13 +137,13 @@ class TestCreateResponse:
             id=uuid4(),
             resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
-            name="deploy",
+            display_name="deploy",
             description="my description",
             deployment_type=DeploymentType.AGENT,
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentCreateResult(id="prov-1")
+        result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.description == "my description"
         assert response.provider_id == provider_account_id
@@ -148,13 +157,13 @@ class TestCreateResponse:
             id=uuid4(),
             resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
-            name="deploy",
+            display_name="deploy",
             description=None,
             deployment_type=DeploymentType.AGENT,
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentCreateResult(id="prov-1")
+        result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.description is None
         assert response.provider_id == provider_account_id
@@ -168,13 +177,13 @@ class TestCreateResponse:
             id=uuid4(),
             resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
-            name="deploy",
+            display_name="deploy",
             description=None,
             deployment_type=DeploymentType.AGENT,
             created_at=now,
             updated_at=now,
         )
-        result = DeploymentCreateResult(id="prov-1")
+        result = DeploymentCreateResult(id="prov-1", type=DeploymentType.AGENT)
         response = mapper.shape_deployment_create_result(result, row, provider_key="test-provider")
         assert response.type == DeploymentType.AGENT
         assert response.provider_id == provider_account_id
@@ -195,7 +204,7 @@ class TestMapperUpdateResult:
             id=uuid4(),
             resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
-            name="deploy",
+            display_name="deploy",
             description="persisted desc",
             deployment_type=DeploymentType.AGENT,
             created_at=now,
@@ -216,7 +225,7 @@ class TestMapperUpdateResult:
             id=uuid4(),
             resource_key="rk-1",
             deployment_provider_account_id=provider_account_id,
-            name="deploy",
+            display_name="deploy",
             description=None,
             deployment_type=DeploymentType.AGENT,
             created_at=now,

@@ -6,6 +6,7 @@ import FilesTab from "./components/FilesTab";
 
 export const FilesPage = () => {
   const { t } = useTranslation();
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   const [selectedFiles, setSelectedFiles] = useState<any[]>([]);
   const [quantitySelected, setQuantitySelected] = useState(0);
   const [isShiftPressed, setIsShiftPressed] = useState(false);

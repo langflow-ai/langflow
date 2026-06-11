@@ -121,17 +121,26 @@ class BaseFileComponent(Component, ABC):
         # first concurrent entry — two threads could each create their own Lock
         # and bypass serialization on the call this PR is meant to fix.
         self._load_files_base_lock = threading.Lock()
-        # Dynamically update FileInput to include valid extensions and bundles
-        self.get_base_inputs()[0].file_types = [
+        file_types = [
             *self.valid_extensions,
             *self.SUPPORTED_BUNDLE_EXTENSIONS,
         ]
-
-        file_types = ", ".join(self.valid_extensions)
+        supported_file_types = ", ".join(self.valid_extensions)
         bundles = ", ".join(self.SUPPORTED_BUNDLE_EXTENSIONS)
-        self.get_base_inputs()[
-            0
-        ].info = f"Supported file extensions: {file_types}; optionally bundled in file extensions: {bundles}"
+        info = f"Supported file extensions: {supported_file_types}; optionally bundled in file extensions: {bundles}"
+        self._update_file_input_metadata(file_types=file_types, info=info)
+
+    def _update_file_input_metadata(self, *, file_types: list[str], info: str) -> None:
+        for input_ in self.inputs:
+            if isinstance(input_, FileInput) and input_.name == "path":
+                input_.file_types = file_types.copy()
+                input_.info = info
+                break
+
+        mapped_input = self._inputs.get("path")
+        if isinstance(mapped_input, FileInput):
+            mapped_input.file_types = file_types.copy()
+            mapped_input.info = info
 
     _base_inputs = [
         FileInput(

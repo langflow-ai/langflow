@@ -81,8 +81,8 @@ jobs:
         run: |
           name=$(grep '^name = "' src/sdk/pyproject.toml | head -n 1 | sed 's/.*"\(.*\)".*/\1/')
           version=$(grep '^version = "' src/sdk/pyproject.toml | head -n 1 | sed 's/.*"\(.*\)".*/\1/')
-          if [ "$name" != "langflow-sdk-nightly" ]; then
-            echo "Name $name does not match langflow-sdk-nightly. Exiting the workflow."
+          if [ "$name" != "langflow-sdk" ]; then
+            echo "Name $name does not match langflow-sdk. Exiting the workflow."
             exit 1
           fi
           if [ "v$version" != "${{ inputs.nightly_tag_sdk }}" ]; then
@@ -94,10 +94,11 @@ jobs:
         id: verify
         run: |
           cd src/lfx
-          name=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $1}')
-          version=$(uv tree | grep 'lfx' | head -n 1 | awk '{print $2}')
-          if [ "$name" != "lfx-nightly" ]; then
-            echo "Name $name does not match lfx-nightly. Exiting the workflow."
+          # Root the tree at lfx; a bare `grep lfx` matches bundles like `lfx-ibm` first.
+          name=$(uv tree --package lfx | head -n 1 | awk '{print $1}')
+          version=$(uv tree --package lfx | head -n 1 | awk '{print $2}')
+          if [ "$name" != "lfx" ]; then
+            echo "Name $name does not match lfx. Exiting the workflow."
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_lfx }}" ]; then
@@ -188,21 +189,26 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow-base' | awk '{print $2}' | head -n 1)
-          version=$(uv tree | grep 'langflow-base' | awk '{print $3}' | head -n 1)
-          # Strip extras from package name (e.g., "langflow-base-nightly[complete]" -> "langflow-base-nightly")
+          # Root the tree at langflow-base; it prints as a top-level `langflow-base v<ver>` line,
+          # so a bare `grep langflow-base` would read the version into $name and leave $version empty.
+          name=$(uv tree --package langflow-base | head -n 1 | awk '{print $1}')
+          version=$(uv tree --package langflow-base | head -n 1 | awk '{print $2}')
+          # Strip extras from package name (e.g., "langflow-base[complete]" -> "langflow-base")
           name_without_extras=$(echo $name | sed 's/\[.*\]//')
-          if [ "$name_without_extras" != "langflow-base-nightly" ]; then
-            echo "Name $name_without_extras does not match langflow-base-nightly. Exiting the workflow."
+          if [ "$name_without_extras" != "langflow-base" ]; then
+            echo "Name $name_without_extras does not match langflow-base. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_base }}" ]; then
             echo "Version $version does not match nightly tag ${{ inputs.nightly_tag_base }}. Exiting the workflow."
+            echo "skipped=true" >> $GITHUB_OUTPUT
             exit 1
           fi
           # Strip the leading `v` from the version
           version=$(echo $version | sed 's/^v//')
           echo "version=$version" >> $GITHUB_OUTPUT
+          echo "skipped=false" >> $GITHUB_OUTPUT
 
       - name: Build Langflow Base for distribution
         run: |
@@ -294,10 +300,10 @@ jobs:
       - name: Verify Nightly Name and Version
         id: verify
         run: |
-          name=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $1}')
-          version=$(uv tree | grep 'langflow' | grep -v 'langflow-base' | grep -v 'langflow-sdk' | awk '{print $2}')
-          if [ "$name" != "langflow-nightly" ]; then
-            echo "Name $name does not match langflow-nightly. Exiting the workflow."
+          name=$(uv tree | grep -E '^langflow[[:space:]]' | awk '{print $1}')
+          version=$(uv tree | grep -E '^langflow[[:space:]]' | awk '{print $2}')
+          if [ "$name" != "langflow" ]; then
+            echo "Name $name does not match langflow. Exiting the workflow."
             exit 1
           fi
           if [ "$version" != "${{ inputs.nightly_tag_release }}" ]; then
@@ -331,13 +337,30 @@ jobs:
             echo "Server terminated successfully"
           fi
 
+      - name: Prepare Langflow Main artifact
+        run: |
+          shopt -s nullglob
+          MAIN_WHEELS=(dist/langflow-*.whl)
+          if [ ${#MAIN_WHEELS[@]} -ne 1 ]; then
+            echo "Expected exactly one langflow wheel in dist/, found ${#MAIN_WHEELS[@]}"
+            ls -la dist/
+            exit 1
+          fi
+          rm -rf main-dist
+          mkdir -p main-dist
+          cp "${MAIN_WHEELS[0]}" main-dist/
+
+      # Bundles are NOT rebuilt/republished for nightly. The stable `lfx-*` bundles on
+      # PyPI work as-is against the canonical `lfx` pre-release (see src/bundles/NIGHTLY.md). The
+      # cross-platform test self-builds the bundles from src/bundles for install coverage.
+
       # PyPI publishing moved to after cross-platform testing
 
       - name: Upload Artifact
         uses: actions/upload-artifact@v6
         with:
           name: dist-nightly-main
-          path: dist
+          path: main-dist
 
   test-cross-platform:
     name: Test Cross-Platform Installation
@@ -437,6 +460,7 @@ jobs:
   publish-nightly-main:
     name: Publish Langflow Main Nightly to PyPI
     needs: [build-nightly-main, test-cross-platform, publish-nightly-base]
+    if: ${{ always() && needs.build-nightly-main.result == 'success' && needs.test-cross-platform.result == 'success' && needs.publish-nightly-base.result == 'success' }}
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code

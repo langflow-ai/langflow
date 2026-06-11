@@ -3,10 +3,9 @@
 ``pip install`` three local bundles and verify ``lfx extension list``
 shows all 3 at @official; plus a Dockerfile-style seed-directory case.
 
-This is the AC item from LE-1022:
-
-    > Integration test: pip install three local wheel bundles into the
-    > test environment; extension list shows all 3 at @official.
+Acceptance: integration test that pip-installs three local wheel
+bundles into the test environment; ``extension list`` shows all 3 at
+@official.
 
 The test builds three minimal wheel-shaped source trees, runs
 ``pip install --target <isolated dir>`` against each, and points
@@ -44,7 +43,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "{distribution_name}"
 version = "{version}"
-description = "Test bundle for LE-1022 production-install discovery"
+description = "Test bundle for production-install discovery"
 requires-python = ">=3.10"
 
 [tool.setuptools]

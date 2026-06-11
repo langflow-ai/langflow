@@ -1,6 +1,8 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
-import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+
+import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import {
   closeAdvancedOptions,
   disableInspectPanel,
@@ -15,13 +17,7 @@ test(
     const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 
@@ -66,7 +62,7 @@ test(
 
     expect(curl).toContain(flowId);
 
-    await page.getByText("Close", { exact: true }).last().click();
+    await page.getByText(TEXTS.close, { exact: true }).last().click();
     await closeAdvancedOptions(page);
     await enableInspectPanel(page);
   },
@@ -94,13 +90,7 @@ test(
     const _randomApiKeyDescription =
       Math.random().toString(36).substring(2, 15) +
       Math.random().toString(36).substring(2, 15);
-
-    await awaitBootstrapTest(page);
-
-    await page.waitForSelector('[data-testid="blank-flow"]', {
-      timeout: 30000,
-    });
-    await page.getByTestId("blank-flow").click();
+    await openBlankFlow(page);
     await page.getByTestId("sidebar-search-input").click();
     await page.getByTestId("sidebar-search-input").fill("webhook");
 

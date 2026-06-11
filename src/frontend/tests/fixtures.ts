@@ -2,6 +2,8 @@
 import { test as base, expect, Page } from "@playwright/test";
 import "./playwrightCoverage";
 
+export type { LangflowPage } from "./utils/types";
+
 // Optional CPU throttling for reproducing race conditions seen on slower
 // runners (Windows CI). Enable with LF_CPU_THROTTLE=<rate>, e.g. 4.
 const CPU_THROTTLE_RATE = (() => {
@@ -36,7 +38,7 @@ export const test = base.extend({
     // Flag to allow flow errors (for tests that expect errors)
     let allowFlowErrors = false;
 
-    // Add helper method to page context
+    // Add helper method to page context — see LangflowPage type in utils/types.ts
     (page as Page & { allowFlowErrors?: () => void }).allowFlowErrors = () => {
       allowFlowErrors = true;
     };
@@ -241,12 +243,6 @@ export const test = base.extend({
     // Check for errors and fail test if not allowed
     if (errors.length > 0) {
       const flowErrors = errors.filter((e) => e.type === "flow_error");
-      const httpErrors = errors.filter((e) => e.type === "http_error");
-
-      if (flowErrors.length > 0) {
-      }
-      if (httpErrors.length > 0) {
-      }
 
       // Fail the test if flow errors occurred and weren't allowed
       if (flowErrors.length > 0 && !allowFlowErrors) {

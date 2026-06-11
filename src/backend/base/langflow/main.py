@@ -163,6 +163,7 @@ def get_lifespan(*, fix_migration=False, version=None):
 
         sync_flows_from_fs_task = None
         mcp_init_task = None
+        models_dev_refresh_task = None
 
         try:
             start_time = asyncio.get_event_loop().time()
@@ -196,6 +197,23 @@ def get_lifespan(*, fix_migration=False, version=None):
             # migration application both no-op when already done.
             await initialize_services(fix_migration=fix_migration)
             await logger.adebug(f"Services initialized in {asyncio.get_event_loop().time() - start_time:.2f}s")
+
+            # Start the telemetry writer (no-op when telemetry_writer_enabled is False).
+            try:
+                from langflow.services.deps import get_telemetry_writer_service
+
+                telemetry_writer = get_telemetry_writer_service()
+                if telemetry_writer is not None and telemetry_writer.is_enabled():
+                    await telemetry_writer.start()
+            except Exception as exc:  # noqa: BLE001
+                # If the user explicitly opted in (telemetry_writer_enabled=True)
+                # but startup failed, this is an error not a warning — every
+                # subsequent write will silently fall back to the legacy direct-
+                # write path that this feature was built to replace.
+                await logger.aerror(
+                    f"Failed to start telemetry writer; transactions and vertex_build "
+                    f"writes will use the legacy direct-write path: {exc}"
+                )
 
             current_time = asyncio.get_event_loop().time()
             await logger.adebug("Setting up LLM caching")
@@ -415,6 +433,61 @@ def get_lifespan(*, fix_migration=False, version=None):
             # Allows the server to start first to avoid race conditions with MCP Server startup
             mcp_init_task = asyncio.create_task(delayed_init_mcp_servers())
 
+            async def refresh_models_dev_periodically() -> None:
+                """Hydrate the models.dev catalog at startup and refresh daily.
+
+                Loads any disk snapshot first so the in-memory catalog reflects
+                last-known-good metadata immediately, then attempts a live
+                fetch. On failure the disk snapshot (or bundled static lists)
+                stays in effect — startup is never blocked by models.dev
+                availability.
+                """
+                from lfx.base.models.models_dev_catalog import (
+                    fetch_models_dev_snapshot,
+                    invalidate_catalog_cache,
+                    load_models_dev_snapshot,
+                    save_models_dev_snapshot,
+                    set_active_snapshot,
+                )
+
+                refresh_interval_seconds = 24 * 60 * 60
+
+                disk_snapshot = load_models_dev_snapshot()
+                if disk_snapshot is not None:
+                    set_active_snapshot(disk_snapshot)
+                    invalidate_catalog_cache()
+                    await logger.adebug("Loaded models.dev snapshot from disk")
+
+                while True:
+                    try:
+                        fresh = await fetch_models_dev_snapshot()
+                    except asyncio.CancelledError:
+                        raise
+                    except Exception as e:  # noqa: BLE001
+                        await logger.awarning(f"models.dev refresh failed: {e}")
+                        fresh = None
+
+                    if fresh is not None:
+                        set_active_snapshot(fresh)
+                        invalidate_catalog_cache()
+                        try:
+                            save_models_dev_snapshot(fresh)
+                        except Exception as e:  # noqa: BLE001
+                            await logger.awarning(f"models.dev snapshot save failed: {e}")
+                        else:
+                            await logger.adebug("models.dev snapshot refreshed")
+
+                    await asyncio.sleep(refresh_interval_seconds)
+
+            # LANGFLOW_MODELS_DEV_REFRESH=false disables the live models.dev
+            # fetch. Tests set this: the startup fetch otherwise fires from a
+            # background task during whatever test is running, hitting the
+            # network and tripping event-loop-block detectors (pyleak).
+            if os.getenv("LANGFLOW_MODELS_DEV_REFRESH", "true").lower() not in ("false", "0", "no"):
+                models_dev_refresh_task = asyncio.create_task(refresh_models_dev_periodically())
+            else:
+                await logger.adebug("models.dev refresh disabled via LANGFLOW_MODELS_DEV_REFRESH")
+
             # v1 and project MCP server context managers
             from langflow.api.v1.mcp import start_streamable_http_manager
             from langflow.api.v1.mcp_projects import start_project_task_group
@@ -489,6 +562,9 @@ def get_lifespan(*, fix_migration=False, version=None):
                     if mcp_init_task and not mcp_init_task.done():
                         mcp_init_task.cancel()
                         tasks_to_cancel.append(mcp_init_task)
+                    if models_dev_refresh_task and not models_dev_refresh_task.done():
+                        models_dev_refresh_task.cancel()
+                        tasks_to_cancel.append(models_dev_refresh_task)
                     if tasks_to_cancel:
                         # Wait for all tasks to complete, capturing exceptions
                         results = await asyncio.gather(*tasks_to_cancel, return_exceptions=True)
@@ -499,6 +575,16 @@ def get_lifespan(*, fix_migration=False, version=None):
 
                 # Step 2: Cleaning Up Services
                 with shutdown_progress.step(2):
+                    # Drain pending audit writes before services tear down so
+                    # rows scheduled mid-request still land in the DB. We do
+                    # this here (not in teardown_services) because the DB
+                    # session factory must still be alive.
+                    try:
+                        from langflow.services.authorization.utils import drain_pending_audit_writes
+
+                        await drain_pending_audit_writes(timeout=5.0)
+                    except Exception as drain_exc:  # noqa: BLE001 — never block shutdown on audit
+                        await logger.awarning(f"drain_pending_audit_writes failed: {drain_exc}")
                     try:
                         await asyncio.wait_for(teardown_services(), timeout=30)
                     except asyncio.TimeoutError:
@@ -695,6 +781,36 @@ def create_app():
             content={"detail": exc.detail},
         )
 
+    # Add rate limit exception handler
+    from slowapi.errors import RateLimitExceeded
+
+    @app.exception_handler(RateLimitExceeded)
+    async def rate_limit_exception_handler(request: Request, _exc: RateLimitExceeded):
+        """Handle rate limit exceeded errors with structured logging."""
+        from langflow.services.rate_limit.service import get_limiter_key
+
+        # Default to 60 seconds for "/minute" window
+        retry_after_seconds = "60"
+
+        client_ip = get_limiter_key(request)
+        logger.warning(
+            "Rate limit exceeded",
+            auth_event="rate_limit_exceeded",
+            client_ip=client_ip,
+            path=request.url.path,
+            method=request.method,
+        )
+        return JSONResponse(
+            status_code=HTTPStatus.TOO_MANY_REQUESTS,
+            content={
+                "detail": "Too many requests. Please try again later.",
+                "retry_after": retry_after_seconds,
+            },
+            headers={
+                "Retry-After": retry_after_seconds,
+            },
+        )
+
     @app.exception_handler(Exception)
     async def exception_handler(_request: Request, exc: Exception):
         if isinstance(exc, HTTPException):
@@ -715,6 +831,12 @@ def create_app():
     FastAPIInstrumentor.instrument_app(app)
 
     add_pagination(app)
+
+    # Add SlowAPI state to app for rate limiting
+    from langflow.services.rate_limit import get_rate_limiter
+
+    limiter = get_rate_limiter()
+    app.state.limiter = limiter
 
     return app
 
