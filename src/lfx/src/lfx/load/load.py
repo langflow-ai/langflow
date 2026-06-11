@@ -29,6 +29,7 @@ async def aload_flow_from_json(
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
+    session_context: dict | None = None,
 ) -> "Graph":
     """Load a flow graph from a JSON file or a JSON object.
 
@@ -43,6 +44,9 @@ async def aload_flow_from_json(
         cache (Optional[str]): Optional cache path to update the flow settings.
         disable_logs (Optional[bool], default=True): Optional flag to disable logs during flow processing.
             If log_level or log_file are set, disable_logs is not used.
+        session_context (Optional[dict]): Per-session values that components can read at build time
+            via ``self.graph.context["session"]``. Used by Pipecat transport components to access
+            the live WebSocket object.
 
     Returns:
         Graph: The loaded flow graph as a Graph object.
@@ -93,7 +97,8 @@ async def aload_flow_from_json(
 
     from lfx.graph.graph.base import Graph
 
-    return Graph.from_payload(graph_data)
+    graph_context = {"session": session_context} if session_context is not None else None
+    return Graph.from_payload(graph_data, context=graph_context)
 
 
 def load_flow_from_json(
@@ -106,6 +111,7 @@ def load_flow_from_json(
     env_file: str | None = None,
     cache: str | None = None,
     disable_logs: bool | None = True,
+    session_context: dict | None = None,
 ) -> "Graph":
     """Load a flow graph from a JSON file or a JSON object.
 
@@ -120,6 +126,7 @@ def load_flow_from_json(
         cache (Optional[str]): Optional cache path to update the flow settings.
         disable_logs (Optional[bool], default=True): Optional flag to disable logs during flow processing.
             If log_level or log_file are set, disable_logs is not used.
+        session_context (Optional[dict]): Optional per-session context injected into the graph at load time.
 
     Returns:
         Graph: The loaded flow graph as a Graph object.
@@ -138,6 +145,7 @@ def load_flow_from_json(
             env_file=env_file,
             cache=cache,
             disable_logs=disable_logs,
+            session_context=session_context,
         )
     )
 

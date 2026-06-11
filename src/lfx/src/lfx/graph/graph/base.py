@@ -1282,6 +1282,46 @@ class Graph:
         else:
             return graph
 
+    def terminal_output_of_type(self, target_type: str) -> tuple[Vertex, str]:
+        """Find the unique vertex output declaring ``target_type``.
+
+        Walks every vertex's ``outputs`` list and returns the ``(vertex, output_name)``
+        pair of the single output whose declared ``types`` include ``target_type``.
+
+        Used by the voice runtime: the API endpoint loads a voice graph then calls
+        ``graph.terminal_output_of_type("PipecatPipelineTask")`` to locate the
+        terminal node (``VoicePipelineComponent`` or ``PipecatFlowComponent``)
+        whose output it should resolve and run.
+
+        Args:
+            target_type: The output type name to search for (e.g. ``"PipecatPipelineTask"``).
+
+        Returns:
+            Tuple of (vertex, output_name) — the single matching output.
+
+        Raises:
+            ValueError: If zero or more than one matching output is found.
+        """
+        matches: list[tuple[Vertex, str]] = []
+        for vertex in self.vertices:
+            for output in getattr(vertex, "outputs", []) or []:
+                if not isinstance(output, dict):
+                    continue
+                types = output.get("types") or []
+                if target_type in types:
+                    matches.append((vertex, output.get("name", "")))
+        if not matches:
+            msg = f"No graph output of type {target_type!r} found."
+            raise ValueError(msg)
+        if len(matches) > 1:
+            located = ", ".join(f"{v.id}.{name}" for v, name in matches)
+            msg = (
+                f"Expected exactly one output of type {target_type!r} but found "
+                f"{len(matches)}: {located}"
+            )
+            raise ValueError(msg)
+        return matches[0]
+
     def __eq__(self, /, other: object) -> bool:
         if not isinstance(other, Graph):
             return False
@@ -1905,7 +1945,7 @@ class Graph:
             params=params,
             data=result_data_response,
             artifacts={},
-            job_id=self._run_id if self._run_id else None,
+            job_id=self._run_id or None,
         )
 
     async def _execute_tasks(
@@ -1948,7 +1988,7 @@ class Graph:
                         params=result.params,
                         data=result.result_dict,
                         artifacts=result.artifacts,
-                        job_id=self._run_id if self._run_id else None,
+                        job_id=self._run_id or None,
                     )
                     # Store for SSE emission later
                     build_results[result.vertex.id] = result
@@ -2180,7 +2220,7 @@ class Graph:
     def _get_vertex_class(node_type: str, node_base_type: str, node_id: str) -> type[Vertex]:
         """Returns the node class based on the node type."""
         # First we check for the node_base_type
-        node_name = node_id.split("-")[0]
+        node_name = node_id.split("-", maxsplit=1)[0]
         if node_name in InterfaceComponentTypes or node_type in InterfaceComponentTypes:
             return InterfaceVertex
         if node_name in {"SharedState", "Notify", "Listen"}:
