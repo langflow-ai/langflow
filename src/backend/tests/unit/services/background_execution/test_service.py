@@ -77,6 +77,45 @@ async def test_events_reattach_replays_durable(active_user):
         await svc.stop()
 
 
+async def test_events_polls_durable_log_for_cross_worker_job(active_user):
+    # The job runs on ANOTHER worker, so this facade's live bus never sees its
+    # frames. Durable job_events rows appear over time and the job goes terminal.
+    # events() must replay them gap-free from the durable log and return, instead
+    # of blocking forever on the empty local live queue.
+    from langflow.services.deps import get_job_service
+
+    job_service = get_job_service()
+    job_id = uuid4()
+    await job_service.create_job(job_id=job_id, flow_id=uuid4(), user_id=active_user.id)
+    await job_service.update_job_status(job_id, JobStatus.IN_PROGRESS)
+    await job_service.append_event(job_id, "build_start", {"event": "build_start", "data": {}})
+
+    svc = _make_service()
+    await svc.start()
+
+    async def other_worker():
+        await asyncio.sleep(0.3)
+        await job_service.append_event(job_id, "end_vertex", {"event": "end_vertex", "data": {"id": "n1"}})
+        await asyncio.sleep(0.3)
+        await job_service.append_event(job_id, "end", {"event": "end", "data": {}})
+        await job_service.set_result(job_id, {"ok": True})
+        await job_service.update_job_status(job_id, JobStatus.COMPLETED, finished_timestamp=True)
+
+    async def consume() -> list[bytes]:
+        return [chunk async for chunk in svc.events(job_id, last_event_id=None, user=active_user)]
+
+    worker = asyncio.create_task(other_worker())
+    try:
+        seen = await asyncio.wait_for(consume(), timeout=15)
+    finally:
+        await worker
+        await svc.stop()
+
+    assert any(b"build_start" in c for c in seen)
+    assert any(b"end_vertex" in c for c in seen)
+    assert any(b"end" in c for c in seen)
+
+
 async def test_status_rejects_cross_user(active_user, user_two):
     # ``active_super_user`` shares ``active_user``'s username (and thus DB row),
     # so a genuinely distinct second user (``user_two``) is needed to exercise

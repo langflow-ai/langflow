@@ -6,6 +6,7 @@ import uuid
 from collections.abc import AsyncIterator
 
 from fastapi import BackgroundTasks, HTTPException, Response
+from lfx.graph.exceptions import GraphPausedException
 from lfx.graph.graph.base import Graph
 from lfx.graph.utils import log_vertex_build
 from lfx.log.logger import logger
@@ -504,6 +505,10 @@ async def generate_flow_events(
                 top_level_vertices = graph.get_top_level_vertices(next_runnable_vertices)
 
                 result_data_response = ResultDataResponse.model_validate(result_dict, from_attributes=True)
+            except GraphPausedException:
+                # A pause is control flow, not a failure: converting it to an
+                # error output would terminalize a suspendable run.
+                raise
             except Exception as exc:  # noqa: BLE001
                 if isinstance(exc, ComponentBuildError):
                     params = exc.message
@@ -586,6 +591,8 @@ async def generate_flow_events(
                     component_run_id=graph.run_id,
                 ),
             )
+        except GraphPausedException:
+            raise
         except Exception as exc:
             if "vertex" in locals():
                 # Extract and send component input telemetry even on error (separate payload)
@@ -623,6 +630,8 @@ async def generate_flow_events(
             event_manager: Manager for handling events
             vertex_timedeltas: Shared list to accumulate each vertex's timedelta
         """
+        # Why: the background path never enters Graph.process(), so the pause boundary must live in this driver.
+        await graph.check_and_handle_pause()
         try:
             vertex_build_response: VertexBuildResponse = await _build_vertex(vertex_id, graph, event_manager)
         except asyncio.CancelledError:
@@ -716,6 +725,10 @@ async def generate_flow_events(
             cleanup_task = asyncio.create_task(graph.end_all_traces_in_context()())
             cleanup_tasks.add(cleanup_task)
             cleanup_task.add_done_callback(cleanup_tasks.discard)
+            raise
+        except GraphPausedException:
+            # Suspension must reach the runtime unwrapped — emitting on_error
+            # here would terminalize the run in every client.
             raise
         except Exception as e:
             await logger.aerror(f"Error building vertices: {e}")

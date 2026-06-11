@@ -222,7 +222,13 @@ class BackgroundExecutionService(Service):
                 yield frame.data
             return
 
-        async for frame in self._bus.reattach(str(job_id), last_seq=last_seq, read_durable=read_durable):
+        async def _is_terminal() -> bool:
+            current = await job_service.get_job_by_job_id(job_id)
+            return current is not None and current.status in _TERMINAL_STATUSES
+
+        async for frame in self._bus.reattach(
+            str(job_id), last_seq=last_seq, read_durable=read_durable, is_done=_is_terminal
+        ):
             yield frame.data
 
     # ------------------------------------------------------------------ status

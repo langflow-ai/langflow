@@ -1,0 +1,67 @@
+"""resume_from_checkpoint mechanics (LE-1440).
+
+The resumed graph must continue from the exact pause point: identity restored,
+built vertices NOT re-executed, and the next runnable layer recomputed from
+already-built predecessors instead of a full re-sort.
+"""
+
+from __future__ import annotations
+
+from lfx.components.input_output import ChatInput, ChatOutput
+from lfx.graph import Graph
+from lfx.graph.checkpoint.store import InMemoryCheckpointStore
+
+
+async def _paused_checkpoint():
+    chat_input = ChatInput(_id="chat_input", input_value="hello")
+    chat_input.set(should_store_message=False)
+    chat_output = ChatOutput(_id="chat_output")
+    chat_output.set(input_value=chat_input.message_response, should_store_message=False)
+    graph = Graph(chat_input, chat_output)
+    graph.session_id = "sess-1"
+    graph.set_run_id()
+    graph.checkpointing_enabled = True
+    graph.job_id = "job-1"
+    await graph.astep()
+    return graph, graph.build_checkpoint()
+
+
+async def test_resume_restores_identity_and_state():
+    original, checkpoint = await _paused_checkpoint()
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+    assert str(resumed.run_id) == str(original.run_id)
+    assert resumed.session_id == "sess-1"
+    assert resumed.job_id == "job-1"
+    assert resumed.resumed_from_checkpoint is True
+    assert resumed._call_order == original._call_order
+    assert resumed.get_vertex("chat_input").built is True
+
+
+async def test_resume_recomputes_next_runnable_layer_from_built_predecessors():
+    _, checkpoint = await _paused_checkpoint()
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+    assert resumed.resume_first_layer() == ["chat_output"]
+
+
+async def test_resumed_process_completes_without_rerunning_built_vertices():
+    _, checkpoint = await _paused_checkpoint()
+    store = InMemoryCheckpointStore()
+    resumed = Graph.resume_from_checkpoint(checkpoint, checkpoint_store=store)
+    # Mutate the restored result: if process() re-ran chat_input the marker
+    # would be recomputed back to "hello", proving a re-execution.
+    restored_input = resumed.get_vertex("chat_input")
+    restored_input.results["message"].text = "hello-restored"
+    restored_input.built_object["message"].text = "hello-restored"
+    await resumed.process(fallback_to_env_vars=False)
+    output_vertex = resumed.get_vertex("chat_output")
+    assert output_vertex.built is True
+    assert output_vertex.results["message"].text == "hello-restored"
+    assert resumed._call_order.count("chat_input") == 1
+
+
+async def test_resume_restores_vertex_results():
+    original, checkpoint = await _paused_checkpoint()
+    original_results = original.get_vertex("chat_input").results
+    resumed = Graph.resume_from_checkpoint(checkpoint)
+    restored_results = resumed.get_vertex("chat_input").results
+    assert set(restored_results) == set(original_results)
