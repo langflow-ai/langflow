@@ -279,6 +279,46 @@ def serve_command(
             "instead of reading from the process environment."
         ),
     ),
+    identity_mode: str = typer.Option(
+        "off",
+        "--identity-mode",
+        help=(
+            "Per-user identity forwarding mode. 'off' (default) ignores caller identity. "
+            "'jwt' verifies a signed JWT (Authorization: Bearer or --identity-jwt-header) and "
+            "threads its claim as user_id. 'header' trusts a plain gateway header verbatim "
+            "(weaker; safe only when network policy guarantees the gateway is the sole caller)."
+        ),
+    ),
+    identity_jwt_issuer: str | None = typer.Option(
+        None,
+        "--identity-jwt-issuer",
+        help="Expected JWT 'iss' (exact match). Required when --identity-mode=jwt.",
+    ),
+    identity_jwt_audience: str | None = typer.Option(
+        None,
+        "--identity-jwt-audience",
+        help="Expected JWT 'aud' (the token's audience must contain it). Required when --identity-mode=jwt.",
+    ),
+    identity_jwt_jwks_url: str | None = typer.Option(
+        None,
+        "--identity-jwt-jwks-url",
+        help="JWKS URL for signing keys. Optional; defaults to OIDC discovery from the issuer.",
+    ),
+    identity_claim: str = typer.Option(
+        "sub",
+        "--identity-claim",
+        help="JWT claim used as the caller identity (user_id). Defaults to 'sub'.",
+    ),
+    identity_jwt_header: str = typer.Option(
+        "Authorization",
+        "--identity-jwt-header",
+        help="Header the JWT is read from in jwt mode (a 'Bearer ' prefix is stripped). Defaults to Authorization.",
+    ),
+    identity_header: str = typer.Option(
+        "X-Consumer-Username",
+        "--identity-header",
+        help="Plain header trusted as identity in header mode. Defaults to X-Consumer-Username.",
+    ),
     upgrade_flow: str | None = None,
 ) -> None:
     """Serve LFX flows as a web API.
@@ -324,6 +364,22 @@ def serve_command(
     if workers < 1:
         typer.echo("Error: --workers must be at least 1.", err=True)
         raise typer.Exit(1)
+
+    from lfx.cli.serve_identity import IdentityConfig, IdentityConfigError
+
+    try:
+        identity_config = IdentityConfig(
+            mode=identity_mode,  # type: ignore[arg-type]
+            jwt_issuer=identity_jwt_issuer,
+            jwt_audience=identity_jwt_audience,
+            jwt_jwks_url=identity_jwt_jwks_url,
+            claim=identity_claim,
+            jwt_header=identity_jwt_header,
+            trusted_header=identity_header,
+        )
+    except IdentityConfigError as e:
+        typer.echo(f"Error: {e}", err=True)
+        raise typer.Exit(1) from e
 
     os.environ["LANGFLOW_PRETTY_LOGS"] = "false"
     configure(log_level=log_level)
@@ -443,6 +499,11 @@ def serve_command(
 
                 os.environ[_SERVE_FLOW_DIR_ENV] = str(flow_dir) if flow_dir else ""
                 os.environ[_SERVE_NO_ENV_FALLBACK_ENV] = "1" if no_env_fallback else "0"
+                # Round-trip identity config into the worker processes (each worker keeps
+                # its own JWKS cache — a few KB; no cross-worker sharing).
+                identity_env = identity_config.to_env()
+                for identity_key, identity_value in identity_env.items():
+                    os.environ[identity_key] = identity_value
 
                 # When flow_dir is set, startup flows are already in the store (written by
                 # _build_serve_registry above) so workers load them via warm_from_store().
@@ -466,10 +527,15 @@ def serve_command(
                 finally:
                     # Only remove the keys we set above — a prefix sweep would also delete
                     # any LFX_SERVE_* var the operator intentionally exported before launch.
-                    for k in (_SERVE_FLOW_DIR_ENV, _SERVE_NO_ENV_FALLBACK_ENV, _SERVE_STARTUP_PATHS_ENV):
+                    for k in (
+                        _SERVE_FLOW_DIR_ENV,
+                        _SERVE_NO_ENV_FALLBACK_ENV,
+                        _SERVE_STARTUP_PATHS_ENV,
+                        *identity_env,
+                    ):
                         os.environ.pop(k, None)
             else:
-                serve_app = create_multi_serve_app(registry=registry)
+                serve_app = create_multi_serve_app(registry=registry, identity_config=identity_config)
                 uvicorn.run(serve_app, host=host, port=port, workers=1, log_level=log_level)
         except KeyboardInterrupt:
             verbose_print("\nServer stopped")
