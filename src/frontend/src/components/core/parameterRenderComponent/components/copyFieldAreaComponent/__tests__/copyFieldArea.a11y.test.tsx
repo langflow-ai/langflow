@@ -32,9 +32,9 @@ describe("CopyFieldAreaComponent accessibility", () => {
     expect(await axe(container)).toHaveNoViolations();
   });
 
-  // Known gap (a11y-action-plan 2.4): the copy action is a bare <div
-  // onClick> wrapping a decorative icon - no button role, no accessible
-  // name, no keyboard activation. Fails until the fix lands.
+  // Regression lock (a11y-action-plan 2.4): the copy action was a bare
+  // <div onClick> wrapping a decorative icon - no button role, no
+  // accessible name, no keyboard activation.
   it("should_expose_copy_action_as_named_button", () => {
     renderComponent();
 
