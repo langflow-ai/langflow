@@ -67,9 +67,14 @@ class ResembleWatermarkComponent(Component):
                 )
                 it = item(result)
                 if not (it.get("watermarked_media") or it.get("url")) and it.get("uuid"):
+                    # The apply result has no `status` field — done means the media URL is present.
                     with contextlib.suppress(ValueError):
                         result = poll(
-                            self.api_key, self.base_url, f"/watermark/apply/{it['uuid']}/result", self.max_wait_seconds
+                            self.api_key,
+                            self.base_url,
+                            f"/watermark/apply/{it['uuid']}/result",
+                            self.max_wait_seconds,
+                            is_done=lambda d: bool(item(d).get("watermarked_media") or item(d).get("url")),
                         )
             else:
                 result = request(

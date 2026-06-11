@@ -55,7 +55,7 @@ class ResembleIntelligenceComponent(Component):
         if uuid and status and status not in TERMINAL:
             # Poll path may vary by deployment; on failure return the submit payload.
             with contextlib.suppress(ValueError):
-                result = poll(self.api_key, self.base_url, f"/intelligence/{uuid}", self.max_wait_seconds)
+                result = poll(self.api_key, self.base_url, f"/intelligences/{uuid}", self.max_wait_seconds)
         data = Data(data=sanitize(result))
         self.status = data
         return data

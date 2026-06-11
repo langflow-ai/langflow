@@ -8,9 +8,12 @@ async poll-to-completion, `Prefer: wait` for watermark.
 from __future__ import annotations
 
 import time
-from typing import Any
+from typing import TYPE_CHECKING, Any
 
 import requests
+
+if TYPE_CHECKING:
+    from collections.abc import Callable
 
 DEFAULT_BASE_URL = "https://app.resemble.ai/api/v2"
 TERMINAL = {"completed", "failed", "error", "cancelled", "success"}
@@ -58,17 +61,28 @@ def item(data: Any) -> dict:
     return data if isinstance(data, dict) else {}
 
 
-def poll(api_key: str, base_url: str | None, path: str, max_wait: int = 120) -> Any:
+def _status_done(data: Any) -> bool:
+    return str(item(data).get("status") or "").lower() in TERMINAL
+
+
+def poll(
+    api_key: str,
+    base_url: str | None,
+    path: str,
+    max_wait: int = 120,
+    is_done: Callable[[Any], bool] | None = None,
+) -> Any:
+    """Poll `path` until `is_done` (default: terminal `status`) or raise on timeout."""
+    done = is_done or _status_done
     wait = max(1, int(max_wait or 120))
     deadline = time.monotonic() + wait
     delay = 2
     last = request(api_key, base_url, "GET", path)
     while True:
-        status = item(last).get("status")
-        if not status or str(status).lower() in TERMINAL:
+        if done(last):
             return last
         if time.monotonic() >= deadline:
-            msg = f"Timed out after {wait}s waiting for {path} to complete (last status: {status})."
+            msg = f"Timed out after {wait}s waiting for {path} to complete."
             raise ValueError(msg)
         time.sleep(delay)
         delay = min(10, delay + 1)
