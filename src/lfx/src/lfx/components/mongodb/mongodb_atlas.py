@@ -1,5 +1,8 @@
 import tempfile
 import time
+from contextlib import suppress
+from importlib.metadata import PackageNotFoundError
+from importlib.metadata import version as _get_package_version
 
 import certifi
 from langchain_mongodb import MongoDBAtlasVectorSearch
@@ -10,6 +13,21 @@ from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vec
 from lfx.helpers.data import docs_to_data
 from lfx.io import BoolInput, DropdownInput, HandleInput, IntInput, SecretStrInput, StrInput
 from lfx.schema.data import Data
+
+# Identifies Langflow in the MongoDB driver handshake metadata so server-side
+# telemetry can attribute traffic to this library.
+_DRIVER_NAME = "Langflow"
+
+
+def _get_driver_version() -> str | None:
+    """Resolve the running Langflow/lfx version at runtime, or None if unavailable."""
+    for package_name in ("langflow", "langflow-base", "lfx"):
+        with suppress(PackageNotFoundError):
+            return _get_package_version(package_name)
+    return None
+
+
+_DRIVER_VERSION = _get_driver_version()
 
 
 class MongoVectorStoreComponent(LCVectorStoreComponent):
@@ -97,9 +115,12 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
     def build_vector_store(self) -> MongoDBAtlasVectorSearch:
         try:
             from pymongo import MongoClient
+            from pymongo.driver_info import DriverInfo
         except ImportError as e:
             msg = "Please install pymongo to use MongoDB Atlas Vector Store"
             raise ImportError(msg) from e
+
+        driver_info = DriverInfo(name=_DRIVER_NAME, version=_DRIVER_VERSION)
 
         # Create temporary files for the client certificate
         if self.enable_mtls:
@@ -127,9 +148,10 @@ class MongoVectorStoreComponent(LCVectorStoreComponent):
                     tls=True,
                     tlsCertificateKeyFile=client_cert_path,
                     tlsCAFile=certifi.where(),
+                    driver=driver_info,
                 )
                 if self.enable_mtls
-                else MongoClient(self.mongodb_atlas_cluster_uri)
+                else MongoClient(self.mongodb_atlas_cluster_uri, driver=driver_info)
             )
 
             collection = mongo_client[self.db_name][self.collection_name]
