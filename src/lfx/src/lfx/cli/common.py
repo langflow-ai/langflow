@@ -321,9 +321,11 @@ async def execute_graph_with_capture(
             shell/env-var typos (see ``lfx.run._defaults.validate_provided_id``).
         user_id: Optional verified caller identity (e.g. forwarded by an edge
             gateway via a verified JWT — see ``lfx.cli.serve_identity``). ``None``
-            preserves any pre-existing ``graph.user_id`` and otherwise
-            auto-generates one, matching the prior behavior. A non-``None`` value
-            wins (the verified identity is authoritative).
+            keeps any ``user_id`` already pinned on the graph, and auto-generates
+            a throwaway UUID when the graph has none (components require a
+            non-empty user_id, but lfx's variable service is env-backed so the
+            value is not used for scoping). A non-``None`` value overwrites the
+            graph's value (the verified identity is authoritative).
 
     Returns:
         Tuple of (results, captured_logs)
@@ -332,9 +334,10 @@ async def execute_graph_with_capture(
         Exception: Re-raises any exception that occurs during graph execution
     """
     # Apply session_id, user_id, and Memory-vertex propagation defaults via the
-    # shared helper (same logic as run_flow). When a verified user_id is supplied
-    # it overwrites any graph-pinned value; when absent (off mode / CLI runs) the
-    # existing graph.user_id is preserved — byte-for-byte the prior behavior.
+    # shared helper (same logic as run_flow). A supplied (verified) user_id
+    # overwrites any graph-pinned value; when None (off mode / CLI runs) the
+    # graph's existing user_id is kept, or a UUID auto-generated if it has none —
+    # the same result as calling this function before user_id was a parameter.
     apply_run_defaults(graph, session_id=session_id, user_id=user_id, overwrite_user_id=user_id is not None)
 
     # Create input request

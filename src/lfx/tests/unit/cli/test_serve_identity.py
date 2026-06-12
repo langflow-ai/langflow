@@ -19,11 +19,13 @@ from cryptography.hazmat.primitives.asymmetric import rsa
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from jwt.algorithms import RSAAlgorithm
+from lfx.cli.common import execute_graph_with_capture
 from lfx.cli.serve_app import FlowMeta, FlowRegistry, create_multi_serve_app, create_serve_app
 from lfx.cli.serve_identity import (
     IdentityConfig,
     IdentityConfigError,
     IdentityVerifier,
+    _fetch_json,
     build_identity_verifier,
 )
 from lfx.graph import Graph
@@ -135,6 +137,11 @@ class TestIdentityConfig:
     def test_unknown_mode_rejected(self):
         with pytest.raises(IdentityConfigError):
             IdentityConfig(mode="bogus")  # type: ignore[arg-type]
+
+    def test_non_http_jwks_url_rejected_offline(self):
+        # A bad scheme must fail fast at config construction, not at first fetch.
+        with pytest.raises(IdentityConfigError):
+            IdentityConfig(mode="jwt", jwt_issuer=ISSUER, jwt_audience=AUDIENCE, jwt_jwks_url="file:///etc/passwd")
 
     def test_env_round_trip_preserves_all_fields(self):
         cfg = IdentityConfig(
@@ -256,6 +263,18 @@ class TestIdentityVerifierJwt:
             verifier.authenticate(self._headers(token))
         assert exc.value.status_code == 401
 
+    def test_missing_kid_rejected(self, verifier, keypair):
+        # Token with no `kid` in its header — distinct from an unknown kid.
+        token = jwt.encode(
+            {"iss": ISSUER, "aud": AUDIENCE, "exp": int(time.time()) + 3600, "email": "a@b.c"},
+            keypair,
+            algorithm="RS256",  # no headers={"kid": ...}
+        )
+        with pytest.raises(HTTPException) as exc:
+            verifier.authenticate(self._headers(token))
+        assert exc.value.status_code == 401
+        assert "key id" in exc.value.detail.lower()
+
     def test_unknown_kid_triggers_one_rate_limited_refresh_then_401(self, verifier, fetcher, keypair):
         assert fetcher.calls == 1  # prefetch
         token = _sign(keypair, {"email": "a@b.c"}, kid="rotated-kid-not-in-jwks")
@@ -314,6 +333,50 @@ class TestIdentityVerifierJwt:
 # ---------------------------------------------------------------------------
 # Startup prefetch
 # ---------------------------------------------------------------------------
+
+
+class TestJwksSourceResolution:
+    """OIDC discovery (when no explicit jwks_url) and the SSRF scheme guard."""
+
+    def _disco_config(self):
+        # No jwt_jwks_url → the verifier must discover it from the issuer.
+        return IdentityConfig(mode="jwt", jwt_issuer=ISSUER, jwt_audience=AUDIENCE, claim="email")
+
+    def test_oidc_discovery_resolves_jwks_uri_then_verifies(self, jwks, keypair):
+        seen = {}
+
+        def openid_fetch(url):
+            seen["openid"] = url
+            return {"jwks_uri": "https://accounts.example.com/discovered-jwks"}
+
+        def jwks_fetch(url):
+            seen["jwks"] = url
+            return jwks
+
+        v = IdentityVerifier(self._disco_config(), jwks_fetcher=jwks_fetch, openid_fetcher=openid_fetch)
+        v.prefetch()
+        token = _sign(keypair, {"email": "alice@example.com"})
+        assert v.authenticate({"Authorization": f"Bearer {token}"}) == "alice@example.com"
+        # Discovery hit the well-known doc, then fetched the URL it advertised.
+        assert seen["openid"] == "https://accounts.example.com/.well-known/openid-configuration"
+        assert seen["jwks"] == "https://accounts.example.com/discovered-jwks"
+
+    def test_oidc_discovery_without_jwks_uri_degrades_to_401(self, keypair):
+        # Discovery doc missing jwks_uri → IdentityConfigError, swallowed at fetch,
+        # cache stays empty, prefetch does not raise, requests fail closed (401).
+        v = IdentityVerifier(
+            self._disco_config(), jwks_fetcher=lambda _u: {"keys": []}, openid_fetcher=lambda _u: {}
+        )
+        v.prefetch()
+        token = _sign(keypair, {"email": "a@b.c"})
+        with pytest.raises(HTTPException) as exc:
+            v.authenticate({"Authorization": f"Bearer {token}"})
+        assert exc.value.status_code == 401
+
+    def test_fetch_json_rejects_non_http_scheme(self):
+        # The SSRF guard: a file:// (or other non-http) URL must be refused.
+        with pytest.raises(IdentityConfigError):
+            _fetch_json("file:///etc/passwd")
 
 
 class TestStartupPrefetch:
@@ -601,3 +664,32 @@ class TestServeAppIdentityEndpoints:
             )
         assert resp.status_code != 401
         assert captured["user_id"] == "kong-user-7"
+
+
+class TestExecuteGraphUserIdThreading:
+    """The user_id contract in execute_graph_with_capture.
+
+    Covers the off-mode preservation the docstrings describe: None keeps the
+    graph's existing user_id, a verified value overwrites it. async_start is
+    stubbed so only the apply_run_defaults stamping logic runs, not a full flow.
+    """
+
+    @staticmethod
+    def _stub_async_start(real_graph):
+        async def _no_results(*_args, **_kwargs):
+            return
+            yield  # make it an (empty) async generator
+
+        real_graph.async_start = _no_results
+
+    async def test_none_user_id_preserves_existing_graph_user_id(self, real_graph):
+        self._stub_async_start(real_graph)
+        real_graph.user_id = "preexisting-user"
+        await execute_graph_with_capture(real_graph, "hi", user_id=None)
+        assert real_graph.user_id == "preexisting-user"
+
+    async def test_verified_user_id_overwrites_graph_user_id(self, real_graph):
+        self._stub_async_start(real_graph)
+        real_graph.user_id = "preexisting-user"
+        await execute_graph_with_capture(real_graph, "hi", user_id="alice@example.com")
+        assert real_graph.user_id == "alice@example.com"

@@ -14,7 +14,8 @@ Two modes carry identity, plus an off switch:
 ``jwt``
     A signed JWT (``Authorization: Bearer`` or a configured header) is verified
     against the issuer's JWKS before its identity claim is trusted. Missing or
-    invalid tokens are rejected with 401. This is the secure default mode.
+    invalid tokens are rejected with 401. This is the recommended secure mode
+    when identity forwarding is enabled (note: ``off`` is the actual default).
 
 ``header``
     A plain gateway header (e.g. ``X-Consumer-Username``) is trusted verbatim.
@@ -128,6 +129,12 @@ class IdentityConfig:
             if not self.claim:
                 msg = "--identity-claim must be non-empty when --identity-mode=jwt."
                 raise IdentityConfigError(msg)
+            # Validate the JWKS URL scheme offline so a typo (e.g. file://) fails
+            # at startup rather than masquerading as a transient fetch error later.
+            # (A None jwks_url is fine — it's resolved via OIDC discovery from iss.)
+            if self.jwt_jwks_url and not self.jwt_jwks_url.lower().startswith(("http://", "https://")):
+                msg = f"--identity-jwt-jwks-url must be an http(s) URL, got {self.jwt_jwks_url!r}."
+                raise IdentityConfigError(msg)
         if self.mode == "header" and not self.trusted_header:
             msg = "--identity-header must be non-empty when --identity-mode=header."
             raise IdentityConfigError(msg)
@@ -186,27 +193,49 @@ class _JwksCache:
     cooldown window, when a request presents an unknown ``kid`` (key rotation).
     Fetch failures keep the existing keys and surface as a per-request error.
 
-    Both fetch paths (stale/cold-cache and unknown-``kid``) are rate-limited to
-    one attempt per ``min_refresh_interval`` so that a JWKS outage cannot make
-    every inbound request trigger its own (blocking) fetch.
+    The stale/cold-cache and unknown-``kid`` fetch paths have independent
+    cooldown floors (``_last_stale_fetch_at`` / ``_last_unknown_refresh_at``),
+    each allowing one fetch per ``min_refresh_interval`` — so the worst case is
+    ~two fetches per window, not one, which still bounds a JWKS outage away from
+    a per-request fetch storm. The floors are best-effort and lock-free: under
+    concurrent requests two threads can both decide to fetch, so the cap is
+    approximate, not exact (a redundant fetch is harmless; a lock around the
+    blocking fetch would be worse).
     """
 
     fetch_jwks: Callable[[], dict]
     ttl_seconds: float = _JWKS_TTL_SECONDS
     min_refresh_interval: float = _JWKS_MIN_REFRESH_INTERVAL_SECONDS
+    source_label: str = "the JWKS endpoint"  # human-readable source for log messages
     _jwk_set: jwt.PyJWKSet | None = field(default=None, init=False)
     _fetched_at: float | None = field(default=None, init=False)
     _last_stale_fetch_at: float | None = field(default=None, init=False)
     _last_unknown_refresh_at: float | None = field(default=None, init=False)
 
     def _fetch_into_cache(self) -> None:
-        """Best-effort refresh. On failure, keep the existing keys and log loudly."""
+        """Best-effort refresh. On failure, keep the existing keys and log loudly.
+
+        A permanent configuration error (bad/undiscoverable JWKS source) is logged
+        distinctly from a transient transport/parse failure, so the operator isn't
+        told to wait for a recovery that can never come. Either way the cache is
+        left intact and requests fail closed (401); serving never aborts here.
+        Unexpected exceptions are intentionally NOT swallowed — they surface as a
+        real error rather than a silent "keeping cached keys" line.
+        """
         try:
             data = self.fetch_jwks()
             self._jwk_set = jwt.PyJWKSet.from_dict(data)
             self._fetched_at = time.monotonic()
-        except (URLError, OSError, jwt.PyJWTError, ValueError, KeyError) as exc:
-            logger.error(f"JWKS refresh failed ({type(exc).__name__}: {exc}); keeping cached keys.")
+        except IdentityConfigError as exc:
+            logger.error(
+                f"JWKS source is misconfigured ({self.source_label}): {exc} "
+                "This is a configuration error, not a transient outage — requests will be "
+                "rejected (401) until it is fixed."
+            )
+        except (URLError, OSError, TimeoutError, json.JSONDecodeError, jwt.PyJWTError) as exc:
+            logger.error(
+                f"JWKS refresh from {self.source_label} failed ({type(exc).__name__}: {exc}); keeping cached keys."
+            )
 
     def prefetch(self) -> None:
         """Warm the cache at startup. Logs an error if it stays empty, never raises."""
@@ -276,7 +305,8 @@ class IdentityVerifier:
         self._resolved_jwks_url: str | None = config.jwt_jwks_url
         self._jwks: _JwksCache | None = None
         if config.mode == "jwt":
-            self._jwks = _JwksCache(fetch_jwks=self._fetch_signing_jwks)
+            source_label = config.jwt_jwks_url or f"OIDC discovery from {config.jwt_issuer}"
+            self._jwks = _JwksCache(fetch_jwks=self._fetch_signing_jwks, source_label=source_label)
 
     @property
     def config(self) -> IdentityConfig:

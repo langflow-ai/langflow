@@ -505,7 +505,9 @@ async def run_flow_generator_for_serve(
         event_manager: Manages the streaming of events to the client
         client_consumed_queue (asyncio.Queue): Tracks client consumption of events
         user_id (str | None): Verified caller identity threaded into execution as
-            the graph's ``user_id`` (``None`` preserves the prior behavior).
+            the graph's ``user_id``. ``None`` means no verified identity — the
+            graph's existing ``user_id`` is used, or a UUID auto-generated if it
+            has none.
 
     Events Generated:
         - "add_message": Sent when new messages are added during flow execution
