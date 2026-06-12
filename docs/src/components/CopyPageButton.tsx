@@ -156,22 +156,30 @@ export function CopyPageButton(): JSX.Element | null {
   }, []);
 
   useEffect(() => {
-    setIsMac(/Mac|iPhone|iPad|iPod/.test(navigator.platform));
+    const platform =
+      (navigator as { userAgentData?: { platform?: string } }).userAgentData
+        ?.platform ?? navigator.platform;
+    setIsMac(/Mac|iPhone|iPad|iPod/i.test(platform));
 
     const onKeyDown = (event: KeyboardEvent) => {
-      // Cmd/Ctrl+C with no text selected copies the whole page as Markdown.
+      // Option/Alt+C copies the whole page as Markdown. Unlike Cmd/Ctrl+C,
+      // this never shadows the native copy gesture or clobbers the clipboard
+      // on a reflexive copy with a collapsed selection.
+      // event.code is required here: on macOS, Option+C produces
+      // event.key === "ç", and key-based checks also break on non-Latin
+      // layouts.
       const isCopyShortcut =
-        (event.metaKey || event.ctrlKey) &&
+        event.altKey &&
+        !event.metaKey &&
+        !event.ctrlKey &&
         !event.shiftKey &&
-        !event.altKey &&
-        event.key.toLowerCase() === "c";
+        event.code === "KeyC";
       if (!isCopyShortcut) return;
+      if (event.repeat) return;
 
-      // Let the native copy behavior win when the user selected text or is
-      // typing in a form field.
+      // Don't fire while typing in a form field, where Option+C may insert a
+      // character (e.g. "ç" on macOS).
       if (isEditableElement(document.activeElement)) return;
-      const selection = window.getSelection();
-      if (selection && selection.toString().length > 0) return;
 
       event.preventDefault();
       void handleCopy();
@@ -181,7 +189,7 @@ export function CopyPageButton(): JSX.Element | null {
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [handleCopy]);
 
-  const shortcutLabel = isMac ? "⌘C" : "Ctrl+C";
+  const shortcutLabel = isMac ? "⌥C" : "Alt+C";
 
   return (
     <div className={styles.root}>
@@ -190,6 +198,7 @@ export function CopyPageButton(): JSX.Element | null {
         onClick={handleCopy}
         className={styles.button}
         title={`Copy page as Markdown (${shortcutLabel})`}
+        aria-keyshortcuts="Alt+C"
       >
         <span aria-hidden="true" className={styles.icon}>
           {copied ? (
