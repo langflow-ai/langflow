@@ -475,6 +475,7 @@ export const SIDEBAR_BUNDLES = [
   { display_name: "IBM", name: "ibm", icon: "WatsonxAI" },
   { display_name: "Icosa Computing", name: "icosacomputing", icon: "Icosa" },
   { display_name: "JigsawStack", name: "jigsawstack", icon: "JigsawStack" },
+  { display_name: "Jungle Grid", name: "jungle_grid", icon: "JungleGrid" },
   { display_name: "LangChain", name: "langchain_utilities", icon: "LangChain" },
   { display_name: "LangWatch", name: "langwatch", icon: "Langwatch" },
   { display_name: "LiteLLM", name: "litellm", icon: "LiteLLM" },
@@ -664,6 +665,7 @@ export const nodeIconToDisplayIconMap: Record<string, string> = {
   WolframAlphaAPIWrapper: "Wolfram",
   WolframAlphaQueryRun: "Wolfram",
   Agentics: "Agentics",
+  JungleGrid: "JungleGrid",
 
   //Node Icons
   model_specs: "FileSliders",

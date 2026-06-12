@@ -462,6 +462,7 @@ module.exports = {
             "Components/bundles-huggingface",
             "Components/bundles-ibm",
             "Components/bundles-icosacomputing",
+            "Components/bundles-jungle-grid",
             "Components/bundles-langchain",
             "Components/bundles-lite-llm",
             "Components/bundles-lmstudio",
