@@ -25,7 +25,7 @@ keywords = ["langflow", "lfx", "extension", "bundle", "oracle", "oracledb", "vec
 #   ``langflow-base[oracledb]`` extra this bundle replaces.
 # * ``langchain-community`` provides DistanceStrategy for the vector store.
 dependencies = [
-    "lfx>=1.11.0,<2.0.0",
+    "lfx>=1.11.0.dev0,<2.0.0",
     "oracledb>=2.2.0,<4.0.0",
     "langchain-oracledb>=1.0.1,<2.0.0",
     "langchain-community>=0.4.1,<1.0.0",

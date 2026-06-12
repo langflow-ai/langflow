@@ -36,15 +36,18 @@ mod = _load_module()
 
 
 class TestLfxFloorSpec:
+    # The .dev0 floor is load-bearing: nightlies are canonical X.Y.0.devN
+    # pre-releases, which PEP 440 sorts BELOW X.Y.0, so a plain >=X.Y.0
+    # floor makes the branch's own nightly lfx unresolvable.
     @pytest.mark.parametrize(
         ("version", "expected"),
         [
-            ("1.10.0", "lfx>=1.10.0,<2.0.0"),
-            ("1.10.3", "lfx>=1.10.0,<2.0.0"),  # patch within a minor -> same floor
-            ("1.11.0", "lfx>=1.11.0,<2.0.0"),
-            ("2.0.0", "lfx>=2.0.0,<3.0.0"),
-            ("v1.10.0", "lfx>=1.10.0,<2.0.0"),  # leading v tolerated
-            ("10.4.2", "lfx>=10.4.0,<11.0.0"),  # multi-digit major
+            ("1.10.0", "lfx>=1.10.0.dev0,<2.0.0"),
+            ("1.10.3", "lfx>=1.10.0.dev0,<2.0.0"),  # patch within a minor -> same floor
+            ("1.11.0", "lfx>=1.11.0.dev0,<2.0.0"),
+            ("2.0.0", "lfx>=2.0.0.dev0,<3.0.0"),
+            ("v1.10.0", "lfx>=1.10.0.dev0,<2.0.0"),  # leading v tolerated
+            ("10.4.2", "lfx>=10.4.0.dev0,<11.0.0"),  # multi-digit major
         ],
     )
     def test_floor(self, version, expected):
@@ -62,7 +65,7 @@ class TestLfxFloorSpec:
 
 
 class TestRewriteLfxDep:
-    FLOOR = "lfx>=1.10.0,<2.0.0"
+    FLOOR = "lfx>=1.10.0.dev0,<2.0.0"
 
     def test_rewrites_bare_floor(self):
         assert mod.rewrite_lfx_dep('    "lfx>=0.5.0",', self.FLOOR) == f'    "{self.FLOOR}",'
@@ -84,7 +87,8 @@ class TestRewriteLfxDep:
             assert mod.rewrite_lfx_dep(self_ref, self.FLOOR) == self_ref
 
     def test_leaves_nightly_form_untouched(self):
-        # update_bundle_versions.py rewrites to this; sync must not clobber it.
+        # Legacy form from the retired nightly bundle-rename track (see
+        # src/bundles/NIGHTLY.md); sync must not clobber it if encountered.
         assert mod.rewrite_lfx_dep('"lfx-nightly==1.10.0.dev38"', self.FLOOR) == '"lfx-nightly==1.10.0.dev38"'
 
     def test_only_rewrites_runtime_dep_in_full_block(self):
@@ -121,11 +125,11 @@ class TestSyncBundles:
     def test_sync_updates_and_reports(self, tmp_path):
         bundles = tmp_path / "bundles"
         self._make_bundle(bundles, "arxiv", "lfx>=0.5.0")
-        self._make_bundle(bundles, "ibm", "lfx>=1.10.0,<2.0.0")  # already correct
+        self._make_bundle(bundles, "ibm", "lfx>=1.10.0.dev0,<2.0.0")  # already correct
 
         results = dict(mod.sync_bundles("1.10.0", bundles))
         assert results == {"arxiv": True, "ibm": False}  # arxiv changed, ibm no-op
-        assert '"lfx>=1.10.0,<2.0.0"' in (bundles / "arxiv" / "pyproject.toml").read_text()
+        assert '"lfx>=1.10.0.dev0,<2.0.0"' in (bundles / "arxiv" / "pyproject.toml").read_text()
 
     def test_sync_idempotent(self, tmp_path):
         bundles = tmp_path / "bundles"

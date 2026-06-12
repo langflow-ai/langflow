@@ -86,12 +86,27 @@ ERROR_CODES: frozenset[str] = frozenset(
         "seed-directory-not-found",
         "seed-bundle-shadowed",
         "bundle-shadowed",
+        # Manifest-less lfx.bundles root whose entry-point declaration could
+        # not be resolved to a real package directory. Surfaced as a *warning*
+        # (never aborts startup) so a broken third-party declaration degrades
+        # to "that bundle root is skipped".
+        "bundle-discovery-malformed",
+        # lfx.bundles tier intra-tier diagnostics, mirroring the inline
+        # tier's split (inline-bundle-name-invalid / inline-path-unreadable /
+        # duplicate-inline-bundle).  All warning-only: never abort startup.
+        "bundles-provider-name-invalid",
+        "bundles-root-unreadable",
+        "duplicate-lfx-bundles-provider",
         "duplicate-extension-id",
         # Reload-specific codes
         "reload-in-progress",
         "reload-bundle-not-installed",
         "reload-bundle-name-mismatch",
         "reload-source-missing",
+        # Manifest-less lfx.bundles providers carry no manifest for the
+        # reload pipeline's load_extension stage; hot reload refuses them
+        # with this typed code instead of a misleading manifest-not-found.
+        "reload-manifestless-unsupported",
         # Post-swap hook failures: the registry swap committed but a
         # downstream side-effect (e.g. component cache rebuild) raised.
         # Surfaced on ReloadResult.warnings so the API caller knows the
@@ -284,6 +299,18 @@ _BRANCH_TEMPLATES: dict[str, str] = {
         "Bundle {content!r} is registered from multiple discovery sources; the lower-precedence copy "
         "at {location} is being skipped in favor of the higher-precedence one."
     ),
+    "bundle-discovery-malformed": (
+        "lfx.bundles entry point {content!r} could not be resolved to a package directory: {message}"
+    ),
+    "bundles-provider-name-invalid": (
+        "lfx.bundles provider directory {content!r} (at {location}) is not a valid bundle name; "
+        "bundle names are lowercase snake_case (a-z, 0-9, _), 2-64 characters."
+    ),
+    "bundles-root-unreadable": ("lfx.bundles root {location} could not be enumerated: {message}"),
+    "duplicate-lfx-bundles-provider": (
+        "Provider {content!r} appears in more than one lfx.bundles root; the copy at {location} "
+        "is skipped (the first discovered root wins)."
+    ),
     "duplicate-extension-id": ("Extension id {content!r} is registered more than once (already at {location})."),
     "reload-in-progress": (
         "Reload already in progress for bundle {content!r}; refuse to start a second concurrent reload."
@@ -298,6 +325,10 @@ _BRANCH_TEMPLATES: dict[str, str] = {
     ),
     "reload-source-missing": (
         "Reload source path {content!r} for bundle {location!r} does not exist or is not a directory."
+    ),
+    "reload-manifestless-unsupported": (
+        "Bundle {content!r} comes from a manifest-less lfx.bundles metapackage and cannot be "
+        "hot-reloaded; upgrade the metapackage distribution and restart the process instead."
     ),
     "reload-post-swap-hook-failed": (
         "Post-swap hook failed for bundle {content!r}; the bundle swap committed but a "

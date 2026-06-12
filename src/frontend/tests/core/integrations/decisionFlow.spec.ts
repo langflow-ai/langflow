@@ -303,11 +303,11 @@ test(
       .first()
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-input-left")
+      .getByTestId("handle-openaimodelcomponent-shownode-input-left")
       .nth(0)
       .click();
     await page
-      .getByTestId("handle-openaimodel-shownode-model response-right")
+      .getByTestId("handle-openaimodelcomponent-shownode-model response-right")
       .nth(0)
       .click();
     await page

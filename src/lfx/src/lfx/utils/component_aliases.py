@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping
 from typing import Any
 
@@ -11,6 +12,17 @@ LEGACY_TYPE_ALIASES: dict[str, str] = {
     "parser": "ParserComponent",
 }
 
+# Extension components are keyed ``ext:<bundle>:<ClassName>@<slot>``.  Their
+# decorated templates carry ``name=None`` and ``_type="Component"``, so none
+# of the metadata-derived aliases below yield the legacy class name; the key
+# itself is the only source.  Flows saved before a provider moved out of the
+# built-in palette reference the legacy keys (``TavilySearchComponent`` /
+# ``TavilySearch``) -- without these aliases such nodes stop resolving a
+# current template, so e.g. the starter-project updater leaves their embedded
+# code stale and the UI reports them as permanently outdated.  Mirrors
+# ``getTemplateAliases`` in the frontend's reactflowUtils.ts.
+_EXT_KEY_RE = re.compile(r"^ext:[^:]+:(?P<class_name>[^@]+)@.+$")
+
 
 def get_component_type_aliases(
     component_name: str,
@@ -19,6 +31,13 @@ def get_component_type_aliases(
     """Return the known aliases for a component type."""
     aliases: list[str] = [component_name]
     aliases.extend(old_name for old_name, new_name in LEGACY_TYPE_ALIASES.items() if new_name == component_name)
+
+    ext_match = _EXT_KEY_RE.match(component_name)
+    if ext_match:
+        bare_class_name = ext_match.group("class_name")
+        aliases.append(bare_class_name)
+        if bare_class_name.endswith("Component"):
+            aliases.append(bare_class_name.removesuffix("Component"))
 
     if component_data:
         for field_name in ("name", "display_name"):
