@@ -552,9 +552,7 @@ class MCPToolsComponent(ComponentWithCache):
                     # rotates session tokens would grow this map without bound. Drop
                     # the oldest entry when over the limit.
                     max_entries = self.SHARED_SERVERS_CACHE_MAX_ENTRIES
-                    while (
-                        len(current_servers_cache) >= max_entries and servers_cache_key not in current_servers_cache
-                    ):
+                    while len(current_servers_cache) >= max_entries and servers_cache_key not in current_servers_cache:
                         oldest_key = next(iter(current_servers_cache))
                         current_servers_cache.pop(oldest_key, None)
                     current_servers_cache[servers_cache_key] = cache_data
