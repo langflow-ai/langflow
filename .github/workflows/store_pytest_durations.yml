@@ -22,6 +22,8 @@ jobs:
   measure:
     name: Measure durations (group ${{ matrix.group }})
     runs-on: ubuntu-latest
+    # The 5 matrix groups run in parallel; this keeps failures visible before
+    # the old single-job 6h cancellation cliff.
     timeout-minutes: 150
     strategy:
       fail-fast: false
@@ -55,7 +57,6 @@ jobs:
             --ignore=src/backend/tests/integration \
             --ignore=src/backend/tests/unit/template \
             -n auto -q -ra -m 'not api_key_required' \
-            --timeout=150 \
             --durations-path /tmp/group_durations.json \
             --splitting-algorithm least_duration \
             --splits 5 --group ${{ matrix.group }} \
@@ -69,7 +70,7 @@ jobs:
             exit "$code"
           fi
       - name: Upload group durations
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: durations-group-${{ matrix.group }}
           path: /tmp/group_durations.json
@@ -93,7 +94,7 @@ jobs:
     steps:
       - uses: actions/checkout@v6
       - name: Download group durations
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v8
         with:
           pattern: durations-group-*
           path: /tmp/durations
@@ -203,6 +204,7 @@ jobs:
             erichare
           assignees: |
             erichare
+            Adam-Aghili
 
       - name: Trigger CI on the PR branch
         # PRs created with the default GITHUB_TOKEN don't trigger pull_request
