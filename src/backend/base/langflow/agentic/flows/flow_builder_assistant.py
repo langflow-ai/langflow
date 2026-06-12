@@ -27,6 +27,9 @@ from lfx.mcp.flow_builder_tools import (
 from langflow.agentic.flows.model_config import build_model_config
 from langflow.agentic.services.file_events import wrap_file_tool_with_event
 
+# Multi-component builds need ~16+ tool iterations; the component default (15) killed healthy runs.
+AGENT_MAX_ITERATIONS = 30
+
 FLOW_BUILDER_PROMPT = """\
 You are a Langflow Flow Builder assistant. You build and modify flows directly \
 on the user's canvas. Components appear in real time as you add them.
@@ -540,6 +543,7 @@ async def get_graph(
         "system_prompt": FLOW_BUILDER_PROMPT,
         "tools": tools,
         "temperature": 0.1,
+        "max_iterations": AGENT_MAX_ITERATIONS,
     }
     if api_key_var:
         agent_config["api_key"] = api_key_var

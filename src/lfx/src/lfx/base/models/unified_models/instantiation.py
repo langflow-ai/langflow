@@ -234,6 +234,13 @@ def get_llm(
         )
         if ollama_base_url_value:
             kwargs[base_url_param] = ollama_base_url_value
+    elif provider == "OpenAI":
+        from lfx.utils.util import transform_localhost_url
+
+        provider_vars = unified_models_module.get_all_variables_for_provider(user_id, provider)
+        openai_base_url_value = provider_vars.get("OPENAI_BASE_URL") or _env_if_allowed("OPENAI_BASE_URL")
+        if openai_base_url_value:
+            kwargs["base_url"] = transform_localhost_url(openai_base_url_value)
     elif provider == "OpenRouter":
         # OpenRouter speaks the OpenAI wire format. Point ChatOpenAI at the
         # OpenRouter base URL (declared in MODEL_PROVIDER_METADATA) and forward
