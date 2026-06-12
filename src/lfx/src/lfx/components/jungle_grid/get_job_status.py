@@ -9,8 +9,13 @@ from ._shared import DOCUMENTATION_URL, ICON, auth_inputs
 
 
 class JungleGridGetJobStatusComponent(Component):
+    """Retrieve normalized job status, execution phase, delays, routing, failures, and artifact readiness."""
+
     display_name = "Get Job Status"
-    description = "Retrieve Jungle Grid job lifecycle status and details."
+    description = (
+        "Retrieve job status, execution phase, phase timing, scheduling delay, routing, failure, billing, "
+        "and artifact readiness without inferring failure from empty logs."
+    )
     documentation = DOCUMENTATION_URL
     icon = ICON
     name = "JungleGridGetJobStatus"
@@ -22,9 +27,10 @@ class JungleGridGetJobStatusComponent(Component):
     outputs = [Output(display_name="JSON", name="data", method="get_job_status")]
 
     async def get_job_status(self) -> Data:
+        """Return the current production status response without discarding fields."""
         job_id = path_segment(self.job_id, "Job ID")
         client = JungleGridClient(self.api_key, self.api_base_url)
-        result = await client.request("GET", f"/v1/jobs/{job_id}")
+        result = await client.request("GET", f"/v1/mcp/jobs/{job_id}")
         data = Data(data=result)
         self.status = data
         return data

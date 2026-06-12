@@ -9,6 +9,8 @@ from ._shared import DOCUMENTATION_URL, ICON, auth_inputs
 
 
 class JungleGridCancelJobComponent(Component):
+    """Explicitly request cancellation of one Jungle Grid job."""
+
     display_name = "Cancel Job"
     description = (
         "Cancel a Jungle Grid job that has not reached a terminal state. "
@@ -26,12 +28,13 @@ class JungleGridCancelJobComponent(Component):
     outputs = [Output(display_name="JSON", name="data", method="cancel_job")]
 
     async def cancel_job(self) -> Data:
+        """Send one cancellation request without automatic retry."""
         job_id = path_segment(self.job_id, "Job ID")
         payload = {}
         if reason := optional_text(self.reason):
             payload["reason"] = reason
         client = JungleGridClient(self.api_key, self.api_base_url)
-        result = await client.request("POST", f"/v1/jobs/{job_id}/cancel", json_body=payload)
+        result = await client.request("POST", f"/v1/mcp/jobs/{job_id}/cancel", json_body=payload)
         data = Data(data=result)
         self.status = data
         return data

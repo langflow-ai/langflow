@@ -9,8 +9,13 @@ from ._shared import DOCUMENTATION_URL, ICON, auth_inputs
 
 
 class JungleGridGetJobRuntimeComponent(Component):
+    """Retrieve runtime diagnostics that are separate from status, events, and paginated logs."""
+
     display_name = "Get Job Runtime"
-    description = "Retrieve Jungle Grid runtime information where the execution path exposes it."
+    description = (
+        "Retrieve runtime diagnostics such as command, exit code, output tails, availability, and diagnostic notes. "
+        "Runtime details may be unavailable before worker assignment or startup."
+    )
     documentation = DOCUMENTATION_URL
     icon = ICON
     name = "JungleGridGetJobRuntime"
@@ -22,6 +27,7 @@ class JungleGridGetJobRuntimeComponent(Component):
     outputs = [Output(display_name="JSON", name="data", method="get_job_runtime")]
 
     async def get_job_runtime(self) -> Data:
+        """Call the supported compatibility runtime endpoint."""
         job_id = path_segment(self.job_id, "Job ID")
         client = JungleGridClient(self.api_key, self.api_base_url)
         result = await client.request("GET", f"/v1/jobs/{job_id}/runtime")

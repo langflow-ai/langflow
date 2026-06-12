@@ -9,7 +9,7 @@ export const JungleGridIcon = forwardRef<
 >((props, ref) => {
   const isdark = useDarkStore((state) => state.dark).toString();
 
-  return <JungleGridIconSvg ref={ref} isdark={isdark} {...props} />;
+  return <JungleGridIconSvg {...props} ref={ref} isdark={isdark} />;
 });
 
 export default JungleGridIcon;

@@ -4,11 +4,13 @@ from lfx.custom.custom_component.component import Component
 from lfx.io import MessageTextInput, Output
 from lfx.schema.data import Data
 
-from ._client import JungleGridClient, path_segment, sanitize
+from ._client import JungleGridClient, path_segment
 from ._shared import DOCUMENTATION_URL, ICON, auth_inputs
 
 
 class JungleGridCreateArtifactDownloadURLComponent(Component):
+    """Create temporary artifact download information without persisting its signed URL."""
+
     display_name = "Create Artifact Download URL"
     description = (
         "Create a temporary signed download URL for a Jungle Grid job artifact. "
@@ -26,10 +28,16 @@ class JungleGridCreateArtifactDownloadURLComponent(Component):
     outputs = [Output(display_name="JSON", name="data", method="create_artifact_download_url")]
 
     async def create_artifact_download_url(self) -> Data:
+        """Return signed download data only through the component output."""
         job_id = path_segment(self.job_id, "Job ID")
         artifact_id = path_segment(self.artifact_id, "Artifact ID")
         client = JungleGridClient(self.api_key, self.api_base_url)
-        result = await client.request("POST", f"/v1/jobs/{job_id}/artifacts/{artifact_id}/download", json_body={})
+        result = await client.request("POST", f"/v1/mcp/jobs/{job_id}/artifacts/{artifact_id}/download", json_body={})
         data = Data(data=result)
-        self.status = Data(data=sanitize(result))
+        self.status = Data(
+            data={
+                "summary": "Temporary artifact download information generated",
+                "url": "<redacted>",
+            }
+        )
         return data

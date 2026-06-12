@@ -9,6 +9,8 @@ from ._shared import DOCUMENTATION_URL, ICON, auth_inputs
 
 
 class JungleGridListJobArtifactsComponent(Component):
+    """List managed output artifacts and their readiness metadata."""
+
     display_name = "List Job Artifacts"
     description = (
         "List artifacts created by a Jungle Grid job. "
@@ -25,9 +27,10 @@ class JungleGridListJobArtifactsComponent(Component):
     outputs = [Output(display_name="JSON", name="data", method="list_job_artifacts")]
 
     async def list_job_artifacts(self) -> Data:
+        """Return artifacts from the current production endpoint."""
         job_id = path_segment(self.job_id, "Job ID")
         client = JungleGridClient(self.api_key, self.api_base_url)
-        result = await client.request("GET", f"/v1/jobs/{job_id}/artifacts")
+        result = await client.request("GET", f"/v1/mcp/jobs/{job_id}/artifacts")
         data = Data(data=result)
         self.status = data
         return data
