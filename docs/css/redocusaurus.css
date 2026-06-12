@@ -1,55 +1,520 @@
 /* ========================================
    Redocusaurus / API Reference Pages
+
+   NOTE: This file uses `!important` throughout because Redoc injects styles
+   via CSS-in-JS (Styled Components) with high specificity at runtime.
+   Plain selectors cannot override them — `!important` is intentional here.
+
+   NOTE: Structural selectors (nth-child, first-child, etc.) target Redoc's
+   internal DOM layout. Tested against redocusaurus@2.5.0 / Redoc v2.x.
+   If Redoc is upgraded, verify these selectors still apply correctly.
    ======================================== */
 
-/* Remove Redoc's built-in left gutter so it aligns with the rest of the layout */
-.redocusaurus .menu-content {
-  padding-left: 0 !important;
+/* ── Prevent horizontal scroll ───────────────────────────── */
+/* clip (not hidden) so position:sticky on sidebar/right panel still works */
+
+html.plugin-redoc .main-wrapper {
+  overflow-x: clip;
+  width: 100%;
 }
 
-/* Match sidebar font to site font */
-.redocusaurus .menu-content,
-.redocusaurus [class*="SidebarDivider"],
-.redocusaurus [class*="ApiItemName"] {
+/* ── CSS custom properties ────────────────────────────────── */
+/* Centralizes all theme colors — change here, applies everywhere. */
+
+html[data-theme='dark'] .redocusaurus {
+  --redoc-bg-primary:    #111;
+  --redoc-bg-secondary:  #18181b;
+  --redoc-bg-code:       #161618;
+  --redoc-border-color:  #303038;
+  --redoc-text-primary:  #e3e3e3;
+  --redoc-text-muted:    #cdcdd4;
+  --redoc-text-label:    #ffffff;
+}
+
+html[data-theme='light'] .redocusaurus {
+  --redoc-bg-primary:    #f5f5f5;
+  --redoc-bg-secondary:  #ffffff;
+  --redoc-bg-code:       #f5f5f5;
+  --redoc-border-color:  #e4e4e7;
+  --redoc-text-primary:  #111827;
+  --redoc-text-muted:    hsl(240, 4%, 46%);
+  --redoc-text-label:    #111827;
+  /* Darkened brand pink — #f471b5 fails WCAG AA on light surfaces;
+     #cd1072 passes 4.5:1 on #fff, #f5f5f5, #ebebec and #f5f3f4 */
+  --redoc-pink-a11y:     #cd1072;
+}
+
+/* ── Sidebar layout ───────────────────────────────────────── */
+
+/* Redoc sets top:0 which overlaps the navbar */
+.redocusaurus .menu-content {
+  top: 60px !important;
+  padding-left: 0 !important;
+  border-right: none !important;
   font-family: var(--ifm-font-family-base) !important;
 }
 
-/* Light theme Redoc sidebar */
-[data-theme="light"] .redocusaurus .menu-content {
+/* ── Sidebar background ───────────────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus .menu-content {
+  background: var(--redoc-bg-secondary) !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
+}
+
+/* "API docs by Redocly" badge — position:fixed, background transparent from Redoc.
+   Give it a solid background so it renders above the sidebar. */
+html[data-theme='dark'] .redocusaurus a[href*="redocly"] {
+  background: var(--redoc-bg-secondary) !important;
+  display: block !important;
+  padding: 8px !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
+}
+
+html[data-theme='light'] .redocusaurus a[href*="redocly"] {
   background: var(--ifm-background-color) !important;
-  border-right: none !important;
+  display: block !important;
+  padding: 8px !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
 }
 
-/* Dark theme Redoc sidebar */
-[data-theme="dark"] .redocusaurus .menu-content {
-  background: #111 !important;
-  border-right: none !important;
+
+html[data-theme='light'] .redocusaurus .menu-content {
+  background: var(--ifm-background-color) !important;
+  border-right: 1px solid var(--redoc-border-color) !important;
 }
 
-[data-theme="dark"] .redocusaurus {
-  background: #111 !important;
+/* ── Sidebar active item ──────────────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus .menu-content label.active {
+  background-color: var(--redoc-bg-primary) !important;
 }
 
-/* Redoc operation panels */
-[data-theme="dark"] .redocusaurus [class*="OperationTitle"],
-[data-theme="dark"] .redocusaurus [class*="operation-type"] {
-  color: #cdcdd4;
+html[data-theme='light'] .redocusaurus .menu-content label.active {
+  background-color: var(--redoc-bg-primary) !important;
 }
 
-/* Redoc search input */
-.redocusaurus input[type="search"] {
-  border-radius: 8px;
-  font-family: var(--ifm-font-family-base);
+/* ── Sidebar hover ────────────────────────────────────────── */
+
+html[data-theme='light'] .redocusaurus .menu-content label:hover,
+html[data-theme='light'] .redocusaurus .menu-content label:hover span:not([class*="operation-type"]),
+html[data-theme='light'] .redocusaurus .menu-content li:hover > label {
+  color: var(--redoc-text-primary) !important;
 }
 
-[data-theme="dark"] .redocusaurus input[type="search"] {
-  background: rgba(255, 255, 255, 0.04);
-  border-color: #303038;
-  color: #c6c6d1;
+/* ── Central content background ───────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus {
+  background: var(--redoc-bg-primary) !important;
 }
 
-/* Redoc code samples */
-[data-theme="dark"] .redocusaurus [class*="CodeSample"] pre {
-  background: #161618 !important;
-  border: 1px solid #303038;
+html[data-theme='light'] .redocusaurus {
+  background: var(--redoc-bg-primary) !important;
+}
+
+/* ── Dark theme headings ──────────────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus h1,
+html[data-theme='dark'] .redocusaurus h2,
+html[data-theme='dark'] .redocusaurus h3,
+html[data-theme='dark'] .redocusaurus h4,
+html[data-theme='dark'] .redocusaurus h5,
+html[data-theme='dark'] .redocusaurus h6 {
+  color: var(--redoc-text-primary) !important;
+}
+
+/* ── Expanded response/schema content background ──────────── */
+/* redocusaurus@2.5.0: button+div is the expanded schema panel */
+
+html[data-theme='dark'] .redocusaurus div[id^='tag'] button + div,
+html[data-theme='dark'] .redocusaurus div[id^='operation'] button + div {
+  background-color: var(--redoc-bg-secondary) !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='tag'] button + div,
+html[data-theme='light'] .redocusaurus div[id^='operation'] button + div {
+  background-color: var(--redoc-bg-secondary) !important;
+}
+
+/* ── Right panel background ───────────────────────────────── */
+/* redocusaurus@2.5.0: nth-child(2) of tag/operation is the right panel */
+
+html[data-theme='dark'] .redocusaurus .api-content > div > div:nth-child(2),
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2),
+html[data-theme='dark'] .redocusaurus div[id^='tag'] > div > div:nth-child(2) {
+  background: var(--redoc-bg-primary) !important;
+}
+
+html[data-theme='light'] .redocusaurus .api-content > div > div:nth-child(2),
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2),
+html[data-theme='light'] .redocusaurus div[id^='tag'] > div > div:nth-child(2),
+html[data-theme='light'] .redocusaurus [class*="RightPanel"] {
+  background: var(--redoc-bg-primary) !important;
+}
+
+/* ── HTTP method button wrapper ───────────────────────────── */
+/* redocusaurus@2.5.0: nth-child(1) of the right panel */
+
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) {
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
+  border-radius: 8px !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) {
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
+  border-radius: 8px !important;
+}
+
+/* ── HTTP method button ───────────────────────────────────── */
+/* redocusaurus@2.5.0: button inside div:first-child of the right panel */
+
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:first-child > button {
+  background: var(--redoc-bg-secondary) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:first-child > button {
+  background: var(--redoc-bg-secondary) !important;
+  border: none !important;
+  border-radius: 8px !important;
+  box-shadow: none !important;
+  color: var(--redoc-text-muted) !important;
+}
+
+/* ── HTTP method dropdown ──────────────────────────────────── */
+/* redocusaurus@2.5.0: div>div inside the button wrapper */
+
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  box-shadow: none !important;
+  border-top: none !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(1) > div > div {
+  border-bottom-left-radius: 8px !important;
+  border-bottom-right-radius: 8px !important;
+  box-shadow: none !important;
+  border-top: none !important;
+}
+
+/* ── Request + Response cards ─────────────────────────────── */
+/* redocusaurus@2.5.0: nth-child(2) and nth-child(3) of the right panel */
+
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2),
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) {
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5) !important;
+  margin-top: 12px !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2),
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) {
+  background: var(--redoc-bg-secondary) !important;
+  border: 1px solid var(--redoc-border-color) !important;
+  border-radius: 12px !important;
+  overflow: hidden !important;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08) !important;
+  margin-top: 12px !important;
+}
+
+/* ── Status code tabs ─────────────────────────────────────── */
+
+.redocusaurus .react-tabs__tab-list {
+  padding: 0 20px !important;
+  margin-top: 4px;
+}
+
+html[data-theme='dark'] .redocusaurus .tab-success,
+html[data-theme='dark'] .redocusaurus .tab-error,
+html[data-theme='dark'] .redocusaurus .react-tabs__tab--selected {
+  background: var(--redoc-bg-secondary) !important;
+  border-color: var(--redoc-border-color) !important;
+}
+
+html[data-theme='light'] .redocusaurus .tab-success,
+html[data-theme='light'] .redocusaurus .tab-error,
+html[data-theme='light'] .redocusaurus .react-tabs__tab--selected {
+  background: var(--redoc-bg-secondary) !important;
+  border-color: var(--redoc-border-color) !important;
+}
+
+/* ── Card title (h3) ──────────────────────────────────────── */
+/* redocusaurus@2.5.0: h3 direct child of nth-child(2/3) of right panel */
+
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3 ~ div,
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 ~ div {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
+  padding-top: 12px !important;
+  padding-left: 16px !important;
+  padding-bottom: 12px !important;
+  margin: 0 !important;
+}
+
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
+html[data-theme='dark'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
+  border-bottom: 1px solid var(--redoc-border-color) !important;
+}
+
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) > h3,
+html[data-theme='light'] .redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) > h3 {
+  border-bottom: 1px solid var(--redoc-border-color) !important;
+  color: var(--redoc-text-primary) !important;
+}
+
+/* ── Tab panel content ────────────────────────────────────── */
+/* redocusaurus@2.5.0: structural selectors for content type / example area */
+
+.redocusaurus .react-tabs__tab-panel--selected > div {
+  padding-top: 8px !important;
+  padding-bottom: 8px !important;
+}
+
+.redocusaurus .react-tabs__tab-panel--selected > div > div,
+.redocusaurus .react-tabs__tab-panel--selected > div > div > div:not(:last-child) {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 0.5rem !important;
+}
+
+.redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) {
+  margin-top: 8px !important;
+}
+
+/* Content type / Example labels */
+html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div > span,
+html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div > span {
+  position: static !important;
+  font-size: 0.875rem !important;
+  color: var(--redoc-text-label) !important;
+}
+
+html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div > span,
+html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div > span {
+  position: static !important;
+  font-size: 0.875rem !important;
+  color: var(--redoc-text-primary) !important;
+}
+
+/* Content type / Example value borders + text color */
+html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:first-of-type > div:first-of-type,
+html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:last-child,
+html[data-theme='dark'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:not(:last-child) > div {
+  border: 1px solid var(--redoc-border-color) !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  min-height: 20px !important;
+  padding: 8px !important;
+  color: var(--redoc-text-muted) !important;
+}
+
+html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:first-of-type > div:first-of-type,
+html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:last-child,
+html[data-theme='light'] .redocusaurus .react-tabs__tab-panel--selected > div > div:nth-child(2) > div:not(:last-child) > div {
+  border: 1px solid var(--redoc-border-color) !important;
+  border-radius: 6px !important;
+  background: transparent !important;
+  min-height: 20px !important;
+  padding: 8px !important;
+  color: var(--redoc-text-muted) !important;
+}
+
+/* Tab panel transparent so card bg shows through */
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(2) .react-tabs__tab-panel--selected,
+.redocusaurus div[id^='operation'] > div:nth-child(2) > div:nth-child(3) .react-tabs__tab-panel--selected {
+  background: transparent !important;
+}
+
+/* ── Light theme syntax highlighting ──────────────────────── */
+/* All colors pass WCAG AA (4.5:1) on white sample backgrounds */
+
+html[data-theme='light'] .redocusaurus .token.keyword {
+  color: #b75868 !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.punctuation {
+  color: rgb(113, 113, 122) !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.boolean,
+html[data-theme='light'] .redocusaurus .token.null {
+  color: #e32c29 !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.number,
+html[data-theme='light'] .redocusaurus .token.constant {
+  color: #427ca0 !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.literal-property.property,
+html[data-theme='light'] .redocusaurus .token.string-property.property {
+  color: #427ca0 !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.string {
+  color: rgb(22, 130, 50) !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.operator {
+  color: #9f6d08 !important;
+}
+
+html[data-theme='light'] .redocusaurus .token.property {
+  color: var(--redoc-text-muted) !important;
+}
+
+/* ── Operation divider ────────────────────────────────────── */
+
+.redocusaurus .api-content > div:not(:last-of-type)::after {
+  display: none !important;
+}
+
+/* ── Light theme WCAG contrast overrides ──────────────────── */
+/* Redoc renders these with #f471b5 / #9c9ca2, which fail 4.5:1 on
+   light surfaces. Dark theme is unaffected (colors pass there). */
+
+/* Inline code in descriptions (typography.code.color from config) */
+html[data-theme='light'] .redocusaurus *:not(pre) > code {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* "required" labels in schema tables (schema.requireLabelColor) */
+html[data-theme='light'] .redocusaurus td[kind='field'] > div {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Classless utility buttons (Expand all / Collapse all, etc.).
+   Redoc dims their wrapper div to 0.7, lightening the effective color —
+   restore full opacity on the wrapper, not the button */
+html[data-theme='light'] .redocusaurus button:not([class]) {
+  color: #6c6c74 !important;
+}
+
+html[data-theme='light'] .redocusaurus div:has(> button:not([class])) {
+  opacity: 1 !important;
+}
+
+/* Links (Download button, server URLs) — primaryColor fails on light */
+html[data-theme='light'] .redocusaurus .api-content a {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Schema tree lines (schema.linesColor #F471B5) — align with the
+   accessible pink on light so all pinks on the page match */
+html[data-theme='light'] .redocusaurus td[kind='field'] {
+  border-left-color: var(--redoc-pink-a11y) !important;
+}
+
+html[data-theme='light'] .redocusaurus td[kind='field'] > span:not(.property-name)::before,
+html[data-theme='light'] .redocusaurus td[kind='field'] > span:not(.property-name)::after {
+  background-color: var(--redoc-pink-a11y) !important;
+}
+
+/* Expandable property names render inside a classless <button> and pick up
+   button colors (gray in light via our rule, Redoc's #333 in dark) — match
+   the non-expandable property names in both themes */
+.redocusaurus td[kind='field'] button span.property-name {
+  color: var(--ifm-font-color-base) !important;
+}
+
+/* Field markers (required / recursive) in schema tables */
+html[data-theme='light'] .redocusaurus td[kind='field'] > span:not(.property-name),
+html[data-theme='light'] .redocusaurus td[kind='field'] > div > div > span {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* "required" badge inside section headings (Request Body schema: ... required) */
+html[data-theme='light'] .redocusaurus .api-content h5 > div {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Field type labels (string, Array of strings) in description cells —
+   they sit on #ebebeb chips, so the gray is darker than the button one */
+html[data-theme='light'] .redocusaurus td:not([kind]) > div > div > span {
+  color: #696971 !important;
+}
+
+/* Constraint chips (>= 1, [ 1 .. 200 ]) — rendered at 0.9 alpha by Redoc */
+html[data-theme='light'] .redocusaurus td span:not([class]) > span {
+  color: var(--redoc-pink-a11y) !important;
+}
+
+/* Active sidebar item — Redoc leaves it white on the light surface.
+   Use the regular text color (no pink); keep HTTP method badges intact */
+html[data-theme='light'] .redocusaurus .menu-content label.active,
+html[data-theme='light'] .redocusaurus .menu-content label.active span:not([class*="operation-type"]) {
+  color: var(--redoc-text-primary) !important;
+}
+
+/* oneOf variant buttons (td div button — expandable property buttons are
+   direct td children and keep their own colors/arrows). Their backgrounds
+   are white (inactive) or primaryColor pink (active) in BOTH themes; dark
+   text passes 4.5:1 on both, while Redoc's white/pink text fails */
+.redocusaurus td div button {
+  color: #111827 !important;
+}
+
+/* ── Inline code (dark) ───────────────────────────────────── */
+/* Redoc's default typography.code.backgroundColor is rgba(38, 50, 56, 0.05),
+   nearly invisible over the dark background — lighten it for contrast.
+   :not(pre) keeps code sample blocks (pre > code) unaffected. */
+
+html[data-theme='dark'] .redocusaurus *:not(pre) > code {
+  background-color: rgba(255, 255, 255, 0.05) !important;
+}
+
+/* ── Response button code alignment ───────────────────────── */
+/* Redoc sets vertical-align: top + line-height: 20px on the status code
+   ("200") while the description text is baseline-aligned with a taller
+   line-height, leaving the code visually higher than the phrase */
+.redocusaurus button > strong {
+  vertical-align: baseline !important;
+  line-height: inherit !important;
+}
+
+/* ── Dark theme WCAG contrast overrides ───────────────────── */
+
+/* Code sample tokens — Redoc defaults fail on the dark panel (#242426) */
+html[data-theme='dark'] .redocusaurus .token.boolean,
+html[data-theme='dark'] .redocusaurus .token.null {
+  color: #e95c59 !important;
+}
+
+html[data-theme='dark'] .redocusaurus .token.number,
+html[data-theme='dark'] .redocusaurus .token.constant {
+  color: #5392b8 !important;
+}
+
+/* Status-code tabs — Redoc renders #303846 on the dark card.
+   docusaurus-theme-redoc ships `.redocusaurus ul > li.react-tabs__tab--selected
+   :not(.tab-error):not(.tab-success) { color: #303846 !important }` (0,4,2),
+   so the selected-tab override must outrank it in specificity */
+html[data-theme='dark'] .redocusaurus .react-tabs__tab,
+html[data-theme='dark'] .redocusaurus ul > li.react-tabs__tab--selected:not(.tab-error):not(.tab-success) {
+  color: var(--redoc-text-muted) !important;
+}
+
+/* ── Dark theme misc ──────────────────────────────────────── */
+
+html[data-theme='dark'] .redocusaurus [class*="OperationTitle"],
+html[data-theme='dark'] .redocusaurus [class*="operation-type"] {
+  color: var(--redoc-text-muted);
+}
+
+html[data-theme='dark'] .redocusaurus [class*="CodeSample"] pre {
+  background: var(--redoc-bg-code) !important;
+  border: 1px solid var(--redoc-border-color);
 }
