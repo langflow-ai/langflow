@@ -18,7 +18,12 @@ let flowStoreState: Record<string, unknown>;
 jest.mock("@/stores/flowStore", () => ({
   __esModule: true,
   default: jest.fn((selector?: (state: unknown) => unknown) => {
-    const state = { setNodes, setEdges, setCurrentFlow, currentFlow: flowStoreState.currentFlow };
+    const state = {
+      setNodes,
+      setEdges,
+      setCurrentFlow,
+      currentFlow: flowStoreState.currentFlow,
+    };
     return selector ? selector(state) : state;
   }),
 }));
@@ -103,7 +108,8 @@ describe("useApplyTemplateToCurrentFlow", () => {
       collaborationOperationMode: false,
       onCollaborationOperations,
     };
-    setStores(fullExamples);  });
+    setStores(fullExamples);
+  });
 
   it("should_call_setNodes_and_setEdges_with_template_data_when_template_is_applied", () => {
     const { result } = renderHook(() => useApplyTemplateToCurrentFlow());
