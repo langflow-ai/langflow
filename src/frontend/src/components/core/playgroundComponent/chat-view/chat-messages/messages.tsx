@@ -1,5 +1,6 @@
-import { useMemo, useRef } from "react";
-import { StickToBottom } from "use-stick-to-bottom";
+import { Loader2 } from "lucide-react";
+import { useEffect, useMemo, useRef } from "react";
+import { StickToBottom, useStickToBottomContext } from "use-stick-to-bottom";
 import { SafariScrollFix } from "@/components/common/safari-scroll-fix";
 import useFlowStore from "@/stores/flowStore";
 import { usePlaygroundStore } from "@/stores/playgroundStore";
@@ -16,13 +17,71 @@ interface MessagesProps {
   closeChat?: () => void;
 }
 
+// Placed inside StickToBottom so useStickToBottomContext is available
+const LoadMoreTrigger = ({
+  hasMore,
+  isLoadingMore,
+  onLoadMore,
+}: {
+  hasMore: boolean;
+  isLoadingMore: boolean;
+  onLoadMore: () => void;
+}) => {
+  const { scrollRef } = useStickToBottomContext();
+  const sentinelRef = useRef<HTMLDivElement>(null);
+
+  // Keep stable refs to avoid recreating the observer on every render
+  const hasMoreRef = useRef(hasMore);
+  hasMoreRef.current = hasMore;
+  const isLoadingMoreRef = useRef(isLoadingMore);
+  isLoadingMoreRef.current = isLoadingMore;
+  const onLoadMoreRef = useRef(onLoadMore);
+  onLoadMoreRef.current = onLoadMore;
+
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    const container = scrollRef.current;
+    if (!sentinel || !container) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (
+          entries[0].isIntersecting &&
+          hasMoreRef.current &&
+          !isLoadingMoreRef.current
+        ) {
+          onLoadMoreRef.current();
+        }
+      },
+      { root: container, threshold: 0 },
+    );
+
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [scrollRef]);
+
+  if (!hasMore) return null;
+
+  return (
+    <div
+      ref={sentinelRef}
+      className="flex h-8 w-full items-center justify-center"
+    >
+      {isLoadingMore && (
+        <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+      )}
+    </div>
+  );
+};
+
 export const Messages = ({
   visibleSession,
   playgroundPage,
   updateChat,
   closeChat,
 }: MessagesProps) => {
-  const chatHistory = useChatHistory(visibleSession);
+  const { chatHistory, loadMore, hasMore, isLoadingMore } =
+    useChatHistory(visibleSession);
   const isBuilding = useFlowStore((state) => state.isBuilding);
   const isPlaygroundOpen = usePlaygroundStore((state) => state.isOpen);
 
@@ -52,6 +111,11 @@ export const Messages = ({
     <div className="flex flex-col flex-grow place-self-center w-full relative overflow-x-hidden">
       {chatHistory && (isBuilding || chatHistory.length > 0) && (
         <>
+          <LoadMoreTrigger
+            hasMore={hasMore}
+            isLoadingMore={isLoadingMore}
+            onLoadMore={loadMore}
+          />
           {chatHistory.map((chat: ChatMessageType, index) => {
             return (
               <ChatMessage

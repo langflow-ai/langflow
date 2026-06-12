@@ -54,7 +54,7 @@ export function FlowPageSlidingContainerContent({
   const inputTypes = inputs.map((obj) => obj.type);
   const noInput = !inputTypes.includes("ChatInput");
 
-  const chatHistory = useChatHistory(activeSessionId ?? currentFlowId ?? null);
+  const { chatHistory } = useChatHistory(activeSessionId ?? currentFlowId ?? null);
 
   useEffect(() => {
     const chatInput = inputs.find((input) => input.type === "ChatInput");
