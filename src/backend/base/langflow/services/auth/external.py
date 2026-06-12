@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import hashlib
 import inspect
+import json
 import time
 from collections.abc import Awaitable, Callable, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import TYPE_CHECKING, Any, Protocol, TypeAlias, TypeVar, cast
@@ -35,6 +37,37 @@ JWKS_MIN_REFRESH_INTERVAL_SECONDS = 30
 _jwks_cache: dict[str, tuple[float, dict[str, Any]]] = {}
 T = TypeVar("T")
 
+EXTERNAL_ACCESS_VIEWER = "viewer"
+EXTERNAL_ACCESS_EDITOR = "editor"
+EXTERNAL_ACCESS_ADMIN = "admin"
+_EXTERNAL_ACCESS_LEVELS = frozenset(
+    {
+        EXTERNAL_ACCESS_VIEWER,
+        EXTERNAL_ACCESS_EDITOR,
+        EXTERNAL_ACCESS_ADMIN,
+    }
+)
+_EXTERNAL_ACCESS_ALIASES = {
+    "view": EXTERNAL_ACCESS_VIEWER,
+    "viewer": EXTERNAL_ACCESS_VIEWER,
+    "read": EXTERNAL_ACCESS_VIEWER,
+    "readonly": EXTERNAL_ACCESS_VIEWER,
+    "read_only": EXTERNAL_ACCESS_VIEWER,
+    "read-only": EXTERNAL_ACCESS_VIEWER,
+    "edit": EXTERNAL_ACCESS_EDITOR,
+    "editor": EXTERNAL_ACCESS_EDITOR,
+    "write": EXTERNAL_ACCESS_EDITOR,
+    "developer": EXTERNAL_ACCESS_EDITOR,
+    "admin": EXTERNAL_ACCESS_ADMIN,
+    "administrator": EXTERNAL_ACCESS_ADMIN,
+}
+_VIEWER_ALLOWED_ACTIONS = frozenset({"read"})
+_EDITOR_ALLOWED_ACTIONS = frozenset({"read", "write", "create", "execute", "ingest"})
+_current_external_access = ContextVar["ExternalAccessContext | None"](
+    "langflow_external_access",
+    default=None,
+)
+
 
 @dataclass(frozen=True)
 class ExternalIdentity:
@@ -46,6 +79,17 @@ class ExternalIdentity:
     email: str | None = None
     name: str | None = None
     claims: Mapping[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ExternalAccessContext:
+    """Request-local access ceiling derived from an external identity claim."""
+
+    provider: str
+    subject: str
+    level: str
+    claim_name: str | None = None
+    claim_value: str | None = None
 
 
 class ExternalIdentityResolver(Protocol):
@@ -117,6 +161,115 @@ def identity_from_claims(claims: Mapping[str, Any], auth_settings: AuthSettings)
         name=name,
         claims=dict(claims),
     )
+
+
+def _normalize_access_level(value: str | None) -> str | None:
+    if value is None:
+        return None
+    normalized = value.strip().lower()
+    if not normalized:
+        return None
+    return _EXTERNAL_ACCESS_ALIASES.get(normalized, normalized if normalized in _EXTERNAL_ACCESS_LEVELS else None)
+
+
+def _access_claim_mapping(auth_settings: AuthSettings) -> dict[str, str]:
+    raw_mapping = auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM_MAPPING
+    if not raw_mapping:
+        return {}
+
+    mapping: dict[str, str] = {}
+    try:
+        loaded = json.loads(raw_mapping)
+    except json.JSONDecodeError:
+        loaded = None
+
+    if isinstance(loaded, Mapping):
+        pairs = loaded.items()
+    else:
+        pairs = []
+        for item in raw_mapping.split(","):
+            key, separator, value = item.partition(":")
+            if not separator:
+                continue
+            pairs.append((key, value))
+
+    for key, value in pairs:
+        if not isinstance(key, str):
+            continue
+        normalized_level = _normalize_access_level(str(value))
+        if normalized_level is not None:
+            mapping[key.strip().lower()] = normalized_level
+    return mapping
+
+
+def access_context_from_identity(
+    identity: ExternalIdentity,
+    auth_settings: AuthSettings,
+) -> ExternalAccessContext | None:
+    """Return the request-local access ceiling for an external identity."""
+    if not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED:
+        return None
+
+    claim_name = auth_settings.EXTERNAL_AUTH_ACCESS_CLAIM
+    claim_value = _claim_as_str(identity.claims, claim_name)
+    mapped_level = None
+    if claim_value is not None:
+        mapped_level = _access_claim_mapping(auth_settings).get(claim_value.strip().lower())
+        if mapped_level is None:
+            mapped_level = _normalize_access_level(claim_value)
+    level = mapped_level or _normalize_access_level(auth_settings.EXTERNAL_AUTH_DEFAULT_ACCESS_LEVEL)
+    if level is None:
+        level = EXTERNAL_ACCESS_VIEWER
+
+    return ExternalAccessContext(
+        provider=identity.provider,
+        subject=identity.subject,
+        level=level,
+        claim_name=claim_name,
+        claim_value=claim_value,
+    )
+
+
+def set_current_external_access_context(context: ExternalAccessContext | None) -> None:
+    """Store the external access ceiling for the current request/task."""
+    _current_external_access.set(context)
+
+
+def clear_current_external_access_context() -> None:
+    """Clear any external access ceiling from the current request/task."""
+    _current_external_access.set(None)
+
+
+def get_current_external_access_context() -> ExternalAccessContext | None:
+    """Return the external access ceiling for the current request/task, if any."""
+    return _current_external_access.get()
+
+
+def external_access_allows(action: str, context: ExternalAccessContext | None = None) -> bool:
+    """Return whether the external access ceiling allows this action.
+
+    This is deliberately action-level and deny-only. It does not grant access to
+    resources; normal ownership, route guards, and enterprise authz plugins still
+    decide whether an otherwise allowed action may proceed.
+    """
+    context = context if context is not None else get_current_external_access_context()
+    if context is None:
+        return True
+
+    normalized_action = action.strip().lower()
+    if context.level == EXTERNAL_ACCESS_ADMIN:
+        return True
+    if context.level == EXTERNAL_ACCESS_EDITOR:
+        return normalized_action in _EDITOR_ALLOWED_ACTIONS
+    return normalized_action in _VIEWER_ALLOWED_ACTIONS
+
+
+def filter_actions_by_external_access_ceiling(actions: list[str] | tuple[str, ...]) -> list[str]:
+    """Filter an action list through the current external access ceiling."""
+    context = get_current_external_access_context()
+    if context is None:
+        return list(actions)
+    return [action for action in actions if external_access_allows(action, context)]
 
 
 def _validate_trusted_time_claims(claims: Mapping[str, Any]) -> None:

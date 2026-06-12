@@ -28,8 +28,11 @@ from langflow.services.auth.exceptions import (
 )
 from langflow.services.auth.external import (
     ExternalIdentity,
+    access_context_from_identity,
+    clear_current_external_access_context,
     identity_from_claims,
     resolve_external_identity,
+    set_current_external_access_context,
 )
 from langflow.services.database.models.api_key.crud import check_key
 from langflow.services.database.models.user.crud import (
@@ -89,6 +92,8 @@ class AuthService(BaseAuthService):
             TokenExpiredError: If token has expired
             InactiveUserError: If user account is inactive
         """
+        clear_current_external_access_context()
+
         # Try token authentication first (if token provided)
         if token:
             try:
@@ -245,6 +250,7 @@ class AuthService(BaseAuthService):
         except AuthInvalidTokenError as exc:
             logger.debug(f"External credential rejected: {exc}")
             return None
+        set_current_external_access_context(access_context_from_identity(identity, self.settings.auth_settings))
         return await self._materialize_external_user(identity, db)
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
@@ -254,6 +260,10 @@ class AuthService(BaseAuthService):
             return None
 
         if isinstance(result, User):
+            if await self._external_access_ceiling_blocks_api_key_user(result, db):
+                logger.info("API key rejected for externally managed user while external access ceiling is enabled")
+                msg = "API key authentication is disabled for externally managed users"
+                raise InvalidCredentialsError(msg)
             user_read = UserRead.model_validate(result, from_attributes=True)
             if not user_read.is_active:
                 msg = "User account is inactive"
@@ -261,6 +271,24 @@ class AuthService(BaseAuthService):
             return user_read
 
         return None
+
+    async def _external_access_ceiling_blocks_api_key_user(self, user: User, db: AsyncSession) -> bool:
+        auth_settings = self.settings.auth_settings
+        if (
+            not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
+            or not auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+        ):
+            return False
+
+        from sqlmodel import select
+
+        from langflow.services.database.models.auth import SSOUserProfile
+
+        profile_stmt = select(SSOUserProfile).where(
+            SSOUserProfile.user_id == user.id,
+            SSOUserProfile.sso_provider == auth_settings.EXTERNAL_AUTH_PROVIDER,
+        )
+        return (await db.exec(profile_stmt)).first() is not None
 
     # ------------------------------------------------------------------
     # JIT user provisioning via BaseAuthService hook

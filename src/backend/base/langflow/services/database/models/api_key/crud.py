@@ -64,6 +64,18 @@ async def get_api_keys(session: AsyncSession, user_id: UUID) -> list[ApiKeyRead]
 
 async def create_api_key(session: AsyncSession, api_key_create: ApiKeyCreate, user_id: UUID) -> UnmaskedApiKeyRead:
     """Create a new API key, storing an encrypted value and a SHA-256 hash for fast lookup."""
+    settings_service = get_settings_service()
+    auth_settings = settings_service.auth_settings
+    if (
+        auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
+        and auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+    ):
+        from langflow.services.auth.external import get_current_external_access_context
+
+        if get_current_external_access_context() is not None:
+            msg = "API key creation is disabled for externally authenticated users"
+            raise PermissionError(msg)
+
     # Generate a random API key with 32 bytes of randomness
     generated_api_key = f"sk-{secrets.token_urlsafe(32)}"
 
