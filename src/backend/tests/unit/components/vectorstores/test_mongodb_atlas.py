@@ -274,8 +274,10 @@ def test_mongodb_overwrite_insert_mode_clears_collection(mocker):
     mock_store_cls.from_documents.assert_called_once()
 
 
-def test_mongodb_client_passes_driver_info(mocker):
-    """The MongoClient is constructed with DriverInfo identifying Langflow in the handshake."""
+@pytest.mark.parametrize("enable_mtls", [False, True])
+def test_mongodb_client_passes_driver_info(mocker, enable_mtls):
+    """Both the plain and mTLS paths construct MongoClient with DriverInfo identifying Langflow."""
+    from lfx.components.mongodb.mongodb_atlas import _DRIVER_VERSION
     from pymongo.driver_info import DriverInfo
 
     mock_client_cls = mocker.patch("pymongo.MongoClient", return_value=MagicMock())
@@ -285,7 +287,9 @@ def test_mongodb_client_passes_driver_info(mocker):
         db_name="test_db",
         collection_name="test_collection",
         index_name="test_index",
-        enable_mtls=False,
+        enable_mtls=enable_mtls,
+        # The mTLS branch reads/transforms this cert before constructing the client.
+        mongodb_atlas_client_cert="-----BEGIN PRIVATE KEY-----\nkey\n-----END PRIVATE KEY-----",
     )
     component.embedding = MagicMock()
 
@@ -295,3 +299,4 @@ def test_mongodb_client_passes_driver_info(mocker):
     assert "driver" in kwargs
     assert isinstance(kwargs["driver"], DriverInfo)
     assert kwargs["driver"].name == "Langflow"
+    assert kwargs["driver"].version == _DRIVER_VERSION
