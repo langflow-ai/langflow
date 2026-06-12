@@ -48,9 +48,13 @@ export function useApplyTemplateToCurrentFlow() {
         // and calls syncNodeTranslations — no need for separate setNodes/setEdges.
         setCurrentFlowInManager(renamedFlow);
         // Roll back the optimistic rename on failure (saveFlow toasts its own error).
-        void saveFlow(renamedFlow).catch(() =>
-          setCurrentFlowInManager(currentFlow),
-        );
+        // Only restore if the user hasn't already switched to a different flow.
+        void saveFlow(renamedFlow).catch(() => {
+          const latest = useFlowsManagerStore.getState().currentFlow;
+          if (latest?.id === renamedFlow.id) {
+            setCurrentFlowInManager(currentFlow);
+          }
+        });
       } else {
         // No flow context yet — update the canvas directly as a fallback.
         setNodes(template.data.nodes ?? []);
