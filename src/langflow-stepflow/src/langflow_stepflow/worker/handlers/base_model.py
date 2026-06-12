@@ -117,8 +117,9 @@ def _resolve_secret_value(secret_value: Any) -> Any:
 def _handle_special_pydantic_types(obj: Any, serialized: dict[str, Any]) -> dict[str, Any]:
     """Handle SecretStr and other special Pydantic types during serialization."""
     try:
-        if hasattr(obj, "model_fields"):
-            fields = obj.model_fields
+        cls = type(obj)
+        if hasattr(cls, "model_fields"):
+            fields = cls.model_fields
             for field_name, field_info in fields.items():
                 if hasattr(field_info, "annotation"):
                     field_type = field_info.annotation
@@ -130,8 +131,8 @@ def _handle_special_pydantic_types(obj: Any, serialized: dict[str, Any]) -> dict
                                 serialized[field_name] = _resolve_secret_value(secret_value)
                             except Exception:
                                 pass
-        elif hasattr(obj, "__fields__"):
-            fields = obj.__fields__
+        elif hasattr(cls, "__fields__"):
+            fields = cls.__fields__
             for field_name, field_info in fields.items():
                 field_type = field_info.type_
                 if _is_secret_str_type(field_type):
