@@ -39,7 +39,7 @@ from langflow.services.authorization import (
     filter_visible_resources,
 )
 from langflow.services.authorization.fetch import authorized_or_owner_scoped, deny_to_404
-from langflow.services.authorization.utils import _resolve_casbin_domain
+from langflow.services.authorization.utils import _resolve_authz_domain
 from langflow.services.database.models.deployment.exceptions import (
     araise_if_deployment_guard_error_or_skip,
     remap_flow_guard_for_project_delete,
@@ -230,7 +230,7 @@ async def read_projects(
             current_user,
             resource_type="project",
             candidates=list(projects),
-            domain_extractor=lambda project: _resolve_casbin_domain(project.workspace_id, None),
+            domain_extractor=lambda project: _resolve_authz_domain(project.workspace_id, None),
             owner_extractor=lambda project: project.user_id,
             act=ProjectAction.READ,
         )
@@ -335,7 +335,7 @@ async def read_project(
                     current_user,
                     resource_type="flow",
                     candidates=list(paginated_flows.items),
-                    domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+                    domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
                     owner_extractor=lambda flow: flow.user_id,
                     act=FlowAction.READ,
                 )
@@ -354,7 +354,7 @@ async def read_project(
                 current_user,
                 resource_type="flow",
                 candidates=list(project.flows),
-                domain_extractor=lambda flow: _resolve_casbin_domain(flow.workspace_id, flow.folder_id),
+                domain_extractor=lambda flow: _resolve_authz_domain(flow.workspace_id, flow.folder_id),
                 owner_extractor=lambda flow: flow.user_id,
                 act=FlowAction.READ,
             )

@@ -1,5 +1,4 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { useCheckToolNames } from "@/controllers/API/queries/deployments";
 import { useGetRefreshFlowsQuery } from "@/controllers/API/queries/flows/use-get-refresh-flows-query";
 import { useFolderStore } from "@/stores/foldersStore";
 import StepReview from "../components/step-review";
@@ -9,14 +8,6 @@ import type { ConnectionItem } from "../types";
 jest.mock("../contexts/deployment-stepper-context", () => ({
   useDeploymentStepper: jest.fn(),
 }));
-
-jest.mock("@/controllers/API/queries/deployments", () => ({
-  useCheckToolNames: jest.fn(() => ({ data: undefined })),
-}));
-
-const mockedUseCheckToolNames = useCheckToolNames as jest.MockedFunction<
-  typeof useCheckToolNames
->;
 
 jest.mock(
   "@/controllers/API/queries/flows/use-get-refresh-flows-query",
@@ -146,7 +137,6 @@ describe("StepReview tool name editing", () => {
         { id: "flow-2", name: "Other Flow", folder_id: "folder-1" },
       ],
     } as never);
-    mockedUseCheckToolNames.mockReturnValue({ data: undefined } as never);
   });
 
   it("persists tool name edits when input loses focus", () => {
@@ -176,6 +166,13 @@ describe("StepReview tool name editing", () => {
 // ---------------------------------------------------------------------------
 
 describe("Deployment summary display", () => {
+  it("labels the deployment name", () => {
+    setup();
+
+    expect(screen.getByText("Name")).toBeInTheDocument();
+    expect(screen.queryByText("Display Name")).not.toBeInTheDocument();
+  });
+
   it("renders a dash when deployment name is empty", () => {
     setup({ deploymentName: "" });
 
@@ -329,15 +326,15 @@ describe("Flow configuration section", () => {
       [{ id: "flow-1", name: "Default Name Flow", folder_id: "folder-1" }],
     );
 
-    // The raw flow name appears in the attached column and the config sub-detail.
+    // The raw flow name appears in the attached column, tool-name row, and config sub-detail.
     const nameInstances = screen.getAllByText("Default Name Flow");
-    expect(nameInstances).toHaveLength(2);
+    expect(nameInstances).toHaveLength(3);
 
-    // Verify the tool-name row falls back to the generated default tool name
+    // Verify the tool-name row falls back to the flow name.
     const wrenchIcon = screen.getByTestId("icon-Wrench");
     const configRow = wrenchIcon.closest(".flex.items-center.gap-2")!;
     expect(
-      within(configRow as HTMLElement).getByText("Default Name Flow 1"),
+      within(configRow as HTMLElement).getByText("Default Name Flow"),
     ).toBeInTheDocument();
   });
 
@@ -711,10 +708,10 @@ describe("EditableToolName sub-component", () => {
 });
 
 // ---------------------------------------------------------------------------
-// 7. Duplicate tool name detection (edit mode)
+// Tool display-name labels
 // ---------------------------------------------------------------------------
 
-describe("StepReview duplicate tool name detection in edit mode", () => {
+describe("StepReview tool display-name labels", () => {
   beforeEach(() => {
     mockedUseFolderStore.mockImplementation((selector) =>
       selector({ myCollectionId: "folder-1" } as never),
@@ -727,131 +724,40 @@ describe("StepReview duplicate tool name detection in edit mode", () => {
     } as never);
   });
 
-  it("shows provider duplicate error when pre-existing flow tool name is changed to an existing name", () => {
+  it("allows duplicate tool display names without blocking review", () => {
     const setHasToolNameErrors = jest.fn();
-    mockedUseCheckToolNames.mockReturnValue({
-      data: { existing_names: ["taken_tool"] },
-    } as never);
     mockedUseDeploymentStepper.mockReturnValue(
       buildBaseStepper({
-        isEditMode: true,
-        preExistingFlowIds: new Set(["flow-1"]),
-        initialToolNameByFlow: new Map([["flow-1", "original_tool"]]),
-        toolNameByFlow: new Map([["flow-1", "taken_tool"]]),
-        selectedInstance: { id: "inst-1" },
-        setHasToolNameErrors,
-      }),
-    );
-
-    render(<StepReview />);
-
-    expect(
-      screen.getByText("Edit tool name (already exists in provider)"),
-    ).toBeInTheDocument();
-    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
-  });
-
-  it("does not show error when pre-existing flow tool name is unchanged", () => {
-    const setHasToolNameErrors = jest.fn();
-    mockedUseCheckToolNames.mockReturnValue({
-      data: { existing_names: ["original_tool"] },
-    } as never);
-    mockedUseDeploymentStepper.mockReturnValue(
-      buildBaseStepper({
-        isEditMode: true,
-        preExistingFlowIds: new Set(["flow-1"]),
-        initialToolNameByFlow: new Map([["flow-1", "original_tool"]]),
-        toolNameByFlow: new Map([["flow-1", "original_tool"]]),
-        selectedInstance: { id: "inst-1" },
-        setHasToolNameErrors,
-      }),
-    );
-
-    render(<StepReview />);
-
-    expect(
-      screen.queryByText("Edit tool name (already exists in provider)"),
-    ).not.toBeInTheDocument();
-  });
-
-  it("shows batch duplicate error when two flows have the same renamed tool name", () => {
-    const setHasToolNameErrors = jest.fn();
-    mockedUseCheckToolNames.mockReturnValue({ data: undefined } as never);
-    mockedUseDeploymentStepper.mockReturnValue(
-      buildBaseStepper({
-        isEditMode: true,
         selectedVersionByFlow: new Map([
           ["flow-1", { versionId: "ver-1", versionTag: "v1" }],
           ["flow-2", { versionId: "ver-2", versionTag: "v2" }],
         ]),
-        preExistingFlowIds: new Set(["flow-1"]),
-        initialToolNameByFlow: new Map([["flow-1", "original_tool"]]),
         toolNameByFlow: new Map([
-          ["flow-1", "same_name"],
-          ["flow-2", "same_name"],
+          ["flow-1", "Same Display Name"],
+          ["flow-2", "Same Display Name"],
         ]),
-        selectedInstance: { id: "inst-1" },
         setHasToolNameErrors,
       }),
     );
 
     render(<StepReview />);
 
-    const errors = screen.getAllByText(
-      "Duplicate tool name within this deployment",
-    );
-    expect(errors.length).toBe(2);
-    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
-  });
-});
-
-describe("StepReview invalid tool name validation", () => {
-  beforeEach(() => {
-    mockedUseFolderStore.mockImplementation((selector) =>
-      selector({ myCollectionId: "folder-1" } as never),
-    );
-    mockedUseGetRefreshFlowsQuery.mockReturnValue({
-      data: [{ id: "flow-1", name: "12925", folder_id: "folder-1" }],
-    } as never);
-    mockedUseCheckToolNames.mockReturnValue({ data: undefined } as never);
+    expect(screen.getAllByText("Same Display Name")).toHaveLength(2);
+    expect(setHasToolNameErrors).toHaveBeenCalledWith(false);
   });
 
-  it("shows inline error when flow-derived tool name starts with number", () => {
+  it("allows display names that would not be valid provider technical names", () => {
     const setHasToolNameErrors = jest.fn();
     mockedUseDeploymentStepper.mockReturnValue(
       buildBaseStepper({
-        selectedInstance: { id: "inst-1" },
+        toolNameByFlow: new Map([["flow-1", "12925"]]),
         setHasToolNameErrors,
       }),
     );
 
     render(<StepReview />);
 
-    expect(
-      screen.getByText(
-        "Tool name must start with a letter and contain at least one alphanumeric character.",
-      ),
-    ).toBeInTheDocument();
-    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
-  });
-
-  it("shows inline error when custom tool name normalizes to invalid name", () => {
-    const setHasToolNameErrors = jest.fn();
-    mockedUseDeploymentStepper.mockReturnValue(
-      buildBaseStepper({
-        selectedInstance: { id: "inst-1" },
-        toolNameByFlow: new Map([["flow-1", "!!!"]]),
-        setHasToolNameErrors,
-      }),
-    );
-
-    render(<StepReview />);
-
-    expect(
-      screen.getByText(
-        "Tool name must start with a letter and contain at least one alphanumeric character.",
-      ),
-    ).toBeInTheDocument();
-    expect(setHasToolNameErrors).toHaveBeenCalledWith(true);
+    expect(screen.getByText("12925")).toBeInTheDocument();
+    expect(setHasToolNameErrors).toHaveBeenCalledWith(false);
   });
 });

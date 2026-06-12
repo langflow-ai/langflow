@@ -505,6 +505,7 @@ def register_all_service_factories() -> None:
     from langflow.services.store import factory as store_factory
     from langflow.services.task import factory as task_factory
     from langflow.services.telemetry import factory as telemetry_factory
+    from langflow.services.telemetry_writer import factory as telemetry_writer_factory
     from langflow.services.tracing import factory as tracing_factory
     from langflow.services.transaction import factory as transaction_factory
     from langflow.services.variable import factory as variable_factory
@@ -520,6 +521,7 @@ def register_all_service_factories() -> None:
     service_manager.register_factory(telemetry_factory.TelemetryServiceFactory())
     service_manager.register_factory(tracing_factory.TracingServiceFactory())
     service_manager.register_factory(transaction_factory.TransactionServiceFactory())
+    service_manager.register_factory(telemetry_writer_factory.TelemetryWriterServiceFactory())
     service_manager.register_factory(state_factory.StateServiceFactory())
     service_manager.register_factory(job_queue_factory.JobQueueServiceFactory())
     service_manager.register_factory(task_factory.TaskServiceFactory())
@@ -529,11 +531,12 @@ def register_all_service_factories() -> None:
     service_manager.register_service_class(ServiceType.AUTH_SERVICE, AuthService, override=True)
     service_manager.register_factory(auth_factory.AuthServiceFactory())
     # Same pattern as ``auth_service``: register the OSS pass-through here with
-    # ``override=True`` so Langflow always has a default. Enterprise replaces it
-    # by listing its class in ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use
-    # ``override=True`` via ``_discover_from_config``). Plain entry-point
-    # discovery uses ``override=False`` and would lose to this default — the
-    # supported override path is the ``lfx.toml`` config, matching SSO.
+    # ``override=True`` so Langflow always has a default. A registered
+    # authorization plugin replaces it by listing its class in
+    # ``LANGFLOW_CONFIG_DIR/lfx.toml`` (config files use ``override=True`` via
+    # ``_discover_from_config``). Plain entry-point discovery uses
+    # ``override=False`` and would lose to this default — the supported
+    # override path is the ``lfx.toml`` config, matching SSO.
     service_manager.register_service_class(
         ServiceType.AUTHORIZATION_SERVICE, LangflowAuthorizationService, override=True
     )
@@ -543,11 +546,10 @@ def register_all_service_factories() -> None:
 
 
 def register_builtin_adapters() -> None:
-    """Import built-in adapter modules so ``@register_adapter`` decorators fire.
+    """Import built-in adapter registration modules.
 
     Mirrors ``register_all_service_factories()`` for the adapter registry system.
-    Each import triggers the ``@register_adapter`` decorator at module scope,
-    registering the adapter class on the AdapterRegistry singleton.
+    Each import registers the adapter class on the AdapterRegistry singleton.
 
     TODO: Watsonx risks are documented here because registration is runtime-optional:
     missing ``ibm_*`` modules should skip adapter registration, but broad
@@ -562,7 +564,7 @@ def register_builtin_adapters() -> None:
         return
 
     try:
-        import_module("langflow.services.adapters.deployment.watsonx_orchestrate")
+        import_module("langflow.services.adapters.deployment.watsonx_orchestrate.register")
     except ModuleNotFoundError as exc:
         logger.info("Skipping Watsonx Orchestrate adapter registration: %s", exc)
 

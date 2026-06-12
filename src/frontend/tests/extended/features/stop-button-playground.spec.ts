@@ -1,12 +1,12 @@
 import { expect, test } from "../../fixtures";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { TID } from "../../utils/constants/testIds";
+import { TEXTS } from "../../utils/constants/texts";
 import { TIMEOUTS } from "../../utils/constants/timeouts";
 import { addComponentFromSidebar } from "../../utils/flow/add-component-from-sidebar";
 import { openBlankFlow } from "../../utils/flow/open-blank-flow";
 import { replaceComponentCode } from "../../utils/flow/replace-component-code";
 
-import { TEXTS } from "../../utils/constants/texts";
 const SLEEP_60_CUSTOM_COMPONENT = `
 # from langflow.field_typing import Data
 from langflow.custom import Component

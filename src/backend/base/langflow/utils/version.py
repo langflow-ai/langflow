@@ -38,10 +38,17 @@ def _get_version_info():
         except (ImportError, metadata.PackageNotFoundError):
             pass
         else:
+            # The canonical `langflow` / `langflow-base` distribution matches first, and the
+            # nightly now publishes under that canonical name as a `.devN` pre-release. Derive the
+            # "Nightly" label from the `.dev` version marker (not the package name) so the startup
+            # banner and telemetry `package` field still identify nightlies correctly.
+            display = display_name
+            if "dev" in prerelease_version and "Nightly" not in display:
+                display = f"{display_name} Nightly"
             return {
                 "version": prerelease_version,
                 "main_version": version,
-                "package": display_name,
+                "package": display,
             }
 
     if __version__ is None:

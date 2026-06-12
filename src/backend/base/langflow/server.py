@@ -14,6 +14,22 @@ class LangflowUvicornWorker(UvicornWorker):
     CONFIG_KWARGS = {"loop": "asyncio"}
     _has_exited = False
 
+    def init_process(self) -> None:
+        from langflow.services.deps import get_settings_service
+
+        trust_proxy = get_settings_service().settings.rate_limit_trust_proxy
+        forwarded_allow_ips = "*" if trust_proxy else ""
+
+        # Gunicorn cfg: keeps the value consistent for anything that reads it later.
+        self.cfg.set("forwarded_allow_ips", forwarded_allow_ips)
+
+        # Uvicorn Config: UvicornWorker.__init__ already snapshotted cfg.forwarded_allow_ips
+        # into self.config before init_process runs.  ProxyHeadersMiddleware reads
+        # self.config.forwarded_allow_ips at startup, so we must update it directly.
+        self.config.forwarded_allow_ips = forwarded_allow_ips
+
+        super().init_process()
+
     def _install_sigint_handler(self) -> None:
         """Install a SIGQUIT handler on workers.
 

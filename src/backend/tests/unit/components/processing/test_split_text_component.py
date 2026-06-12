@@ -272,11 +272,11 @@ class TestSplitTextComponent(ComponentTestBaseWithoutClient):
         assert "Another text" in results["text"][2], f"Expected 'Another text', got '{results['text'][2]}'"
         assert "Another line" in results["text"][3], f"Expected 'Another line', got '{results['text'][3]}'"
 
-    def test_with_url_loader(self):
+    async def test_with_url_loader(self):
         """Test splitting text with URL loader."""
         component = SplitTextComponent()
         url = ["https://en.wikipedia.org/wiki/London", "https://en.wikipedia.org/wiki/Paris"]
-        data_frame = URLComponent(urls=url, format="Text").fetch_content()
+        data_frame = await URLComponent(urls=url, format="Text").fetch_content()
         assert isinstance(data_frame, DataFrame), "Expected DataFrame instance"
         assert len(data_frame) == 2, f"Expected DataFrame with 2 rows, got {len(data_frame)}"
 

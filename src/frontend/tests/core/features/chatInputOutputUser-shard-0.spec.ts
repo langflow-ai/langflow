@@ -2,13 +2,13 @@ import * as dotenv from "dotenv";
 import path from "path";
 import { expect, test } from "../../fixtures";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
 import { initialGPTsetup } from "../../utils/initialGPTsetup";
 import {
   closeAdvancedOptions,
   openAdvancedOptions,
 } from "../../utils/open-advanced-options";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to send an image on chat",
   { tag: ["@release", "@workspace", "@components"] },

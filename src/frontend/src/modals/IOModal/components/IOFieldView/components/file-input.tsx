@@ -148,7 +148,7 @@ export default function IOFileInput({ field, updateValue }: IOFileInputProps) {
         {isDragging ? (
           <>
             <IconComponent name="ArrowUpToLine" className="h-5 w-5 stroke-1" />
-            "Drop your file here"
+            {t("ioModal.dropFileHere")}
           </>
         ) : image ? (
           <img

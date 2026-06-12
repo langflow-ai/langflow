@@ -117,6 +117,7 @@ jest.mock("@/utils/utils", () => ({
 }));
 
 jest.mock("@/stores/playgroundStore", () => ({
+  // biome-ignore lint/suspicious/noExplicitAny: legacy
   usePlaygroundStore: (selector: (state: typeof mockPlaygroundStore) => any) =>
     selector(mockPlaygroundStore),
 }));
@@ -383,8 +384,8 @@ describe("SidebarSegmentedNav", () => {
     expect(NAV_ITEMS[4]).toEqual({
       id: "memories",
       icon: "BrainCog",
-      label: "Memories",
-      tooltip: "Memories",
+      label: "memory.sidebarTitle",
+      tooltip: "memory.sidebarTitle",
     });
     expect(NAV_ITEMS[5]).toEqual({
       id: "traces",

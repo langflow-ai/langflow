@@ -2,12 +2,12 @@ import { expect, test } from "../../fixtures";
 import { addLegacyComponents } from "../../utils/add-legacy-components";
 import { adjustScreenView } from "../../utils/adjust-screen-view";
 import { awaitBootstrapTest } from "../../utils/await-bootstrap-test";
+import { TEXTS } from "../../utils/constants/texts";
+import { dismissLegacyWarnings } from "../../utils/dismiss-legacy-warnings";
 import { unselectNodes } from "../../utils/unselect-nodes";
-
 import { updateOldComponents } from "../../utils/update-old-components";
 import { zoomOut } from "../../utils/zoom-out";
 
-import { TEXTS } from "../../utils/constants/texts";
 test(
   "user must be able to check similarity between embedding texts",
   { tag: ["@release", "@components"] },
@@ -255,6 +255,11 @@ test(
     });
 
     await unselectNodes(page);
+
+    // Data to Message, Filter Data, and Text Output are legacy components; their
+    // "Legacy" warning bars increase node height and can overlap the Text Output
+    // inspection button. Dismiss the bars so the button is clickable.
+    await dismissLegacyWarnings(page);
 
     await page
       .getByTestId(/rf__node-TextOutput-[a-zA-Z0-9]{5}/)

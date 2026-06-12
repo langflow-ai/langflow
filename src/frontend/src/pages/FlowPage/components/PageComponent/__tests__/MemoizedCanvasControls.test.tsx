@@ -76,9 +76,6 @@ import { MemoizedCanvasControls } from "../MemoizedComponents";
 
 describe("MemoizedCanvasControls", () => {
   const defaultProps = {
-    setIsAddingNote: jest.fn(),
-    shadowBoxWidth: 100,
-    shadowBoxHeight: 100,
     selectedNode: null,
   };
 
@@ -106,5 +103,20 @@ describe("MemoizedCanvasControls", () => {
     render(<MemoizedCanvasControls {...defaultProps} />);
 
     expect(screen.queryByTestId("icon-Lock")).not.toBeInTheDocument();
+  });
+
+  it("should accept optional isAgentWorking prop without error", () => {
+    expect(() =>
+      render(
+        <MemoizedCanvasControls {...defaultProps} isAgentWorking={true} />,
+      ),
+    ).not.toThrow();
+    expect(screen.getByTestId("canvas-controls")).toBeInTheDocument();
+  });
+
+  it("should be memoized", () => {
+    expect(MemoizedCanvasControls.$$typeof.toString()).toContain(
+      "Symbol(react.memo)",
+    );
   });
 });

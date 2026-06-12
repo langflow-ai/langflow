@@ -80,6 +80,14 @@ from langflow.services.telemetry.schema import RunPayload
 from langflow.utils.compression import compress_response
 from langflow.utils.version import get_version_info
 
+
+def _requires_component_hash_lookups(settings: object, user: CurrentActiveUser) -> bool:
+    requires_admin_only_hashes = (
+        getattr(settings, "custom_component_admin_only", False) is True and not user.is_superuser
+    )
+    return requires_admin_only_hashes or not settings.allow_custom_components
+
+
 if TYPE_CHECKING:
     from langflow.events.event_manager import EventManager
 
@@ -1263,9 +1271,12 @@ async def get_version():
 async def custom_component(
     raw_code: CustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ) -> CustomComponentResponse:
     settings_service = get_settings_service()
-    if not settings_service.settings.allow_custom_components:
+    settings = settings_service.settings
+    all_known = None
+    if _requires_component_hash_lookups(settings, user):
         # Lazily compute hash lookups if they haven't been built yet
         # (e.g. during startup before the cache is fully populated).
         get_component_hash_lookups_for_validation()
@@ -1275,13 +1286,26 @@ async def custom_component(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Component templates are still initializing. Please try again in a few seconds.",
             )
+
+    # In admin-only mode, non-admin users may create/refresh only known server
+    # templates. Truly custom code creation remains restricted to administrators.
+    if (
+        getattr(settings, "custom_component_admin_only", False) is True
+        and not user.is_superuser
+        and not code_hash_matches_any_template(raw_code.code, all_known)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is restricted to administrators",
+        )
+
+    if not settings.allow_custom_components and not code_hash_matches_any_template(raw_code.code, all_known):
         # Allow updating to a known server template (core component update),
         # but block truly custom code.
-        if not code_hash_matches_any_template(raw_code.code, all_known):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is disabled",
+        )
 
     component = Component(_code=raw_code.code)
 
@@ -1297,6 +1321,14 @@ async def custom_component(
             field_value=tool_mode,
         )
     type_ = get_instance_name(component_instance)
+    locale = getattr(request.state, "locale", "en")
+    if locale != "en":
+        from langflow.utils.i18n import translate_component_node
+
+        try:
+            built_frontend_node = translate_component_node(type_, built_frontend_node, locale)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to translate component node", extra={"locale": locale})
     return CustomComponentResponse(data=built_frontend_node, type=type_)
 
 
@@ -1304,6 +1336,7 @@ async def custom_component(
 async def custom_component_update(
     code_request: UpdateCustomComponentRequest,
     user: CurrentActiveUser,
+    request: Request,
 ):
     """Update an existing custom component with new code and configuration.
 
@@ -1316,7 +1349,8 @@ async def custom_component_update(
         SerializationError: If serialization of the updated component node fails.
     """
     settings_service = get_settings_service()
-    if not settings_service.settings.allow_custom_components:
+    all_known = None
+    if _requires_component_hash_lookups(settings_service.settings, user):
         get_component_hash_lookups_for_validation()
         all_known = component_cache.all_known_hashes
         if all_known is None:
@@ -1324,11 +1358,26 @@ async def custom_component_update(
                 status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
                 detail="Component templates are still initializing. Please try again in a few seconds.",
             )
-        if not code_hash_matches_any_template(code_request.code, all_known):
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Custom component creation is disabled",
-            )
+
+    # In admin-only mode, non-admin users may refresh/update only known server
+    # templates. Truly custom code edits remain restricted to administrators.
+    if (
+        getattr(settings_service.settings, "custom_component_admin_only", False) is True
+        and not user.is_superuser
+        and not code_hash_matches_any_template(code_request.code, all_known)
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component editing is restricted to administrators",
+        )
+
+    if not settings_service.settings.allow_custom_components and not code_hash_matches_any_template(
+        code_request.code, all_known
+    ):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Custom component creation is disabled",
+        )
 
     try:
         component = Component(_code=code_request.code)
@@ -1392,6 +1441,15 @@ async def custom_component_update(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
 
+    locale = getattr(request.state, "locale", "en")
+    if locale != "en":
+        from langflow.utils.i18n import translate_component_node
+
+        try:
+            component_node = translate_component_node(get_instance_name(cc_instance), component_node, locale)
+        except Exception:  # noqa: BLE001
+            logger.exception("Failed to translate component node", extra={"locale": locale})
+
     try:
         return jsonable_encoder(component_node)
     except Exception as exc:
@@ -1421,7 +1479,10 @@ async def get_config(
         settings_service: SettingsService = get_settings_service()
 
         if user is None:
-            return PublicConfigResponse.from_settings(settings_service.settings)
+            return PublicConfigResponse.from_settings(
+                settings_service.settings,
+                settings_service.auth_settings,
+            )
 
         return ConfigResponse.from_settings(settings_service.settings, settings_service.auth_settings)
 

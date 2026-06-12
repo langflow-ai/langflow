@@ -7,6 +7,7 @@ import { SidebarProvider } from "@/components/ui/sidebar";
 import { useCustomNavigate } from "@/customization/hooks/use-custom-navigate";
 import { track } from "@/customization/utils/analytics";
 import useAddFlow from "@/hooks/flows/use-add-flow";
+import { useUtilityStore } from "@/stores/utilityStore";
 import type { Category } from "@/types/templates/types";
 import { cn } from "@/utils/utils";
 import type { newFlowModalPropsType } from "../../types/components";
@@ -25,6 +26,15 @@ export default function TemplatesModal({
   const addFlow = useAddFlow();
   const navigate = useCustomNavigate();
   const { folderId } = useParams();
+  const hideStarterProjects = useUtilityStore(
+    (state) => state.hideStarterProjects,
+  );
+
+  // If starter projects are hidden and we're on the get-started tab, switch to all-templates
+  const effectiveTab =
+    hideStarterProjects && currentTab === "get-started"
+      ? "all-templates"
+      : currentTab;
 
   const handleFlowCreating = (isCreating: boolean) => {
     setLoading(isCreating);
@@ -50,11 +60,16 @@ export default function TemplatesModal({
     {
       title: t("templatesModal.title"),
       items: [
-        {
-          title: t("templatesModal.getStarted"),
-          icon: "SquarePlay",
-          id: "get-started",
-        },
+        // Hide "Get Started" tab if starter projects are hidden
+        ...(hideStarterProjects
+          ? []
+          : [
+              {
+                title: t("templatesModal.getStarted"),
+                icon: "SquarePlay",
+                id: "get-started",
+              },
+            ]),
         {
           title: t("templatesModal.allTemplates"),
           icon: "LayoutPanelTop",
@@ -111,18 +126,18 @@ export default function TemplatesModal({
           <SidebarProvider width="15rem" defaultOpen={false}>
             <Nav
               categories={categories}
-              currentTab={currentTab}
+              currentTab={effectiveTab}
               setCurrentTab={setCurrentTab}
             />
             <main className="flex flex-1 flex-col gap-4 overflow-auto p-6 md:gap-8">
-              {currentTab === "get-started" ? (
+              {effectiveTab === "get-started" ? (
                 <GetStartedComponent
                   loading={loading}
                   onFlowCreating={handleFlowCreating}
                 />
               ) : (
                 <TemplateContentComponent
-                  currentTab={currentTab}
+                  currentTab={effectiveTab}
                   categories={categories.flatMap((category) => category.items)}
                   loading={loading}
                   onFlowCreating={handleFlowCreating}

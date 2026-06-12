@@ -157,6 +157,7 @@ export default function DragFilesComponent({
                 : t("fileManager.fileUploadedSuccessfully"),
           });
         }
+        // biome-ignore lint/suspicious/noExplicitAny: legacy
       } catch (error: any) {
         setErrorData({
           title: t("fileManager.errorUploadingFile"),
@@ -206,6 +207,7 @@ export default function DragFilesComponent({
               : t("fileManager.fileUploadedSuccessfully"),
         });
       }
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       setErrorData({
         title: t("fileManager.errorUploadingFile"),
@@ -226,6 +228,7 @@ export default function DragFilesComponent({
               : t("fileManager.fileUploadedSuccessfully"),
         });
       }
+      // biome-ignore lint/suspicious/noExplicitAny: legacy
     } catch (error: any) {
       setErrorData({
         title: t("fileManager.errorUploadingFile"),
@@ -286,7 +289,7 @@ export default function DragFilesComponent({
                   className="text-muted-foreground flex items-center gap-1"
                   data-testid="info-types"
                 >
-                  +{types.length - 3} more
+                  {t("fileManager.moreTypes", { count: types.length - 3 })}
                   <ForwardedIconComponent name="info" className="w-3 h-3" />
                 </span>
               </ShadTooltip>

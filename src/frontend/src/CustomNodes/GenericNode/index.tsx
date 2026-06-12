@@ -16,13 +16,13 @@ import NodeToolbarComponent from "../../pages/FlowPage/components/nodeToolbarCom
 import { useChangeOnUnfocus } from "../../shared/hooks/use-change-on-unfocus";
 import useAlertStore from "../../stores/alertStore";
 import useFlowStore, {
-  registerNodeUpdate,
   completeNodeUpdate,
+  registerNodeUpdate,
 } from "../../stores/flowStore";
 import useFlowsManagerStore from "../../stores/flowsManagerStore";
-import { useUtilityStore } from "../../stores/utilityStore";
 import { useShortcutsStore } from "../../stores/shortcuts";
 import { useTypesStore } from "../../stores/typesStore";
+import { useUtilityStore } from "../../stores/utilityStore";
 import type { OutputFieldType, VertexBuildTypeAPI } from "../../types/api";
 import type { NodeDataType } from "../../types/flow";
 import { scapedJSONStringfy } from "../../utils/reactflowUtils";
@@ -359,6 +359,21 @@ function GenericNode({
       data.node?.outputs?.find((output) => output.selected) || null,
     );
   }, [data.node?.outputs, data?.selected_output, handleSelectOutput]);
+
+  // Sync local `selectedOutput` state when `data.selected_output` is mutated
+  // from outside the component (e.g. the agentic flow_builder updating the
+  // dropdown after wiring a non-default output). Without this the local state
+  // stays at the initial value captured by `useState(...)` and the dropdown
+  // never reflects programmatic changes.
+  useEffect(() => {
+    const newSelected =
+      data.node?.outputs?.find(
+        (output) => output.name === data?.selected_output,
+      ) || null;
+    if (newSelected?.name !== selectedOutput?.name) {
+      setSelectedOutput(newSelected);
+    }
+  }, [data?.selected_output, data.node?.outputs, selectedOutput?.name]);
 
   const [hasChangedNodeDescription, setHasChangedNodeDescription] =
     useState(false);

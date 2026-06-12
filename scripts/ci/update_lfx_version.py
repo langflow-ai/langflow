@@ -1,10 +1,19 @@
-"""Script to update LFX version for nightly builds."""
+"""Update the canonical ``lfx`` package (and its SDK dep) for nightly builds.
+
+The nightly publishes ``lfx`` and ``langflow-sdk`` under their CANONICAL names as ``.devN``
+pre-releases -- it does NOT rename them to ``lfx-nightly`` / ``langflow-sdk-nightly``, and it does
+NOT give the ``src/bundles/*`` packages their own nightly track. The stable ``lfx-*`` bundles
+(pinning ``lfx>=X.Y.0,<(X+1).0.0``) then resolve against the single canonical ``lfx`` distribution,
+so there is no ``lfx`` vs ``lfx-nightly`` install collision. See ``src/bundles/NIGHTLY.md``.
+
+This script therefore only (a) sets ``lfx``'s version to the nightly ``.devN`` and (b) re-pins
+lfx's ``langflow-sdk`` dependency to the exact canonical dev version.
+"""
 
 import re
 import sys
 from pathlib import Path
 
-from update_pyproject_name import update_pyproject_name
 from update_pyproject_version import update_pyproject_version
 
 # Add the current directory to the path so we can import the other scripts
@@ -14,33 +23,18 @@ sys.path.append(str(current_dir))
 BASE_DIR = Path(__file__).parent.parent.parent
 
 
-def update_lfx_workspace_dep(pyproject_path: str, new_project_name: str) -> None:
-    """Update the LFX workspace dependency in pyproject.toml."""
-    filepath = BASE_DIR / pyproject_path
-    content = filepath.read_text(encoding="utf-8")
-
-    if new_project_name == "lfx-nightly":
-        pattern = re.compile(r"lfx = \{ workspace = true \}")
-        replacement = "lfx-nightly = { workspace = true }"
-    else:
-        msg = f"Invalid LFX project name: {new_project_name}"
-        raise ValueError(msg)
-
-    # Updates the dependency name for uv
-    if not pattern.search(content):
-        msg = f"lfx workspace dependency not found in {filepath}"
-        raise ValueError(msg)
-    content = pattern.sub(replacement, content)
-    filepath.write_text(content, encoding="utf-8")
-
-
 def update_sdk_dependency_in_lfx(pyproject_path: str, sdk_version: str) -> None:
-    """Update the SDK dependency in the LFX pyproject for nightly builds."""
+    """Pin lfx's ``langflow-sdk`` dependency to the exact canonical dev version.
+
+    An exact ``==<dev>`` pin keeps the SDK in lockstep with the lfx built in the same run and,
+    because it names a pre-release explicitly, enables pre-release resolution for ``langflow-sdk``
+    down the dependency tree without requiring ``--pre``.
+    """
     filepath = BASE_DIR / pyproject_path
     content = filepath.read_text(encoding="utf-8")
 
     pattern = re.compile(r'"langflow-sdk(?:-nightly)?(?:==|~=|>=)[\d.]+(?:\.(?:post|dev|a|b|rc)\d+)*"')
-    replacement = f'"langflow-sdk-nightly=={sdk_version}"'
+    replacement = f'"langflow-sdk=={sdk_version}"'
 
     if not pattern.search(content):
         msg = f"SDK dependency not found in {filepath}"
@@ -50,69 +44,24 @@ def update_sdk_dependency_in_lfx(pyproject_path: str, sdk_version: str) -> None:
     filepath.write_text(content, encoding="utf-8")
 
 
-# Match an `lfx` (or `lfx-nightly`) dependency specifier inside a quoted
-# string. The lookahead enforces a version operator immediately after the
-# name so we don't accidentally match sibling packages like `lfx-arxiv` or
-# `lfx-duckduckgo`.
-_BUNDLE_LFX_DEP_PATTERN = re.compile(r'"lfx(?:-nightly)?(?=[<>=!~])[^"]*"')
-
-
-def update_lfx_dep_in_bundles(lfx_version: str) -> None:
-    """Pin every bundle's `lfx` dep to the renamed `lfx-nightly==<version>`.
-
-    Each `src/bundles/*/pyproject.toml` declares an `lfx>=X.Y,<Z` style pin
-    against the published `lfx` package. During nightly builds the
-    workspace `lfx` package gets renamed to `lfx-nightly`, so those pins
-    no longer resolve against the workspace member — and PyPI may not yet
-    ship a matching `lfx` either. Rewrite each bundle's pin to
-    `lfx-nightly==<exact dev version>` so `uv lock` resolves cleanly.
-
-    No-op when no bundles exist (e.g. on a branch that hasn't picked up
-    the bundle extraction) or when a bundle has no `lfx` dep.
-    """
-    bundles_dir = BASE_DIR / "src" / "bundles"
-    if not bundles_dir.is_dir():
-        return
-
-    replacement = f'"lfx-nightly=={lfx_version}"'
-    for bundle_pyproject in sorted(bundles_dir.glob("*/pyproject.toml")):
-        content = bundle_pyproject.read_text(encoding="utf-8")
-        if not _BUNDLE_LFX_DEP_PATTERN.search(content):
-            continue
-        new_content = _BUNDLE_LFX_DEP_PATTERN.sub(replacement, content)
-        if new_content == content:
-            continue
-        bundle_pyproject.write_text(new_content, encoding="utf-8")
-        print(f"Updated lfx dep in {bundle_pyproject.relative_to(BASE_DIR)} -> lfx-nightly=={lfx_version}")
-
-
 def update_lfx_for_nightly(lfx_tag: str, sdk_tag: str):
-    """Update LFX package for nightly build.
+    """Update the canonical ``lfx`` package for a nightly build.
 
     Args:
-        lfx_tag: The nightly tag for LFX (e.g., "v0.1.0.dev0")
-        sdk_tag: The nightly tag for the SDK (e.g., "v0.1.0.dev0")
+        lfx_tag: The nightly tag for LFX (e.g., "v1.11.0.dev0").
+        sdk_tag: The nightly tag for the SDK (e.g., "v0.1.0.dev0").
     """
     lfx_pyproject_path = "src/lfx/pyproject.toml"
 
-    # Update name to lfx-nightly
-    update_pyproject_name(lfx_pyproject_path, "lfx-nightly")
-
-    # Update version (strip 'v' prefix if present)
+    # Set the version (strip 'v' prefix if present); the package keeps its canonical `lfx` name.
     version = lfx_tag.lstrip("v")
     update_pyproject_version(lfx_pyproject_path, version)
 
-    # Update workspace dependency in root pyproject.toml
-    update_lfx_workspace_dep("pyproject.toml", "lfx-nightly")
-
+    # Re-pin lfx's SDK dependency to the exact canonical dev version.
     sdk_version = sdk_tag.lstrip("v")
     update_sdk_dependency_in_lfx(lfx_pyproject_path, sdk_version)
 
-    # Re-pin every bundle's lfx dep to the renamed workspace package so
-    # `uv lock` resolves cleanly. No-op when no bundles are present.
-    update_lfx_dep_in_bundles(version)
-
-    print(f"Updated LFX package to lfx-nightly version {version}")
+    print(f"Updated lfx to nightly version {version}")
 
 
 def main():
