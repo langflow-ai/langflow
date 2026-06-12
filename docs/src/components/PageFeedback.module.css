@@ -24,6 +24,11 @@
   gap: 0.5rem;
 }
 
+.button {
+  min-width: 5.25rem;
+  justify-content: center;
+}
+
 .button,
 .supportLink {
   display: inline-flex;
