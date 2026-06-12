@@ -1,40 +1,38 @@
-"""The assistant Agent must have enough iterations for multi-component builds.
+"""Pin the assistant agent iteration budget — a COST decision, not a tuning knob.
 
-Reproduced live (2026-06-12, gpt-oss:20b): "crie um flow com 5 componentes
-aleatorios" needs ~16+ legitimate iterations (search + describe + 5x add +
-4x connect + run); max_iterations=15 (recursion_limit 35) killed a healthy,
-progressing run.
+Decision (2026-06-12, user): the LangGraph budget stays at the component
+default (max_iterations=15 -> recursion limit 35). Raising it doubles the
+worst-case token spend per attempt on hosted models when the agent churns.
+The trade-off: open-ended multi-component builds (e.g. "5 random
+components", ~16+ legitimate iterations) hit the limit by design; the
+recursion-limit error tells the user to break the request into parts.
 """
 
 import json
 from pathlib import Path
 
-from langflow.agentic.flows.flow_builder_assistant import AGENT_MAX_ITERATIONS
-
 FLOW_PATH = Path(__file__).parents[4] / "base" / "langflow" / "agentic" / "flows" / "LangflowAssistant.json"
 PY_FLOW_PATH = Path(__file__).parents[4] / "base" / "langflow" / "agentic" / "flows" / "flow_builder_assistant.py"
 
-MIN_AGENT_ITERATIONS = 30
+COMPONENT_DEFAULT_ITERATIONS = 15
 
 
-def test_should_give_the_flow_builder_agent_enough_iterations():
-    """Build-intent requests run flow_builder_assistant.py, not the JSON flow."""
-    assert AGENT_MAX_ITERATIONS >= MIN_AGENT_ITERATIONS
-
-    source = PY_FLOW_PATH.read_text(encoding="utf-8")
-    assert '"max_iterations": AGENT_MAX_ITERATIONS' in source, (
-        "get_graph's agent_config must wire AGENT_MAX_ITERATIONS, or the component default (15) wins"
-    )
-
-
-def test_should_give_assistant_agents_enough_iterations_for_multi_component_builds():
+def test_should_keep_json_agents_at_the_component_default_budget():
     data = json.loads(FLOW_PATH.read_text(encoding="utf-8"))
     agents = [n["data"] for n in data["data"]["nodes"] if n.get("data", {}).get("type") == "Agent"]
 
     assert agents, "LangflowAssistant.json must contain Agent nodes"
     for agent in agents:
         configured = agent["node"]["template"]["max_iterations"]["value"]
-        assert configured >= MIN_AGENT_ITERATIONS, (
-            f"Agent {agent.get('id')} has max_iterations={configured}; "
-            f"a 5-component build legitimately needs ~16+ iterations plus retries"
+        assert configured == COMPONENT_DEFAULT_ITERATIONS, (
+            f"Agent {agent.get('id')} has max_iterations={configured}; raising it doubles "
+            "the worst-case hosted-model cost per attempt — deliberate decision, see docstring"
         )
+
+
+def test_should_not_override_iterations_in_the_flow_builder_agent():
+    source = PY_FLOW_PATH.read_text(encoding="utf-8")
+
+    assert "max_iterations" not in source, (
+        "flow_builder_assistant.py must not override max_iterations — cost ceiling decision 2026-06-12"
+    )
