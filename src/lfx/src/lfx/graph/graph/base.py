@@ -994,7 +994,7 @@ class Graph:
         }
 
     def _collect_branch_vertices(self, vertex_id: str, output_names: set[str] | None = None) -> set[str]:
-        visited: set[str] = set()
+        visited: set[str] = {vertex_id}
 
         def walk(current_id: str, *, is_source: bool = False) -> None:
             for edge in self.edges:
@@ -1009,6 +1009,7 @@ class Graph:
                 walk(child_id)
 
         walk(vertex_id, is_source=True)
+        visited.discard(vertex_id)
         return visited
 
     def _get_vertices_reachable_from_other_outputs(self, vertex_id: str, output_names: set[str]) -> set[str]:
