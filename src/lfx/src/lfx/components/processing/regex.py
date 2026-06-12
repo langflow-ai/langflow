@@ -44,8 +44,10 @@ class RegexExtractorComponent(Component):
             # Compile regex pattern
             pattern = re.compile(self.pattern)
 
-            # Find all matches in the input text
-            matches = pattern.findall(self.input_text)
+            # Find all matches in the input text. Use finditer + group(0) so the match is
+            # always the full matched string. findall returns tuples when the pattern has
+            # multiple capture groups, which breaks the downstream str join in get_matches_text.
+            matches = [match.group(0) for match in pattern.finditer(self.input_text)]
 
             # Filter out empty matches
             filtered_matches = [match for match in matches if match]  # Remove empty matches

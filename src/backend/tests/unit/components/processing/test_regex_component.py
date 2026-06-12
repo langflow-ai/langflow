@@ -75,6 +75,21 @@ class TestRegexExtractorComponent(ComponentTestBaseWithoutClient):
         assert isinstance(result, Message)
         assert result.text == "test@example.com"
 
+    def test_multiple_capture_groups(self):
+        # A pattern with multiple capture groups must not crash and must return full matches as strings.
+        component = RegexExtractorComponent(input_text="John: 25, Jane: 30", pattern=r"(\w+): (\d+)")
+
+        result = component.extract_matches()
+        assert isinstance(result, list)
+        assert len(result) == 2
+        assert all(isinstance(item.data["match"], str) for item in result)
+        assert result[0].data["match"] == "John: 25"
+        assert result[1].data["match"] == "Jane: 30"
+
+        message = component.get_matches_text()
+        assert isinstance(message, Message)
+        assert message.text == "John: 25\nJane: 30"
+
     def test_get_matches_text_no_matches(self):
         # Test text output with no matches
         component = RegexExtractorComponent(input_text="No email addresses", pattern=r"\b\w+@\w+\.\w+\b")
