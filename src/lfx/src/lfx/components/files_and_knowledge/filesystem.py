@@ -168,6 +168,24 @@ _DENY_BASENAME_SUFFIXES = (".pem", ".key", ".pfx", ".p12")
 _DENY_PATH_FRAGMENTS = frozenset({".ssh", ".aws", ".gnupg", ".docker", ".kube", ".git"})
 
 
+def _check_deny_list(path: str) -> str | None:
+    parts = PureWindowsPath(path).parts
+    if not parts:
+        return None
+    *directories, basename = parts
+    folded = basename.casefold()
+    if (
+        folded in _DENY_BASENAME_LITERALS
+        or folded.startswith(_DENY_BASENAME_PREFIXES)
+        or folded.endswith(_DENY_BASENAME_SUFFIXES)
+    ):
+        return f"Access to {basename!r} is denied: filename matches a protected credential pattern"
+    for segment in directories:
+        if segment.casefold() in _DENY_PATH_FRAGMENTS:
+            return f"Access to {path!r} is denied: path contains protected directory {segment!r}"
+    return None
+
+
 def _looks_binary(head: bytes) -> bool:
     return b"\x00" in head
 
@@ -838,11 +856,17 @@ class FileSystemToolComponent(Component):
                 canonical = next(seg for seg in RESERVED_SEGMENTS if seg.casefold() == folded)
                 msg = f"Path component {canonical!r} is reserved"
                 raise PermissionError(msg)
+        if deny_error := _check_deny_list(path):
+            raise PermissionError(deny_error)
         root_resolved = self._validate_root()
         candidate = (root_resolved / path).resolve()
         if not candidate.is_relative_to(root_resolved):
             msg = f"Path escapes workspace boundary: {path}"
             raise PermissionError(msg)
+        # Re-check the resolved name: a symlink with an innocuous basename can
+        # alias a denied target that `.resolve()` has already followed.
+        if deny_error := _check_deny_list(str(candidate.relative_to(root_resolved))):
+            raise PermissionError(deny_error)
         if hardlink_error := _check_hardlink(candidate):
             raise PermissionError(hardlink_error)
         return candidate
@@ -1055,7 +1079,10 @@ class FileSystemToolComponent(Component):
                 continue
             if not resolved_match.is_relative_to(root_resolved):
                 continue
-            collected.append(str(resolved_match.relative_to(root_resolved)))
+            relative_match = str(resolved_match.relative_to(root_resolved))
+            if _check_deny_list(relative_match):
+                continue
+            collected.append(relative_match)
             if len(collected) >= GLOB_SCAN_CEILING:
                 break
 
@@ -1165,6 +1192,9 @@ class FileSystemToolComponent(Component):
                 continue
             if not resolved_file.is_relative_to(root_resolved):
                 continue
+            rel_path = str(resolved_file.relative_to(root_resolved))
+            if _check_deny_list(rel_path):
+                continue
             try:
                 size = resolved_file.stat().st_size
             except OSError:
@@ -1183,7 +1213,6 @@ class FileSystemToolComponent(Component):
             except OSError:
                 continue
 
-            rel_path = str(resolved_file.relative_to(root_resolved))
             per_file_count = 0
             matched_any = False
             for idx, line in enumerate(text.splitlines(), start=1):

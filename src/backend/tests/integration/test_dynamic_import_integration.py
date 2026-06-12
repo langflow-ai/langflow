@@ -344,6 +344,31 @@ class TestDynamicImportIntegration:
         with pytest.raises((ImportError, ModuleNotFoundError)):
             importlib.import_module("lfx.components.datastax.getenvvar")
 
+    def test_python_code_structured_tool_removed(self):
+        """Test that the removed PythonCodeStructuredTool component cannot be imported from lfx tools.
+
+        Security follow-up to report H1-3754930: this legacy component ``exec()``'d
+        attacker-controlled ``tool_code`` at flow-build time and was reachable as an
+        unauthenticated RCE through public flows. It was first neutered to a
+        non-executable stub (#13538) and is now fully removed. The node ``type`` is
+        still blocked on the unauthenticated public path (see
+        ``lfx.utils.flow_validation.CODE_EXECUTION_COMPONENT_TYPES``) so stored code in
+        any saved flow that still references it cannot execute on that path.
+        """
+        import importlib
+
+        import lfx.components.tools as lfx_tools
+
+        with pytest.raises(AttributeError):
+            _ = lfx_tools.PythonCodeStructuredTool
+
+        assert not hasattr(lfx_tools, "PythonCodeStructuredTool"), (
+            "PythonCodeStructuredTool should have been removed from lfx.components.tools"
+        )
+
+        with pytest.raises((ImportError, ModuleNotFoundError)):
+            importlib.import_module("lfx.components.tools.python_code_structured_tool")
+
     def test_datastax_dir_excludes_deprecated(self):
         """Test that dir(datastax) does not list deprecated components."""
         from langflow.components import datastax
