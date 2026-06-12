@@ -5,69 +5,220 @@ slug: /bundles-jungle-grid
 
 # Jungle Grid bundle
 
-Jungle Grid is an execution layer for AI workloads and agents. Langflow flows can estimate, submit, monitor, cancel, and retrieve outputs from GPU-backed work without managing GPU placement directly.
+Jungle Grid runs asynchronous AI workloads on managed compute. The native Langflow bundle estimates jobs, prepares
+managed inputs, submits workloads, inspects lifecycle and runtime state, retrieves paginated logs, and downloads
+managed artifacts. The components call the Jungle Grid REST API directly.
 
-## Credentials
+## Credentials and API URL
 
-Jungle Grid components require a scoped API key from the Jungle Grid portal. Keep API keys secret, do not insert them into exported public flows, and use only the scopes required by the components in your flow.
+Create a scoped API key in Jungle Grid and provide it through the **Jungle Grid API Key** secret input. The key is sent
+server-side only in the `Authorization: Bearer ...` header. Do not publish credentials in exported flows.
 
-The components send the key server-side as a bearer token to `https://api.junglegrid.dev` by default.
+The default API origin is `https://api.junglegrid.dev`. You can configure another Jungle Grid hostname with **API Base
+URL**, but the value must be a path-free HTTPS origin. Paths, query strings, credentials, and fragments are rejected to
+prevent malformed or duplicated API routes.
+
+Relevant scopes are:
+
+- `jobs:estimate` for estimates
+- `jobs:submit` or `jobs:write` for submission, upload-slot creation, and cancellation
+- `jobs:read` or `jobs:write` for jobs, inputs, status, events, runtime, and artifacts
+- `logs:read`, `jobs:read`, or `jobs:write` for logs
+
+## Production workflow
+
+Use this sequence:
+
+`Estimate Job -> Create Job Input Upload (when needed) -> upload and complete the file -> Submit Job -> Get Job Status
+or Get Job Events -> Get Job Logs -> List Job Artifacts -> Create Artifact Download URL`
+
+Estimate before submission to screen the workload and review routing, capacity, duration, and cost information.
+Estimation does not submit a job, start compute, reserve capacity, or guarantee that runtime startup will succeed.
+Submitting a job can consume Jungle Grid credits.
 
 ## Components
 
 ### Estimate Job
 
-Read-only. Estimates routing, availability, queue timing, and cost for a workload without starting execution.
+Estimates a proposed workload using `workload_type`, optional model size, image, command, arguments, routing mode,
+template, and notes. The component returns the complete screening, classification, routing, capacity, duration, and
+cost response without discarding additional production fields.
 
-Required scope: `jobs:estimate`.
+Canonical workload types are `inference`, `training`, `fine_tuning`, and `batch`. Langflow normalizes `fine_tuning` to
+the REST API representation.
+
+### Create Job Input Upload
+
+Creates a managed upload slot for a file or script. Inputs are:
+
+- `filename`
+- optional `content_type`
+- `kind`, either `input` or `script`
+
+Slot creation is not the same as uploading bytes. Use the returned HTTP method and temporary upload URL to upload the
+file, then call the completion URL with the required token and upload metadata. Only after completion is the returned
+`input_id` ready for `input_files` or `script_files`.
+
+Temporary upload URLs, completion URLs, and tokens are returned through the component output but are redacted from
+component status. The bundle does not accept arbitrary host filesystem paths or place binary file data in text inputs.
+
+### List Job Inputs
+
+Lists managed inputs and scripts for the authenticated account. Records can include the input ID, filename, content
+type, kind, size, status, readiness, timestamps, and mount path under `/workspace/inputs/` or `/workspace/scripts/`.
+The current operation has no pagination or filter inputs.
 
 ### Submit Job
 
-Cost-incurring. Submits a real Jungle Grid workload. This operation may start compute and consume credits.
+Submits a workload and may start managed compute. Supported inputs include:
 
-Required scope: `jobs:submit` or `jobs:write`.
+- workload name, type, and image
+- command array and optional argument array
+- environment object with string values
+- managed `input_files` and `script_files` references
+- the deprecated `script_file` input-ID alias
+- expected artifact paths
+- routing mode, template, and metadata
+- callback URL, callback authentication token, and callback metadata when used by the REST contract
+
+The preferred command representation is:
+
+```json
+{
+  "command": [
+    "python",
+    "/workspace/scripts/transcribe.py",
+    "/workspace/inputs/audio.wav",
+    "/workspace/artifacts/transcript.txt"
+  ]
+}
+```
+
+Legacy command plus arguments remains supported:
+
+```json
+{
+  "command": "python",
+  "args": ["-c", "print('hello')"]
+}
+```
+
+Environment values must be strings:
+
+```json
+{
+  "MODEL_NAME": "small",
+  "OUTPUT_PATH": "/workspace/artifacts/transcript.txt"
+}
+```
+
+Managed file references accept objects or string IDs and are normalized to:
+
+```json
+{
+  "input_files": [{"input_id": "inp_audio123"}],
+  "script_files": [{"input_id": "inp_script123"}]
+}
+```
+
+Expected outputs must be under `/workspace/artifacts/`.
+
+### List Jobs
+
+Lists jobs for the authenticated account. It supports `limit` (default 10, maximum 100), cursor pagination, and an
+optional status string. The response includes structured jobs plus `next_cursor` and `has_more` when returned.
 
 ### Get Job Status
 
-Read-only. Retrieves job lifecycle status and details.
+Returns the current high-level status, normalized execution phase, status message, phase-entry time, latest phase
+update, delayed-start indicator and reason, scheduling and provider details, route information, retry and failure
+information, billing fields, managed input references, artifact contract, and artifact readiness where available.
 
-Required scope: `jobs:read` or `jobs:write`.
+Use the actual response fields to distinguish queueing, capacity search, provider provisioning, input/runtime
+preparation, container startup, workload execution, retries, completion, failure, and cancellation. Empty logs do not
+mean that a job failed or is stuck.
+
+### Get Job Events
+
+Returns ordered platform lifecycle events. Events can describe capacity lookup, scheduling, provisioning, input
+preparation, container startup, retries, completion, failure, and cancellation before workload stdout or stderr
+exists. Event records can include ID, type, title, message, source, level, phase, timestamps, sequence, and related job
+status. Event names are not restricted by the component.
+
+Lifecycle events are not workload logs.
 
 ### Get Job Runtime
 
-Read-only. Retrieves runtime information where the execution path exposes it. Runtime responses can vary by workload and route.
+Returns runtime diagnostics from the supported compatibility endpoint. Runtime details are separate from status,
+lifecycle events, and paginated logs, and can include execution mode, image, command, arguments, timestamps, exit code,
+timeout state, output tails, availability details, and diagnostics.
 
-Required scope: `jobs:read` or `jobs:write`.
+Runtime data can be unavailable before worker assignment or startup. A running or terminal job can also report fields
+as delayed, truncated, unsupported, or partially lost.
 
 ### Get Job Logs
 
-Read-only. Retrieves bounded stored logs for monitoring and debugging. The live SSE log stream is not implemented in this bundle version.
+Returns persisted, cursor-paginated log entries. The default page size is 100 and the API maximum is 1000. Entries can
+include category, source, stream, message, truncation, and creation time, plus `next_cursor`, `has_more`, failure
+highlights, and usage hints.
 
-Required scope: `logs:read`, `jobs:read`, or `jobs:write`.
+Logs may be empty while a job is queued, scheduling, provisioning, or preparing. Use **Get Job Events** for platform
+progress. Repeated paginated polling is not true streaming.
 
 ### Cancel Job
 
-Side-effecting. Cancels a job that has not reached a terminal state and stops work where possible.
-
-Required scope: `jobs:submit` or `jobs:write`.
+Explicitly requests cancellation for a job, with an optional reason. Cancellation can stop active execution and
+prevent further outputs. The component does not cancel automatically from another operation and does not retry the
+side-effecting request.
 
 ### List Job Artifacts
 
-Read-only. Lists artifacts created by a job. Artifacts may be unavailable until a job has completed and storage processing has finished.
-
-Required scope: `jobs:read` or `jobs:write`.
+Lists managed output artifacts for a job. Records can include artifact ID, filename, path, size, content type, status,
+readiness, and creation or upload timestamps. Artifacts may not be ready until execution and storage processing finish.
 
 ### Create Artifact Download URL
 
-Temporary-sensitive output. Creates a temporary signed download URL for a job artifact. Treat the returned URL as sensitive and do not log it or publish it in exported flows.
+Uses the job ID and artifact ID to create temporary download information. Signed URLs can expire and are returned only
+through the component output. They are never copied into component status or logs.
 
-Required scope: `jobs:read` or `jobs:write`.
+## File-backed submission example
 
-## Example flow
+After creating, uploading, and completing the two managed inputs, submit:
 
-`Estimate Job -> Submit Job -> Get Job Status -> Get Job Runtime / Get Job Logs -> List Job Artifacts -> Create Artifact Download URL`
+```json
+{
+  "workload_name": "audio-transcription",
+  "workload_type": "inference",
+  "image": "python:3.11-slim",
+  "command": [
+    "python",
+    "/workspace/scripts/transcribe.py",
+    "/workspace/inputs/audio.wav",
+    "/workspace/artifacts/transcript.txt"
+  ],
+  "script_files": [
+    {
+      "input_id": "inp_script123"
+    }
+  ],
+  "input_files": [
+    {
+      "input_id": "inp_audio123"
+    }
+  ],
+  "expected_artifacts": [
+    "/workspace/artifacts/transcript.txt"
+  ]
+}
+```
 
-Use `Cancel Job` as an explicit separate action when a workflow needs cancellation.
+## Security and testing
+
+- Credentials remain server-side and are omitted from URLs and request bodies.
+- Environment values, callback secrets, upload tokens, and signed URLs are excluded from error messages.
+- Temporary upload and artifact URLs are not stored in component status.
+- Submission, cancellation, and signed-URL generation are not automatically retried.
+- Automated tests mock every Jungle Grid HTTP request and do not require an API key or start billable workloads.
 
 ## Jungle Grid documentation
 
