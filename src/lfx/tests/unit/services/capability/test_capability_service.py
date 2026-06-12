@@ -100,3 +100,17 @@ def test_install_swaps_primitives(service: CapabilityService) -> None:
         "lfx_tenant_id": "tenant-u1",
         "lfx_trust": "untrusted",
     }
+
+
+def test_untrusted_route_without_untrusted_executor_fails_closed(service: CapabilityService) -> None:
+    class _Classifier:
+        def trust_of_flow(self, context: CapabilityContext) -> Trust:  # noqa: ARG002
+            return Trust.UNTRUSTED
+
+        def is_untrusted_node(self, _node: dict[str, Any], _context: CapabilityContext | None = None) -> bool:
+            return True
+
+    service.install(classifier=_Classifier())
+
+    with pytest.raises(RuntimeError, match="no untrusted executor is configured"):
+        service.route(graph=None, user_id="u1", flow_id="f1", run_id="r1")

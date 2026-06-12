@@ -10,6 +10,15 @@ if TYPE_CHECKING:
     from collections.abc import Mapping, Sequence
 
 
+RESERVED_CAPABILITY_RUNTIME_OPTION_KEYS: frozenset[str] = frozenset(
+    {
+        "lfx_capability_token",
+        "lfx_tenant_id",
+        "lfx_trust",
+    }
+)
+
+
 class Trust(str, Enum):
     """Trust classification used by execution policy plugins."""
 

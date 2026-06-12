@@ -118,6 +118,75 @@ async def test_coordinator_routes_untrusted_runs_to_capability_executor() -> Non
 
 
 @pytest.mark.asyncio
+async def test_coordinator_strips_spoofed_capability_metadata_when_provider_returns_no_token() -> None:
+    sandbox = _RecordingExecutor("sandbox", "sandbox-output")
+    registry = ExecutorRegistry()
+    registry.register(_RecordingExecutor("in-process", "in-process-output"))
+    registry.register(sandbox)
+
+    class _Classifier:
+        def trust_of_flow(self, context: CapabilityContext) -> Trust:
+            assert "lfx_capability_token" not in context.runtime_options
+            assert "lfx_tenant_id" not in context.runtime_options
+            assert "lfx_trust" not in context.runtime_options
+            return Trust.UNTRUSTED
+
+        def is_untrusted_node(self, _node: dict[str, Any], _context: CapabilityContext | None = None) -> bool:
+            return True
+
+    class _Resolver:
+        def resolve(self, context: CapabilityContext) -> str:  # noqa: ARG002
+            return "tenant:resolved"
+
+    class _Provider:
+        def mint(
+            self,
+            *,
+            context: CapabilityContext,  # noqa: ARG002
+            tenant_id: str,
+            component_id: str | None,
+            scopes: Sequence[str],
+            ttl_seconds: int = 600,  # noqa: ARG002
+        ) -> str | None:
+            assert tenant_id == "tenant:resolved"
+            assert component_id is None
+            assert tuple(scopes) == ("variables:read",)
+            return None
+
+        def verify(self, token: str) -> CapabilityClaims:  # noqa: ARG002
+            return CapabilityClaims(tenant_id="tenant:resolved", user_id="graph-user")
+
+    capability_service = CapabilityService(settings_service=_StubSettings())
+    capability_service.install(
+        provider=_Provider(),
+        classifier=_Classifier(),
+        resolver=_Resolver(),
+        untrusted_executor_kind="sandbox",
+    )
+    coordinator = Coordinator(
+        registry=registry,
+        executor_kind="in-process",
+        capability_service=capability_service,
+    )
+
+    outputs = await coordinator.run_to_completion(
+        SimpleNamespace(user_id="graph-user", flow_id="graph-flow"),
+        inputs=[{}],
+        capability_scopes=["variables:read"],
+        lfx_capability_token="spoofed",  # noqa: S106
+        lfx_tenant_id="tenant:spoofed",
+        lfx_trust="trusted",
+    )
+
+    assert outputs == ["sandbox-output"]
+    assert len(sandbox.units) == 1
+    assert sandbox.units[0].executor_kind == "sandbox"
+    assert "lfx_capability_token" not in sandbox.units[0].runtime_options
+    assert sandbox.units[0].runtime_options["lfx_tenant_id"] == "tenant:resolved"
+    assert sandbox.units[0].runtime_options["lfx_trust"] == "untrusted"
+
+
+@pytest.mark.asyncio
 async def test_coordinator_skips_capability_service_when_passthrough() -> None:
     default = _RecordingExecutor("in-process", "default-output")
     registry = ExecutorRegistry()

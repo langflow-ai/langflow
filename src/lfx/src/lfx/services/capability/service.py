@@ -102,7 +102,10 @@ class CapabilityService(Service):
         tenant_id = self._resolver.resolve(context)
         trust = self._classifier.trust_of_flow(context)
         executor_kind = default_executor_kind
-        if trust is Trust.UNTRUSTED and self._untrusted_executor_kind is not None:
+        if trust is Trust.UNTRUSTED:
+            if self._untrusted_executor_kind is None:
+                msg = "Cannot route untrusted flow because no untrusted executor is configured."
+                raise RuntimeError(msg)
             executor_kind = self._untrusted_executor_kind
 
         effective_scopes = tuple(scopes or ())
