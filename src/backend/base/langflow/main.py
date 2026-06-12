@@ -164,6 +164,10 @@ def get_lifespan(*, fix_migration=False, version=None):
         sync_flows_from_fs_task = None
         mcp_init_task = None
         models_dev_refresh_task = None
+        # Pre-initialize so the shutdown cleanup in the `finally` block is safe even
+        # when startup fails before bundle loading assigns it. Otherwise that cleanup
+        # raises UnboundLocalError, masking the real startup error.
+        temp_dirs: list[tempfile.TemporaryDirectory] = []
 
         try:
             start_time = asyncio.get_event_loop().time()
