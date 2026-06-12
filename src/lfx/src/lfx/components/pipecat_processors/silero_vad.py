@@ -66,10 +66,19 @@ class SileroVADComponent(Component):
         from pipecat.audio.vad.silero import SileroVADAnalyzer
         from pipecat.audio.vad.vad_analyzer import VADParams
 
+        confidence = float(self.confidence)
+        min_volume = float(self.min_volume)
+        if not 0.0 <= confidence <= 1.0:
+            msg = f"confidence must be between 0 and 1, got {confidence}"
+            raise ValueError(msg)
+        if not 0.0 <= min_volume <= 1.0:
+            msg = f"min_volume must be between 0 and 1, got {min_volume}"
+            raise ValueError(msg)
+
         params = VADParams(
-            confidence=float(self.confidence),
+            confidence=confidence,
             start_secs=float(self.start_secs),
             stop_secs=float(self.stop_secs),
-            min_volume=float(self.min_volume),
+            min_volume=min_volume,
         )
         return SileroVADAnalyzer(sample_rate=int(self.sample_rate), params=params)

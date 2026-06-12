@@ -45,9 +45,13 @@ class CartesiaTTSServiceComponent(PipecatServiceComponent):
     def build_service(self) -> PipecatTTSService:
         from pipecat.services.cartesia.tts import CartesiaTTSService
 
+        sample_rate = int(self.sample_rate)
+        if sample_rate <= 0:
+            msg = f"sample_rate must be a positive integer, got {sample_rate}"
+            raise ValueError(msg)
         return CartesiaTTSService(
             api_key=self.api_key,
             voice_id=self.voice_id,
             model=self.model,
-            sample_rate=int(self.sample_rate),
+            sample_rate=sample_rate,
         )

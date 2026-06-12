@@ -38,6 +38,12 @@ def get_session(component: Any) -> dict:
             "with at least a 'websocket' entry."
         )
         raise RuntimeError(msg)
+    if not isinstance(session, dict):
+        msg = (
+            f"{type(component).__name__}: session_context must be a dict, "
+            f"got {type(session).__name__}."
+        )
+        raise TypeError(msg)
     return session
 
 
