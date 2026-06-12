@@ -5,6 +5,8 @@ on:
   # branch, since workflow_dispatch only registers once the file is on main.
   push:
     branches: [feat/a11y]
+  # TEMP: remove before merging — run on PRs while validating the workflow.
+  pull_request:
   schedule:
     # Run nightly at 02:00 UTC, after the nightly build window
     - cron: "0 2 * * *"
