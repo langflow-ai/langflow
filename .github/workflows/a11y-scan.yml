@@ -35,10 +35,35 @@ jobs:
     permissions:
       contents: read
     steps:
+      # Cron only fires from the default branch, so scheduled runs resolve the
+      # latest release-* branch and scan that (same pattern as nightly_build).
+      - name: Resolve Ref To Scan
+        id: resolve_ref
+        shell: bash
+        run: |
+          if [ -n "${{ inputs.ref }}" ]; then
+            REF="${{ inputs.ref }}"
+          elif [ "${{ github.event_name }}" = "schedule" ]; then
+            REF=$(git ls-remote --heads https://github.com/${{ github.repository }} 'refs/heads/release-*' \
+              | awk '{print $2}' \
+              | sed 's|refs/heads/||' \
+              | grep -E '^release-[0-9]+\.[0-9]+\.[0-9]+$' \
+              | sort -V \
+              | tail -n 1)
+            if [ -z "$REF" ]; then
+              echo "No release-* branch found in ${{ github.repository }}"
+              exit 1
+            fi
+          else
+            REF="${{ github.ref }}"
+          fi
+          echo "ref=$REF" >> "$GITHUB_OUTPUT"
+          echo "Scanning ref: $REF"
+
       - name: Checkout Repository
         uses: actions/checkout@v6
         with:
-          ref: ${{ inputs.ref || github.ref }}
+          ref: ${{ steps.resolve_ref.outputs.ref }}
 
       - name: Setup Node.js Environment
         uses: actions/setup-node@v6
