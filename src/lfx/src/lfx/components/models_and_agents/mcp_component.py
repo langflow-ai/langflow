@@ -161,7 +161,7 @@ class MCPToolsComponent(ComponentWithCache):
             msg = "Tool Execution Timeout must be greater than or equal to 0."
             raise ValueError(msg)
 
-        return val if val else None
+        return val or None
 
     def _mcp_servers_cache_key(self, server_name: str) -> str:
         """Cache key for shared servers map.
