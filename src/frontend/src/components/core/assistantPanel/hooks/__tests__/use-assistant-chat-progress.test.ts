@@ -412,7 +412,10 @@ describe("useAssistantChat — retrying clears stale partial output", () => {
     // attempt stayed on screen while the next attempt ran.
     mockPostAssistStream.mockImplementation(
       async (_request: unknown, callbacks: Record<string, Function>) => {
-        callbacks.onToken({ event: "token", chunk: '{"component_type":"Memory"}' });
+        callbacks.onToken({
+          event: "token",
+          chunk: '{"component_type":"Memory"}',
+        });
         callbacks.onProgress({
           event: "progress",
           step: "retrying",
@@ -428,7 +431,9 @@ describe("useAssistantChat — retrying clears stale partial output", () => {
       await result.current.handleSend("crie um flow", TEST_MODEL);
     });
 
-    const assistant = result.current.messages.find((m) => m.role === "assistant");
+    const assistant = result.current.messages.find(
+      (m) => m.role === "assistant",
+    );
     expect(assistant?.content).toBe("");
   });
 });
