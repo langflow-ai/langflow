@@ -3,6 +3,7 @@ import datetime
 import hashlib
 import os
 import secrets
+from dataclasses import dataclass
 from typing import TYPE_CHECKING
 from uuid import UUID
 
@@ -18,6 +19,15 @@ from langflow.services.deps import get_settings_service
 
 if TYPE_CHECKING:
     from sqlmodel.sql.expression import SelectOfScalar
+
+
+@dataclass(frozen=True)
+class ApiKeyAuthResult:
+    """Authenticated API-key metadata."""
+
+    user: User
+    api_key_source: str
+    api_key_id: UUID | None = None
 
 
 def hash_api_key(api_key: str) -> str:
@@ -117,7 +127,30 @@ async def check_key(session: AsyncSession, api_key: str) -> User | None:
     return await _check_key_from_db(session, api_key, settings_service)
 
 
+async def authenticate_api_key(session: AsyncSession, api_key: str) -> ApiKeyAuthResult | None:
+    """Validate an API key and return the user plus non-secret key metadata."""
+    settings_service = get_settings_service()
+    api_key_source = settings_service.auth_settings.API_KEY_SOURCE
+
+    if api_key_source == "env":
+        user = await _check_key_from_env(session, api_key, settings_service)
+        if user is not None:
+            return ApiKeyAuthResult(user=user, api_key_source="env")
+        # Fallback to database if env validation fails
+    return await _check_key_from_db_with_context(session, api_key, settings_service)
+
+
 async def _check_key_from_db(session: AsyncSession, api_key: str, settings_service) -> User | None:
+    """Validate API key against the database and return only the user."""
+    result = await _check_key_from_db_with_context(session, api_key, settings_service)
+    return result.user if result is not None else None
+
+
+async def _check_key_from_db_with_context(
+    session: AsyncSession,
+    api_key: str,
+    settings_service,
+) -> ApiKeyAuthResult | None:
     """Validate API key against the database.
 
     Uses hash-based O(1) lookup first. Falls back to decrypt-and-compare
@@ -141,7 +174,10 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
             api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-        return await session.get(User, api_key_obj.user_id)
+        user = await session.get(User, api_key_obj.user_id)
+        if user is None:
+            return None
+        return ApiKeyAuthResult(user=user, api_key_source="db", api_key_id=api_key_obj.id)  # pragma: allowlist secret
 
     if len(matches) > 1:
         key_ids = [str(m.id) for m in matches]
@@ -179,7 +215,14 @@ async def _check_key_from_db(session: AsyncSession, api_key: str, settings_servi
                 api_key_obj.last_used_at = datetime.datetime.now(datetime.timezone.utc)
             session.add(api_key_obj)
             await session.flush()
-            return await session.get(User, api_key_obj.user_id)
+            user = await session.get(User, api_key_obj.user_id)
+            if user is None:
+                return None
+            return ApiKeyAuthResult(
+                user=user,
+                api_key_source="db",  # pragma: allowlist secret
+                api_key_id=api_key_obj.id,
+            )
 
     return None
 

@@ -10,6 +10,11 @@ import jwt
 import pytest
 from fastapi import HTTPException, WebSocketException, status
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    clear_current_auth_context,
+    get_current_auth_context,
+)
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidTokenError,
@@ -17,6 +22,7 @@ from langflow.services.auth.exceptions import (
     TokenExpiredError,
 )
 from langflow.services.auth.service import AuthService
+from langflow.services.database.models.api_key.crud import ApiKeyAuthResult
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
 from pydantic import SecretStr
@@ -116,6 +122,38 @@ async def test_authenticate_with_credentials_missing_creds_raises(
     """Default config (AUTO_LOGIN off, skip_auth_auto_login off) rejects callers with no creds."""
     with pytest.raises(MissingCredentialsError):
         await auth_service.authenticate_with_credentials(token=None, api_key=None, db=AsyncMock())
+
+
+@pytest.mark.anyio
+async def test_authenticate_with_api_key_sets_auth_context(auth_service: AuthService):
+    user = _dummy_user(uuid4())
+    api_key_id = uuid4()
+
+    with patch(
+        "langflow.services.auth.service.authenticate_api_key",
+        new=AsyncMock(
+            return_value=ApiKeyAuthResult(
+                user=user,
+                api_key_source="db",  # pragma: allowlist secret
+                api_key_id=api_key_id,
+            )
+        ),
+    ):
+        try:
+            result = await auth_service.authenticate_with_credentials(
+                token=None,
+                api_key="sk-test-key",  # pragma: allowlist secret
+                db=AsyncMock(),
+            )
+            context = get_current_auth_context()
+        finally:
+            clear_current_auth_context()
+
+    assert result.id == user.id
+    assert context is not None
+    assert context.method == AUTH_METHOD_API_KEY
+    assert context.api_key_id == api_key_id
+    assert context.api_key_source == "db"  # pragma: allowlist secret
 
 
 @pytest.mark.anyio

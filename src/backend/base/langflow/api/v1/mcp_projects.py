@@ -67,9 +67,15 @@ from langflow.api.v1.schemas import (
     MCPSettings,
 )
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    AUTH_METHOD_AUTO_LOGIN,
+    AuthCredentialContext,
+    set_current_auth_context,
+)
 from langflow.services.auth.mcp_encryption import decrypt_auth_settings, encrypt_auth_settings
 from langflow.services.database.models import Flow, Folder
-from langflow.services.database.models.api_key.crud import check_key, create_api_key
+from langflow.services.database.models.api_key.crud import authenticate_api_key, create_api_key
 from langflow.services.database.models.api_key.model import ApiKeyCreate
 from langflow.services.database.models.user.crud import get_user_by_username
 from langflow.services.database.models.user.model import User
@@ -144,9 +150,17 @@ async def verify_project_auth(
             )
 
         # Validate the API key
-        user = await check_key(db, api_key)
-        if not user:
+        api_key_result = await authenticate_api_key(db, api_key)
+        if not api_key_result:
             raise HTTPException(status_code=401, detail="Invalid API key")
+        set_current_auth_context(
+            AuthCredentialContext(
+                method=AUTH_METHOD_API_KEY,
+                api_key_id=api_key_result.api_key_id,
+                api_key_source=api_key_result.api_key_source,
+            )
+        )
+        user = api_key_result.user
 
         # Verify user has access to the project
         project_access = (
@@ -171,6 +185,7 @@ async def _superuser_fallback(db: AsyncSession, settings_service) -> User:
     result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
     if result:
         logger.warning(AUTO_LOGIN_WARNING)
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
         return result
     raise HTTPException(
         status_code=status.HTTP_403_FORBIDDEN,

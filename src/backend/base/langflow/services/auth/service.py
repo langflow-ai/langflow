@@ -17,6 +17,15 @@ from sqlalchemy.exc import IntegrityError
 
 from langflow.helpers.user import get_user_by_flow_id_or_endpoint_name
 from langflow.services.auth.constants import AUTO_LOGIN_ERROR, AUTO_LOGIN_WARNING
+from langflow.services.auth.context import (
+    AUTH_METHOD_API_KEY,
+    AUTH_METHOD_AUTO_LOGIN,
+    AUTH_METHOD_EXTERNAL,
+    AUTH_METHOD_JWT,
+    AuthCredentialContext,
+    clear_current_auth_context,
+    set_current_auth_context,
+)
 from langflow.services.auth.exceptions import (
     InactiveUserError,
     InvalidCredentialsError,
@@ -31,7 +40,7 @@ from langflow.services.auth.external import (
     identity_from_claims,
     resolve_external_identity,
 )
-from langflow.services.database.models.api_key.crud import check_key
+from langflow.services.database.models.api_key.crud import authenticate_api_key
 from langflow.services.database.models.user.crud import (
     get_user_by_id,
     get_user_by_username,
@@ -44,8 +53,6 @@ from langflow.services.schema import ServiceType
 if TYPE_CHECKING:
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
-
-    from langflow.services.database.models.api_key.model import ApiKey
 
 
 class AuthService(BaseAuthService):
@@ -89,6 +96,8 @@ class AuthService(BaseAuthService):
             TokenExpiredError: If token has expired
             InactiveUserError: If user account is inactive
         """
+        clear_current_auth_context()
+
         # Try token authentication first (if token provided)
         if token:
             try:
@@ -155,6 +164,7 @@ class AuthService(BaseAuthService):
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
             logger.warning(AUTO_LOGIN_WARNING)
+            set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
             return superuser
 
         # No credentials provided
@@ -229,6 +239,7 @@ class AuthService(BaseAuthService):
             msg = "User account is inactive"
             raise InactiveUserError(msg)
 
+        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_JWT))
         return user
 
     async def _authenticate_with_external_token(self, token: str, db: AsyncSession) -> User | None:
@@ -245,19 +256,29 @@ class AuthService(BaseAuthService):
         except AuthInvalidTokenError as exc:
             logger.debug(f"External credential rejected: {exc}")
             return None
+        set_current_auth_context(
+            AuthCredentialContext(method=AUTH_METHOD_EXTERNAL, external_provider=identity.provider)
+        )
         return await self._materialize_external_user(identity, db)
 
     async def _authenticate_with_api_key(self, api_key: str, db: AsyncSession) -> UserRead | None:
         """Internal method to authenticate with API key (raises generic exceptions)."""
-        result = await check_key(db, api_key)
+        result = await authenticate_api_key(db, api_key)
         if not result:
             return None
 
-        if isinstance(result, User):
-            user_read = UserRead.model_validate(result, from_attributes=True)
+        if isinstance(result.user, User):
+            user_read = UserRead.model_validate(result.user, from_attributes=True)
             if not user_read.is_active:
                 msg = "User account is inactive"
                 raise InactiveUserError(msg)
+            set_current_auth_context(
+                AuthCredentialContext(
+                    method=AUTH_METHOD_API_KEY,
+                    api_key_id=result.api_key_id,
+                    api_key_source=result.api_key_source,
+                )
+            )
             return user_read
 
         return None
@@ -403,7 +424,7 @@ class AuthService(BaseAuthService):
         db: AsyncSession,
         settings_service,
     ) -> UserRead | None:
-        result: ApiKey | User | None
+        clear_current_auth_context()
 
         if settings_service.auth_settings.AUTO_LOGIN:
             if not settings_service.auth_settings.SUPERUSER:
@@ -425,6 +446,7 @@ class AuthService(BaseAuthService):
                             detail="User account is inactive",
                         )
                     logger.warning(AUTO_LOGIN_WARNING)
+                    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                     return UserRead.model_validate(result, from_attributes=True)
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
@@ -434,7 +456,7 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, api_key)
+            api_key_result = await authenticate_api_key(db, api_key)
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -447,23 +469,32 @@ class AuthService(BaseAuthService):
             api_key = query_param or header_param
             if api_key is None:  # pragma: no cover - guaranteed by the elif-condition above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, api_key)
+            api_key_result = await authenticate_api_key(db, api_key)
 
-        if not result:
+        if not api_key_result:
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="Invalid or missing API key",
             )
 
-        if isinstance(result, User):
-            return UserRead.model_validate(result, from_attributes=True)
+        if isinstance(api_key_result.user, User):
+            set_current_auth_context(
+                AuthCredentialContext(
+                    method=AUTH_METHOD_API_KEY,
+                    api_key_id=api_key_result.api_key_id,
+                    api_key_source=api_key_result.api_key_source,
+                )
+            )
+            return UserRead.model_validate(api_key_result.user, from_attributes=True)
 
         msg = "Invalid result type"
         raise ValueError(msg)
 
     async def ws_api_key_security(self, api_key: str | None) -> UserRead:
         settings = self.settings
+        clear_current_auth_context()
         async with session_scope() as db:
+            api_key_result = None
             if settings.auth_settings.AUTO_LOGIN:
                 if not settings.auth_settings.SUPERUSER:
                     raise WebSocketException(
@@ -484,13 +515,15 @@ class AuthService(BaseAuthService):
                                 reason="User account is inactive",
                             )
                         logger.warning(AUTO_LOGIN_WARNING)
+                        set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                     else:
                         raise WebSocketException(
                             code=status.WS_1008_POLICY_VIOLATION,
                             reason=AUTO_LOGIN_ERROR,
                         )
                 else:
-                    result = await check_key(db, api_key)
+                    api_key_result = await authenticate_api_key(db, api_key)
+                    result = api_key_result.user if api_key_result is not None else None
 
             else:
                 if not api_key:
@@ -498,7 +531,8 @@ class AuthService(BaseAuthService):
                         code=status.WS_1008_POLICY_VIOLATION,
                         reason="An API key must be passed as query or header",
                     )
-                result = await check_key(db, api_key)
+                api_key_result = await authenticate_api_key(db, api_key)
+                result = api_key_result.user if api_key_result is not None else None
 
             if not result:
                 raise WebSocketException(
@@ -507,6 +541,14 @@ class AuthService(BaseAuthService):
                 )
 
             if isinstance(result, User):
+                if api_key_result is not None:
+                    set_current_auth_context(
+                        AuthCredentialContext(
+                            method=AUTH_METHOD_API_KEY,
+                            api_key_id=api_key_result.api_key_id,
+                            api_key_source=api_key_result.api_key_source,
+                        )
+                    )
                 return UserRead.model_validate(result, from_attributes=True)
 
         raise WebSocketException(
@@ -543,6 +585,7 @@ class AuthService(BaseAuthService):
 
         This method now uses the framework-agnostic _authenticate_with_token() internally.
         """
+        clear_current_auth_context()
         if token is None:
             msg = "Missing authentication token"
             raise MissingCredentialsError(msg)
@@ -590,6 +633,7 @@ class AuthService(BaseAuthService):
 
     async def get_webhook_user(self, flow_id: str, request: Request) -> UserRead:
         settings_service = self.settings
+        clear_current_auth_context()
 
         if not settings_service.auth_settings.WEBHOOK_AUTH_ENABLE:
             try:
@@ -612,12 +656,19 @@ class AuthService(BaseAuthService):
 
         try:
             async with session_scope() as db:
-                result = await check_key(db, api_key)
+                result = await authenticate_api_key(db, api_key)
                 if not result:
                     logger.warning("Invalid API key provided for webhook")
                     raise HTTPException(status_code=403, detail="Invalid API key")
 
-                authenticated_user = UserRead.model_validate(result, from_attributes=True)
+                set_current_auth_context(
+                    AuthCredentialContext(
+                        method=AUTH_METHOD_API_KEY,
+                        api_key_id=result.api_key_id,
+                        api_key_source=result.api_key_source,
+                    )
+                )
+                authenticated_user = UserRead.model_validate(result.user, from_attributes=True)
                 logger.info("Webhook API key validated successfully")
         except HTTPException:
             raise
@@ -925,11 +976,13 @@ class AuthService(BaseAuthService):
         header_param: str | None,
         db: AsyncSession,
     ) -> User | UserRead:
+        clear_current_auth_context()
         if token:
             return await self.get_current_user_from_access_token(token, db)
 
         settings_service = self.settings
-        result: ApiKey | User | None
+        result: User | None
+        api_key_result = None
 
         if settings_service.auth_settings.AUTO_LOGIN:
             if not settings_service.auth_settings.SUPERUSER:
@@ -941,13 +994,15 @@ class AuthService(BaseAuthService):
                 result = await get_user_by_username(db, settings_service.auth_settings.SUPERUSER)
                 if result:
                     logger.warning(AUTO_LOGIN_WARNING)
+                    set_current_auth_context(AuthCredentialContext(method=AUTH_METHOD_AUTO_LOGIN))
                     return result
             else:
                 # At least one of query_param or header_param is truthy
                 api_key = query_param or header_param
                 if api_key is None:  # pragma: no cover - guaranteed by the if-condition above
                     raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-                result = await check_key(db, api_key)
+                api_key_result = await authenticate_api_key(db, api_key)
+                result = api_key_result.user if api_key_result is not None else None
 
         elif not query_param and not header_param:
             raise HTTPException(
@@ -956,13 +1011,15 @@ class AuthService(BaseAuthService):
             )
 
         elif query_param:
-            result = await check_key(db, query_param)
+            api_key_result = await authenticate_api_key(db, query_param)
+            result = api_key_result.user if api_key_result is not None else None
 
         else:
             # header_param must be truthy here (query_param is falsy, and we passed the not-both-None check)
             if header_param is None:  # pragma: no cover - guaranteed by the elif chain above
                 raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Invalid or missing API key")
-            result = await check_key(db, header_param)
+            api_key_result = await authenticate_api_key(db, header_param)
+            result = api_key_result.user if api_key_result is not None else None
 
         if not result:
             raise HTTPException(
@@ -971,6 +1028,14 @@ class AuthService(BaseAuthService):
             )
 
         if isinstance(result, User):
+            if api_key_result is not None:
+                set_current_auth_context(
+                    AuthCredentialContext(
+                        method=AUTH_METHOD_API_KEY,
+                        api_key_id=api_key_result.api_key_id,
+                        api_key_source=api_key_result.api_key_source,
+                    )
+                )
             return result
 
         raise HTTPException(

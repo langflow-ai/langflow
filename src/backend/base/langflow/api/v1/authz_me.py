@@ -17,6 +17,7 @@ from fastapi import APIRouter, HTTPException, status
 from pydantic import BaseModel, Field, field_validator
 
 from langflow.api.utils import CurrentActiveUser
+from langflow.services.authorization.guards import _auth_context
 from langflow.services.deps import get_authorization_service
 
 router = APIRouter(prefix="/authz/me", tags=["Authorization"])
@@ -127,7 +128,7 @@ async def get_effective_permissions(
         resource_ids=body.resource_ids,
         actions=actions,
         domain=body.domain,
-        context={"is_superuser": getattr(current_user, "is_superuser", False)},
+        context=_auth_context(current_user),
     )
     return EffectivePermissionsResponse(
         resource_type=body.resource_type,
