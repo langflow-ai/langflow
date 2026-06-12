@@ -148,7 +148,9 @@ async def test_unselected_branch_does_not_run_when_branches_reconverge():
 
     assert selected.did_run is True
     assert unselected.did_run is False, "Unselected branch executed despite not being routed to"
+    assert merge.did_run is True, "Merge node should execute from selected branch"
     assert "unselected" not in yielded
+    assert "merge" in yielded
 
 
 async def test_only_matched_branch_runs_with_three_routes():

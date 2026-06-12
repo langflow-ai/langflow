@@ -986,13 +986,51 @@ class Graph:
         if state == VertexStates.INACTIVE:
             self.run_manager.remove_from_predecessors(vertex_id)
 
+    def _get_output_names(self, vertex_id: str) -> set[str]:
+        return {
+            edge.source_handle.name
+            for edge in self.edges
+            if edge.source_id == vertex_id and getattr(edge.source_handle, "name", None)
+        }
+
+    def _collect_branch_vertices(self, vertex_id: str, output_names: set[str] | None = None) -> set[str]:
+        visited: set[str] = set()
+
+        def walk(current_id: str, *, is_source: bool = False) -> None:
+            for edge in self.edges:
+                if edge.source_id != current_id:
+                    continue
+                if is_source and output_names is not None and edge.source_handle.name not in output_names:
+                    continue
+                child_id = edge.target_id
+                if child_id in visited:
+                    continue
+                visited.add(child_id)
+                walk(child_id)
+
+        walk(vertex_id, is_source=True)
+        return visited
+
+    def _get_vertices_reachable_from_other_outputs(self, vertex_id: str, output_names: set[str]) -> set[str]:
+        other_output_names = self._get_output_names(vertex_id) - output_names
+        if not other_output_names:
+            return set()
+        return self._collect_branch_vertices(vertex_id, other_output_names)
+
     def _mark_branch(
-        self, vertex_id: str, state: str, visited: set | None = None, output_name: str | None = None
+        self,
+        vertex_id: str,
+        state: str,
+        visited: set | None = None,
+        output_name: str | None = None,
+        protected_vertices: set[str] | None = None,
     ) -> set:
         """Marks a branch of the graph."""
         if visited is None:
             visited = set()
         else:
+            if state == VertexStates.INACTIVE and vertex_id in (protected_vertices or set()):
+                return visited
             self.mark_vertex(vertex_id, state)
         if vertex_id in visited:
             return visited
@@ -1005,11 +1043,21 @@ class Graph:
                 edge = self.get_edge(vertex_id, child_id)
                 if edge and edge.source_handle.name != output_name:
                     continue
-            self._mark_branch(child_id, state, visited)
+            self._mark_branch(child_id, state, visited, protected_vertices=protected_vertices)
         return visited
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
-        visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+        protected_vertices = (
+            self._get_vertices_reachable_from_other_outputs(vertex_id, {output_name})
+            if state == VertexStates.INACTIVE and output_name
+            else None
+        )
+        visited = self._mark_branch(
+            vertex_id=vertex_id,
+            state=state,
+            output_name=output_name,
+            protected_vertices=protected_vertices,
+        )
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
         new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
         if vertex_id in self.cycle_vertices:
@@ -1044,10 +1092,11 @@ class Graph:
             self.conditionally_excluded_vertices -= previous_exclusions
             del self.conditional_exclusion_sources[vertex_id]
 
-        # Now exclude the new branch
-        visited: set[str] = set()
-        excluded: set[str] = set()
-        self._exclude_branch_conditionally(vertex_id, visited, excluded, output_name, skip_first=True)
+        # Now exclude the new branch, except vertices still reachable from a sibling output.
+        excluded = self._collect_branch_vertices(vertex_id, {output_name} if output_name else None)
+        if output_name:
+            excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, {output_name})
+        self.conditionally_excluded_vertices.update(excluded)
 
         # Track which vertices this source excluded
         if excluded:
@@ -1074,40 +1123,19 @@ class Graph:
             self.conditionally_excluded_vertices -= previous_exclusions
             del self.conditional_exclusion_sources[vertex_id]
 
-        # Exclude each requested branch, accumulating the excluded vertices into one set.
-        # ``visited`` is reset per output so each branch is traversed fully, while
-        # ``excluded`` accumulates across outputs (a vertex shared by two excluded
-        # branches is simply added once).
+        # Exclude each requested branch, then keep shared descendants that are still
+        # reachable from a non-excluded output (for example, a merge node downstream
+        # of both a selected and an unselected branch).
+        output_names_set = set(output_names)
         excluded: set[str] = set()
         for output_name in output_names:
-            self._exclude_branch_conditionally(vertex_id, set(), excluded, output_name, skip_first=True)
+            excluded.update(self._collect_branch_vertices(vertex_id, {output_name}))
+        excluded -= self._get_vertices_reachable_from_other_outputs(vertex_id, output_names_set)
+        self.conditionally_excluded_vertices.update(excluded)
 
         # Track which vertices this source excluded so they can be cleared on re-evaluation
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
-
-    def _exclude_branch_conditionally(
-        self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
-    ) -> None:
-        """Recursively excludes vertices in a branch for conditional routing."""
-        if vertex_id in visited:
-            return
-        visited.add(vertex_id)
-
-        # Don't exclude the first vertex (the router itself)
-        if not skip_first:
-            self.conditionally_excluded_vertices.add(vertex_id)
-            excluded.add(vertex_id)
-
-        for child_id in self.parent_child_map[vertex_id]:
-            # If we're at the router (skip_first=True) and have an output_name,
-            # only follow edges from that specific output
-            if skip_first and output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
-                    continue
-            # After the first level, exclude all descendants
-            self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:
         """Returns the edge between two vertices."""
