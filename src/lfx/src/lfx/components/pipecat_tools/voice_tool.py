@@ -122,9 +122,13 @@ class VoiceToolComponent(PipecatToolComponent):
 
         async def _pipecat_handler(params: Any) -> None:  # pragma: no cover — runtime wiring
             args = dict(getattr(params, "arguments", {}) or {})
-            result = user_handle(args)
-            if asyncio.iscoroutine(result):
-                result = await result
+            try:
+                result = user_handle(args)
+                if asyncio.iscoroutine(result):
+                    result = await result
+            except Exception as exc:  # noqa: BLE001 — surface all handler errors to the LLM
+                await params.result_callback({"error": f"{type(exc).__name__}: {exc}"})
+                return
             if not isinstance(result, dict):
                 result = {"result": result}
             await params.result_callback(result)

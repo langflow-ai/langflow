@@ -9,6 +9,7 @@ This is intentionally tiny: KB integrations vary widely. Use this as the
 canonical example, then copy-paste-modify for your own retrieval backend.
 """
 
+import asyncio
 from typing import Any
 
 from lfx.base.pipecat.tool import PipecatToolComponent
@@ -123,18 +124,22 @@ class KnowledgeBaseToolComponent(PipecatToolComponent):
                 return
 
             try:
-                client_kwargs = {"region_name": region}
+                client_kwargs: dict[str, Any] = {"region_name": region}
                 if access_key and secret_key:
                     client_kwargs["aws_access_key_id"] = access_key
                     client_kwargs["aws_secret_access_key"] = secret_key
                 client = boto3.client("bedrock-agent-runtime", **client_kwargs)
-                resp = client.retrieve(
-                    knowledgeBaseId=kb_id,
-                    retrievalQuery={"text": query},
-                    retrievalConfiguration={
-                        "vectorSearchConfiguration": {"numberOfResults": top_k}
-                    },
-                )
+
+                def _retrieve() -> dict:
+                    return client.retrieve(
+                        knowledgeBaseId=kb_id,
+                        retrievalQuery={"text": query},
+                        retrievalConfiguration={
+                            "vectorSearchConfiguration": {"numberOfResults": top_k}
+                        },
+                    )
+
+                resp = await asyncio.to_thread(_retrieve)
                 results = []
                 for item in resp.get("retrievalResults", []):
                     score = float(item.get("score", 0.0))

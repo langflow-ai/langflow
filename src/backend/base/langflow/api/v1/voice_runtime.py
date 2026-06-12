@@ -44,24 +44,30 @@ def _voice_agents_dir() -> Path:
 
 
 def resolve_voice_flow_path(agent_id: str) -> Path:
-    """Resolve an agent ID to an on-disk JSON file path.
+    """Resolve an agent ID to a JSON file path inside the voice-agents directory.
 
-    Supported forms:
-      - absolute path -> used as-is
-      - relative path -> resolved against the voice-agents dir
-      - bare ID       -> joined with .json under the voice-agents dir
+    Only bare names and relative paths that stay inside the agents directory are
+    accepted. Absolute paths and traversal sequences (``..``) that would escape
+    the directory are rejected to prevent path-traversal attacks.
     """
     if not agent_id:
         msg = "Empty agent_id."
         raise ValueError(msg)
     candidate = Path(agent_id)
     if candidate.is_absolute():
-        return candidate
-    base = _voice_agents_dir()
-    direct = base / candidate
+        msg = f"agent_id must be a relative name, not an absolute path: '{agent_id}'"
+        raise ValueError(msg)
+    base = _voice_agents_dir().resolve()
+    direct = (base / candidate).resolve()
+    if not direct.is_relative_to(base):
+        msg = f"agent_id '{agent_id}' resolves outside the agents directory."
+        raise ValueError(msg)
     if direct.exists():
         return direct
-    with_json = base / f"{agent_id}.json"
+    with_json = (base / f"{agent_id}.json").resolve()
+    if not with_json.is_relative_to(base):
+        msg = f"agent_id '{agent_id}' resolves outside the agents directory."
+        raise ValueError(msg)
     if with_json.exists():
         return with_json
     msg = (
