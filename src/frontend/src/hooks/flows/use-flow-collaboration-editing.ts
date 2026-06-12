@@ -8,12 +8,9 @@ import {
 import {
   applyFlowOperationsToStore,
   applyRemoteFlowOperations,
+  buildInverseFlowOperations,
   syncSavedFlowStateFromCanvas,
 } from "@/hooks/flows/flow-operation-adapter";
-import {
-  collectFlowOperationTouches,
-  flowOperationTouchesIntersect,
-} from "@/hooks/flows/flow-operation-diff";
 import useApplyFlowToCanvas from "@/hooks/flows/use-apply-flow-to-canvas";
 import { useFlowCollaboration } from "@/hooks/flows/use-flow-collaboration";
 import useFlowStore from "@/stores/flowStore";
@@ -37,10 +34,14 @@ type UseFlowCollaborationEditingOptions = {
 type QueuedOperationBatch = {
   operations: FlowOperation[];
   historyEntry?: CollaborationHistoryEntry;
+  optimisticHistoryId?: number;
   onAccepted?: (acceptedForwardOps: FlowOperation[]) => void;
 };
 
 type UpdateNodesOperation = Extract<FlowOperation, { type: "update_nodes" }>;
+type OptimisticHistoryEntry = CollaborationHistoryEntry & {
+  optimisticHistoryId?: number;
+};
 
 const MAX_COLLABORATION_HISTORY_SIZE = 100;
 const UPDATE_NODES_COALESCE_MS = 300;
@@ -189,8 +190,9 @@ export function useFlowCollaborationEditing({
   const coalescedOperationTimerRef = useRef<ReturnType<
     typeof setTimeout
   > | null>(null);
-  const undoHistoryRef = useRef<CollaborationHistoryEntry[]>([]);
-  const redoHistoryRef = useRef<CollaborationHistoryEntry[]>([]);
+  const undoHistoryRef = useRef<OptimisticHistoryEntry[]>([]);
+  const redoHistoryRef = useRef<OptimisticHistoryEntry[]>([]);
+  const nextOptimisticHistoryIdRef = useRef(1);
   const collaborationReadyRef = useRef(false);
   const reloadingRef = useRef(false);
 
@@ -223,12 +225,62 @@ export function useFlowCollaborationEditing({
     return true;
   }, []);
 
-  const pushUndoHistory = useCallback((entry: CollaborationHistoryEntry) => {
-    undoHistoryRef.current = [
-      ...undoHistoryRef.current.slice(-MAX_COLLABORATION_HISTORY_SIZE + 1),
-      entry,
-    ];
-  }, []);
+  const pushUndoHistory = useCallback(
+    (entry: OptimisticHistoryEntry): OptimisticHistoryEntry => {
+      const nextEntry = { ...entry };
+      undoHistoryRef.current = [
+        ...undoHistoryRef.current.slice(-MAX_COLLABORATION_HISTORY_SIZE + 1),
+        nextEntry,
+      ];
+      return nextEntry;
+    },
+    [],
+  );
+
+  const replaceOptimisticHistoryEntry = useCallback(
+    (optimisticHistoryId: number, entry: CollaborationHistoryEntry) => {
+      const nextEntry = { ...entry, optimisticHistoryId };
+      const replaceEntry = (historyEntry: OptimisticHistoryEntry) =>
+        historyEntry.optimisticHistoryId === optimisticHistoryId
+          ? nextEntry
+          : historyEntry;
+
+      undoHistoryRef.current = undoHistoryRef.current.map(replaceEntry);
+      redoHistoryRef.current = redoHistoryRef.current.map(replaceEntry);
+    },
+    [],
+  );
+
+  const pushOptimisticUndoHistory = useCallback(
+    (entry: CollaborationHistoryEntry): number => {
+      const optimisticHistoryId = nextOptimisticHistoryIdRef.current;
+      nextOptimisticHistoryIdRef.current += 1;
+      pushUndoHistory({ ...entry, optimisticHistoryId });
+      redoHistoryRef.current = [];
+      return optimisticHistoryId;
+    },
+    [pushUndoHistory],
+  );
+
+  const ensureOptimisticHistory = useCallback(
+    (batch: QueuedOperationBatch): QueuedOperationBatch => {
+      if (!batch.historyEntry) {
+        return batch;
+      }
+      if (batch.optimisticHistoryId != null) {
+        replaceOptimisticHistoryEntry(
+          batch.optimisticHistoryId,
+          batch.historyEntry,
+        );
+        return batch;
+      }
+      return {
+        ...batch,
+        optimisticHistoryId: pushOptimisticUndoHistory(batch.historyEntry),
+      };
+    },
+    [pushOptimisticUndoHistory, replaceOptimisticHistoryEntry],
+  );
 
   const reloadFlowFromServer = useCallback(async () => {
     if (!flowId) {
@@ -293,12 +345,11 @@ export function useFlowCollaborationEditing({
           accepted.forward_ops.length > 0
             ? accepted.forward_ops
             : batch.operations;
-        if (batch.historyEntry) {
-          pushUndoHistory({
+        if (batch.historyEntry && batch.optimisticHistoryId != null) {
+          replaceOptimisticHistoryEntry(batch.optimisticHistoryId, {
             forwardOps: acceptedForwardOps,
             inverseOps: batch.historyEntry.inverseOps,
           });
-          redoHistoryRef.current = [];
         }
         batch.onAccepted?.(acceptedForwardOps);
       } catch {
@@ -307,7 +358,7 @@ export function useFlowCollaborationEditing({
         return;
       }
     }
-  }, [pushUndoHistory, reloadFlowFromServer]);
+  }, [reloadFlowFromServer, replaceOptimisticHistoryEntry]);
 
   const scheduleDrainQueue = useCallback(() => {
     if (!collaborationReadyRef.current) {
@@ -337,15 +388,20 @@ export function useFlowCollaborationEditing({
       if (!operations.length || reloadingRef.current) {
         return;
       }
-      const batch: QueuedOperationBatch = {
+      let batch: QueuedOperationBatch = {
         operations,
         historyEntry: options?.historyEntry,
       };
 
       if (canCoalesceOperationBatch(batch)) {
-        coalescedOperationBatchRef.current = coalescedOperationBatchRef.current
-          ? mergeUpdateNodeBatches(coalescedOperationBatchRef.current, batch)
+        const currentBatch = coalescedOperationBatchRef.current;
+        batch = currentBatch
+          ? {
+              ...mergeUpdateNodeBatches(currentBatch, batch),
+              optimisticHistoryId: currentBatch.optimisticHistoryId,
+            }
           : batch;
+        coalescedOperationBatchRef.current = ensureOptimisticHistory(batch);
         if (collaborationReadyRef.current) {
           scheduleCoalescedOperationFlush();
         }
@@ -353,10 +409,11 @@ export function useFlowCollaborationEditing({
       }
 
       flushCoalescedOperationBatch();
-      queuedOperationBatchesRef.current.push(batch);
+      queuedOperationBatchesRef.current.push(ensureOptimisticHistory(batch));
       scheduleDrainQueue();
     },
     [
+      ensureOptimisticHistory,
       flushCoalescedOperationBatch,
       scheduleCoalescedOperationFlush,
       scheduleDrainQueue,
@@ -364,14 +421,15 @@ export function useFlowCollaborationEditing({
   );
 
   const enqueueHistoryAction = useCallback(
-    (operations: FlowOperation[], onAccepted: () => void) => {
+    (operations: FlowOperation[]) => {
       if (!operations.length || reloadingRef.current) {
-        return;
+        return false;
       }
       applyFlowOperationsToStore(operations);
       flushCoalescedOperationBatch();
-      queuedOperationBatchesRef.current.push({ operations, onAccepted });
+      queuedOperationBatchesRef.current.push({ operations });
       scheduleDrainQueue();
+      return true;
     },
     [flushCoalescedOperationBatch, scheduleDrainQueue],
   );
@@ -381,9 +439,23 @@ export function useFlowCollaborationEditing({
     if (!entry) {
       return;
     }
-    enqueueHistoryAction(entry.inverseOps, () => {
-      redoHistoryRef.current.push(entry);
-    });
+    const flowStore = useFlowStore.getState();
+    const redoForwardOps = buildInverseFlowOperations(
+      flowStore.nodes,
+      flowStore.edges,
+      flowStore.currentFlow?.data as Record<string, unknown> | undefined,
+      entry.inverseOps,
+    );
+    if (enqueueHistoryAction(entry.inverseOps)) {
+      if (redoForwardOps.length > 0) {
+        redoHistoryRef.current.push({
+          forwardOps: redoForwardOps,
+          inverseOps: entry.inverseOps,
+        });
+      }
+    } else {
+      undoHistoryRef.current.push(entry);
+    }
   }, [enqueueHistoryAction]);
 
   const redoCollaborationOperations = useCallback(() => {
@@ -391,27 +463,12 @@ export function useFlowCollaborationEditing({
     if (!entry) {
       return;
     }
-    enqueueHistoryAction(entry.forwardOps, () => {
+    if (enqueueHistoryAction(entry.forwardOps)) {
       pushUndoHistory(entry);
-    });
+    } else {
+      redoHistoryRef.current.push(entry);
+    }
   }, [enqueueHistoryAction, pushUndoHistory]);
-
-  const invalidateHistoryForRemoteOperations = useCallback(
-    (operations: FlowOperation[]) => {
-      const remoteTouches = collectFlowOperationTouches(operations);
-      const isStillValid = (entry: CollaborationHistoryEntry) => {
-        const entryTouches = collectFlowOperationTouches([
-          ...entry.forwardOps,
-          ...entry.inverseOps,
-        ]);
-        return !flowOperationTouchesIntersect(remoteTouches, entryTouches);
-      };
-
-      undoHistoryRef.current = undoHistoryRef.current.filter(isStillValid);
-      redoHistoryRef.current = redoHistoryRef.current.filter(isStillValid);
-    },
-    [],
-  );
 
   const flushCollaborationSave = useCallback(async () => {
     if (flushCoalescedOperationBatch()) {
@@ -432,7 +489,6 @@ export function useFlowCollaborationEditing({
     enabled: betaEnabled && Boolean(flowId),
     onRemoteOperation: (message) => {
       applyRemoteFlowOperations(message.forward_ops);
-      invalidateHistoryForRemoteOperations(message.forward_ops);
     },
     onReloadRequired: () => {
       queuedOperationBatchesRef.current = [];

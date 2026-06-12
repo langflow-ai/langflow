@@ -413,9 +413,24 @@ function PageComponent({
     useFlowStore.setState({ autoSaveFlow });
   }, [autoSaveFlow]);
 
+  function isEditableShortcutTarget(e: KeyboardEvent) {
+    const target = e.target;
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(target.closest("input, textarea, [contenteditable='true']"));
+  }
+
+  function shouldHandleHistoryShortcut(e: KeyboardEvent) {
+    if (isEditableShortcutTarget(e)) return false;
+    if (!isWrappedWithClass(e, "noflow")) return true;
+    return (
+      collaborationOperationMode &&
+      (window.getSelection()?.toString().length ?? 0) === 0
+    );
+  }
+
   function handleUndo(e: KeyboardEvent) {
     if (isPreviewActive || effectiveLocked) return;
-    if (!isWrappedWithClass(e, "noflow")) {
+    if (shouldHandleHistoryShortcut(e)) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       undo();
@@ -424,7 +439,7 @@ function PageComponent({
 
   function handleRedo(e: KeyboardEvent) {
     if (isPreviewActive || effectiveLocked) return;
-    if (!isWrappedWithClass(e, "noflow")) {
+    if (shouldHandleHistoryShortcut(e)) {
       e.preventDefault();
       (e as unknown as Event).stopImmediatePropagation();
       redo();
@@ -597,12 +612,16 @@ function PageComponent({
   const cutAction = useShortcutsStore((state) => state.cut);
   const pasteAction = useShortcutsStore((state) => state.paste);
   const downloadAction = useShortcutsStore((state) => state.download);
+  const historyHotkeyOptions = {
+    enableOnFormTags: true,
+    enableOnContentEditable: true,
+  };
   //@ts-ignore
-  useHotkeys(undoAction, handleUndo);
+  useHotkeys(undoAction, handleUndo, historyHotkeyOptions);
   //@ts-ignore
-  useHotkeys(redoAction, handleRedo);
+  useHotkeys(redoAction, handleRedo, historyHotkeyOptions);
   //@ts-ignore
-  useHotkeys(redoAltAction, handleRedo);
+  useHotkeys(redoAltAction, handleRedo, historyHotkeyOptions);
   //@ts-ignore
   useHotkeys(groupAction, handleGroup);
   //@ts-ignore

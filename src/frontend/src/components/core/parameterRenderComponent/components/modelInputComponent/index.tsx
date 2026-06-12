@@ -106,6 +106,7 @@ export default function ModelInputComponent({
   // Ref to track if we've already processed the empty options state
   // prevents infinite loop when no models are available
   const hasProcessedEmptyRef = useRef(false);
+  const hasHadValueRef = useRef(Boolean(value?.length));
 
   const _postTemplateValue = usePostTemplateValue({
     parameterId: "model",
@@ -441,11 +442,24 @@ export default function ModelInputComponent({
     return flatOptions.length > 0 ? flatOptions[0] : null;
   }, [value, flatOptions, isConnectionMode, externalOptions, providersData]);
 
+  const releaseFocusAfterClose = useCallback(() => {
+    window.setTimeout(() => {
+      refButton.current?.blur();
+      if (document.activeElement instanceof HTMLElement) {
+        document.activeElement.blur();
+      }
+    }, 0);
+  }, []);
+
   useEffect(() => {
     if (flatOptions.length === 0 || isConnectionMode) return;
     if (hasProcessedEmptyRef.current) return;
 
     const isEmpty = !value || value.length === 0;
+    const hadValueBeforeThisRender = hasHadValueRef.current;
+    if (!isEmpty) {
+      hasHadValueRef.current = true;
+    }
 
     // Detect a stale saved value: the saved model isn't in flatOptions AND
     // the saved provider is configured locally (the user has actively
@@ -470,6 +484,7 @@ export default function ModelInputComponent({
     // value remains visible and runnable. Only auto-select the first option
     // when there's no saved value at all OR when the saved value is stale.
     if (!isEmpty && !isSavedValueStale) return;
+    if (isEmpty && hadValueBeforeThisRender) return;
 
     const firstOption = flatOptions[0];
     // Construct the new value object
@@ -555,8 +570,9 @@ export default function ModelInputComponent({
 
       handleOnNewValue({ value: newValue });
       setOpen(false);
+      releaseFocusAfterClose();
     },
-    [flatOptions, handleOnNewValue],
+    [flatOptions, handleOnNewValue, releaseFocusAfterClose],
   );
 
   const handleRefreshButtonPress = useCallback(async () => {
@@ -697,6 +713,10 @@ export default function ModelInputComponent({
         }}
         className="noflow nowheel nopan nodelete nodrag p-0"
         style={{ minWidth: refButton?.current?.clientWidth ?? "200px" }}
+        onCloseAutoFocus={(event) => {
+          event.preventDefault();
+          releaseFocusAfterClose();
+        }}
       >
         <Command className="flex flex-col">
           <ModelList

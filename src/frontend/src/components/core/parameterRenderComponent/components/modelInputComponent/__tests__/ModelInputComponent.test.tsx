@@ -332,6 +332,20 @@ describe("ModelInputComponent", () => {
       expect(handleOnNewValue).toHaveBeenCalled();
     });
 
+    it("should release focus after a model is selected", async () => {
+      const user = userEvent.setup();
+
+      renderWithQueryClient(<ModelInputComponent {...defaultProps} />);
+
+      await user.click(screen.getByRole("combobox"));
+      const modelOption = screen.getByTestId("gpt-3.5-turbo-option");
+      await user.click(modelOption);
+
+      await waitFor(() => {
+        expect(document.activeElement).toBe(document.body);
+      });
+    });
+
     it("should allow opening dropdown even when no models are available", async () => {
       const user = userEvent.setup();
       renderWithQueryClient(
@@ -643,6 +657,38 @@ describe("ModelInputComponent", () => {
 
       // Should have called handleOnNewValue with first option
       expect(handleOnNewValue).toHaveBeenCalled();
+    });
+
+    it("should not auto-select after a populated value is cleared", () => {
+      const handleOnNewValue = jest.fn();
+      const selectedValue = [
+        {
+          id: "gpt-4",
+          name: "gpt-4",
+          icon: "Bot",
+          provider: "OpenAI",
+          metadata: {},
+        },
+      ];
+      const { rerenderWithProvider } = renderWithQueryClient(
+        <ModelInputComponent
+          {...defaultProps}
+          value={selectedValue}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      expect(handleOnNewValue).not.toHaveBeenCalled();
+
+      rerenderWithProvider(
+        <ModelInputComponent
+          {...defaultProps}
+          value={[]}
+          handleOnNewValue={handleOnNewValue}
+        />,
+      );
+
+      expect(handleOnNewValue).not.toHaveBeenCalled();
     });
   });
 

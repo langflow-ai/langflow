@@ -436,7 +436,227 @@ describe("useFlowCollaborationEditing", () => {
     });
   });
 
-  it("does not undo a local history entry invalidated by remote operations", async () => {
+  it("allows undo before a local operation is accepted", async () => {
+    writeCollaborationOperationBetaEnabled(true);
+    const forwardOperation: FlowOperation = {
+      type: "delete_edges",
+      ids: ["e1"],
+    };
+    const inverseOperation: FlowOperation = {
+      type: "add_edges",
+      edges: [{ id: "e1", source: "a", target: "b" } as never],
+    };
+    let resolveFirstSubmit:
+      | ((value: {
+          type: "operation.accepted";
+          request_id: string;
+          flow_id: string;
+          revision: number;
+          actor_user_id: string;
+          forward_ops: FlowOperation[];
+          created_at: string;
+        }) => void)
+      | undefined;
+
+    mockSubmitOperations.mockImplementationOnce(
+      (operations: FlowOperation[]) =>
+        new Promise((resolve) => {
+          resolveFirstSubmit = resolve;
+        }),
+    );
+
+    renderHook(() =>
+      useFlowCollaborationEditing({
+        flowId: "flow-1",
+      }),
+    );
+
+    await act(async () => {});
+    act(() => {
+      useFlowStore.getState().onCollaborationOperations?.([forwardOperation], {
+        historyEntry: {
+          forwardOps: [forwardOperation],
+          inverseOps: [inverseOperation],
+        },
+      });
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledWith([forwardOperation]);
+    });
+
+    act(() => {
+      useFlowStore.getState().undoCollaborationOperations?.();
+    });
+
+    expect(mockSubmitOperations).toHaveBeenCalledTimes(1);
+
+    await act(async () => {
+      resolveFirstSubmit?.({
+        type: "operation.accepted",
+        request_id: "req-1",
+        flow_id: "flow-1",
+        revision: 1,
+        actor_user_id: "user-1",
+        forward_ops: [forwardOperation],
+        created_at: "2026-05-30T00:00:00Z",
+      });
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledWith([inverseOperation]);
+    });
+  });
+
+  it("allows undoing coalesced node updates before they are submitted", async () => {
+    jest.useFakeTimers();
+    try {
+      writeCollaborationOperationBetaEnabled(true);
+      const forwardUpdate = {
+        id: "node-1",
+        op: "set_field" as const,
+        path: ["data", "node", "template", "model", "value"],
+        value: [{ name: "gpt-4o", provider: "OpenAI" }],
+      };
+      const inverseUpdate = {
+        id: "node-1",
+        op: "set_field" as const,
+        path: ["data", "node", "template", "model", "value"],
+        value: [],
+      };
+      const forwardOperation: FlowOperation = {
+        type: "update_nodes",
+        updates: [forwardUpdate],
+      };
+      const inverseOperation: FlowOperation = {
+        type: "update_nodes",
+        updates: [inverseUpdate],
+      };
+
+      renderHook(() =>
+        useFlowCollaborationEditing({
+          flowId: "flow-1",
+        }),
+      );
+
+      await act(async () => {});
+      act(() => {
+        useFlowStore
+          .getState()
+          .onCollaborationOperations?.([forwardOperation], {
+            historyEntry: {
+              forwardOps: [forwardOperation],
+              inverseOps: [inverseOperation],
+            },
+          });
+      });
+
+      expect(mockSubmitOperations).not.toHaveBeenCalled();
+
+      await act(async () => {
+        useFlowStore.getState().undoCollaborationOperations?.();
+        await Promise.resolve();
+        await Promise.resolve();
+      });
+
+      expect(mockSubmitOperations).toHaveBeenNthCalledWith(1, [
+        forwardOperation,
+      ]);
+      expect(mockSubmitOperations).toHaveBeenNthCalledWith(2, [
+        inverseOperation,
+      ]);
+    } finally {
+      jest.useRealTimers();
+    }
+  });
+
+  it("applies collaboration undo to the local graph state immediately", async () => {
+    writeCollaborationOperationBetaEnabled(true);
+    const node = {
+      id: "agent-node",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "agent-node",
+        type: "Agent",
+        node: {
+          template: {
+            model: { value: [] },
+          },
+        },
+      },
+    } as unknown as AllNodeType;
+    const selectedNode = {
+      ...node,
+      data: {
+        ...node.data,
+        node: {
+          ...node.data.node,
+          template: {
+            ...node.data.node?.template,
+            model: {
+              ...node.data.node?.template?.model,
+              value: [{ name: "gpt-4o", provider: "OpenAI" }],
+            },
+          },
+        },
+      },
+    } as unknown as AllNodeType;
+
+    useFlowStore.setState({
+      nodes: [node],
+      edges: [],
+      currentFlow: {
+        id: "flow-1",
+        name: "Flow",
+        description: "",
+        data: {
+          nodes: [node],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
+      },
+    });
+
+    renderHook(() =>
+      useFlowCollaborationEditing({
+        flowId: "flow-1",
+      }),
+    );
+
+    await act(async () => {});
+
+    act(() => {
+      useFlowStore
+        .getState()
+        .setNode("agent-node", selectedNode, true, undefined, {
+          collaborationUpdates: [
+            {
+              id: "agent-node",
+              op: "set_field",
+              path: ["data", "node", "template", "model", "value"],
+              value: [{ name: "gpt-4o", provider: "OpenAI" }],
+            },
+          ],
+        });
+    });
+
+    expect(
+      useFlowStore.getState().nodes[0].data.node?.template?.model?.value,
+    ).toEqual([{ name: "gpt-4o", provider: "OpenAI" }]);
+
+    await act(async () => {
+      useFlowStore.getState().undoCollaborationOperations?.();
+    });
+
+    expect(
+      useFlowStore.getState().nodes[0].data.node?.template?.model?.value,
+    ).toEqual([]);
+  });
+
+  it("keeps local undo history after a remote delete touches the same node", async () => {
     writeCollaborationOperationBetaEnabled(true);
     const nodeA = {
       id: "a",
@@ -493,7 +713,9 @@ describe("useFlowCollaborationEditing", () => {
       useFlowStore.getState().undoCollaborationOperations?.();
     });
 
-    expect(mockSubmitOperations).not.toHaveBeenCalled();
+    expect(mockSubmitOperations).toHaveBeenCalledWith([
+      { type: "delete_nodes", ids: ["a"] },
+    ]);
   });
 
   it("keeps local undo history after a remote edit to an unrelated field on the same node", async () => {
@@ -583,7 +805,94 @@ describe("useFlowCollaborationEditing", () => {
     ]);
   });
 
-  it("drops local undo history after a remote edit to the same field path", async () => {
+  it("keeps local undo history after a remote edit elsewhere in the graph", async () => {
+    writeCollaborationOperationBetaEnabled(true);
+    const nodeA = {
+      id: "a",
+      position: { x: 0, y: 0 },
+      data: { value: "old" },
+    } as AllNodeType;
+    const nodeB = {
+      id: "b",
+      position: { x: 100, y: 0 },
+      data: { value: "remote" },
+    } as AllNodeType;
+    const localForward = {
+      id: "a",
+      op: "set_field" as const,
+      path: ["data", "value"],
+      value: "local",
+    };
+    const localInverse = {
+      id: "a",
+      op: "set_field" as const,
+      path: ["data", "value"],
+      value: "old",
+    };
+
+    useFlowStore.setState({
+      nodes: [nodeA],
+      edges: [],
+      currentFlow: {
+        id: "flow-1",
+        name: "Flow",
+        description: "",
+        data: {
+          nodes: [nodeA],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
+      },
+    });
+
+    renderHook(() =>
+      useFlowCollaborationEditing({
+        flowId: "flow-1",
+      }),
+    );
+
+    await act(async () => {});
+    await act(async () => {
+      useFlowStore
+        .getState()
+        .onCollaborationOperations?.(
+          [{ type: "update_nodes", updates: [localForward] }],
+          {
+            historyEntry: {
+              forwardOps: [{ type: "update_nodes", updates: [localForward] }],
+              inverseOps: [{ type: "update_nodes", updates: [localInverse] }],
+            },
+          },
+        );
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledWith([
+        { type: "update_nodes", updates: [localForward] },
+      ]);
+    });
+    mockSubmitOperations.mockClear();
+
+    await act(async () => {
+      mockCollaborationOptions?.onRemoteOperation?.({
+        type: "operation.broadcast",
+        flow_id: "flow-1",
+        revision: 2,
+        actor_user_id: "user-2",
+        forward_ops: [{ type: "add_nodes", nodes: [nodeB] }],
+        created_at: "2026-05-30T00:00:00Z",
+      });
+      useFlowStore.getState().undoCollaborationOperations?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockSubmitOperations).toHaveBeenCalledWith([
+      { type: "update_nodes", updates: [localInverse] },
+    ]);
+  });
+
+  it("keeps local undo history after a remote edit to the same field path", async () => {
     writeCollaborationOperationBetaEnabled(true);
     const nodeA = {
       id: "a",
@@ -665,6 +974,132 @@ describe("useFlowCollaborationEditing", () => {
       await Promise.resolve();
     });
 
-    expect(mockSubmitOperations).not.toHaveBeenCalled();
+    expect(mockSubmitOperations).toHaveBeenCalledWith([
+      { type: "update_nodes", updates: [localInverse] },
+    ]);
+  });
+
+  it("redoes to the value visible before undo after another user edits the same field", async () => {
+    writeCollaborationOperationBetaEnabled(true);
+    const modelPath = ["data", "node", "template", "model", "value"];
+    const initialValue = [{ name: "gpt-5.4", provider: "OpenAI" }];
+    const userAValue = [{ name: "gpt-5.5", provider: "OpenAI" }];
+    const userBValue = [{ name: "gpt-5.3", provider: "OpenAI" }];
+    const node = {
+      id: "agent-node",
+      type: "genericNode",
+      position: { x: 0, y: 0 },
+      data: {
+        id: "agent-node",
+        type: "Agent",
+        node: {
+          template: {
+            model: { value: initialValue },
+          },
+        },
+      },
+    } as unknown as AllNodeType;
+    const userAForward = {
+      id: "agent-node",
+      op: "set_field" as const,
+      path: modelPath,
+      value: userAValue,
+    };
+    const userAInverse = {
+      id: "agent-node",
+      op: "set_field" as const,
+      path: modelPath,
+      value: initialValue,
+    };
+    const userBForward = {
+      id: "agent-node",
+      op: "set_field" as const,
+      path: modelPath,
+      value: userBValue,
+    };
+
+    useFlowStore.setState({
+      nodes: [node],
+      edges: [],
+      currentFlow: {
+        id: "flow-1",
+        name: "Flow",
+        description: "",
+        data: {
+          nodes: [node],
+          edges: [],
+          viewport: { x: 0, y: 0, zoom: 1 },
+        },
+      },
+    });
+
+    renderHook(() =>
+      useFlowCollaborationEditing({
+        flowId: "flow-1",
+      }),
+    );
+
+    await act(async () => {});
+    await act(async () => {
+      useFlowStore
+        .getState()
+        .onCollaborationOperations?.(
+          [{ type: "update_nodes", updates: [userAForward] }],
+          {
+            historyEntry: {
+              forwardOps: [{ type: "update_nodes", updates: [userAForward] }],
+              inverseOps: [{ type: "update_nodes", updates: [userAInverse] }],
+            },
+          },
+        );
+    });
+
+    await waitFor(() => {
+      expect(mockSubmitOperations).toHaveBeenCalledWith([
+        { type: "update_nodes", updates: [userAForward] },
+      ]);
+    });
+
+    await act(async () => {
+      mockCollaborationOptions?.onRemoteOperation?.({
+        type: "operation.broadcast",
+        flow_id: "flow-1",
+        revision: 2,
+        actor_user_id: "user-2",
+        forward_ops: [{ type: "update_nodes", updates: [userBForward] }],
+        created_at: "2026-05-30T00:00:00Z",
+      });
+      await Promise.resolve();
+    });
+
+    mockSubmitOperations.mockClear();
+
+    await act(async () => {
+      useFlowStore.getState().undoCollaborationOperations?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockSubmitOperations).toHaveBeenCalledWith([
+      { type: "update_nodes", updates: [userAInverse] },
+    ]);
+    expect(
+      useFlowStore.getState().nodes[0].data.node?.template?.model?.value,
+    ).toEqual(initialValue);
+
+    mockSubmitOperations.mockClear();
+
+    await act(async () => {
+      useFlowStore.getState().redoCollaborationOperations?.();
+      await Promise.resolve();
+      await Promise.resolve();
+    });
+
+    expect(mockSubmitOperations).toHaveBeenCalledWith([
+      { type: "update_nodes", updates: [userBForward] },
+    ]);
+    expect(
+      useFlowStore.getState().nodes[0].data.node?.template?.model?.value,
+    ).toEqual(userBValue);
   });
 });
