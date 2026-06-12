@@ -65,6 +65,21 @@ def _is_backend_connection_error(exc: BaseException) -> bool:
     return isinstance(exc, RedisConnectionError | RedisTimeoutError)
 
 
+def _redact_url_credentials(url: str) -> str:
+    """Strip userinfo from a URL so credentials never reach logs or HTTP responses."""
+    from urllib.parse import urlparse, urlunparse
+
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return "<redacted>"
+    if parsed.username is None and parsed.password is None:
+        return url
+    host = parsed.hostname or ""
+    netloc = f"***@{host}:{parsed.port}" if parsed.port else f"***@{host}"
+    return urlunparse(parsed._replace(netloc=netloc))
+
+
 class JobQueueService(Service):
     """Asynchronous service for managing job-specific queues and their associated tasks.
 
@@ -852,14 +867,17 @@ class RedisJobQueueService(JobQueueService):
         task.add_done_callback(self._background_tasks.discard)
         return task
 
-    def start(self) -> None:
-        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
+    def _make_client(self):
+        """Build a Redis client from the configured settings."""
         from redis.asyncio import StrictRedis
 
         if self._redis_url:
-            self._client = StrictRedis.from_url(self._redis_url)
-        else:
-            self._client = StrictRedis(host=self._redis_host, port=self._redis_port, db=self._redis_db)
+            return StrictRedis.from_url(self._redis_url)
+        return StrictRedis(host=self._redis_host, port=self._redis_port, db=self._redis_db)
+
+    def start(self) -> None:
+        """Create the Redis client, start the periodic cleanup, and run one cancel dispatcher."""
+        self._client = self._make_client()
         super().start()
         # Schedule a connectivity check so startup logs a clear error if Redis is unreachable.
         self._connection_check_task = asyncio.create_task(self._check_connection())
@@ -884,9 +902,13 @@ class RedisJobQueueService(JobQueueService):
 
     @property
     def connection_target(self) -> str:
-        """Human-readable description of the configured Redis endpoint for error messages."""
+        """Human-readable description of the configured Redis endpoint for error messages.
+
+        Credentials embedded in the URL are redacted — this string ends up in
+        server logs and in HTTP 503 details returned to API clients.
+        """
         if self._redis_url:
-            return self._redis_url
+            return _redact_url_credentials(self._redis_url)
         return f"{self._redis_host}:{self._redis_port} db={self._redis_db}"
 
     def _backend_unavailable_message(self) -> str:
@@ -903,26 +925,38 @@ class RedisJobQueueService(JobQueueService):
         Used at startup to fail fast when ``LANGFLOW_JOB_QUEUE_TYPE=redis`` but the
         Redis server is not reachable, instead of booting "fine" and then emitting
         confusing connection errors on the first flow execution.
+
+        The startup probe runs from ``initialize_services()``, before the per-worker
+        ``start()`` creates ``self._client``, so a temporary client is used (and
+        closed) when the service has not started yet. It is not retained: ``start()``
+        runs on the worker's event loop, which may differ from the probe's.
         """
-        if self._client is None:
-            return False
         attempts = self._STARTUP_PROBE_ATTEMPTS if attempts is None else attempts
         backoff_s = self._STARTUP_PROBE_BACKOFF_S if backoff_s is None else backoff_s
-        for attempt in range(1, attempts + 1):
-            try:
-                await self._client.ping()
-            except Exception as exc:  # noqa: BLE001
-                if attempt < attempts:
-                    await logger.adebug(
-                        f"RedisJobQueueService: Redis not reachable at {self.connection_target} "
-                        f"(attempt {attempt}/{attempts}): {exc}. Retrying in {backoff_s}s."
-                    )
-                    await asyncio.sleep(backoff_s)
-                    continue
-                return False
-            else:
-                return True
-        return False
+        temp_client = None
+        client = self._client
+        if client is None:
+            client = temp_client = self._make_client()
+        try:
+            for attempt in range(1, attempts + 1):
+                try:
+                    await client.ping()
+                except Exception as exc:  # noqa: BLE001
+                    if attempt < attempts:
+                        await logger.adebug(
+                            f"RedisJobQueueService: Redis not reachable at {self.connection_target} "
+                            f"(attempt {attempt}/{attempts}): {exc}. Retrying in {backoff_s}s."
+                        )
+                        await asyncio.sleep(backoff_s)
+                        continue
+                    return False
+                else:
+                    return True
+            return False
+        finally:
+            if temp_client is not None:
+                with contextlib.suppress(Exception):
+                    await temp_client.aclose()
 
     async def _check_connection(self) -> None:
         """Ping Redis and log a prominent error if the connection is unavailable."""
@@ -1644,13 +1678,16 @@ class RedisJobQueueService(JobQueueService):
                 (route handlers) translate this into a clean HTTP 503 instead of
                 letting a raw redis ``ConnectionError`` escape as a 500.
         """
-        self._job_owners[job_id] = user_id
+        # Write to Redis first: registering locally before a failed Redis write
+        # would let same-worker ownership checks pass while every other worker
+        # sees the job as unowned.
         try:
             await self._set_owner_key(job_id, user_id)
         except Exception as exc:
             if _is_backend_connection_error(exc):
                 raise JobQueueBackendUnavailableError(self._backend_unavailable_message()) from exc
             raise
+        self._job_owners[job_id] = user_id
         if job_id in self._queues:
             self._ensure_owner_refresh_task(job_id)
 

@@ -90,6 +90,25 @@ async def _verify_job_ownership(job_id: str, current_user: CurrentActiveUser, qu
         raise HTTPException(status_code=404, detail=f"Job not found: {job_id}")
 
 
+async def _register_job_owner_or_cancel(queue_service: JobQueueService, job_id: str, user_id: uuid.UUID) -> None:
+    """Register the build's owner, cancelling the just-started build on backend outage.
+
+    By the time this runs, start_flow_build has already launched the build task.
+    If the Redis-backed queue is unreachable, the client never receives the
+    job_id, so cancel the build (best-effort) instead of leaving an unreachable
+    build running, then surface a clean 503 instead of a raw redis
+    ConnectionError 500.
+    """
+    try:
+        await queue_service.register_job_owner(job_id, user_id)
+    except JobQueueBackendUnavailableError as exc:
+        try:
+            await queue_service.cancel_job(job_id)
+        except Exception as cancel_exc:  # noqa: BLE001
+            await logger.awarning(f"Failed to cancel job {job_id} after owner registration failed: {cancel_exc!r}")
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
 @router.post(
     "/build/{flow_id}/vertices",
     deprecated=True,
@@ -308,13 +327,7 @@ async def build_flow(
         queue_service=queue_service,
         flow_name=flow_name,
     )
-    try:
-        await queue_service.register_job_owner(job_id, current_user.id)
-    except JobQueueBackendUnavailableError as exc:
-        # Redis-backed job queue is unreachable. Surface a clean 503 instead of a
-        # raw redis ConnectionError 500. The build task already started is reaped
-        # by the queue service's periodic cleanup.
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
+    await _register_job_owner_or_cancel(queue_service, job_id, current_user.id)
 
     # This is required to support FE tests - we need to be able to set the event delivery to direct
     if event_delivery != EventDeliveryType.DIRECT:
