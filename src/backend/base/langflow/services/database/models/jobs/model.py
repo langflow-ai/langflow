@@ -8,9 +8,7 @@ from sqlalchemy import Enum as SQLEnum
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlmodel import Field, SQLModel
 
-# JSONB on Postgres for binary storage + GIN-indexable paths, JSON
-# elsewhere (SQLite). Matches the variant used for other JSON columns
-# on the ``ingestion_run`` and ``knowledge_base`` tables.
+# JSONB on Postgres (GIN-indexable), JSON elsewhere — same variant as other JSON columns.
 JsonVariant = JSON().with_variant(JSONB(), "postgresql")
 
 
@@ -21,6 +19,7 @@ class JobStatus(str, Enum):
     FAILED = "failed"
     CANCELLED = "cancelled"
     TIMED_OUT = "timed_out"
+    SUSPENDED = "suspended"
 
 
 class JobType(str, Enum):
@@ -74,21 +73,13 @@ class JobBase(SQLModel):
         index=True, nullable=True
     )  # Optional idempotency key to prevent duplicate jobs for the same asset and operation.
 
-    # Free-form per-domain progress / outcome data. Populated by the
-    # wrapped coroutine inside ``execute_with_status`` (e.g. KB
-    # ingestion writes counters and per-item outcomes here as it runs).
-    # Shape is intentionally untyped at this layer; each ``JobType``
-    # owns the keys it writes. Nullable so existing rows stay readable
-    # without a backfill — code reads with ``.get(...)``.
+    # Free-form per-JobType progress/outcome data; nullable so old rows read without backfill.
     job_metadata: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JsonVariant, nullable=True),
     )
 
-    # Durable terminal payloads for background workflow runs. result holds
-    # the final output blob on COMPLETED; error holds {type, message, ...}
-    # on FAILED/TIMED_OUT. Both nullable so non-workflow jobs and in-flight
-    # rows stay readable.
+    # Durable terminal payloads: result on COMPLETED, error on FAILED/TIMED_OUT; both nullable.
     result: dict[str, Any] | None = Field(
         default=None,
         sa_column=Column(JsonVariant, nullable=True),
@@ -129,13 +120,11 @@ class JobEvent(SQLModel, table=True):  # type: ignore[call-arg]
 
 
 class SignalType(str, Enum):
-    """Cooperative control signals delivered to a running job.
-
-    Only STOP is implemented today; PAUSE/RESUME are intentionally left
-    out of the enum until they're wired so we don't ship dead values.
-    """
+    """Cooperative control signals delivered to a running job."""
 
     STOP = "stop"
+    PAUSE = "pause"
+    RESUME = "resume"
 
 
 class ExecutionSignal(SQLModel, table=True):  # type: ignore[call-arg]
