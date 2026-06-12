@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { type KeyboardEvent, useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { useParams } from "react-router-dom";
 import ForwardedIconComponent from "@/components/common/genericIconComponent";
@@ -114,25 +114,25 @@ const ListComponent = ({
         draggable
         // role/tabIndex instead of a native button: the card nests other
         // interactive elements (checkbox, dropdown), which a <button>
-        // wrapper would make invalid markup.
-        role="button"
-        tabIndex={0}
-        aria-label={
-          isComponent
-            ? flowData.name
-            : t("flow.openFlow", { defaultValue: `Open ${flowData.name}` })
-        }
+        // wrapper would make invalid markup. Component cards aren't
+        // activatable (click only selects with shift held), so they get no
+        // button semantics — exposing a no-op button would mislead AT users.
+        {...(!isComponent && {
+          role: "button",
+          tabIndex: 0,
+          "aria-label": t("flow.openFlow", { name: flowData.name }),
+          onKeyDown: (e: KeyboardEvent) => {
+            if (
+              (e.key === "Enter" || e.key === " ") &&
+              e.target === e.currentTarget
+            ) {
+              e.preventDefault();
+              handleClick();
+            }
+          },
+        })}
         onDragStart={onDragStart}
         onClick={handleClick}
-        onKeyDown={(e) => {
-          if (
-            (e.key === "Enter" || e.key === " ") &&
-            e.target === e.currentTarget
-          ) {
-            e.preventDefault();
-            handleClick();
-          }
-        }}
         className={`flex flex-row bg-background ${
           isComponent ? "cursor-default" : "cursor-pointer"
         } group justify-between rounded-lg border-none px-4 py-3 shadow-none hover:bg-muted`}

@@ -148,14 +148,20 @@ RUN_A11Y=true RUN_A11Y_ASSERT=true npx playwright test <file> --retries=0
 ## Component-level a11y unit tests (jest-axe)
 
 Second tier next to the IBM page scans. Runs on every PR in its own workflow
-(`.github/workflows/a11y-unit-tests.yml`, `make test_frontend_a11y_ci`) so the
-known-gap failures don't block regular CI — the main Jest workflow excludes
-`*.a11y.test.*` files.
+(`.github/workflows/a11y-unit-tests.yml`, `make test_frontend_a11y_ci`). All
+tests pass as of the fixes in this branch and act as regression locks: a
+failure blocks the PR. The main Jest workflow excludes `*.a11y.test.*` files.
+
+> **jsdom limitations — not a compliance signal.** jest-axe runs in jsdom,
+> which has no layout engine: color contrast, focus-visible styling, and
+> anything canvas-based (ReactFlow nodes/edges) are **not** covered here and
+> stay with the IBM Playwright scans. A green jest-axe run means the tested
+> DOM semantics are correct, not that the component is WCAG-compliant.
 
 - Matcher: `toHaveNoViolations` is registered globally in [src/frontend/src/setupTests.ts](/Users/viktoravelino/projects/langflow/src/frontend/src/setupTests.ts)
 - Shared axe instance: [src/frontend/src/utils/a11y-test.ts](/Users/viktoravelino/projects/langflow/src/frontend/src/utils/a11y-test.ts) (`color-contrast` disabled — jsdom has no layout; contrast stays with the IBM checker)
 - File convention: `<component>.a11y.test.tsx` inside the component's `__tests__/` folder
-- Known gaps are encoded as regular tests asserting the semantics the component *should* have — they **fail by design** until the corresponding fix lands, then stay as regression locks
+- New known gaps should be encoded as regular tests asserting the semantics the component *should* have, and land **together with the component fix** — the workflow blocks on failures, so a red test means a regression (or a fix that hasn't landed yet)
 
 Pattern:
 
@@ -183,24 +189,24 @@ Wave 1 — shared primitives with named gaps in [a11y-action-plan.md](/Users/vik
 
 | Component | Plan item | What to assert | Status |
 |-----------|-----------|----------------|--------|
-| `components/ui/checkbox.tsx` (`Checkbox`, `CheckBoxDiv`) | 1.3 | checkbox role, `aria-checked`, keyboard toggle | Done — `checkbox.a11y.test.tsx` (failing until fix) |
-| `components/ui/accordion.tsx` (`AccordionTrigger`) | 1.4 | trigger is focusable button with expanded state | Done — `accordion.a11y.test.tsx` (failing until fix) |
-| `components/ui/input.tsx` | 1.2 | no duplicate label when externally labeled | Done — `input.a11y.test.tsx` (failing until fix) |
-| `components/ui/dialog.tsx` | 0.4 / 1.7 | focus lands inside on open; single accessible dialog name | Done — `dialog.a11y.test.tsx` (axe + name pass; focus test failing until fix) |
-| `parameterRenderComponent/components/inputComponent` | 1.1 | password toggle tab-focusable, `aria-label` + `aria-pressed` | Done — `inputComponent.a11y.test.tsx` (failing until fix) |
-| `modals/baseModal` (`type="full-screen"`) | 1.5 | `role="dialog"`, `aria-modal`, labeled title | Done — `baseModal.a11y.test.tsx` (failing until fix) |
-| `components/common/genericIconComponent` | 0.3 | decorative default `aria-hidden`, opt-in `aria-label` | Done — `genericIconComponent.a11y.test.tsx` (uses `jest.unmock`; failing until fix) |
+| `components/ui/checkbox.tsx` (`Checkbox`, `CheckBoxDiv`) | 1.3 | checkbox role, `aria-checked`, keyboard toggle | Done — `checkbox.a11y.test.tsx` (passing — regression lock) |
+| `components/ui/accordion.tsx` (`AccordionTrigger`) | 1.4 | trigger is focusable button with expanded state | Done — `accordion.a11y.test.tsx` (passing — regression lock) |
+| `components/ui/input.tsx` | 1.2 | no duplicate label when externally labeled | Done — `input.a11y.test.tsx` (passing — regression lock) |
+| `components/ui/dialog.tsx` | 0.4 / 1.7 | focus lands inside on open; single accessible dialog name | Done — `dialog.a11y.test.tsx` (passing — regression lock) |
+| `parameterRenderComponent/components/inputComponent` | 1.1 | password toggle tab-focusable, `aria-label` + `aria-pressed` | Done — `inputComponent.a11y.test.tsx` (passing — regression lock) |
+| `modals/baseModal` (`type="full-screen"`) | 1.5 | `role="dialog"`, `aria-modal`, labeled title | Done — `baseModal.a11y.test.tsx` (passing — regression lock) |
+| `components/common/genericIconComponent` | 0.3 | decorative default `aria-hidden`, opt-in `aria-label` | Done — `genericIconComponent.a11y.test.tsx` (uses `jest.unmock`; passing — regression lock) |
 
 Wave 2 — naming, structure, feedback:
 
 | Component | Plan item | What to assert | Status |
 |-----------|-----------|----------------|--------|
-| `core/appHeaderComponent` | 2.3 / 3.3 | `<header>` landmark; bell button accessible name + unread state | Done — `appHeader.a11y.test.tsx` (failing until fix) |
-| `pages/MainPage/components/list` (flow cards) | 2.2 | card is focusable link/button, Enter activates | Done — `list.a11y.test.tsx` (failing until fix) |
-| `alerts/displayArea` | 4.2 | `aria-live` region announces alerts | Done — `displayArea.a11y.test.tsx` (failing until fix) |
+| `core/appHeaderComponent` | 2.3 / 3.3 | `<header>` landmark; bell button accessible name + unread state | Done — `appHeader.a11y.test.tsx` (passing — regression lock) |
+| `pages/MainPage/components/list` (flow cards) | 2.2 | card is focusable link/button, Enter activates | Done — `list.a11y.test.tsx` (passing — regression lock) |
+| `alerts/displayArea` | 4.2 | `aria-live` region announces alerts | Done — `displayArea.a11y.test.tsx` (passing — regression lock) |
 | `components/ui/switch.tsx` | 4.1.2 | switch role + checked state | Done — `switch.a11y.test.tsx` (passing regression locks) |
 | `components/ui/select.tsx` / `dropdown-menu.tsx` | 4.1.2 | combobox/menu trigger has accessible name (IBM scan flagged unnamed comboboxes) | Done — `select.a11y.test.tsx` (passing locks; call-site naming stays with IBM scans) |
-| `components/ui/table.tsx` | 3.5 | header cells with `scope="col"`, caption/label | Done — `table.a11y.test.tsx` (scope test failing until fix) |
+| `components/ui/table.tsx` | 3.5 | header cells with `scope="col"`, caption/label | Done — `table.a11y.test.tsx` (passing — regression lock) |
 | `components/ui/tabs.tsx` | 4.1.2 | tablist/tab roles, arrow-key navigation | Done — `tabs.a11y.test.tsx` (passing regression locks) |
 
 Not testable in jsdom (stay with IBM page scans): ReactFlow canvas, node handles/edges, contrast tokens, focus-visible CSS.
