@@ -37,6 +37,7 @@ dependencies = [
     "lfx-anthropic>=0.1.0,<1.0.0",
     "lfx-amazon>=0.1.0,<1.0.0",
     "lfx-cohere>=0.1.0,<1.0.0",
+    "lfx-oracle>=0.1.0,<1.0.0",
     # langflow-extensions:bundle-deps-end
 ]
 
@@ -104,6 +105,7 @@ lfx-openai = { workspace = true }
 lfx-anthropic = { workspace = true }
 lfx-amazon = { workspace = true }
 lfx-cohere = { workspace = true }
+lfx-oracle = { workspace = true }
 # langflow-extensions:bundle-sources-end
 torch = { index = "pytorch-cpu" }
 torchvision = { index = "pytorch-cpu" }
@@ -126,6 +128,7 @@ members = [
     "src/bundles/anthropic",
     "src/bundles/amazon",
     "src/bundles/cohere",
+    "src/bundles/oracle",
     # langflow-extensions:bundle-members-end
 ]
 

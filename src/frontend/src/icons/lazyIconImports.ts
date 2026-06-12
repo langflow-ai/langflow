@@ -375,6 +375,8 @@ export const lazyIconsMapping = {
     })),
   OpenSearch: () =>
     import("@/icons/OpenSearch").then((mod) => ({ default: mod.OpenSearch })),
+  Oracle: () =>
+    import("@/icons/Oracle").then((mod) => ({ default: mod.OracleIcon })),
   Perplexity: () =>
     import("@/icons/Perplexity").then((mod) => ({
       default: mod.PerplexityIcon,
