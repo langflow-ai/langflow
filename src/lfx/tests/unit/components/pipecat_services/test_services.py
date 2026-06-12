@@ -1,6 +1,5 @@
 """Tests for pipecat_services components (metadata + tool registration)."""
 
-from unittest.mock import MagicMock
 
 
 def _service_input_names(component_cls) -> set:

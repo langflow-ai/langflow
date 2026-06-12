@@ -1,7 +1,8 @@
 """Tests for VoicePipelineComponent."""
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 
 class TestVoicePipelineComponent:

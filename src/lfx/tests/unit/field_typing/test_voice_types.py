@@ -2,8 +2,6 @@
 
 import sys
 
-import pytest
-
 
 class TestPipecatBaseTypes:
     """PIPECAT_BASE_TYPES dict is complete and consistent with __all__."""
@@ -100,7 +98,11 @@ class TestPipecatFieldTypingExports:
         from lfx.field_typing import PipecatContext, PipecatFrameProcessor, PipecatPipelineTask
         from lfx.field_typing.voice_types import (
             PipecatContext as DirectContext,
+        )
+        from lfx.field_typing.voice_types import (
             PipecatFrameProcessor as DirectFP,
+        )
+        from lfx.field_typing.voice_types import (
             PipecatPipelineTask as DirectTask,
         )
 

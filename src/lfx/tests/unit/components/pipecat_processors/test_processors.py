@@ -28,6 +28,7 @@ class TestLLMContextComponent:
         """build_context with empty JSON returns an LLMContext with no messages."""
         pytest.importorskip("pipecat")
         from unittest.mock import MagicMock, patch
+
         from lfx.components.pipecat_processors.llm_context import LLMContextComponent
 
         comp = LLMContextComponent.__new__(LLMContextComponent)
@@ -44,6 +45,7 @@ class TestLLMContextComponent:
         """build_context passes parsed messages to LLMContext."""
         pytest.importorskip("pipecat")
         from unittest.mock import MagicMock, patch
+
         from lfx.components.pipecat_processors.llm_context import LLMContextComponent
 
         comp = LLMContextComponent.__new__(LLMContextComponent)
@@ -60,6 +62,7 @@ class TestLLMContextComponent:
         """build_context passes tool_choice when it is not 'auto'."""
         pytest.importorskip("pipecat")
         from unittest.mock import MagicMock, patch
+
         from lfx.components.pipecat_processors.llm_context import LLMContextComponent
 
         comp = LLMContextComponent.__new__(LLMContextComponent)
@@ -73,13 +76,15 @@ class TestLLMContextComponent:
 
     def test_build_context_invalid_json_raises(self):
         """build_context raises on invalid JSON regardless of pipecat install."""
+        import json
+
         from lfx.components.pipecat_processors.llm_context import LLMContextComponent
 
         comp = LLMContextComponent.__new__(LLMContextComponent)
         comp.initial_messages_json = "{not valid json"
         comp.tool_choice = "auto"
 
-        with pytest.raises(Exception):
+        with pytest.raises(json.JSONDecodeError):
             comp.build_context()
 
     def test_build_context_non_list_json_raises(self):

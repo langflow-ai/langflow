@@ -1,6 +1,5 @@
 """Tests for Pipecat abstract base classes in lfx/base/pipecat/."""
 
-from abc import ABC
 from unittest.mock import MagicMock
 
 
@@ -15,7 +14,7 @@ class TestPipecatFrameProcessorComponent:
         assert PipecatFrameProcessorComponent.build_processor.__isabstractmethod__
 
     def test_category(self):
-        """category is set to 'pipecat'."""
+        """Category is set to 'pipecat'."""
         from lfx.base.pipecat.processor import PipecatFrameProcessorComponent
 
         assert PipecatFrameProcessorComponent.category == "pipecat"

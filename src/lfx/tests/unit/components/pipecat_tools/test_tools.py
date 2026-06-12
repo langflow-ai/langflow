@@ -1,7 +1,8 @@
 """Tests for pipecat_tools components."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 class TestVoiceToolComponent:
@@ -62,20 +63,20 @@ class TestHTTPAPIToolComponent:
     """HTTPAPIToolComponent metadata and handler logic."""
 
     def test_metadata(self):
-        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent  # noqa: PLC0415
+        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent
 
         assert HTTPAPIToolComponent.display_name == "HTTP API Tool"
         assert HTTPAPIToolComponent.name == "HTTPAPITool"
         assert HTTPAPIToolComponent.category == "pipecat"
 
     def test_output_type_is_pipecat_tool(self):
-        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent  # noqa: PLC0415
+        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent
 
         types = {t for o in HTTPAPIToolComponent.outputs for t in o.types}
         assert "PipecatTool" in types
 
     def test_has_required_inputs(self):
-        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent  # noqa: PLC0415
+        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent
 
         names = {i.name for i in HTTPAPIToolComponent.inputs}
         assert "url" in names
@@ -84,22 +85,20 @@ class TestHTTPAPIToolComponent:
         assert "tool_description" in names
 
     def test_build_function_schema_returns_schema(self):
-        """build_function_schema returns a FunctionSchema object."""
-        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent  # noqa: PLC0415
+        """build_function_schema returns a FunctionSchema with name and description."""
+        pytest.importorskip("pipecat")
+        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent
 
         comp = HTTPAPIToolComponent.__new__(HTTPAPIToolComponent)
         comp.tool_name = "fetch_data"
-        comp.description = "Fetches data from an API."
-        comp.parameters_schema = "{}"
-
-        mock_schema = MagicMock()
-        with pytest.raises(Exception):
-            # May raise if pipecat not installed; test is about the call path
-            comp.build_function_schema()
+        comp.tool_description = "Fetches data from an API."
+        schema = comp.build_function_schema()
+        assert schema is not None
+        assert schema.name == "fetch_data"
 
     def test_build_handler_returns_callable(self):
         """build_handler returns a callable async function."""
-        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent  # noqa: PLC0415
+        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent
 
         comp = HTTPAPIToolComponent.__new__(HTTPAPIToolComponent)
         comp.url = "https://example.com/api"
@@ -113,7 +112,7 @@ class TestHTTPAPIToolComponent:
     @pytest.mark.asyncio
     async def test_build_handler_returns_error_on_network_failure(self):
         """build_handler catches exceptions and returns them via result_callback."""
-        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent  # noqa: PLC0415
+        from lfx.components.pipecat_tools.http_api_tool import HTTPAPIToolComponent
 
         comp = HTTPAPIToolComponent.__new__(HTTPAPIToolComponent)
         comp.url = "https://unreachable.invalid"
