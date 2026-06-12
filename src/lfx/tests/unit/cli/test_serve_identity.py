@@ -364,9 +364,7 @@ class TestJwksSourceResolution:
     def test_oidc_discovery_without_jwks_uri_degrades_to_401(self, keypair):
         # Discovery doc missing jwks_uri → IdentityConfigError, swallowed at fetch,
         # cache stays empty, prefetch does not raise, requests fail closed (401).
-        v = IdentityVerifier(
-            self._disco_config(), jwks_fetcher=lambda _u: {"keys": []}, openid_fetcher=lambda _u: {}
-        )
+        v = IdentityVerifier(self._disco_config(), jwks_fetcher=lambda _u: {"keys": []}, openid_fetcher=lambda _u: {})
         v.prefetch()
         token = _sign(keypair, {"email": "a@b.c"})
         with pytest.raises(HTTPException) as exc:
