@@ -274,9 +274,8 @@ class AuthService(BaseAuthService):
 
     async def _external_access_ceiling_blocks_api_key_user(self, user: User, db: AsyncSession) -> bool:
         auth_settings = self.settings.auth_settings
-        if (
-            not auth_settings.EXTERNAL_AUTH_ACCESS_CEILING_ENABLED
-            or not auth_settings.EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS
+        if not getattr(auth_settings, "EXTERNAL_AUTH_ACCESS_CEILING_ENABLED", False) or not getattr(
+            auth_settings, "EXTERNAL_AUTH_DISABLE_API_KEYS_FOR_EXTERNAL_USERS", True
         ):
             return False
 
