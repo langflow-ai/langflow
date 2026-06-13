@@ -91,8 +91,8 @@ def test_map_uses_default_base_url(mock_firecrawl):
     app_instance.map_url.assert_called_once()
 
 
-@pytest.mark.usefixtures("mock_firecrawl")
-def test_map_requires_urls():
+def test_map_requires_urls(mock_firecrawl):
+    _firecrawl_app, _app_instance = mock_firecrawl
     component = CrwMapApi()
     component.set_attributes({"api_key": "test-key", "urls": ""})
 
@@ -113,8 +113,8 @@ def test_search_uses_default_base_url(mock_firecrawl):
     app_instance.search.assert_called_once()
 
 
-@pytest.mark.usefixtures("mock_firecrawl")
-def test_search_requires_query():
+def test_search_requires_query(mock_firecrawl):
+    _firecrawl_app, _app_instance = mock_firecrawl
     component = CrwSearchApi()
     component.set_attributes({"api_key": "test-key", "query": ""})
 
