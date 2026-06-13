@@ -108,6 +108,9 @@ class ComponentVertex(Vertex):
                     else:
                         default_value = requester.get_value_from_template_dict(edge.target_param)
 
+            if default_value is UNDEFINED and self.graph and self.id in self.graph.conditionally_excluded_vertices:
+                default_value = None
+
             if default_value is not UNDEFINED:
                 return default_value
             msg = f"Component {self.display_name} has not been built yet"

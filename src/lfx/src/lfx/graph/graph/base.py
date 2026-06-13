@@ -999,19 +999,54 @@ class Graph:
         visited.add(vertex_id)
 
         for child_id in self.parent_child_map[vertex_id]:
-            # Only child_id that have an edge with the vertex_id through the output_name
-            # should be marked
             if output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
+                edges = [e for e in self.edges if e.source_id == vertex_id and e.target_id == child_id]
+                if not any(e.source_handle.name == output_name for e in edges):
                     continue
             self._mark_branch(child_id, state, visited)
         return visited
 
     def mark_branch(self, vertex_id: str, state: str, output_name: str | None = None) -> None:
         visited = self._mark_branch(vertex_id=vertex_id, state=state, output_name=output_name)
+
+        # Reactivate common downstream vertices that have at least one active predecessor
+        # outside the stopped branch. Without this, merge/combine nodes that receive input
+        # from both active and inactive branches would be blocked forever.
+        # The loop repeats until no more vertices are reactivated, so reactivating a merge
+        # node re-opens its descendants for re-evaluation.
+        # Note: reactivated vertices are discarded from `visited` and therefore omitted from
+        # `new_predecessor_map` below. Their `run_predecessors` entries are left as-is by
+        # `update_run_state`. This is correct when coupled with `exclude_branch_conditionally`
+        # (called right after this method), which removes excluded branch vertices from all
+        # successor predecessor lists via `remove_from_predecessors`.
+        if state == VertexStates.INACTIVE:
+            changed = True
+            while changed:
+                changed = False
+                for v_id in list(visited):
+                    active_predecessors = [
+                        p_id
+                        for p_id in self.predecessor_map.get(v_id, [])
+                        if self.get_vertex(p_id).is_active() and (p_id not in visited or p_id == vertex_id)
+                    ]
+                    if active_predecessors:
+                        self.mark_vertex(v_id, VertexStates.ACTIVE)
+                        visited.discard(v_id)
+                        changed = True
+
         new_predecessor_map, _ = self.build_adjacency_maps(self.edges)
-        new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
+
+        if state == VertexStates.ACTIVE:
+            # Rebuild predecessor entries for successors of activated vertices.
+            # A previous INACTIVE+exclude pass may have pruned entries from these
+            # successors via remove_from_predecessors.
+            affected = set(visited)
+            for v_id in visited:
+                affected.update(self.parent_child_map.get(v_id, []))
+            new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in affected}
+        else:
+            new_predecessor_map = {k: v for k, v in new_predecessor_map.items() if k in visited}
+
         if vertex_id in self.cycle_vertices:
             # Remove dependencies that are not in the cycle and have run at least once
             new_predecessor_map = {
@@ -1042,6 +1077,22 @@ class Graph:
         if vertex_id in self.conditional_exclusion_sources:
             previous_exclusions = self.conditional_exclusion_sources[vertex_id]
             self.conditionally_excluded_vertices -= previous_exclusions
+
+            # Restore predecessor entries for successors of previously excluded
+            # vertices from the full graph adjacency. Without this, run_predecessors
+            # monotonically shrinks across cycle iterations.
+            full_predecessor_map, _ = self.build_adjacency_maps(self.edges)
+            restore_map = {}
+            for excluded_id in previous_exclusions:
+                for successor_id in self.parent_child_map.get(excluded_id, []):
+                    if successor_id in full_predecessor_map:
+                        restore_map[successor_id] = full_predecessor_map[successor_id]
+            if restore_map:
+                self.run_manager.update_run_state(
+                    run_predecessors=restore_map,
+                    vertices_to_run=self.vertices_to_run,
+                )
+
             del self.conditional_exclusion_sources[vertex_id]
 
         # Now exclude the new branch
@@ -1052,6 +1103,12 @@ class Graph:
         # Track which vertices this source excluded
         if excluded:
             self.conditional_exclusion_sources[vertex_id] = excluded
+
+        # Remove conditionally excluded vertices from the run_manager's predecessor
+        # lists so that downstream merge/combine nodes can proceed with available
+        # inputs instead of waiting forever for data from the excluded branch.
+        for excluded_id in excluded:
+            self.run_manager.remove_from_predecessors(excluded_id)
 
     def _exclude_branch_conditionally(
         self, vertex_id: str, visited: set, excluded: set, output_name: str | None = None, *, skip_first: bool = False
@@ -1067,13 +1124,14 @@ class Graph:
             excluded.add(vertex_id)
 
         for child_id in self.parent_child_map[vertex_id]:
-            # If we're at the router (skip_first=True) and have an output_name,
-            # only follow edges from that specific output
             if skip_first and output_name:
-                edge = self.get_edge(vertex_id, child_id)
-                if edge and edge.source_handle.name != output_name:
+                edges = [e for e in self.edges if e.source_id == vertex_id and e.target_id == child_id]
+                if not any(e.source_handle.name == output_name for e in edges):
                     continue
-            # After the first level, exclude all descendants
+                # If the child also receives input through a different output of the
+                # source, it is a shared/merge vertex — skip it and its descendants.
+                if any(e.source_handle.name != output_name for e in edges):
+                    continue
             self._exclude_branch_conditionally(child_id, visited, excluded, output_name=None, skip_first=False)
 
     def get_edge(self, source_id: str, target_id: str) -> CycleEdge | None:

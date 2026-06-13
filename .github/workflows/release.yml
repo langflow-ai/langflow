@@ -1216,6 +1216,20 @@ jobs:
         with:
           name: dist-main
           path: dist
+      # The release must attach to the dispatched v-prefixed tag. Passing the
+      # bare version as `tag` made GitHub mint a new lightweight tag at the
+      # default-branch HEAD — the wrong commit, still carrying the previous
+      # version (main only adopts the new version via the post-release
+      # back-merge). Pre-releases keep their computed tag (e.g. 1.10.0rc1),
+      # but `commit` pins any newly minted tag to the release commit.
+      - name: Resolve release commit
+        id: release_commit
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sha=$(gh api "repos/${{ github.repository }}/commits/${{ inputs.release_tag }}" --jq '.sha')
+          echo "Release tag '${{ inputs.release_tag }}' resolves to commit $sha"
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
       - name: Create Release
         uses: ncipollo/release-action@v1
         with:
@@ -1224,6 +1238,8 @@ jobs:
           draft: false
           generateReleaseNotes: true
           prerelease: ${{ inputs.pre_release }}
-          tag: ${{ needs.determine-main-version.outputs.version }}
+          tag: ${{ inputs.pre_release && needs.determine-main-version.outputs.version || inputs.release_tag }}
+          name: ${{ needs.determine-main-version.outputs.version }}
+          commit: ${{ steps.release_commit.outputs.sha }}
           allowUpdates: true
           updateOnlyUnreleased: false

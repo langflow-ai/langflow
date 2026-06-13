@@ -579,6 +579,9 @@ class Vertex:
             if not self._is_vertex(value):
                 self.params[key][sub_key] = value
             else:
+                if value.graph and (value.id in value.graph.conditionally_excluded_vertices or not value.is_active()):
+                    self.params[key].pop(sub_key, None)
+                    continue
                 result = await value.get_result(self, target_handle_name=key)
                 self.params[key][sub_key] = result
 
@@ -646,6 +649,10 @@ class Vertex:
 
     async def _build_vertex_and_update_params(self, key, vertex: Vertex) -> None:
         """Builds a given vertex and updates the params dictionary accordingly."""
+        if vertex.graph and (vertex.id in vertex.graph.conditionally_excluded_vertices or not vertex.is_active()):
+            self.params.pop(key, None)
+            return
+
         result = await vertex.get_result(self, target_handle_name=key)
         self._handle_func(key, result)
         if isinstance(result, list):
@@ -660,6 +667,8 @@ class Vertex:
         """Iterates over a list of vertices, builds each and updates the params dictionary."""
         self.params[key] = []
         for vertex in vertices:
+            if vertex.graph and (vertex.id in vertex.graph.conditionally_excluded_vertices or not vertex.is_active()):
+                continue
             result = await vertex.get_result(self, target_handle_name=key)
             # Weird check to see if the params[key] is a list
             # because sometimes it is a Data and breaks the code
