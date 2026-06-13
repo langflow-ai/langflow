@@ -227,6 +227,8 @@ async def get_messages(
     sender: Annotated[str | None, Query()] = None,
     sender_name: Annotated[str | None, Query()] = None,
     order_by: Annotated[str | None, Query()] = "timestamp",
+    order: Annotated[str | None, Query()] = "ASC",
+    limit: Annotated[int | None, Query()] = None,
 ) -> list[MessageResponse]:
     try:
         # When a flow_id is provided, gate on flow READ permission first; the
@@ -255,8 +257,14 @@ async def get_messages(
         if sender_name:
             stmt = stmt.where(MessageTable.sender_name == sender_name)
         if order_by:
-            order_col = getattr(MessageTable, order_by).asc()
+            order_col = getattr(MessageTable, order_by)
+            if order and order.upper() == "DESC":
+                order_col = order_col.desc()
+            else:
+                order_col = order_col.asc()
             stmt = stmt.order_by(order_col)
+        if limit is not None:
+            stmt = stmt.limit(limit)
         messages = await session.exec(stmt)
         return [MessageResponse.model_validate(d, from_attributes=True) for d in messages]
     except Exception as e:
