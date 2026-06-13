@@ -25,6 +25,7 @@ from mcp.shared.exceptions import McpError
 from pydantic import BaseModel
 
 from lfx.base.agents.utils import maybe_unflatten_dict
+from lfx.base.mcp.trust import TrustVerifier, run_trust_check
 from lfx.log.logger import logger
 from lfx.schema.data import Data
 from lfx.schema.json_schema import create_input_schema_from_json_schema
@@ -573,7 +574,12 @@ def _convert_mcp_result(result: Any) -> Any:
     return blocks
 
 
-def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., Awaitable]:
+def create_tool_coroutine(
+    tool_name: str,
+    arg_schema: type[BaseModel],
+    client,
+    trust_verifier: TrustVerifier | None = None,
+) -> Callable[..., Awaitable]:
     async def tool_coroutine(*args, **kwargs):
         # Get field names from the model (preserving order)
         field_names = list(arg_schema.model_fields.keys())
@@ -597,7 +603,21 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+
+            if trust_verifier is not None:
+                conn = getattr(client, "_connection_params", None)
+                server_uri = conn.get("url", "") if isinstance(conn, dict) else str(conn or "")
+                await run_trust_check(
+                    trust_verifier,
+                    tool_name,
+                    server_uri,
+                    arguments,
+                    warn_logger=logger.awarning,
+                )
+
             return await client.run_tool(tool_name, arguments=arguments)
+        except PermissionError:
+            raise
         except Exception as e:
             await logger.aerror(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -607,7 +627,26 @@ def create_tool_coroutine(tool_name: str, arg_schema: type[BaseModel], client) -
     return tool_coroutine
 
 
-def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Callable[..., str]:
+def create_tool_func(
+    tool_name: str,
+    arg_schema: type[BaseModel],
+    client,
+    trust_verifier: TrustVerifier | None = None,
+) -> Callable[..., str]:
+    async def _verify(arguments: dict) -> None:
+        """Run trust check inside the sync wrapper via run_until_complete."""
+        if trust_verifier is None:
+            return
+        conn = getattr(client, "_connection_params", None)
+        server_uri = conn.get("url", "") if isinstance(conn, dict) else str(conn or "")
+        await run_trust_check(
+            trust_verifier,
+            tool_name,
+            server_uri,
+            arguments,
+            warn_logger=None,  # sync path: run_trust_check falls back to print
+        )
+
     def tool_func(*args, **kwargs):
         field_names = list(arg_schema.model_fields.keys())
         provided_args = {}
@@ -627,7 +666,11 @@ def create_tool_func(tool_name: str, arg_schema: type[BaseModel], client) -> Cal
 
         try:
             arguments = _strip_none_recursive(validated.model_dump(exclude_none=True))
+            if trust_verifier is not None:
+                run_until_complete(_verify(arguments))
             return run_until_complete(client.run_tool(tool_name, arguments=arguments))
+        except PermissionError:
+            raise
         except Exception as e:
             logger.error(f"Tool '{tool_name}' execution failed: {e}")
             # Re-raise with more context
@@ -2092,6 +2135,7 @@ async def update_tools(
     mcp_sse_client: MCPStreamableHttpClient | None = None,  # Backward compatibility
     request_variables: dict[str, str] | None = None,
     tool_execution_timeout: float | None = None,
+    trust_verifier: TrustVerifier | None = None,
 ) -> tuple[str, list[StructuredTool], dict[str, StructuredTool]]:
     """Fetch server config and update available tools.
 
@@ -2103,6 +2147,7 @@ async def update_tools(
         mcp_sse_client: Optional SSE client instance (backward compatibility)
         request_variables: Optional dict of global variables to resolve in headers
         tool_execution_timeout: Optional timeout in seconds for tool execution (int or float)
+        trust_verifier: Optional trust verifier called before each tool dispatch.
     """
     if server_config is None:
         server_config = {}
@@ -2296,8 +2341,8 @@ async def update_tools(
                 name=tool.name,
                 description=tool.description or "",
                 args_schema=args_schema,
-                func=create_tool_func(tool.name, args_schema, client),
-                coroutine=create_tool_coroutine(tool.name, args_schema, client),
+                func=create_tool_func(tool.name, args_schema, client, trust_verifier),
+                coroutine=create_tool_coroutine(tool.name, args_schema, client, trust_verifier),
                 tags=[tool.name],
                 metadata={"server_name": server_name, "output_schema": getattr(tool, "outputSchema", None)},
                 response_format="content_and_artifact",

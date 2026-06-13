@@ -3824,3 +3824,193 @@ class TestStreamableHttpTransportPolicy:
         e = httpx.HTTPStatusError("x", request=req, response=resp_404)
         assert _should_attempt_sse_after_streamable_failure(e) is True
         assert _should_attempt_sse_after_streamable_failure(ConnectionError("x")) is False
+
+
+class TestTrustVerifierIntegration:
+    """End-to-end threading tests for the trust verifier hook.
+
+    Verifies that create_tool_coroutine / create_tool_func correctly wire
+    trust_verifier into the dispatch boundary and that the audit record
+    (decision_id, reason_code, server_origin, tool_name, parameters_digest)
+    is emitted before run_tool is ever called.
+    """
+
+    @pytest.fixture
+    def schema(self):
+        from pydantic import Field, create_model
+
+        return create_model(
+            "TrustTestSchema",
+            query=(str, Field(..., description="Search query")),
+        )
+
+    @pytest.fixture
+    def mock_client(self):
+        client = AsyncMock()
+        client.run_tool = AsyncMock(return_value="ok")
+        client._connection_params = {"url": "https://trusted.example.com/mcp"}
+        return client
+
+    # ------------------------------------------------------------------
+    # create_tool_coroutine — async path
+    # ------------------------------------------------------------------
+
+    @pytest.mark.asyncio
+    async def test_coroutine_allow_calls_run_tool(self, schema, mock_client):
+        tool = util.create_tool_coroutine("search", schema, mock_client, trust_verifier=_make_verifier("allow"))
+        await tool(query="hello")
+        mock_client.run_tool.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_coroutine_deny_blocks_run_tool(self, schema, mock_client):
+        tool = util.create_tool_coroutine("search", schema, mock_client, trust_verifier=_make_verifier("deny"))
+        with pytest.raises(PermissionError):
+            await tool(query="hello")
+        mock_client.run_tool.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_coroutine_require_approval_blocks_run_tool(self, schema, mock_client):
+        tool = util.create_tool_coroutine(
+            "search", schema, mock_client, trust_verifier=_make_verifier("require_approval")
+        )
+        with pytest.raises(PermissionError):
+            await tool(query="hello")
+        mock_client.run_tool.assert_not_awaited()
+
+    @pytest.mark.asyncio
+    async def test_coroutine_verifier_fires_before_run_tool(self, schema, mock_client):
+        """Verifier must be invoked strictly before client.run_tool."""
+        call_order = []
+
+        class _OrderVerifier:
+            async def verify(self, call):  # noqa: ARG002
+                call_order.append("verify")
+                from lfx.base.mcp.trust import TrustDecision, TrustState
+
+                return TrustDecision(state=TrustState.ALLOW)
+
+        original_run_tool = mock_client.run_tool
+
+        async def _tracking_run_tool(*a, **kw):
+            call_order.append("run_tool")
+            return await original_run_tool(*a, **kw)
+
+        mock_client.run_tool = _tracking_run_tool
+
+        tool = util.create_tool_coroutine("search", schema, mock_client, trust_verifier=_OrderVerifier())
+        await tool(query="hello")
+        assert call_order == ["verify", "run_tool"]
+
+    @pytest.mark.asyncio
+    async def test_coroutine_warn_still_calls_run_tool(self, schema, mock_client):
+        tool = util.create_tool_coroutine("search", schema, mock_client, trust_verifier=_make_verifier("warn"))
+        with patch("lfx.base.mcp.util.logger.awarning", new_callable=AsyncMock):
+            await tool(query="hello")
+        mock_client.run_tool.assert_awaited_once()
+
+    @pytest.mark.asyncio
+    async def test_coroutine_warn_audit_record_contains_required_fields(self, schema, mock_client):
+        """Warn path must emit decision_id and reason_code before dispatch.
+
+        An external verifier must be able to reconstruct the audit trail without
+        inspecting logs after the fact.
+        """
+        from lfx.base.mcp.trust import TrustDecision, TrustState
+
+        fixed_decision_id = "audit-test-id-001"
+
+        class _WarnVerifier:
+            async def verify(self, call):  # noqa: ARG002
+                return TrustDecision(
+                    state=TrustState.WARN,
+                    decision_id=fixed_decision_id,
+                    reason_code="low_trust_score",
+                )
+
+        with patch("lfx.base.mcp.util.logger.awarning", new_callable=AsyncMock) as mock_warn:
+            tool = util.create_tool_coroutine("search", schema, mock_client, trust_verifier=_WarnVerifier())
+            await tool(query="test-query")
+
+        mock_warn.assert_awaited_once()
+        log_args = " ".join(str(a) for a in mock_warn.call_args[0])
+        assert fixed_decision_id in log_args
+        assert "low_trust_score" in log_args
+
+    @pytest.mark.asyncio
+    async def test_coroutine_different_params_invoke_verifier_again(self, schema, mock_client):
+        """Each call with different params must produce a fresh MCPToolCall.
+
+        A different parameters_digest must be generated so decisions are never reused.
+        """
+        from lfx.base.mcp.trust import TrustDecision, TrustState
+
+        seen_digests = []
+
+        class _DigestRecorder:
+            async def verify(self, call):
+                seen_digests.append(call.parameters_digest)
+                return TrustDecision(state=TrustState.ALLOW)
+
+        tool = util.create_tool_coroutine("search", schema, mock_client, trust_verifier=_DigestRecorder())
+        await tool(query="first")
+        await tool(query="second")
+
+        assert len(seen_digests) == 2
+        assert seen_digests[0] != seen_digests[1]
+
+    @pytest.mark.asyncio
+    async def test_coroutine_no_verifier_calls_run_tool_without_overhead(self, schema, mock_client):
+        """When trust_verifier is None the coroutine path is unchanged."""
+        tool = util.create_tool_coroutine("search", schema, mock_client)
+        await tool(query="hello")
+        mock_client.run_tool.assert_awaited_once()
+
+    # ------------------------------------------------------------------
+    # create_tool_func — sync path
+    # ------------------------------------------------------------------
+
+    def test_func_deny_blocks_run_tool(self, schema, mock_client):
+        tool = util.create_tool_func("search", schema, mock_client, trust_verifier=_make_verifier("deny"))
+        with (
+            patch("lfx.base.mcp.util.run_until_complete", side_effect=_sync_run_until_complete),
+            pytest.raises(PermissionError),
+        ):
+            tool(query="hello")
+        mock_client.run_tool.assert_not_awaited()
+
+    def test_func_allow_calls_run_tool(self, schema, mock_client):
+        tool = util.create_tool_func("search", schema, mock_client, trust_verifier=_make_verifier("allow"))
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="ok"):
+            result = tool(query="hello")
+        assert result == "ok"
+
+    def test_func_no_verifier_calls_run_tool_once(self, schema, mock_client):
+        tool = util.create_tool_func("search", schema, mock_client)
+        with patch("lfx.base.mcp.util.run_until_complete", return_value="ok") as mock_ruc:
+            tool(query="hello")
+        mock_ruc.assert_called_once()
+
+
+# ---------------------------------------------------------------------------
+# Helpers for TestTrustVerifierIntegration
+# ---------------------------------------------------------------------------
+
+
+def _make_verifier(state_name: str):
+    """Return a simple verifier that always returns the given TrustState."""
+    from lfx.base.mcp.trust import TrustDecision, TrustState
+
+    state = TrustState(state_name)
+
+    class _SimpleVerifier:
+        async def verify(self, call):  # noqa: ARG002
+            return TrustDecision(state=state, reason_code=f"{state_name}_reason")
+
+    return _SimpleVerifier()
+
+
+def _sync_run_until_complete(coro):
+    """Run a coroutine synchronously — used to exercise the sync tool_func path."""
+    import asyncio
+
+    return asyncio.run(coro)
