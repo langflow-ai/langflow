@@ -3,6 +3,8 @@ import uuid
 
 from langchain_core.embeddings import Embeddings
 from langchain_qdrant import QdrantVectorStore
+from qdrant_client import QdrantClient
+from qdrant_client.models import Distance, VectorParams
 
 from lfx.base.vectorstores.model import LCVectorStoreComponent, check_cached_vector_store
 from lfx.helpers.data import docs_to_data
@@ -14,6 +16,12 @@ from lfx.io import (
     StrInput,
 )
 from lfx.schema.data import Data, custom_serializer
+
+DISTANCE_MAP = {
+    "Cosine": Distance.COSINE,
+    "Euclidean": Distance.EUCLID,
+    "Dot Product": Distance.DOT,
+}
 
 
 class QdrantVectorStoreComponent(LCVectorStoreComponent):
@@ -61,16 +69,14 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
 
         server_kwargs = {
             "host": self.host or None,
-            "port": int(self.port),  # Ensure port is an integer
-            "grpc_port": int(self.grpc_port),  # Ensure grpc_port is an integer
-            "api_key": self.api_key,
-            "prefix": self.prefix,
-            # Ensure timeout is an integer
+            "port": int(self.port) if self.port else 6333,
+            "grpc_port": int(self.grpc_port) if self.grpc_port else 6334,
+            "api_key": self.api_key or None,
+            "prefix": self.prefix or None,
             "timeout": int(self.timeout) if self.timeout else None,
             "path": self.path or None,
             "url": self.url or None,
         }
-
         server_kwargs = {k: v for k, v in server_kwargs.items() if v is not None}
 
         # Convert DataFrame to Data if needed using parent's method
@@ -87,6 +93,18 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
             msg = "Invalid embedding object"
             raise TypeError(msg)
 
+        client = QdrantClient(**server_kwargs)
+
+        if not client.collection_exists(self.collection_name):
+            vector_size = len(self.embedding.embed_query("test"))
+            distance = DISTANCE_MAP.get(self.distance_func, Distance.COSINE)
+            client.create_collection(
+                collection_name=self.collection_name,
+                vectors_config=VectorParams(size=vector_size, distance=distance),
+            )
+
+        qdrant = QdrantVectorStore(embedding=self.embedding, client=client, **qdrant_kwargs)
+
         if documents:
             ids = [
                 str(
@@ -97,14 +115,7 @@ class QdrantVectorStoreComponent(LCVectorStoreComponent):
                 )
                 for doc in documents
             ]
-            qdrant = QdrantVectorStore.from_documents(
-                documents, embedding=self.embedding, ids=ids, **qdrant_kwargs, **server_kwargs
-            )
-        else:
-            from qdrant_client import QdrantClient
-
-            client = QdrantClient(**server_kwargs)
-            qdrant = QdrantVectorStore(embedding=self.embedding, client=client, **qdrant_kwargs)
+            qdrant.add_documents(documents=documents, ids=ids)
 
         return qdrant
 
