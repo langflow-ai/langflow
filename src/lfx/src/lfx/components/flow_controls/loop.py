@@ -28,8 +28,8 @@ class LoopComponent(Component):
         HandleInput(
             name="data",
             display_name="Inputs",
-            info="The initial DataFrame to iterate over.",
-            input_types=["DataFrame", "Table"],
+            info="Data to iterate over. Accepts DataFrame, Table, Data, or Message.",
+            input_types=["DataFrame", "Table", "Data", "Message"],
         ),
     ]
 
@@ -38,11 +38,18 @@ class LoopComponent(Component):
             display_name="Item",
             name="item",
             method="item_output",
+            types=["Data"],
             allows_loop=True,
             loop_types=["Message"],
             group_outputs=True,
         ),
-        Output(display_name="Done", name="done", method="done_output", group_outputs=True),
+        Output(
+            display_name="Done",
+            name="done",
+            method="done_output",
+            types=["DataFrame", "Table"],
+            group_outputs=True,
+        ),
     ]
 
     def initialize_data(self) -> None:
@@ -72,6 +79,10 @@ class LoopComponent(Component):
 
     def _validate_data(self, data):
         """Validate and return a list of Data objects."""
+        if isinstance(data, Message):
+            data = self._convert_message_to_data(data)
+        elif isinstance(data, list):
+            data = [self._convert_message_to_data(item) if isinstance(item, Message) else item for item in data]
         return validate_data_input(data)
 
     def get_loop_body_vertices(self) -> set[str]:
