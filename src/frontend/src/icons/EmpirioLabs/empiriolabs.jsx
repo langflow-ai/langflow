@@ -8,13 +8,7 @@ const SvgEmpirioLabs = (props) => (
     {...props}
   >
     <defs>
-      <linearGradient
-        id="empiriolabs-fill"
-        x1="50%"
-        x2="60%"
-        y1="0%"
-        y2="100%"
-      >
+      <linearGradient id="empiriolabs-fill" x1="50%" x2="60%" y1="0%" y2="100%">
         <stop offset="0%" stopColor="#7AD7F2"></stop>
         <stop offset="48%" stopColor="#1186F5"></stop>
         <stop offset="100%" stopColor="#0A2E8C"></stop>
