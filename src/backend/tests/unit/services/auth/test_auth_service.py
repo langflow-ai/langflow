@@ -9,8 +9,6 @@ from uuid import UUID, uuid4
 import jwt
 import pytest
 from fastapi import HTTPException, WebSocketException, status
-from pydantic import SecretStr
-
 from langflow.services.auth.constants import AUTO_LOGIN_WARNING
 from langflow.services.auth.exceptions import (
     InactiveUserError,
@@ -21,6 +19,7 @@ from langflow.services.auth.exceptions import (
 from langflow.services.auth.service import AuthService
 from langflow.services.database.models.user.model import User
 from lfx.services.settings.auth import AuthSettings
+from pydantic import SecretStr
 
 
 @pytest.fixture

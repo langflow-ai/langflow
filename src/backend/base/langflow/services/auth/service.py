@@ -36,11 +36,11 @@ from langflow.services.deps import session_scope
 from langflow.services.schema import ServiceType
 
 if TYPE_CHECKING:
+    from cryptography.fernet import Fernet, MultiFernet
     from lfx.services.settings.service import SettingsService
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.api_key.model import ApiKey
-    from cryptography.fernet import Fernet, MultiFernet
 
 
 class AuthService(BaseAuthService):
