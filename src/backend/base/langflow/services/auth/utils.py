@@ -5,8 +5,6 @@ import hashlib
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 
-MINIMUM_KEY_LENGTH = 32
-
 from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
@@ -30,6 +28,8 @@ if TYPE_CHECKING:
     from sqlmodel.ext.asyncio.session import AsyncSession
 
     from langflow.services.database.models.user.model import User, UserRead
+
+MINIMUM_KEY_LENGTH = 32
 
 
 class OAuth2PasswordBearerCookie(OAuth2PasswordBearer):
@@ -353,7 +353,10 @@ def ensure_fernet_key(secret_key: str) -> bytes:
 
 def get_legacy_fernet_key(secret_key: str) -> bytes:
     """Generate the legacy insecure fernet key for backward compatibility."""
-    rng = random.Random(secret_key)
+    # Legacy insecure derivation retained solely for backward-compatible
+    # decryption of existing ciphertexts.
+    # New encryptions use the PBKDF2-derived primary key.
+    rng = random.Random(secret_key)  # noqa: S311
     key = bytes(rng.getrandbits(8) for _ in range(32))
     return base64.urlsafe_b64encode(key)
 
