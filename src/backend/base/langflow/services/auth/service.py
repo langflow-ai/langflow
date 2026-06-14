@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from uuid import UUID
 
 import jwt
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from fastapi import HTTPException, Request, WebSocketException, status
 from jwt import InvalidTokenError
 from lfx.log.logger import logger
@@ -715,11 +715,10 @@ class AuthService(BaseAuthService):
             )
         return user
 
-    def _get_fernet(self) -> Fernet:
-        from langflow.services.auth.utils import ensure_fernet_key
+    def _get_fernet(self) -> Fernet | MultiFernet:
+        from langflow.services.auth.utils import get_fernet
 
-        secret_key: str = self.settings.auth_settings.SECRET_KEY.get_secret_value()
-        return Fernet(ensure_fernet_key(secret_key))
+        return get_fernet(self.settings)
 
     def encrypt_api_key(self, api_key: str) -> str:
         fernet = self._get_fernet()

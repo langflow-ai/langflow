@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import base64
+import hashlib
 import random
 from typing import TYPE_CHECKING, Annotated, Final
 
-from cryptography.fernet import Fernet
+from cryptography.fernet import Fernet, MultiFernet
 from fastapi import Depends, HTTPException, Request, Security, WebSocket, WebSocketException, status
 from fastapi.security import APIKeyHeader, APIKeyQuery, OAuth2PasswordBearer
 from fastapi.security.utils import get_authorization_scheme_param
@@ -329,30 +330,54 @@ def add_base64_padding(value: str) -> str:
 def ensure_fernet_key(secret_key: str) -> bytes:
     """Derive a valid Fernet key from a secret key string.
 
-    For short keys (< 32 chars), uses the key as a random seed to generate
-    a deterministic 32-byte key. For longer keys, adds base64 padding.
+    For short keys (< 32 chars), uses PBKDF2 (SHA-256) to derive a
+    deterministic 32-byte key suitable for cryptographic operations.
+    For longer keys, adds base64 padding.
     """
     MINIMUM_KEY_LENGTH = 32  # noqa: N806
     if len(secret_key) < MINIMUM_KEY_LENGTH:
-        random.seed(secret_key)
-        key = bytes(random.getrandbits(8) for _ in range(32))
-        key = base64.urlsafe_b64encode(key)
+        key = base64.urlsafe_b64encode(
+            hashlib.pbkdf2_hmac(
+                "sha256",
+                secret_key.encode(),
+                b"langflow-fernet",
+                100000,
+                dklen=32,
+            )
+        )
     else:
         key = add_base64_padding(secret_key).encode()
     return key
 
 
-def get_fernet(settings_service: SettingsService) -> Fernet:
+def get_legacy_fernet_key(secret_key: str) -> bytes:
+    """Generate the legacy insecure fernet key for backward compatibility."""
+    random.seed(secret_key)
+    key = bytes(random.getrandbits(8) for _ in range(32))
+    return base64.urlsafe_b64encode(key)
+
+
+def get_fernet(settings_service: SettingsService) -> Fernet | MultiFernet:
     """Get a Fernet instance for encryption/decryption.
 
     Args:
         settings_service: Settings service to get the secret key
 
     Returns:
-        Fernet instance for encryption/decryption
+        Fernet or MultiFernet instance for encryption/decryption
     """
     secret_key: str = settings_service.auth_settings.SECRET_KEY.get_secret_value()
-    return Fernet(ensure_fernet_key(secret_key))
+    primary_key = ensure_fernet_key(secret_key)
+
+    MINIMUM_KEY_LENGTH = 32  # noqa: N806
+    if len(secret_key) < MINIMUM_KEY_LENGTH:
+        # For short keys, we use MultiFernet to rotate keys automatically.
+        # It encrypts with the new primary key (PBKDF2) but can decrypt
+        # tokens that were encrypted with the legacy insecure random key.
+        legacy_key = get_legacy_fernet_key(secret_key)
+        return MultiFernet([Fernet(primary_key), Fernet(legacy_key)])
+
+    return Fernet(primary_key)
 
 
 def encrypt_api_key(api_key: str, settings_service: SettingsService | None = None) -> str:  # noqa: ARG001

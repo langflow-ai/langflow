@@ -367,6 +367,58 @@ def test_ensure_fernet_key_with_44_char_key():
     assert fernet.decrypt(encrypted) == b"test-value"
 
 
+def test_ensure_fernet_key_pbkdf2_deterministic():
+    """ensure_fernet_key must use PBKDF2 to deterministically derive a 44-char base64 key for short secrets."""
+    from cryptography.fernet import Fernet
+
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    short_key = "short-secret-123"
+    derived1 = ensure_fernet_key(short_key)
+    derived2 = ensure_fernet_key(short_key)
+
+    # Must be deterministic
+    assert derived1 == derived2
+
+    # Must be 44 chars (32 bytes base64-url-safe encoded)
+    assert len(derived1) == 44
+
+    # Must be a valid Fernet key
+    fernet = Fernet(derived1)
+    encrypted = fernet.encrypt(b"test-value")
+    assert fernet.decrypt(encrypted) == b"test-value"
+
+
+def test_ensure_fernet_key_pbkdf2_different_secrets():
+    """ensure_fernet_key must produce different keys for different short secrets."""
+    from langflow.services.auth.utils import ensure_fernet_key
+
+    key1 = ensure_fernet_key("secret-1")
+    key2 = ensure_fernet_key("secret-2")
+    assert key1 != key2
+
+
+def test_legacy_fernet_backward_compatibility(auth_service: AuthService, tmp_path):
+    """Ensure MultiFernet can decrypt data encrypted with the legacy, insecure PRNG key."""
+    from cryptography.fernet import Fernet
+
+    from langflow.services.auth.utils import get_legacy_fernet_key
+
+    # Initialize a legacy encryption context exactly as it used to be
+    secret = auth_service.settings.auth_settings.SECRET_KEY.get_secret_value()
+    legacy_key = get_legacy_fernet_key(secret)
+    legacy_fernet = Fernet(legacy_key)
+    
+    # Encrypt some test data
+    plaintext = "super-secret-api-key"
+    legacy_ciphertext = legacy_fernet.encrypt(plaintext.encode()).decode()
+
+    # The auth_service uses MultiFernet under the hood which uses the new PBKDF2 key for 
+    # writing, but seamlessly handles decrypting the legacy ciphertext
+    decrypted = auth_service.decrypt_api_key(legacy_ciphertext)
+    assert decrypted == plaintext
+
+
 def test_password_helpers_roundtrip(auth_service: AuthService):
     password = "Str0ngP@ssword"  # noqa: S105  # pragma: allowlist secret
 
